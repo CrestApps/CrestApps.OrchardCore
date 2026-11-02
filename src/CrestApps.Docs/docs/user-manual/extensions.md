@@ -17,8 +17,6 @@ An **extension** is a short internal number, such as `1001`, that belongs to one
 
 <AskYourAdmin />
 
-<YouTube video="telephony" title="Video of creating an extension for a user" start={352} end={405} />
-
 ## Create an extension
 
 1. Open **Interaction Center > Management > Extensions** and click **Add extension**.

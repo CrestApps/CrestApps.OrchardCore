@@ -16,8 +16,6 @@ A **wizard** shows a form one step at a time, with a progress bar, remembers the
 
 <AskYourAdmin />
 
-<YouTube video="site-wizard-recipes" title="Video overview of wizards, recipes and shared resources" />
-
 ## How a wizard is made
 
 - Each **step** is an ordinary content type with its own boxes, for example *Visitor Details* with **Full name** and **Email**.
@@ -25,8 +23,6 @@ A **wizard** shows a form one step at a time, with a progress bar, remembers the
 - Visitors take part on the site's public wizard page, which opens on the first step. Ask your technical team for the link to put on a page or a button.
 
 ## Prepare a wizard type
-
-<YouTube video="site-wizard-recipes" title="Video of adding the Wizard part to a content type" start={102} end={154} />
 
 1. Create the content types for the steps, for example *Visitor Details* and *Visit Preferences*, with the boxes each step asks for.
 2. Open **Design > Content Definition > Content Types** and edit the type that will host the wizard, for example *Workshop Registration*.
@@ -43,8 +39,6 @@ A **wizard** shows a form one step at a time, with a progress bar, remembers the
 
 ## Build the steps
 
-<YouTube video="site-wizard-recipes" title="Video of building the steps of a wizard" start={154} end={182} />
-
 1. Open **Content > Content Items**, click **New** and choose the wizard type.
 2. Enter the **Title**.
 3. Click **Add step** and choose a step type. Repeat for each step. Each step card has its own boxes, which can start with a default value.
@@ -53,13 +47,9 @@ A **wizard** shows a form one step at a time, with a progress bar, remembers the
 
 ## What a visitor sees
 
-<YouTube video="site-wizard-recipes" title="Video of a visitor taking part in a wizard" start={182} end={212} />
-
 The wizard opens on the first step. A progress bar at the top shows every step and where the visitor is. **Next** saves the step and moves on, a finished step is marked with a tick, and **Previous** goes back without losing answers. On the last step the button reads **Finish**, and a confirmation tells the visitor the submission was completed.
 
 ## See what was collected
-
-<YouTube video="site-wizard-recipes" title="Video of the content items a wizard creates" start={212} end={229} />
 
 With the default **Completion policy**, each step's answers become a published content item of the step's type. Open **Content > Content Items** to find them, and edit or publish them like any other item.
 

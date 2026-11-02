@@ -18,8 +18,6 @@ A new store takes a few steps before its first sale: its name and contact detail
 
 Watch the video for a tour of the setup guide, from a new site to a first sale.
 
-<YouTube video="set-up-your-store" title="Set up your store in CrestApps for Orchard Core" />
-
 ## Start a new store
 
 When you set up a new site, choose the **Online store** recipe. Your site starts with:
@@ -32,8 +30,6 @@ When you set up a new site, choose the **Online store** recipe. Your site starts
 On a site you already have, the guide shows the steps for the features you've turned on.
 
 ## Follow the guide
-
-<YouTube video="set-up-your-store" title="Opening the guide" start={84} end={105} />
 
 Open **Commerce > Set up your store**. The step to do next is open. Each step says what it's for, and either has a short form to fill in or a link to the page where it's done in full. A tick shows a step that's done. The bar at the top shows how many steps are left.
 
@@ -51,8 +47,6 @@ Choose **Skip this step** for a step you don't need, such as shipping when you s
 
 ## Roles for your staff
 
-<YouTube video="set-up-your-store" title="Roles for your staff" start={220} end={244} />
-
 **Add the staff roles** adds four roles, each allowed what that job needs:
 
 | Role | What it can do |
@@ -65,8 +59,6 @@ Choose **Skip this step** for a step you don't need, such as shipping when you s
 Each role gets what the features turned on now allow it. When a commerce feature is turned on later, the staff roles get what that feature allows them too. Give a staff member a role under **Security > Users**. Change what a role can do under **Security > Roles**. A role that was there already is left as it is.
 
 ## The Storefront theme
-
-<YouTube video="set-up-your-store" title="The Storefront theme" start={244} end={266} />
 
 The Storefront theme gives your store:
 

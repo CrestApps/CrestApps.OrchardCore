@@ -17,11 +17,7 @@ A **recipe** is a ready-made setup that creates content types, settings, roles o
 
 <AskYourAdmin />
 
-<YouTube video="site-wizard-recipes" title="Video overview of wizards, recipes and shared resources" />
-
 ## Run a recipe
-
-<YouTube video="site-wizard-recipes" title="Video of the recipe list and the JSON import editor" start={229} end={264} />
 
 1. Open **Tools > Recipes**. The recipes are grouped by feature. Each has a name, tags and a description of what it creates.
 2. Type in the **Search** box to find a recipe by name or tag.

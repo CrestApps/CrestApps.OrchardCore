@@ -23,8 +23,6 @@ Each data set is read in one of two ways:
 
 ## Add a connection
 
-<YouTube video="data-connectors-connections" title="Video overview of connections: the four kinds, Save and test, secrets, and deleting" />
-
 1. Go to **Tools > Data Connectors > Connections** and click **Add Connection**.
 2. In **Which kind of system should the connection reach?**, find the kind of system (type in **Filter** to narrow the list), then click **Add** on its card.
 3. Enter a **Name** and the settings of the system (see the tables below).
@@ -85,8 +83,6 @@ The site can't reach servers on its own private network unless your administrato
 
 ## Add a data set
 
-<YouTube video="data-connectors-data-sets" title="Video overview of adding data sets from a file and a web API, and reviewing their fields" />
-
 1. Go to **Tools > Data Connectors > Data Sets** and click **Add Data Set**, or open **Actions** on a connection and click **Add data set**.
 2. In **Which connection should the new data set read?**, find the connection and click **Add** on its card. The connections are grouped by the kind of system they reach: click a group on the left, such as **SQL Server** or **HTTP API**, to see only its connections, or type in **Filter** to search their names and descriptions.
 3. Enter a **Name**. The **Technical name** is what reports and pipelines store; it is made from the name if you leave it empty, and it can't change after you save.
@@ -118,8 +114,6 @@ If you save without discovering the fields, the site reads them for you. An impo
 
 ## Keep an imported data set up to date
 
-<YouTube video="data-connectors-refresh" title="Video of refreshing imported data sets: schedule, Refresh now, history and failed refreshes" />
-
 In the **Refresh** section of an imported data set:
 
 | Field | What it does |
@@ -139,15 +133,11 @@ Open **Actions** on a data set and click **Preview**. You see its first rows exa
 
 ## Use a data set in a report or pipeline
 
-<YouTube video="data-connectors-reports-and-pipelines" title="Video of using live and imported data sets in the Report Builder and in a data pipeline" />
-
 Live data sets are listed under **Connected data (live)** and imported ones under **Connected data (imported)**, grouped by their connection, wherever you pick a data source: in the [Report Builder](report-builder/data-sources.md) and in a data pipeline's **Read a data source** step.
 
 You only see a data set there when your role has **Read every connected data set**, or **Read the connected data set** with that data set's name. This is the same for live and imported data sets, so importing data never shows it to more people. Ask your administrator to grant the permission in **Access Control > Roles**.
 
 ## Copy connections and data sets to another site
-
-<YouTube video="data-connectors-deployment-and-permissions" title="Video of the permissions of Data Connectors, deployment plans and troubleshooting" />
 
 You can move your connections and data sets to another site, such as from a staging site to the live one, with a deployment plan.
 

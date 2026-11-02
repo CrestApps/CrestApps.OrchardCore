@@ -18,8 +18,6 @@ technical_manual:
 
 This video shows how files are kept private and delivered, how to set up a digital product, what buyers see, and how to manage a buyer's downloads:
 
-<YouTube video="downloads" title="Narrated video overview of Digital downloads" />
-
 ## Set up a digital product
 
 Your content type needs the **Product** part with the product type **Digital**, and the **Digital files** part. The **Digital downloads sample** recipe adds a ready **Digital Product** type with two sample ebooks and their PDF files, an **Ebooks** page at */ebooks*, and two coupons. See [Try a store sample](index.md#try-a-store-sample).
@@ -27,8 +25,6 @@ Your content type needs the **Product** part with the product type **Digital**, 
 :::note[Guests need to give an email]
 Download links are sent to the email the buyer gives at checkout, which the **Customers** feature asks for. The sample turns it on. If you set up your own store, turn it on too.
 :::
-
-<YouTube video="downloads" title="Video of setting up a digital product" start={92} end={145} />
 
 1. Open the product and find **Digital files**.
 2. Under **Files**, choose one or more files. Each uploads right away, up to 1 GB, and appears in the list.
@@ -47,13 +43,9 @@ When the order is paid:
 - In their account, **Downloads** lists every file they bought, with the order it came from, how many downloads are left and until when.
 - Their order page shows **Your downloads** with a **Download** button for each file.
 
-<YouTube video="downloads" title="Video of what buyers see" start={168} end={218} />
-
 A link opens a page with the file's name, how many downloads are left and until when, and a **Download** button. When a link no longer works, the page says why: it expired, all its downloads were used, or the order was canceled or refunded.
 
 ## Settings
-
-<YouTube video="downloads" title="Video of the download settings" start={145} end={168} />
 
 Under **Settings > Commerce > Downloads**:
 
@@ -65,8 +57,6 @@ Under **Settings > Commerce > Downloads**:
 A product's own values, when set, win.
 
 ## Manage a buyer's downloads
-
-<YouTube video="downloads" title="Video of managing a buyer's downloads" start={218} end={265} />
 
 On the order's page, **Downloads** lists each file with how often it was downloaded, until when the link works, and whether it still does.
 

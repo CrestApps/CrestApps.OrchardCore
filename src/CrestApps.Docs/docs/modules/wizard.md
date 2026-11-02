@@ -12,7 +12,6 @@ user_manual: user-manual/administration/wizard
 | **Feature ID** | `CrestApps.OrchardCore.Wizard` |
 
 
-<YouTube video="site-wizard-recipes" title="Video overview of wizards, recipes and shared resources" />
 | **Other features** | None. The content item support and the workflow events turn on by themselves when `OrchardCore.Contents` and `OrchardCore.Workflows` are enabled. |
 
 The Wizard module provides a reusable, multi-step **wizard** (also called a *stepper*) framework. A wizard
@@ -46,8 +45,6 @@ Core feature they build on is enabled.
 
 The step editor of the `WizardPart` uses the editor of `OrchardCore.Flows`, so enable **Flows** too.
 
-<YouTube video="wizard" title="Video overview of the Wizard part settings, resuming a visit, permissions and workflow events" />
-
 ## Concepts
 
 | Type | Role |
@@ -78,8 +75,6 @@ Enable the **Wizard** feature, with `OrchardCore.Contents` and `OrchardCore.Flow
 Enable **Wizard**, `OrchardCore.Contents` and `OrchardCore.Flows`.
 
 ### 1. Attach the wizard part
-
-<YouTube video="wizard" title="Video of the settings of the Wizard part" start={46} end={99} />
 
 1. Go to **Content Definition → Content Types** and edit (or create) the content type that will host the
    wizard, for example `Registration`.
@@ -248,8 +243,6 @@ var result = await _wizardEngine.CompleteAsync(
 ## Workflow events
 
 Enable `OrchardCore.Workflows` next to the **Wizard** feature to react to wizard activity with workflows. It contributes four
-<YouTube video="wizard" title="Video of the four wizard workflow events" start={180} end={213} />
-
 Enable **Wizard** with `OrchardCore.Workflows` to react to wizard activity with workflows. It contributes four
 events under the **Wizard** category:
 
@@ -271,8 +264,6 @@ session across steps.
 A visitor who leaves a wizard can come back and continue. The host keeps the session ids in a `wizard_sessions` cookie, so opening the same start route again resumes the session on the step the visitor reached, with their earlier answers. A wizard without the cookie starts a new session.
 
 Two permissions, in the **Wizard** category of the role editor, decide who can take part: **Start a wizard** and **Continue a wizard**. The **Anonymous** role has both by default, so a public wizard works for visitors. Remove them from a role to restrict the wizard to other roles, or tick **Requires an authenticated user** on the wizard type to make visitors sign in first.
-
-<YouTube video="wizard" title="Video of resuming a visit and of the start and continue permissions" start={122} end={180} />
 
 ## Controlling access
 

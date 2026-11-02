@@ -16,8 +16,6 @@ Bulk import creates or updates many content items from one spreadsheet, and bulk
 
 <AskYourAdmin />
 
-<YouTube video="content-transfer" title="Video overview of bulk import and export" />
-
 <YouTube video="site-administration-walkthroughs" title="Video of enabling Content Transfer, exporting a content type, and starting a bulk import" start={221} end={257} />
 
 <YouTube video="contact-center-configuration-deployment" title="Video overview of exporting the Contact Center configuration as a deployment plan and replaying it" />
@@ -39,14 +37,9 @@ Every import file follows the same rules:
 
 ## Which content types appear
 
-<YouTube video="content-transfer" title="Video of choosing which content types can be imported and exported" start={85} end={112} />
-
 Every content type appears on the import and export screens unless an administrator turns it off. On the content type's settings, **Allow bulk import** and **Allow bulk export** are ticked by default. Untick one to keep a type off that screen.
 
 ## Import a file
-
-<YouTube video="content-transfer" title="Video of preparing a file and uploading it" start={112} end={197} />
-<YouTube video="content-transfer-columns" title="Video of the Columns Requirements table of an import and of importing a file" start={43} end={155} />
 
 1. Open **Content > Import**. The **Bulk Import** page lists earlier imports.
 2. Click **Import** and pick the content type. When only one type can be imported, the button reads **Import** followed by the type's name.
@@ -68,15 +61,9 @@ The import runs in the background, so you can leave the page. For each row:
 
 Rows a contact import leaves out on purpose, such as duplicate phone numbers or numbers on a [do-not-call list](do-not-call-lists.md), are counted as errors too, with the reason.
 
-<YouTube video="contact-import-and-export" title="Video of the contact import options: ignoring duplicate phone numbers, what to compare with, and the lead country" start={42} end={117} />
-
 ### Follow an import
 
-<YouTube video="content-transfer" title="Video of following an import and downloading the rejected rows" start={197} end={276} />
-
 Each import is a row on the **Bulk Import** page showing the file name, content type, its status, when it was created, who uploaded it, how many records imported (the green number) and how many had errors (the red number), with the reason a row was rejected under the file name. While it runs, a progress bar shows *N of M records processed*. The list does not refresh by itself: reload the page to see an import's latest status.
-<YouTube video="content-transfer-recovery" title="Video of an import that finishes with errors, the Download errors action, and deleting an entry" start={40} end={112} />
-
 Each import is a row on the **Bulk Import** page showing the file name, content type, who uploaded it, its status, how many records imported and how many had errors. When rows fail, the entry also groups the errors by reason, for example *Did not pass validation*, with how many rows each reason covers. While it runs, a progress bar shows *N of M records processed*.
 
 | Status | Meaning |
@@ -99,9 +86,6 @@ The **Actions** menu on each row offers:
 Use the status and sort menus above the list to find an import, and tick several rows to **Remove** them at once.
 
 ## Export content
-
-<YouTube video="content-transfer" title="Video of exporting content with filters and downloading the file" start={276} end={351} />
-<YouTube video="contact-import-and-export" title="Video of exporting contacts with their last completed activity" start={117} end={157} />
 
 For a contact type, the export page also shows a **CRM last activity** section. Tick **Include last completed activity information** and choose a **Subject**, and the file appends each contact's most recent completed activity of that subject: the agent's note, the completion date, the disposition, the subject and the subject's fields. Tick **Include only contacts with a last activity record** to leave out the contacts that have none.
 

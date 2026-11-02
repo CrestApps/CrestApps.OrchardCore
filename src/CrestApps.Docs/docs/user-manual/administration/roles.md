@@ -16,8 +16,6 @@ Roles decide what each person can see and do. Use this page when someone cannot 
 
 <AskYourAdmin />
 
-<YouTube video="users-roles" title="Video overview of users, roles, names and avatars" />
-
 ## How roles work
 
 - A **permission** is one thing a person may do, for example *Manage Contact Center queues* or *Run 'Phone Number Verifications' Report*.
@@ -31,8 +29,6 @@ Orchard Core includes some roles out of the box. **Administrator** can do everyt
 The User Manual pages list the permission each screen needs in the table at the top. Use those names when you ask for access or grant it.
 
 ## Give someone access
-
-<YouTube video="users-roles" title="Video of creating a role and giving a person a role" start={163} end={225} />
 
 
 Most of the time you only need step 1.

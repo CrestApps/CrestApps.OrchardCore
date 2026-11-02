@@ -18,13 +18,9 @@ Raise money for a cause. Donors give the amount they choose, the campaign's page
 
 This video shows setting up receipts, starting a campaign, how donors give, and the donations and receipts:
 
-<YouTube video="fundraising" title="Narrated video overview of Fundraising" />
-
 To try it, run the **Fundraising sample** recipe under **Configuration > Recipes**. It adds a campaign raising $10,000 for a community library.
 
 ## Set up your receipts
-
-<YouTube video="fundraising" title="Video of setting up receipts" start={93} end={129} />
 
 Under **Settings > Commerce > Fundraising**:
 
@@ -34,8 +30,6 @@ Under **Settings > Commerce > Fundraising**:
 - **Email donors their receipts**: untick it to have donors find receipts in their account only.
 
 ## Start a campaign
-
-<YouTube video="fundraising" title="Video of starting a campaign" start={129} end={180} />
 
 1. Add the **Fundraising campaign** part to a product's content type. The sample's **Fundraising Campaign** type has it.
 2. On the campaign, enter its **Goal**, or leave it empty for none.
@@ -47,8 +41,6 @@ Set the product's price display to hide its price, since donors choose the amoun
 
 ## How donors give
 
-<YouTube video="fundraising" title="Video of how donors give" start={180} end={216} />
-
 On the campaign's page, donors pick an amount or enter their own, and can name someone they're giving in honor or memory of. Amounts show in the donor's currency. They check out like any order. Discounts and promotion codes never take anything off a donation.
 
 The page shows what's been raised toward the goal, how many have given, and the days left. Once a campaign ends, it stops taking donations.
@@ -58,8 +50,6 @@ The page shows what's been raised toward the goal, how many have given, and the 
 Each donor is emailed a receipt with your organization, tax ID and statement. <YouTube video="fundraising" title="Video of a donor's Donations and receipt" start={244} end={271} />
 
 They also find their donations under **Donations** in their account, with the date, who it honors, the amount and the receipt number. Each receipt opens to print.
-
-<YouTube video="fundraising" title="Video of donations in the orders list" start={216} end={244} />
 
 Each donation is an order under **Commerce > Orders**: its line says **Donation** with the amount, and **In honor of** shows the name the donor gave. Only paid donations count toward the progress.
 

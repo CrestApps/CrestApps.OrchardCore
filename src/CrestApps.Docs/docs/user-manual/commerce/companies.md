@@ -22,8 +22,6 @@ This video shows a company's terms, a buyer's order that needs approval, the adm
 
 ## Add a company
 
-<YouTube video="customers-companies" title="Video of adding a company" start={540} end={625} />
-
 1. On **Commerce > Companies**, click **Add company**.
 2. Enter its **Name**, and if you like its **Tax or VAT number** (printed on its invoices) and a **Billing email** that gets its invoices too.
 3. Under **Buyers**, enter each person's **User name or email** (they need a user account first), choose **Buyer** or **Admin**, and give a buyer an **Order limit** if their bigger orders need approval. An admin sees all of the company's orders and approves orders. Save to get more empty rows.
@@ -57,8 +55,6 @@ The invoice is the transaction *on account*, with its purchase order number, due
 Under **Locations**, add the places the company has orders shipped to, with a name such as *Head office* and the address, in the same address form as the rest of the store: choose the country first and the form asks for what that country's addresses need. Its buyers pick one at checkout. To remove a location, clear its fields.
 
 ## Price lists
-
-<YouTube video="customers-companies" title="Video of creating a price list" start={497} end={540} />
 
 A **price list** gives the companies on it their own prices.
 
