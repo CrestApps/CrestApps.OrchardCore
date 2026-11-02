@@ -344,6 +344,181 @@ public sealed class ReportDesignDocumentBuilderTests : IDisposable
         Assert.Null(Assert.Single(document.Sections).ContainerId);
     }
 
+    [Fact]
+    public async Task Build_DimensionOnTheRowsShelf_CrossTabsTheColumnsShelfDimensionsAcrossTheTop()
+    {
+        // Arrange
+        var query = RevenueByRegionAndCustomer();
+        query.Columns[1].Shelf = ReportColumnShelf.Rows;
+
+        // Act
+        var document = DocumentBuilder().Build("Revenue", [], await RunAsync(query, [], SalesData()));
+
+        // Assert
+        var section = Assert.Single(document.Sections);
+        Assert.Equal(["Customer", "East", "West", "Total"], section.Columns.Select(column => column.Label));
+        var caption = Assert.Single(section.HeaderRows);
+        Assert.Equal([(string.Empty, 1), ("Region", 2), (string.Empty, 1)], caption.Cells.Select(cell => (cell.Label, cell.Span)));
+        Assert.Equal(["Acme", string.Empty, "150", "150"], section.Rows.Single(row => row.Cells[0] == "Acme").Cells);
+        Assert.Equal(["Globex", "300", string.Empty, "300"], section.Rows.Single(row => row.Cells[0] == "Globex").Cells);
+        Assert.Equal(["Total", "300", "170", "470"], section.Rows[^1].Cells);
+        Assert.Equal(ReportRowKind.GrandTotal, section.Rows[^1].Kind);
+    }
+
+    [Fact]
+    public async Task Build_SeveralMeasuresAcross_GroupsTheirColumnsUnderEachValue()
+    {
+        // Arrange
+        var query = RevenueByRegionAndCustomer();
+        query.Columns[1].Shelf = ReportColumnShelf.Rows;
+        query.Columns.Add(new ReportColumnDefinition { Id = "quantity", Field = "o.Quantity", Label = "Quantity", Aggregate = DataAggregate.Sum });
+
+        // Act
+        var document = DocumentBuilder().Build("Revenue", [], await RunAsync(query, [], SalesData()));
+
+        // Assert
+        var section = Assert.Single(document.Sections);
+        Assert.Equal(["Customer", "Revenue", "Quantity", "Revenue", "Quantity", "Revenue", "Quantity"], section.Columns.Select(column => column.Label));
+        Assert.Equal(2, section.HeaderRows.Count);
+        Assert.Equal([(string.Empty, 1), ("East", 2), ("West", 2), ("Total", 2)], section.HeaderRows[1].Cells.Select(cell => (cell.Label, cell.Span)));
+        Assert.Equal(["Acme", string.Empty, string.Empty, "150", "3", "150", "3"], section.Rows.Single(row => row.Cells[0] == "Acme").Cells);
+    }
+
+    [Fact]
+    public async Task Build_MeasuresOnTheRowsShelf_ListsOneRowPerMeasure()
+    {
+        // Arrange
+        var query = RevenueByRegionAndCustomer();
+        query.Columns[1].Shelf = ReportColumnShelf.Rows;
+        query.Columns[2].Shelf = ReportColumnShelf.Rows;
+        query.Columns.Add(new ReportColumnDefinition { Id = "quantity", Field = "o.Quantity", Label = "Quantity", Aggregate = DataAggregate.Sum, Shelf = ReportColumnShelf.Rows });
+
+        // Act
+        var document = DocumentBuilder().Build("Revenue", [], await RunAsync(query, [], SalesData()));
+
+        // Assert
+        var section = Assert.Single(document.Sections);
+        Assert.Equal(["Customer", string.Empty, "East", "West", "Total"], section.Columns.Select(column => column.Label));
+        var acme = section.Rows.IndexOf(section.Rows.Single(row => row.Cells[0] == "Acme"));
+        Assert.Equal(["Acme", "Revenue", string.Empty, "150", "150"], section.Rows[acme].Cells);
+        Assert.Equal([string.Empty, "Quantity", string.Empty, "3", "3"], section.Rows[acme + 1].Cells);
+        Assert.Equal(["Total", "Revenue", "300", "170", "470"], section.Rows[^2].Cells);
+    }
+
+    [Fact]
+    public async Task Build_TableOfAListedColumnsVisual_IgnoresTheRowsShelf()
+    {
+        // Arrange
+        var query = RevenueByRegionAndCustomer();
+        query.Columns[1].Shelf = ReportColumnShelf.Rows;
+        var visual = new ReportVisualDefinition { Id = "table", Type = ReportVisualType.Table, ColumnIds = ["region", "customer", "revenue"] };
+
+        // Act
+        var document = DocumentBuilder().Build("Revenue", [visual], await RunAsync(query, [visual], SalesData()));
+
+        // Assert
+        var section = Assert.Single(document.Sections);
+        Assert.Empty(section.HeaderRows);
+        Assert.Equal(["Region", "Customer", "Revenue"], section.Columns.Select(column => column.Label));
+    }
+
+    [Fact]
+    public async Task Build_ColorRules_ColorTheCellsOfTheFirstRuleEachValueMeets()
+    {
+        // Arrange
+        var query = RevenueByRegionAndCustomer();
+        query.Columns[2].Colors = new ReportColumnColors
+        {
+            HeaderBackgroundColor = "#0D6EFD",
+            Rules =
+            [
+                new ReportColorRule { Operator = DataFilterOperator.LessThan, Values = ["100"], Color = "#F8D7DA" },
+                new ReportColorRule { Operator = DataFilterOperator.GreaterThanOrEqual, Values = ["200"], Color = "#198754", Target = ReportColorTarget.Text },
+                new ReportColorRule { Operator = DataFilterOperator.LessThan, Values = ["1000"], Color = "#000000" },
+            ],
+        };
+
+        // Act
+        var document = DocumentBuilder().Build("Revenue", [], await RunAsync(query, [], SalesData()));
+
+        // Assert
+        var section = Assert.Single(document.Sections);
+        var initech = section.Rows.Single(row => row.Cells[1] == "Initech").GetCellStyle(2);
+        var globex = section.Rows.Single(row => row.Cells[1] == "Globex").GetCellStyle(2);
+        var acme = section.Rows.Single(row => row.Cells[1] == "Acme").GetCellStyle(2);
+        Assert.Equal(("#212529", "#F8D7DA"), (initech.Color, initech.BackgroundColor));
+        Assert.Equal(("#198754", null), (globex.Color, globex.BackgroundColor));
+        Assert.Equal(("#FFFFFF", "#000000"), (acme.Color, acme.BackgroundColor));
+        Assert.Null(section.Rows.Single(row => row.Cells[1] == "Acme").GetCellStyle(1));
+        Assert.Null(section.Rows[^1].GetCellStyle(2));
+        Assert.Equal(("#FFFFFF", "#0D6EFD"), (section.Columns[2].HeaderStyle.Color, section.Columns[2].HeaderStyle.BackgroundColor));
+    }
+
+    [Fact]
+    public async Task Build_ColorScale_ShadesNumbersFromTheSmallestToTheLargest()
+    {
+        // Arrange
+        var query = RevenueByRegionAndCustomer();
+        query.Columns[2].Colors = new ReportColumnColors
+        {
+            Scale = new ReportColorScale { LowColor = "#FFFFFF", HighColor = "#000000" },
+        };
+
+        // Act
+        var document = DocumentBuilder().Build("Revenue", [], await RunAsync(query, [], SalesData()));
+
+        // Assert
+        var section = Assert.Single(document.Sections);
+        Assert.Equal("#FFFFFF", section.Rows.Single(row => row.Cells[1] == "Initech").GetCellStyle(2).BackgroundColor);
+        Assert.Equal("#000000", section.Rows.Single(row => row.Cells[1] == "Globex").GetCellStyle(2).BackgroundColor);
+        Assert.Equal("#898989", section.Rows.Single(row => row.Cells[1] == "Acme").GetCellStyle(2).BackgroundColor);
+    }
+
+    [Fact]
+    public async Task Build_ColorRulesOfACrossTabMeasure_ColorItsCellsButNotItsTotals()
+    {
+        // Arrange
+        var query = RevenueByRegionAndCustomer();
+        query.Columns[1].Shelf = ReportColumnShelf.Rows;
+        query.Columns[2].Colors = new ReportColumnColors
+        {
+            Rules = [new ReportColorRule { Operator = DataFilterOperator.GreaterThan, Values = ["100"], Color = "#D1E7DD" }],
+        };
+
+        // Act
+        var document = DocumentBuilder().Build("Revenue", [], await RunAsync(query, [], SalesData()));
+
+        // Assert
+        var acme = Assert.Single(document.Sections).Rows.Single(row => row.Cells[0] == "Acme");
+        Assert.Null(acme.GetCellStyle(1));
+        Assert.Equal("#D1E7DD", acme.GetCellStyle(2).BackgroundColor);
+        Assert.Null(acme.GetCellStyle(3));
+    }
+
+    [Fact]
+    public async Task Build_PivotWithSeveralValues_ShowsEachValueUnderEachColumn()
+    {
+        // Arrange
+        var query = RevenueByRegionAndCustomer();
+        query.Columns.Add(new ReportColumnDefinition { Id = "quantity", Field = "o.Quantity", Label = "Quantity", Aggregate = DataAggregate.Sum });
+        var visual = new ReportVisualDefinition
+        {
+            Id = "pivot",
+            Type = ReportVisualType.Pivot,
+            ColumnIds = ["customer"],
+            SeriesColumnId = "region",
+            ValueColumnIds = ["revenue", "quantity"],
+        };
+
+        // Act
+        var document = DocumentBuilder().Build("Revenue", [visual], await RunAsync(query, [visual], SalesData()));
+
+        // Assert
+        var section = Assert.Single(document.Sections);
+        Assert.Equal(["Customer", "Revenue", "Quantity", "Revenue", "Quantity"], section.Columns.Select(column => column.Label));
+        Assert.Equal(["Globex", "300", "3", string.Empty, string.Empty], section.Rows.Single(row => row.Cells[0] == "Globex").Cells);
+    }
+
     private static ReportQueryDefinition RevenueByRegionAndCustomer()
     {
         var query = CustomersWithOrders();

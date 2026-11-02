@@ -290,6 +290,8 @@ public sealed partial class ReportQueryEngine
             Transform = column.Definition.Transform,
             Format = column.Definition.Format,
             Hidden = column.Definition.Hidden,
+            Shelf = column.Definition.Shelf,
+            Colors = column.Definition.Colors,
         };
     }
 

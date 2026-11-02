@@ -76,6 +76,15 @@
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead>
+                        @foreach (var headerRow in reportSection.HeaderRows ?? [])
+                        {
+                            <tr class="report-header-group">
+                                @foreach (var headerCell in headerRow.Cells)
+                                {
+                                    <th colspan="@Math.Max(1, headerCell.Span)" class="text-center@(string.IsNullOrEmpty(headerCell.Label) ? " border-0" : null)">@headerCell.Label</th>
+                                }
+                            </tr>
+                        }
                         <tr>
                             @for (var i = 0; i < reportSection.Columns.Count; i++)
                             {

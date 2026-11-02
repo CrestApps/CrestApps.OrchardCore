@@ -19,7 +19,7 @@ internal sealed class ReportPdfTableWriter
     private readonly double[] _widths;
     private readonly double[] _lefts;
     private readonly double _lineHeight;
-    private readonly Row _header;
+    private readonly List<Row> _header;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReportPdfTableWriter"/> class.
@@ -108,7 +108,7 @@ internal sealed class ReportPdfTableWriter
 
     private double GetLeadHeight(double space)
     {
-        var header = GetHeight(_header);
+        var header = _header.Sum(GetHeight);
         var first = (_section.Rows ?? []).FirstOrDefault(row => row is not null);
 
         if (first is null)
@@ -127,19 +127,47 @@ internal sealed class ReportPdfTableWriter
 
     private void WriteHeader()
     {
-        if (_header is not null)
+        foreach (var row in _header)
         {
-            DrawRow(_header, 0, Math.Max(1, _header.LineCount), top: false);
+            DrawRow(row, 0, Math.Max(1, row.LineCount), top: false);
         }
     }
 
-    private Row CreateHeader()
+    // The header of the table: the rows that group its columns, each cell spanning the columns it groups, then the
+    // column headers.
+    private List<Row> CreateHeader()
     {
         var columns = _section.Columns ?? [];
 
         if (columns.Count == 0)
         {
-            return null;
+            return [];
+        }
+
+        var header = new List<Row>();
+
+        foreach (var headerRow in _section.HeaderRows ?? [])
+        {
+            var groups = new List<Cell>();
+            var column = 0;
+
+            foreach (var headerCell in headerRow?.Cells ?? [])
+            {
+                var span = Math.Clamp(headerCell.Span, 1, Math.Max(1, _layout.ColumnCount - column));
+
+                if (column >= _layout.ColumnCount)
+                {
+                    break;
+                }
+
+                groups.Add(CreateCell(column, span, headerCell.Label, bold: true, style: null, ReportColumnAlign.Center));
+                column += span;
+            }
+
+            if (groups.Count > 0)
+            {
+                header.Add(new Row([.. groups], ReportPdfTheme.HeaderFill, ReportPdfTheme.Border, 0.5, topRule: false));
+            }
         }
 
         var cells = new Cell[_layout.ColumnCount];
@@ -151,7 +179,9 @@ internal sealed class ReportPdfTableWriter
             cells[index] = CreateCell(index, column?.Label, bold: true, column?.HeaderStyle);
         }
 
-        return new Row(cells, ReportPdfTheme.HeaderFill, ReportPdfTheme.Muted, 0.75, topRule: false);
+        header.Add(new Row(cells, ReportPdfTheme.HeaderFill, ReportPdfTheme.Muted, 0.75, topRule: false));
+
+        return header;
     }
 
     private Row CreateRow(ReportRow row)
@@ -172,15 +202,32 @@ internal sealed class ReportPdfTableWriter
 
     private Cell CreateCell(int index, string value, bool bold, ReportStyle style)
     {
+        return CreateCell(index, 1, value, bold, style, GetAlignment(index));
+    }
+
+    private Cell CreateCell(int index, int span, string value, bool bold, ReportStyle style, ReportColumnAlign align)
+    {
         var hasStyle = style is not null && !style.IsEmpty;
         var font = bold || (hasStyle && style.Bold)
             ? _flow.Bold
             : _flow.Regular;
         var color = hasStyle && ReportPdfColor.TryParse(style.Color, out var textColor) ? textColor : ReportPdfTheme.Text;
         ReportPdfColor? fill = hasStyle && ReportPdfColor.TryParse(style.BackgroundColor, out var background) ? background : null;
-        var lines = ReportPdfText.Wrap(font.Prepare(value), font, _layout.FontSize, _widths[index] - ReportPdfTableLayout.CellPadding);
+        var lines = ReportPdfText.Wrap(font.Prepare(value), font, _layout.FontSize, Width(index, span) - ReportPdfTableLayout.CellPadding);
 
-        return new Cell(lines, font, color, fill, GetAlignment(index));
+        return new Cell(lines, font, color, fill, align, index, span);
+    }
+
+    private double Width(int index, int span)
+    {
+        var width = 0d;
+
+        for (var column = index; column < Math.Min(_widths.Length, index + span); column++)
+        {
+            width += _widths[column];
+        }
+
+        return width;
     }
 
     private ReportColumnAlign GetAlignment(int index)
@@ -207,14 +254,14 @@ internal sealed class ReportPdfTableWriter
             page.FillRectangle(_flow.Left, y, tableWidth, height, rowFill);
         }
 
-        for (var index = 0; index < row.Cells.Length; index++)
+        foreach (var cell in row.Cells)
         {
-            var cell = row.Cells[index];
-            var left = _flow.Left + _lefts[index];
+            var left = _flow.Left + _lefts[cell.Column];
+            var width = Width(cell.Column, cell.Span);
 
             if (cell.Fill is { } cellFill)
             {
-                page.FillRectangle(left, y, _widths[index], height, cellFill);
+                page.FillRectangle(left, y, width, height, cellFill);
             }
 
             for (var line = firstLine; line < Math.Min(cell.Lines.Count, firstLine + lineCount); line++)
@@ -223,8 +270,8 @@ internal sealed class ReportPdfTableWriter
                 var textWidth = cell.Font.Measure(text, _layout.FontSize);
                 var x = cell.Align switch
                 {
-                    ReportColumnAlign.End => left + _widths[index] - HorizontalPadding - textWidth,
-                    ReportColumnAlign.Center => left + ((_widths[index] - textWidth) / 2),
+                    ReportColumnAlign.End => left + width - HorizontalPadding - textWidth,
+                    ReportColumnAlign.Center => left + ((width - textWidth) / 2),
                     _ => left + HorizontalPadding,
                 };
 
@@ -241,7 +288,7 @@ internal sealed class ReportPdfTableWriter
         _flow.Advance(height);
     }
 
-    private sealed record Cell(List<string> Lines, ReportPdfFont Font, ReportPdfColor Color, ReportPdfColor? Fill, ReportColumnAlign Align);
+    private sealed record Cell(List<string> Lines, ReportPdfFont Font, ReportPdfColor Color, ReportPdfColor? Fill, ReportColumnAlign Align, int Column, int Span);
 
     private sealed class Row
     {
