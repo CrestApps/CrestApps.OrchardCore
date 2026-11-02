@@ -115,6 +115,7 @@
             return {
                 id: column.id,
                 hidden: !!column.hidden,
+                shelf: designer.shelfOf(column),
                 label: known ? known.label : designer.columnLabel(column, field, app.config.aggregateLabels),
                 dataType: known ? known.dataType : (field ? field.dataType : 'Text'),
                 isMeasure: known ? known.isMeasure : designer.isMeasure(column, field)

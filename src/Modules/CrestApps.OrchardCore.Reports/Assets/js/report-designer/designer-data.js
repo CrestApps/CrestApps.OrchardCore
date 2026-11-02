@@ -35,6 +35,46 @@
 
     designer.FIELD_MIME = FIELD_MIME;
 
+    // The label of a calculated field made with a quick formula, such as "Sum of Total".
+    function quickLabel(formula, field) {
+        return app.t('{0} of {1}').replace('{0}', app.t(formula.label)).replace('{1}', field.label);
+    }
+
+    // The menu of a field of the Data pane: add it to a shelf, or make a calculated field of it with a common formula.
+    app.fieldMenu = function (field, x, y) {
+        var add = function (shelf) {
+            return function () {
+                var column = designer.addColumn(app.design.query, field, null, shelf);
+
+                app.selection = { kind: 'column', id: column.id };
+                app.changed();
+            };
+        };
+        var formulas = designer.quickFormulas(field, app.functions);
+
+        ui.menu([
+            { header: field.label },
+            { label: app.t('Add to Columns'), icon: 'fa-table-columns', action: add('Columns') },
+            { label: app.t('Add to Rows'), icon: 'fa-table-list', action: add('Rows') },
+            { label: app.t('Add to filters'), icon: 'fa-filter', action: function () {
+                app.selection = { kind: 'filter', id: designer.addFilter(app.design.query, field).id };
+                app.changed();
+            } },
+            formulas.length || field.key !== designer.ROW_COUNT_FIELD ? { divider: true } : null,
+            formulas.length ? {
+                label: app.t('New calculated field'),
+                icon: 'fa-square-root-variable',
+                items: formulas.map(function (formula) {
+                    return { label: app.t(formula.label), action: function () {
+                        app.openFormula(null, { label: quickLabel(formula, field), expression: formula.expression });
+                    } };
+                }).concat([{ divider: true }, { label: app.t('Custom formula…'), action: function () {
+                    app.openFormula(null, { label: '', expression: '[' + field.key + ']' });
+                } }])
+            } : null
+        ], x, y);
+    };
+
     function fieldItem(field) {
         var item = h('li', {
             className: 'report-designer-field list-group-item list-group-item-action d-flex align-items-center gap-2 py-1',
@@ -45,6 +85,10 @@
                 event.dataTransfer.setData(FIELD_MIME, field.key);
                 event.dataTransfer.setData('text/plain', '[' + field.key + ']');
                 event.dataTransfer.effectAllowed = 'copy';
+            },
+            oncontextmenu: function (event) {
+                event.preventDefault();
+                app.fieldMenu(field, event.clientX, event.clientY);
             }
         },
         h('span', { className: 'report-designer-type badge text-bg-light' + (field.isAggregate ? ' is-measure' : '') }, designer.typeGlyph(field.dataType)),
@@ -72,7 +116,19 @@
                 app.selection = { kind: 'filter', id: filter.id };
                 app.changed();
             }
-        }, ui.icon('fa-filter')));
+        }, ui.icon('fa-filter')),
+        h('button', {
+            type: 'button',
+            className: 'btn btn-link btn-sm p-0 report-designer-field-action',
+            title: app.t('More options'),
+            'aria-label': app.t('More options') + ': ' + field.label,
+            'aria-haspopup': 'true',
+            onclick: function (event) {
+                var box = event.currentTarget.getBoundingClientRect();
+
+                app.fieldMenu(field, box.left, box.bottom + 2);
+            }
+        }, ui.icon('fa-ellipsis-vertical')));
 
         return item;
     }
@@ -565,10 +621,12 @@
         });
     }
 
-    app.openFormula = function (existing) {
+    // Opens the formula window on a calculated field, or on a new one, optionally started with a label and a formula
+    // (seed), such as one picked from a field's common formulas.
+    app.openFormula = function (existing, seed) {
         var query = app.design.query;
         var fields = app.fields();
-        var editing = existing || { name: '', label: '', expression: '' };
+        var editing = existing || { name: '', label: (seed && seed.label) || '', expression: (seed && seed.expression) || '' };
         var label = h('input', { type: 'text', className: 'form-control mb-2', value: editing.label || '', placeholder: app.t('Label, such as Profit margin'), maxlength: '200' });
         var name = h('input', { type: 'text', className: 'form-control mb-2', value: editing.name || '', placeholder: app.t('Name used in formulas, such as ProfitMargin'), pattern: '[A-Za-z][A-Za-z0-9_]*', disabled: !!existing });
         var formula = h('textarea', { className: 'form-control font-monospace mb-2', rows: '5', spellcheck: 'false', placeholder: 'SUM([Order.Total]) / COUNTD([Customer.ContentItemId])' }, editing.expression || '');
@@ -581,29 +639,84 @@
             formula.focus();
             formula.setSelectionRange(start + text.length, start + text.length);
         };
+        // Each field inserts itself, or, from its menu, a common formula of its type such as SUM or COUNTD around it.
         var fieldList = h('div', { className: 'list-group list-group-flush report-designer-formula-list' }, Object.keys(fields)
             .map(function (key) {
                 return fields[key];
             })
             .filter(function (field) {
-                return field.key !== editing.name;
+                return field.key !== editing.name && field.key !== designer.ROW_COUNT_FIELD;
             })
             .map(function (field) {
-                return h('button', { type: 'button', className: 'list-group-item list-group-item-action py-1 small', title: field.key, onclick: function () {
-                    insert('[' + field.key + ']');
-                } }, h('span', { className: 'badge text-bg-light me-1' }, designer.typeGlyph(field.dataType)), field.label);
-            }));
-        var functionList = h('div', { className: 'list-group list-group-flush report-designer-formula-list' }, app.functions.map(function (fn) {
-            return h('button', { type: 'button', className: 'list-group-item list-group-item-action py-1 small', title: fn.description, onclick: function () {
-                insert(fn.name + '(');
-            } }, h('code', null, fn.signature), h('div', { className: 'text-muted' }, fn.description));
-        }));
+                var formulas = designer.quickFormulas(field, app.functions);
 
-        label.addEventListener('input', function () {
-            if (!existing && !name.dataset.edited) {
-                name.value = designer.aliasFor(label.value || 'Field', []);
-            }
+                return h('div', { className: 'list-group-item d-flex align-items-center gap-1 py-0 px-1 small' },
+                    h('button', { type: 'button', className: 'btn btn-sm btn-link text-reset text-decoration-none text-start flex-grow-1 py-1 px-1 text-truncate', title: field.key, onclick: function () {
+                        insert('[' + field.key + ']');
+                    } }, h('span', { className: 'badge text-bg-light me-1' }, designer.typeGlyph(field.dataType)), field.label),
+                    formulas.length ? h('button', {
+                        type: 'button',
+                        className: 'btn btn-sm btn-outline-secondary py-0 px-1 rd-quick-formula',
+                        title: app.t('Insert a common formula'),
+                        'aria-label': app.t('Insert a common formula') + ': ' + field.label,
+                        'aria-haspopup': 'true',
+                        onclick: function (event) {
+                            var box = event.currentTarget.getBoundingClientRect();
+
+                            ui.menu([{ header: field.label }].concat(formulas.map(function (formula) {
+                                return { label: app.t(formula.label), action: function () {
+                                    insert(formula.expression);
+
+                                    if (!label.value.trim()) {
+                                        label.value = quickLabel(formula, field);
+                                        label.dispatchEvent(new root.Event('input'));
+                                    }
+                                } };
+                            })), box.left, box.bottom + 2);
+                        }
+                    }, 'ƒ', ui.icon('fa-caret-down small ms-1')) : null);
+            }));
+        var functionSearch = h('input', { type: 'search', className: 'form-control form-control-sm mb-1', placeholder: app.t('Search functions'), 'aria-label': app.t('Search functions') });
+        var functionList = h('div', { className: 'list-group list-group-flush report-designer-formula-list' });
+        var renderFunctions = function () {
+            var text = functionSearch.value.trim().toLowerCase();
+            var category = null;
+
+            ui.clear(functionList);
+            app.functions.filter(function (fn) {
+                return !text || (fn.name + ' ' + fn.description + ' ' + (fn.category || '')).toLowerCase().indexOf(text) >= 0;
+            }).slice().sort(function (left, right) {
+                return String(left.category || '').localeCompare(String(right.category || '')) || String(left.name).localeCompare(String(right.name));
+            }).forEach(function (fn) {
+                if (fn.category !== category) {
+                    category = fn.category;
+                    functionList.appendChild(h('div', { className: 'list-group-item py-1 small fw-semibold text-muted bg-body-tertiary' }, category || app.t('Other')));
+                }
+
+                functionList.appendChild(h('button', { type: 'button', className: 'list-group-item list-group-item-action py-1 small', title: fn.description, onclick: function () {
+                    insert(fn.name + '(');
+                } }, h('code', null, fn.signature), h('div', { className: 'text-muted' }, fn.description)));
+            });
+        };
+
+        functionSearch.addEventListener('input', renderFunctions);
+        renderFunctions();
+
+        // The name follows the label until it is edited, and is not one another calculated field has.
+        var takenNames = (query.calculatedFields || []).map(function (other) {
+            return { alias: other.name };
         });
+        var suggestName = function () {
+            if (!existing && !name.dataset.edited) {
+                name.value = designer.aliasFor(label.value || 'Field', takenNames);
+            }
+        };
+
+        label.addEventListener('input', suggestName);
+
+        if (editing.label) {
+            suggestName();
+        }
         name.addEventListener('input', function () {
             name.dataset.edited = 'true';
         });
@@ -655,7 +768,7 @@
                 h('p', { className: 'small text-muted mb-0' }, app.t('Write fields in square brackets. Use an aggregate function such as SUM or COUNTD to calculate one value per group.'))),
             h('div', { className: 'col-12 col-md-5' },
                 h('div', { className: 'small fw-semibold' }, app.t('Fields')), fieldList,
-                h('div', { className: 'small fw-semibold mt-2' }, app.t('Functions')), functionList)), [
+                h('div', { className: 'small fw-semibold mt-2' }, app.t('Functions')), functionSearch, functionList)), [
             existing ? h('button', { type: 'button', className: 'btn btn-outline-danger me-auto', onclick: function () {
                 query.calculatedFields = query.calculatedFields.filter(function (other) {
                     return other.name !== existing.name;

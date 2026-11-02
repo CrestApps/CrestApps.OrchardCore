@@ -221,7 +221,8 @@
         });
     }
 
-    designer.addColumn = function (query, field, index) {
+    // Adds a column for a field to a shelf (Columns when none is given), at a position among that shelf's columns.
+    designer.addColumn = function (query, field, index, shelf) {
         query.columns = query.columns || [];
 
         var column = {
@@ -231,13 +232,185 @@
             aggregate: designer.defaultAggregate(field),
             transform: 'None',
             format: null,
-            hidden: false
+            hidden: false,
+            shelf: 'Columns'
         };
-        var position = typeof index === 'number' && index >= 0 && index <= query.columns.length ? index : query.columns.length;
 
-        query.columns.splice(position, 0, column);
+        query.columns.push(column);
+        designer.placeColumn(query, column.id, shelf || 'Columns', index);
 
         return column;
+    };
+
+    // The shelf a column is on: Rows, or Columns for every other column.
+    designer.shelfOf = function (column) {
+        return column && column.shelf === 'Rows' ? 'Rows' : 'Columns';
+    };
+
+    // The columns placed on a shelf, in order.
+    designer.shelfColumns = function (query, shelf) {
+        return (query.columns || []).filter(function (column) {
+            return designer.shelfOf(column) === shelf;
+        });
+    };
+
+    // Moves a column onto a shelf, at a position among the columns already on it (after the last one when the position
+    // is missing or past the end). The other columns keep their order. Returns the column, or null when there is none.
+    designer.placeColumn = function (query, columnId, shelf, index) {
+        var columns = query.columns || [];
+        var column = columns.filter(function (candidate) {
+            return candidate.id === columnId;
+        })[0];
+
+        if (!column) {
+            return null;
+        }
+
+        var rest = columns.filter(function (candidate) {
+            return candidate !== column;
+        });
+        var onShelf = rest.filter(function (candidate) {
+            return designer.shelfOf(candidate) === shelf;
+        });
+        var position;
+
+        if (typeof index === 'number' && index >= 0 && index < onShelf.length) {
+            position = rest.indexOf(onShelf[index]);
+        } else {
+            position = onShelf.length ? rest.indexOf(onShelf[onShelf.length - 1]) + 1 : rest.length;
+        }
+
+        column.shelf = shelf === 'Rows' ? 'Rows' : 'Columns';
+        rest.splice(position, 0, column);
+        columns.length = 0;
+        Array.prototype.push.apply(columns, rest);
+        query.columns = columns;
+
+        return column;
+    };
+
+    // Sorts the result by one column first, keeping the other sorts after it.
+    designer.sortBy = function (query, columnId, descending) {
+        query.sorts = (query.sorts || []).filter(function (sort) {
+            return sort.columnId !== columnId;
+        });
+        query.sorts.unshift({ columnId: columnId, descending: !!descending });
+    };
+
+    // The operators a color rule can compare a column's values with.
+    designer.colorOperatorsFor = function (dataType) {
+        return designer.operatorsFor(dataType).filter(function (operator) {
+            return ['In', 'NotIn', 'InLastDays', 'InNextDays'].indexOf(operator) < 0;
+        });
+    };
+
+    // The colors offered next to a color box: strong colors for text and soft ones for cell backgrounds.
+    designer.COLOR_SWATCHES = ['#DC3545', '#FD7E14', '#FFC107', '#198754', '#0D6EFD', '#6F42C1', '#6C757D',
+        '#F8D7DA', '#FFE5D0', '#FFF3CD', '#D1E7DD', '#CFE2FF', '#E2D9F3', '#E9ECEF'];
+
+    // The colors of a column, created empty when it has none.
+    designer.ensureColors = function (column) {
+        column.colors = column.colors || { headerColor: null, headerBackgroundColor: null, color: null, backgroundColor: null, scale: null, rules: [] };
+        column.colors.rules = column.colors.rules || [];
+
+        return column.colors;
+    };
+
+    // Drops a column's colors when they no longer color anything, so the design stays as it was before.
+    designer.pruneColors = function (column) {
+        var colors = column.colors;
+
+        if (colors && !colors.headerColor && !colors.headerBackgroundColor && !colors.color && !colors.backgroundColor &&
+            !colors.scale && !(colors.rules || []).length) {
+            column.colors = null;
+        }
+    };
+
+    // Adds the three bands of a traffic light to a column: red below the low value, orange up to the high value, green
+    // from it. The values are left for the user to fill when they are not given.
+    designer.addTrafficLightRules = function (column, low, high, target) {
+        var colors = designer.ensureColors(column);
+        var paint = target === 'Text' ? 'Text' : 'Background';
+        var strong = paint === 'Text';
+        var lowValue = low == null ? '' : String(low);
+        var highValue = high == null ? '' : String(high);
+
+        colors.rules.push(
+            { operator: 'LessThan', values: [lowValue], color: strong ? '#DC3545' : '#F8D7DA', target: paint },
+            { operator: 'Between', values: [lowValue, highValue], color: strong ? '#FD7E14' : '#FFE5D0', target: paint },
+            { operator: 'GreaterThanOrEqual', values: [highValue], color: strong ? '#198754' : '#D1E7DD', target: paint });
+
+        return colors.rules;
+    };
+
+    // The ready-made color scales: low, middle (or null), and high colors.
+    designer.COLOR_SCALES = {
+        RedToGreen: ['#F8D7DA', '#FFF3CD', '#D1E7DD'],
+        GreenToRed: ['#D1E7DD', '#FFF3CD', '#F8D7DA'],
+        WhiteToBlue: ['#FFFFFF', null, '#6EA8FE'],
+        WhiteToRed: ['#FFFFFF', null, '#EA868F']
+    };
+
+    // The common formulas offered for a field, by its type, so the user picks one instead of typing it. Each has the
+    // name of the function it needs, a label key, and the formula with the field in it. Aggregates come first, as in a
+    // column's aggregate list; only the functions the catalog has are offered.
+    designer.quickFormulas = function (field, functions) {
+        if (!field || field.key === designer.ROW_COUNT_FIELD) {
+            return [];
+        }
+
+        var key = '[' + field.key + ']';
+        var available = {};
+        var formulas = [];
+
+        (functions || []).forEach(function (fn) {
+            available[String(fn.name).toUpperCase()] = true;
+        });
+
+        // A field that is already aggregated, such as the number of rows, cannot be aggregated again.
+        var add = function (fn, label, expression, aggregate) {
+            if ((!functions || available[fn]) && !(aggregate && field.isAggregate)) {
+                formulas.push({ fn: fn, label: label, expression: expression, isAggregate: !!aggregate });
+            }
+        };
+
+        if (isNumeric(field.dataType)) {
+            add('SUM', 'Sum', 'SUM(' + key + ')', true);
+            add('AVG', 'Average', 'AVG(' + key + ')', true);
+            add('MIN', 'Minimum', 'MIN(' + key + ')', true);
+            add('MAX', 'Maximum', 'MAX(' + key + ')', true);
+            add('MEDIAN', 'Median', 'MEDIAN(' + key + ')', true);
+        } else if (isTemporal(field.dataType) || field.dataType === 'Text') {
+            add('MIN', isTemporal(field.dataType) ? 'Earliest' : 'Minimum', 'MIN(' + key + ')', true);
+            add('MAX', isTemporal(field.dataType) ? 'Latest' : 'Maximum', 'MAX(' + key + ')', true);
+        }
+
+        add('COUNT', 'Count', 'COUNT(' + key + ')', true);
+        add('COUNTD', 'Count (distinct)', 'COUNTD(' + key + ')', true);
+
+        if (field.dataType === 'Boolean') {
+            add('SUM', 'Count of yes', 'SUM(IF(' + key + ', 1, 0))', true);
+        }
+
+        if (isNumeric(field.dataType)) {
+            add('ROUND', 'Round to 2 decimals', 'ROUND(' + key + ', 2)');
+            add('ABS', 'Absolute value', 'ABS(' + key + ')');
+        } else if (isTemporal(field.dataType)) {
+            add('YEAR', 'Year', 'YEAR(' + key + ')');
+            add('MONTH', 'Month number', 'MONTH(' + key + ')');
+            add('DATETRUNC', 'Start of the month', 'DATETRUNC(\'month\', ' + key + ')');
+            add('DATEDIFF', 'Days until today', 'DATEDIFF(\'day\', ' + key + ', TODAY())');
+        } else if (field.dataType === 'Text') {
+            add('UPPER', 'Upper case', 'UPPER(' + key + ')');
+            add('LOWER', 'Lower case', 'LOWER(' + key + ')');
+            add('PROPER', 'Capitalize words', 'PROPER(' + key + ')');
+            add('TRIM', 'Trim spaces', 'TRIM(' + key + ')');
+            add('LEN', 'Number of characters', 'LEN(' + key + ')');
+        }
+
+        add('ISBLANK', 'Is empty', 'ISBLANK(' + key + ')');
+
+        return formulas;
     };
 
     // Finds the column that shows a field in a role, adding one when there is none, so a field dropped on a visual's

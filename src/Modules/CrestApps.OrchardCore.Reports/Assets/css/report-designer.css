@@ -362,6 +362,96 @@
     box-shadow: 0 0 0 .2rem rgba(var(--bs-primary-rgb), .35);
 }
 
+.report-designer-pill .rd-pill-menu {
+    padding-left: .3rem;
+    padding-right: .3rem;
+    border-left: 1px solid rgba(var(--bs-white-rgb), .35);
+}
+
+/* Context menus: a flyout opens beside its item on hover, focus, or a click. */
+.rd-menu {
+    min-width: 12rem;
+    max-height: calc(100vh - 1rem);
+    overflow: visible;
+    font-size: .875rem;
+}
+
+.rd-menu .rd-menu-item {
+    position: relative;
+}
+
+.rd-menu .rd-menu-check {
+    display: inline-block;
+    width: 1rem;
+    text-align: center;
+    color: var(--bs-secondary-color);
+}
+
+.rd-menu .rd-submenu {
+    display: none;
+    position: absolute;
+    top: -.5rem;
+    left: 100%;
+    margin: 0;
+}
+
+.rd-menu .rd-submenu.opens-left {
+    left: auto;
+    right: 100%;
+}
+
+.rd-menu .rd-menu-item:hover > .rd-submenu,
+.rd-menu .rd-menu-item:focus-within > .rd-submenu,
+.rd-menu .rd-menu-item.is-open > .rd-submenu {
+    display: block;
+}
+
+/* Color boxes and their palette. */
+.rd-color-button {
+    padding: .1rem .4rem;
+}
+
+.rd-color-chip {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: .2rem;
+}
+
+.rd-color-chip.is-empty {
+    background: linear-gradient(to top right, transparent calc(50% - 1px), var(--bs-danger) 50%, transparent calc(50% + 1px));
+}
+
+.rd-palette {
+    width: 15rem;
+}
+
+.rd-swatches {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: .25rem;
+}
+
+.rd-swatch {
+    width: 100%;
+    aspect-ratio: 1;
+    border: 1px solid var(--bs-border-color);
+    border-radius: .25rem;
+    padding: 0;
+}
+
+.rd-swatch.is-selected,
+.rd-swatch:focus-visible {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 1px;
+}
+
+.rd-quick-formula {
+    font-style: italic;
+    font-family: var(--bs-font-serif, Georgia, serif);
+}
+
 .report-designer-preview {
     position: relative;
     min-height: 10rem;

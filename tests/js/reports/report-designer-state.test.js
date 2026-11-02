@@ -161,6 +161,107 @@ describe('columns and filters', () => {
     });
 });
 
+describe('shelves', () => {
+    it('adds a field to the Rows shelf and keeps each shelf in its own order', () => {
+        const value = design();
+        const total = designer.addColumn(value.query, field('Order.Total', 'Decimal'));
+        const region = designer.addColumn(value.query, field('Customer.Region', 'Text'), 0, 'Rows');
+        const name = designer.addColumn(value.query, field('Customer.Name', 'Text'), 0, 'Rows');
+        const status = designer.addColumn(value.query, field('Order.Status', 'Text'), 0);
+
+        expect(designer.shelfColumns(value.query, 'Rows').map(column => column.id)).toEqual([name.id, region.id]);
+        expect(designer.shelfColumns(value.query, 'Columns').map(column => column.id)).toEqual([status.id, total.id]);
+        expect(region.shelf).toBe('Rows');
+        expect(designer.shelfOf({})).toBe('Columns');
+    });
+
+    it('moves a column to the other shelf at a position among its columns', () => {
+        const value = design();
+        const total = designer.addColumn(value.query, field('Order.Total', 'Decimal'));
+        const region = designer.addColumn(value.query, field('Customer.Region', 'Text'), null, 'Rows');
+        const status = designer.addColumn(value.query, field('Order.Status', 'Text'));
+
+        designer.placeColumn(value.query, status.id, 'Rows', 0);
+
+        expect(designer.shelfColumns(value.query, 'Rows').map(column => column.id)).toEqual([status.id, region.id]);
+        expect(designer.shelfColumns(value.query, 'Columns').map(column => column.id)).toEqual([total.id]);
+        expect(designer.placeColumn(value.query, 'missing', 'Rows', 0)).toBeNull();
+    });
+
+    it('sorts by a column first and keeps the other sorts after it', () => {
+        const value = design();
+
+        value.query.sorts = [{ columnId: 'a', descending: false }, { columnId: 'b', descending: true }];
+        designer.sortBy(value.query, 'b', false);
+
+        expect(value.query.sorts).toEqual([{ columnId: 'b', descending: false }, { columnId: 'a', descending: false }]);
+    });
+});
+
+describe('column colors', () => {
+    it('adds red, orange and green bands that fill the cells', () => {
+        const column = { id: 'c1' };
+
+        designer.addTrafficLightRules(column, 20, 50);
+
+        expect(column.colors.rules).toEqual([
+            { operator: 'LessThan', values: ['20'], color: '#F8D7DA', target: 'Background' },
+            { operator: 'Between', values: ['20', '50'], color: '#FFE5D0', target: 'Background' },
+            { operator: 'GreaterThanOrEqual', values: ['50'], color: '#D1E7DD', target: 'Background' },
+        ]);
+    });
+
+    it('drops colors that no longer color anything', () => {
+        const column = { id: 'c1' };
+
+        designer.ensureColors(column).color = '#DC3545';
+        designer.pruneColors(column);
+        expect(column.colors.color).toBe('#DC3545');
+
+        column.colors.color = null;
+        designer.pruneColors(column);
+        expect(column.colors).toBeNull();
+    });
+
+    it('compares values with single values and ranges only', () => {
+        expect(designer.colorOperatorsFor('Decimal')).toContain('Between');
+        expect(designer.colorOperatorsFor('Decimal')).not.toContain('In');
+        expect(designer.colorOperatorsFor('Date')).not.toContain('InLastDays');
+        expect(designer.colorOperatorsFor('Text')).toContain('Contains');
+    });
+});
+
+describe('quick formulas', () => {
+    const functions = ['SUM', 'AVG', 'MIN', 'MAX', 'MEDIAN', 'COUNT', 'COUNTD', 'ROUND', 'ABS', 'UPPER', 'LOWER', 'TRIM', 'LEN', 'YEAR', 'DATETRUNC', 'ISBLANK']
+        .map(name => ({ name }));
+
+    it('offers the aggregates and functions that suit the type of a field', () => {
+        const number = designer.quickFormulas(field('Order.Total', 'Decimal'), functions).map(formula => formula.expression);
+        const text = designer.quickFormulas(field('Order.Status', 'Text'), functions).map(formula => formula.expression);
+        const date = designer.quickFormulas(field('Order.Placed', 'DateTime'), functions).map(formula => formula.expression);
+
+        expect(number.slice(0, 3)).toEqual(['SUM([Order.Total])', 'AVG([Order.Total])', 'MIN([Order.Total])']);
+        expect(number).toContain('ROUND([Order.Total], 2)');
+        expect(text).not.toContain('SUM([Order.Status])');
+        expect(text).toEqual(expect.arrayContaining(['MIN([Order.Status])', 'COUNTD([Order.Status])', 'UPPER([Order.Status])']));
+        expect(date).toContain('DATETRUNC(\'month\', [Order.Placed])');
+    });
+
+    it('offers only the functions the catalog has', () => {
+        const expressions = designer.quickFormulas(field('Order.Placed', 'DateTime'), functions).map(formula => formula.expression);
+
+        expect(expressions.some(expression => expression.startsWith('MONTH('))).toBe(false);
+        expect(expressions.some(expression => expression.startsWith('DATEDIFF('))).toBe(false);
+    });
+
+    it('does not aggregate a field that is already aggregated', () => {
+        const formulas = designer.quickFormulas(field('Margin', 'Decimal', { isAggregate: true }), functions);
+
+        expect(formulas.some(formula => formula.isAggregate)).toBe(false);
+        expect(designer.quickFormulas(field(designer.ROW_COUNT_FIELD, 'Integer', { isAggregate: true }), functions)).toEqual([]);
+    });
+});
+
 describe('join suggestions', () => {
     it('matches an order picker that names the customer with the customer id', () => {
         const customer = {
