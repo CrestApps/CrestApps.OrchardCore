@@ -954,6 +954,13 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         Assert.Contains(EndCallTool.ToolName, orchestration.MustIncludeTools);
         Assert.Contains(OmnichannelHandoffHelper.TransferToAgentToolName, orchestration.MustIncludeTools);
         Assert.Contains("Hand off when the customer asks for a human.", orchestration.SystemMessageBuilder.ToString());
+
+        // The call's tools are registered hidden, so the session is given them only because its context names them.
+        // They used to be attached as scoped registry entries, which the realtime orchestrator does not read.
+        Assert.Contains(EndCallTool.ToolName, orchestration.CompletionContext.ToolNames);
+        Assert.Contains(PressKeysTool.ToolName, orchestration.CompletionContext.ToolNames);
+        Assert.Contains(OmnichannelHandoffHelper.TransferToAgentToolName, orchestration.CompletionContext.ToolNames);
+        Assert.Equal(orchestration.CompletionContext.ToolNames.Length, orchestration.CompletionContext.ToolNames.Distinct().Count());
     }
 
     [Fact]
@@ -973,6 +980,7 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         var orchestration = harness.Orchestrator.Contexts.Single();
 
         Assert.DoesNotContain(OmnichannelHandoffHelper.TransferToAgentToolName, orchestration.MustIncludeTools);
+        Assert.DoesNotContain(OmnichannelHandoffHelper.TransferToAgentToolName, orchestration.CompletionContext.ToolNames);
         Assert.Contains(VoiceCallGuidance.NobodyToHandTo, orchestration.SystemMessageBuilder.ToString(), StringComparison.Ordinal);
     }
 
