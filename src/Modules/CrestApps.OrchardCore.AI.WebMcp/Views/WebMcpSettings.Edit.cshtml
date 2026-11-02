@@ -29,7 +29,19 @@
 <div class="ocat-wrapper">
     <div class="ocat-end-offset">
         <div class="form-check">
-            <input type="checkbox" class="form-check-input" asp-for="ExposeAllTools" />
+            <input type="checkbox" class="form-check-input" asp-for="EnablePageTools" />
+            <label class="form-check-label" asp-for="EnablePageTools">
+                @T["Add page tools"]
+            </label>
+            <span class="hint dashed">@T["When enabled, the pages that offer WebMCP tools also get page tools: page info, the page's links, opening another page of the site, and reading and filling its forms. They never submit a form."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="ExposeAllTools" data-webmcp-expose-all-tools="true" />
             <label class="form-check-label" asp-for="ExposeAllTools">
                 @T["Expose all tools"]
             </label>
@@ -37,3 +49,28 @@
         </div>
     </div>
 </div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', () => {
+        const exposeAllTools = document.querySelector('[data-webmcp-expose-all-tools="true"]');
+
+        if (!exposeAllTools) {
+            return;
+        }
+
+        // The tool pickers are separate shapes in the same WebMCP tab; look only inside that tab, because other cards
+        // on the settings page (such as the MCP Server) render the same pickers.
+        const scope = exposeAllTools.closest('.tab-pane') || exposeAllTools.closest('form') || document;
+        const toolSelectors = [
+            scope.querySelector('.tool-groups-container')?.closest('.ocat-wrapper'),
+            scope.querySelector('[id^="tool-instance-"]')?.closest('.ocat-wrapper'),
+        ].filter(Boolean);
+
+        function toggleToolSelectors() {
+            toolSelectors.forEach(section => section.classList.toggle('d-none', exposeAllTools.checked));
+        }
+
+        exposeAllTools.addEventListener('change', toggleToolSelectors);
+        toggleToolSelectors();
+    });
+</script>

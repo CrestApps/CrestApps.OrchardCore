@@ -2,7 +2,7 @@
 sidebar_label: WebMCP
 sidebar_position: 5
 title: WebMCP
-description: Register AI tools and page tools with the standard WebMCP API, and let the AI chat discover and run every WebMCP tool the user's page exposes.
+description: Register AI tools, per-content-item tools and page tools with the standard WebMCP API, and let the AI chat discover and run every WebMCP tool the user's page exposes.
 user_manual:
   - user-manual/ai/webmcp
 ---
@@ -10,27 +10,29 @@ user_manual:
 | | |
 | --- | --- |
 | **Module** | `CrestApps.OrchardCore.AI.WebMcp` |
+| **Feature** | WebMCP (`CrestApps.OrchardCore.AI.WebMcp`) |
 | **Category** | Artificial Intelligence - MCP |
 
 [WebMCP](https://webmachinelearning.github.io/webmcp/) is a proposed web standard of the W3C Web Machine Learning Community Group. It lets a web page give tools to an AI agent in the browser, such as the browser's own assistant, an agent extension, or a chat on the page. The page registers each tool with `document.modelContext.registerTool()`: a name, a description, a JSON schema, annotations and a JavaScript `execute` function. An agent lists the tools with `getTools()` and runs one with `executeTool()`. The tool runs in the page with the user's session, so no API key or OAuth setup is needed.
 
-The module is a thin Orchard Core layer over [CrestApps.Core's WebMCP](https://crestapps.com/docs/core/mcp/webmcp) (`CrestApps.Core.AI.WebMcp` and the `@crestapps/webmcp` scripts), and uses only the standard API. It has three features:
+The module is a thin Orchard Core layer over [CrestApps.Core's WebMCP](https://crestapps.com/docs/core/mcp/webmcp) (`CrestApps.Core.AI.WebMcp` and the `@crestapps/webmcp` scripts), and uses only the standard API. It is one feature, **WebMCP**, which adds:
 
-| Feature name | Feature ID | What it adds |
-| --- | --- | --- |
-| WebMCP Tools | `CrestApps.OrchardCore.AI.WebMcp` | Gives the AI tools and [tool instances](../tool-instances.md) you select to browser agents, on the pages a signed-in user opens. |
-| WebMCP Page Tools | `CrestApps.OrchardCore.AI.WebMcp.PageTools` | Adds tools that work on the page itself: page info, links, opening a page, and reading and filling forms. |
-| WebMCP Chat Bridge | `CrestApps.OrchardCore.AI.WebMcp.Chat` | Lets the Orchard Core [AI chat](../chat.md) discover and run **every** WebMCP tool the page the user has open exposes, whoever registered it, for the AI profiles that allow it. |
+| Part | What it does |
+| --- | --- |
+| [Site tools](#site-tools) | Gives the AI tools and [tool instances](../tool-instances.md) you select on the **WebMCP** settings card to every page a signed-in user opens (admin pages by default). |
+| [Content item tools](#content-item-tools) | The **WebMCP tools** content part: attach it to a content type, and each content item picks the tools its own page exposes. |
+| [Page tools](#page-tools) | Tools that work on the page itself: page info, links, opening a page, and reading and filling forms. On by default; the **Add page tools** setting turns them off. |
+| [The AI chat as a WebMCP agent](#the-ai-chat-as-a-webmcp-agent) | When **AI Chat** is enabled, the [AI chat](../chat.md) discovers and runs **every** WebMCP tool the page exposes, whoever registered it, for the AI profiles that allow it. It switches on by itself with AI Chat (`[RequireFeatures]`); there is nothing else to enable. |
 
 Using the settings screen and the profile switch is described in the User Manual under [WebMCP](../../user-manual/ai/webmcp.md).
 
 :::note[Browser support]
-WebMCP is experimental. Chrome and Edge are trialling it natively. In the other browsers, the W3C reference polyfill (`webmcp-polyfill.js`, resource `CrestAppsWebMcpPolyfill`) installs `document.modelContext`, so the tools and the chat bridge work everywhere. WebMCP needs a secure context: HTTPS, or `localhost` while developing.
+WebMCP is experimental. Chrome and Edge are trialling it natively. In the other browsers, the W3C reference polyfill (`webmcp-polyfill.js`, resource `CrestAppsWebMcpPolyfill`) installs `document.modelContext`, so the tools and the AI chat work everywhere. WebMCP needs a secure context: HTTPS, or `localhost` while developing.
 :::
 
 ## How it compares with the MCP server
 
-| | [MCP Server](server.md) | WebMCP Tools |
+| | [MCP Server](server.md) | WebMCP |
 | --- | --- | --- |
 | Who calls the tools | A remote MCP client | An agent in the user's browser |
 | Transport | Streamable HTTP at `/mcp` | `document.modelContext` in the page, and two same-origin endpoints |
@@ -40,7 +42,7 @@ WebMCP is experimental. Chrome and Edge are trialling it natively. In the other 
 
 Both features read the same tool catalog: tools registered with `AddCoreAITool<T>()` that are selectable (neither system tools nor hidden) and the configured tool instances. WebMCP adds no tools of its own to that catalog.
 
-## WebMCP Tools
+## Site tools
 
 ### Who gets the scripts
 
@@ -50,7 +52,7 @@ A full page (an MVC view or Razor page) gets the WebMCP scripts when all of thes
 2. The page kind is turned on: admin pages by default, front-end pages only when **Offer tools on front-end pages** is on.
 3. The user has the **Use WebMCP tools in the browser** (`UseWebMcpTools`) permission. Administrators have it by default.
 
-The page then gets, in order: the polyfill, CrestApps.Core's `webmcp.js` (resource `CrestAppsWebMcp`), and the scripts the enabled features add. `webmcp.js` lists the tools the user may call and registers each with `document.modelContext.registerTool()`. A tool is listed when it is selectable, the settings allow it (by **Expose all tools** or the selection), and the user has **Access AI tool** for it. The server checks the same rules again on every call.
+The page then gets, in order: the polyfill, CrestApps.Core's `webmcp.js` (resource `CrestAppsWebMcp`), the page tools (unless **Add page tools** is off), and the scripts other modules add. `webmcp.js` lists the tools the user may call and registers each with `document.modelContext.registerTool()`. A tool is listed when it is selectable, the settings allow it (by **Expose all tools** or the selection), and the user has **Access AI tool** for it. The server checks the same rules again on every call.
 
 ### Endpoints
 
@@ -65,7 +67,7 @@ A tool that throws answers `isError: true` with a generic message. The exception
 
 ### Registering your own tools
 
-A theme or module registers its own tools with the standard API. Nothing CrestApps-specific is needed, and the chat bridge finds them like any other tool:
+A theme or module registers its own tools with the standard API. Nothing CrestApps-specific is needed, and the AI chat finds them like any other tool:
 
 ```javascript
 const registration = new AbortController();
@@ -115,7 +117,8 @@ The `CrestApps:AI:WebMcp` shell configuration section overrides the stored setti
 | --- | --- |
 | `ExposeAllTools`, `Tools` | The tools given to browser agents (tool and tool instance names). |
 | `EnableOnAdminPages`, `EnableOnFrontEndPages` | The page kinds that get the scripts. |
-| `PageToolOrigins` | The origins of cross-origin frames whose shared tools the chat bridge may use. Empty by default. See [Frames on other origins](#frames-on-other-origins). |
+| `EnablePageTools` | Whether those pages also get the page tools. On by default. |
+| `PageToolOrigins` | The origins of cross-origin frames whose shared tools the AI chat may use. Empty by default. See [Frames on other origins](#frames-on-other-origins). |
 
 ```json
 {
@@ -137,11 +140,28 @@ OrchardCore__CrestApps__AI__WebMcp__EnableOnFrontEndPages=false
 OrchardCore__CrestApps__AI__WebMcp__Tools__0=listTimeZones
 ```
 
-Saving the **WebMCP** settings card releases the tenant, so the new selection takes effect on the next request.
+Saving the **WebMCP** settings card releases the tenant, so the new selection takes effect on the next request. While **Expose all tools** is checked, the card hides the tool lists, because they are ignored.
 
-## WebMCP Page Tools
+## Content item tools
 
-The feature adds CrestApps.Core's `webmcp-page-tools.js` (resource `CrestAppsWebMcpPageTools`) to the pages that get the WebMCP scripts. It registers these tools with `document.modelContext`, so any WebMCP agent can use them:
+WebMCP lets each page expose its own tools, not only the tools every page gets. The **WebMCP tools** content part (`WebMcpPart`) does that for content items. It is available when Orchard Core's **Contents** feature is enabled.
+
+1. Attach **WebMCP tools** to a content type (**Content Definition → Content Types → Edit → Add Parts**).
+2. When creating or editing a content item of that type, pick the tools its page exposes. The list shows only the selectable tools and tool instances the editor may use (**Access AI tool**); tools another editor picked that the current editor may not use stay selected.
+3. On the content item's page (its **Detail** display), signed-in users with **Use WebMCP tools in the browser** get those tools, registered with `document.modelContext.registerTool()` like the site tools. Each call goes to the item's own endpoints:
+
+| Method and route | What it does |
+| --- | --- |
+| `GET /api/ai/webmcp/content-items/{contentItemId}/tools` | Lists the item's tools the user may call. |
+| `POST /api/ai/webmcp/content-items/{contentItemId}/tools/{name}/invoke` | Calls one of them, with the antiforgery token. |
+
+On every list and call, the server checks: the user is signed in and has **Use WebMCP tools in the browser**; the published content item has the part with that tool selected; the user may **view** the content item; and the user has **Access AI tool** for the tool. Anything else answers `404`, except `401` when not signed in and `403` without the WebMCP permission.
+
+The item's tools are added even when front-end pages are off on the settings card, because the editor chose them for that page. The site tools and page tools still follow the settings. The scripts are added through the resource manager, so they reach the page whatever zones the theme's template renders. The AI chat sees the item's tools among the page's tools, so on that page a profile with **Allow page tools** can run them; each run goes through the item's endpoint with the same checks.
+
+## Page tools
+
+When **Add page tools** is on (the default), the pages that get the WebMCP scripts also get CrestApps.Core's `webmcp-page-tools.js` (resource `CrestAppsWebMcpPageTools`). It registers these tools with `document.modelContext`, so any WebMCP agent can use them:
 
 | Tool | Read-only | What it does |
 | --- | --- | --- |
@@ -151,9 +171,9 @@ The feature adds CrestApps.Core's `webmcp-page-tools.js` (resource `CrestAppsWeb
 | `page_list_form_fields` | Yes | Up to 200 fields of the page's forms: name, id, label, type, value (cut to 2,000 characters), required and, for lists, the choices. Hidden, password, file, button and disabled fields and the antiforgery token are left out. |
 | `page_set_form_field` | No | Puts a value into one listed field, found by name, id or label, and raises `input` and `change`. For a list, the value is a choice's value or text. It never submits the form. |
 
-## WebMCP Chat Bridge
+## The AI chat as a WebMCP agent
 
-The chat bridge makes the AI chat a WebMCP agent for the tab the user has open. It uses every tool `document.modelContext.getTools()` lists, not only the CrestApps ones. It runs through the AI chat's own SignalR hub, so it opens no extra connection:
+When the **AI Chat** feature is enabled, the module makes the AI chat a WebMCP agent for the tab the user has open. It uses every tool `document.modelContext.getTools()` lists, not only the CrestApps ones. It runs through the AI chat's own SignalR hub, so it opens no extra connection:
 
 1. Before it sends a message, the chat (`ai-chat.js`) reads the page's tools and sends them to the hub with `SetPageTools`, when they changed since the last message. It leaves out the site's AI tools, because the chat reaches those on the server. A tool registered after the page loaded is picked up with the next message.
 2. The hub checks each tool: at most 64 tools, WebMCP names (`^[A-Za-z0-9_.-]{1,128}$`), a description of at most 2,000 characters and a JSON object schema of at most 16 KB, and keeps them for the connection.
@@ -177,7 +197,7 @@ WebMCP names may contain `.`, which AI providers do not accept in function names
 
 ### Frames on other origins
 
-A frame on another origin can share its tools with the page by registering them with `exposedTo`, and the page must allow it with the `tools` permissions policy: `<iframe src="https://partner.example" allow="tools">`. List the frame's origin under `PageToolOrigins` for the chat bridge to use those tools.
+A frame on another origin can share its tools with the page by registering them with `exposedTo`, and the page must allow it with the `tools` permissions policy: `<iframe src="https://partner.example" allow="tools">`. List the frame's origin under `PageToolOrigins` for the AI chat to use those tools.
 
 ### Configuration
 

@@ -1,7 +1,7 @@
 namespace CrestApps.OrchardCore.AI.WebMcp.Models;
 
 /// <summary>
-/// The site settings of the WebMCP Tools feature. <see cref="Services.WebMcpOptionsConfiguration"/> loads them into
+/// The site settings of the WebMCP feature. <see cref="Services.WebMcpOptionsConfiguration"/> loads them into
 /// <see cref="CrestApps.Core.AI.WebMcp.Models.WebMcpOptions"/> and <see cref="WebMcpPageOptions"/>.
 /// </summary>
 public sealed class WebMcpSettings
@@ -27,4 +27,11 @@ public sealed class WebMcpSettings
     /// Gets or sets a value indicating whether front-end pages offer WebMCP tools. The default is <see langword="false"/>.
     /// </summary>
     public bool EnableOnFrontEndPages { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the pages that get the WebMCP scripts also get the page tools, which
+    /// read the page, list its links, open another page of the site, and read and fill its forms. The default is
+    /// <see langword="true"/>.
+    /// </summary>
+    public bool EnablePageTools { get; set; } = true;
 }

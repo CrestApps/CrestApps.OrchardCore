@@ -19,4 +19,9 @@ public class WebMcpSettingsViewModel
     /// Gets or sets a value indicating whether front-end pages offer WebMCP tools.
     /// </summary>
     public bool EnableOnFrontEndPages { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the pages that get the WebMCP scripts also get the page tools.
+    /// </summary>
+    public bool EnablePageTools { get; set; }
 }

@@ -11,12 +11,12 @@ description: >
 license: Apache-2.0
 metadata:
   author: CrestApps Team
-  version: "2.0"
+  version: "2.1"
 ---
 
 # Extending WebMCP
 
-The WebMCP module (`src/Modules/CrestApps.OrchardCore.AI.WebMcp`) is an Orchard Core layer over CrestApps.Core's WebMCP. Core owns the tool service, the endpoints, the chat's page tools and the browser scripts; this module owns the settings, the permission, the script filter, the resources and the profile options. Read the Technical Manual page `src/CrestApps.Docs/docs/ai/mcp/webmcp.md` first; it is the source of truth for routes, settings and limits.
+The WebMCP module (`src/Modules/CrestApps.OrchardCore.AI.WebMcp`) is an Orchard Core layer over CrestApps.Core's WebMCP. Core owns the tool service, the endpoints, the chat's page tools and the browser scripts; this module owns the settings, the permission, the script filter, the resources, the **WebMCP tools** content part with its endpoints, and the profile options. It is one feature: the chat side switches on with AI Chat through `[RequireFeatures]`, the content part with Orchard Core's Contents feature, and page tools are a setting (`EnablePageTools`). Do not add sub-features for these. Read the Technical Manual page `src/CrestApps.Docs/docs/ai/mcp/webmcp.md` first; it is the source of truth for routes, settings and limits.
 
 Use only the standard WebMCP API (`document.modelContext`). Never add a CrestApps-specific registry or a second hub: the chat bridge already finds every tool the page registers.
 
@@ -24,7 +24,8 @@ Use only the standard WebMCP API (`document.modelContext`). Never add a CrestApp
 
 | You want to... | Use |
 | --- | --- |
-| Let browser agents call an existing server AI tool | Nothing new: register the tool with `AddCoreAITool<T>().Selectable()` and let the operator select it on the **WebMCP** card. Never bypass the allow-list. |
+| Let browser agents call an existing server AI tool on every page | Nothing new: register the tool with `AddCoreAITool<T>().Selectable()` and let the operator select it on the **WebMCP** card. Never bypass the allow-list. |
+| Expose a server AI tool on one content item's page | Nothing new: attach the **WebMCP tools** part (`WebMcpPart`) to the content type and pick the tool on the item. Its endpoints (`api/ai/webmcp/content-items/{id}/...`) also check that the user may view the item. |
 | Add a tool that works on the page (DOM, client state) | `document.modelContext.registerTool(...)` from a script resource that depends on `CrestAppsWebMcpPolyfill` |
 | Add that script, or a setting it needs, to every page that gets the WebMCP scripts | `IWebMcpClientConfigurationHandler` |
 | Change the server behavior (tool service, endpoints, page tools in the chat, scripts) | Change CrestApps.Core, release it, then bump `CrestAppsCoreVersion` and `@crestapps/webmcp` here |
@@ -57,7 +58,7 @@ Rules: page tools never submit forms, never navigate off the site, and never rea
 
 ## Tests to add
 
-- .NET (`tests/CrestApps.OrchardCore.Tests/AI/WebMcp/`): handlers (scripts and settings added), options configuration, the script filter, and any new server rule.
+- .NET (`tests/CrestApps.OrchardCore.Tests/AI/WebMcp/`): handlers (scripts and settings added), options configuration, the script filter, the tool selection merge, the content item endpoints, and any new server rule.
 - Browser behavior of the scripts is tested in CrestApps.Core (`tests/realtime-client/webmcp*.js`), against the real polyfill.
 
 Update `src/CrestApps.Docs/docs/ai/mcp/webmcp.md`, the User Manual page `src/CrestApps.Docs/docs/user-manual/ai/webmcp.md`, and this skill in the same change.

@@ -12,7 +12,7 @@ Some web browsers now come with an AI assistant, and some people add one as a br
 | --- | --- |
 | **Menu** | Settings > Artificial Intelligence, **WebMCP** card; Artificial Intelligence > Profiles, **Capabilities** tab |
 | **Permission** | Use WebMCP tools in the browser; Manage the WebMCP settings (to change the settings); Access any AI tool, or Access AI tool - *tool name*, for each tool |
-| **Feature** | WebMCP Tools; WebMCP Page Tools (page tools); WebMCP Chat Bridge (page tools in the site's chat) |
+| **Feature** | WebMCP (the site's chat can use page tools when AI Chat is also on) |
 
 <AskYourAdmin />
 
@@ -26,21 +26,33 @@ WebMCP is new, and only some browsers have it built in. The site adds it to the 
 2. Choose where tools are offered:
    - **Offer tools on admin pages** is on at first.
    - **Offer tools on front-end pages** is off at first. Turn it on to offer tools on the site's public pages too. Visitors who are not signed in never get tools.
-3. Pick the tools. Tick the tools and tool instances an assistant may use, or turn on **Expose all tools** to offer every one of them. At first, none is offered.
-4. Click **Save**.
+3. Leave **Add page tools** on to also offer the page tools described below, or turn it off.
+4. Pick the tools. Tick the tools and tool instances an assistant may use, or turn on **Expose all tools** to offer every one of them; the tool lists are hidden while it is on. At first, none is offered.
+5. Click **Save**.
 
 | Field | What it does |
 | --- | --- |
 | **Offer tools on admin pages** | Admin pages offer tools to users who have the **Use WebMCP tools in the browser** permission. |
 | **Offer tools on front-end pages** | The site's public pages also offer tools to signed-in users who have the permission. |
+| **Add page tools** | The pages that offer tools also offer the page tools. On at first. |
 | **Expose all tools** | Every tool and tool instance in the lists is offered, and the selection is ignored. |
 | Tool and tool instance lists | The tools an assistant may use. The lists show only the tools you are allowed to use yourself. |
 
 Even when a tool is offered, each person can only use the tools their role allows (**Access any AI tool**, or **Access AI tool -** *tool name*). An assistant can never do more than the person using it.
 
+## Offer tools on one content item's page
+
+Some tools only make sense on one page, for example a product page that offers a tool to check its stock. With the **WebMCP tools** part, each content item picks the tools its own page offers.
+
+1. Open **Content Definition > Content Types**, edit the content type, click **Add Parts**, tick **WebMCP tools** and save. (Your administrator may have done this already.)
+2. Create or edit a content item of that type. In the **WebMCP tools** section, tick the tools its page should offer. The list shows only the tools you are allowed to use; tools someone else ticked that you may not use stay ticked.
+3. Publish the content item.
+
+On the item's page, signed-in people who have the **Use WebMCP tools in the browser** permission and may view the item get those tools, in addition to the tools every page offers. Each person can still only use the tools their role allows.
+
 ## Page tools
 
-With the **WebMCP Page Tools** feature on, every page that offers tools also offers these:
+With **Add page tools** on, every page that offers tools also offers these:
 
 | Tool | What it does |
 | --- | --- |
@@ -52,7 +64,7 @@ With the **WebMCP Page Tools** feature on, every page that offers tools also off
 
 ## Let the site's chat use the page you have open
 
-With the **WebMCP Chat Bridge** feature on, you can let an AI profile's chat use the tools of the page you have open, for example to ask the admin chat widget to fill in the form you are editing. The chat sees every tool the page offers: the page tools above, and tools other scripts on the page add.
+When **AI Chat** is on, you can let an AI profile's chat use the tools of the page you have open, for example to ask the admin chat widget to fill in the form you are editing. The chat sees every tool the page offers: the page tools above, a content item's own tools, and tools other scripts on the page add.
 
 1. Open **Artificial Intelligence > Profiles** and edit a chat profile.
 2. On the **Capabilities** tab, tick **Allow page tools**.

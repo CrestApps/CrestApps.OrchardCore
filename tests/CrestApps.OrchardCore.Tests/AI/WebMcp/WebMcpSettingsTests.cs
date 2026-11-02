@@ -15,6 +15,7 @@ public sealed class WebMcpSettingsTests
         Assert.Empty(settings.Tools);
         Assert.True(settings.EnableOnAdminPages);
         Assert.False(settings.EnableOnFrontEndPages);
+        Assert.True(settings.EnablePageTools);
     }
 
     [Theory]

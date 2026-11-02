@@ -18,6 +18,11 @@ public sealed class WebMcpPageOptions
     public bool EnableOnFrontEndPages { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the pages that get the WebMCP scripts also get the page tools.
+    /// </summary>
+    public bool EnablePageTools { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets the origins of cross-origin frames whose shared WebMCP tools the AI chat may use. A frame also
     /// needs <c>allow="tools"</c>. Empty by default, so the chat only uses the page's own tools.
     /// </summary>

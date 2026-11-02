@@ -36,6 +36,7 @@ public sealed class WebMcpOptionsConfigurationTests
         {
             EnableOnAdminPages = false,
             EnableOnFrontEndPages = true,
+            EnablePageTools = false,
         };
 
         // Act
@@ -44,6 +45,7 @@ public sealed class WebMcpOptionsConfigurationTests
         // Assert
         Assert.False(options.EnableOnAdminPages);
         Assert.True(options.EnableOnFrontEndPages);
+        Assert.False(options.EnablePageTools);
         Assert.False(options.IsEnabledFor(isAdminPage: true));
         Assert.True(options.IsEnabledFor(isAdminPage: false));
         Assert.Empty(options.PageToolOrigins);

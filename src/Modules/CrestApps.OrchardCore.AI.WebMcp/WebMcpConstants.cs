@@ -33,20 +33,20 @@ public static class WebMcpConstants
     public static class Feature
     {
         /// <summary>
-        /// The WebMCP Tools feature.
+        /// The WebMCP feature.
         /// </summary>
         public const string Area = "CrestApps.OrchardCore.AI.WebMcp";
-
-        /// <summary>
-        /// The WebMCP Page Tools feature.
-        /// </summary>
-        public const string PageTools = "CrestApps.OrchardCore.AI.WebMcp.PageTools";
-
-        /// <summary>
-        /// The WebMCP Chat Bridge feature.
-        /// </summary>
-        public const string Chat = "CrestApps.OrchardCore.AI.WebMcp.Chat";
     }
+
+    /// <summary>
+    /// The relative route of the endpoint that lists the tools a content item exposes to the current user.
+    /// </summary>
+    public const string ContentItemToolsRoute = $"{CoreWebMcpConstants.DefaultRoutePrefix}/content-items/{{contentItemId}}/tools";
+
+    /// <summary>
+    /// The relative route of the endpoint that calls one of the tools a content item exposes.
+    /// </summary>
+    public const string ContentItemInvokeRoute = $"{CoreWebMcpConstants.DefaultRoutePrefix}/content-items/{{contentItemId}}/tools/{{name}}/invoke";
 
     /// <summary>
     /// The names of the module's resources.
