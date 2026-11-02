@@ -30,7 +30,7 @@ The **Visuals** card on the right, under **Properties**, lists what the report s
 
 Every visual has a **Title**, shown above it, and a **Width**: **Quarter**, **Third**, **Half**, **Two thirds** or **Full**. Visuals that fit on one line are placed side by side, for example two charts at **Half**. Tables and metrics start at **Full**, charts and pivot tables at **Half**.
 
-You can also drag a field from the **Data** pane straight onto a visual's **Categories**, **Values**, **Split into series by**, **Rows**, **Columns across** or **Value** box. The builder adds the column for you: a number dropped on values is summed, and other fields dropped on values are counted.
+You can also drag a field from the **Data** pane straight onto a visual's **Categories**, **Values**, **Split into series by**, **Rows** or **Columns across** box. The builder adds the column for you: a number dropped on values is summed, and other fields dropped on values are counted.
 
 ## Table
 
@@ -76,10 +76,12 @@ A pivot table is a cross-tab:
 | --- | --- |
 | **Rows** | The dimensions down the side. |
 | **Columns across** | The dimension whose values become the columns along the top. |
-| **Value** | The measure shown in each cell. |
+| **Values** | The measures shown in each cell. With several, each value across the top gets one column per measure. |
 | **Show totals** | Adds totals for each row and column. |
 
 For example, *Assigned to* as rows, *Status* across, and the number of rows as the value shows how many activities each person has in each status.
+
+The report's own table can be a cross-tab too, without a visual: put the row dimensions on the **Rows** shelf. See [Lay out rows and columns](build-a-report.md#lay-out-rows-and-columns). A table visual that leaves **Columns shown** empty shows that layout as well.
 
 ## Totals stay correct
 
