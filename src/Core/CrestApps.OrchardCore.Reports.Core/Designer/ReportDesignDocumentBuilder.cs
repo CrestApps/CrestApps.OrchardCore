@@ -52,7 +52,9 @@ public sealed partial class ReportDesignDocumentBuilder
 
             var name = string.IsNullOrWhiteSpace(visual.Title) ? visual.Type.ToString() : visual.Title;
 
-            foreach (var columnId in visual.ColumnIds.Concat(visual.ValueColumnIds).Append(visual.CategoryColumnId).Append(visual.SeriesColumnId))
+            var lineColumnIds = (visual.ReferenceLines ?? []).Select(line => line?.ColumnId);
+
+            foreach (var columnId in visual.ColumnIds.Concat(visual.ValueColumnIds).Append(visual.CategoryColumnId).Append(visual.SeriesColumnId).Concat(lineColumnIds))
             {
                 if (!string.IsNullOrEmpty(columnId) && !byId.ContainsKey(columnId))
                 {
@@ -73,6 +75,23 @@ public sealed partial class ReportDesignDocumentBuilder
                     if (visual.ValueColumnIds.Count == 0)
                     {
                         errors.Add(S["The chart '{0}' needs at least one value column.", name]);
+                    }
+
+                    foreach (var line in visual.ReferenceLines ?? [])
+                    {
+                        if (line is null)
+                        {
+                            continue;
+                        }
+
+                        if (line.Kind == ReportReferenceLineKind.Constant
+                            ? line.Value is null
+                            : !visual.ValueColumnIds.Contains(line.ColumnId ?? string.Empty, StringComparer.Ordinal))
+                        {
+                            errors.Add(S["Each reference line of the chart '{0}' needs a value, or one of the chart's value columns to compute it from.", name]);
+
+                            break;
+                        }
                     }
 
                     break;
@@ -367,7 +386,7 @@ public sealed partial class ReportDesignDocumentBuilder
 
     private ReportRow DetailRow(object[] values, ReportQueryResult result, int[] indexes, int keyIndex, ReportColumnColorizer[] colorizers)
     {
-        var row = new ReportRow(indexes.Select(index => _formatter.Format(values[index], result.Columns[index])).ToList())
+        var row = new ReportRow(indexes.Select(index => FormatShown(values[index], result.Columns[index], IsCalculated(result, index))).ToList())
         {
             Key = keyIndex >= 0 ? ReportSelectionKeys.ToKey(values[keyIndex]) : null,
         };
@@ -477,16 +496,18 @@ public sealed partial class ReportDesignDocumentBuilder
         }
 
         var keyIndex = ActionIndex(visual, result);
+        var withSubtotals = visual.ShowSubtotals && result.IsAggregated;
+        var shown = ShownRows(result, indexes, withSubtotals);
         var colorizers = indexes
-            .Select(index => ReportColumnColorizer.Create(result.Columns[index], result.Rows.Select(values => values[index])))
+            .Select(index => ReportColumnColorizer.Create(ShownColumn(result.Columns[index], IsCalculated(result, index)), shown.Select(values => values[index])))
             .ToArray();
 
         var columns = indexes
             .Select(index => new ReportColumn(result.Columns[index].Label, Align(result.Columns[index]), ReportColumnColorizer.HeaderStyleOf(result.Columns[index])))
             .ToList();
-        var rows = visual.ShowSubtotals && result.IsAggregated
-            ? BuildRowsWithSubtotals(result, indexes, keyIndex, colorizers)
-            : result.Rows
+        var rows = withSubtotals
+            ? BuildRowsWithSubtotals(result, shown, indexes, keyIndex, colorizers)
+            : shown
                 .Select(values => DetailRow(values, result, indexes, keyIndex, colorizers))
                 .ToList();
 
@@ -511,14 +532,14 @@ public sealed partial class ReportDesignDocumentBuilder
     // The rows of a grouped table with a subtotal after each group of its leading dimensions (every shown dimension but
     // the last). Rows are kept together by those dimensions, keeping their order within each group. Each subtotal is
     // the result regrouped by the dimensions up to its level, so averages and distinct counts stay correct.
-    private List<ReportRow> BuildRowsWithSubtotals(ReportQueryResult result, int[] indexes, int keyIndex, ReportColumnColorizer[] colorizers)
+    private List<ReportRow> BuildRowsWithSubtotals(ReportQueryResult result, IReadOnlyList<object[]> detailRows, int[] indexes, int keyIndex, ReportColumnColorizer[] colorizers)
     {
         var dimensions = indexes.Where(index => !result.Columns[index].IsMeasure).ToArray();
         var levels = dimensions.Length - 1;
 
         if (levels < 1)
         {
-            return result.Rows
+            return detailRows
                 .Select(values => DetailRow(values, result, indexes, keyIndex, colorizers))
                 .ToList();
         }
@@ -543,7 +564,7 @@ public sealed partial class ReportDesignDocumentBuilder
 
         // Keep each group together, in the order its first row appears, without reordering rows within it: stable sorts
         // from the innermost level out leave the rows ordered by their outermost group first.
-        var ordered = result.Rows
+        var ordered = detailRows
             .Select((values, position) => (values, position))
             .ToList();
 
@@ -617,6 +638,111 @@ public sealed partial class ReportDesignDocumentBuilder
         return rows;
     }
 
+    // The detail rows of a table as it shows them: in its order, with each column shown as a quick table calculation
+    // computed down them. Subtotals keep the groups of the leading dimensions together, so the calculations follow that
+    // order. The result's own rows when no column is calculated.
+    private static IReadOnlyList<object[]> ShownRows(ReportQueryResult result, int[] indexes, bool withSubtotals)
+    {
+        var calculated = indexes.Where(index => IsCalculated(result, index)).ToArray();
+
+        if (calculated.Length == 0)
+        {
+            return result.Rows;
+        }
+
+        var dimensions = indexes.Where(index => !result.Columns[index].IsMeasure).ToArray();
+        var rows = (withSubtotals && dimensions.Length > 1 ? KeepTogether([.. result.Rows], dimensions) : [.. result.Rows])
+            .Select(values => (object[])values.Clone())
+            .ToList();
+
+        foreach (var index in calculated)
+        {
+            var grid = rows.Select(values => new[] { values[index] }).ToArray();
+
+            ReportTableCalculations.Apply(grid, result.Columns[index].ShowAs, ReportShowAsDirection.Down);
+
+            for (var row = 0; row < rows.Count; row++)
+            {
+                rows[row][index] = grid[row][0];
+            }
+        }
+
+        return rows;
+    }
+
+    // Whether a column of a result shows its values as a quick table calculation: a number that a totals row totals.
+    private static bool IsCalculated(ReportQueryResult result, int index)
+    {
+        return IsCalculable(result.Columns[index]) && IsTotalled(result, index);
+    }
+
+    private static bool IsCalculable(ReportResultColumn column)
+    {
+        return column.ShowAs != ReportShowAs.Value && DataValues.IsNumeric(column.DataType);
+    }
+
+    // The column as its calculated values read: percentages are decimals and ranks whole numbers, which color rules and
+    // scales compare.
+    private static ReportResultColumn ShownColumn(ReportResultColumn column, bool calculated)
+    {
+        if (!calculated)
+        {
+            return column;
+        }
+
+        return new ReportResultColumn
+        {
+            Id = column.Id,
+            Field = column.Field,
+            Label = column.Label,
+            DataType = column.ShowAs switch
+            {
+                ReportShowAs.Rank => DataFieldType.Integer,
+                ReportShowAs.PercentOfTotal or ReportShowAs.PercentDifference => DataFieldType.Decimal,
+                _ => column.DataType,
+            },
+            IsMeasure = column.IsMeasure,
+            Aggregate = column.Aggregate,
+            Transform = column.Transform,
+            Format = column.Format,
+            Hidden = column.Hidden,
+            Shelf = column.Shelf,
+            Colors = column.Colors,
+            ShowAs = column.ShowAs,
+            ShowAsDirection = column.ShowAsDirection,
+        };
+    }
+
+    // How a cell shows its value: a calculated value as its calculation reads, percentages as percentages (in the
+    // column's format when that is a percent format) and ranks as whole numbers; any other value in the column's format.
+    private string FormatShown(object value, ReportResultColumn column, bool calculated)
+    {
+        if (!calculated)
+        {
+            return _formatter.Format(value, column);
+        }
+
+        if (column.ShowAs == ReportShowAs.Rank)
+        {
+            return _formatter.Format(value, DataFieldType.Integer, "N0");
+        }
+
+        if (ReportTableCalculations.IsPercent(column.ShowAs))
+        {
+            return _formatter.Format(value, DataFieldType.Decimal, PercentFormat(column));
+        }
+
+        return _formatter.Format(value, column.DataType, column.Format);
+    }
+
+    // The format of a percentage a column shows: its own format when it is a percent format, such as P0, or one decimal.
+    private static string PercentFormat(ReportResultColumn column)
+    {
+        var format = column.Format?.Trim();
+
+        return !string.IsNullOrEmpty(format) && (format[0] is 'P' or 'p' || format.Contains('%')) ? format : "P1";
+    }
+
     private ReportSection BuildMetrics(ReportVisualDefinition visual, ReportQueryResult result)
     {
         var totals = result.GetTotals();
@@ -649,6 +775,9 @@ public sealed partial class ReportDesignDocumentBuilder
             ShowLegend = visual.ShowLegend,
         };
 
+        // The values each value column plots, by category then series, for its reference lines.
+        var plotted = new Dictionary<int, object[][]>();
+
         if (seriesIndex >= 0 && seriesIndex != categoryIndex)
         {
             var seriesColumn = result.Columns[seriesIndex];
@@ -672,11 +801,25 @@ public sealed partial class ReportDesignDocumentBuilder
                 chart.SeriesKeys = series.Select(ReportSelectionKeys.ToKey).ToList();
             }
 
-            foreach (var seriesValue in series)
-            {
-                var values = categories.Select(category => ToDouble(cells.GetValueOrDefault(Key(category) + "\u001F" + Key(seriesValue))));
+            // The categories down the side and the series across: a calculation down runs along the categories of each
+            // series, and one across runs over the series of each category.
+            var grid = categories
+                .Select(category => series.Select(seriesValue => cells.GetValueOrDefault(Key(category) + "\u001F" + Key(seriesValue))).ToArray())
+                .ToArray();
+            var column = result.Columns[valueIndex];
 
-                chart.Datasets.Add(new ReportChartDataset(_formatter.Format(seriesValue, seriesColumn), values));
+            if (IsCalculable(column))
+            {
+                ReportTableCalculations.Apply(grid, column.ShowAs, column.ShowAsDirection);
+            }
+
+            plotted[valueIndex] = grid;
+
+            for (var position = 0; position < series.Count; position++)
+            {
+                var current = position;
+
+                chart.Datasets.Add(new ReportChartDataset(_formatter.Format(series[position], seriesColumn), grid.Select(row => ToPlotted(row[current], column))));
             }
         }
         else
@@ -692,11 +835,132 @@ public sealed partial class ReportDesignDocumentBuilder
 
             foreach (var valueIndex in valueIndexes)
             {
-                chart.Datasets.Add(new ReportChartDataset(result.Columns[valueIndex].Label, groups.Select(group => ToDouble(group.Values[valueIndex]))));
+                // Each value column is computed along the categories.
+                var column = result.Columns[valueIndex];
+                var grid = groups.Select(group => new[] { group.Values[valueIndex] }).ToArray();
+
+                if (IsCalculable(column))
+                {
+                    ReportTableCalculations.Apply(grid, column.ShowAs, ReportShowAsDirection.Down);
+                }
+
+                plotted.TryAdd(valueIndex, grid);
+                chart.Datasets.Add(new ReportChartDataset(column.Label, grid.Select(row => ToPlotted(row[0], column))));
             }
         }
 
+        // Percentages are plotted in percent, on an axis read in percent, when every value column shows one.
+        chart.PercentageScale = valueIndexes.All(index => IsCalculable(result.Columns[index]) && ReportTableCalculations.IsPercent(result.Columns[index].ShowAs));
+
+        if (visual.ChartType is not (ReportChartType.Pie or ReportChartType.Doughnut))
+        {
+            AddReferenceLines(chart, visual, result, valueIndexes, plotted, seriesIndex >= 0 && seriesIndex != categoryIndex);
+        }
+
         return ReportSection.ForChart(visual.Title, chart, visual.Width);
+    }
+
+    // Adds the reference lines of a chart: the average or median of the values it plots for a value column, or a
+    // constant, labeled with the value formatted as the column shows it.
+    private void AddReferenceLines(
+        ReportChart chart,
+        ReportVisualDefinition visual,
+        ReportQueryResult result,
+        int[] valueIndexes,
+        Dictionary<int, object[][]> plotted,
+        bool hasSeries)
+    {
+        foreach (var line in visual.ReferenceLines ?? [])
+        {
+            if (line is null)
+            {
+                continue;
+            }
+
+            var index = string.IsNullOrEmpty(line.ColumnId) ? -1 : result.IndexOf(line.ColumnId);
+            var column = index >= 0 ? result.Columns[index] : null;
+
+            // A line computed from a column is computed from what the chart plots of it.
+            if (line.Kind != ReportReferenceLineKind.Constant && (column is null || !plotted.ContainsKey(index)))
+            {
+                continue;
+            }
+
+            var values = column is not null && plotted.TryGetValue(index, out var grid)
+                ? grid.SelectMany(row => row).Where(value => value is not null).Select(value => ToPlotted(value, column)).ToList()
+                : [];
+            double? value = line.Kind switch
+            {
+                ReportReferenceLineKind.Average => values.Count > 0 ? values.Average() : null,
+                ReportReferenceLineKind.Median => Median(values),
+                _ => line.Value is { } constant ? (double)constant : null,
+            };
+
+            if (value is not { } at || !double.IsFinite(at))
+            {
+                continue;
+            }
+
+            var name = !string.IsNullOrWhiteSpace(line.Label)
+                ? line.Label.Trim()
+                : line.Kind switch
+                {
+                    ReportReferenceLineKind.Average => S["Average"].Value,
+                    ReportReferenceLineKind.Median => S["Median"].Value,
+                    _ => null,
+                };
+            var text = FormatLineValue(at, column, chart.PercentageScale);
+
+            chart.ReferenceLines.Add(new ReportChartReferenceLine(name is null ? text : S["{0}: {1}", name, text].Value, at)
+            {
+                // A line of a column takes the color of its series, unless the column is split into several.
+                DatasetIndex = !hasSeries && index >= 0 && Array.IndexOf(valueIndexes, index) is var position and >= 0 ? position : null,
+            });
+        }
+    }
+
+    // How a reference line shows its value: as a percentage on an axis read in percent, otherwise as the column shows
+    // its values, with the decimals an average or median needs.
+    private string FormatLineValue(double value, ReportResultColumn column, bool percentageScale)
+    {
+        var number = (decimal)Math.Round(value, 6);
+
+        if (column is not null && IsCalculable(column) && ReportTableCalculations.IsPercent(column.ShowAs))
+        {
+            return _formatter.Format(number / 100, DataFieldType.Decimal, PercentFormat(column));
+        }
+
+        if (percentageScale)
+        {
+            return _formatter.Format(number / 100, DataFieldType.Decimal, "P1");
+        }
+
+        var format = column is null || column.ShowAs == ReportShowAs.Rank ? null : column.Format;
+
+        return _formatter.Format(number, DataFieldType.Decimal, format);
+    }
+
+    private static double? Median(List<double> values)
+    {
+        if (values.Count == 0)
+        {
+            return null;
+        }
+
+        var sorted = values.Order().ToList();
+        var middle = sorted.Count / 2;
+
+        return sorted.Count % 2 == 1 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+    }
+
+    // The value a chart plots: a percentage in percent, rounded to hundredths of a percent; missing values as zero.
+    private static double ToPlotted(object value, ReportResultColumn column)
+    {
+        var number = ToDouble(value);
+
+        return IsCalculable(column) && ReportTableCalculations.IsPercent(column.ShowAs)
+            ? Math.Round(number * 100, 2)
+            : number;
     }
 
     private ReportSection BuildPivot(ReportVisualDefinition visual, ReportQueryResult result)

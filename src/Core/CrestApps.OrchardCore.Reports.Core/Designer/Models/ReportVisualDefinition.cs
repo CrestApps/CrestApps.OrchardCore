@@ -93,4 +93,9 @@ public sealed class ReportVisualDefinition
     /// Gets or sets a value indicating whether a chart shows its legend.
     /// </summary>
     public bool ShowLegend { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the lines a chart draws across its values, such as the average of a value column or a target.
+    /// </summary>
+    public IList<ReportReferenceLine> ReferenceLines { get; set; } = [];
 }

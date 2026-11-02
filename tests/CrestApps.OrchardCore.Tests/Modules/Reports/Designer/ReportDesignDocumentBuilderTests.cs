@@ -2,6 +2,7 @@ using System.Globalization;
 using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Models;
 using OrchardCore.DataSources;
+using OrchardCore.DataSources.Operations;
 using static CrestApps.OrchardCore.Tests.Modules.Reports.Designer.ReportDesignerTestServices;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Reports.Designer;
@@ -517,6 +518,282 @@ public sealed class ReportDesignDocumentBuilderTests : IDisposable
         var section = Assert.Single(document.Sections);
         Assert.Equal(["Customer", "Revenue", "Quantity", "Revenue", "Quantity"], section.Columns.Select(column => column.Label));
         Assert.Equal(["Globex", "300", "3", string.Empty, string.Empty], section.Rows.Single(row => row.Cells[0] == "Globex").Cells);
+    }
+
+    [Theory]
+    [InlineData(ReportShowAs.PercentOfTotal, "63.8 %", "31.9 %", "4.3 %")]
+    [InlineData(ReportShowAs.RunningTotal, "300", "450", "470")]
+    [InlineData(ReportShowAs.DifferenceFromPrevious, "", "-150", "-130")]
+    [InlineData(ReportShowAs.PercentDifference, "", "-50.0 %", "-86.7 %")]
+    [InlineData(ReportShowAs.Rank, "1", "2", "3")]
+    public async Task Build_TableColumnShownAsACalculation_ComputesItDownTheRowsAndKeepsThePlainTotal(ReportShowAs showAs, string first, string second, string third)
+    {
+        // Arrange
+        var query = RevenueByRegionAndCustomer();
+        query.Columns[2].ShowAs = showAs;
+
+        // Act
+        var document = DocumentBuilder().Build("Revenue", [], await RunAsync(query, [], SalesData()));
+
+        // Assert
+        var section = Assert.Single(document.Sections);
+        Assert.Equal(["Globex", "Acme", "Initech"], section.Rows.Take(3).Select(row => row.Cells[1]));
+        Assert.Equal([first, second, third], section.Rows.Take(3).Select(row => row.Cells[2]));
+        Assert.Equal(["Total", string.Empty, "470"], section.Rows[^1].Cells);
+    }
+
+    [Fact]
+    public async Task Build_PercentOfTotalWithAPercentFormat_KeepsTheColumnsFormat()
+    {
+        // Arrange
+        var query = RevenueByRegionAndCustomer();
+        query.Columns[2].ShowAs = ReportShowAs.PercentOfTotal;
+        query.Columns[2].Format = "P0";
+
+        // Act
+        var document = DocumentBuilder().Build("Revenue", [], await RunAsync(query, [], SalesData()));
+
+        // Assert
+        Assert.Equal(["64 %", "32 %", "4 %"], document.Sections[0].Rows.Take(3).Select(row => row.Cells[2]));
+    }
+
+    [Fact]
+    public async Task Build_TableWithSubtotals_RunsTheTotalInTheOrderTheRowsAreShown()
+    {
+        // Arrange
+        var query = RevenueByRegionAndCustomer();
+        query.Columns[2].ShowAs = ReportShowAs.RunningTotal;
+        query.Sorts = [new ReportSortDefinition { ColumnId = "revenue" }];
+        var visual = new ReportVisualDefinition { Id = "table", Type = ReportVisualType.Table, ShowSubtotals = true };
+
+        // Act
+        var document = DocumentBuilder().Build("Revenue", [visual], await RunAsync(query, [visual], SalesData()));
+
+        // Assert: West's rows are kept together, so the total runs over them before East's; subtotals stay plain.
+        var rows = document.Sections[0].Rows;
+        Assert.Equal(
+            [("Initech", "20"), ("Acme", "170"), ("West total", "170"), ("Globex", "470"), ("East total", "300")],
+            rows.Select(row => (row.Kind == ReportRowKind.Subtotal ? row.Cells[0] : row.Cells[1], row.Cells[2])));
+    }
+
+    [Theory]
+    [InlineData(ReportShowAs.PercentOfTotal, ReportShowAsDirection.Down, new[] { "", "85.7 %", "", "300" }, new[] { "100.0 %", "14.3 %", "100.0 %", "170" })]
+    [InlineData(ReportShowAs.PercentOfTotal, ReportShowAsDirection.Across, new[] { "", "100.0 %", "", "300" }, new[] { "58.8 %", "29.4 %", "11.8 %", "170" })]
+    [InlineData(ReportShowAs.PercentOfTotal, ReportShowAsDirection.Table, new[] { "", "63.8 %", "", "300" }, new[] { "21.3 %", "10.6 %", "4.3 %", "170" })]
+    [InlineData(ReportShowAs.RunningTotal, ReportShowAsDirection.Across, new[] { "", "300", "300", "300" }, new[] { "100", "150", "170", "170" })]
+    [InlineData(ReportShowAs.RunningTotal, ReportShowAsDirection.Down, new[] { "", "300", "", "300" }, new[] { "100", "350", "20", "170" })]
+    [InlineData(ReportShowAs.DifferenceFromPrevious, ReportShowAsDirection.Across, new[] { "", "", "", "300" }, new[] { "", "-50", "-30", "170" })]
+    [InlineData(ReportShowAs.Rank, ReportShowAsDirection.Down, new[] { "", "1", "", "300" }, new[] { "1", "2", "1", "170" })]
+    public async Task Build_CrossTabMeasureShownAsACalculation_ComputesItAlongTheChosenDirection(ReportShowAs showAs, ReportShowAsDirection direction, string[] east, string[] west)
+    {
+        // Arrange: regions down the side, months across the top.
+        var query = RevenueByRegionAndMonth();
+        query.Columns[2].ShowAs = showAs;
+        query.Columns[2].ShowAsDirection = direction;
+
+        // Act
+        var document = DocumentBuilder().Build("Revenue", [], await RunAsync(query, [], SalesData()));
+
+        // Assert: the row totals and the totals row show the plain totals.
+        var section = Assert.Single(document.Sections);
+        Assert.Equal(["East", .. east], section.Rows.Single(row => row.Cells[0] == "East").Cells);
+        Assert.Equal(["West", .. west], section.Rows.Single(row => row.Cells[0] == "West").Cells);
+        Assert.Equal(["Total", "100", "350", "20", "470"], section.Rows[^1].Cells);
+    }
+
+    [Fact]
+    public async Task Build_PivotValueShownAsPercentOfTotal_ComputesItOverItsCells()
+    {
+        // Arrange
+        var query = RevenueByRegionAndMonth();
+        query.Columns[0].Shelf = ReportColumnShelf.Columns;
+        query.Columns[2].ShowAs = ReportShowAs.PercentOfTotal;
+        query.Columns[2].ShowAsDirection = ReportShowAsDirection.Across;
+        var visual = new ReportVisualDefinition
+        {
+            Id = "pivot",
+            Type = ReportVisualType.Pivot,
+            ColumnIds = ["region"],
+            SeriesColumnId = "month",
+            ValueColumnIds = ["revenue"],
+            ShowTotals = true,
+        };
+
+        // Act
+        var document = DocumentBuilder().Build("Revenue", [visual], await RunAsync(query, [visual], SalesData()));
+
+        // Assert
+        var section = Assert.Single(document.Sections);
+        Assert.Equal(["West", "58.8 %", "29.4 %", "11.8 %", "170"], section.Rows.Single(row => row.Cells[0] == "West").Cells);
+    }
+
+    [Fact]
+    public async Task Build_ChartValueShownAsPercentOfTotal_PlotsPercentagesOnAPercentageScale()
+    {
+        // Arrange
+        var query = RevenueByRegionAndCustomer();
+        query.Columns[2].ShowAs = ReportShowAs.PercentOfTotal;
+        var visual = Chart("region", "revenue");
+
+        // Act
+        var document = DocumentBuilder().Build("Revenue", [visual], await RunAsync(query, [visual], SalesData()));
+
+        // Assert
+        var chart = Assert.Single(document.Sections).Chart;
+        Assert.Equal([63.83, 36.17], Assert.Single(chart.Datasets).Values);
+        Assert.True(chart.PercentageScale);
+    }
+
+    [Theory]
+    [InlineData(ReportShowAs.RunningTotal, 300d, 470d)]
+    [InlineData(ReportShowAs.DifferenceFromPrevious, 0d, -130d)]
+    [InlineData(ReportShowAs.Rank, 1d, 2d)]
+    public async Task Build_ChartValueShownAsACalculation_ComputesItAlongTheCategories(ReportShowAs showAs, double east, double west)
+    {
+        // Arrange
+        var query = RevenueByRegionAndCustomer();
+        query.Columns[2].ShowAs = showAs;
+        var visual = Chart("region", "revenue");
+
+        // Act
+        var document = DocumentBuilder().Build("Revenue", [visual], await RunAsync(query, [visual], SalesData()));
+
+        // Assert
+        var chart = Assert.Single(document.Sections).Chart;
+        Assert.Equal([east, west], Assert.Single(chart.Datasets).Values);
+        Assert.False(chart.PercentageScale);
+    }
+
+    [Fact]
+    public async Task Build_ChartSplitIntoSeries_ComputesPercentOfTotalAcrossTheSeriesOfEachCategory()
+    {
+        // Arrange
+        var query = RevenueByRegionAndCustomer();
+        query.Columns[2].ShowAs = ReportShowAs.PercentOfTotal;
+        query.Columns[2].ShowAsDirection = ReportShowAsDirection.Across;
+        var visual = Chart("region", "revenue");
+        visual.SeriesColumnId = "customer";
+
+        // Act
+        var document = DocumentBuilder().Build("Revenue", [visual], await RunAsync(query, [visual], SalesData()));
+
+        // Assert: each region's customers add up to 100%.
+        var chart = Assert.Single(document.Sections).Chart;
+        Assert.Equal(["East", "West"], chart.Labels);
+        Assert.Equal([100d, 0d], chart.Datasets.Single(dataset => dataset.Label == "Globex").Values);
+        Assert.Equal([0d, 88.24], chart.Datasets.Single(dataset => dataset.Label == "Acme").Values);
+        Assert.Equal([0d, 11.76], chart.Datasets.Single(dataset => dataset.Label == "Initech").Values);
+    }
+
+    [Fact]
+    public async Task Build_ChartReferenceLines_DrawTheAverageMedianAndConstantOfTheValuesPlotted()
+    {
+        // Arrange
+        var query = RevenueByRegionAndCustomer();
+        var visual = Chart("customer", "revenue");
+        visual.ReferenceLines =
+        [
+            new ReportReferenceLine { ColumnId = "revenue", Kind = ReportReferenceLineKind.Average },
+            new ReportReferenceLine { ColumnId = "revenue", Kind = ReportReferenceLineKind.Median, Label = "Typical" },
+            new ReportReferenceLine { ColumnId = "revenue", Kind = ReportReferenceLineKind.Constant, Value = 200, Label = "Target" },
+            new ReportReferenceLine { Kind = ReportReferenceLineKind.Constant, Value = 250 },
+        ];
+
+        // Act
+        var document = DocumentBuilder().Build("Revenue", [visual], await RunAsync(query, [visual], SalesData()));
+
+        // Assert: Acme 150, Globex 300 and Initech 20, in the revenue column's format.
+        var lines = Assert.Single(document.Sections).Chart.ReferenceLines;
+        Assert.Equal(["Average: 157", "Typical: 150", "Target: 200", "250"], lines.Select(line => line.Label));
+        Assert.Equal([470d / 3, 150d, 200d, 250d], lines.Select(line => line.Value));
+        Assert.Equal(new int?[] { 0, 0, 0, null }, lines.Select(line => line.DatasetIndex));
+    }
+
+    [Fact]
+    public async Task Build_ReferenceLineOfAPercentChart_IsLabeledAsAPercentage()
+    {
+        // Arrange
+        var query = RevenueByRegionAndCustomer();
+        query.Columns[2].ShowAs = ReportShowAs.PercentOfTotal;
+        var visual = Chart("region", "revenue");
+        visual.ReferenceLines = [new ReportReferenceLine { ColumnId = "revenue", Kind = ReportReferenceLineKind.Average }];
+
+        // Act
+        var document = DocumentBuilder().Build("Revenue", [visual], await RunAsync(query, [visual], SalesData()));
+
+        // Assert
+        var line = Assert.Single(document.Sections[0].Chart.ReferenceLines);
+        Assert.Equal(50d, line.Value, 6);
+        Assert.Equal("Average: 50.0 %", line.Label);
+    }
+
+    [Fact]
+    public async Task Build_PieChart_DrawsNoReferenceLines()
+    {
+        // Arrange
+        var query = RevenueByRegionAndCustomer();
+        var visual = Chart("region", "revenue");
+        visual.ChartType = ReportChartType.Pie;
+        visual.ReferenceLines = [new ReportReferenceLine { ColumnId = "revenue", Kind = ReportReferenceLineKind.Average }];
+
+        // Act
+        var document = DocumentBuilder().Build("Revenue", [visual], await RunAsync(query, [visual], SalesData()));
+
+        // Assert
+        Assert.Empty(document.Sections[0].Chart.ReferenceLines);
+    }
+
+    [Fact]
+    public async Task Validate_ReferenceLinesWithoutAValueOrAPlottedColumn_AreRejected()
+    {
+        // Arrange
+        var query = RevenueByRegionAndCustomer();
+        var visual = Chart("region", "revenue");
+        var columns = (await RunAsync(query, [visual], SalesData())).Columns;
+        var builder = DocumentBuilder();
+
+        // Act
+        visual.ReferenceLines = [new ReportReferenceLine { Kind = ReportReferenceLineKind.Constant }];
+        var withoutValue = builder.Validate([visual], columns);
+        visual.ReferenceLines = [new ReportReferenceLine { ColumnId = "customer", Kind = ReportReferenceLineKind.Average }];
+        var notPlotted = builder.Validate([visual], columns);
+        visual.ReferenceLines = [new ReportReferenceLine { ColumnId = "missing", Kind = ReportReferenceLineKind.Average }];
+        var missing = builder.Validate([visual], columns);
+        visual.ReferenceLines = [new ReportReferenceLine { ColumnId = "revenue", Kind = ReportReferenceLineKind.Median }];
+        var valid = builder.Validate([visual], columns);
+
+        // Assert
+        Assert.Single(withoutValue);
+        Assert.Single(notPlotted);
+        Assert.Contains(missing, error => error.Contains("no longer exists", StringComparison.Ordinal));
+        Assert.Empty(valid);
+    }
+
+    private static ReportVisualDefinition Chart(string categoryColumnId, string valueColumnId)
+    {
+        return new ReportVisualDefinition
+        {
+            Id = "chart",
+            Type = ReportVisualType.Chart,
+            ChartType = ReportChartType.Bar,
+            CategoryColumnId = categoryColumnId,
+            ValueColumnIds = [valueColumnId],
+        };
+    }
+
+    // The regions down the side, the months of the orders across the top, and the revenue in the cells: East has 300 in
+    // February; West has 100 in January, 50 in February and 20 in March.
+    private static ReportQueryDefinition RevenueByRegionAndMonth()
+    {
+        var query = CustomersWithOrders();
+        query.Columns =
+        [
+            new ReportColumnDefinition { Id = "region", Field = "c.Region", Label = "Region", Shelf = ReportColumnShelf.Rows },
+            new ReportColumnDefinition { Id = "month", Field = "o.PlacedUtc", Label = "Month", Transform = DataFieldTransform.Month },
+            new ReportColumnDefinition { Id = "revenue", Field = "o.Total", Label = "Revenue", Aggregate = DataAggregate.Sum, Format = "0" },
+        ];
+
+        return query;
     }
 
     private static ReportQueryDefinition RevenueByRegionAndCustomer()

@@ -20,6 +20,11 @@ public static class ReportDesignNormalizer
     public const int MaxColorRules = 20;
 
     /// <summary>
+    /// The most reference lines a chart keeps.
+    /// </summary>
+    public const int MaxReferenceLines = 10;
+
+    /// <summary>
     /// Normalizes a query in place.
     /// </summary>
     /// <param name="query">The query.</param>
@@ -115,6 +120,13 @@ public static class ReportDesignNormalizer
             visual.ColumnIds = (visual.ColumnIds ?? []).Where(id => !string.IsNullOrEmpty(id)).ToList();
             visual.ValueColumnIds = (visual.ValueColumnIds ?? []).Where(id => !string.IsNullOrEmpty(id)).ToList();
             visual.ContainerId = string.IsNullOrWhiteSpace(visual.ContainerId) ? null : visual.ContainerId.Trim();
+            visual.ReferenceLines = (visual.ReferenceLines ?? []).Where(line => line is not null).Take(MaxReferenceLines).ToList();
+
+            foreach (var line in visual.ReferenceLines)
+            {
+                line.ColumnId = string.IsNullOrWhiteSpace(line.ColumnId) ? null : line.ColumnId.Trim();
+                line.Label = Truncate(line.Label);
+            }
         }
 
         return list;

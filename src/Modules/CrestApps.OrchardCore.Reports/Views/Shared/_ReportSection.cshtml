@@ -22,6 +22,7 @@
             stacked = reportSection.Chart.Stacked,
             showLegend = reportSection.Chart.ShowLegend,
             percentageScale = reportSection.Chart.PercentageScale,
+            referenceLines = (reportSection.Chart.ReferenceLines ?? []).Select(line => new { label = line.Label, value = line.Value, datasetIndex = line.DatasetIndex }),
             keys = selection is null ? null : reportSection.Chart.Keys,
             seriesKeys = selection is null ? null : reportSection.Chart.SeriesKeys,
             selectedKeys,

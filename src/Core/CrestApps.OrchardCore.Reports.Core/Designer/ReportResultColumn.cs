@@ -62,4 +62,14 @@ public sealed class ReportResultColumn
     /// Gets or sets how the column is colored in tables, or <see langword="null"/> for the default colors.
     /// </summary>
     public ReportColumnColors Colors { get; set; }
+
+    /// <summary>
+    /// Gets or sets how the column shows its values.
+    /// </summary>
+    public ReportShowAs ShowAs { get; set; }
+
+    /// <summary>
+    /// Gets or sets which values the calculation of <see cref="ShowAs"/> is computed along.
+    /// </summary>
+    public ReportShowAsDirection ShowAsDirection { get; set; }
 }

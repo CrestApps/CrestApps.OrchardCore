@@ -6,7 +6,8 @@ namespace CrestApps.OrchardCore.Reports.Pdf.Services;
 /// <summary>
 /// Draws a chart section as a chart, like the report charts on screen: lines, areas, columns and sideways bars, side
 /// by side or stacked, on a value axis with gridlines, and pies and doughnuts of the first series with the share of
-/// each slice. Several series, and the slices of a pie, are named in a legend.
+/// each slice. Several series, and the slices of a pie, are named in a legend. Reference lines are drawn dashed across
+/// the plot, with their labels.
 /// </summary>
 internal sealed class ReportPdfChartWriter
 {
@@ -28,6 +29,7 @@ internal sealed class ReportPdfChartWriter
     private readonly int _categoryCount;
     private readonly List<string> _labels = [];
     private readonly List<Series> _series = [];
+    private readonly List<ReferenceLine> _lines = [];
     private readonly bool _integers;
     private readonly double _chartHeight;
 
@@ -87,6 +89,16 @@ internal sealed class ReportPdfChartWriter
         }
 
         _integers = _series.SelectMany(series => series.Values).Where(double.IsFinite).All(value => Math.Abs(value - Math.Round(value)) < 1e-9);
+
+        if (_kind != ChartKind.Pie)
+        {
+            foreach (var line in (chart.ReferenceLines ?? []).Where(line => line is not null && double.IsFinite(line.Value)))
+            {
+                var color = line.DatasetIndex is { } index && index >= 0 ? ReportPdfTheme.GetPaletteColor(index) : ReportPdfTheme.Text;
+
+                _lines.Add(new ReferenceLine(SingleLine(line.Label ?? string.Empty), line.Value, color));
+            }
+        }
 
         var height = _kind switch
         {
@@ -188,6 +200,44 @@ internal sealed class ReportPdfChartWriter
         }
 
         page.DrawLine(plotLeft, Y(0), plotRight, Y(0), ReportPdfTheme.Muted, 0.75);
+
+        // Each reference line runs across the plot, labeled at its right end, above the line unless that leaves the plot.
+        foreach (var line in _lines)
+        {
+            var y = Y(line.Value);
+            var label = ReportPdfText.Fit(line.Label, Font, FontSize, (plotRight - plotLeft) / 2);
+            var top = y - LineHeight - 1 < plotTop ? y + 1 : y - LineHeight - 1;
+
+            DrawDashedLine(plotLeft, y, plotRight, y, line.Color);
+            page.DrawText(label, Font, FontSize, plotRight - 2 - Font.Measure(label, FontSize), top, line.Color);
+        }
+    }
+
+    // Draws a dashed line between two points, as reference lines are drawn on screen.
+    private void DrawDashedLine(double x1, double top1, double x2, double top2, ReportPdfColor color)
+    {
+        const double Dash = 5;
+        const double Gap = 3;
+
+        var length = Math.Sqrt(((x2 - x1) * (x2 - x1)) + ((top2 - top1) * (top2 - top1)));
+
+        if (length <= 0)
+        {
+            return;
+        }
+
+        for (var from = 0d; from < length; from += Dash + Gap)
+        {
+            var to = Math.Min(length, from + Dash);
+
+            _flow.Page.DrawLine(
+                x1 + ((x2 - x1) * from / length),
+                top1 + ((top2 - top1) * from / length),
+                x1 + ((x2 - x1) * to / length),
+                top1 + ((top2 - top1) * to / length),
+                color,
+                1.25);
+        }
     }
 
     private void DrawColumns(double plotLeft, double bandWidth, Func<double, double> y)
@@ -278,7 +328,7 @@ internal sealed class ReportPdfChartWriter
         var labelWidth = Math.Min(_labels.Max(label => Font.Measure(label, FontSize)), box.Width * 0.3);
         var plotLeft = box.Left + labelWidth + 6;
         var plotRight = box.Right - (Font.Measure(tickLabels[tickLabels.Count - 1], FontSize) / 2) - 2;
-        var plotTop = box.Top + 4;
+        var plotTop = box.Top + 4 + (_lines.Count > 0 ? LineHeight : 0);
         var plotBottom = box.Bottom - legendHeight - LineHeight - 4;
         var bandHeight = (plotBottom - plotTop) / _categoryCount;
 
@@ -326,6 +376,18 @@ internal sealed class ReportPdfChartWriter
         }
 
         page.DrawLine(X(0), plotTop, X(0), plotBottom, ReportPdfTheme.Muted, 0.75);
+
+        // Each reference line runs down the plot, labeled above it, toward the middle of the chart.
+        foreach (var line in _lines)
+        {
+            var x = X(line.Value);
+            var label = ReportPdfText.Fit(line.Label, Font, FontSize, (plotRight - plotLeft) / 2);
+            var width = Font.Measure(label, FontSize);
+            var left = x + 2 + width > plotRight ? x - 2 - width : x + 2;
+
+            DrawDashedLine(x, plotTop, x, plotBottom, line.Color);
+            page.DrawText(label, Font, FontSize, left, plotTop - LineHeight, line.Color);
+        }
     }
 
     // The bars of every category, from and to the values they span: side by side from zero, or stacked, positive values
@@ -518,6 +580,9 @@ internal sealed class ReportPdfChartWriter
             values = [.. values, .. totals];
         }
 
+        // The scale reaches every reference line.
+        values.AddRange(_lines.Select(line => line.Value));
+
         return Scale.Create(values, _integers, _chart.PercentageScale);
     }
 
@@ -540,6 +605,8 @@ internal sealed class ReportPdfChartWriter
     }
 
     private sealed record Series(string Label, double[] Values, ReportPdfColor Color);
+
+    private sealed record ReferenceLine(string Label, double Value, ReportPdfColor Color);
 
     private readonly record struct Box(double Left, double Top, double Width, double Height)
     {

@@ -6,6 +6,9 @@
  * A chart people can click carries the keys of its categories (keys) or of its series (seriesKeys): a click raises a
  * report-chart-select event with the key clicked, and window.CrestAppsReportCharts.select(canvas, keys) dims what isn't
  * picked (see report-interactions.js).
+ *
+ * A chart may carry reference lines ({ label, value, datasetIndex }): each is drawn as a dashed line across the plot at
+ * its value, in the color of its dataset, with its label at the end.
  */
 (function (root) {
     'use strict';
@@ -59,6 +62,82 @@
         };
     }
 
+    // The color of a reference line: that of the dataset it was computed from, or the text color.
+    function referenceLineColor(line, textColor) {
+        return typeof line.datasetIndex === 'number' ? palette[line.datasetIndex % palette.length] : textColor;
+    }
+
+    // The range the value axis is suggested to span so that every reference line shows, besides the values.
+    function referenceLineRange(lines, percentageScale) {
+        var values = (lines || []).map(function (line) {
+            return Number(line.value);
+        }).filter(function (value) {
+            return isFinite(value);
+        });
+        var max = percentageScale ? 100 : undefined;
+        var min;
+
+        values.forEach(function (value) {
+            max = max === undefined ? value : Math.max(max, value);
+            min = value < 0 ? (min === undefined ? value : Math.min(min, value)) : min;
+        });
+
+        return { suggestedMin: min, suggestedMax: max };
+    }
+
+    // Draws the reference lines of a chart across its plot area, after its datasets, so they stay on top.
+    var referenceLinesPlugin = {
+        id: 'reportReferenceLines',
+        afterDatasetsDraw: function (chart, args, options) {
+            var lines = (options && options.lines) || [];
+            var area = chart.chartArea;
+            var scale = options && options.horizontal ? chart.scales.x : chart.scales.y;
+            var ctx = chart.ctx;
+
+            if (!lines.length || !area || !scale) {
+                return;
+            }
+
+            ctx.save();
+            ctx.font = '600 11px system-ui, -apple-system, "Segoe UI", sans-serif';
+            ctx.lineWidth = 1.5;
+
+            lines.forEach(function (line) {
+                var at = scale.getPixelForValue(Number(line.value));
+                var color = referenceLineColor(line, options.textColor || '#495057');
+
+                if (!isFinite(at)) {
+                    return;
+                }
+
+                ctx.strokeStyle = color;
+                ctx.fillStyle = color;
+                ctx.setLineDash([6, 4]);
+                ctx.beginPath();
+
+                if (options.horizontal) {
+                    ctx.moveTo(at, area.top);
+                    ctx.lineTo(at, area.bottom);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    ctx.textAlign = at > area.left + ((area.right - area.left) * 0.7) ? 'right' : 'left';
+                    ctx.textBaseline = 'top';
+                    ctx.fillText(line.label || '', ctx.textAlign === 'right' ? at - 4 : at + 4, area.top + 2);
+                } else {
+                    ctx.moveTo(area.left, at);
+                    ctx.lineTo(area.right, at);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    ctx.textAlign = 'right';
+                    ctx.textBaseline = at - 14 < area.top ? 'top' : 'bottom';
+                    ctx.fillText(line.label || '', area.right - 4, ctx.textBaseline === 'top' ? at + 3 : at - 3);
+                }
+            });
+
+            ctx.restore();
+        }
+    };
+
     function applySelection(datasets, model, kind, keys) {
         datasets.forEach(function (dataset, index) {
             var colors = colorsOf(model, kind, index, (dataset.data || []).length, keys);
@@ -101,10 +180,13 @@
         });
 
         applySelection(datasets, model, kind, model.selectedKeys);
+        var lines = kind.circular ? [] : (model.referenceLines || []);
+        var range = referenceLineRange(lines, model.percentageScale);
         var valueAxis = {
             beginAtZero: true,
             stacked: !!model.stacked,
-            suggestedMax: model.percentageScale ? 100 : undefined,
+            suggestedMin: range.suggestedMin,
+            suggestedMax: range.suggestedMax,
             grid: { color: gridColor },
             ticks: {
                 color: textColor,
@@ -123,6 +205,7 @@
                 labels: model.labels || [],
                 datasets: datasets
             },
+            plugins: lines.length ? [referenceLinesPlugin] : [],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -132,6 +215,11 @@
                     mode: kind.circular ? 'nearest' : 'index'
                 },
                 plugins: {
+                    reportReferenceLines: {
+                        lines: lines,
+                        horizontal: kind.horizontal,
+                        textColor: textColor
+                    },
                     legend: {
                         display: model.showLegend !== false,
                         position: 'bottom',
@@ -211,6 +299,9 @@
         buildConfig: buildConfig,
         chartKind: chartKind,
         keyAt: keyAt,
+        referenceLineColor: referenceLineColor,
+        referenceLineRange: referenceLineRange,
+        referenceLinesPlugin: referenceLinesPlugin,
         render: render,
         select: select
     };

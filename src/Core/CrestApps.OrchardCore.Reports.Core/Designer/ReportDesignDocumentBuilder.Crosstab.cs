@@ -223,8 +223,18 @@ public sealed partial class ReportDesignDocumentBuilder
             }
         }
 
+        var calculated = valueIndexes.Select(index => IsCalculated(result, index)).ToArray();
+
+        for (var measure = 0; measure < measures.Length; measure++)
+        {
+            if (calculated[measure])
+            {
+                Calculate(rows.Where(row => row.Kind == ReportRowKind.Detail).Select(row => row.Values).ToList(), measure, measures[measure]);
+            }
+        }
+
         var colorizers = measures
-            .Select((measure, position) => ReportColumnColorizer.Create(measure, rows
+            .Select((measure, position) => ReportColumnColorizer.Create(ShownColumn(measure, calculated[position]), rows
                 .SelectMany(row => row.Values)
                 .Where(cell => cell.Measure == position && !cell.IsTotal)
                 .Select(cell => cell.Value)))
@@ -233,7 +243,7 @@ public sealed partial class ReportDesignDocumentBuilder
         var reportRows = rows.Select(row =>
         {
             var reportRow = new ReportRow(
-                [.. row.Headers, .. row.Values.Select(cell => _formatter.Format(cell.Value, measures[cell.Measure]))],
+                [.. row.Headers, .. row.Values.Select(cell => FormatShown(cell.Value, measures[cell.Measure], calculated[cell.Measure] && !cell.IsTotal))],
                 row.Kind);
 
             for (var position = 0; position < row.Values.Count; position++)
@@ -258,6 +268,33 @@ public sealed partial class ReportDesignDocumentBuilder
         }
 
         return section;
+    }
+
+    // Shows the cells of a measure of a cross-tab as its quick table calculation: the cells of each detail row, by the
+    // combinations across the top, form the grid it is computed over. Row totals and totals rows keep the plain totals.
+    private static void Calculate(List<List<(object Value, int Measure, bool IsTotal)>> rows, int measure, ReportResultColumn column)
+    {
+        var positions = rows
+            .Select(values => Enumerable.Range(0, values.Count).Where(position => values[position].Measure == measure && !values[position].IsTotal).ToArray())
+            .ToList();
+        var grid = rows
+            .Select((values, row) => positions[row].Select(position => values[position].Value).ToArray())
+            .Where(cells => cells.Length > 0)
+            .ToArray();
+        var withCells = Enumerable.Range(0, rows.Count).Where(row => positions[row].Length > 0).ToArray();
+
+        ReportTableCalculations.Apply(grid, column.ShowAs, column.ShowAsDirection);
+
+        for (var row = 0; row < withCells.Length; row++)
+        {
+            var values = rows[withCells[row]];
+            var cells = positions[withCells[row]];
+
+            for (var cell = 0; cell < cells.Length; cell++)
+            {
+                values[cells[cell]] = (grid[row][cell], measure, false);
+            }
+        }
     }
 
     // The header rows above a cross-tab's column headers: the names of the dimensions across the top, then the values

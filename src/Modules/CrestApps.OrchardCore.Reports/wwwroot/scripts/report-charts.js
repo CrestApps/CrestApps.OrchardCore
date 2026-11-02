@@ -79,6 +79,66 @@
 				points: picked.length && categoryKeys ? marks : color
 			};
 		}
+		function referenceLineColor(line, textColor) {
+			return typeof line.datasetIndex === "number" ? palette[line.datasetIndex % palette.length] : textColor;
+		}
+		function referenceLineRange(lines, percentageScale) {
+			var values = (lines || []).map(function(line) {
+				return Number(line.value);
+			}).filter(function(value) {
+				return isFinite(value);
+			});
+			var max = percentageScale ? 100 : void 0;
+			var min;
+			values.forEach(function(value) {
+				max = max === void 0 ? value : Math.max(max, value);
+				min = value < 0 ? min === void 0 ? value : Math.min(min, value) : min;
+			});
+			return {
+				suggestedMin: min,
+				suggestedMax: max
+			};
+		}
+		var referenceLinesPlugin = {
+			id: "reportReferenceLines",
+			afterDatasetsDraw: function(chart, args, options) {
+				var lines = options && options.lines || [];
+				var area = chart.chartArea;
+				var scale = options && options.horizontal ? chart.scales.x : chart.scales.y;
+				var ctx = chart.ctx;
+				if (!lines.length || !area || !scale) return;
+				ctx.save();
+				ctx.font = "600 11px system-ui, -apple-system, \"Segoe UI\", sans-serif";
+				ctx.lineWidth = 1.5;
+				lines.forEach(function(line) {
+					var at = scale.getPixelForValue(Number(line.value));
+					var color = referenceLineColor(line, options.textColor || "#495057");
+					if (!isFinite(at)) return;
+					ctx.strokeStyle = color;
+					ctx.fillStyle = color;
+					ctx.setLineDash([6, 4]);
+					ctx.beginPath();
+					if (options.horizontal) {
+						ctx.moveTo(at, area.top);
+						ctx.lineTo(at, area.bottom);
+						ctx.stroke();
+						ctx.setLineDash([]);
+						ctx.textAlign = at > area.left + (area.right - area.left) * .7 ? "right" : "left";
+						ctx.textBaseline = "top";
+						ctx.fillText(line.label || "", ctx.textAlign === "right" ? at - 4 : at + 4, area.top + 2);
+					} else {
+						ctx.moveTo(area.left, at);
+						ctx.lineTo(area.right, at);
+						ctx.stroke();
+						ctx.setLineDash([]);
+						ctx.textAlign = "right";
+						ctx.textBaseline = at - 14 < area.top ? "top" : "bottom";
+						ctx.fillText(line.label || "", area.right - 4, ctx.textBaseline === "top" ? at + 3 : at - 3);
+					}
+				});
+				ctx.restore();
+			}
+		};
 		function applySelection(datasets, model, kind, keys) {
 			datasets.forEach(function(dataset, index) {
 				var colors = colorsOf(model, kind, index, (dataset.data || []).length, keys);
@@ -109,10 +169,13 @@
 				};
 			});
 			applySelection(datasets, model, kind, model.selectedKeys);
+			var lines = kind.circular ? [] : model.referenceLines || [];
+			var range = referenceLineRange(lines, model.percentageScale);
 			var valueAxis = {
 				beginAtZero: true,
 				stacked: !!model.stacked,
-				suggestedMax: model.percentageScale ? 100 : void 0,
+				suggestedMin: range.suggestedMin,
+				suggestedMax: range.suggestedMax,
 				grid: { color: gridColor },
 				ticks: {
 					color: textColor,
@@ -132,6 +195,7 @@
 					labels: model.labels || [],
 					datasets
 				},
+				plugins: lines.length ? [referenceLinesPlugin] : [],
 				options: {
 					responsive: true,
 					maintainAspectRatio: false,
@@ -140,15 +204,22 @@
 						intersect: false,
 						mode: kind.circular ? "nearest" : "index"
 					},
-					plugins: { legend: {
-						display: model.showLegend !== false,
-						position: "bottom",
-						labels: {
-							color: textColor,
-							usePointStyle: true,
-							padding: 18
+					plugins: {
+						reportReferenceLines: {
+							lines,
+							horizontal: kind.horizontal,
+							textColor
+						},
+						legend: {
+							display: model.showLegend !== false,
+							position: "bottom",
+							labels: {
+								color: textColor,
+								usePointStyle: true,
+								padding: 18
+							}
 						}
-					} },
+					},
 					scales: kind.circular ? {} : kind.horizontal ? {
 						x: valueAxis,
 						y: categoryAxis
@@ -204,6 +275,9 @@
 			buildConfig,
 			chartKind,
 			keyAt,
+			referenceLineColor,
+			referenceLineRange,
+			referenceLinesPlugin,
 			render,
 			select
 		};
