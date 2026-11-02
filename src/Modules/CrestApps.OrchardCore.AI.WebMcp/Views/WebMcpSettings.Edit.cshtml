@@ -51,26 +51,45 @@
 </div>
 
 <script at="Foot">
-    document.addEventListener('DOMContentLoaded', () => {
-        const exposeAllTools = document.querySelector('[data-webmcp-expose-all-tools="true"]');
+    (() => {
+        const init = () => {
+            const exposeAllTools = document.querySelector('[data-webmcp-expose-all-tools="true"]');
 
-        if (!exposeAllTools) {
-            return;
+            if (!exposeAllTools) {
+                return;
+            }
+
+            // The tool pickers are separate shapes, and other cards on the settings page (such as the MCP Server) render
+            // the same pickers. Every field of this card is posted under the same prefix (for example "WebMcpSettings."),
+            // so pick the pickers whose fields share the prefix of this checkbox.
+            const prefix = exposeAllTools.name.substring(0, exposeAllTools.name.lastIndexOf('.') + 1);
+
+            if (!prefix) {
+                return;
+            }
+
+            const sections = new Set();
+
+            document.querySelectorAll('.tool-groups-container input, [id^="tool-instance-"]').forEach(input => {
+                if (input.name && input.name.startsWith(prefix)) {
+                    const section = input.closest('.ocat-wrapper');
+
+                    if (section) {
+                        sections.add(section);
+                    }
+                }
+            });
+
+            const toggleToolSelectors = () => sections.forEach(section => section.classList.toggle('d-none', exposeAllTools.checked));
+
+            exposeAllTools.addEventListener('change', toggleToolSelectors);
+            toggleToolSelectors();
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
         }
-
-        // The tool pickers are separate shapes in the same WebMCP tab; look only inside that tab, because other cards
-        // on the settings page (such as the MCP Server) render the same pickers.
-        const scope = exposeAllTools.closest('.tab-pane') || exposeAllTools.closest('form') || document;
-        const toolSelectors = [
-            scope.querySelector('.tool-groups-container')?.closest('.ocat-wrapper'),
-            scope.querySelector('[id^="tool-instance-"]')?.closest('.ocat-wrapper'),
-        ].filter(Boolean);
-
-        function toggleToolSelectors() {
-            toolSelectors.forEach(section => section.classList.toggle('d-none', exposeAllTools.checked));
-        }
-
-        exposeAllTools.addEventListener('change', toggleToolSelectors);
-        toggleToolSelectors();
-    });
+    })();
 </script>
