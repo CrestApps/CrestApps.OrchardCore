@@ -297,6 +297,96 @@
         query.sorts.unshift({ columnId: columnId, descending: !!descending });
     };
 
+    // The quick table calculations a column can show its values as, and the directions they are computed along.
+    designer.SHOW_AS = ['Value', 'PercentOfTotal', 'RunningTotal', 'DifferenceFromPrevious', 'PercentDifference', 'Rank'];
+    designer.SHOW_AS_DIRECTIONS = ['Down', 'Across', 'Table'];
+
+    // Whether a result column can be shown as a quick table calculation: a number that a measure sums, or any number of
+    // a result that groups nothing (whose numbers are totalled as they are).
+    designer.canShowAs = function (described, columns) {
+        if (!described || !isNumeric(described.dataType)) {
+            return false;
+        }
+
+        return described.isMeasure || !(columns || []).some(function (column) {
+            return column.isMeasure;
+        });
+    };
+
+    // Sets how a column shows its values. Showing the plain values again forgets the direction, so the design stays as
+    // it was before.
+    designer.setShowAs = function (column, showAs, direction) {
+        var value = designer.SHOW_AS.indexOf(showAs) > 0 ? showAs : 'Value';
+
+        if (value === 'Value') {
+            delete column.showAs;
+            delete column.showAsDirection;
+
+            return column;
+        }
+
+        column.showAs = value;
+
+        if (direction !== undefined) {
+            column.showAsDirection = designer.SHOW_AS_DIRECTIONS.indexOf(direction) > 0 ? direction : 'Down';
+        } else {
+            column.showAsDirection = column.showAsDirection || 'Down';
+        }
+
+        return column;
+    };
+
+    // The short badge of a calculated column's pill, or null when it shows its values as they are.
+    designer.showAsBadge = function (column) {
+        switch (column && column.showAs) {
+            case 'PercentOfTotal':
+                return '%';
+            case 'RunningTotal':
+                return '\u03A3';
+            case 'DifferenceFromPrevious':
+                return '\u0394';
+            case 'PercentDifference':
+                return '%\u0394';
+            case 'Rank':
+                return '#';
+            default:
+                return null;
+        }
+    };
+
+    // The kinds of reference line a chart can draw.
+    designer.REFERENCE_LINE_KINDS = ['Average', 'Median', 'Constant'];
+
+    // Adds a reference line to a chart: the average of its first value column, until the user picks otherwise.
+    designer.addReferenceLine = function (visual) {
+        var line = { columnId: (visual.valueColumnIds || [])[0] || null, kind: 'Average', value: null, label: '' };
+
+        visual.referenceLines = visual.referenceLines || [];
+        visual.referenceLines.push(line);
+
+        return line;
+    };
+
+    // Drops the reference lines of a chart that can no longer be drawn: those computed from a column it no longer plots.
+    // A constant line keeps its value, and forgets a column it no longer plots.
+    designer.pruneReferenceLines = function (visual) {
+        var plotted = visual.valueColumnIds || [];
+
+        visual.referenceLines = (visual.referenceLines || []).filter(function (line) {
+            if (line.kind === 'Constant') {
+                if (line.columnId && plotted.indexOf(line.columnId) < 0) {
+                    line.columnId = null;
+                }
+
+                return true;
+            }
+
+            return plotted.indexOf(line.columnId) >= 0;
+        });
+
+        return visual.referenceLines;
+    };
+
     // The operators a color rule can compare a column's values with.
     designer.colorOperatorsFor = function (dataType) {
         return designer.operatorsFor(dataType).filter(function (operator) {
@@ -723,6 +813,10 @@
             visual.valueColumnIds = (visual.valueColumnIds || []).filter(function (id) {
                 return id !== columnId;
             });
+
+            if (visual.referenceLines) {
+                designer.pruneReferenceLines(visual);
+            }
 
             if (visual.categoryColumnId === columnId) {
                 visual.categoryColumnId = null;

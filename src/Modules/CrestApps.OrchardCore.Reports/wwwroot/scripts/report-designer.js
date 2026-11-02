@@ -241,6 +241,74 @@
 				descending: !!descending
 			});
 		};
+		designer.SHOW_AS = [
+			"Value",
+			"PercentOfTotal",
+			"RunningTotal",
+			"DifferenceFromPrevious",
+			"PercentDifference",
+			"Rank"
+		];
+		designer.SHOW_AS_DIRECTIONS = [
+			"Down",
+			"Across",
+			"Table"
+		];
+		designer.canShowAs = function(described, columns) {
+			if (!described || !isNumeric(described.dataType)) return false;
+			return described.isMeasure || !(columns || []).some(function(column) {
+				return column.isMeasure;
+			});
+		};
+		designer.setShowAs = function(column, showAs, direction) {
+			var value = designer.SHOW_AS.indexOf(showAs) > 0 ? showAs : "Value";
+			if (value === "Value") {
+				delete column.showAs;
+				delete column.showAsDirection;
+				return column;
+			}
+			column.showAs = value;
+			if (direction !== void 0) column.showAsDirection = designer.SHOW_AS_DIRECTIONS.indexOf(direction) > 0 ? direction : "Down";
+			else column.showAsDirection = column.showAsDirection || "Down";
+			return column;
+		};
+		designer.showAsBadge = function(column) {
+			switch (column && column.showAs) {
+				case "PercentOfTotal": return "%";
+				case "RunningTotal": return "Σ";
+				case "DifferenceFromPrevious": return "Δ";
+				case "PercentDifference": return "%Δ";
+				case "Rank": return "#";
+				default: return null;
+			}
+		};
+		designer.REFERENCE_LINE_KINDS = [
+			"Average",
+			"Median",
+			"Constant"
+		];
+		designer.addReferenceLine = function(visual) {
+			var line = {
+				columnId: (visual.valueColumnIds || [])[0] || null,
+				kind: "Average",
+				value: null,
+				label: ""
+			};
+			visual.referenceLines = visual.referenceLines || [];
+			visual.referenceLines.push(line);
+			return line;
+		};
+		designer.pruneReferenceLines = function(visual) {
+			var plotted = visual.valueColumnIds || [];
+			visual.referenceLines = (visual.referenceLines || []).filter(function(line) {
+				if (line.kind === "Constant") {
+					if (line.columnId && plotted.indexOf(line.columnId) < 0) line.columnId = null;
+					return true;
+				}
+				return plotted.indexOf(line.columnId) >= 0;
+			});
+			return visual.referenceLines;
+		};
 		designer.colorOperatorsFor = function(dataType) {
 			return designer.operatorsFor(dataType).filter(function(operator) {
 				return [
@@ -592,6 +660,7 @@
 				visual.valueColumnIds = (visual.valueColumnIds || []).filter(function(id) {
 					return id !== columnId;
 				});
+				if (visual.referenceLines) designer.pruneReferenceLines(visual);
 				if (visual.categoryColumnId === columnId) visual.categoryColumnId = null;
 				if (visual.seriesColumnId === columnId) visual.seriesColumnId = null;
 				if (visual.action && visual.action.columnId === columnId) visual.action = null;
@@ -2659,6 +2728,23 @@
 				onclick: onRemove
 			}, ui.icon("fa-xmark")));
 		}
+		function showAsLabel(value) {
+			switch (value) {
+				case "PercentOfTotal": return app.t("Percent of total");
+				case "RunningTotal": return app.t("Running total");
+				case "DifferenceFromPrevious": return app.t("Difference from previous");
+				case "PercentDifference": return app.t("Percent difference from previous");
+				case "Rank": return app.t("Rank");
+				default: return app.t("Value");
+			}
+		}
+		function directionLabel(value) {
+			switch (value) {
+				case "Across": return app.t("Across the columns");
+				case "Table": return app.t("Over the whole table");
+				default: return app.t("Down the rows");
+			}
+		}
 		app.columnMenu = function(column, x, y) {
 			var query = app.design.query;
 			var fields = app.fields();
@@ -2708,6 +2794,39 @@
 					};
 				})
 			});
+			var described = app.columns().filter(function(candidate) {
+				return candidate.id === column.id;
+			})[0];
+			if (designer.canShowAs(described, app.columns())) {
+				var showAs = column.showAs || "Value";
+				items.push({
+					label: app.t("Show as"),
+					icon: "fa-percent",
+					items: designer.SHOW_AS.map(function(value) {
+						return {
+							label: showAsLabel(value),
+							checked: showAs === value,
+							action: function() {
+								designer.setShowAs(column, value);
+								app.changed();
+							}
+						};
+					})
+				});
+				if (showAs !== "Value") items.push({
+					label: app.t("Compute along"),
+					items: designer.SHOW_AS_DIRECTIONS.map(function(value) {
+						return {
+							label: directionLabel(value),
+							checked: (column.showAsDirection || "Down") === value,
+							action: function() {
+								designer.setShowAs(column, showAs, value);
+								app.changed();
+							}
+						};
+					})
+				});
+			}
 			items.push({ divider: true }, {
 				label: app.t("Sort ascending"),
 				icon: "fa-arrow-up-short-wide",
@@ -2785,6 +2904,8 @@
 			var columnPill = function(column) {
 				var index = query.columns.indexOf(column);
 				var aggregate = column.aggregate && column.aggregate !== "None" ? app.config.aggregateLabels[column.aggregate] || column.aggregate : null;
+				var calculation = designer.showAsBadge(column);
+				if (calculation) aggregate = aggregate ? aggregate + " " + calculation : calculation;
 				return pill(columns[index].label, aggregate, selection.kind === "column" && selection.id === column.id, columns[index].isMeasure, function() {
 					app.select("column", column.id);
 				}, function() {
@@ -3272,6 +3393,24 @@
 					app.changed();
 				} })),
 				labelled(app.t("Format"), formatEditor(column, field), app.t("How values are shown. Click the question mark for common formats.")),
+				designer.canShowAs(described, app.columns()) ? labelled(app.t("Show as"), ui.select(designer.SHOW_AS.map(function(value) {
+					return {
+						value,
+						text: showAsLabel(value)
+					};
+				}), column.showAs || "Value", { onchange: function(event) {
+					designer.setShowAs(column, event.target.value);
+					app.changed();
+				} }), app.t("A quick table calculation over the values each table and chart shows. Totals rows keep the plain totals.")) : null,
+				designer.canShowAs(described, app.columns()) && column.showAs ? labelled(app.t("Compute along"), ui.select(designer.SHOW_AS_DIRECTIONS.map(function(value) {
+					return {
+						value,
+						text: directionLabel(value)
+					};
+				}), column.showAsDirection || "Down", { onchange: function(event) {
+					designer.setShowAs(column, column.showAs, event.target.value);
+					app.changed();
+				} }), app.t("In a cross-tab: down each column, across each row, or over every cell. In a chart split into series: along the categories, or across the series of each category.")) : null,
 				check(app.t("Hide from tables"), column.hidden, function(value) {
 					column.hidden = value;
 					app.changed({ render: false });
@@ -3603,6 +3742,76 @@
 			parts.push(labelled(app.t("Filter these visuals"), list, app.t("They show only the rows with the picked values. Hold Ctrl to pick several; click again to clear.")));
 			return parts;
 		}
+		function referenceLineProperties(visual, numbers) {
+			var lines = visual.referenceLines || [];
+			var plotted = numbers.filter(function(option) {
+				return (visual.valueColumnIds || []).indexOf(option.value) >= 0;
+			});
+			var list = h("div", { className: "rd-reference-lines" });
+			lines.forEach(function(line, index) {
+				var constant = line.kind === "Constant";
+				list.appendChild(h("div", { className: "rd-reference-line border rounded p-1 mb-1" }, h("div", { className: "d-flex gap-1 mb-1" }, ui.select(designer.REFERENCE_LINE_KINDS.map(function(value) {
+					return {
+						value,
+						text: value === "Average" ? app.t("Average") : value === "Median" ? app.t("Median") : app.t("Constant")
+					};
+				}), line.kind || "Average", {
+					"aria-label": app.t("Line at"),
+					onchange: function(event) {
+						line.kind = event.target.value;
+						if (line.kind !== "Constant" && !line.columnId) line.columnId = (visual.valueColumnIds || [])[0] || null;
+						app.changed();
+					}
+				}), h("button", {
+					type: "button",
+					className: "btn btn-sm btn-link text-reset p-0 px-1",
+					"aria-label": app.t("Remove"),
+					onclick: function() {
+						lines.splice(index, 1);
+						app.changed();
+					}
+				}, ui.icon("fa-xmark"))), ui.select((constant ? [{
+					value: "",
+					text: app.t("None")
+				}] : []).concat(plotted), line.columnId || "", {
+					className: "form-select form-select-sm mb-1",
+					"aria-label": constant ? app.t("Format like") : app.t("Of"),
+					title: constant ? app.t("The value is shown in the format of this column.") : null,
+					onchange: function(event) {
+						line.columnId = event.target.value || null;
+						app.changed();
+					}
+				}), constant ? h("input", {
+					type: "number",
+					step: "any",
+					className: "form-control form-control-sm mb-1",
+					value: line.value == null ? "" : String(line.value),
+					placeholder: app.t("Value"),
+					"aria-label": app.t("Value"),
+					onchange: function(event) {
+						var value = parseFloat(event.target.value);
+						line.value = isFinite(value) ? value : null;
+						app.changed();
+					}
+				}) : null, textInput(line.label, function(value) {
+					line.label = value;
+					app.changed();
+				}, {
+					placeholder: constant ? app.t("Label, such as Target") : line.kind === "Median" ? app.t("Median") : app.t("Average"),
+					maxlength: "200",
+					"aria-label": app.t("Label")
+				})));
+			});
+			return labelled(app.t("Reference lines"), h("div", null, lines.length ? list : h("div", { className: "form-text mt-0 mb-1" }, app.t("Draw a line across the chart at the average or median of a value, or at a target.")), h("button", {
+				type: "button",
+				className: "btn btn-sm btn-outline-primary",
+				disabled: !plotted.length,
+				onclick: function() {
+					designer.addReferenceLine(visual);
+					app.changed();
+				}
+			}, ui.icon("fa-plus"), " ", app.t("Add reference line"))));
+		}
 		function visualProperties(visual) {
 			var columns = app.columns();
 			var dimensions = columns.filter(function(column) {
@@ -3693,7 +3902,11 @@
 						app.changed({ render: false });
 					} }), function(column) {
 						visual.categoryColumnId = column.id;
-					}), well(app.t("Values"), "measure", checkboxList(numbers, visual.valueColumnIds || [], set("valueColumnIds")), function(column) {
+					}), well(app.t("Values"), "measure", checkboxList(numbers, visual.valueColumnIds || [], function(value) {
+						visual.valueColumnIds = value;
+						designer.pruneReferenceLines(visual);
+						app.changed();
+					}), function(column) {
 						visual.valueColumnIds = (visual.valueColumnIds || []).filter(function(id) {
 							return id !== column.id;
 						}).concat([column.id]);
@@ -3702,7 +3915,7 @@
 						app.changed({ render: false });
 					} }), function(column) {
 						visual.seriesColumnId = column.id;
-					}), h("div", { className: "form-text mb-2" }, app.t("Draws one series per value of this column, using the first value column.")), check(app.t("Stack series"), visual.stacked, set("stacked", false)), check(app.t("Show legend"), visual.showLegend !== false, set("showLegend", false)));
+					}), h("div", { className: "form-text mb-2" }, app.t("Draws one series per value of this column, using the first value column.")), check(app.t("Stack series"), visual.stacked, set("stacked", false)), check(app.t("Show legend"), visual.showLegend !== false, set("showLegend", false)), visual.chartType === "Pie" || visual.chartType === "Doughnut" ? null : referenceLineProperties(visual, numbers));
 					parts.push.apply(parts, actionProperties(visual, columns));
 					break;
 				case "Metrics":
