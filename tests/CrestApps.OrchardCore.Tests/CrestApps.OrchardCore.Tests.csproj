@@ -77,6 +77,7 @@
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.A2A/CrestApps.OrchardCore.AI.A2A.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Chat/CrestApps.OrchardCore.AI.Chat.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Mcp/CrestApps.OrchardCore.AI.Mcp.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.WebMcp/CrestApps.OrchardCore.AI.WebMcp.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Prompting/CrestApps.OrchardCore.AI.Prompting.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Asterisk/CrestApps.OrchardCore.Asterisk.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/CrestApps.OrchardCore.Omnichannel.Managements.csproj" />
