@@ -52,6 +52,12 @@ public sealed class CsvReportExportFormat : IReportExportFormat
 
                     break;
                 case ReportSectionKind.Table:
+                    // The rows that group the columns: each label in the first cell of the columns it spans.
+                    foreach (var headerRow in section.HeaderRows ?? [])
+                    {
+                        AppendRow(builder, [.. (headerRow?.Cells ?? []).SelectMany(cell => Enumerable.Range(0, Math.Max(1, cell.Span)).Select(position => position == 0 ? cell.Label : string.Empty))]);
+                    }
+
                     AppendRow(builder, [.. section.Columns.Select(column => column.Label)]);
 
                     foreach (var row in section.Rows)

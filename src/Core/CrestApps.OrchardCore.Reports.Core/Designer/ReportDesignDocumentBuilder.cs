@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.Reports.Designer;
 /// Turns a designed query result and its visuals into a <see cref="ReportDocument"/>, so designed reports render and
 /// export through the same pipeline as every other report.
 /// </summary>
-public sealed class ReportDesignDocumentBuilder
+public sealed partial class ReportDesignDocumentBuilder
 {
     private readonly ReportValueFormatter _formatter;
     private readonly IStringLocalizer S;
@@ -149,7 +149,7 @@ public sealed class ReportDesignDocumentBuilder
         {
             if (isAggregated)
             {
-                groupings.Add([]);
+                groupings.AddRange(GetShelfLayout(DefaultTable(isAggregated), columns)?.Groupings ?? [[]]);
             }
 
             return groupings;
@@ -175,24 +175,18 @@ public sealed class ReportDesignDocumentBuilder
                     break;
 
                 case ReportVisualType.Pivot:
-                    var rowIds = visual.ColumnIds.Where(id => IdOf(id) is not null).ToArray();
-                    var pivotSeries = IdOf(visual.SeriesColumnId);
-
-                    if (rowIds.Length > 0 && pivotSeries is not null)
-                    {
-                        groupings.Add([.. rowIds, pivotSeries]);
-                        groupings.Add(rowIds);
-
-                        if (visual.ShowTotals)
-                        {
-                            groupings.Add([pivotSeries]);
-                            groupings.Add([]);
-                        }
-                    }
+                    groupings.AddRange(GetPivotLayout(visual, columns)?.Groupings ?? []);
 
                     break;
 
                 default:
+                    if (isAggregated && GetShelfLayout(visual, columns) is { } layout)
+                    {
+                        groupings.AddRange(layout.Groupings);
+
+                        break;
+                    }
+
                     var tableGrouping = GetTableGrouping(visual, columns);
 
                     if (tableGrouping is not null)
@@ -253,12 +247,7 @@ public sealed class ReportDesignDocumentBuilder
 
         if (list.Count == 0)
         {
-            list.Add(new ReportVisualDefinition
-            {
-                Id = "table",
-                Type = ReportVisualType.Table,
-                ShowTotals = result.IsAggregated,
-            });
+            list.Add(DefaultTable(result.IsAggregated));
         }
 
         foreach (var visual in list)
@@ -284,6 +273,17 @@ public sealed class ReportDesignDocumentBuilder
         }
 
         return document;
+    }
+
+    // The table a report without visuals shows: the result as laid out on the shelves, with totals when it is grouped.
+    private static ReportVisualDefinition DefaultTable(bool isAggregated)
+    {
+        return new ReportVisualDefinition
+        {
+            Id = "table",
+            Type = ReportVisualType.Table,
+            ShowTotals = isAggregated,
+        };
     }
 
     // What picking a value in a visual filters, when the section built for it carries the keys of the values it shows.
@@ -338,12 +338,16 @@ public sealed class ReportDesignDocumentBuilder
         return position >= 0 && row is not null && position < row.Cells.Count ? row.Cells[position] : null;
     }
 
-    // The positions in the result of the columns a table shows: those it lists, or every column the result doesn't hide.
+    // The positions in the result of the columns a table shows: those it lists, or every column the result doesn't hide,
+    // those of the Rows shelf first.
     private static int[] TableIndexes(ReportVisualDefinition visual, ReportQueryResult result)
     {
         return visual.ColumnIds.Count > 0
             ? visual.ColumnIds.Select(result.IndexOf).Where(index => index >= 0).ToArray()
-            : Enumerable.Range(0, result.Columns.Count).Where(index => !result.Columns[index].Hidden).ToArray();
+            : Enumerable.Range(0, result.Columns.Count)
+                .Where(index => !result.Columns[index].Hidden)
+                .OrderBy(index => result.Columns[index].Shelf == ReportColumnShelf.Rows ? 0 : 1)
+                .ToArray();
     }
 
     // The position of the column clicking a visual picks, or -1 when clicking it picks nothing.
@@ -361,12 +365,24 @@ public sealed class ReportDesignDocumentBuilder
         return index >= 0 && IsClickable(visual, result.Columns[index]) ? index : -1;
     }
 
-    private ReportRow DetailRow(object[] values, ReportQueryResult result, int[] indexes, int keyIndex)
+    private ReportRow DetailRow(object[] values, ReportQueryResult result, int[] indexes, int keyIndex, ReportColumnColorizer[] colorizers)
     {
-        return new ReportRow(indexes.Select(index => _formatter.Format(values[index], result.Columns[index])).ToList())
+        var row = new ReportRow(indexes.Select(index => _formatter.Format(values[index], result.Columns[index])).ToList())
         {
             Key = keyIndex >= 0 ? ReportSelectionKeys.ToKey(values[keyIndex]) : null,
         };
+
+        for (var position = 0; position < indexes.Length; position++)
+        {
+            var style = colorizers[position]?.StyleOf(values[indexes[position]]);
+
+            if (style is not null)
+            {
+                row.WithCellStyle(position, style);
+            }
+        }
+
+        return row;
     }
 
     /// <summary>
@@ -433,6 +449,11 @@ public sealed class ReportDesignDocumentBuilder
 
     private ReportSection BuildTable(ReportVisualDefinition visual, ReportQueryResult result)
     {
+        if (result.IsAggregated && GetShelfLayout(visual, result.Columns) is { } layout)
+        {
+            return BuildCrosstab(visual, result, layout);
+        }
+
         var grouping = GetTableGrouping(visual, result.Columns);
 
         if (grouping is not null)
@@ -456,14 +477,17 @@ public sealed class ReportDesignDocumentBuilder
         }
 
         var keyIndex = ActionIndex(visual, result);
+        var colorizers = indexes
+            .Select(index => ReportColumnColorizer.Create(result.Columns[index], result.Rows.Select(values => values[index])))
+            .ToArray();
 
         var columns = indexes
-            .Select(index => new ReportColumn(result.Columns[index].Label, Align(result.Columns[index])))
+            .Select(index => new ReportColumn(result.Columns[index].Label, Align(result.Columns[index]), ReportColumnColorizer.HeaderStyleOf(result.Columns[index])))
             .ToList();
         var rows = visual.ShowSubtotals && result.IsAggregated
-            ? BuildRowsWithSubtotals(result, indexes, keyIndex)
+            ? BuildRowsWithSubtotals(result, indexes, keyIndex, colorizers)
             : result.Rows
-                .Select(values => DetailRow(values, result, indexes, keyIndex))
+                .Select(values => DetailRow(values, result, indexes, keyIndex, colorizers))
                 .ToList();
 
         if (visual.ShowTotals && indexes.Any(index => IsTotalled(result, index)))
@@ -487,7 +511,7 @@ public sealed class ReportDesignDocumentBuilder
     // The rows of a grouped table with a subtotal after each group of its leading dimensions (every shown dimension but
     // the last). Rows are kept together by those dimensions, keeping their order within each group. Each subtotal is
     // the result regrouped by the dimensions up to its level, so averages and distinct counts stay correct.
-    private List<ReportRow> BuildRowsWithSubtotals(ReportQueryResult result, int[] indexes, int keyIndex)
+    private List<ReportRow> BuildRowsWithSubtotals(ReportQueryResult result, int[] indexes, int keyIndex, ReportColumnColorizer[] colorizers)
     {
         var dimensions = indexes.Where(index => !result.Columns[index].IsMeasure).ToArray();
         var levels = dimensions.Length - 1;
@@ -495,7 +519,7 @@ public sealed class ReportDesignDocumentBuilder
         if (levels < 1)
         {
             return result.Rows
-                .Select(values => DetailRow(values, result, indexes, keyIndex))
+                .Select(values => DetailRow(values, result, indexes, keyIndex, colorizers))
                 .ToList();
         }
 
@@ -581,7 +605,7 @@ public sealed class ReportDesignDocumentBuilder
                 }
             }
 
-            rows.Add(DetailRow(values, result, indexes, keyIndex));
+            rows.Add(DetailRow(values, result, indexes, keyIndex, colorizers));
             previous = values;
         }
 
@@ -677,65 +701,9 @@ public sealed class ReportDesignDocumentBuilder
 
     private ReportSection BuildPivot(ReportVisualDefinition visual, ReportQueryResult result)
     {
-        var rowIndexes = visual.ColumnIds.Select(result.IndexOf).Where(index => index >= 0).ToArray();
-        var seriesIndex = result.IndexOf(visual.SeriesColumnId);
-        var valueIndex = visual.ValueColumnIds.Select(result.IndexOf).FirstOrDefault(index => index >= 0, -1);
+        var layout = GetPivotLayout(visual, result.Columns);
 
-        if (rowIndexes.Length == 0 || seriesIndex < 0 || valueIndex < 0)
-        {
-            return null;
-        }
-
-        var rowIds = rowIndexes.Select(index => result.Columns[index].Id).ToArray();
-        var seriesColumn = result.Columns[seriesIndex];
-        var valueColumn = result.Columns[valueIndex];
-        var cells = result.Regroup([.. rowIds, seriesColumn.Id]);
-        var series = DistinctKeys(cells, seriesIndex);
-        var rowGroups = result.Regroup(rowIds);
-        var lookup = cells.ToDictionary(
-            group => RowKey(group.Values, rowIndexes) + "\u001E" + Key(group.Values[seriesIndex]),
-            group => group.Values[valueIndex],
-            StringComparer.Ordinal);
-
-        var columns = rowIndexes
-            .Select(index => new ReportColumn(result.Columns[index].Label))
-            .Concat(series.Select(value => new ReportColumn(_formatter.Format(value, seriesColumn), ReportColumnAlign.End)))
-            .ToList();
-
-        if (visual.ShowTotals)
-        {
-            columns.Add(new ReportColumn(S["Total"], ReportColumnAlign.End));
-        }
-
-        var rows = new List<ReportRow>();
-
-        foreach (var group in rowGroups)
-        {
-            var rowKey = RowKey(group.Values, rowIndexes);
-            var row = rowIndexes.Select(index => _formatter.Format(group.Values[index], result.Columns[index])).ToList();
-
-            row.AddRange(series.Select(value => _formatter.Format(lookup.GetValueOrDefault(rowKey + "\u001E" + Key(value)), valueColumn)));
-
-            if (visual.ShowTotals)
-            {
-                row.Add(_formatter.Format(group.Values[valueIndex], valueColumn));
-            }
-
-            rows.Add(new ReportRow(row));
-        }
-
-        if (visual.ShowTotals)
-        {
-            var seriesTotals = result.Regroup([seriesColumn.Id]).ToDictionary(group => Key(group.Values[seriesIndex]), group => group.Values[valueIndex], StringComparer.Ordinal);
-            var totals = rowIndexes.Select(_ => string.Empty).ToList();
-
-            totals[0] = S["Total"];
-            totals.AddRange(series.Select(value => _formatter.Format(seriesTotals.GetValueOrDefault(Key(value)), valueColumn)));
-            totals.Add(_formatter.Format(result.GetTotals()[valueIndex], valueColumn));
-            rows.Add(new ReportRow(totals, ReportRowKind.GrandTotal));
-        }
-
-        return ReportSection.ForTable(visual.Title, columns, rows);
+        return layout is null ? null : BuildCrosstab(visual, result, layout);
     }
 
     private static bool IsTotalled(ReportQueryResult result, int index)

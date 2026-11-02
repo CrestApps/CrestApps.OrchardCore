@@ -141,4 +141,46 @@ public sealed class ReportDesignNormalizerTests
         Assert.Equal(1, normalized[1].Width);
         Assert.Equal(ReportContainerDefinition.MaxHeight, normalized[1].Height);
     }
+
+    // Colors are written into inline styles, so anything that is not a color is dropped before a design is saved.
+    [Fact]
+    public void Normalize_DropsColorsThatAreNotColorsAndColorsThatColorNothing()
+    {
+        // Arrange
+        var query = new ReportQueryDefinition
+        {
+            Columns =
+            [
+                new ReportColumnDefinition
+                {
+                    Id = "a",
+                    Colors = new ReportColumnColors
+                    {
+                        Color = "red;background:url(x)",
+                        BackgroundColor = "#d1e7dd",
+                        Scale = new ReportColorScale { LowColor = "#FFFFFF" },
+                        Rules =
+                        [
+                            new ReportColorRule { Operator = DataFilterOperator.LessThan, Values = ["20"], Color = "expression(1)" },
+                            new ReportColorRule { Operator = DataFilterOperator.GreaterThan, Values = [null], Color = "#198754" },
+                        ],
+                    },
+                },
+                new ReportColumnDefinition { Id = "b", Colors = new ReportColumnColors { Color = "not a color" } },
+            ],
+        };
+
+        // Act
+        var normalized = ReportDesignNormalizer.Normalize(query);
+
+        // Assert
+        var colors = normalized.Columns[0].Colors;
+        Assert.Null(colors.Color);
+        Assert.Equal("#D1E7DD", colors.BackgroundColor);
+        Assert.Null(colors.Scale);
+        var rule = Assert.Single(colors.Rules);
+        Assert.Equal("#198754", rule.Color);
+        Assert.Equal([string.Empty], rule.Values);
+        Assert.Null(normalized.Columns[1].Colors);
+    }
 }

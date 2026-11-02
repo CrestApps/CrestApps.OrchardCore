@@ -52,4 +52,14 @@ public sealed class ReportResultColumn
     /// Gets or sets a value indicating whether the column is hidden from tables.
     /// </summary>
     public bool Hidden { get; set; }
+
+    /// <summary>
+    /// Gets or sets the shelf the column is placed on.
+    /// </summary>
+    public ReportColumnShelf Shelf { get; set; }
+
+    /// <summary>
+    /// Gets or sets how the column is colored in tables, or <see langword="null"/> for the default colors.
+    /// </summary>
+    public ReportColumnColors Colors { get; set; }
 }
