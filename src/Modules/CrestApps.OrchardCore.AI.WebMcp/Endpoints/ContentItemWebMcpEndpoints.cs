@@ -147,9 +147,9 @@ internal static class ContentItemWebMcpEndpoints
         }
 
         var contentItem = await contentManager.GetAsync(contentItemId, VersionOptions.Published);
-        var part = contentItem?.As<WebMcpPart>();
 
-        if (part is null ||
+        if (contentItem is null ||
+            !contentItem.TryGet<WebMcpPart>(out var part) ||
             part.Tools is not { Count: > 0 } ||
             !await authorizationService.AuthorizeAsync(user, CommonPermissions.ViewContent, contentItem))
         {
