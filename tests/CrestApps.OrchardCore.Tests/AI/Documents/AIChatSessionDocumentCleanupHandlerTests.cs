@@ -31,7 +31,9 @@ public sealed class AIChatSessionDocumentCleanupHandlerTests
             Mock.Of<IAIDocumentChunkStore>(),
             cleanupService.Object);
 
-        await handler.DeletingAsync(new DeletingContext<AIChatSession>(new AIChatSession { SessionId = SessionId }));
+        await handler.DeletingAsync(
+            new DeletingContext<AIChatSession>(new AIChatSession { SessionId = SessionId }),
+            TestContext.Current.CancellationToken);
 
         // Runs even for a session with no documents because the workspaces it keeps outlive the document rows.
         cleanupService.Verify(
@@ -77,7 +79,9 @@ public sealed class AIChatSessionDocumentCleanupHandlerTests
 
         var handler = new AIChatSessionDocumentCleanupHandler(documentStore.Object, chunkStore.Object, cleanupService);
 
-        await handler.DeletingAsync(new DeletingContext<AIChatSession>(new AIChatSession { SessionId = SessionId }));
+        await handler.DeletingAsync(
+            new DeletingContext<AIChatSession>(new AIChatSession { SessionId = SessionId }),
+            TestContext.Current.CancellationToken);
 
         fileStore.Verify(store => store.DeleteFileAsync(StoredFilePath), Times.Once);
         chunkStore.Verify(store => store.DeleteByDocumentIdAsync(document.ItemId), Times.Once);
