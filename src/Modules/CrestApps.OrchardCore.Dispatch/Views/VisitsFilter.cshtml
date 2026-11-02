@@ -2,23 +2,27 @@
     var filter = (VisitsListViewModel)Model.ViewModel;
     var formId = (string)Model.FormId;
 }
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 
-<label for="visits-status" class="visually-hidden">@T["Status"]</label>
-<select id="visits-status" name="status" form="@formId" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
-    <option value="@VisitsController.OpenFilter" selected="@(filter.Status == VisitsController.OpenFilter)">@T["Still to do"]</option>
-    <option value="@VisitsController.AllFilter" selected="@(filter.Status == VisitsController.AllFilter)">@T["Every status"]</option>
-    @foreach (var status in Enum.GetValues<VisitStatus>())
-    {
-        <option value="@status" selected="@(filter.Status == status.ToString())">@T[status.Text()]</option>
-    }
-</select>
-<label for="visits-worker" class="visually-hidden">@T["Technician"]</label>
-<select id="visits-worker" name="workerId" form="@formId" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
-    <option value="">@T["Every technician"]</option>
-    @foreach (var option in filter.WorkerOptions)
-    {
-        <option value="@option.Value" selected="@option.Selected">@option.Text</option>
-    }
-</select>
+<div class="btn-group filter">
+    <select id="visits-status" name="status" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Status"]" data-dropdown-align-right="auto" aria-label="@T["Status"]" onchange="this.form.submit()">
+        <option value="@VisitsController.OpenFilter" selected="@(filter.Status == VisitsController.OpenFilter)">@T["Still to do"]</option>
+        <option value="@VisitsController.AllFilter" selected="@(filter.Status == VisitsController.AllFilter)">@T["Every status"]</option>
+        @foreach (var status in Enum.GetValues<VisitStatus>())
+        {
+            <option value="@status" selected="@(filter.Status == status.ToString())">@T[status.Text()]</option>
+        }
+    </select>
+</div>
+<div class="btn-group filter">
+    <select id="visits-worker" name="workerId" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Technician"]" data-dropdown-align-right="auto" aria-label="@T["Technician"]" onchange="this.form.submit()">
+        <option value="">@T["Every technician"]</option>
+        @foreach (var option in filter.WorkerOptions)
+        {
+            <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+        }
+    </select>
+</div>
 <label for="visits-day" class="visually-hidden">@T["Day"]</label>
 <input id="visits-day" type="date" name="day" value="@filter.Day" form="@formId" class="form-control form-control-sm w-auto" onchange="this.form.submit()" />
