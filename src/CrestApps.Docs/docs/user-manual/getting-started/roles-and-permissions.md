@@ -141,7 +141,7 @@ A settings page under **Settings** opens for anyone who has the permission liste
 | **Settings > Communication > Telephony** | Manage telephony settings |
 | **Settings > Communication > SMS** (the Telnyx section, when Telnyx SMS is on) | Manage SMS Settings |
 | **Settings > Contact Center** | Manage the Contact Center |
-| **Settings > Artificial Intelligence** | Manage AI profiles. A person with only Manage chat interaction settings, Edit any chat interactions, Manage Copilot Settings, Manage Claude Settings or Manage the MCP Server settings can open the page too, and sees only the sections that permission covers. |
+| **Settings > Artificial Intelligence** | Manage AI profiles. A person with only Manage chat interaction settings, Edit any chat interactions, Manage Copilot Settings, Manage Claude Settings, Manage the MCP Server settings or Manage the WebMCP settings can open the page too, and sees only the sections that permission covers. |
 | **Settings > DNC Registries** and **Settings > Content Import** | Manage DNC registry settings |
 | **Settings > Phone Number Verifications** | Manage phone number verification settings |
 | **Settings > User Display Name** | Manage the user display name settings. |

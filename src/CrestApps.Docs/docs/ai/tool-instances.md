@@ -64,7 +64,7 @@ All four sources carry the **Knowledgebase** category. Each source captures its 
 
 The sitemap and search index sources materialize a corpus (the crawled pages or the downloaded index) on the first search and cache it; later searches reuse the cache until the instance settings change. The website search source keeps no corpus — it issues a live query per request — so there is no cold-start indexing delay and results reflect the site's own relevance ranking.
 
-These instances are usable anywhere tool instances are — on a profile, a chat interaction, or exposed to external clients through the [MCP server](mcp/server#tool-exposure).
+These instances are usable anywhere tool instances are — on a profile, a chat interaction, or exposed to external clients through the [MCP server](mcp/server#tool-exposure), or to AI agents in the browser through [WebMCP](mcp/webmcp), site-wide or on one content item's page.
 
 ## The data source search source
 

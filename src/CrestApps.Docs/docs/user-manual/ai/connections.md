@@ -138,6 +138,7 @@ The same page has these sections, each explained on its own page:
 | **Admin Widget** | The [admin chat widget](chat-widgets.md). |
 | **Copilot** and **Claude** | Sign-in for the GitHub Copilot and Claude engines, set up by your technical team. See the Technical Manual pages for [Copilot](../../ai/copilot.md) and [Claude](../../ai/claude.md). |
 | **MCP Server** | Which tools outside AI apps may use. See [Tools and agents](tools-and-agents.md#share-your-tools-with-other-ai-apps). |
+| **WebMCP** | Which tools AI assistants in the browser, and the site's own chat, may use on the pages you open. See [WebMCP](webmcp.md). |
 
 ## Where each model is used
 

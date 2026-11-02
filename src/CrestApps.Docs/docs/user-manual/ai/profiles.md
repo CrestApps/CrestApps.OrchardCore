@@ -226,6 +226,8 @@ Let the assistant do things beyond answering. See [Tools and agents](tools-and-a
 | **Agents** | Agent profiles on this site the assistant may call. **Select All Agents** picks all of them. |
 | **Tools** | Built-in actions, grouped by category. Search with **Search tools...**, or use **Select All Tools** and **Select All in** *category*. |
 | **Tool Instances** | Tools your team set up, such as a call to your order system. |
+| **Allow page tools** | With the **WebMCP** feature on, the chat can use the tools of the page a message is sent from, such as filling the form being edited. See [WebMCP](webmcp.md#let-the-sites-chat-use-the-page-you-have-open). |
+| **Allow consequential page tools** | Also lets the chat use the page tools marked as having consequences, such as placing an order. Needs **Allow page tools**. |
 
 A user can only use a tool their role is allowed to use, even when the profile has it. See [Who can use tools](tools-and-agents.md#who-can-use-tools).
 

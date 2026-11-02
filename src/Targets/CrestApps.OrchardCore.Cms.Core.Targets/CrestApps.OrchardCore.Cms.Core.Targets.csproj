@@ -56,6 +56,7 @@
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.Mcp/CrestApps.OrchardCore.AI.Mcp.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.Mcp.Resources.Ftp/CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.Mcp.Resources.Sftp/CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.WebMcp/CrestApps.OrchardCore.AI.WebMcp.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.Memory/CrestApps.OrchardCore.AI.Memory.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.Memory.AzureAI/CrestApps.OrchardCore.AI.Memory.AzureAI.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.Memory.Elasticsearch/CrestApps.OrchardCore.AI.Memory.Elasticsearch.csproj" PrivateAssets="none" />

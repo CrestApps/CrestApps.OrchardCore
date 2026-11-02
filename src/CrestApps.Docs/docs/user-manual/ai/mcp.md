@@ -15,6 +15,8 @@ The **Model Context Protocol (MCP)** is a common standard for sharing tools and 
 - **Use outside tools.** An **MCP connection** brings the tools of an outside MCP server, such as a time-zone service or your company's internal tools, into the site. The assistants you choose can then use them.
 - **Share your own.** The **MCP Server** lets other AI apps, such as a desktop AI assistant, use the tools you select on this site. It can also offer **prompts** (ready-made instructions) and **resources** (files and data an app can read).
 
+To give tools to an AI assistant in the web browser instead, on the pages a signed-in person opens, see [WebMCP](webmcp.md).
+
 | | |
 | --- | --- |
 | **Menu** | Artificial Intelligence > Model Context Protocol > MCP Hosts, Prompts, Resources; Settings > Artificial Intelligence (the **MCP Server** section) |
