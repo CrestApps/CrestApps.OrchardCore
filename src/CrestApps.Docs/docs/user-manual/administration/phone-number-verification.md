@@ -96,7 +96,7 @@ Open **Tools > Phone Verifications Queue** to see every number that has verifica
   - **Failed**: the last check failed, and the site will try again by itself.
   - **Needs attention**: failed **Maximum verification attempts** times in a row, so the site stopped trying. The latest error is shown in red.
 - Use **Search by phone number** and **Sort by** (**Recently attempted**, **Least recently attempted**, **Recently created**, **Oldest created**) to find a record.
-- Click **Retry now** on a record, tick records (or **Select all on this page**) and click **Retry selected**, or click **Retry all failed** to retry every failed and needs-attention record on every page that matches your search.
+- Click **Retry now** on a failed or needs-attention record, or open the **Actions** menu of a verified or invalid record and click **Verify again**. Tick records (or **Select all on this page**) and choose **Actions > Retry** to retry them together, or click **Retry all failed** to retry every failed and needs-attention record on every page that matches your search.
 
 Retries need the **Verify phone numbers** permission. They are queued, not instant: the records show **Pending** right away and are checked shortly after, spaced out by the **Request delay**.
 
@@ -112,4 +112,4 @@ Open **Reports > General > Phone Number Verifications**.
 | **Line and queue status** | Mobile, landline and VoIP numbers, numbers pending verification, and numbers requiring revalidation. |
 | **Provider usage** | How many records each provider checked. |
 
-The report shows the current state of all numbers. Use the export button to download it as a file. See [Reports](../reports.md) for how report pages work.
+The report shows the current state of all numbers. Use the **Export CSV** button to download it as a file (with the Reports OpenXml or Pdf features on, it becomes an **Export** menu with more formats). See [Reports](../reports.md) for how report pages work.

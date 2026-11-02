@@ -45,6 +45,7 @@ The widths of the visuals in a container divide the container's width: two visua
 
 Exports keep the containers' layout where the format can:
 
+
 | Format | How containers are exported |
 | --- | --- |
 | Excel | Each container is a worksheet named after it, with its visuals one under the other, each under its title. A visual outside a container is a worksheet of its own, named after the visual. Chart values are numbers, so you can chart or add them up in Excel. |

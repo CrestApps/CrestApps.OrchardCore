@@ -7,7 +7,7 @@ technical_manual:
   - modules/payments
 ---
 
-The **Point of Sale** feature lets your staff sell at the counter of each of your stores, from a phone, tablet or till computer running a **till app**. The till app talks to your site through the [commerce API](headless-api.md), so a sale at the counter uses the same products, prices, coupons, gift cards, stock and orders as your online store.
+The **Point of Sale** feature lets your staff sell at the counter of each of your stores, from a phone, tablet or till computer running a **till app**. No till app ships with this solution: your developers, or a partner, build one on the commerce API. The site gives the registers, the shifts, the cash drawer and the rules. The till app talks to your site through the [commerce API](headless-api.md), so a sale at the counter uses the same products, prices, coupons, gift cards, stock and orders as your online store.
 
 At each store you set up one or more **registers**. A member of staff opens a **shift** at a register with the cash in its drawer, rings up sales, takes cash, a card or both, prints or emails the receipt, and at the end of the day counts the drawer and closes the shift. You see every shift, what it sold and whether its drawer came out right.
 
@@ -18,6 +18,8 @@ At each store you set up one or more **registers**. A member of staff opens a **
 | **Feature** | Point of Sale (it needs Orders, Inventory and the Checkout API). Receipts, to print and email receipts. Stripe, to take cards on Stripe Terminal readers. |
 
 <AskYourAdmin />
+
+This video shows why a store sells at the counter with the same system, the registers and shifts screens, a day at the till, and register sales in your orders:
 
 ## Before you start
 
@@ -60,6 +62,8 @@ With Stripe in test mode, pair a simulated reader with the registration code *si
 :::
 
 Your developers find the requests the till app sends in [Point of Sale](../../modules/point-of-sale.md#pair-a-reader), in the Technical Manual.
+
+This video follows a day at the till, step by step, and shows what each step leaves for the manager in the admin:
 
 ## A day at the till
 

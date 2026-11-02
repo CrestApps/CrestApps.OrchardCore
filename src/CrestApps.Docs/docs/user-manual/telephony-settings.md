@@ -46,6 +46,8 @@ Before you start, create an API key in the Telnyx portal under **Account > Keys 
 
 The **Advanced — browser WebRTC (optional)** section holds settings you rarely change: **Credential lifetime (minutes)**, **Audio test destination** (a number that plays your voice back, used by the soft phone's **Run audio test**), **Calls with no local record** (what to do with a call left over from a restart: **Report** or **End call**), **Answering machine detection** (**Premium**, **Standard** or **Off**; Telnyx bills the first two per call), **Text-to-speech voice** and **Text-to-speech language** for spoken prompts, the SIP and ICE (STUN/TURN) connection settings, **Preferred audio codecs**, **Soft phone region** and an API address override. Every one has a working default. Change them only when Telnyx support tells you to, or when your network needs a relay server. The [Telnyx reference](../telephony/telnyx.md#browser-webrtc-settings) explains each one.
 
+**Soft phone region** picks the Telnyx region the browser connects to: **Automatic (chosen by Telnyx)**, or one of the regions in the list. Telnyx can also send texts; its SMS settings are under **Settings > Communication > SMS** when Telnyx SMS is on.
+
 **Disconnect** deletes the resources Connect created on Telnyx, after you confirm. To start over, click **Disconnect** and then **Connect Telnyx** again.
 
 ## Connect Asterisk for calls
@@ -58,6 +60,14 @@ Use Asterisk when your company runs its own Asterisk phone system. The values co
 4. Optionally fill in the **Endpoint template**, **Outbound caller id**, **Dial timeout (seconds)** and the voicemail fields.
 5. For call audio in the browser, fill in the browser audio fields (**SIP WebSocket URL**, **SIP domain**, the ICE and TURN fields, **Browser audio codecs** and the PJSIP fields).
 6. Save.
+
+**Voicemail context**, **Voicemail extension template** and **Voicemail priority** say where a ringing call continues when an agent chooses **Send to voicemail**: the dialplan context, the extension (it can use the queue name or the recipient's user name) and the priority to start at. Fill all three, and the soft phone shows its voicemail button; leave them empty and the button stays hidden.
+
+The browser audio fields are **SIP WebSocket URL** (the secure address the browser connects to) and **SIP domain**, both required; **ICE server URLs** (STUN and TURN servers that help audio cross firewalls), **TURN shared secret** (stored encrypted), **ICE transport policy** (direct paths, or force the relay) and **Browser audio codecs** (in order of preference); **PJSIP credential lifetime (minutes)** and **PJSIP contact expiration (seconds)** (how long a browser login and its registration last); and the **PJSIP Realtime provider**, **PJSIP Realtime connection string** (stored encrypted) and **PJSIP Realtime table prefix** that name the database Asterisk reads its endpoints from.
+
+:::note
+AI voice calls, such as the AI voice agent and AI outbound calls, work with Telnyx only: Asterisk cannot place or answer them. The demo site in the videos points Asterisk at an address that nothing answers, so the soft phone shows *Ready* but a call never connects.
+:::
 
 The [Asterisk reference](../telephony/asterisk.md#tenant-configured-asterisk-settings) explains each field. When no default provider is chosen yet, Asterisk becomes the default. Your IT team can also set up a shared Asterisk connection for every site; it then appears as **Default Asterisk** in the **Default telephony provider** list, with no tab of its own.
 

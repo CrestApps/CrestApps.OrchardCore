@@ -22,6 +22,8 @@ This page covers the screens. For exactly how amounts are calculated, rounded an
 
 ## 1. Create tax categories
 
+This video walks through tax categories, jurisdictions, rules, the tax origin, classifying products and the tax at checkout:
+
 A **category** groups what you sell for tax purposes, for example *Electronics*, *Food* or *Tobacco*. Rules can target a category, and products are classified with one.
 
 1. Open **Commerce > Taxation > Categories** and click **Add Tax Category**.
@@ -134,13 +136,13 @@ Rules only apply to items that carry the **Taxation** part. Add it to each conte
 
 | | |
 | --- | --- |
-| **Menu** | Content > Content Definition > Content Types |
+| **Menu** | Design > Content Definition > Content Types |
 | **Permission** | Edit content types |
 | **Feature** | Taxation |
 
 <AskYourAdmin />
 
-1. Open **Content > Content Definition > Content Types** and edit the content type.
+1. Open **Design > Content Definition > Content Types** and edit the content type.
 2. Click **Add Parts**, tick **Taxation**, and save.
 3. Click **Edit** next to the **Taxation** part, set the options below, and save.
 
@@ -179,7 +181,7 @@ A product with no category of its own takes the category of its tagged term. A c
 3. **Rules:** add a **Percentage** rule *CA sales tax* with **Tax type** *SalesTax*, **Jurisdiction** *California*, **Category** **Any category**, **Rate** *0.075*. Add a second **Percentage** rule *CA tobacco tax* with **Tax type** *TobaccoTax*, **Category** *Tobacco (TOBACCO)*, **Rate** *0.3*.
 4. **Products:** classify televisions as *Electronics* and cigarettes as *Tobacco*.
 
-For a buyer in California, a television is charged 7.5%. A pack of cigarettes matches both rules and is charged 7.5% plus 30%. Each tax shows as its own line in the buyer's order summary. A buyer outside California pays only the tobacco tax, which has no jurisdiction. The sales tax needs the buyer's address, which the checkout only knows when your developer supplies it.
+For a buyer in California, a television is charged 7.5%. A pack of cigarettes matches both rules and is charged 7.5% plus 30%. Each tax shows as its own line in the buyer's order summary. A buyer outside California pays only the tobacco tax, which has no jurisdiction. The checkout taxes an order by the address it ships to, or by the billing address when nothing ships, so the sales tax applies to a buyer in California and not to a buyer elsewhere.
 
 ## Prices that include tax
 

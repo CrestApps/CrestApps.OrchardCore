@@ -4,12 +4,17 @@ sidebar_position: 1
 title: Model Context Protocol (MCP)
 description: Overview of MCP client and server support for integrating LLM applications with external tools and data sources.
 user_manual:
+  - user-manual/ai/mcp
   - user-manual/ai/tools-and-agents
 ---
 
 # Model Context Protocol (MCP)
 
 The [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) is an open standard that allows seamless integration between large language model (LLM) applications and external tools or data sources. Whether you're building an AI-enhanced IDE, a chat interface, or custom AI workflows, MCP makes it easy to supply LLMs with the context they need.
+
+<YouTube video="ai-mcp" title="Video overview of the Model Context Protocol in the admin" />
+
+The video shows how an administrator adds connections, shares tools and publishes prompts in the admin.
 
 ## Features Overview
 
@@ -28,7 +33,7 @@ When the relevant features are enabled, Orchard adds these MCP screens under **A
 - **Model Context Protocol -> Prompts** (MCP Server feature)
 - **Model Context Protocol -> Resources** (MCP Server feature)
 
-Using these screens is described in the User Manual under [Tools and agents](../../user-manual/ai/tools-and-agents.md).
+Using these screens is described in the User Manual under [Model Context Protocol (MCP)](../../user-manual/ai/mcp.md).
 
 ## Supported Capabilities
 

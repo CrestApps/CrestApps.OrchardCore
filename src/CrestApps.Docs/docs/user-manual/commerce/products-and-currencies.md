@@ -11,6 +11,8 @@ Anything you sell on your site is a content item with a price. You set this up i
 
 ## Manage currencies
 
+<YouTube video="products" title="Video of adding a currency" start={108} end={140} />
+
 The currencies you add here are the ones offered in every currency drop-down of the product editors. Add only the currencies you actually sell in. To sell to other countries in their currency without pricing every product again, use [Markets](markets.md), which convert your prices at an exchange rate.
 
 | | |
@@ -20,6 +22,10 @@ The currencies you add here are the ones offered in every currency drop-down of 
 | **Feature** | Products |
 
 <AskYourAdmin />
+
+This video walks through the product screens, from currencies and a first product to sales, listings, bundles and feeds:
+
+<YouTube video="products" title="Video overview of products, prices and listings" />
 
 ### Add a currency
 
@@ -41,17 +47,19 @@ When the list is empty it shows *Nothing here! There are no managed currencies a
 
 ## Make a content type sellable
 
+<YouTube video="products" title="Video of the Product part's settings on a content type" start={274} end={331} />
+
 You add the **Product** part to the content type that describes what you sell, for example *Course* or *Plan*. Every item of that type then gets a price. Content types are edited in the browser like any other content setting.
 
 | | |
 | --- | --- |
-| **Menu** | Content > Content Definition > Content Types |
+| **Menu** | Design > Content Definition > Content Types |
 | **Permission** | Edit content types |
 | **Feature** | Products |
 
 <AskYourAdmin />
 
-1. Open **Content > Content Definition > Content Types** and edit the content type, or create one.
+1. Open **Design > Content Definition > Content Types** and edit the content type, or create one.
 2. Click **Add Parts**, tick **Product**, and save. Tick **Product prices** as well if items should offer more than one way to buy them, such as monthly and yearly, or **Product variants** if items come in versions such as sizes and colors.
 3. Back on the content type, click **Edit** next to the **Product** part to set its options (below), and save.
 
@@ -69,6 +77,8 @@ You add the **Product** part to the content type that describes what you sell, f
 The same part's settings also lay out each product's own page and its inquiry button; see [Product listings](product-listings.md#lay-out-the-product-pages).
 
 ### Price an item
+
+<YouTube video="products" title="Video of adding a product with a price, a SKU and pictures" start={140} end={205} />
 
 When you create or edit an item of the type, the **Product** part adds:
 
@@ -116,7 +126,7 @@ A product that comes in versions, such as a shirt in three sizes and two colors,
 
 First, give the content type its options:
 
-1. Open **Content > Content Definition > Content Types**, edit the type, click **Add Parts**, and add **Product variants**.
+1. Open **Design > Content Definition > Content Types**, edit the type, click **Add Parts**, and add **Product variants**.
 2. Click **Edit** next to the **Product variants** part.
 3. Under **Options**, enter one option per row, such as *Size* and *Color*. Tick **Filterable** for an option visitors can filter listings by. Save; saving offers empty rows for more options, and clearing a name removes that option.
 
@@ -138,6 +148,8 @@ When you change the values later, a variant keeps its SKU and prices while its c
 In listings, a product whose variants are priced differently shows **From** its lowest price, a filter on an option finds the product when any variant on sale has that value, and keyword search matches the variants' SKUs. On the product's card and page, **Add to cart** offers one list per option, such as **Size** and **Finish**. A value that makes no variant on sale with the others picked can't be chosen. On the product's page, the price, the SKU and the photo change to the chosen variant's. Without JavaScript, a single **Choose** list of the variants on sale, with their prices, is offered instead.
 
 ## Put a product on sale
+
+<YouTube video="products" title="Video of a sale price, quantity limits, volume and role discounts, and add-ons" start={205} end={274} />
 
 On the product's editor, enter a **Sale price** and, optionally, when the sale runs under **Sale runs**, in your site's time zone. During the sale the product sells at the sale price, with its regular price struck through, on its card, its page and in the cart. Listings switch to and from the sale price within a minute of the times you set. Leave the dates empty for a sale that runs until you clear the sale price. A variant can have its own sale price in the variants table.
 

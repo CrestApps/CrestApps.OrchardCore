@@ -18,6 +18,8 @@ Bulk import creates or updates many content items from one spreadsheet, and bulk
 
 <YouTube video="site-administration-walkthroughs" title="Video of enabling Content Transfer, exporting a content type, and starting a bulk import" start={221} end={257} />
 
+<YouTube video="contact-center-configuration-deployment" title="Video overview of exporting the Contact Center configuration as a deployment plan and replaying it" />
+
 ## File formats
 
 | Format | When you can use it |
@@ -61,7 +63,8 @@ Rows a contact import leaves out on purpose, such as duplicate phone numbers or 
 
 ### Follow an import
 
-Each import is a row on the **Bulk Import** page showing the file name, content type, who uploaded it, its status, how many records imported and how many had errors. While it runs, a progress bar shows *N of M records processed*.
+Each import is a row on the **Bulk Import** page showing the file name, content type, its status, when it was created, who uploaded it, how many records imported (the green number) and how many had errors (the red number), with the reason a row was rejected under the file name. While it runs, a progress bar shows *N of M records processed*. The list does not refresh by itself: reload the page to see an import's latest status.
+Each import is a row on the **Bulk Import** page showing the file name, content type, who uploaded it, its status, how many records imported and how many had errors. When rows fail, the entry also groups the errors by reason, for example *Did not pass validation*, with how many rows each reason covers. While it runs, a progress bar shows *N of M records processed*.
 
 | Status | Meaning |
 | --- | --- |
@@ -75,7 +78,7 @@ Each import is a row on the **Bulk Import** page showing the file name, content 
 
 The **Actions** menu on each row offers:
 
-- **Download errors** downloads only the rows that were skipped, in the same file format as your upload, with an **Errors** column that gives the reason for each. Fix them and import that file again.
+- **Download errors (N)**, where N is the number of rejected rows, downloads only the rows that were skipped, in the same file format as your upload, with an **Errors** column that gives the reason for each. Fix them and import that file again.
 - **Pause import** stops an import that is running.
 - **Resume import** continues a pending, paused, failed or stalled import from the last saved batch.
 - **Delete** removes the entry. It also deletes the uploaded file, but never the content items that were imported.
@@ -83,6 +86,8 @@ The **Actions** menu on each row offers:
 Use the status and sort menus above the list to find an import, and tick several rows to **Remove** them at once.
 
 ## Export content
+
+For a contact type, the export page also shows a **CRM last activity** section. Tick **Include last completed activity information** and choose a **Subject**, and the file appends each contact's most recent completed activity of that subject: the agent's note, the completion date, the disposition, the subject and the subject's fields. Tick **Include only contacts with a last activity record** to leave out the contacts that have none.
 
 1. Open **Content > Export**. The **Bulk Export** page lists earlier exports.
 2. Click **Export** to open the **Export contents** form.

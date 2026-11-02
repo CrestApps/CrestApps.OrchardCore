@@ -19,6 +19,8 @@ An **invoice** tells a customer what they owe and gives them a link to pay it. A
 
 <YouTube video="commerce" title="Narrated video of an invoice, its pay link, and a customer paying through the link" start={452} end={501} />
 
+This video shows how to brand invoices and receipts, send an invoice, how a customer pays from its link, and the receipts and refund notices:
+
 ## Invoice numbers
 
 A transaction gets an **invoice number** the first time the customer is told about a payment they pay themselves: when an administrator clicks [Send invoice](transactions.md#send-the-invoice-now), or with the first [payment reminder](transactions.md#payment-reminders) for it, either the notice that a payment is coming due or the first reminder once it is due. Numbers run in order across the whole site: **INV-1001**, **INV-1002**, and so on.

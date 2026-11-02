@@ -111,7 +111,7 @@ The links of every feature of the site, such as report links and the files of da
 **Reports > Report Builder** (or **Shared Reports**) lists every report you can open. Click **Run**, or the report's title, to open it. A report pinned to the menu also opens from **Reports** > *its group* (or directly from **Reports** when it is in no group).
 
 1. Change the filters shown above the report, if any, and click **Show**.
-2. To download the report, click **Export CSV**. When the Reports (OpenXml) feature is on, an **Export** menu offers **Export CSV** and **Export Excel (.xlsx)**.
+2. To download the report, click **Export CSV**. When the Reports (OpenXml) or Reports (PDF) feature is on, the button becomes an **Export** menu with **Export CSV**, **Export Excel (.xlsx)** and **Export PDF**. The PDF lays the report out as it looks on the page, with a band for each container, its charts as drawn, and numbered pages.
 
 The export uses the filters on screen. People the report is shared with can export it when **Let people the report is shared with export it** is on; people who may change the report can always export it. A share link exports only when its **Allow export** is checked.
 

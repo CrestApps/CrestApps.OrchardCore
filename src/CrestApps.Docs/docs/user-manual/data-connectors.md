@@ -77,7 +77,7 @@ It also reads OpenSearch clusters.
 | --- | --- |
 | **Folder** | The folder of the media library whose files data sets can read, with its subfolders. Leave it empty for the whole library. |
 
-Upload CSV, JSON, JSON Lines or Excel files to that folder with **Media > Library**.
+Upload CSV, JSON, JSON Lines or Excel files to that folder with **Media > Library**. Out of the box the media library accepts Excel files only: your administrator has to allow CSV, JSON and JSON Lines in the site's media settings before you can upload them, and the library does not list them until then.
 
 The site can't reach servers on its own private network unless your administrator allows them. If a check fails with a message about the site's own network, ask your administrator.
 
@@ -96,7 +96,7 @@ The site can't reach servers on its own private network unless your administrato
 7. Pick a **Default date field** if reports should filter by a date by default.
 8. Fill in the settings of the connector (see below), then click **Save**.
 
-If you save without discovering the fields, the site reads them for you. An imported data set starts its first import as soon as you save it.
+If you save without discovering the fields, the site reads them for you. An imported data set is queued for its first import as soon as you save it, and the site's background task runs it within a minute: until then its row in the list says the first import is waiting to run.
 
 ### Settings by connector
 
@@ -123,7 +123,7 @@ In the **Refresh** section of an imported data set:
 | **Changed rows have a larger** | For changed rows only: a modification date or a version number that grows when a row changes. |
 | **When the source's fields change** | Add the new fields and keep the removed ones empty, or fail the refresh and keep the rows you have until you review the fields. |
 
-To refresh now, open **Actions** on the data set's row and click **Refresh now**. The list shows the result of the last refresh, how many rows it published and, when it failed, why. A refresh that fails never removes rows: reports keep reading the rows of the last refresh that worked.
+To refresh now, open **Actions** on the data set's row and click **Refresh now**. The refresh is queued, and the background task runs it within a minute: the row shows **Refresh waiting** until it does. The list shows the result of the last refresh, how many rows it published and, when it failed, why. A refresh that fails never removes rows: reports keep reading the rows of the last refresh that worked.
 
 To see every refresh, open **Actions** and click **History**. Each entry shows when it ran, who or what started it, whether it read every row or only changed ones, how many rows it read and published, and any change of the source's fields or error.
 

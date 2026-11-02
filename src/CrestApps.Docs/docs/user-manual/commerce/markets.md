@@ -16,6 +16,8 @@ A **market** is a group of countries you sell to on the same terms. Its shoppers
 
 <AskYourAdmin />
 
+Watch the video for a tour of every screen, from adding a market to a checkout with prices that include tax.
+
 ## How a market works
 
 Your store has one currency of its own: the one set under **Settings > Commerce > Checkout**. In this page it's called **your store's currency**. A market adds another currency, and an **exchange rate**: how much of the market's currency 1 unit of your store's currency is worth.

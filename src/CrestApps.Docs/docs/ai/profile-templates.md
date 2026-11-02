@@ -12,6 +12,10 @@ user_manual:
 
 AI profile templates are the Orchard Core-friendly way to stamp out repeatable AI profile configurations inside the admin UI and recipes.
 
+<YouTube video="ai-profiles-personas-templates" title="Video overview of AI profiles, personas and templates" />
+
+The video shows the New AI Profile picker, the profile editor, and how an administrator creates a profile template and starts a profile from it.
+
 ## Orchard-specific scope
 
 Use profile templates when you want to:
