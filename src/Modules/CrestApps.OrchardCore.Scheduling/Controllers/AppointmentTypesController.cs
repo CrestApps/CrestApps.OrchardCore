@@ -114,9 +114,21 @@ public sealed partial class AppointmentTypesController : Controller
             MinimumNoticeMinutes = type.MinimumNoticeMinutes,
             HorizonDays = type.HorizonDays,
             MaxPerDay = type.MaxPerDay,
+            MaxPerWeek = type.MaxPerWeek,
+            MaxUpcomingPerCustomer = type.MaxUpcomingPerCustomer,
+            CancelNoticeMinutes = type.CancelNoticeMinutes,
+            RescheduleNoticeMinutes = type.RescheduleNoticeMinutes,
             Capacity = type.Capacity,
-            ResourceIds = type.ResourceIds.ToArray(),
-            Assignment = type.Assignment.ToString(),
+            Requirements = type.GetResourceRequirements()
+                .Where(requirement => requirement.ResourceIds.Count > 0)
+                .Select(requirement => new AppointmentResourceRequirementViewModel
+                {
+                    Name = requirement.Name,
+                    ResourceIds = requirement.ResourceIds.ToArray(),
+                    Assignment = requirement.Assignment.ToString(),
+                    Weights = requirement.ResourceIds.ToDictionary(id => id, requirement.GetWeight, StringComparer.Ordinal),
+                })
+                .ToList(),
             RequiresConfirmation = type.RequiresConfirmation,
             HoldMinutes = type.HoldMinutes,
             AllowSelfService = type.AllowSelfService,
@@ -163,6 +175,12 @@ public sealed partial class AppointmentTypesController : Controller
         }
 
         var slug = string.IsNullOrWhiteSpace(model.Slug) ? null : SlugPattern().Replace(model.Slug.Trim().ToLowerInvariant(), "-").Trim('-');
+        var requirements = ToRequirements(model.Requirements);
+
+        if (requirements.SelectMany(requirement => requirement.ResourceIds).GroupBy(id => id, StringComparer.Ordinal).Any(group => group.Count() > 1))
+        {
+            ModelState.AddModelError(nameof(model.Requirements), S["A resource can be in only one group."]);
+        }
 
         if (slug is not null && await _typeStore.FindBySlugAsync(slug) is { } other && other.ItemId != type.ItemId)
         {
@@ -186,9 +204,25 @@ public sealed partial class AppointmentTypesController : Controller
         type.MinimumNoticeMinutes = Math.Max(0, model.MinimumNoticeMinutes);
         type.HorizonDays = Math.Clamp(model.HorizonDays, 1, 730);
         type.MaxPerDay = Math.Max(0, model.MaxPerDay);
+        type.MaxPerWeek = Math.Max(0, model.MaxPerWeek);
+        type.MaxUpcomingPerCustomer = Math.Max(0, model.MaxUpcomingPerCustomer);
+        type.CancelNoticeMinutes = Math.Max(0, model.CancelNoticeMinutes);
+        type.RescheduleNoticeMinutes = Math.Max(0, model.RescheduleNoticeMinutes);
         type.Capacity = Math.Max(1, model.Capacity);
-        type.ResourceIds = (model.ResourceIds ?? []).Where(id => !string.IsNullOrEmpty(id)).Distinct().ToList();
-        type.Assignment = Enum.TryParse<AppointmentAssignment>(model.Assignment, out var assignment) ? assignment : AppointmentAssignment.AnyAvailable;
+        // One unnamed group without weights is stored the simple way, as the type's resources and assignment, so it reads the
+        // same as before groups existed. Several groups are stored as requirements, with every resource in ResourceIds too.
+        if (requirements.Count <= 1 && requirements.All(requirement => string.IsNullOrEmpty(requirement.Name) && requirement.Weights.Count == 0))
+        {
+            type.ResourceIds = requirements.FirstOrDefault()?.ResourceIds ?? [];
+            type.Assignment = requirements.FirstOrDefault()?.Assignment ?? AppointmentAssignment.AnyAvailable;
+            type.ResourceRequirements = [];
+        }
+        else
+        {
+            type.ResourceRequirements = requirements;
+            type.ResourceIds = requirements.SelectMany(requirement => requirement.ResourceIds).Distinct(StringComparer.Ordinal).ToList();
+            type.Assignment = requirements[0].Assignment;
+        }
         type.RequiresConfirmation = model.RequiresConfirmation;
         type.HoldMinutes = Math.Clamp(model.HoldMinutes, 1, 1440);
         type.AllowSelfService = model.AllowSelfService;
@@ -235,10 +269,50 @@ public sealed partial class AppointmentTypesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    private static List<AppointmentResourceRequirement> ToRequirements(IEnumerable<AppointmentResourceRequirementViewModel> groups)
+    {
+        var requirements = new List<AppointmentResourceRequirement>();
+
+        foreach (var group in groups ?? [])
+        {
+            var resourceIds = (group?.ResourceIds ?? []).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToList();
+
+            if (resourceIds.Count == 0)
+            {
+                continue;
+            }
+
+            var assignment = Enum.TryParse<AppointmentAssignment>(group.Assignment, out var parsed) ? parsed : AppointmentAssignment.AnyAvailable;
+
+            requirements.Add(new AppointmentResourceRequirement
+            {
+                Name = string.IsNullOrWhiteSpace(group.Name) ? null : group.Name.Trim(),
+                ResourceIds = resourceIds,
+                Assignment = assignment,
+
+                // Weights only matter for round robin, and 1 is the default, so only the higher ones are kept.
+                Weights = assignment == AppointmentAssignment.RoundRobin
+                    ? (group.Weights ?? []).Where(weight => resourceIds.Contains(weight.Key) && weight.Value > 1).ToDictionary(weight => weight.Key, weight => Math.Min(weight.Value, 100), StringComparer.Ordinal)
+                    : new Dictionary<string, int>(StringComparer.Ordinal),
+            });
+        }
+
+        return requirements;
+    }
+
     private async Task FillAsync(AppointmentTypeViewModel model)
     {
+        // Show the groups in use, then a few empty ones the page reveals one at a time.
+        model.Requirements = (model.Requirements ?? []).Where(group => group?.ResourceIds?.Any(id => !string.IsNullOrEmpty(id)) == true).ToList();
+        model.VisibleRequirements = Math.Max(1, model.Requirements.Count);
+
+        while (model.Requirements.Count < model.VisibleRequirements + 3)
+        {
+            model.Requirements.Add(new AppointmentResourceRequirementViewModel { Assignment = nameof(AppointmentAssignment.AnyAvailable) });
+        }
+
         model.ResourceOptions = (await _resourceStore.ListAsync())
-            .Select(resource => new SelectListItem(resource.Name, resource.ItemId, model.ResourceIds.Contains(resource.ItemId)))
+            .Select(resource => new SelectListItem(resource.Name, resource.ItemId))
             .ToList();
         model.AssignmentOptions =
         [

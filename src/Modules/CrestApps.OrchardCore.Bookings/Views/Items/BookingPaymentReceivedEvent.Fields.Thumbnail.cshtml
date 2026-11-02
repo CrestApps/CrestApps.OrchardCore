@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Bookings.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<BookingPaymentReceivedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-money-bill-wave" aria-hidden="true"></i>
+    @T["Booking Payment Received"]
+</h4>
+<p>@T["Starts when a payment toward a booking is received: the order paid in full or by deposit, or the balance paid."]</p>

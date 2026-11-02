@@ -263,22 +263,50 @@
   {
     "action": "copy",
     "name": "fullcalendar",
-    "source": [
-      "node_modules/fullcalendar/index.global.js",
-      "node_modules/fullcalendar/index.global.min.js",
-      "node_modules/fullcalendar/LICENSE.md"
-    ],
-    "dest": "wwwroot/vendors/fullcalendar/",
+    "source": "node_modules/fullcalendar/all/global.js",
+    "dest": "wwwroot/vendors/fullcalendar/global.js",
+    "tags": ["vendor"]
+  },
+  {
+    "action": "copy",
+    "name": "fullcalendar-license",
+    "source": "node_modules/fullcalendar/LICENSE.md",
+    "dest": "wwwroot/vendors/fullcalendar/LICENSE.md",
     "tags": ["vendor"]
   },
   {
     "action": "copy",
     "name": "fullcalendar-locales",
-    "source": [
-      "node_modules/@fullcalendar/core/locales-all.global.js",
-      "node_modules/@fullcalendar/core/locales-all.global.min.js"
-    ],
-    "dest": "wwwroot/vendors/fullcalendar/",
+    "source": "node_modules/fullcalendar/locales-all/global.js",
+    "dest": "wwwroot/vendors/fullcalendar/locales-all.global.js",
+    "tags": ["vendor"]
+  },
+  {
+    "action": "copy",
+    "name": "fullcalendar-classic-theme-script",
+    "source": "node_modules/fullcalendar/themes/classic/global.js",
+    "dest": "wwwroot/vendors/fullcalendar/classic-theme.global.js",
+    "tags": ["vendor"]
+  },
+  {
+    "action": "copy",
+    "name": "fullcalendar-skeleton",
+    "source": "node_modules/fullcalendar/skeleton.css",
+    "dest": "wwwroot/vendors/fullcalendar/skeleton.css",
+    "tags": ["vendor"]
+  },
+  {
+    "action": "copy",
+    "name": "fullcalendar-classic-theme",
+    "source": "node_modules/fullcalendar/themes/classic/theme.css",
+    "dest": "wwwroot/vendors/fullcalendar/classic-theme.css",
+    "tags": ["vendor"]
+  },
+  {
+    "action": "copy",
+    "name": "fullcalendar-classic-palette",
+    "source": "node_modules/fullcalendar/themes/classic/palette.css",
+    "dest": "wwwroot/vendors/fullcalendar/classic-palette.css",
     "tags": ["vendor"]
   }
 ]

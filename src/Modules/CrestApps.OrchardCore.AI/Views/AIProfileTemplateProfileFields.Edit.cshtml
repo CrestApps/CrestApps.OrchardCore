@@ -46,6 +46,16 @@
     </div>
 </div>
 
+<div class="ocat-wrapper profile-type profile-type-agent@(Model.ProfileType == AIProfileType.Agent ? string.Empty : " d-none")">
+    <div class="ocat-end">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="AllowToolInvocation" />
+            <label class="form-check-label" asp-for="AllowToolInvocation">@T["Let this agent use its tools"]</label>
+            <span class="hint dashed">@T["Lets this agent use the tools ticked on its Capabilities tab when another assistant hands it a job. Leave it off and the agent can only answer from its instructions and what it is told."]</span>
+        </div>
+    </div>
+</div>
+
 <div class="ocat-wrapper profile-type profile-type-template-prompt@(Model.ProfileType == AIProfileType.TemplatePrompt ? string.Empty : " d-none")">
     <label asp-for="PromptTemplate" class="ocat-label">@T["Prompt template"]</label>
     <div class="ocat-end">

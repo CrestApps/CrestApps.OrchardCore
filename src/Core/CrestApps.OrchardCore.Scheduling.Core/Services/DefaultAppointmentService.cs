@@ -15,8 +15,9 @@ using Calendar = CrestApps.OrchardCore.Calendars.Models.Calendar;
 namespace CrestApps.OrchardCore.Scheduling.Core.Services;
 
 /// <summary>
-/// Books appointments on the shared calendar. Each booking checks the time again under a lock on every resource it takes, and
-/// bumps those resources' versions under a concurrency check, so two requests can never book the same time.
+/// Books appointments on the shared calendar. Each booking checks the time again under a lock on every resource it could take,
+/// across all of the type's resource requirements, and bumps the versions of the resources it takes under a concurrency check,
+/// so two requests can never book the same resource at the same time.
 /// </summary>
 public sealed class DefaultAppointmentService : IAppointmentService
 {
@@ -113,8 +114,14 @@ public sealed class DefaultAppointmentService : IAppointmentService
         }
 
         var start = Truncate(request.StartUtc);
-        var candidates = type.ResourceIds.Where(id => request.ResourceId is null || id == request.ResourceId).ToList();
-        var lockers = await LockAsync(candidates);
+        var requirements = SchedulingRequirements.ForRequest(type, request.ResourceId) ?? [];
+
+        // Every resource the booking could take, from every requirement, is locked before the time is checked again.
+        var candidates = requirements.SelectMany(requirement => requirement.ResourceIds).ToList();
+        var limitCustomer = request.SelfService && type.MaxUpcomingPerCustomer > 0;
+
+        // With a per-customer limit, the customer is locked too, so two of their bookings can't both slip under it.
+        var lockers = await LockAsync(ResourceLockKeys(candidates).Concat(limitCustomer ? CustomerLockKeys(type, request) : []));
 
         if (lockers is null)
         {
@@ -126,6 +133,23 @@ public sealed class DefaultAppointmentService : IAppointmentService
 
         try
         {
+            // A request sent again, such as an API call retried after a timeout, must not take a second place: in a group
+            // session the time would still look open, so the customer's own booking of it is looked for first.
+            if (await HasBookedAsync(type, start, request))
+            {
+                result.Errors.Add(S["This customer has already booked that time."]);
+                result.Conflict = true;
+
+                return result;
+            }
+
+            if (limitCustomer && await CountUpcomingForCustomerAsync(type, request) >= type.MaxUpcomingPerCustomer)
+            {
+                result.Errors.Add(S["You already have {0} upcoming appointments of this kind, the most that can be booked online. Cancel one or contact us to book another.", type.MaxUpcomingPerCustomer]);
+
+                return result;
+            }
+
             var slot = (await _availabilityService.FindSlotsAsync(type, start, start.AddMinutes(1), request.ResourceId, 1, cancellationToken: cancellationToken)).FirstOrDefault(item => item.StartUtc == start);
 
             if (slot is null)
@@ -136,7 +160,16 @@ public sealed class DefaultAppointmentService : IAppointmentService
                 return result;
             }
 
-            var resourceIds = await ChooseResourcesAsync(type, slot);
+            var resourceIds = await ChooseResourcesAsync(requirements, slot);
+
+            if (resourceIds is null)
+            {
+                result.Errors.Add(S["That time is no longer available."]);
+                result.Conflict = true;
+
+                return result;
+            }
+
             var now = _clock.UtcNow;
             var appointment = new Appointment
             {
@@ -215,7 +248,7 @@ public sealed class DefaultAppointmentService : IAppointmentService
     }
 
     /// <inheritdoc />
-    public async Task<AppointmentResult> RescheduleAsync(Appointment appointment, DateTime startUtc, string resourceId = null, string actor = null, CancellationToken cancellationToken = default)
+    public async Task<AppointmentResult> RescheduleAsync(Appointment appointment, DateTime startUtc, string resourceId = null, string actor = null, bool selfService = false, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(appointment);
 
@@ -229,9 +262,17 @@ public sealed class DefaultAppointmentService : IAppointmentService
             return result;
         }
 
+        if (selfService && !type.CustomerCanReschedule(appointment, _clock.UtcNow))
+        {
+            result.Errors.Add(S["This appointment can't be moved online less than {0} before it starts. Contact us to move it.", DescribeMinutes(type.RescheduleNoticeMinutes)]);
+
+            return result;
+        }
+
         var start = Truncate(startUtc);
-        var candidates = type.ResourceIds.Where(id => resourceId is null || id == resourceId).ToList();
-        var lockers = await LockAsync(candidates);
+        var requirements = SchedulingRequirements.ForRequest(type, resourceId) ?? [];
+        var candidates = requirements.SelectMany(requirement => requirement.ResourceIds).ToList();
+        var lockers = await LockAsync(ResourceLockKeys(candidates));
 
         if (lockers is null)
         {
@@ -254,7 +295,20 @@ public sealed class DefaultAppointmentService : IAppointmentService
             }
 
             var previousStart = appointment.StartUtc;
-            var keep = appointment.ResourceIds.All(slot.ResourceIds.Contains) && type.Assignment != AppointmentAssignment.AllTogether;
+
+            // The appointment keeps its resources when they are all free at the new time and still meet every requirement.
+            var keep = appointment.ResourceIds.Count > 0 &&
+                appointment.ResourceIds.All(slot.ResourceIds.Contains) &&
+                requirements.All(requirement => requirement.Assignment != AppointmentAssignment.AllTogether && appointment.ResourceIds.Any(requirement.ResourceIds.Contains));
+            var resourceIds = keep ? appointment.ResourceIds.ToList() : await ChooseResourcesAsync(requirements, slot);
+
+            if (resourceIds is null)
+            {
+                result.Errors.Add(S["That time is no longer available."]);
+                result.Conflict = true;
+
+                return result;
+            }
 
             appointment.StartUtc = start;
             appointment.EndUtc = start.AddMinutes(type.DurationMinutes);
@@ -264,7 +318,7 @@ public sealed class DefaultAppointmentService : IAppointmentService
             {
                 await RemoveEventAsync(appointment, type, actor);
 
-                appointment.ResourceIds = keep ? appointment.ResourceIds : await ChooseResourcesAsync(type, slot);
+                appointment.ResourceIds = resourceIds;
 
                 var eventError = await PlaceEventAsync(type, appointment, actor);
 
@@ -299,7 +353,7 @@ public sealed class DefaultAppointmentService : IAppointmentService
     }
 
     /// <inheritdoc />
-    public async Task<AppointmentResult> CancelAsync(Appointment appointment, string reason = null, string actor = null, CancellationToken cancellationToken = default)
+    public async Task<AppointmentResult> CancelAsync(Appointment appointment, string reason = null, string actor = null, bool selfService = false, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(appointment);
 
@@ -313,6 +367,13 @@ public sealed class DefaultAppointmentService : IAppointmentService
         }
 
         var type = await _typeStore.FindByIdAsync(appointment.AppointmentTypeId, cancellationToken);
+
+        if (selfService && !type.CustomerCanCancel(appointment, _clock.UtcNow))
+        {
+            result.Errors.Add(S["This appointment can't be cancelled online less than {0} before it starts. Contact us to cancel it.", DescribeMinutes(type.CancelNoticeMinutes)]);
+
+            return result;
+        }
 
         await RemoveEventAsync(appointment, type, actor);
 
@@ -345,9 +406,17 @@ public sealed class DefaultAppointmentService : IAppointmentService
             return result;
         }
 
+        var status = noShow ? AppointmentStatus.NoShow : AppointmentStatus.Completed;
+
+        // Marking it the same way again, such as a retried request, changes nothing and raises no second event.
+        if (appointment.Status == status)
+        {
+            return result;
+        }
+
         var type = await _typeStore.FindByIdAsync(appointment.AppointmentTypeId, cancellationToken);
 
-        appointment.Status = noShow ? AppointmentStatus.NoShow : AppointmentStatus.Completed;
+        appointment.Status = status;
         appointment.ModifiedUtc = _clock.UtcNow;
 
         await _appointmentStore.UpdateAsync(appointment, cancellationToken);
@@ -539,27 +608,70 @@ public sealed class DefaultAppointmentService : IAppointmentService
         }
     }
 
-    private async Task<List<string>> ChooseResourcesAsync(AppointmentType type, AppointmentSlot slot)
+    private async Task<bool> HasBookedAsync(AppointmentType type, DateTime startUtc, AppointmentRequest request)
     {
-        if (type.Assignment == AppointmentAssignment.AllTogether)
+        var email = string.IsNullOrWhiteSpace(request.CustomerEmail) ? null : request.CustomerEmail.Trim();
+        var phone = string.IsNullOrWhiteSpace(request.CustomerPhone) ? null : request.CustomerPhone.Trim();
+        var userId = string.IsNullOrWhiteSpace(request.UserId) ? null : request.UserId;
+
+        if (email is null && phone is null && userId is null)
         {
-            return slot.ResourceIds.ToList();
+            return false;
         }
 
-        if (type.Assignment == AppointmentAssignment.RoundRobin && slot.ResourceIds.Count > 1)
-        {
-            var since = _clock.UtcNow.AddDays(-30);
-            var counts = new List<(string Id, int Count)>();
+        var booked = await _appointmentStore.ListForResourcesAsync(type.GetAllResourceIds(), startUtc, startUtc.AddMinutes(1));
 
-            foreach (var id in slot.ResourceIds)
+        return booked.Any(appointment =>
+            appointment.AppointmentTypeId == type.ItemId &&
+            appointment.StartUtc == startUtc &&
+            appointment.Status != AppointmentStatus.Completed &&
+            ((email is not null && string.Equals(appointment.CustomerEmail, email, StringComparison.OrdinalIgnoreCase)) ||
+             (phone is not null && string.Equals(appointment.CustomerPhone, phone, StringComparison.Ordinal)) ||
+             (userId is not null && string.Equals(appointment.UserId, userId, StringComparison.Ordinal))));
+    }
+
+    // Takes resources for each requirement in turn, never the same resource twice. Returns null when a requirement can't be met.
+    private async Task<List<string>> ChooseResourcesAsync(IReadOnlyList<AppointmentResourceRequirement> requirements, AppointmentSlot slot)
+    {
+        var chosen = new List<string>();
+
+        foreach (var requirement in requirements)
+        {
+            var free = slot.ResourceIds.Where(id => requirement.ResourceIds.Contains(id) && !chosen.Contains(id)).ToList();
+
+            if (free.Count == 0)
             {
-                counts.Add((id, await _appointmentStore.CountForResourceAsync(id, since)));
+                return null;
             }
 
-            return [counts.OrderBy(item => item.Count).ThenBy(item => type.ResourceIds.IndexOf(item.Id)).First().Id];
+            if (requirement.Assignment == AppointmentAssignment.AllTogether)
+            {
+                chosen.AddRange(free);
+
+                continue;
+            }
+
+            if (requirement.Assignment == AppointmentAssignment.RoundRobin && free.Count > 1)
+            {
+                // The resource with the fewest recent appointments for its weight goes next, so a resource with weight 2 takes
+                // about twice as many as one with weight 1. Ties go to the one listed first.
+                var since = _clock.UtcNow.AddDays(-30);
+                var scores = new List<(string Id, double Score)>();
+
+                foreach (var id in free)
+                {
+                    scores.Add((id, (double)await _appointmentStore.CountForResourceAsync(id, since) / requirement.GetWeight(id)));
+                }
+
+                chosen.Add(scores.OrderBy(item => item.Score).ThenBy(item => requirement.ResourceIds.IndexOf(item.Id)).First().Id);
+
+                continue;
+            }
+
+            chosen.Add(requirement.ResourceIds.First(free.Contains));
         }
 
-        return [type.ResourceIds.First(slot.ResourceIds.Contains)];
+        return chosen;
     }
 
     private async Task OfferToWaitlistAsync(AppointmentType type, DateTime freedStartUtc, string actor)
@@ -601,13 +713,54 @@ public sealed class DefaultAppointmentService : IAppointmentService
         }
     }
 
-    private async Task<List<ILocker>> LockAsync(IEnumerable<string> resourceIds)
+    private async Task<int> CountUpcomingForCustomerAsync(AppointmentType type, AppointmentRequest request)
+    {
+        var now = _clock.UtcNow;
+        var appointments = await _appointmentStore.ListForCustomerAsync(Normalize(request.CustomerEmail), Normalize(request.CustomerPhone), Normalize(request.UserId), now);
+
+        return appointments.Count(appointment =>
+            appointment.AppointmentTypeId == type.ItemId &&
+            appointment.Status is AppointmentStatus.Held or AppointmentStatus.Requested or AppointmentStatus.Confirmed);
+    }
+
+    private string DescribeMinutes(int minutes)
+    {
+        return minutes % 1440 == 0
+            ? S["{0} days", minutes / 1440]
+            : minutes % 60 == 0
+                ? S["{0} hours", minutes / 60]
+                : S["{0} minutes", minutes];
+    }
+
+    private static string Normalize(string value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private static IEnumerable<string> ResourceLockKeys(IEnumerable<string> resourceIds)
+    {
+        return resourceIds.Select(id => "SCHEDULING_RESOURCE_" + id);
+    }
+
+    private static IEnumerable<string> CustomerLockKeys(AppointmentType type, AppointmentRequest request)
+    {
+        foreach (var value in new[] { request.UserId, request.CustomerEmail, request.CustomerPhone })
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                yield return "SCHEDULING_CUSTOMER_" + type.ItemId + "_" + value.Trim().ToLowerInvariant();
+            }
+        }
+    }
+
+    // Every key is taken in ordinal order, resources and customers alike, so two requests never wait on each other in a circle.
+    private async Task<List<ILocker>> LockAsync(IEnumerable<string> keys)
     {
         var lockers = new List<ILocker>();
 
-        foreach (var id in resourceIds.Distinct().Order(StringComparer.Ordinal))
+        foreach (var key in keys.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
         {
-            var (locker, locked) = await _distributedLock.TryAcquireLockAsync("SCHEDULING_RESOURCE_" + id, _lockTimeout, _lockExpiration);
+            var (locker, locked) = await _distributedLock.TryAcquireLockAsync(key, _lockTimeout, _lockExpiration);
 
             if (!locked)
             {

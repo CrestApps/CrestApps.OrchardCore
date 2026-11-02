@@ -52,6 +52,8 @@ Watch the short video, then read about each data source below.
 | **Point of Sale** | **Registers** and **Register shifts**. | **Point of Sale** is on. | **Manage registers and shifts**. |
 | **Phone number verifications** | **Verifications**: the phone numbers checked, and what the check found. | **Phone Number Verifications** is on. | **Run 'Phone Number Verifications' Report**. |
 | **DNC registry** | **DNC lists** and **DNC entries** of your own do-not-call lists. | **Local Do Not Call Registry** is on. | **Manage DNC registry settings**. |
+| **Calendars** | **Calendars** and **Calendar events**: only the calendars you can read, as on the calendar. A private event on a calendar you can't change shows its time but not its title. A repeating event is one row. | **Calendars** is on. | **Use calendars**. |
+| **Scheduling** | **Appointments** (with how far ahead each was booked), **Appointment resources** (one row for each staff member, room or piece of equipment an appointment books), **Appointment types**, **Scheduling resources** and the **Waitlist**. | **Scheduling** is on. | **View appointments**. The waitlist needs **Manage appointments**. |
 
 If a data source or data set is missing, your site may not use the feature that stores that data, or you may not have the permission it asks for. Ask your administrator.
 

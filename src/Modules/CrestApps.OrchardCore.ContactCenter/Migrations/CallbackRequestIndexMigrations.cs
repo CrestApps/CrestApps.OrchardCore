@@ -48,7 +48,8 @@ internal sealed class CallbackRequestIndexMigrations : DataMigration
             .Column<CallbackRequestStatus>("Status")
             .Column<DateTime>("ScheduledUtc")
             .Column<DateTime>("LeaseExpiresUtc", column => column.Nullable())
-            .Column<DateTime>("ModifiedUtc", column => column.Nullable()),
+            .Column<DateTime>("ModifiedUtc", column => column.Nullable())
+            .Column<string>("AgentId", column => column.Nullable().WithLength(ContactCenterStorage.AgentIdLength)),
             collection: ContactCenterStorage.CollectionName
         );
 
@@ -80,8 +81,9 @@ internal sealed class CallbackRequestIndexMigrations : DataMigration
             collection: ContactCenterStorage.CollectionName);
 
         await CreateReportIndexAsync();
+        await CreateAgentIndexAsync();
 
-        return 5;
+        return 6;
     }
 
     /// <summary>
@@ -154,6 +156,32 @@ internal sealed class CallbackRequestIndexMigrations : DataMigration
         await CreateReportIndexAsync();
 
         return 5;
+    }
+
+    /// <summary>
+    /// Adds the agent a personal callback is reserved for, so the calendar finds an agent's open callbacks in a range
+    /// without reading every callback. Callbacks saved before this step have no agent in the index until they are
+    /// saved again.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom5Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<CallbackRequestIndex>(table => table
+            .AddColumn<string>("AgentId", column => column.Nullable().WithLength(ContactCenterStorage.AgentIdLength)),
+            collection: ContactCenterStorage.CollectionName);
+
+        await CreateAgentIndexAsync();
+
+        return 6;
+    }
+
+    private Task<bool> CreateAgentIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<CallbackRequestIndex>(
+            SchemaBuilder,
+            "IDX_CallbackRequestIndex_Agent",
+            ContactCenterStorage.CollectionName,
+            "AgentId", "ScheduledUtc", "Status");
     }
 
     private Task<bool> CreateReportIndexAsync()

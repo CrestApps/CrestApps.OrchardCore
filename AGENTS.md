@@ -374,6 +374,9 @@ runtime MCP skills shipped by the `CrestApps.OrchardCore.AI.Mcp` module (which c
   registering a calendar type and its event types with `AddCalendarType` (owner kind, capacity, `ManagedByCode`),
   creating and keeping events in step with the module's own records, busy-time and event sources, handlers and
   after-commit observers, and the naming and wall-clock time traps.
+- **Example**: `.agents/skills/crestapps-calendar-provider` — how to add an external calendar provider (Google Calendar,
+  Microsoft 365, CalDAV, …) to External Calendars: full and incremental reads, two-way writes with versions, conflict
+  policies, refused access, account connections, event mapping, registration, tests and docs.
 
 ### Frontend Development
 - CSS/SCSS files are in individual module `Assets/` directories

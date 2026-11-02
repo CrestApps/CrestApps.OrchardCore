@@ -20,6 +20,7 @@ public sealed class BookingPagesController : Controller
     private readonly AppointmentTypeStore _typeStore;
     private readonly IAppointmentService _appointmentService;
     private readonly SchedulingPageService _pageService;
+    private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
 
@@ -29,16 +30,19 @@ public sealed class BookingPagesController : Controller
     /// <param name="typeStore">The appointment type store.</param>
     /// <param name="appointmentService">The appointment service.</param>
     /// <param name="pageService">The page builder.</param>
+    /// <param name="clock">The clock.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public BookingPagesController(
         AppointmentTypeStore typeStore,
         IAppointmentService appointmentService,
         SchedulingPageService pageService,
+        IClock clock,
         IStringLocalizer<BookingPagesController> stringLocalizer)
     {
         _typeStore = typeStore;
         _appointmentService = appointmentService;
         _pageService = pageService;
+        _clock = clock;
         S = stringLocalizer;
     }
 
@@ -98,6 +102,7 @@ public sealed class BookingPagesController : Controller
                 Notes = model.Notes,
                 Source = "SelfService",
                 Actor = model.CustomerEmail,
+                SelfService = true,
             });
 
             if (result.Succeeded)
@@ -140,6 +145,8 @@ public sealed class BookingPagesController : Controller
         var model = await _pageService.BuildDetailAsync(appointment, date);
 
         model.Token = token;
+        model.CustomerCanCancel = model.AppointmentType.CustomerCanCancel(appointment, _clock.UtcNow);
+        model.CustomerCanReschedule = model.AppointmentType.CustomerCanReschedule(appointment, _clock.UtcNow);
 
         return View(model);
     }
@@ -165,8 +172,8 @@ public sealed class BookingPagesController : Controller
 
         var result = operation switch
         {
-            "Cancel" => await _appointmentService.CancelAsync(appointment, S["Cancelled by the customer."], appointment.CustomerEmail),
-            "Reschedule" when DateTimeOffset.TryParse(start, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var newStart) => await _appointmentService.RescheduleAsync(appointment, newStart.UtcDateTime, actor: appointment.CustomerEmail),
+            "Cancel" => await _appointmentService.CancelAsync(appointment, S["Cancelled by the customer."], appointment.CustomerEmail, selfService: true),
+            "Reschedule" when DateTimeOffset.TryParse(start, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var newStart) => await _appointmentService.RescheduleAsync(appointment, newStart.UtcDateTime, actor: appointment.CustomerEmail, selfService: true),
             _ => null,
         };
 
@@ -186,6 +193,6 @@ public sealed class BookingPagesController : Controller
     {
         var appointment = await _appointmentService.FindByIdAsync(id);
 
-        return appointment is not null && !string.IsNullOrEmpty(token) && string.Equals(appointment.ManageToken, token, StringComparison.Ordinal) ? appointment : null;
+        return AppointmentManageToken.Matches(appointment, token) ? appointment : null;
     }
 }

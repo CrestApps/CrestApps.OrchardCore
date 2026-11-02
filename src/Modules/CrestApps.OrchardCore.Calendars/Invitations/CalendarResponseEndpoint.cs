@@ -1,4 +1,6 @@
 using System.Net;
+using System.Security.Cryptography;
+using System.Text;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
 using Microsoft.AspNetCore.Builder;
@@ -30,7 +32,7 @@ internal static class CalendarResponseEndpoint
         IStringLocalizer<CalendarInvitationObserver> S)
     {
         var calendarEvent = await eventManager.FindByIdAsync(eventId);
-        var attendee = calendarEvent?.Attendees.FirstOrDefault(item => !string.IsNullOrEmpty(item.ResponseToken) && string.Equals(item.ResponseToken, token, StringComparison.Ordinal));
+        var attendee = FindAttendee(calendarEvent, token);
 
         if (attendee is null || !Enum.TryParse<CalendarAttendeeResponse>(response, ignoreCase: true, out var answer) || answer == CalendarAttendeeResponse.NeedsAction)
         {
@@ -41,5 +43,19 @@ internal static class CalendarResponseEndpoint
         var text = result.Succeeded ? S["Thank you. Your answer to '{0}' has been saved.", calendarEvent.Title] : S["Your answer could not be saved."];
 
         return Results.Content($"<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>{WebUtility.HtmlEncode(calendarEvent.Title)}</title></head><body><p>{WebUtility.HtmlEncode(text)}</p></body></html>", "text/html");
+    }
+
+    // The code in an invitation's links names one attendee of one event; it's compared in constant time so it can't be
+    // guessed a character at a time.
+    internal static CalendarAttendee FindAttendee(CalendarEvent calendarEvent, string token)
+    {
+        if (calendarEvent is null || string.IsNullOrEmpty(token))
+        {
+            return null;
+        }
+
+        var given = Encoding.UTF8.GetBytes(token);
+
+        return calendarEvent.Attendees.FirstOrDefault(item => !string.IsNullOrEmpty(item.ResponseToken) && CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(item.ResponseToken), given));
     }
 }
