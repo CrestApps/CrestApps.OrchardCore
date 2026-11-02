@@ -700,4 +700,9 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* The names in front of the boxes of a chart reference line, lined up. */
+.rd-reference-line .rd-reference-name {
+    min-width: 5.5rem;
+}
 /*$vite$:1*/

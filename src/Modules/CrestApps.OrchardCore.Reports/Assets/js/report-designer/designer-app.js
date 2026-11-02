@@ -267,9 +267,25 @@
         });
     };
 
+    // The names and kinds of the columns the pills show, to tell when they change.
+    function pillLabels() {
+        return app.columns().map(function (column) {
+            return column.label + (column.isMeasure ? '#' : '');
+        }).join('\u001F');
+    }
+
     app.refreshPlan = function () {
         return ui.request(app.url('plan'), { body: app.design.query }).then(function (plan) {
+            var pills = pillLabels();
+
             app.plan = plan || { fields: [], columns: [], errors: [] };
+
+            // The plan names the columns, such as Rank of Number of rows; the pills are drawn again only when a name or
+            // a kind changed, so a box being typed in keeps its focus.
+            if (pillLabels() !== pills && app.renderShelves) {
+                app.renderShelves();
+            }
+
             app.renderIssues();
             app.renderDataPane();
             app.renderProperties();
