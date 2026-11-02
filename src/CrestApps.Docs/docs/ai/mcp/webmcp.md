@@ -225,6 +225,84 @@ A frame on another origin can share its tools with the page by registering them 
 OrchardCore__CrestApps__AI__WebMcp__Chat__ToolCallTimeout=00:00:30
 ```
 
+## Recipes
+
+The WebMCP settings are a site settings section, so the **Settings** step sets them:
+
+```json
+{
+  "steps": [
+    {
+      "name": "Settings",
+      "WebMcpSettings": {
+        "EnableOnAdminPages": true,
+        "EnableOnFrontEndPages": false,
+        "EnablePageTools": true,
+        "ExposeAllTools": false,
+        "Tools": [ "listAIProfiles" ]
+      }
+    }
+  ]
+}
+```
+
+Attach the **WebMCP tools** part to a content type with the **ContentDefinition** step, and set an item's tools in the **Content** step under `WebMcpPart.Tools`:
+
+```json
+{
+  "steps": [
+    {
+      "name": "ContentDefinition",
+      "ContentTypes": [
+        {
+          "Name": "Product",
+          "ContentTypePartDefinitionRecords": [
+            { "PartName": "WebMcpPart", "Name": "WebMcpPart", "Settings": {} }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Content",
+      "data": [
+        {
+          "ContentItemId": "4product0000000000000000001",
+          "ContentType": "Product",
+          "Published": true,
+          "Latest": true,
+          "WebMcpPart": { "Tools": [ "checkStock" ] }
+        }
+      ]
+    }
+  ]
+}
+```
+
+The step adds the part to the type. The tools a recipe sets are not limited to what an editor may use: the server still checks **Access AI tool** for the user on every call.
+
+Set the profile options in the **AIProfile** step, under the profile's `Settings`:
+
+```json
+{
+  "steps": [
+    {
+      "name": "AIProfile",
+      "Profiles": [
+        {
+          "Name": "admin-assistant",
+          "Settings": {
+            "WebMcpProfileSettings": {
+              "AllowPageTools": true,
+              "AllowConsequentialPageTools": false
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
 ## Security
 
 - Nothing is given by default. You select the tools, and front-end pages are off.
