@@ -22,8 +22,11 @@ public sealed class SkillsAdminMenu : AdminNavigationProvider
     /// <inheritdoc />
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
+        // The first menu provider to add Workforce gives it its icon, and Skills comes before Workforce.
         builder.Add(S["Workforce"], S["Workforce"].PrefixPosition("6"), workforce => workforce
             .AddClass("workforce")
+            .AddClass("icon-class-fa-solid")
+            .AddClass("icon-class-fa-users")
             .Id("workforce")
             .Add(S["Skills"], S["Skills"].PrefixPosition("80"), skills => skills
                 .Id("skills")

@@ -10,7 +10,7 @@ This page covers what helps you set up Workforce and use what it records: the **
 
 | | |
 | --- | --- |
-| **Menu** | Workforce > Get Started; Reports; Workflows; Configuration > Recipes; Configuration > Import/Export |
+| **Menu** | Workforce > Teams > Get started; Reports; Workflows; Configuration > Recipes; Configuration > Import/Export |
 | **Permission** | Manage workforce teams for Get Started; the permission of each data set for reports |
 | **Feature** | Workforce, and Reports, Workflows, AI or Workforce API for each part |
 
@@ -18,7 +18,7 @@ This page covers what helps you set up Workforce and use what it records: the **
 
 ## Get started
 
-**Workforce > Get Started** lists the steps of setting up Workforce in order: the team tree, workers, shift planning, time off, labor rules, the time clock and My Work. Each step shows what is there now, is marked **Done** once it is set up, and has a button to its page. A step whose feature is off says so, with a link to the features.
+Open **Workforce > Teams** and choose **Get started**. The page lists the steps of setting up Workforce in order: the team tree, workers, shift planning, time off, labor rules, the time clock and My Work. Each step shows what is there now, is marked **Done** once it is set up, and has a button to its page. A step whose feature is off says so, with a link to the features.
 
 To try Workforce with sample data, run **Workforce sample** under **Configuration > Recipes**. It adds a region with a clinic and two teams, six workers, early and late shift templates, vacation and sick time, an example rule set, and a time clock with pay periods every two weeks. Link the sample workers to user accounts under **Workforce > Workers** to try My Work as them.
 
