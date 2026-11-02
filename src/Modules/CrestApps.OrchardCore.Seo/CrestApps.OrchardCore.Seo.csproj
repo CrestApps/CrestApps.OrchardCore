@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <Title>CrestApps OrchardCore SEO Module</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Publishes schema.org structured data (JSON-LD) for the site and its content items: the organization and web
+      site, a schema.org type and Liquid property map per content type, and data other modules add, such as product
+      offers. Works with Orchard Core's SEO module and merges the JSON-LD editors type there.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS SEO SchemaOrg JsonLd StructuredData</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.Admin.Abstractions" />
+    <PackageReference Include="OrchardCore.ContentManagement" />
+    <PackageReference Include="OrchardCore.ContentManagement.Display" />
+    <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />
+    <PackageReference Include="OrchardCore.ContentLocalization.Abstractions" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.Liquid.Abstractions" />
+    <PackageReference Include="OrchardCore.Navigation.Core" />
+    <PackageReference Include="OrchardCore.ResourceManagement" />
+    <PackageReference Include="OrchardCore.Seo" />
+    <PackageReference Include="OrchardCore.Settings.Core" />
+    <PackageReference Include="OrchardCore.Shortcodes.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Seo.Abstractions/CrestApps.OrchardCore.Seo.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>
