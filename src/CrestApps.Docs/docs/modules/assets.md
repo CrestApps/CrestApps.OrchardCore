@@ -40,6 +40,10 @@ For a vehicle, equipment or tool the business owns, `AssetFleet` keeps `Schedula
 - `StockMovement` gains `ReferenceType` and `ReferenceId` (indexed) beside `OrderId`, and the `Consumed` kind.
 - `IInventoryService.ConsumeAsync(stockItemId, locationId, quantity, referenceType, referenceId, reason, actor)` uses units up at a location, refusing more than it has available, and records what they were for.
 
+## Recipes and deployment
+
+The `Assets` recipe step creates or updates asset types (`Types`) and assets (`Assets`, parents first) by `ItemId`, with the editor's checks. The **Asset types and assets** deployment step exports the types, and the assets unless told not to. Meter readings stay where they were taken.
+
 ## Permissions
 
 | Permission | Allows |

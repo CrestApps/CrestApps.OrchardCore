@@ -56,10 +56,12 @@ internal sealed class TimeTrackerRecipeStep : NamedRecipeStepHandler
                 continue;
             }
 
-            var category = categories.FirstOrDefault(item => string.Equals(item.Name, name, StringComparison.OrdinalIgnoreCase));
+            var id = Text(node, "ItemId");
+            var category = categories.FirstOrDefault(item => id is not null && item.ItemId == id)
+                ?? categories.FirstOrDefault(item => string.Equals(item.Name, name, StringComparison.OrdinalIgnoreCase));
             var isNew = category is null;
 
-            category ??= await _categories.NewAsync();
+            category ??= await NewAsync(_categories, id);
             category.Name = name.Trim();
             category.Code = Text(node, "code") ?? category.Code;
             category.Color = Text(node, "color") ?? category.Color;
@@ -91,10 +93,12 @@ internal sealed class TimeTrackerRecipeStep : NamedRecipeStepHandler
                 continue;
             }
 
-            var stage = stages.FirstOrDefault(item => string.Equals(item.Name, name, StringComparison.OrdinalIgnoreCase));
+            var id = Text(node, "ItemId");
+            var stage = stages.FirstOrDefault(item => id is not null && item.ItemId == id)
+                ?? stages.FirstOrDefault(item => string.Equals(item.Name, name, StringComparison.OrdinalIgnoreCase));
             var isNew = stage is null;
 
-            stage ??= await _stages.NewAsync();
+            stage ??= await NewAsync(_stages, id);
             stage.Name = name.Trim();
             stage.Code = Text(node, "code") ?? stage.Code;
             stage.Color = Text(node, "color") ?? stage.Color;
@@ -167,6 +171,21 @@ internal sealed class TimeTrackerRecipeStep : NamedRecipeStepHandler
         }
     }
 
+    // A new record keeps the id it had where it was exported, so records that point at it, such as activity codes,
+    // still do.
+    private static async Task<T> NewAsync<T>(CrestApps.Core.Services.ICatalogManager<T> manager, string id)
+        where T : CrestApps.Core.Models.CatalogItem
+    {
+        var item = await manager.NewAsync();
+
+        if (!string.IsNullOrEmpty(id) && CrestApps.Core.UniqueId.IsValid(id))
+        {
+            item.ItemId = id;
+        }
+
+        return item;
+    }
+
     private static IEnumerable<JsonObject> Items(RecipeExecutionContext context, string section)
         => (context.Step[section] as JsonArray ?? []).OfType<JsonObject>();
 
@@ -220,8 +239,8 @@ internal sealed class TimeTrackerRecipeStepSchema : IRecipeStep
             .Description("Creates or updates time categories and stages by name, and adds time entries.")
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const(TimeTrackerConstants.RecipeStepName).Description("Recipe step discriminator. Must be 'TimeTracker'.")),
-                ("Categories", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true)).Description("Categories: name, code, color, position, factor (how a minute counts, 1 by default) and enabled.")),
-                ("Stages", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true)).Description("Stages: name, code, color, position, selfService, enabled, and categories, the names of the categories its time counts toward.")),
+                ("Categories", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true)).Description("Categories, matched by ItemId and then name: name, code, color, position, factor (how a minute counts, 1 by default) and enabled.")),
+                ("Stages", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true)).Description("Stages, matched by ItemId and then name: name, code, color, position, selfService, enabled, and categories, the names of the categories its time counts toward.")),
                 ("Entries", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true)).Description("Entries: userName, stage (a stage name), startUtc, endUtc, source and note. An entry is skipped when the person already has time then.")))
             .Required("name")
             .AdditionalProperties(true)
@@ -287,6 +306,7 @@ internal sealed class TimeTrackerDeploymentSource : DeploymentSourceBase<TimeTra
             ["name"] = step.Name,
             ["Categories"] = new JsonArray([.. categories.Select(item => new JsonObject
             {
+                ["ItemId"] = item.ItemId,
                 ["name"] = item.Name,
                 ["code"] = item.Code,
                 ["color"] = item.Color,
@@ -296,6 +316,7 @@ internal sealed class TimeTrackerDeploymentSource : DeploymentSourceBase<TimeTra
             })]),
             ["Stages"] = new JsonArray([.. stages.Select(item => new JsonObject
             {
+                ["ItemId"] = item.ItemId,
                 ["name"] = item.Name,
                 ["code"] = item.Code,
                 ["color"] = item.Color,

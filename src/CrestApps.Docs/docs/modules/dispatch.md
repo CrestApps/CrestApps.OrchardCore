@@ -92,6 +92,10 @@ Each has `VisitId`, `Number`, `WorkOrderId`, `WorkOrderNumber`, `Status`, `LeadW
 - `IDispatchSettingsProvider`: give the settings from somewhere else.
 - `WorkOrderPanels` (Work Orders): a display driver for it adds a panel to the work order's page; Dispatch adds the visits.
 
+## Recipes and deployment
+
+The **Dispatch settings** deployment step exports `DispatchSettings` through Orchard Core's Settings step. Visits aren't exported: they belong to the work orders of the site they were made on.
+
 ## Permissions
 
 | Permission | Allows |

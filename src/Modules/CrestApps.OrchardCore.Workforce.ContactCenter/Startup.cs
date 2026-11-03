@@ -28,6 +28,7 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -340,5 +341,48 @@ public sealed class ContactCenterTimeTrackerDeploymentStartup : StartupBase
         services.AddSiteSettingsPropertyDeploymentStep<ContactCenterTimeStages, ContactCenterTimeTrackerDeploymentStartup>(
             S => S["Contact Center time stages"],
             S => S["The Time Tracker stage of each agent state and break reason."]);
+    }
+}
+
+/// <summary>
+/// Exports the adherence rule sets with a deployment.
+/// </summary>
+[Feature(WorkforceContactCenterConstants.Features.Adherence)]
+[RequireFeatures("OrchardCore.Deployment")]
+public sealed class AdherenceDeploymentStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<WorkforceAdherenceDeploymentSource, WorkforceAdherenceDeploymentStep, WorkforceAdherenceDeploymentStepDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Exports the forecasting setup with a deployment.
+/// </summary>
+[Feature(WorkforceContactCenterConstants.Features.Forecasting)]
+[RequireFeatures("OrchardCore.Deployment")]
+public sealed class ForecastingDeploymentStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<WorkforceForecastingDeploymentSource, WorkforceForecastingDeploymentStep, WorkforceForecastingDeploymentStepDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Describes the adherence and forecasting deployment steps to CrestApps Recipes.
+/// </summary>
+[Feature(WorkforceContactCenterConstants.Features.ContactCenter)]
+[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+public sealed class DeploymentSchemaStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeploymentStepSchema<WorkforceAdherenceDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<WorkforceForecastingDeploymentStepSchema>();
     }
 }

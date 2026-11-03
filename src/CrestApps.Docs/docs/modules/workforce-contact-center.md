@@ -118,6 +118,8 @@ When the AI feature is on, two tools join the Workforce tools:
 
 ## Recipes
 
+The **Adherence rule sets** and **Forecasting setup** deployment steps export what the `WorkforceAdherence` and `WorkforceForecasting` steps import, with the records' ids; the stages of agent states go with the **Contact Center time stages** settings step.
+
 Each feature has a recipe step that matches records by id or name, so a second run updates them, and names the records it refers to. A name that doesn't exist is reported and its record skipped.
 
 - `WorkforceForecasting` (**Workforce Forecasting**): `PlanningGroups` with `queueNames` and `teamName`, `ForecastEvents` with `planningGroupNames` (none for every planning group), and `CapacityPlans` with `planningGroupName`. A plan's `startDate` moves to its Monday.

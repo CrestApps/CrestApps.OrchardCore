@@ -100,11 +100,19 @@ Shift planning already sits on Calendars where it matters: each team has a **Wor
 - A team's Workforce calendar on **Manage Calendars** gets **Shift schedules** in its actions, opening that team's schedules; the planner already links back to the team calendar.
 - Nothing changes in how shifts are stored or published.
 
-## 5. Consistency rules from review
+## 5. What recipes and deployments carry
+
+Every module in the plan exports and imports its configuration and master data, with the records' ids so they stay linked: Workforce (activity codes, teams, workers, shift planning, time off, labor rules and time clock settings), Workforce for Contact Center (adherence rule sets, the forecasting setup and the stages of agent states), Skills, Time Tracker (categories and stages with their ids, entries when asked), Geo (service territories and the maps settings, without provider keys), Assets (types and assets), Work Orders (types, checklists, service levels, sub-statuses, and service agreements when asked) and Dispatch (its settings). Each recipe step has a CrestApps Recipes schema and each deployment step a deployment step schema.
+
+Transactional records stay where they happened: work orders, visits, meter readings, punches, timesheets, attendance exceptions, time-off requests and ledgers, and Contact Center states. They carry running numbers, service-level clocks and payroll history that a copy on another site would break or duplicate; moving them is a data migration, not a deployment.
+
+None of these modules reads options from appsettings yet, so none has a `ConfigurationSchema.json`; one is added with the first such option.
+
+## 6. Consistency rules from review
 
 Every module in the plan follows these: admin lists through `<admin-list>`; forms with the `ocat-*` classes, one label and field per line, grouped in cards; a deployment step, a recipe step and the CrestApps `IRecipeStep` definition for every kind of stored record; `ConfigurationSchema.json` for every options class read from configuration; an icon on every top-level menu item; and no one-time setup pages in the menu.
 
-## 6. Order of work
+## 7. Order of work
 
 In PR C (#1252), after C7, one commit each (fewer PRs, one per plan):
 

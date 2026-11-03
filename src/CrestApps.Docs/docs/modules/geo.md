@@ -92,6 +92,10 @@ The Geo module's `_GeoMap` partial renders a map element with the site's tile se
 
 **Settings > Maps and Geocoding** (`GeoSettings`, permission **Manage maps and geocoding settings**): the geocoding, travel-time and route providers, the built-in estimate's average speed and road factor, how long travel times are cached, the tile address and attribution, and where maps open. The default tile server is OpenStreetMap's, for trying things out only: a live site must use its own tiles or a commercial tile service, under the OpenStreetMap tile usage policy.
 
+## Recipes and deployment
+
+The `Geo` recipe step creates or updates service territories by `ItemId` (`Territories`), parents first, with the same checks as the editor; the **Service territories** deployment step exports them. The **Maps and geocoding settings** deployment step exports `GeoSettings` (the providers chosen, the built-in estimate and the tiles) through Orchard Core's Settings step; provider keys stay on each site.
+
 ## Permissions
 
 | Permission | Allows |

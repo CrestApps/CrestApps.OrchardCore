@@ -124,11 +124,9 @@
                 @if (Model.CanAssign && Model.AllPolicyOptions.Count > 0)
                 {
                     <form method="post" asp-action="Assign" asp-route-workerId="@Model.Worker.ItemId" class="no-multisubmit">
-                        <div class="row g-2 align-items-end">
-                            <div class="col-sm-12"><label for="assign-policy" class="form-label">@T["Give them a policy"]</label><select id="assign-policy" name="PolicyId" class="form-select" asp-items="Model.AllPolicyOptions"></select></div>
-                            <div class="col-sm-6"><label for="assign-from" class="form-label">@T["From"]</label><input id="assign-from" name="EffectiveFrom" type="date" class="form-control" /></div>
-                            <div class="col-sm-6"><label for="assign-to" class="form-label">@T["To"]</label><input id="assign-to" name="EffectiveTo" type="date" class="form-control" /></div>
-                        </div>
+                        <div class="ocat-wrapper"><label for="assign-policy" class="ocat-label">@T["Give them a policy"]</label><div class="ocat-end"><select id="assign-policy" name="PolicyId" class="form-select" asp-items="Model.AllPolicyOptions"></select></div></div>
+                        <div class="ocat-wrapper"><label for="assign-from" class="ocat-label">@T["From"]</label><div class="ocat-end"><input id="assign-from" name="EffectiveFrom" type="date" class="form-control" style="max-width: 12rem" /></div></div>
+                        <div class="ocat-wrapper"><label for="assign-to" class="ocat-label">@T["To"]</label><div class="ocat-end"><input id="assign-to" name="EffectiveTo" type="date" class="form-control" style="max-width: 12rem" /></div></div>
                         <span class="hint">@T["Their own policy of a type replaces their teams' policy of that type."]</span>
                         <div class="mt-2"><button type="submit" class="btn btn-secondary">@T["Assign"]</button></div>
                     </form>

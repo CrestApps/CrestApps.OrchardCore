@@ -85,6 +85,10 @@ Each can be limited to some work order types. Every event's input has `WorkOrder
 - `IServiceHoursProvider`: give the open hours of a policy's calendar.
 - `WorkOrderPanels`: a display driver for it adds a panel, placed in the Content zone, to the work order's page.
 
+## Recipes and deployment
+
+The `WorkOrders` recipe step creates or updates, by `ItemId`, checklists (`Checklists`), service levels (`ServiceLevels`), sub-statuses (`SubStatuses`), types (`Types`, which name their checklists and service level by id) and, with Service Agreements on, agreements (`Agreements`). The **Work order settings** deployment step exports them, the agreements only when asked, since their customers, places and assets must be on the other site too. Work orders themselves aren't exported: they carry numbers and service level clocks of the site they belong to.
+
 ## Permissions
 
 | Permission | Allows |

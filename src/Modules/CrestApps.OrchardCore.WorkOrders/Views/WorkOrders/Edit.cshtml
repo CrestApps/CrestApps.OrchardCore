@@ -9,128 +9,167 @@
 <form asp-action="@(isNew ? "New" : "Edit")" asp-route-id="@Model.Id" asp-route-typeId="@(isNew ? Model.TypeId : null)" method="post" class="no-multisubmit">
     <div asp-validation-summary="All" class="text-danger"></div>
     <input type="hidden" asp-for="Id" />
-
-    <div class="row g-3 mb-3">
-        <div class="col-12 col-md-8">
-            <label asp-for="Summary" class="form-label">@T["Summary"]</label>
-            <input asp-for="Summary" class="form-control" required placeholder="@T["Such as: No heat in the upstairs rooms"]" />
-        </div>
-        <div class="col-6 col-md-2">
-            <label asp-for="Priority" class="form-label">@T["Priority"]</label>
-            <select asp-for="Priority" asp-items="Html.GetEnumSelectList<WorkOrderPriority>()" class="form-select"></select>
-        </div>
-        <div class="col-6 col-md-2">
-            <label asp-for="EstimatedMinutes" class="form-label">@T["Minutes"]</label>
-            <input asp-for="EstimatedMinutes" type="number" min="0" step="5" class="form-control" />
-        </div>
-        <div class="col-12">
-            <label asp-for="Description" class="form-label">@T["Description"]</label>
-            <textarea asp-for="Description" class="form-control" rows="3"></textarea>
-        </div>
-    </div>
-
-    <h2 class="h5 mt-4">@T["Who and where"]</h2>
-    <div class="row g-3 mb-3">
-        <div class="col-12 col-md-4">
-            <label asp-for="ContactName" class="form-label">@T["Contact"]</label>
-            <input asp-for="ContactName" class="form-control" autocomplete="off" />
-        </div>
-        <div class="col-6 col-md-4">
-            <label asp-for="ContactPhone" class="form-label">@T["Phone"]</label>
-            <input asp-for="ContactPhone" type="tel" class="form-control" autocomplete="off" />
-        </div>
-        <div class="col-6 col-md-4">
-            <label asp-for="ContactEmail" class="form-label">@T["Email"]</label>
-            <input asp-for="ContactEmail" type="email" class="form-control" autocomplete="off" />
-        </div>
-        <div class="col-12 col-md-8">
-            <label asp-for="AddressLine1" class="form-label">@T["Street address"]</label>
-            <input asp-for="AddressLine1" class="form-control" autocomplete="off" />
-        </div>
-        <div class="col-12 col-md-4">
-            <label asp-for="AddressLine2" class="form-label">@T["Unit, floor"]</label>
-            <input asp-for="AddressLine2" class="form-control" autocomplete="off" />
-        </div>
-        <div class="col-6 col-md-4">
-            <label asp-for="City" class="form-label">@T["City"]</label>
-            <input asp-for="City" class="form-control" autocomplete="off" />
-        </div>
-        <div class="col-6 col-md-3">
-            <label asp-for="Region" class="form-label">@T["State or region"]</label>
-            <input asp-for="Region" class="form-control" autocomplete="off" />
-        </div>
-        <div class="col-6 col-md-3">
-            <label asp-for="PostalCode" class="form-label">@T["Postal code"]</label>
-            <input asp-for="PostalCode" class="form-control" autocomplete="off" />
-        </div>
-        <div class="col-6 col-md-2">
-            <label asp-for="Country" class="form-label">@T["Country"]</label>
-            <input asp-for="Country" class="form-control" autocomplete="off" maxlength="2" placeholder="US" />
-        </div>
-        @if (Model.Map is not null)
-        {
-            <div class="col-12">
-                <input type="hidden" asp-for="Latitude" />
-                <input type="hidden" asp-for="Longitude" />
-                <style asp-name="leaflet"></style>
-                <script asp-name="crestapps-map" at="Foot"></script>
-                <div id="work-order-map" class="border rounded" style="height: 16rem; z-index: 0;"
-                     data-tile-url="@Model.Map.TileUrl" data-attribution="@Model.Map.TileAttribution"
-                     data-latitude="@Model.Map.DefaultLatitude.ToString(CultureInfo.InvariantCulture)" data-longitude="@Model.Map.DefaultLongitude.ToString(CultureInfo.InvariantCulture)" data-zoom="@Model.Map.DefaultZoom"
-                     role="region" aria-label="@T["Where the job is"]"></div>
-                <span class="hint">@T["Click the map to place the job, or drag the pin. Without a pin, the address is placed in the background."]</span>
-                <script at="Foot">
-                    document.addEventListener('DOMContentLoaded', () => {
-                        const map = window.crestappsMap && window.crestappsMap.create('work-order-map');
-                        if (map) {
-                            window.crestappsMap.pin(map, document.getElementById('@Html.IdFor(model => model.Latitude)'), document.getElementById('@Html.IdFor(model => model.Longitude)'));
-                        }
-                    });
-                </script>
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Details"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="Summary" class="ocat-label">@T["Summary"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Summary" class="form-control" required placeholder="@T["Such as: No heat in the upstairs rooms"]" />
+                </div>
             </div>
-        }
-        <div class="col-12">
-            <label asp-for="AccessNotes" class="form-label">@T["Access notes"]</label>
-            <textarea asp-for="AccessNotes" class="form-control" rows="2" placeholder="@T["Such as: gate code, the dog, where to park"]"></textarea>
-            <span class="hint">@T["When Geo is on, the address is placed on the map in the background and gives the work order its territory."]</span>
+            <div class="ocat-wrapper">
+                <label asp-for="Priority" class="ocat-label">@T["Priority"]</label>
+                <div class="ocat-end">
+                    <select asp-for="Priority" asp-items="Html.GetEnumSelectList<WorkOrderPriority>()" class="form-select"></select>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="EstimatedMinutes" class="ocat-label">@T["Minutes"]</label>
+                <div class="ocat-end">
+                    <input asp-for="EstimatedMinutes" type="number" min="0" step="5" class="form-control" style="max-width: 12rem" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+                <div class="ocat-end">
+                    <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                </div>
+            </div>
         </div>
     </div>
-
-    <h2 class="h5 mt-4">@T["When"]</h2>
-    <div class="row g-3 mb-3">
-        <div class="col-6 col-md-4">
-            <label asp-for="Earliest" class="form-label">@T["Not before"]</label>
-            <input asp-for="Earliest" type="datetime-local" class="form-control" />
-        </div>
-        <div class="col-6 col-md-4">
-            <label asp-for="Latest" class="form-label">@T["Not after"]</label>
-            <input asp-for="Latest" type="datetime-local" class="form-control" />
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Who and where"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="ContactName" class="ocat-label">@T["Contact"]</label>
+                <div class="ocat-end">
+                    <input asp-for="ContactName" class="form-control" autocomplete="off" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="ContactPhone" class="ocat-label">@T["Phone"]</label>
+                <div class="ocat-end">
+                    <input asp-for="ContactPhone" type="tel" class="form-control" autocomplete="off" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="ContactEmail" class="ocat-label">@T["Email"]</label>
+                <div class="ocat-end">
+                    <input asp-for="ContactEmail" type="email" class="form-control" autocomplete="off" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="AddressLine1" class="ocat-label">@T["Street address"]</label>
+                <div class="ocat-end">
+                    <input asp-for="AddressLine1" class="form-control" autocomplete="off" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="AddressLine2" class="ocat-label">@T["Unit, floor"]</label>
+                <div class="ocat-end">
+                    <input asp-for="AddressLine2" class="form-control" autocomplete="off" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="City" class="ocat-label">@T["City"]</label>
+                <div class="ocat-end">
+                    <input asp-for="City" class="form-control" autocomplete="off" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Region" class="ocat-label">@T["State or region"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Region" class="form-control" autocomplete="off" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="PostalCode" class="ocat-label">@T["Postal code"]</label>
+                <div class="ocat-end">
+                    <input asp-for="PostalCode" class="form-control" autocomplete="off" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Country" class="ocat-label">@T["Country"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Country" class="form-control" autocomplete="off" maxlength="2" placeholder="US" />
+                </div>
+            </div>
+            @if (Model.Map is not null)
+            {
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <input type="hidden" asp-for="Latitude" />
+                    <input type="hidden" asp-for="Longitude" />
+                    <style asp-name="leaflet"></style>
+                    <script asp-name="crestapps-map" at="Foot"></script>
+                    <div id="work-order-map" class="border rounded" style="height: 16rem; z-index: 0;"
+                         data-tile-url="@Model.Map.TileUrl" data-attribution="@Model.Map.TileAttribution"
+                         data-latitude="@Model.Map.DefaultLatitude.ToString(CultureInfo.InvariantCulture)" data-longitude="@Model.Map.DefaultLongitude.ToString(CultureInfo.InvariantCulture)" data-zoom="@Model.Map.DefaultZoom"
+                         role="region" aria-label="@T["Where the job is"]"></div>
+                    <span class="hint">@T["Click the map to place the job, or drag the pin. Without a pin, the address is placed in the background."]</span>
+                    <script at="Foot">
+                        document.addEventListener('DOMContentLoaded', () => {
+                            const map = window.crestappsMap && window.crestappsMap.create('work-order-map');
+                            if (map) {
+                                window.crestappsMap.pin(map, document.getElementById('@Html.IdFor(model => model.Latitude)'), document.getElementById('@Html.IdFor(model => model.Longitude)'));
+                            }
+                        });
+                    </script>
+                </div>
+            </div>
+            }
+            <div class="ocat-wrapper">
+                <label asp-for="AccessNotes" class="ocat-label">@T["Access notes"]</label>
+                <div class="ocat-end">
+                    <textarea asp-for="AccessNotes" class="form-control" rows="2" placeholder="@T["Such as: gate code, the dog, where to park"]"></textarea>
+                    <span class="hint">@T["When Geo is on, the address is placed on the map in the background and gives the work order its territory."]</span>
+                </div>
+            </div>
         </div>
     </div>
-
-    @if (Model.AssetOptions.Count > 0)
-    {
-        <h2 class="h5 mt-4">@T["Assets"]</h2>
-        <div class="mb-3">
-            <label asp-for="AssetIds" class="form-label visually-hidden">@T["Assets"]</label>
-            <select asp-for="AssetIds" asp-items="Model.AssetOptions" class="form-select" multiple size="5"></select>
-            <span class="hint">@T["The equipment the job is on. The work order shows in each asset's history."]</span>
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["When"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="Earliest" class="ocat-label">@T["Not before"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Earliest" type="datetime-local" class="form-control" style="max-width: 12rem" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Latest" class="ocat-label">@T["Not after"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Latest" type="datetime-local" class="form-control" style="max-width: 12rem" />
+                </div>
+            </div>
+            @if (Model.AssetOptions.Count > 0)
+            {
+                <h2 class="h5 mt-4">@T["Assets"]</h2>
+                <div class="mb-3">
+                    <label asp-for="AssetIds" class="form-label visually-hidden">@T["Assets"]</label>
+                    <select asp-for="AssetIds" asp-items="Model.AssetOptions" class="form-select" multiple size="5"></select>
+                    <span class="hint">@T["The equipment the job is on. The work order shows in each asset's history."]</span>
+                </div>
+            }
         </div>
-    }
-
-    <h2 class="h5 mt-4">@T["Lines"]</h2>
-    <p class="hint">@T["Parts, labor and charges planned for the job. What is used is recorded on the work order's page."]</p>
-    <partial name="_LineRows" model="(Model.Lines, Model.StockItemOptions)" />
-
-    <div class="mb-3">
-        <button type="submit" class="btn btn-primary save">@(isNew ? T["Create"] : T["Save"])</button>
-        @if (isNew)
-        {
-            <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
-        }
-        else
-        {
-            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary">@T["Cancel"]</a>
-        }
+    </div>
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Lines"]</div>
+        <div class="card-body">
+            <p class="hint">@T["Parts, labor and charges planned for the job. What is used is recorded on the work order's page."]</p>
+            <partial name="_LineRows" model="(Model.Lines, Model.StockItemOptions)" />
+            <div class="mb-3">
+                <button type="submit" class="btn btn-primary save">@(isNew ? T["Create"] : T["Save"])</button>
+                @if (isNew)
+                {
+                    <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+                }
+                else
+                {
+                    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary">@T["Cancel"]</a>
+                }
+            </div>
+        </div>
     </div>
 </form>
