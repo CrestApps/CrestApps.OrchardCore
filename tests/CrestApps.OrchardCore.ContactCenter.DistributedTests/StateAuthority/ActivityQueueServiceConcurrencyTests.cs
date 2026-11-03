@@ -87,7 +87,7 @@ public sealed class ActivityQueueServiceConcurrencyTests
         }.RestorePersistedStatus(QueueItemStatus.Waiting);
 
         var scopedService = Mock.Of<IActivityQueueService>(service =>
-            service.EnqueueAsync(ActivityItemId, QueueId, null, It.IsAny<CancellationToken>()) == Task.FromResult(existing));
+            service.EnqueueAsync(ActivityItemId, QueueId, null, null, false, It.IsAny<CancellationToken>()) == Task.FromResult(existing));
         var scopeExecutor = new SingleContextScopeExecutor<IActivityQueueService>(scopedService);
         var service = CreateConflictingService(scopeExecutor, out var scopeExecutions);
 
@@ -105,7 +105,7 @@ public sealed class ActivityQueueServiceConcurrencyTests
         // Arrange
         var scopedService = new Mock<IActivityQueueService>();
         scopedService
-            .Setup(service => service.EnqueueAsync(ActivityItemId, QueueId, null, It.IsAny<CancellationToken>()))
+            .Setup(service => service.EnqueueAsync(ActivityItemId, QueueId, null, null, false, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new TestDbException());
 
         var scopeExecutor = new SingleContextScopeExecutor<IActivityQueueService>(scopedService.Object);
