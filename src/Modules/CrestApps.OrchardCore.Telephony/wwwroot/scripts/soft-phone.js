@@ -8708,7 +8708,7 @@
 				var toggleHeight = toggleRect.height || 56;
 				var margin = 8;
 				var maxLeft = Math.max(margin, window.innerWidth - toggleWidth - margin);
-				var maxTop = Math.max(margin, window.innerHeight - toggleHeight - margin);
+				var maxTop = Math.max(margin, window.innerHeight - getActionBarHeight() - toggleHeight - margin);
 				var minLeft = margin;
 				var minTop = margin;
 				if (dom.panel && !dom.panel.hidden) {
@@ -8724,6 +8724,10 @@
 					maxLeft,
 					maxTop
 				};
+			}
+			function getActionBarHeight() {
+				var actionBar = document.querySelector(".action-bar-bottom");
+				return actionBar ? actionBar.getBoundingClientRect().height : 0;
 			}
 			function clampPosition(left, top) {
 				var range = getAvailablePositionRange();

@@ -267,6 +267,11 @@
     html:has(.action-bar-bottom) .ai-chat-admin-widget-shell .ai-chat-widget-container {
         bottom: calc(var(--oc-action-bar-bottom-height, 3.5rem) + 5rem);
     }
+
+    /* While the bar's "more actions" menu is open, keep the assistant's button under it, so the menu stays clickable. */
+    html:has(.action-bar-bottom .dropdown-menu.show) .ai-chat-admin-widget-shell .ai-chat-widget-toggle {
+        z-index: calc(var(--oc-action-bar-bottom-zindex, 980) - 1);
+    }
 </style>
 
 @{
@@ -342,6 +347,33 @@
     }, JOptions.CamelCase);
 }
 <script asp-name="AIChatWidgetApp" at="Foot"></script>
+<script at="Foot">
+    // A dragged or restored assistant button keeps the position it was left at, which can sit over Orchard Core's bottom
+    // action bar and its Save and Cancel buttons. Move it back above the bar whenever it lands there.
+    (() => {
+        const actionBar = document.querySelector('.action-bar-bottom');
+        const toggle = document.querySelector('.ai-chat-admin-widget-shell .ai-chat-widget-toggle');
+
+        if (!actionBar || !toggle) {
+            return;
+        }
+
+        const keepAboveActionBar = () => {
+            const barTop = actionBar.getBoundingClientRect().top;
+            const rect = toggle.getBoundingClientRect();
+
+            if (!toggle.style.top || !actionBar.offsetHeight || rect.bottom <= barTop - 8) {
+                return;
+            }
+
+            toggle.style.top = Math.max(8, barTop - rect.height - 8) + 'px';
+        };
+
+        new MutationObserver(keepAboveActionBar).observe(toggle, { attributes: true, attributeFilter: ['style'] });
+        window.addEventListener('resize', keepAboveActionBar);
+        keepAboveActionBar();
+    })();
+</script>
 <div id="@($"{baseId}_Config")"
      class="d-none"
      data-coreai-chat-widget-config="@widgetConfigJson"></div>
