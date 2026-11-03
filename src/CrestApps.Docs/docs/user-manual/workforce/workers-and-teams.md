@@ -51,7 +51,7 @@ Open **Workforce > Workers** and choose **Add worker**, or choose **Add a worker
 | Field | What it does |
 | --- | --- |
 | **Name** | How the worker is shown. |
-| **User account** | Optional. The user the worker signs in as. Without one, the worker can still be scheduled but can't sign in to see their schedule. A user can be only one worker. |
+| **User account** | Optional. The user the worker signs in as. Without one, the worker can still be scheduled but can't sign in to see their schedule. A user can be only one worker. A worker with an account takes its **Name** and **Email** from it, and they can't be changed here. |
 | **Job title**, **Email**, **Phone** | Contact details. |
 | **Employee number** | Optional, but two workers can't share one. |
 | **HR or payroll id** | The worker's id in another system, for exports. |
@@ -85,6 +85,16 @@ One line for each enabled skill: choose how well the worker holds it, from **1 -
 **Certificates**
 
 After the worker is saved, the editor lists their certificates. Add one with **Certification**, **Number**, **Issued on**, **Valid until** (leave it empty to work it out from the certification) and **Checked**, then choose **Add**. The certificate also appears in **Workforce > Certificates**.
+
+## From the user editor
+
+People with an account are managed with their user too. With **Manage workers**, the user editor (**Access Control > Users > Edit**) has a **Workforce** card:
+
+- For a user who isn't a worker yet, tick **Make them a worker** and fill in their employee number, job title, employment, status, hire date, **Main team** and contracted hours. Saving the user makes the worker, with the user's name and email.
+- For a worker, the same fields change their worker. A new main team is joined from today, and the teams they were in stay. **Open their worker page** has the rest: teams and their dates, hours, availability, pay rates and certificates.
+- Whenever the user is saved, their worker takes the user's name and email.
+
+The **Workers** list stays, for workers without an account (such as people who clock in only at a kiosk) and for HR records kept after an account is closed.
 
 ## Find workers
 

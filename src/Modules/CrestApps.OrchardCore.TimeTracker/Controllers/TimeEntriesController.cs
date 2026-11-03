@@ -4,12 +4,13 @@ using CrestApps.OrchardCore.TimeTracker.Core.Services;
 using CrestApps.OrchardCore.TimeTracker.Models;
 using CrestApps.OrchardCore.TimeTracker.Services;
 using CrestApps.OrchardCore.TimeTracker.ViewModels;
+using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
@@ -195,7 +196,7 @@ public sealed class TimeEntriesController : Controller
 
                 result = user is null
                     ? TimeTrackerResult.Fail(H["Choose whose time it is."].Value)
-                    : await _tracker.AddAsync(new TimeEntry { UserId = form.UserId, UserName = user.UserName, StageId = form.StageId, StartUtc = start, EndUtc = end, Note = string.IsNullOrWhiteSpace(form.Note) ? null : form.Note.Trim(), Source = TimeTrackerConstants.Sources.Manager }, User.Identity?.Name, form.Reason, HttpContext.RequestAborted);
+                    : await _tracker.AddAsync(new TimeEntry { UserId = form.UserId, UserName = (HttpContext.RequestServices.GetService<IDisplayNameProvider>() is { } names ? await names.GetAsync(user, HttpContext.RequestAborted) : null) ?? user.UserName, StageId = form.StageId, StartUtc = start, EndUtc = end, Note = string.IsNullOrWhiteSpace(form.Note) ? null : form.Note.Trim(), Source = TimeTrackerConstants.Sources.Manager }, User.Identity?.Name, form.Reason, HttpContext.RequestAborted);
             }
             else
             {

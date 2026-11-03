@@ -11,6 +11,8 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Users.Handlers;
+using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Workforce;
 
@@ -31,6 +33,8 @@ public sealed class Startup : StartupBase
         services.AddWorkforceCore();
         services.AddDisplayDriver<WorkforceTeam, TeamRowDisplayDriver>();
         services.AddDisplayDriver<WorkerProfile, WorkerRowDisplayDriver>();
+        services.AddDisplayDriver<User, UserWorkforceDisplayDriver>();
+        services.AddScoped<IUserEventHandler, WorkerUserEventHandler>();
         services.AddDisplayDriver<ActivityCode, ActivityCodeRowDisplayDriver>();
         services.AddPermissionProvider<WorkforcePermissionsProvider>();
         services.AddNavigationProvider<WorkforceAdminMenu>();

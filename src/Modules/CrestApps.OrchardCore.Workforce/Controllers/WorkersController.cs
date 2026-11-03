@@ -1,15 +1,18 @@
 using CrestApps.OrchardCore.Skills;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
+using CrestApps.OrchardCore.Users;
 using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using CrestApps.OrchardCore.Workforce.ViewModels;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -17,6 +20,8 @@ using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Users;
+using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Workforce.Controllers;
 
@@ -169,6 +174,7 @@ public sealed class WorkersController : Controller
             DisplayName = worker.DisplayName,
             UserId = worker.UserId,
             Email = worker.Email,
+            NameFromUser = !string.IsNullOrEmpty(worker.UserId),
             Phone = worker.Phone,
             EmployeeNumber = worker.EmployeeNumber,
             ExternalId = worker.ExternalId,
@@ -277,6 +283,15 @@ public sealed class WorkersController : Controller
         worker.DisplayName = model.DisplayName;
         worker.UserId = model.UserId;
         worker.Email = model.Email;
+
+        // A worker with an account takes its name and email from it, as the user editor does.
+        if (!string.IsNullOrEmpty(model.UserId) && await HttpContext.RequestServices.GetRequiredService<UserManager<IUser>>().FindByIdAsync(model.UserId) is User account)
+        {
+            var names = HttpContext.RequestServices.GetService<IDisplayNameProvider>();
+
+            worker.DisplayName = (names is null ? null : await names.GetAsync(account)) ?? account.UserName;
+            worker.Email = account.Email;
+        }
         worker.Phone = model.Phone;
         worker.EmployeeNumber = model.EmployeeNumber;
         worker.ExternalId = model.ExternalId;

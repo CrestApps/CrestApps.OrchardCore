@@ -42,6 +42,7 @@ public static class WorkforceCoreServiceCollectionExtensions
         services.TryAddScoped<IWorkforceScopeService, DefaultWorkforceScopeService>();
         services.TryAddScoped<WorkforceCalendarService>();
         services.TryAddScoped<ActivityCodeSeeder>();
+        services.TryAddScoped<WorkerAccounts>();
         services.AddCalendarAccessContributor<WorkforceCalendarAccessContributor>();
         services.AddCalendarBusyTimeSource<ShiftSegmentBusyTimeSource>();
 

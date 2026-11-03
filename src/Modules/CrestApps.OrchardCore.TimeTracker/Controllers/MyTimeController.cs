@@ -3,13 +3,16 @@ using CrestApps.OrchardCore.TimeTracker.Core.Services;
 using CrestApps.OrchardCore.TimeTracker.Models;
 using CrestApps.OrchardCore.TimeTracker.Services;
 using CrestApps.OrchardCore.TimeTracker.ViewModels;
+using CrestApps.OrchardCore.Users;
+using IClock = OrchardCore.Modules.IClock;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement.Notify;
-using IClock = OrchardCore.Modules.IClock;
+using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.TimeTracker.Controllers;
 
@@ -98,7 +101,7 @@ public sealed class MyTimeController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        var result = await _tracker.SwitchAsync(User.FindFirstValue(ClaimTypes.NameIdentifier), User.Identity?.Name, stageId, TimeTrackerConstants.Sources.Self, User.Identity?.Name, null, HttpContext.RequestAborted);
+        var result = await _tracker.SwitchAsync(User.FindFirstValue(ClaimTypes.NameIdentifier), await DisplayNameAsync(), stageId, TimeTrackerConstants.Sources.Self, User.Identity?.Name, null, HttpContext.RequestAborted);
 
         if (!result.Succeeded)
         {
@@ -144,5 +147,18 @@ public sealed class MyTimeController : Controller
         }
 
         return null;
+    }
+
+    // The name people know them by, as other clocks keep it, so a person shows under one name.
+    private async Task<string> DisplayNameAsync()
+    {
+        var names = HttpContext.RequestServices.GetService<IDisplayNameProvider>();
+
+        if (names is not null && await HttpContext.RequestServices.GetRequiredService<UserManager<IUser>>().GetUserAsync(User) is { } user)
+        {
+            return await names.GetAsync(user, HttpContext.RequestAborted) ?? User.Identity?.Name;
+        }
+
+        return User.Identity?.Name;
     }
 }

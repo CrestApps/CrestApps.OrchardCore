@@ -39,6 +39,10 @@ Projects: `CrestApps.OrchardCore.Workforce.Abstractions` (models and contracts),
 
 Every record is a YesSql document in the `Workforce` collection, with `WorkerIndex`, `WorkerTeamMembershipIndex` (one row per membership, with its dates as `yyyyMMdd` numbers), `TeamIndex` and `ActivityCodeIndex`.
 
+## Workers and user accounts
+
+A worker is linked to a user by `UserId`. `WorkerAccounts` (in Core) makes or changes a user's worker from the user editor (`SaveAsync` with a `UserWorkerInput`: employee number, job title, employment, status, hire date, main team and contracted hours; a new main team is joined from today) and gives it the user's name and email (`RefreshAsync`). It doesn't save the database itself, so it runs inside the user editor's save. `UserWorkforceDisplayDriver` adds the **Workforce** card to the user editor for people with `ManageWorkers` who manage the worker's teams, and `WorkerUserEventHandler` refreshes the name and email after each user update. The name is the CrestApps `IDisplayNameProvider`'s when CrestApps Users is on, else the user name; the worker editor takes it from the account too and shows it read-only.
+
 ## The Workforce calendar type
 
 The module registers the `Workforce` calendar type with `ManagedByCode()` and creates one calendar per team when the team is created (`Source` = `Workforce`, `SourceId` = the team id). The calendar follows the team's name, time zone and whether it is in use.
