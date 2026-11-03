@@ -49,6 +49,11 @@ public static class DispatchConstants
         /// Technician Mobile: the field app in My Work, offline, with location sharing.
         /// </summary>
         public const string Mobile = "CrestApps.OrchardCore.Dispatch.Mobile";
+
+        /// <summary>
+        /// Field Service API: work orders, visits, optimizing and geo over HTTP.
+        /// </summary>
+        public const string Api = "CrestApps.OrchardCore.Dispatch.Api";
     }
 
     /// <summary>

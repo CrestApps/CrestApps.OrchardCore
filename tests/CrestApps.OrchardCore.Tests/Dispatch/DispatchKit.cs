@@ -120,9 +120,13 @@ internal sealed class DispatchKit : IAsyncDisposable
                 services.AddWorkOrdersCore();
                 services.AddDispatchCore();
                 services.AddDispatchMobileCore();
+                services.AddAssetsCore();
                 services.AddSingleton<IFieldFileStore>(kit.Files);
                 services.AddSingleton<Microsoft.AspNetCore.Http.IHttpContextAccessor, Microsoft.AspNetCore.Http.HttpContextAccessor>();
+                services.AddScoped<CrestApps.OrchardCore.Dispatch.Reports.FieldServiceKpiService>();
                 services.TryAddScoped<ServiceTerritoryStore>();
+                services.TryAddScoped<ServiceTerritoryManager>();
+                services.TryAddEnumerable(ServiceDescriptor.Scoped<CrestApps.Core.Services.ICatalogEntryHandler<ServiceTerritory>, ServiceTerritoryHandler>());
                 services.AddSingleton(settings.Object);
                 services.AddSingleton(geo.Object);
                 services.AddSingleton(clock.Object);
@@ -146,6 +150,7 @@ internal sealed class DispatchKit : IAsyncDisposable
                 await WorkOrdersIndexSchema.CreateAsync(schema);
                 await DispatchIndexSchema.CreateAsync(schema);
                 await FieldIndexSchema.CreateAsync(schema);
+                await CrestApps.OrchardCore.Assets.Core.Indexes.AssetsIndexSchema.CreateAsync(schema);
                 await GeoIndexSchema.CreateAsync(schema);
             },
             new IIndexProvider[]
@@ -153,8 +158,9 @@ internal sealed class DispatchKit : IAsyncDisposable
                 new WorkOrderIndexProvider(), new WorkOrderTypeIndexProvider(), new ChecklistTemplateIndexProvider(), new ServiceLevelPolicyIndexProvider(), new WorkOrderSubStatusIndexProvider(),
                 new ServiceVisitIndexProvider(), new FieldCommandReceiptIndexProvider(), new WorkerLocationConsentIndexProvider(), new WorkerLocationPingIndexProvider(),
                 new ServiceTerritoryIndexProvider(), new GeocodeRequestIndexProvider(),
+                new CrestApps.OrchardCore.Assets.Core.Indexes.AssetTypeIndexProvider(), new CrestApps.OrchardCore.Assets.Core.Indexes.AssetIndexProvider(), new CrestApps.OrchardCore.Assets.Core.Indexes.AssetMeterReadingIndexProvider(),
             },
-            [WorkOrdersConstants.CollectionName, DispatchConstants.CollectionName, GeoConstants.CollectionName]);
+            [WorkOrdersConstants.CollectionName, DispatchConstants.CollectionName, GeoConstants.CollectionName, CrestApps.OrchardCore.Assets.AssetsConstants.CollectionName]);
 
         kit.Team = await WorkforceTests.AddTeamAsync(kit.Harness, "Field", TeamKind.Team);
         kit.Team = await PlanningKit.UpdateTeamAsync(kit.Harness, kit.Team, team => team.Location = new WorkforceLocation { Latitude = Depot.Latitude, Longitude = Depot.Longitude });

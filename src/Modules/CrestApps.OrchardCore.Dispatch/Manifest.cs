@@ -37,3 +37,14 @@ using OrchardCore.Modules.Manifest;
         "OrchardCore.Media",
     ]
 )]
+
+[assembly: Feature(
+    Id = DispatchConstants.Features.Api,
+    Name = "Field Service API",
+    Description = "Work orders at api/work-orders/v1, visits, candidates, assignment and optimizing at api/dispatch/v1, and geocoding and territories at api/geo/v1, for other systems and apps, with the admin's permissions.",
+    Category = "Field Service",
+    Dependencies =
+    [
+        DispatchConstants.Features.Dispatch,
+    ]
+)]

@@ -34,6 +34,14 @@ public sealed class DispatchAdminMenu : AdminNavigationProvider
                     .Action("Index", "Visits", DispatchConstants.Features.Dispatch)
                     .Permission(DispatchPermissions.ViewDispatch)
                     .LocalNav()))
+            .Add(S["Reports"], "after.40", reports => reports
+                .Add(S["Field Service"], S["Field Service"].PrefixPosition(), category => category
+                    .AddClass("report-category")
+                    .Add(S["KPIs"], S["KPIs"].PrefixPosition("10"), kpis => kpis
+                        .Id("fieldServiceKpis")
+                        .Action("Index", "FieldServiceKpis", DispatchConstants.Features.Dispatch)
+                        .Permission(DispatchPermissions.ViewDispatch)
+                        .LocalNav())))
             .Add(S["Settings"], settings => settings
                 .Add(S["Dispatch"], S["Dispatch"].PrefixPosition(), dispatch => dispatch
                     .Id("dispatchSettings")

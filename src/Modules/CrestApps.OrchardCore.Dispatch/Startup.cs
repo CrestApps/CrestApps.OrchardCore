@@ -15,6 +15,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.DataSources;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -37,6 +38,7 @@ public sealed class Startup : StartupBase
         services.AddDispatchCore();
         services.TryAddScoped<IDispatchSettingsProvider, SiteDispatchSettingsProvider>();
         services.TryAddScoped<DispatchTimeZone>();
+        services.TryAddScoped<Reports.FieldServiceKpiService>();
         services.AddPermissionProvider<DispatchPermissionsProvider>();
         services
             .AddIndexProvider<ServiceVisitIndexProvider>()
@@ -131,5 +133,20 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddActivity<VisitAssignedEvent, VisitAssignedEventDisplayDriver>();
         services.AddActivity<VisitStatusChangedEvent, VisitStatusChangedEventDisplayDriver>();
         services.AddActivity<VisitAtRiskEvent, VisitAtRiskEventDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Adds the Field Service report data source: work orders and visits.
+/// </summary>
+[RequireFeatures("OrchardCore.DataPipelines.Core")]
+public sealed class ReportsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataSource<Reports.FieldServiceReportDataSource>();
+        services.AddScoped<Reports.IFieldServiceReportDataSet, Reports.WorkOrdersReportDataSet>();
+        services.AddScoped<Reports.IFieldServiceReportDataSet, Reports.VisitsReportDataSet>();
     }
 }

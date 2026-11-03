@@ -90,6 +90,10 @@
                 }
                 <div class="col-auto">
                     <a asp-controller="Visits" asp-action="Index" class="btn btn-sm btn-secondary">@T["Visits"]</a>
+                    @if (Model.CanManage)
+                    {
+                        <a asp-controller="FieldServiceSetup" asp-action="Index" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-list-check" aria-hidden="true"></i> @T["Get started"]</a>
+                    }
                 </div>
             </div>
         </div>

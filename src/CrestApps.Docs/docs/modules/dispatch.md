@@ -16,6 +16,7 @@ The admin screens are described in the User Manual: [Dispatch](../user-manual/fi
 | --- | --- | --- |
 | Dispatch | `CrestApps.OrchardCore.Dispatch` | Work Orders, Workforce, Geo |
 | Technician Mobile | `CrestApps.OrchardCore.Dispatch.Mobile` | Dispatch, Workforce My Work Portal, Media |
+| Field Service API | `CrestApps.OrchardCore.Dispatch.Api` | Dispatch |
 
 It works with other features when they are on:
 
@@ -26,6 +27,8 @@ It works with other features when they are on:
 | Skills | Work order types can need skills (with a lowest level) and certifications; the candidate finder checks them on the day. |
 | Fleet (`CrestApps.OrchardCore.Assets.Fleet`) | Work order types can need equipment (asset types); assigning books a free one on its Equipment calendar. |
 | SMS (`OrchardCore.Sms`), Email (`OrchardCore.Email`) | Customer notices, by text when the contact has a phone, else by email. |
+| CrestApps AI (`CrestApps.OrchardCore.AI`) | The field service [AI tools](#ai-tools). |
+| Data Pipelines (`OrchardCore.DataPipelines.Core`) | The **Field Service** report data source, with work orders and visits ([Reports and KPIs](#reports-and-kpis)). |
 | Inventory, with Technician Mobile | The technician app lists stock locations for parts used, the van the technician drives first (`IFieldStockSource`). |
 
 ## Records
@@ -136,6 +139,100 @@ The settings are read from the `CrestApps:Dispatch:Mobile` section of the tenant
 }
 ```
 
+## Reports and KPIs
+
+**Reports > Field Service > KPIs** (`FieldServiceKpisController`, View visits and the dispatch board) shows, for a range of days (the last 30 by default, at most a year) in the dispatch time zone, from the visits that started and the work orders made in it:
+
+| KPI | Counted as |
+| --- | --- |
+| First-time fix | Finished visits (completed or incomplete) completed without a return visit. |
+| On-time arrival | Visits whose first *On site* is by the end of the arrival window (or the start, without one). |
+| Jobs per technician a day | Completed visits per lead technician, on the local days they did any. |
+| Return visits | Finished visits that made a return visit. |
+| Travel | Travel minutes to finished visits against their minutes on site (first *On site* to *Completed* or *Incomplete*). |
+| Answered in time, resolved in time | Work orders answered by their response time, and completed by their resolution time, of those that have one. |
+| Time to repair | The mean hours from making a work order to completing it. |
+
+`FieldServiceKpiService` reads at most 5,000 visits and 5,000 work orders a range; the page says so when there are more.
+
+With **Data Pipelines** on, the **Field Service** report data source (`FieldServiceReportDataSource`) has two data sets for the Report Builder:
+
+- **Work orders** (`FieldServiceWorkOrders`, View work orders): number, type, status, priority, summary, territory, customer, source, when made, answered and completed, the response and resolution times and whether they were met, hours to complete, parts used, and the work order followed up.
+- **Visits** (`FieldServiceVisits`, View visits and the dispatch board): number, work order, status, lead technician, crew size, territory, start and end, travel minutes and kilometers, when they arrived and whether in the window, minutes on site, whether the job was done the first time, and why not finished.
+
+Both filter by the day they were made, and by their id, type or worker and status columns, in the index. More data sets are added through `IFieldServiceReportDataSet`.
+
+## AI tools
+
+With CrestApps AI on, these tools can be chosen for an AI profile, under **Field Service**. Every tool but the last runs as the signed-in user, with the same permission as the admin page.
+
+| Tool | Name | Permission | Does |
+| --- | --- | --- | --- |
+| Create a work order | `workOrderCreate` | Manage work orders | Creates a work order with the problem, priority, contact, service address and access notes, and gives its number; when no type is named and there are several, it lists them. |
+| Work order status | `workOrderStatus` | View work orders | A work order's status, priority, response and resolution times, and its visits with their technicians, times and ETA. |
+| Summarize a work order | `workOrderSummarize` | View work orders | The details and history (notes, checklist answers, parts used, signatures, photos and visits) for a technician's briefing. |
+| Find a technician | `dispatchFindTechnician` | View visits and the dispatch board | Who can do a visit on a day, best first, and who is ruled out and why. |
+| Optimize and explain a day | `dispatchOptimizeAndExplain` | Dispatch visits | The proposal for a day (each move, the travel before and after, the visits that fit nobody); called again with `apply` and the approved visit numbers, it applies only those. |
+| Reschedule a visit | `dispatchRescheduleVisit` | Dispatch visits | Moves a visit to another time or technician, with the board's checks. |
+| Where is my technician | `dispatchWhereIsMyTechnician` | None | For an AI agent or voice line that talks to customers: the caller's visits from today, found by their own phone number (the last ten digits of the work order's contact phone) or their tracking link's token, with only the status, the arrival window, the ETA when on the way and the technician's first name. |
+
+Times are given and read in the dispatch time zone.
+
+## Field Service API
+
+The **Field Service API** feature maps HTTP endpoints for other systems and apps, with the API authentication scheme (`OrchardCoreConstants.AuthenticationSchemes.Api`, such as an OpenID token). Each endpoint checks the same permission as the admin page, and answers JSON with enum names as strings. Errors come back as RFC 9457 problem details with the reason. When OpenAPI is on, the endpoints are listed under the **Work Orders**, **Dispatch**, **Geo** and **Assets** tags.
+
+### Work orders: `api/work-orders/v1`
+
+| Endpoint | Permission | Does |
+| --- | --- | --- |
+| `GET types` | View work orders | The work order types. |
+| `GET work-orders?status=&open=&q=&skip=&take=` | View work orders | Work orders, newest first, with the count; `q` matches the number or summary. |
+| `GET work-orders/{id}` | View work orders | A work order with its lines, checklists, notes and signatures. |
+| `POST work-orders` | Manage work orders | Creates a work order from `typeId`, `summary`, `description`, `priority`, `customerId`, `companyId`, `contactId`, `contact`, `serviceAddress`, `accessNotes`, `assetIds`, `earliestUtc` and `latestUtc`. With an `Idempotency-Key` header, sending it again returns the work order made the first time. |
+| `POST work-orders/{id}/status` | Manage work orders | `{ "status", "subStatusId", "note" }`. |
+| `POST work-orders/{id}/notes` | Manage work orders | `{ "text" }`. |
+| `POST work-orders/{id}/answers` | Manage work orders | `{ "checklistIndex", "questionId", "value", "answeredUtc" }`. |
+| `POST work-orders/{id}/parts` | Manage work orders | `{ "lineId", "quantity", "locationId" }`. |
+| `POST work-orders/{id}/signatures` | Manage work orders | `{ "name", "imagePath" }`. |
+| `POST work-orders/{id}/attachments` | Manage work orders | `{ "path" }`, a file in the media library. |
+| `POST work-orders/{id}/complete` | Manage work orders | Completes it, or answers what is missing. |
+
+### Visits: `api/dispatch/v1`
+
+| Endpoint | Permission | Does |
+| --- | --- | --- |
+| `GET visits?from=&to=&workerId=` | View visits and the dispatch board | Visits scheduled between two UTC times (at most 31 days apart), for one technician or all. |
+| `GET visits?unscheduled=true` | View visits and the dispatch board | The visits waiting for a time. |
+| `GET visits/{id}` | View visits and the dispatch board | A visit with its history and notices. |
+| `GET visits/{id}/candidates?from=&to=` | View visits and the dispatch board | The technicians who can do it, best first, and why the others can't. |
+| `POST visits/{id}/assign` | Dispatch visits | `{ "workerIds", "startUtc", "durationMinutes", "pinned" }`, under the same locks as the board. |
+| `POST visits/{id}/unassign` | Dispatch visits | Takes it off its technicians. |
+| `POST visits/{id}/status` | Dispatch visits | `{ "status", "note" }`. |
+| `POST optimize` | Dispatch visits | `{ "day": "yyyy-MM-dd", "workerIds", "includeUnscheduled" }`: the proposal, with its moves and the travel before and after. No technicians given means every one. |
+| `POST optimize/apply` | Dispatch visits | `{ "moves" }` from a proposal. |
+| `GET positions` | View visits and the dispatch board | Technicians' latest positions from the last 30 minutes, with Technician Mobile. |
+
+The technician app's own endpoints are under `api/dispatch/v1/mobile` (see [Technician Mobile](#technician-mobile)).
+
+### Geo: `api/geo/v1`
+
+| Endpoint | Permission | Does |
+| --- | --- | --- |
+| `GET geocode?address=` | View visits and the dispatch board | The candidates for an address, from the chosen geocoding provider. |
+| `GET territories/resolve?latitude=&longitude=&postalCode=` | View visits and the dispatch board | The territory a place or postal code is in, and how it matched. |
+
+### Assets: `api/assets/v1`
+
+When Assets is on:
+
+| Endpoint | Permission | Does |
+| --- | --- | --- |
+| `GET assets?q=&typeId=&ownerId=&skip=&take=` | View assets | Assets by number, name or serial number, type or owner. |
+| `GET assets/{id}` | View assets | An asset. |
+| `GET assets/{id}/readings?take=` | View assets | Its latest meter readings. |
+| `POST assets/{id}/readings` | Manage assets | `{ "meter", "value", "utc" }`; a cumulative meter can't go back. |
+
 ## Extending
 
 - `IVisitObserver`: hear about visit events after they happen.
@@ -147,9 +244,17 @@ The settings are read from the `CrestApps:Dispatch:Mobile` section of the tenant
 - `IFieldStockSource`: stock locations for parts used from somewhere other than Inventory.
 - `WorkOrderPanels` (Work Orders): a display driver for it adds a panel to the work order's page; Dispatch adds the visits.
 
+## Getting started and the sample
+
+**Get started** on the dispatch board (for **Manage dispatch settings**) opens a checklist (`FieldServiceSetupController`, `dispatch/get-started`): maps and geocoding, territories, technicians, their shifts, work order types, checklists and service levels, assets, customer notices, the Field page and the first visits, each with what is there now and a link to it. It isn't in the menu.
+
+The **Field service sample** recipe (`FieldServiceSample`, in the module's `Recipes` folder) turns on Geo, Assets with Fleet, Work Orders, Workforce with Shift Planning and My Work, Dispatch and Technician Mobile, then adds a Field Operations team with a dispatcher and three technicians, a day shift template, two territories (Cambridge inside Boston), boiler and van asset types with a training boiler and a van that carries stock, a boiler safety checklist, a standard service level, a waiting-on-parts sub-status, and boiler service and no-heat work order types. Its records have fixed ids, so running it again changes nothing. Publish a schedule for the team before dispatching.
+
 ## Recipes and deployment
 
 The **Dispatch settings** deployment step exports `DispatchSettings` through Orchard Core's Settings step. Visits aren't exported: they belong to the work orders of the site they were made on. Neither are the technician app's command records, consent and positions, which are about one site's people and work.
+
+In a hand-written recipe, give records an `ItemId` of 26 lowercase letters and digits, as Orchard Core makes them (such as `4fs7kjkcahkr0q5vh31ktg943y`); any other value is replaced with a new id, so records pointing at it lose the link and running the recipe again adds them twice.
 
 ## Permissions
 

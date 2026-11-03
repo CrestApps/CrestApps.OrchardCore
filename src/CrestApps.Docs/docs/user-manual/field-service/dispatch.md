@@ -19,6 +19,8 @@ A visit is one trip to do a work order's job. Dispatch finds who can do it, book
 
 ## Before you start
 
+**Get started** on the dispatch board opens a checklist of what to set up, in order, with what is there now. To try field service with a sample team, territories, assets and work order types, run the **Field service sample** under **Configuration > Recipes**, then publish a schedule for its Field Operations team.
+
 - Technicians are workers in a team, with published shifts. Give them a home base, or their team a place, so travel is counted from there.
 - On a work order type, under **Who can do it**, choose the skills the job needs (with the lowest level) and the certifications the technician must hold.
 - On a territory's page (**Territories**), choose under **Who serves it** the technicians and teams that work there.
@@ -82,6 +84,10 @@ On a visit, technicians:
 If you give a visit to someone else while its technician is offline, their changes to it aren't kept: when their phone reconnects, they see that the visit was given to someone else, and it leaves their page.
 
 The first time, the page asks whether to share their location while they work. If they agree, their position is sent only while they have a visit under way or still to come that day, and shows as a dot on today's board, with the time. They can stop at any time, which removes the positions kept so far; positions are removed after 30 days anyway.
+
+## KPIs
+
+**Reports > Field Service > KPIs** shows how field service went over a range of days, the last 30 by default: the share of jobs done the first time, arrivals inside the window, completed jobs per technician a day, return visits, time on the road against time on site, work orders answered and resolved in time, and the mean time to repair. Choose the days and select **Show**. For your own charts and tables, use the **Field Service** data source in the Report Builder, which has a row per work order or per visit.
 
 ## Settings
 

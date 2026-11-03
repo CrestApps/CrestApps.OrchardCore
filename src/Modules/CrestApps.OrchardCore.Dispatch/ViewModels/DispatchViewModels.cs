@@ -460,3 +460,29 @@ public class FieldViewModel
     /// </summary>
     public int RetentionDays { get; set; }
 }
+
+/// <summary>
+/// The field service KPIs page.
+/// </summary>
+public class FieldServiceKpisViewModel
+{
+    /// <summary>
+    /// Gets or sets the first day, as yyyy-MM-dd.
+    /// </summary>
+    public string From { get; set; }
+
+    /// <summary>
+    /// Gets or sets the last day, as yyyy-MM-dd.
+    /// </summary>
+    public string To { get; set; }
+
+    /// <summary>
+    /// Gets or sets the time zone the days are in.
+    /// </summary>
+    public string TimeZoneId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the KPIs.
+    /// </summary>
+    public Reports.FieldServiceKpiResult Result { get; set; }
+}
