@@ -84,7 +84,9 @@
         <div class="ocat-wrapper"><label asp-for="RescheduleNoticeMinutes" class="ocat-label">@T["Customers can move up to (minutes before)"]</label><div class="ocat-end"><input asp-for="RescheduleNoticeMinutes" type="number" min="0" class="form-control" style="max-width: 10rem" /><span class="hint">@T["Closer to the start, customers can't move it themselves; staff still can. 0 for any time before it starts."]</span></div></div>
         <div class="ocat-wrapper"><label asp-for="Slug" class="ocat-label">@T["Booking page address"]</label><div class="ocat-end"><div class="input-group" style="max-width: 28rem"><span class="input-group-text">/book/</span><input asp-for="Slug" class="form-control" /></div></div></div>
     </div></div>
-    <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Save"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a></div></div>
+    <div class="action-bar-bottom">
+<button class="btn btn-primary" type="submit">@T["Save"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a>
+    </div>
 </form>
 
 <script at="Foot">

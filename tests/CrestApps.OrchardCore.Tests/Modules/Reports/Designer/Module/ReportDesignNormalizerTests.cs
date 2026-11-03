@@ -118,6 +118,29 @@ public sealed class ReportDesignNormalizerTests
     }
 
     [Fact]
+    public void Normalize_Visuals_DropsEmptyReferenceLinesAndCapsTheirNumber()
+    {
+        // Arrange
+        var lines = Enumerable.Range(0, ReportDesignNormalizer.MaxReferenceLines + 5)
+            .Select(index => new ReportReferenceLine { ColumnId = " total ", Kind = ReportReferenceLineKind.Average, Label = "  Average  " })
+            .Prepend(null)
+            .ToList();
+        List<ReportVisualDefinition> visuals =
+        [
+            new() { Id = "v1", ReferenceLines = lines },
+            new() { Id = "v2", ReferenceLines = null },
+        ];
+
+        // Act
+        var normalized = ReportDesignNormalizer.Normalize(visuals);
+
+        // Assert
+        Assert.Equal(ReportDesignNormalizer.MaxReferenceLines, normalized[0].ReferenceLines.Count);
+        Assert.All(normalized[0].ReferenceLines, line => Assert.Equal(("total", "Average"), (line.ColumnId, line.Label)));
+        Assert.Empty(normalized[1].ReferenceLines);
+    }
+
+    [Fact]
     public void Normalize_Containers_DropsUnnamedAndRepeatedOnesAndClampsTheirSize()
     {
         // Arrange

@@ -28,6 +28,7 @@ public sealed class VoiceQueueOfferService : IVoiceQueueOfferService
     private readonly IAgentProfileManager _agentManager;
     private readonly IInteractionManager _interactionManager;
     private readonly IOmnichannelActivityManager _activityManager;
+    private readonly IDialerProfileReader _dialerProfileReader;
     private readonly IServiceProvider _serviceProvider;
     private readonly IProviderVoiceOfferSynchronizationService _offerSynchronizationService;
     private readonly IContactCenterFeatureWorkManager _workManager;
@@ -43,7 +44,8 @@ public sealed class VoiceQueueOfferService : IVoiceQueueOfferService
     /// <param name="agentManager">The agent profile manager used to resolve the reserved agent.</param>
     /// <param name="interactionManager">The interaction manager used to record communication history.</param>
     /// <param name="activityManager">The CRM activity manager.</param>
-    /// <param name="serviceProvider">The provider the dialer services are resolved from when the dialer is enabled, used to close preview records that can never be dialed before they are offered.</param>
+    /// <param name="dialerProfileReader">The reader of the dialer profile a preview record belongs to.</param>
+    /// <param name="serviceProvider">The provider the dialer attempt service is resolved from when the dialer is enabled, used to close preview records that can never be dialed before they are offered.</param>
     /// <param name="offerSynchronizationService">The offer synchronization service used to remove calls already known to have ended.</param>
     /// <param name="workManager">The feature work manager used to reject offering while Voice is quiescing.</param>
     /// <param name="auditRecorder">The recorder that writes each offer that starts ringing to the audit log.</param>
@@ -55,6 +57,7 @@ public sealed class VoiceQueueOfferService : IVoiceQueueOfferService
         IAgentProfileManager agentManager,
         IInteractionManager interactionManager,
         IOmnichannelActivityManager activityManager,
+        IDialerProfileReader dialerProfileReader,
         IServiceProvider serviceProvider,
         IProviderVoiceOfferSynchronizationService offerSynchronizationService,
         IContactCenterFeatureWorkManager workManager,
@@ -67,6 +70,7 @@ public sealed class VoiceQueueOfferService : IVoiceQueueOfferService
         _agentManager = agentManager;
         _interactionManager = interactionManager;
         _activityManager = activityManager;
+        _dialerProfileReader = dialerProfileReader;
         _serviceProvider = serviceProvider;
         _offerSynchronizationService = offerSynchronizationService;
         _workManager = workManager;
@@ -231,14 +235,13 @@ public sealed class VoiceQueueOfferService : IVoiceQueueOfferService
         // Resolved here rather than injected: the dialer attempt service places calls through the call router, which
         // offers work through this service, and injecting it closed that loop and hung every request at startup.
         var dialerAttemptService = _serviceProvider.GetService<IDialerAttemptService>();
-        var dialerProfileReader = _serviceProvider.GetService<IDialerProfileReader>();
 
-        if (dialerAttemptService is null || dialerProfileReader is null)
+        if (dialerAttemptService is null)
         {
             return false;
         }
 
-        var profile = await dialerProfileReader.FindByIdAsync(reservation.DialerProfileId, cancellationToken);
+        var profile = await _dialerProfileReader.FindByIdAsync(reservation.DialerProfileId, cancellationToken);
 
         return profile is not null &&
             profile.Enabled &&

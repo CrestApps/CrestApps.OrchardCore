@@ -59,6 +59,18 @@ body .ta-content {
     padding-bottom: 3rem;
 }
 
+// On admin edit pages, Orchard Core fixes the page's buttons to the bottom of the screen in a bar whose height it
+// publishes as --oc-action-bar-bottom-height. Dock the tab on top of that bar instead of over its buttons, and
+// reserve both heights. Stay one layer under the bar, so its "more actions" menu opens over the tab.
+html:has(.action-bar-bottom) .cc-agent-bar {
+    bottom: var(--oc-action-bar-bottom-height, 3.5rem);
+    z-index: calc(var(--oc-action-bar-bottom-zindex, 980) - 1);
+}
+
+body .ta-content:has(.action-bar-bottom) {
+    padding-bottom: calc(var(--oc-action-bar-bottom-height, 3.5rem) + 3rem);
+}
+
 .cc-agent-bar__inner {
     display: flex;
     flex-direction: column;

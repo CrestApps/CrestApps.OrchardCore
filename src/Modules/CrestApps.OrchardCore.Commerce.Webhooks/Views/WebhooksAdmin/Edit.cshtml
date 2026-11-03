@@ -76,15 +76,13 @@
         </div>
     }
 
-    <div class="ocat-wrapper">
-        <div class="ocat-end-offset">
-            <button type="submit" class="btn btn-primary save">@T["Save"]</button>
-            <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
-            @if (!Model.IsNew)
-            {
-                <a asp-action="Deliveries" asp-route-itemId="@Model.ItemId" class="btn btn-secondary">@T["Deliveries"]</a>
-                <a asp-action="Delete" asp-route-itemId="@Model.ItemId" class="btn btn-danger" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
-            }
-        </div>
+    <div class="action-bar-bottom">
+        <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+        <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+        @if (!Model.IsNew)
+        {
+            <a asp-action="Deliveries" asp-route-itemId="@Model.ItemId" class="btn btn-secondary action-bar-secondary">@T["Deliveries"]</a>
+            <a asp-action="Delete" asp-route-itemId="@Model.ItemId" class="btn btn-danger action-bar-secondary" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
+        }
     </div>
 </form>

@@ -79,6 +79,81 @@
 				points: picked.length && categoryKeys ? marks : color
 			};
 		}
+		function referenceLineColor(line, textColor) {
+			return typeof line.datasetIndex === "number" ? palette[line.datasetIndex % palette.length] : textColor;
+		}
+		function referenceLineRange(lines, percentageScale) {
+			var values = (lines || []).map(function(line) {
+				return Number(line.value);
+			}).filter(function(value) {
+				return isFinite(value);
+			});
+			var max = percentageScale ? 100 : void 0;
+			var min;
+			values.forEach(function(value) {
+				max = max === void 0 ? value : Math.max(max, value);
+				min = value < 0 ? min === void 0 ? value : Math.min(min, value) : min;
+			});
+			return {
+				suggestedMin: min,
+				suggestedMax: max
+			};
+		}
+		function drawLineLabel(ctx, text, x, y, color, background) {
+			var measured = typeof ctx.measureText === "function" ? ctx.measureText(text) : null;
+			var width = measured && measured.width ? measured.width : 0;
+			if (width && background) {
+				var left = ctx.textAlign === "right" ? x - width : x;
+				var top = ctx.textBaseline === "top" ? y : y - 13;
+				ctx.globalAlpha = .85;
+				ctx.fillStyle = background;
+				ctx.fillRect(left - 3, top - 1, width + 6, 15);
+				ctx.globalAlpha = 1;
+			}
+			ctx.fillStyle = color;
+			ctx.fillText(text, x, y);
+		}
+		var referenceLinesPlugin = {
+			id: "reportReferenceLines",
+			afterDatasetsDraw: function(chart, args, options) {
+				var lines = options && options.lines || [];
+				var area = chart.chartArea;
+				var scale = options && options.horizontal ? chart.scales.x : chart.scales.y;
+				var ctx = chart.ctx;
+				if (!lines.length || !area || !scale) return;
+				ctx.save();
+				ctx.font = "600 11px system-ui, -apple-system, \"Segoe UI\", sans-serif";
+				ctx.lineWidth = 1.5;
+				lines.forEach(function(line) {
+					var at = scale.getPixelForValue(Number(line.value));
+					var color = referenceLineColor(line, options.textColor || "#495057");
+					if (!isFinite(at)) return;
+					ctx.strokeStyle = color;
+					ctx.fillStyle = color;
+					ctx.setLineDash([6, 4]);
+					ctx.beginPath();
+					if (options.horizontal) {
+						ctx.moveTo(at, area.top);
+						ctx.lineTo(at, area.bottom);
+						ctx.stroke();
+						ctx.setLineDash([]);
+						ctx.textAlign = at > area.left + (area.right - area.left) * .7 ? "right" : "left";
+						ctx.textBaseline = "top";
+						drawLineLabel(ctx, line.label || "", ctx.textAlign === "right" ? at - 4 : at + 4, area.top + 2, color, options.background);
+					} else {
+						ctx.moveTo(area.left, at);
+						ctx.lineTo(area.right, at);
+						ctx.stroke();
+						ctx.setLineDash([]);
+						var wide = typeof ctx.measureText === "function" && ctx.measureText(line.label || "").width > area.right - area.left - 8;
+						ctx.textAlign = wide ? "left" : "right";
+						ctx.textBaseline = at - 14 < area.top ? "top" : "bottom";
+						drawLineLabel(ctx, line.label || "", wide ? area.left + 4 : area.right - 4, ctx.textBaseline === "top" ? at + 3 : at - 3, color, options.background);
+					}
+				});
+				ctx.restore();
+			}
+		};
 		function applySelection(datasets, model, kind, keys) {
 			datasets.forEach(function(dataset, index) {
 				var colors = colorsOf(model, kind, index, (dataset.data || []).length, keys);
@@ -95,7 +170,7 @@
 			if (model.keys) return model.keys[hit.index];
 			return model.seriesKeys ? model.seriesKeys[hit.datasetIndex] : void 0;
 		}
-		function buildConfig(model, textColor, gridColor) {
+		function buildConfig(model, textColor, gridColor, background) {
 			var kind = chartKind(model.type);
 			var selectable = !!(model.keys || model.seriesKeys);
 			var datasets = (model.datasets || []).map(function(dataset) {
@@ -109,10 +184,13 @@
 				};
 			});
 			applySelection(datasets, model, kind, model.selectedKeys);
+			var lines = kind.circular ? [] : model.referenceLines || [];
+			var range = referenceLineRange(lines, model.percentageScale);
 			var valueAxis = {
 				beginAtZero: true,
 				stacked: !!model.stacked,
-				suggestedMax: model.percentageScale ? 100 : void 0,
+				suggestedMin: range.suggestedMin,
+				suggestedMax: range.suggestedMax,
 				grid: { color: gridColor },
 				ticks: {
 					color: textColor,
@@ -132,6 +210,7 @@
 					labels: model.labels || [],
 					datasets
 				},
+				plugins: lines.length ? [referenceLinesPlugin] : [],
 				options: {
 					responsive: true,
 					maintainAspectRatio: false,
@@ -140,15 +219,23 @@
 						intersect: false,
 						mode: kind.circular ? "nearest" : "index"
 					},
-					plugins: { legend: {
-						display: model.showLegend !== false,
-						position: "bottom",
-						labels: {
-							color: textColor,
-							usePointStyle: true,
-							padding: 18
+					plugins: {
+						reportReferenceLines: {
+							lines,
+							horizontal: kind.horizontal,
+							textColor,
+							background: background || "#ffffff"
+						},
+						legend: {
+							display: model.showLegend !== false,
+							position: "bottom",
+							labels: {
+								color: textColor,
+								usePointStyle: true,
+								padding: 18
+							}
 						}
-					} },
+					},
 					scales: kind.circular ? {} : kind.horizontal ? {
 						x: valueAxis,
 						y: categoryAxis
@@ -187,6 +274,7 @@
 			var styles = root.getComputedStyle(root.document.documentElement);
 			var textColor = styles.getPropertyValue("--bs-body-color").trim() || "#495057";
 			var gridColor = styles.getPropertyValue("--bs-border-color").trim() || "rgba(0, 0, 0, 0.1)";
+			var background = styles.getPropertyValue("--bs-body-bg").trim() || "#ffffff";
 			scope.querySelectorAll("canvas[data-report-chart]").forEach(function(canvas) {
 				if (canvas.dataset.reportChartRendered === "true") return;
 				var model;
@@ -197,13 +285,16 @@
 				}
 				canvas.dataset.reportChartRendered = "true";
 				canvas.reportChartModel = model;
-				canvas.reportChart = new root.Chart(canvas, buildConfig(model, textColor, gridColor));
+				canvas.reportChart = new root.Chart(canvas, buildConfig(model, textColor, gridColor, background));
 			});
 		}
 		root.CrestAppsReportCharts = {
 			buildConfig,
 			chartKind,
 			keyAt,
+			referenceLineColor,
+			referenceLineRange,
+			referenceLinesPlugin,
 			render,
 			select
 		};

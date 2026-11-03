@@ -24,6 +24,13 @@ public sealed class ReportResultColumn
     public string Label { get; set; }
 
     /// <summary>
+    /// Gets or sets the header of the column's plain values, which its totals show, or <see langword="null"/> when it is
+    /// <see cref="Label"/>. A column without a header of its own is named after the quick table calculation it shows,
+    /// such as <c>% of total Revenue</c>, while its totals are the plain <c>Revenue</c>.
+    /// </summary>
+    public string ValueLabel { get; set; }
+
+    /// <summary>
     /// Gets or sets the type of the column values.
     /// </summary>
     public DataFieldType DataType { get; set; }
@@ -62,4 +69,14 @@ public sealed class ReportResultColumn
     /// Gets or sets how the column is colored in tables, or <see langword="null"/> for the default colors.
     /// </summary>
     public ReportColumnColors Colors { get; set; }
+
+    /// <summary>
+    /// Gets or sets how the column shows its values.
+    /// </summary>
+    public ReportShowAs ShowAs { get; set; }
+
+    /// <summary>
+    /// Gets or sets which values the calculation of <see cref="ShowAs"/> is computed along.
+    /// </summary>
+    public ReportShowAsDirection ShowAsDirection { get; set; }
 }

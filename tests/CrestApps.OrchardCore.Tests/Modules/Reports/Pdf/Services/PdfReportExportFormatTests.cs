@@ -264,6 +264,38 @@ public sealed class PdfReportExportFormatTests
         Assert.Contains("Chat", text);
     }
 
+    [Theory]
+    [InlineData(ReportChartType.Bar)]
+    [InlineData(ReportChartType.Line)]
+    [InlineData(ReportChartType.HorizontalBar)]
+    public void Serialize_WhenAChartHasReferenceLines_ShouldLabelThemAndScaleToThem(ReportChartType type)
+    {
+        // Arrange
+        var document = new ReportDocument { Title = "Chart" }
+            .Add(ReportSection.ForChart("Revenue", new ReportChart
+            {
+                Type = type,
+                Labels = ["East", "West"],
+                Datasets = [new ReportChartDataset("Revenue", [30, 50])],
+                ReferenceLines =
+                [
+                    new ReportChartReferenceLine("Average: 40", 40) { DatasetIndex = 0 },
+                    new ReportChartReferenceLine("Target: 90", 90),
+                ],
+            }));
+
+        // Act
+        var content = CreateFormat().Serialize(document);
+
+        // Assert: the labels are drawn, and the scale reaches the target above every value.
+        using var pdf = PdfDocument.Open(content);
+        var text = GetText(pdf.GetPage(1));
+
+        Assert.Contains("Average: 40", text);
+        Assert.Contains("Target: 90", text);
+        Assert.Contains("100", text);
+    }
+
     [Fact]
     public void Serialize_WhenCellsAreStyledOrHoldControlCharacters_ShouldWriteTheirValues()
     {

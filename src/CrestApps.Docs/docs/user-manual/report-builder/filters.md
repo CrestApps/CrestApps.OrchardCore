@@ -23,9 +23,11 @@ Watch the short video, then follow the steps below.
 
 ## Add a filter
 
-1. Drag a field onto **Filters**, or click the filter icon next to it in the **Data** pane.
+1. Drag a field onto **Filters**, or click the filter icon next to it in the **Data** pane. You can also drag a column from **Columns** or **Rows**, or pick **Filter on this field** in the column's menu.
 2. Click the filter to set it in **Properties** on the right.
 3. Pick a **Condition** and enter a **Value**.
+
+A measure, such as *Number of rows* or *Sum of Total*, filters the result: dragging it onto **Filters** adds a **Result, after grouping** filter on that column with the condition **is at least**, ready for a value such as 10 for agents with at least 10 calls.
 
 | Setting | What it does |
 | --- | --- |

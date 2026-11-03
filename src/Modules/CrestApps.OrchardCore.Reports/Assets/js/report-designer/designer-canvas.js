@@ -85,11 +85,9 @@
                     var column = query.columns.filter(function (candidate) {
                         return candidate.id === moved.id;
                     })[0];
-                    var field = column && fields[column.field];
 
-                    if (field) {
-                        app.selection = { kind: 'filter', id: designer.addFilter(query, field).id };
-                        app.changed();
+                    if (column) {
+                        app.filterOnColumn(column);
                     }
 
                     return;
@@ -157,8 +155,52 @@
         h('button', { type: 'button', className: 'btn ' + tone, 'aria-label': app.t('Remove') + ': ' + label, onclick: onRemove }, ui.icon('fa-xmark')));
     }
 
-    // The menu of a column pill: group by it or aggregate it, transform it, sort by it, filter on it, move it to the
-    // other shelf, change its format and colors, hide or remove it.
+    // Adds a filter on a column and selects it: a dimension filters the rows, and a measure the result, under the
+    // column's header.
+    app.filterOnColumn = function (column) {
+        var described = app.columns().filter(function (candidate) {
+            return candidate.id === column.id;
+        })[0];
+        var filter = designer.addColumnFilter(app.design.query, described ? Object.assign({}, column, { label: column.label || described.label }) : column, app.fields()[column.field]);
+
+        if (filter) {
+            app.selection = { kind: 'filter', id: filter.id };
+            app.changed();
+        }
+    };
+
+    // The names of the quick table calculations a column can show its values as.
+    function showAsLabel(value) {
+        switch (value) {
+            case 'PercentOfTotal':
+                return app.t('Percent of total');
+            case 'RunningTotal':
+                return app.t('Running total');
+            case 'DifferenceFromPrevious':
+                return app.t('Difference from previous');
+            case 'PercentDifference':
+                return app.t('Percent difference from previous');
+            case 'Rank':
+                return app.t('Rank');
+            default:
+                return app.t('Value');
+        }
+    }
+
+    // The names of the directions a calculation is computed along.
+    function directionLabel(value) {
+        switch (value) {
+            case 'Across':
+                return app.t('Across the columns');
+            case 'Table':
+                return app.t('Over the whole table');
+            default:
+                return app.t('Down the rows');
+        }
+    }
+
+    // The menu of a column pill: group by it or aggregate it, transform it, show it as a calculation, sort by it, filter
+    // on it, move it to the other shelf, change its format and colors, hide or remove it.
     app.columnMenu = function (column, x, y) {
         var query = app.design.query;
         var fields = app.fields();
@@ -203,6 +245,37 @@
             });
         }
 
+        var described = app.columns().filter(function (candidate) {
+            return candidate.id === column.id;
+        })[0];
+
+        if (designer.canShowAs(described, app.columns())) {
+            var showAs = column.showAs || 'Value';
+
+            items.push({
+                label: app.t('Show as'),
+                icon: 'fa-percent',
+                items: designer.SHOW_AS.map(function (value) {
+                    return { label: showAsLabel(value), checked: showAs === value, action: function () {
+                        designer.setShowAs(column, value);
+                        app.changed();
+                    } };
+                })
+            });
+
+            if (showAs !== 'Value') {
+                items.push({
+                    label: app.t('Compute along'),
+                    items: designer.SHOW_AS_DIRECTIONS.map(function (value) {
+                        return { label: directionLabel(value), checked: (column.showAsDirection || 'Down') === value, action: function () {
+                            designer.setShowAs(column, showAs, value);
+                            app.changed();
+                        } };
+                    })
+                });
+            }
+        }
+
         items.push(
             { divider: true },
             { label: app.t('Sort ascending'), icon: 'fa-arrow-up-short-wide', checked: !!sort && !sort.descending, action: function () {
@@ -214,8 +287,7 @@
                 app.changed();
             } },
             fields[column.field] ? { label: app.t('Filter on this field'), icon: 'fa-filter', action: function () {
-                app.selection = { kind: 'filter', id: designer.addFilter(query, fields[column.field]).id };
-                app.changed();
+                app.filterOnColumn(column);
             } } : null,
             { divider: true },
             { label: other === 'Rows' ? app.t('Move to Rows') : app.t('Move to Columns'), icon: other === 'Rows' ? 'fa-grip-lines' : 'fa-grip-lines-vertical', action: function () {
@@ -270,6 +342,12 @@
         var columnPill = function (column) {
             var index = query.columns.indexOf(column);
             var aggregate = column.aggregate && column.aggregate !== 'None' ? app.config.aggregateLabels[column.aggregate] || column.aggregate : null;
+            // A column without a header of its own is named after its calculation; one with its own header gets a badge.
+            var calculation = column.label ? designer.showAsBadge(column) : null;
+
+            if (calculation) {
+                aggregate = aggregate ? aggregate + ' ' + calculation : calculation;
+            }
 
             return pill(columns[index].label, aggregate, selection.kind === 'column' && selection.id === column.id, columns[index].isMeasure, function () {
                 app.select('column', column.id);
@@ -753,6 +831,22 @@
                 }
             })),
             labelled(app.t('Format'), formatEditor(column, field), app.t('How values are shown. Click the question mark for common formats.')),
+            designer.canShowAs(described, app.columns()) ? labelled(app.t('Show as'), ui.select(designer.SHOW_AS.map(function (value) {
+                return { value: value, text: showAsLabel(value) };
+            }), column.showAs || 'Value', {
+                onchange: function (event) {
+                    designer.setShowAs(column, event.target.value);
+                    app.changed();
+                }
+            }), app.t('A quick table calculation over the values each table and chart shows. Totals rows keep the plain totals.')) : null,
+            designer.canShowAs(described, app.columns()) && column.showAs ? labelled(app.t('Compute along'), ui.select(designer.SHOW_AS_DIRECTIONS.map(function (value) {
+                return { value: value, text: directionLabel(value) };
+            }), column.showAsDirection || 'Down', {
+                onchange: function (event) {
+                    designer.setShowAs(column, column.showAs, event.target.value);
+                    app.changed();
+                }
+            }), app.t('The values it runs over: down each column, across each row, or every cell. In a chart, the series are its columns.')) : null,
             check(app.t('Hide from tables'), column.hidden, function (value) {
                 column.hidden = value;
                 app.changed({ render: false });
@@ -872,11 +966,13 @@
                 }
             })),
             labelled(filter.stage === 'Result' ? app.t('Column') : app.t('Field'), filter.stage === 'Result'
-                ? ui.select(columns.map(function (column) {
+                ? ui.select((columns.some(function (column) {
+                    return column.id === filter.field;
+                }) ? [] : [{ value: '', text: app.t('Pick a column…') }]).concat(columns.map(function (column) {
                     return { value: column.id, text: column.label };
-                }), filter.field, {
+                })), filter.field || '', {
                     onchange: function (event) {
-                        filter.field = event.target.value;
+                        filter.field = event.target.value || null;
                         app.changed();
                     }
                 })
@@ -1144,6 +1240,80 @@
         return parts;
     }
 
+    // The reference lines of a chart: the average or median of a value column, or a constant such as a target, each
+    // with a label.
+    function referenceLineProperties(visual, numbers) {
+        var lines = visual.referenceLines || [];
+        var plotted = numbers.filter(function (option) {
+            return (visual.valueColumnIds || []).indexOf(option.value) >= 0;
+        });
+        var list = h('div', { className: 'rd-reference-lines' });
+
+        lines.forEach(function (line, index) {
+            var constant = line.kind === 'Constant';
+
+            // Each box of a line is named in front of it, as the boxes of a line read as a sentence: Average of Revenue,
+            // labeled Average.
+            var named = function (text, control) {
+                return h('div', { className: 'input-group input-group-sm mb-1' }, h('span', { className: 'input-group-text rd-reference-name' }, text), control);
+            };
+
+            list.appendChild(h('div', { className: 'rd-reference-line border rounded p-1 mb-1' },
+                h('div', { className: 'd-flex gap-1 mb-1' },
+                    named(app.t('Line at'), ui.select(designer.REFERENCE_LINE_KINDS.map(function (value) {
+                        return { value: value, text: value === 'Average' ? app.t('Average') : (value === 'Median' ? app.t('Median') : app.t('Constant')) };
+                    }), line.kind || 'Average', {
+                        'aria-label': app.t('Line at'),
+                        onchange: function (event) {
+                            line.kind = event.target.value;
+
+                            if (line.kind !== 'Constant' && !line.columnId) {
+                                line.columnId = (visual.valueColumnIds || [])[0] || null;
+                            }
+
+                            app.changed();
+                        }
+                    })),
+                    h('button', { type: 'button', className: 'btn btn-sm btn-link text-reset p-0 px-1 mb-1', 'aria-label': app.t('Remove'), title: app.t('Remove'), onclick: function () {
+                        lines.splice(index, 1);
+                        app.changed();
+                    } }, ui.icon('fa-xmark'))),
+                constant ? named(app.t('Value'), h('input', {
+                    type: 'number',
+                    step: 'any',
+                    className: 'form-control form-control-sm',
+                    value: line.value == null ? '' : String(line.value),
+                    placeholder: app.t('Such as a target'),
+                    'aria-label': app.t('Value'),
+                    onchange: function (event) {
+                        var value = parseFloat(event.target.value);
+
+                        line.value = isFinite(value) ? value : null;
+                        app.changed();
+                    }
+                })) : null,
+                named(constant ? app.t('Format like') : app.t('Of'), ui.select((constant ? [{ value: '', text: app.t('None') }] : []).concat(plotted), line.columnId || '', {
+                    'aria-label': constant ? app.t('Format like') : app.t('Of'),
+                    title: constant ? app.t('The value is shown in the format of this column.') : null,
+                    onchange: function (event) {
+                        line.columnId = event.target.value || null;
+                        app.changed();
+                    }
+                })),
+                named(app.t('Label'), textInput(line.label, function (value) {
+                    line.label = value;
+                    app.changed();
+                }, { placeholder: constant ? app.t('Such as Target') : (line.kind === 'Median' ? app.t('Median') : app.t('Average')), maxlength: '200', 'aria-label': app.t('Label') }))));
+        });
+
+        return labelled(app.t('Reference lines'), h('div', null,
+            lines.length ? list : h('div', { className: 'form-text mt-0 mb-1' }, app.t('Draw a line across the chart at the average or median of a value, or at a target.')),
+            h('button', { type: 'button', className: 'btn btn-sm btn-outline-primary', disabled: !plotted.length, onclick: function () {
+                designer.addReferenceLine(visual);
+                app.changed();
+            } }, ui.icon('fa-plus'), ' ', app.t('Add reference line'))));
+    }
+
     function visualProperties(visual) {
         var columns = app.columns();
         var dimensions = columns.filter(function (column) {
@@ -1217,7 +1387,11 @@
                     }), function (column) {
                         visual.categoryColumnId = column.id;
                     }),
-                    well(app.t('Values'), 'measure', checkboxList(numbers, visual.valueColumnIds || [], set('valueColumnIds')), function (column) {
+                    well(app.t('Values'), 'measure', checkboxList(numbers, visual.valueColumnIds || [], function (value) {
+                        visual.valueColumnIds = value;
+                        designer.pruneReferenceLines(visual);
+                        app.changed();
+                    }), function (column) {
                         visual.valueColumnIds = (visual.valueColumnIds || []).filter(function (id) {
                             return id !== column.id;
                         }).concat([column.id]);
@@ -1232,7 +1406,8 @@
                     }),
                     h('div', { className: 'form-text mb-2' }, app.t('Draws one series per value of this column, using the first value column.')),
                     check(app.t('Stack series'), visual.stacked, set('stacked', false)),
-                    check(app.t('Show legend'), visual.showLegend !== false, set('showLegend', false)));
+                    check(app.t('Show legend'), visual.showLegend !== false, set('showLegend', false)),
+                    visual.chartType === 'Pie' || visual.chartType === 'Doughnut' ? null : referenceLineProperties(visual, numbers));
                 parts.push.apply(parts, actionProperties(visual, columns));
                 break;
 

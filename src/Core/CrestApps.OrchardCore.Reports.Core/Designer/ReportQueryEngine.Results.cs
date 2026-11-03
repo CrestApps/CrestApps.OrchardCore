@@ -284,6 +284,7 @@ public sealed partial class ReportQueryEngine
             Id = column.Definition.Id,
             Field = column.Field.Key,
             Label = column.Label,
+            ValueLabel = column.ValueLabel == column.Label ? null : column.ValueLabel,
             DataType = column.DataType,
             IsMeasure = column.IsMeasure,
             Aggregate = column.Field.IsAggregate ? DataAggregate.None : column.Definition.Aggregate,
@@ -292,6 +293,8 @@ public sealed partial class ReportQueryEngine
             Hidden = column.Definition.Hidden,
             Shelf = column.Definition.Shelf,
             Colors = column.Definition.Colors,
+            ShowAs = column.Definition.ShowAs,
+            ShowAsDirection = column.Definition.ShowAsDirection,
         };
     }
 

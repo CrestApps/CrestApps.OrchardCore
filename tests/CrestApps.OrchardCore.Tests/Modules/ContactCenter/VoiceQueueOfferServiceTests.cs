@@ -410,7 +410,8 @@ public sealed class VoiceQueueOfferServiceTests
                 agentManager.Object,
                 interactionManager.Object,
                 activityManager.Object,
-                CreateServiceProvider(dialerEnabled ? _dialerAttempt.Object : null, dialerProfileReader.Object),
+                dialerProfileReader.Object,
+                CreateServiceProvider(dialerEnabled ? _dialerAttempt.Object : null),
                 _offerSynchronization.Object,
                 workManager.Object,
                 AuditRecorder,
@@ -446,11 +447,10 @@ public sealed class VoiceQueueOfferServiceTests
         public void WithActivity(string activityId, string source)
             => _activities[activityId] = new OmnichannelActivity { ItemId = activityId, Source = source };
 
-        private static IServiceProvider CreateServiceProvider(IDialerAttemptService dialerAttemptService, IDialerProfileReader dialerProfileReader)
+        private static IServiceProvider CreateServiceProvider(IDialerAttemptService dialerAttemptService)
         {
             var serviceProvider = new Mock<IServiceProvider>();
             serviceProvider.Setup(x => x.GetService(typeof(IDialerAttemptService))).Returns(dialerAttemptService);
-            serviceProvider.Setup(x => x.GetService(typeof(IDialerProfileReader))).Returns(dialerProfileReader);
 
             return serviceProvider.Object;
         }
