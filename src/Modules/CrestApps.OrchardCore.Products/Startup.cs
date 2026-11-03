@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Seo;
+using CrestApps.OrchardCore.Products.StructuredData;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.Products.ContentTransfer;
@@ -338,4 +340,18 @@ public sealed class ApiStartup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
         => routes.MapCatalogApi();
+}
+
+/// <summary>
+/// Describes products with schema.org (a Product with its offer) when the Advanced SEO feature is enabled. Product pages are
+/// described without the Schema.org part.
+/// </summary>
+[RequireFeatures(StructuredDataConstants.Feature.Area)]
+public sealed class StructuredDataStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IStructuredDataProvider, ProductStructuredDataProvider>();
+        services.Configure<StructuredDataOptions>(options => options.SelfDescribingParts.Add(nameof(ProductPart)));
+    }
 }

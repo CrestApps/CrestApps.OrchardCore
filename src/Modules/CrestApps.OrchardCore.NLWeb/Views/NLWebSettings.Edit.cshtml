@@ -1,0 +1,81 @@
+@model NLWebSettingsViewModel
+
+<p class="text-muted">@T["NLWeb lets people and AI agents ask the site questions in natural language. The site answers at {0} with the matching content items, described as schema.org objects.", Model.AskUrl]</p>
+
+@if (!Model.HasSearchProvider)
+{
+    <div class="alert alert-warning">@T["No search provider can search the indexes yet. Enable Orchard Core's Search feature and a search provider, such as Lucene or Elasticsearch, then create a content index. When AI is enabled, an AI data source can be searched instead."]</div>
+}
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Search indexes"]</label>
+    <div class="ocat-end">
+        @if (Model.AvailableIndexProfiles.Count == 0)
+        {
+            <p class="text-muted mb-1">@T["There are no content indexes yet."]</p>
+        }
+        @foreach (var indexProfile in Model.AvailableIndexProfiles)
+        {
+            var id = $"{Html.IdFor(m => m.IndexProfileNames)}_{indexProfile.Value}";
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="@id" name="@Html.NameFor(m => m.IndexProfileNames)" value="@indexProfile.Value" checked="@Model.IndexProfileNames.Contains(indexProfile.Value, StringComparer.OrdinalIgnoreCase)" />
+                <label class="form-check-label" for="@id">@indexProfile.Text</label>
+            </div>
+        }
+        <span class="hint">@T["The indexes questions are answered from. The first selected index is searched by default; a caller can pick another one by its name with the query's site."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Content types"]</label>
+    <div class="ocat-end">
+        <div class="border rounded p-2" style="max-height: 14rem; overflow-y: auto;">
+            @foreach (var contentType in Model.AvailableContentTypes)
+            {
+                var id = $"{Html.IdFor(m => m.ContentTypes)}_{contentType.Value}";
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="@id" name="@Html.NameFor(m => m.ContentTypes)" value="@contentType.Value" checked="@Model.ContentTypes.Contains(contentType.Value, StringComparer.OrdinalIgnoreCase)" />
+                    <label class="form-check-label" for="@id">@contentType.Text</label>
+                </div>
+            }
+        </div>
+        <span class="hint">@T["The content types answers can include. Leave all unselected to include every content type. Answers only ever include published content items the caller may view."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="MaxResults">
+    <label asp-for="MaxResults" class="ocat-label">@T["Number of results"]</label>
+    <div class="ocat-end">
+        <input asp-for="MaxResults" type="number" min="1" max="@NLWebConstants.MaxResultsLimit" class="form-control" />
+        <span asp-validation-for="MaxResults"></span>
+        <span class="hint">@T["The most results an answer has. A caller can ask for fewer."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="DefaultMode">
+    <label asp-for="DefaultMode" class="ocat-label">@T["Default mode"]</label>
+    <div class="ocat-end">
+        <select asp-for="DefaultMode" asp-items="Model.Modes" class="form-select"></select>
+        <span class="hint">@T["What a caller gets when it does not ask for a mode. Summaries and answers need AI to be enabled."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="AllowCrossOrigin" />
+            <label class="form-check-label" asp-for="AllowCrossOrigin">@T["Allow calls from other sites"]</label>
+            <span class="hint dashed">@T["When enabled, pages and browser agents on other sites can call the endpoints. Their calls are always anonymous."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="AllowLegacyRequests" />
+            <label class="form-check-label" asp-for="AllowLegacyRequests">@T["Accept the original protocol"]</label>
+            <span class="hint dashed">@T["When enabled, the endpoint also answers the first version of NLWeb, which sends the question in the query string (GET {0}?query=...).", Model.AskUrl]</span>
+        </div>
+    </div>
+</div>

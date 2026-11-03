@@ -23,6 +23,7 @@
     <Project Path="src/Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Calendars.Abstractions/CrestApps.OrchardCore.Calendars.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Scheduling.Abstractions/CrestApps.OrchardCore.Scheduling.Abstractions.csproj" />
+    <Project Path="src/Abstractions/CrestApps.OrchardCore.Seo.Abstractions/CrestApps.OrchardCore.Seo.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Customers.Abstractions/CrestApps.OrchardCore.Customers.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.DataConnectors.Abstractions/CrestApps.OrchardCore.DataConnectors.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.DncRegistry.Abstractions/CrestApps.OrchardCore.DncRegistry.Abstractions.csproj" />
@@ -73,6 +74,7 @@
     <Project Path="src/Core/CrestApps.OrchardCore.Telephony.Core/CrestApps.OrchardCore.Telephony.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Omnichannel.Messaging.Core/CrestApps.OrchardCore.Omnichannel.Messaging.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Core/CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.NLWeb.Core/CrestApps.OrchardCore.NLWeb.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Omnichannel.Voice.Core/CrestApps.OrchardCore.Omnichannel.Voice.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Telnyx.Core/CrestApps.OrchardCore.Telnyx.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.TenantHierarchy.Core/CrestApps.OrchardCore.TenantHierarchy.Core.csproj" />
@@ -152,6 +154,7 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.Marketing/CrestApps.OrchardCore.Marketing.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Bookings/CrestApps.OrchardCore.Bookings.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Memberships/CrestApps.OrchardCore.Memberships.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.NLWeb/CrestApps.OrchardCore.NLWeb.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Marketplace/CrestApps.OrchardCore.Marketplace.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Classifieds/CrestApps.OrchardCore.Classifieds.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Fundraising/CrestApps.OrchardCore.Fundraising.csproj" />
@@ -160,6 +163,7 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.PointOfSale/CrestApps.OrchardCore.PointOfSale.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Calendars/CrestApps.OrchardCore.Calendars.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Scheduling/CrestApps.OrchardCore.Scheduling.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Seo/CrestApps.OrchardCore.Seo.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Customers/CrestApps.OrchardCore.Customers.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.DataConnectors/CrestApps.OrchardCore.DataConnectors.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.DataConnectors.SqlServer/CrestApps.OrchardCore.DataConnectors.SqlServer.csproj" />
