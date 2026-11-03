@@ -20,13 +20,15 @@
                 <button type="button" class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('feed-url').value)">@T["Copy"]</button>
             </div>
         }
-        <form method="post" asp-action="Feed" asp-route-id="@Model.Id" class="d-flex gap-2">
-            <button type="submit" class="btn btn-primary">@(string.IsNullOrEmpty(Model.FeedUrl) ? T["Make an address"] : T["Make a new address"])</button>
-            @if (!string.IsNullOrEmpty(Model.FeedUrl))
-            {
-                <button type="submit" name="remove" value="true" class="btn btn-danger">@T["Remove the address"]</button>
-            }
-            <a class="btn btn-secondary" asp-controller="Calendars" asp-action="Index">@T["Back"]</a>
+        <form method="post" asp-action="Feed" asp-route-id="@Model.Id">
+            <div class="action-bar-bottom">
+                <button type="submit" class="btn btn-primary">@(string.IsNullOrEmpty(Model.FeedUrl) ? T["Make an address"] : T["Make a new address"])</button>
+                @if (!string.IsNullOrEmpty(Model.FeedUrl))
+                {
+                    <button type="submit" name="remove" value="true" class="btn btn-danger action-bar-secondary">@T["Remove the address"]</button>
+                }
+                <a class="btn btn-secondary" asp-controller="Calendars" asp-action="Index">@T["Back"]</a>
+            </div>
         </form>
     </div>
 </div>

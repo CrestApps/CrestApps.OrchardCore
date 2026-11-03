@@ -237,17 +237,13 @@
 
     @if (!readOnly)
     {
-        <div class="ocat-wrapper">
-            <div class="ocat-end-offset">
-                <div class="d-flex flex-wrap gap-2">
-                    <button type="submit" class="btn btn-primary">@T["Save"]</button>
-                    @if (canReceive)
-                    {
-                        <button type="submit" class="btn btn-success" formaction="@Url.Action("Receive", new { purchaseOrderId = order.ItemId })">@T["Receive what arrived"]</button>
-                        <button type="submit" class="btn btn-outline-success" formaction="@Url.Action("Receive", new { purchaseOrderId = order.ItemId, all = true })" data-title="@T["Receive everything"]" data-message="@T["Receive every item still to come, at {0}?", Model.LocationName]">@T["Receive everything still to come"]</button>
-                    }
-                </div>
-            </div>
+        <div class="action-bar-bottom">
+            <button type="submit" class="btn btn-primary">@T["Save"]</button>
+            @if (canReceive)
+            {
+                <button type="submit" class="btn btn-success" formaction="@Url.Action("Receive", new { purchaseOrderId = order.ItemId })">@T["Receive what arrived"]</button>
+                <button type="submit" class="btn btn-outline-success action-bar-secondary" formaction="@Url.Action("Receive", new { purchaseOrderId = order.ItemId, all = true })" data-title="@T["Receive everything"]" data-message="@T["Receive every item still to come, at {0}?", Model.LocationName]">@T["Receive everything still to come"]</button>
+            }
         </div>
     }
 </form>

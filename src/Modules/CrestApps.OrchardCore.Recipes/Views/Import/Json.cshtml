@@ -21,8 +21,10 @@
         <span asp-validation-for="Json"></span>
         <span class="hint">@T["Enter a valid recipe JSON. The editor provides autocomplete and validation based on registered recipe steps."]</span>
     </div>
-    <button class="btn btn-primary import" type="submit">@T["Import"]</button>
-    <a class="btn btn-secondary" asp-action="Index">@T["Cancel"]</a>
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary import" type="submit">@T["Import"]</button>
+        <a class="btn btn-secondary" asp-action="Index">@T["Cancel"]</a>
+    </div>
 </form>
 
 <style asp-name="monaco"></style>
