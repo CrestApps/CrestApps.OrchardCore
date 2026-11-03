@@ -79,7 +79,7 @@ public sealed class ContactCenterCallCommandServiceTests
         Assert.True(result.Succeeded);
         Assert.False(result.RequiresDeviceAnswer);
         harness.DialerAttemptService.Verify(
-            attemptService => attemptService.TryDialAsync(
+            attemptService => attemptService.DialAsync(
                 It.Is<DialerProfile>(profile => profile.ItemId == "profile-1"),
                 It.Is<ActivityReservation>(reservation => reservation.ItemId == "r1"),
                 It.IsAny<CancellationToken>()),
@@ -122,11 +122,36 @@ public sealed class ContactCenterCallCommandServiceTests
             service => service.CancelAsync("r1", It.IsAny<CancellationToken>()),
             Times.Once);
         harness.DialerAttemptService.Verify(
-            attemptService => attemptService.TryDialAsync(It.IsAny<DialerProfile>(), It.IsAny<ActivityReservation>(), It.IsAny<CancellationToken>()),
+            attemptService => attemptService.DialAsync(It.IsAny<DialerProfile>(), It.IsAny<ActivityReservation>(), It.IsAny<CancellationToken>()),
             Times.Never);
         harness.ReservationService.Verify(
             service => service.AcceptAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    // Production: an agent clicked Call on a preview record whose number was on the national do-not-call registry, the
+    // dialer refused it, and the agent saw nothing. The refusal now carries the compliance reason back to the agent.
+    [Fact]
+    public async Task AcceptInboundOfferAsync_WhenThePreviewDialIsRefusedForCompliance_ReturnsWhy()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupPendingReservation();
+        harness.SetupPreviewDialAttempt();
+        harness.DialerAttemptService
+            .Setup(service => service.DialAsync(It.IsAny<DialerProfile>(), It.IsAny<ActivityReservation>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DialerAttemptResult.Suppressed(DialerEligibilityResult.Suppressed(
+                DialerSuppressionReason.NationalDoNotCallRegistry,
+                "The destination is listed on a national do-not-call registry.")));
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Equal("The destination is listed on a national do-not-call registry.", result.Reason);
     }
 
     // A queued callback has no dialer profile of its own: it is dialed with the platform's built-in callback profile,
@@ -1186,11 +1211,11 @@ public sealed class ContactCenterCallCommandServiceTests
                 .ReturnsAsync(CreatePreviewDialProfile(profileEnabled));
 
             DialerAttemptService
-                .Setup(service => service.TryDialAsync(
+                .Setup(service => service.DialAsync(
                     It.Is<DialerProfile>(profile => profile.ItemId == "profile-1"),
                     It.Is<ActivityReservation>(reservation => reservation.ItemId == "r1"),
                     It.IsAny<CancellationToken>()))
-                .ReturnsAsync(true);
+                .ReturnsAsync(DialerAttemptResult.Dialed);
         }
 
         public ContactCenterCallCommandService CreateService()

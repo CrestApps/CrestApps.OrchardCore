@@ -91,6 +91,9 @@ public sealed class DependencyInjectionArchitectureTests
             "DialerAttemptFinalizer",
             "It runs from event handlers and the recovery sweep, and what it completes with belongs to features it cannot depend on: the disposition completers of activity management and the call reconciliation of Voice. Those, and the queue services, also record through the event publisher whose outbox constructs every event handler."),
         new DependencyInjectionException(
+            "VoiceQueueOfferService",
+            "It resolves the dialer attempt service only when it screens a preview record: that service places calls through the call router, which offers work through this service, so injecting it closed a construction cycle that hung every request at startup. The dialer attempt service is also absent when the dialer feature is off."),
+        new DependencyInjectionException(
             "ContactActivityExportHandler",
             "An import handler that injected the import manager would close a manager-to-handler construction cycle."),
         new DependencyInjectionException(

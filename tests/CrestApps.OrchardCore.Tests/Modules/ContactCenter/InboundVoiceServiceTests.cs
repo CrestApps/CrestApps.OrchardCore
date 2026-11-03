@@ -1528,6 +1528,8 @@ public sealed partial class InboundVoiceServiceTests
                 AgentManager.Object,
                 InteractionManager.Object,
                 ActivityManager.Object,
+                new NullDialerProfileReader(),
+                Mock.Of<IServiceProvider>(),
                 OfferSynchronizationService.Object,
                 workManager,
                 AuditRecorder,

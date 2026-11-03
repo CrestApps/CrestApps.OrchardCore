@@ -96,6 +96,7 @@ public sealed class WorkflowActivitySchemaDefinitionTests
         "UnassignUserRoleTask",
         "UnpublishContentTask",
         "UpdateContactMemoryTask",
+        "UpdateContactTask",
         "UpdateContentTask",
         "UpdateTwitterStatusTask",
         "UseAIProfileTask",

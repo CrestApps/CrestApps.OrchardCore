@@ -251,6 +251,7 @@ internal sealed class TransferIntegrationFixture : IAsyncDisposable
             (IActivityAssignmentService)assignmentService,
             (IActivityReservationService)reservationService,
             (IActivityReservationReclaimer)reservationService,
+            (IDialerProfileReader)new NullDialerProfileReader(),
             Mock.Of<IProviderVoiceOfferSynchronizationService>());
 
         Offers = offerService;
