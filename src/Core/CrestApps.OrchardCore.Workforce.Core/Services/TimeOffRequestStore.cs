@@ -35,6 +35,21 @@ internal sealed class TimeOffRequestStore : DocumentCatalog<TimeOffRequest, Time
     }
 
     /// <summary>
+    /// Lists every worker's approved requests that overlap a range.
+    /// </summary>
+    public async Task<IReadOnlyList<TimeOffRequest>> ListApprovedAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken = default)
+    {
+        var fromKey = WorkforceDates.ToKey(from);
+        var toKey = WorkforceDates.ToKey(to);
+        var requests = await Session.Query<TimeOffRequest, TimeOffRequestIndex>(index => index.Status == TimeOffRequestStatus.Approved
+                && index.StartDate <= toKey
+                && index.EndDate >= fromKey, collection: CollectionName)
+            .ListAsync(cancellationToken);
+
+        return requests.ToArray();
+    }
+
+    /// <summary>
     /// Lists a worker's open requests under a policy.
     /// </summary>
     public async Task<IReadOnlyList<TimeOffRequest>> ListOpenForWorkerAsync(string workerId, string policyId, CancellationToken cancellationToken = default)

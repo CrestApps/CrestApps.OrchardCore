@@ -71,6 +71,17 @@ public class TimeOffTypeEditViewModel
     public bool VisibleToWorkers { get; set; }
 
     /// <summary>
+    /// Gets or sets the Time Tracker stage its days are kept in; empty for a stage of its own.
+    /// </summary>
+    public string StageId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the stages to choose from, or <see langword="null"/> when Time Tracker is off.
+    /// </summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> StageOptions { get; set; }
+
+    /// <summary>
     /// Gets or sets whether it is in use.
     /// </summary>
     public bool Enabled { get; set; }

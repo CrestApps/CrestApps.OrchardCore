@@ -12,7 +12,17 @@
 }
 @if (entry.Source != TimeTrackerConstants.Sources.Self)
 {
-    <span class="badge ta-badge fw-normal">@entry.Source</span>
+    <span class="badge ta-badge fw-normal">@(entry.Source switch
+    {
+        TimeTrackerConstants.Sources.Manager => T["Manager"],
+        TimeTrackerConstants.Sources.Kiosk => T["Kiosk"],
+        TimeTrackerConstants.Sources.Mobile => T["Mobile"],
+        TimeTrackerConstants.Sources.ContactCenter => T["Contact Center"],
+        TimeTrackerConstants.Sources.TimeOff => T["Time off"],
+        TimeTrackerConstants.Sources.Api => T["API"],
+        TimeTrackerConstants.Sources.Import => T["Import"],
+        _ => T["{0}", entry.Source],
+    })</span>
 }
 @if (Model.Value.KeptBy is { } keptBy)
 {

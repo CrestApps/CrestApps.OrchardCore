@@ -82,6 +82,10 @@ With **Adjust time-off balances**, **Change a balance** adds an opening balance 
 
 A **grant with a last day** gives hours or days to use by a date, such as 40 hours of year-end bonus time to use by 30 December. Time off taken comes out of grants first, the one that ends soonest first, and only then out of the rest of the balance, oldest first. Canceled time off goes back to the grant. The balance shows what is left of each grant and its last day, and so does the worker's **Time off** page in My Work. The day after the last day, what is left of the grant expires, and a request for a later day can't count on it. With **Manage time-off policies**, **Policies of their own** gives the worker a policy from and to a date, which replaces their teams' policy of that type.
 
+## Time off in Time Tracker
+
+With [Time Tracker](./time-tracker.md) on, every day of approved time off of a worker with a login is kept there once the day comes, in the stage of its type, so the hours report counts it with worked time. Each type gets a stage named after it when Time Tracker is turned on, counting toward **Time off**, and toward **Paid** when the type is paid. Choose another stage under **Time Tracker** on the type. A full day starts at 9:00 in the worker's time; a part day ends at its end. Canceled time off is taken out. These entries are read-only in Time Tracker: change the time off instead.
+
 ## Requesting time off
 
 Open **Workforce > Time Off** and choose **Request time off** to record a request for a worker of a team you manage.

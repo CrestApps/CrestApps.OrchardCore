@@ -1,9 +1,13 @@
+using CrestApps.OrchardCore.TimeTracker.Services;
+using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using CrestApps.OrchardCore.Workforce.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -115,6 +119,7 @@ public sealed class TimeOffTypesController : Controller
             PayCode = item.PayCode,
             VisibleToWorkers = item.VisibleToWorkers,
             Enabled = item.Enabled,
+            StageId = item.StageId,
         };
 
         await PopulateAsync(model);
@@ -159,6 +164,14 @@ public sealed class TimeOffTypesController : Controller
         item.VisibleToWorkers = model.VisibleToWorkers;
         item.Enabled = model.Enabled;
 
+        var stageManager = HttpContext.RequestServices.GetService<ITimeStageManager>();
+        var attacher = HttpContext.RequestServices.GetService<TimeOffTypeStageAttacher>();
+
+        if (stageManager is not null && attacher is not null)
+        {
+            item.StageId = string.IsNullOrEmpty(model.StageId) || await stageManager.FindByIdAsync(model.StageId) is null ? null : model.StageId;
+        }
+
         if (ModelState.IsValid)
         {
             var validation = await _typeManager.ValidateAsync(item);
@@ -174,6 +187,12 @@ public sealed class TimeOffTypesController : Controller
             await PopulateAsync(model);
 
             return View(model);
+        }
+
+        // With Time Tracker on, a type without a stage gets one of its own.
+        if (attacher is not null && string.IsNullOrEmpty(item.StageId))
+        {
+            await attacher.AttachAsync(item);
         }
 
         if (isNew)
@@ -215,8 +234,21 @@ public sealed class TimeOffTypesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    private static Task PopulateAsync(TimeOffTypeEditViewModel model)
+    // The stages, when Time Tracker keeps time off; null otherwise, and the card isn't shown.
+    private async Task PopulateAsync(TimeOffTypeEditViewModel model)
     {
-        return Task.CompletedTask;
+        var stageManager = HttpContext.RequestServices.GetService<ITimeStageManager>();
+
+        if (stageManager is null || HttpContext.RequestServices.GetService<TimeOffTypeStageAttacher>() is null)
+        {
+            return;
+        }
+
+        model.StageOptions = [new SelectListItem(S["A stage of its own, made when saved"], string.Empty)];
+
+        foreach (var stage in (await stageManager.GetAllAsync()).OrderBy(stage => stage.Position).ThenBy(stage => stage.Name, StringComparer.CurrentCultureIgnoreCase))
+        {
+            model.StageOptions.Add(new SelectListItem(stage.Name, stage.ItemId, stage.ItemId == model.StageId));
+        }
     }
 }

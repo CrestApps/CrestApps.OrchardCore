@@ -42,6 +42,10 @@ With **Contact Center Time Tracker** on, agents' states are kept here while they
 
 Go to **Time Tracker > Contact Center Stages** to choose the stage of each state. **Not tracked** leaves a state out. Under **Reasons**, give a reason a stage of its own, such as *Lunch* for a lunch break; **As its state** uses the state's stage. The usual states get a stage when the feature is turned on. These entries are read-only here; they come from the agent state log.
 
+## Time off
+
+With Workforce Time Off on, every day of approved time off is kept here once the day comes, in the stage of its type, such as *Vacation*. It shows as **From approved time off** and is changed on the time off itself. See [Time Off](./time-off.md#time-off-in-time-tracker).
+
 ## Hours by category
 
 **Reports > Time Tracker > Hours by category** shows a row for each person, with a column for each category and the total, for the days you choose (this week at first). Tick **A row per day** to see each day apart. A stage's time adds to each of its categories, so the columns don't add up to the total.

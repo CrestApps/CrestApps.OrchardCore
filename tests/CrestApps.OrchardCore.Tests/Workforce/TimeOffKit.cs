@@ -18,14 +18,14 @@ namespace CrestApps.OrchardCore.Tests.Workforce;
 /// </summary>
 internal static class TimeOffKit
 {
-    public static Task<CalendarTestHarness> CreateAsync(Action<IServiceCollection> configure = null)
+    public static Task<CalendarTestHarness> CreateAsync(Action<IServiceCollection> configure = null, Func<global::YesSql.Sql.ISchemaBuilder, Task> schema = null, IEnumerable<global::YesSql.Indexes.IIndexProvider> indexProviders = null, IEnumerable<string> collections = null)
     {
         return WorkforceTests.CreateAsync(services =>
         {
             services.AddWorkforceTimeOffCore();
             services.AddSingleton<IDistributedLock, KeyedLock>();
             configure?.Invoke(services);
-        });
+        }, schema, indexProviders, collections);
     }
 
     public static Task<TimeOffType> AddTypeAsync(CalendarTestHarness harness, string name, Action<TimeOffType> configure = null)
