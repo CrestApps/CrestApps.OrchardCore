@@ -139,6 +139,20 @@ public sealed class TurnBasedCallSpeechTests
         Assert.False(speech.UsesPersona);
     }
 
+    [Theory]
+    [InlineData(null, true)]
+    [InlineData("en-GB", true)]
+    [InlineData("el-GR", false)]
+    [InlineData("es-MX", false)]
+    public void IsEnglish_ShouldFollowThePersonasLanguage(string personaLanguage, bool expected)
+    {
+        // Act
+        var speech = new VoiceAgentConversationLoop.CallSpeech(ProviderDefaultVoice, personaLanguage);
+
+        // Assert
+        Assert.Equal(expected, speech.IsEnglish);
+    }
+
     private static Task<VoiceAgentConversationLoop.CallSpeech> SelectAsync(
         IServiceProvider services,
         OmnichannelActivity activity,

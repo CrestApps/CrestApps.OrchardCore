@@ -87,6 +87,14 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
         return await accessEvaluator.CanAccessProfileAsync(httpContext?.User ?? Context.User, profile);
     }
 
+    /// <inheritdoc/>
+    protected override string GetPromptBlockedMessage()
+        => S["Your message could not be processed. Please rephrase and try again."].Value;
+
+    /// <inheritdoc/>
+    protected override string GetOutputBlockedMessage()
+        => S["I'm unable to provide a response to that request. Please try a different question."].Value;
+
     /// <summary>
     /// Loads one of the caller's sessions and sends its messages to the caller, logging why a session could not be
     /// loaded.

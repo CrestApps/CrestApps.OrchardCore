@@ -30,6 +30,7 @@ How people use the builder is described in the User Manual, starting at [Report 
 | [Add your own data source](custom-data-sources.md) | Extending the builder with an Orchard Core data source: `IDataSource`, `RecordDataSource` and `RecordDataSet<T>`, grouping in the source, join keys, relationships, and more content parts and fields. |
 | [Formula reference](formulas.md) | The formula language of Orchard Core as reports use it: syntax, operators, types, aggregate formulas, and every built-in function. |
 | [Large data](large-data.md) | Row limits, date push-down, grouping in the source, join key narrowing, and scheduled views. |
+| [Interactive dashboards](interactive-dashboards.md) | Several queries in one report, containers that frame and scroll visuals, and click actions that filter visuals. |
 | [Drafts, versions and real time](drafts-versions-and-real-time.md) | Autosave, revisions and conflicts, publishing, versions, and SignalR presence. |
 | [Workflows and report events](workflows.md) | The workflow events and tasks, and `IReportEventHandler`. |
 | [Recipes and deployment](recipes-and-deployment.md) | The deployment step and the `ReportDesigns` recipe step. |
@@ -42,7 +43,7 @@ On top of it, the builder is split over the three Reports layers, so the engine 
 
 - **`CrestApps.OrchardCore.Reports.Abstractions`** references `OrchardCore.DataSources.Abstractions` and adds a few helpers for data sets (`DataFieldExtensions`, in the `CrestApps.OrchardCore.Reports.DataSources` namespace), and `ReportsConstants`, which names the built-in sources and the builder's feature.
 - **`CrestApps.OrchardCore.Reports.Core`** holds the designed query model (`ReportQueryDefinition`, `ReportDataSetReference`, `ReportJoinDefinition`, `ReportCalculatedField`, `ReportFilterDefinition`, `ReportColumnDefinition`, `ReportSortDefinition`, `ReportVisualDefinition`, in the `CrestApps.OrchardCore.Reports.Designer` namespace, with Orchard Core's `DataAggregate`, `DataFieldTransform` and `DataJoinType` enums) and the engine: `ReportQueryPlanner` checks a query against the live schemas and compiles its formulas with the function catalog, `ReportQueryEngine` runs it, and `ReportDesignDocumentBuilder` turns a result into a `ReportDocument`. `ReportIndexPages`, `ReportIndexConditions` and `ReportIndexAggregator` (namespace `CrestApps.OrchardCore.Reports.Designer.DataSources`) help YesSql-backed sources read page by page, filter and group in the database.
-- **`CrestApps.OrchardCore.Reports`** holds the Orchard Core side: the stores of designed reports, views, drafts and versions, permissions and the authorization handler, the builder pages and JSON endpoints, the admin menu, the background task that refreshes scheduled views, the **Report views** data source, and the shared link handler that opens a report through an Orchard Core shared link.
+- **`CrestApps.OrchardCore.Reports`** holds the Orchard Core side: the stores of designed reports, report groups, views, drafts and versions, permissions and the authorization handler, the builder pages and JSON endpoints, the admin menu, the background task that refreshes scheduled views, the **Report views** data source, and the shared link handler that opens a report through an Orchard Core shared link.
 
 A run goes through these steps:
 
@@ -67,11 +68,12 @@ Values are formatted with the current culture. A column's **Format** is a .NET f
 
 | URL | What it is |
 | --- | --- |
-| `/Admin/reports/designs` | The designed reports the user can run (Report Builder, or Shared Reports for people who do not build reports). Accepts `q` (search title and category) and `status` (`published` or `unpublished`). |
+| `/Admin/reports/designs` | The designed reports the user can run (Report Builder, or Shared Reports for people who do not build reports). Accepts `q` (search title and group path) and `status` (`published` or `unpublished`). |
 | `/Admin/reports/designs/{id}` | Runs a designed report in the admin. |
 | `/Admin/reports/designs/{id}/export/{format}` | Exports a designed report (`csv`, or `xlsx` with Reports (OpenXml)). |
 | `/Admin/reports/builder/create`, `/Admin/reports/builder/edit/{id}` | The builder. |
 | `/Admin/reports/views`, `/Admin/reports/views/create`, `/Admin/reports/views/edit/{id}` | Reusable views. |
+| `/Admin/reports/groups`, `/Admin/reports/groups/create`, `/Admin/reports/groups/edit/{id}` | Report groups. Accepts `q` (search group paths); `create` accepts `parentId` to nest the new group. |
 | `/reports/view/{id}` | A report shared with users or roles, outside the admin, for people without admin access. |
 | `/SharedLinks/{linkId}?token=...` | A report opened through a share link. The page is Orchard Core's, and opens the report through the Report Builder's handler; see [Share links](permissions.md#share-links). |
 

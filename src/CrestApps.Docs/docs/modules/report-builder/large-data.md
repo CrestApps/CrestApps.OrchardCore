@@ -46,7 +46,7 @@ The engine asks the source only when the report:
 
 Row filters are sent as exact conditions and date periods as UTC boundaries of local hours, days or months (at most 1,000 buckets per date). Whatever a source cannot answer exactly (a computed field, a text "contains" filter, a median or distinct count, a calculated field, an exposed filter that lists options) is read row by row as before, and so is anything the source declines by returning `null`. A source may return at most `MaxRowsPerDataSet` groups.
 
-`ReportIndexAggregator` answers such a query with one `GROUP BY` statement over a YesSql index table; Omnichannel activities and the Contact Center data sets use it for the fields their index holds. See [Grouping in the data source](custom-data-sources.md#grouping-in-the-data-source) to add it to your own data sets.
+`ReportIndexAggregator` answers such a query with one `GROUP BY` statement over a YesSql index table; Omnichannel activities and the Contact Center data sets use it for the fields their index holds. Text is grouped without regard to case, like filters and joins compare it; MySQL leaves a group by text to the engine, and every database leaves the smallest or largest text value to it. See [Grouping in the data source](custom-data-sources.md#grouping-in-the-data-source) to add it to your own data sets.
 
 ## Viewer filters read only what matches
 

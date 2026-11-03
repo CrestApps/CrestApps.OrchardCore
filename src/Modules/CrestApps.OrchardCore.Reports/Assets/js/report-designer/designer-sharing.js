@@ -1,5 +1,5 @@
 /*
- * The Settings and Sharing tabs of the report builder: the description, category, and admin menu placement, the
+ * The Settings and Sharing tabs of the report builder: the description, group, and admin menu placement, the
  * people and roles a report is shared with, and its share links.
  */
 (function (root) {
@@ -81,22 +81,11 @@
                     touch();
                 }
             }, design.description || ''), app.isView() ? app.t('Tells other report builders what the view prepares.') : app.t('Shown above the report.')),
-            app.isView() ? null : field(app.t('Category'), h('input', {
-                id: newId(),
-                type: 'text',
-                className: 'form-control',
-                value: design.category || '',
-                maxlength: '200',
-                list: 'report-designer-categories',
-                oninput: function (event) {
-                    design.category = event.target.value;
-                    touch();
-                }
-            }), app.t('Groups the report in the admin menu and the report list.')),
+            app.isView() ? null : groupField(design, touch),
             app.isView() ? null : checkbox(app.t('Show in the admin menu'), design.showInAdminMenu, function (value) {
                 design.showInAdminMenu = value;
                 touch();
-            }, app.t('Adds the report under Reports in the admin menu for everyone who can open it.')),
+            }, app.t('Adds the report under Reports in the admin menu, inside its group, for everyone who can open it.')),
             app.isView() ? null : checkbox(app.t('Let people the report is shared with export it'), design.allowExport !== false, function (value) {
                 design.allowExport = value;
                 touch();
@@ -104,6 +93,26 @@
             // A view's refresh schedule (see designer-refresh.js).
             app.isView() && app.renderRefresh ? app.renderRefresh() : null]);
     };
+
+    // The report's group, picked from the report groups with their path, such as "Sales / Regional"; no group is a valid
+    // choice. A designer who manages groups gets a link to the group list.
+    function groupField(design, touch) {
+        var options = [{ value: '', text: app.t('No group') }].concat(app.config.groups || []);
+        var manageUrl = app.url('groups');
+        var select = ui.select(options, design.groupId || '', {
+            id: newId(),
+            className: 'form-select',
+            onchange: function (event) {
+                design.groupId = event.target.value || null;
+                touch();
+            }
+        });
+
+        return field(app.t('Group'), select, [
+            app.t('Lists the report under this group in the admin menu and the report list.'),
+            manageUrl ? ' ' : null,
+            manageUrl ? h('a', { href: manageUrl, target: '_blank', rel: 'noopener' }, app.t('Manage groups')) : null]);
+    }
 
     // Picks users of the site by user name: the names are kept in the given list, and onChange runs after each change.
     function userPicker(userNames, onChange) {

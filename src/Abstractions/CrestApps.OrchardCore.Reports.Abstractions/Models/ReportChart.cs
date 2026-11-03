@@ -34,4 +34,16 @@ public sealed class ReportChart
     /// Gets or sets a value indicating whether the vertical axis displays percentages.
     /// </summary>
     public bool PercentageScale { get; set; }
+
+    /// <summary>
+    /// Gets or sets the keys of the values a click on each category picks, in the order of <see cref="Labels"/>, or
+    /// <see langword="null"/> when clicking a category picks nothing.
+    /// </summary>
+    public IList<string> Keys { get; set; }
+
+    /// <summary>
+    /// Gets or sets the keys of the values a click on each series picks, in the order of <see cref="Datasets"/>, or
+    /// <see langword="null"/> when clicking a series picks nothing.
+    /// </summary>
+    public IList<string> SeriesKeys { get; set; }
 }

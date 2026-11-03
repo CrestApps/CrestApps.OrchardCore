@@ -1,5 +1,4 @@
 ﻿using System.Text.Json;
-using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -48,13 +47,6 @@ public sealed class ListWorkflowActivitiesTool : AIFunction
         }
 
         var activityLibrary = arguments.Services.GetRequiredService<IActivityLibrary>();
-
-        if (!arguments.TryGetFirst<string>("workflowTypeId", out var workflowTypeId))
-        {
-            logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "workflowTypeId");
-
-            return "Unable to find a workflowTypeId argument in the function arguments.";
-        }
 
         var activities = activityLibrary.ListActivities();
 

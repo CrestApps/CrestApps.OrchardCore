@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import '../../../src/Modules/CrestApps.OrchardCore.Reports/Assets/js/report-designer/designer-state.js';
 import '../../../src/Modules/CrestApps.OrchardCore.Reports/Assets/js/report-charts.js';
+import '../../../src/Modules/CrestApps.OrchardCore.Reports/Assets/js/report-interactions.js';
 
 const designer = globalThis.CrestAppsReportDesigner;
 const charts = globalThis.CrestAppsReportCharts;
+const interactions = globalThis.CrestAppsReportInteractions;
 
 const field = (key, dataType, extra = {}) => ({ key, label: key, dataType, ...extra });
 
@@ -321,6 +323,170 @@ describe('filter form values', () => {
             placed: ['2026-01-01T00:00', '2026-01-31T23:59:59'],
             total: [],
         });
+    });
+});
+
+describe('containers', () => {
+    it('adds containers with unused identifiers', () => {
+        const value = design();
+
+        const first = designer.addContainer(value);
+        const second = designer.addContainer(value);
+
+        expect(first).toMatchObject({ id: 'k1', width: 12, height: 400 });
+        expect(second.id).toBe('k2');
+        expect(value.containers).toHaveLength(2);
+    });
+
+    it('shows the visuals of a removed container on their own', () => {
+        const value = design();
+        const container = designer.addContainer(value);
+
+        value.visuals = [{ id: 'v1', containerId: container.id }, { id: 'v2', containerId: 'other' }];
+        designer.removeContainer(value, container.id);
+
+        expect(value.containers).toEqual([]);
+        expect(value.visuals.map((visual) => visual.containerId)).toEqual([null, 'other']);
+    });
+});
+
+describe('queries', () => {
+    it('adds a query that starts as a copy of another', () => {
+        const value = design();
+        value.query.filters.push({ id: 'f1', field: 'Order.PlacedUtc', exposed: true });
+
+        const added = designer.addQuery(value, value.query);
+
+        expect(added.id).toBe('q1');
+        expect(added.query).toEqual(value.query);
+        expect(added.query).not.toBe(value.query);
+        expect(added.query.filters[0].id).toBe('f1');
+    });
+
+    it('removes a query with its visuals and the clicks that filtered them', () => {
+        const value = design();
+        const added = designer.addQuery(value, value.query);
+
+        value.visuals = [
+            { id: 'v1', action: { columnId: 'c1', targets: [{ visualId: 'v2' }, { visualId: 'v3' }] } },
+            { id: 'v2', queryId: added.id },
+            { id: 'v3' },
+        ];
+        designer.removeQuery(value, added.id);
+
+        expect(value.queries).toEqual([]);
+        expect(value.visuals.map((visual) => visual.id)).toEqual(['v1', 'v3']);
+        expect(value.visuals[0].action.targets).toEqual([{ visualId: 'v3' }]);
+    });
+
+    it('removes a column only from the visuals of the query being edited', () => {
+        const value = design();
+        const column = designer.addColumn(value.query, field('Order.Total', 'Decimal'));
+
+        value.visuals = [
+            { id: 'v1', valueColumnIds: [column.id] },
+            { id: 'v2', queryId: 'q1', valueColumnIds: [column.id] },
+        ];
+        designer.removeColumn(value, column.id);
+
+        expect(value.visuals[0].valueColumnIds).toEqual([]);
+        expect(value.visuals[1].valueColumnIds).toEqual([column.id]);
+    });
+});
+
+describe('click actions', () => {
+    const columns = [
+        { id: 'agent', isMeasure: false },
+        { id: 'day', isMeasure: false },
+        { id: 'weekday', isMeasure: false },
+        { id: 'secret', isMeasure: false, hidden: true },
+        { id: 'score', isMeasure: true },
+    ];
+    const definitions = [
+        { id: 'agent', transform: 'None' },
+        { id: 'day', transform: 'Day' },
+        { id: 'weekday', transform: 'DayOfWeek' },
+        { id: 'secret', transform: 'None' },
+        { id: 'score', transform: 'None' },
+    ];
+
+    it('offers the dimensions a table shows whose values filter their field', () => {
+        const all = designer.clickableColumns({ type: 'Table', columnIds: [] }, columns, definitions);
+        const some = designer.clickableColumns({ type: 'Table', columnIds: ['day', 'score'] }, columns, definitions);
+
+        expect(all.map((column) => column.id)).toEqual(['agent', 'day']);
+        expect(some.map((column) => column.id)).toEqual(['day']);
+    });
+
+    it('offers the categories and series of a chart, and nothing for metrics', () => {
+        const chart = designer.clickableColumns({ type: 'Chart', categoryColumnId: 'day', seriesColumnId: 'agent' }, columns, definitions);
+        const metrics = designer.clickableColumns({ type: 'Metrics' }, columns, definitions);
+
+        expect(chart.map((column) => column.id)).toEqual(['agent', 'day']);
+        expect(metrics).toEqual([]);
+    });
+
+    it('sets the column a click picks and the visuals it filters', () => {
+        const visual = { id: 'v1' };
+
+        designer.setActionColumn(visual, 'agent');
+        designer.toggleActionTarget(visual, 'v2', true);
+        designer.toggleActionTarget(visual, 'v3', true);
+        designer.toggleActionTarget(visual, 'v1', true);
+        designer.toggleActionTarget(visual, 'v2', false);
+
+        expect(visual.action).toEqual({ columnId: 'agent', targets: [{ visualId: 'v3', field: null }] });
+
+        designer.setActionColumn(visual, '');
+        expect(visual.action).toBeNull();
+    });
+
+    it('drops a click action when its column is removed', () => {
+        const value = design();
+        const column = designer.addColumn(value.query, field('Order.Channel', 'Text'));
+
+        value.visuals = [{ id: 'v1', action: { columnId: column.id, targets: [{ visualId: 'v2' }] } }];
+        designer.removeColumn(value, column.id);
+
+        expect(value.visuals[0].action).toBeNull();
+    });
+});
+
+describe('picking values', () => {
+    it('picks only the value clicked, and clears it when clicked again', () => {
+        expect(interactions.nextKeys([], 'a', false)).toEqual(['a']);
+        expect(interactions.nextKeys(['a', 'b'], 'c', false)).toEqual(['c']);
+        expect(interactions.nextKeys(['a'], 'a', false)).toEqual([]);
+        expect(interactions.nextKeys(['a', 'b'], 'a', false)).toEqual(['a']);
+    });
+
+    it('adds or removes the value clicked with Ctrl', () => {
+        expect(interactions.nextKeys(['a'], 'b', true)).toEqual(['a', 'b']);
+        expect(interactions.nextKeys(['a', 'b'], 'a', true)).toEqual(['b']);
+    });
+
+    it('finds the key of the category or series clicked', () => {
+        expect(charts.keyAt({ keys: ['x', 'y'] }, { index: 1, datasetIndex: 0 })).toBe('y');
+        expect(charts.keyAt({ seriesKeys: ['s1', 's2'] }, { index: 0, datasetIndex: 1 })).toBe('s2');
+        expect(charts.keyAt({}, { index: 0, datasetIndex: 0 })).toBeUndefined();
+    });
+
+    it('fades the categories a pick leaves out', () => {
+        const model = { type: 'bar', labels: ['A', 'B'], keys: ['a', 'b'], selectedKeys: ['b'], datasets: [{ label: 'Total', data: [1, 2] }] };
+        const config = charts.buildConfig(model, '#000', '#ccc');
+        const colors = config.data.datasets[0].backgroundColor;
+
+        expect(colors).toHaveLength(2);
+        expect(colors[0]).not.toBe(colors[1]);
+        expect(colors[0].startsWith(colors[1])).toBe(true);
+        expect(typeof config.options.onClick).toBe('function');
+    });
+
+    it('leaves a chart nobody can click as it was', () => {
+        const config = charts.buildConfig({ type: 'bar', labels: ['A'], datasets: [{ label: 'Total', data: [1] }] }, '#000', '#ccc');
+
+        expect(config.options.onClick).toBeUndefined();
+        expect(typeof config.data.datasets[0].backgroundColor).toBe('string');
     });
 });
 

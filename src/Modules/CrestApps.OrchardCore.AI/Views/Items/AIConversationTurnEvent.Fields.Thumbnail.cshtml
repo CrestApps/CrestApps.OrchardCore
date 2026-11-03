@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.AI.Workflows.Models
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AIConversationTurnEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-comments" aria-hidden="true"></i>
+    @T["AI Conversation Turn"]
+</h4>
+<p>@T["Runs after each turn of an AI conversation, while it is going on."]</p>

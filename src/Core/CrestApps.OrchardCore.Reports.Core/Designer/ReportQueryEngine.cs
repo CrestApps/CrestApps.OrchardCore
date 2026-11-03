@@ -745,6 +745,9 @@ public sealed partial class ReportQueryEngine
 
         public DataRowBuffer GroupedRows { get; }
 
+        // The spellings of the text the run groups, so its regroupings show the same ones.
+        public TextSpellings Spellings { get; } = new();
+
         // Whether the run must read every row for the options of its exposed filters, even once its result is complete.
         public bool ListsOptions => _optionFilters.Count > 0;
 

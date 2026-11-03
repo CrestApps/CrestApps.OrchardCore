@@ -129,6 +129,12 @@ public sealed partial class VoiceAgentConversationLoop
         // on its next turn and needs nothing more.
         _answeringMachineSignals.MachineDetected(voiceEvent.ProviderName, voiceEvent.ProviderCallId);
 
+        // The assistant has already pressed keys on it, so the machine is a phone menu it is getting through.
+        if (_answeringMachineSignals.Watch(voiceEvent.ProviderName, voiceEvent.ProviderCallId).PhoneMenuReached.IsCancellationRequested)
+        {
+            return;
+        }
+
         var activity = await _activityStore.FindByIdAsync(voiceEvent.ActivityId, cancellationToken);
 
         if (activity is null || activity.Status.IsTerminal() || activity.TryGet<VoicemailReached>(out _))

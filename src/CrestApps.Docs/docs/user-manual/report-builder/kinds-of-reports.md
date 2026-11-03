@@ -105,6 +105,8 @@ For a value the data does not hold, add a [calculated field](columns-and-formula
 
 Put several visuals side by side with their **Width**: **Metrics** at **Full** across the top, then two charts at **Half**, then a **Table** at **Full**. Check **Show in the admin menu** on the **Settings** tab, and the dashboard is one click away under **Reports**. See [Share and run reports](share-and-run.md).
 
+To show totals per agent next to a trend per day, frame them in scrolling containers, and let a click on an agent filter the rest, see [Interactive dashboards](dashboards.md).
+
 ## Prepare data once for many reports
 
 When several reports need the same joined and filtered data, save it as a [reusable view](views.md) and build the reports on the view.

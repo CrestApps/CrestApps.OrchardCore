@@ -312,9 +312,21 @@ public sealed class ReportDesignerController : Controller
         design.DisplayText ??= S["Preview"];
         design.Query = ReportDesignNormalizer.Normalize(design.Query);
         design.Visuals = view ? [] : ReportDesignNormalizer.Normalize(design.Visuals);
+        design.Containers = view ? [] : ReportDesignNormalizer.Normalize(design.Containers);
+        design.Queries = view ? [] : ReportDesignNormalizer.Normalize(design.Queries);
 
         var filterValues = payload.FilterValues?.ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.Ordinal);
-        var run = await _runner.RunAsync(design, User, filterValues, HttpContext.RequestAborted);
+        var options = new ReportRunOptions();
+
+        foreach (var (visualId, keys) in payload.Selections ?? [])
+        {
+            if (!string.IsNullOrEmpty(visualId) && keys is not null)
+            {
+                options.Selections[visualId] = keys.Where(key => key is not null).Take(ReportSelectionKeys.MaxKeys).ToList();
+            }
+        }
+
+        var run = await _runner.RunAsync(design, User, filterValues, period: null, options, HttpContext.RequestAborted);
 
         return PartialView("_DesignerPreview", new ReportDesignerPreviewViewModel
         {
@@ -354,11 +366,13 @@ public sealed class ReportDesignerController : Controller
             }
         }
 
-        var categories = (await _designService.GetAllAsync())
-            .Select(design => design.Category)
-            .Where(category => !string.IsNullOrWhiteSpace(category))
-            .Distinct(StringComparer.CurrentCultureIgnoreCase)
-            .Order(StringComparer.CurrentCultureIgnoreCase)
+        var groups = (await _designService.GetGroupTreeAsync())
+            .Flatten()
+            .Select(node => new ReportGroupOption
+            {
+                Value = node.Group.ItemId,
+                Text = node.PathText,
+            })
             .ToList();
 
         return new ReportDesignerViewModel
@@ -367,7 +381,8 @@ public sealed class ReportDesignerController : Controller
             Payload = payload,
             CanSharePublicly = await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ShareReportsPublicly),
             Roles = roles.Order(StringComparer.OrdinalIgnoreCase).ToList(),
-            Categories = categories,
+            Groups = groups,
+            CanManageGroups = await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ManageReportGroups),
             Labels = new Dictionary<string, object>(StringComparer.Ordinal)
             {
                 ["text"] = ReportDesignerTexts.Build(S),

@@ -246,3 +246,17 @@ public sealed class CrmWorkflowsStartup : StartupBase
         services.AddScoped<ILeadConversionHandler, Workflows.LeadConvertedWorkflowHandler>();
     }
 }
+
+/// <summary>
+/// Registers the Create AI Activity workflow task, which starts an AI call or text from a workflow.
+/// </summary>
+[Feature(OmnichannelConstants.Features.Activities)]
+[RequireFeatures("OrchardCore.Workflows")]
+public sealed class AIActivityWorkflowsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddActivity<Workflows.Models.CreateAIActivityTask, Workflows.Drivers.CreateAIActivityTaskDisplayDriver>();
+    }
+}

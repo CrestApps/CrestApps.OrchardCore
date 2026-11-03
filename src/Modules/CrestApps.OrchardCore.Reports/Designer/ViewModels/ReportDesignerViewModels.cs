@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore.Reports.Designer.Models;
 using CrestApps.OrchardCore.Reports.Designer.Services;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
 
 namespace CrestApps.OrchardCore.Reports.Designer.ViewModels;
@@ -30,9 +32,14 @@ public class ReportDesignerViewModel
     public IList<string> Roles { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the categories already used by designed reports, suggested in the category box.
+    /// Gets or sets the report groups a report can be placed in, each followed by the groups nested in it.
     /// </summary>
-    public IList<string> Categories { get; set; } = [];
+    public IList<ReportGroupOption> Groups { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the designer may manage report groups.
+    /// </summary>
+    public bool CanManageGroups { get; set; }
 
     /// <summary>
     /// Gets or sets the refresh status of the view being designed, or <see langword="null"/> when it has no stored
@@ -145,6 +152,12 @@ public class ReportDesignListEntry
     /// Gets or sets when an unpublished report was last changed, in UTC.
     /// </summary>
     public DateTime? ModifiedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the names of the path of the report's group, such as <c>Sales / Regional</c>, or
+    /// <see langword="null"/> for a report in no group.
+    /// </summary>
+    public string GroupPath { get; set; }
 }
 
 /// <summary>
@@ -231,6 +244,12 @@ public class DesignedReportViewModel
     /// Gets or sets a value indicating whether the page is shown outside the admin.
     /// </summary>
     public bool IsPublic { get; set; }
+
+    /// <summary>
+    /// Gets or sets the values picked by clicking the report's visuals, as keys by visual identifier. The filter form
+    /// carries them, so changing a filter or exporting keeps them.
+    /// </summary>
+    public IDictionary<string, IList<string>> Selections { get; set; } = new Dictionary<string, IList<string>>(StringComparer.Ordinal);
 }
 
 /// <summary>
@@ -290,4 +309,101 @@ public class ReportDesignsDeploymentEntryViewModel
     /// Gets or sets a value indicating whether it is exported.
     /// </summary>
     public bool IsSelected { get; set; }
+}
+
+/// <summary>
+/// The view model of the report group list.
+/// </summary>
+public class ReportGroupsIndexViewModel
+{
+    /// <summary>
+    /// Gets or sets the list of the groups, each followed by the groups nested in it.
+    /// </summary>
+    public AdminListContext List { get; set; }
+
+    /// <summary>
+    /// Gets or sets the search text.
+    /// </summary>
+    public string Search { get; set; }
+}
+
+/// <summary>
+/// One entry of the report group list.
+/// </summary>
+public class ReportGroupListEntry
+{
+    /// <summary>
+    /// Gets or sets the group.
+    /// </summary>
+    public ReportGroup Group { get; set; }
+
+    /// <summary>
+    /// Gets or sets the names of the group's path, such as <c>Sales / Regional</c>.
+    /// </summary>
+    public string PathText { get; set; }
+
+    /// <summary>
+    /// Gets or sets how deep the group is nested, <c>0</c> for a top-level group.
+    /// </summary>
+    public int Depth { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of groups nested directly in the group.
+    /// </summary>
+    public int GroupCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of reports placed in the group.
+    /// </summary>
+    public int ReportCount { get; set; }
+}
+
+/// <summary>
+/// The view model of the page that creates or changes a report group.
+/// </summary>
+public class ReportGroupEditViewModel
+{
+    /// <summary>
+    /// Gets or sets a value indicating whether a new group is being created.
+    /// </summary>
+    [BindNever]
+    public bool IsNew { get; set; }
+
+    /// <summary>
+    /// Gets or sets the group name.
+    /// </summary>
+    public string DisplayText { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the group it is nested in, or <see langword="null"/> for a top-level group.
+    /// </summary>
+    public string ParentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the display order among the groups that share its parent.
+    /// </summary>
+    public int Order { get; set; }
+
+    /// <summary>
+    /// Gets or sets the groups it can be nested in, shown with their path. The group itself and the groups nested in it
+    /// are left out.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> Parents { get; set; } = [];
+}
+
+/// <summary>
+/// A report group offered in the designer's group list.
+/// </summary>
+public class ReportGroupOption
+{
+    /// <summary>
+    /// Gets or sets the group identifier.
+    /// </summary>
+    public string Value { get; set; }
+
+    /// <summary>
+    /// Gets or sets the names of the group's path, such as <c>Sales / Regional</c>.
+    /// </summary>
+    public string Text { get; set; }
 }

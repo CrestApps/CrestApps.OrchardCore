@@ -200,6 +200,31 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         await LetTheCallGoAsync(harness, run);
     }
 
+    [Fact]
+    public async Task AnOpeningWithARecordingDisclosure_IsHeardToTheEnd_WhenTheCallerTalksOverIt()
+    {
+        // Arrange
+        // Live, a caller's "Hello" a second into the opening stopped it after 0.8 seconds of the notice, and the
+        // model went on without giving it again. The notice has to be heard.
+        var harness = TalkedOverHarness(TalkingDbfs, afterTheOpening: false);
+        harness.RecordingDisclosure = "This call may be recorded for quality assurance and training purposes.";
+
+        // Act
+        var run = harness.RunAsync();
+        await WaitUntilAsync(() => harness.Conversation.SentAudio.Count >= CallerFrames);
+        harness.Conversation.Queue(new RealtimeConversationEvent { Type = RealtimeConversationEventType.UserSpeechStarted });
+        await Task.Delay(TimeSpan.FromMilliseconds(300), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0, harness.Media.Clears);
+        Assert.Empty(harness.Conversation.Truncations);
+
+        // Nor may the provider's own detector cut it off.
+        Assert.False(harness.Conversation.TurnDetectionUpdates[0].AllowInterruption);
+
+        await LetTheCallGoAsync(harness, run);
+    }
+
     private const int CallerFrames = 25;
 
     // Five seconds of the assistant's line handed over at once, the way the model delivers it, with the caller's

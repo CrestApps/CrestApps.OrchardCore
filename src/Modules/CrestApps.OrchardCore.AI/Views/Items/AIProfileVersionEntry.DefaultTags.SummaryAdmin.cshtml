@@ -1,0 +1,11 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIProfileVersionEntry>
+
+@if (Model.Value.IsCurrent)
+{
+    <span class="badge ta-badge fw-normal" title="@T["The profile is at this version"]">
+        <i class="fa-solid fa-circle-check text-success" aria-hidden="true"></i> @T["Current"]
+    </span>
+}

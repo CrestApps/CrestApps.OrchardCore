@@ -30,7 +30,7 @@
           "itemId": "downloads-by-product",
           "displayText": "Downloads",
           "description": "The download links given in the period, by product and file: how many were used, never used, used up, expired or taken back, and the downloads made with them.",
-          "category": "Store",
+          "group": "Store",
           "query": {
             "dataSets": [
               { "alias": "d", "source": "Downloads", "dataSet": "DownloadEntitlements", "displayName": "Download entitlements" }

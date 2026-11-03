@@ -161,7 +161,7 @@ public sealed partial class RealtimeVoiceConversationRunner
         try
         {
             await ApplyTelephonyTurnDetectionAsync(next, callToken);
-            await next.RequestUnpromptedResponseAsync(ResumeInstructions, callToken);
+            await next.RequestUnpromptedResponseAsync(WithSessionInstructions(ResumeInstructions), callToken);
         }
         catch (Exception ex)
         {

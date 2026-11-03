@@ -169,6 +169,12 @@ public sealed partial class ContactCenterPhoneCallSupervisionService : IContactC
             return false;
         }
 
+        // A listen on an AI call: the dashboard endpoint already required the permission to monitor.
+        if (string.Equals(monitoredUserId, AICallUserMarker, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
         var agent = await _agentProfileManager.FindByUserIdAsync(monitoredUserId, cancellationToken);
 
         if (agent is null)

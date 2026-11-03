@@ -27,7 +27,7 @@ namespace CrestApps.OrchardCore.Reports.Designer;
 
 /// <summary>
 /// Registers the report builder: the query engine over the data sources of Orchard Core, the stores of designed reports,
-/// views, and share links, the views data source and the scheduled refresh of views, the sharing-aware authorization handler, and the
+/// report groups, views, and share links, the views data source and the scheduled refresh of views, the sharing-aware authorization handler, and the
 /// admin menu.
 /// </summary>
 [Feature(ReportsConstants.BuilderFeature)]
@@ -63,6 +63,7 @@ public sealed class DesignerStartup : StartupBase
             .AddScoped<ReportExecutionContextFactory>()
             .AddScoped<ReportOwnerPrincipalResolver>()
             .AddScoped<ReportDesignService>()
+            .AddScoped<ReportGroupService>()
             .AddScoped<ReportDesignHistoryStore>()
             .AddScoped<ReportDesignHistoryService>()
             .AddScoped<ReportDesignRunner>()
@@ -80,6 +81,7 @@ public sealed class DesignerStartup : StartupBase
         services.AddDataMigration<ReportDesignHistoryMigrations>();
         services.AddIndexProvider<ReportViewSnapshotIndexProvider>();
         services.AddDataMigration<ReportViewSnapshotMigrations>();
+        services.AddDataMigration<ReportGroupMigrations>();
         services.AddSingleton<IBackgroundTask, ReportViewSnapshotBackgroundTask>();
 
         services.TryAddScoped(sp => new Lazy<IAuthorizationService>(sp.GetRequiredService<IAuthorizationService>));
@@ -89,7 +91,8 @@ public sealed class DesignerStartup : StartupBase
 
         services
             .AddDisplayDriver<ReportDesignListEntry, ReportDesignListEntryDisplayDriver>()
-            .AddDisplayDriver<ReportViewListEntry, ReportViewListEntryDisplayDriver>();
+            .AddDisplayDriver<ReportViewListEntry, ReportViewListEntryDisplayDriver>()
+            .AddDisplayDriver<ReportGroupListEntry, ReportGroupListEntryDisplayDriver>();
     }
 }
 

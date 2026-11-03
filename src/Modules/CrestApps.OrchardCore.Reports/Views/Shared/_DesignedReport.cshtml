@@ -5,6 +5,7 @@
 @{
     var run = Model.Run;
     var hasFilters = run.Filters.Count > 0;
+    var interactive = run.Document?.Sections.Any(section => section.Selection is not null) == true;
 }
 
 @if (!string.IsNullOrWhiteSpace(Model.Design.Description))
@@ -12,12 +13,22 @@
     <p class="text-muted">@Model.Design.Description</p>
 }
 
-<form method="get" action="@Model.FormAction" class="designed-report">
+<form method="get" action="@Model.FormAction" class="designed-report" data-report-interactive="@(interactive ? "true" : null)">
     <input type="hidden" name="@ReportFilterValueBinder.AppliedField" value="1" />
     @foreach (var (name, value) in Model.HiddenFields)
     {
         <input type="hidden" name="@name" value="@value" />
     }
+    @* The values picked by clicking visuals; the page script keeps them current, so filtering and exporting keep them. *@
+    <div data-report-selections hidden>
+        @foreach (var (visualId, keys) in Model.Selections)
+        {
+            foreach (var key in keys)
+            {
+                <input type="hidden" name="@(ReportSelectionKeys.FieldPrefix + visualId)" value="@key" />
+            }
+        }
+    </div>
 
     <div class="card">
         @if (hasFilters || Model.ExportFormats.Count > 0 || !string.IsNullOrEmpty(Model.EditUrl))
@@ -95,6 +106,15 @@
 
             @if (run.Document is not null && run.Document.HasContent)
             {
+                @if (interactive)
+                {
+                    <p class="small text-muted mb-3">
+                        <i class="fa-solid fa-hand-pointer" aria-hidden="true"></i>
+                        @T["Click a row or a chart to filter the visuals it is linked to. Hold Ctrl to pick several; click it again to clear."]
+                    </p>
+                    <script asp-name="CrestApps.OrchardCore.Reports.Interactions" at="Foot"></script>
+                }
+
                 <partial name="_ReportDocument" model="run.Document" />
             }
             else if (run.Errors.Count == 0)

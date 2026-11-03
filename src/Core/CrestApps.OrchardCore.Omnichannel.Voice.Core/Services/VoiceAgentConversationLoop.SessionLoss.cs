@@ -53,7 +53,7 @@ public sealed partial class VoiceAgentConversationLoop
             }
 
             // The same path a transfer the model asked for takes, and it tells the caller what is happening.
-            await PerformVoiceHandoffAsync(voiceEvent, media, activity, lostUtc, cancellationToken);
+            await PerformVoiceHandoffAsync(voiceEvent, media, activity, lostUtc, announced: false, cancellationToken);
 
             return;
         }

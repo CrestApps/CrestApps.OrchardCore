@@ -677,6 +677,20 @@ The model escalates by invoking a transfer tool, which only *records* the reques
 
 It is a short grace rather than an instant cut, because the model announces the transfer in the same breath as invoking the tool; cutting the audio immediately would clip that line mid-word and drop the caller into silence. The profile prompt should keep that announcement to one short sentence, or the grace will truncate it.
 
+### A tool knows which call it is acting for
+
+A tool the profile gives the session, such as one that looks the caller up or records what they asked for, must not learn who it is talking to from what the caller says. When the session opens, the runner puts the call's identity, taken from its activity, into the tool scope, where a tool reads it from `AIInvocationScope.Current.Items` for the whole call. The keys are the constants of `VoiceCallInvocationItems`. They are plain strings, so a tool in another assembly can use them without referencing this one:
+
+| Key | Value |
+|---|---|
+| `Omnichannel.Voice.ActivityId` | The call's activity id. |
+| `Omnichannel.Voice.CustomerNumber` | The customer's number: the caller on an inbound call, the number called on an outbound one. |
+| `Omnichannel.Voice.ChannelEndpointId` | The channel endpoint, the business's own number, the call came in on or was placed from. |
+| `Omnichannel.Voice.ContactContentItemId` | The contact the call was matched to, only when it was matched to exactly one. |
+| `Omnichannel.Voice.ContactContentType` | That contact's content type. |
+
+Each value is a string, and a key the activity has no value for is left out. Turn-based calls do not offer the profile's tools, so the keys are set on live sessions only.
+
 ### Optional room ambience
 
 A call can carry a quiet background bed — faint room tone and the sound of an agent typing — chosen per campaign on the activity batch and snapshotted onto each activity. Perfect silence between sentences is a strong tell that nobody is there. The bed is synthesized rather than looped, because a loop has its own tell: on a long call the caller starts to hear the seam. It is off by default, since it is audible on the call and an operator should opt into it rather than discover it.

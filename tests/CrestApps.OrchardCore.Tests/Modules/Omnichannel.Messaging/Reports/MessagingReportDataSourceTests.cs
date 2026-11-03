@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Reports;
 using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Tests.Modules.Reports.Designer;
 using CrestApps.OrchardCore.Tests.Modules.Reports.Designer.Module;
 using CrestApps.OrchardCore.Tests.Utilities;
@@ -370,6 +371,63 @@ public sealed class MessagingReportDataSourceTests : IAsyncLifetime
 
         // Assert
         Assert.Equal(["message-2", "message-1"], rows.Select(row => row["Id"]));
+    }
+
+    [Theory]
+    [InlineData(MessagingReportDataSource.ConversationsDataSet, MessagingReportDataSource.ConversationIdField, new[] { "conversation-1" })]
+    [InlineData(MessagingReportDataSource.MessagesDataSet, "ConversationId", new[] { "message-0", "message-1", "message-2" })]
+    public async Task Report_AViewerFilterOnTheConversationInAnotherCase_KeepsTheRows(string dataSet, string field, string[] expected)
+    {
+        // Arrange: PostgreSQL compares text case-sensitively, so an exact match in the database would find nothing there,
+        // while the report compares without regard to case. (The SQLite tables YesSql creates ignore case, so this
+        // guards the end-to-end behavior; the join test below fails on any database.)
+        await using var session = _store.CreateSession();
+        var idField = dataSet == MessagingReportDataSource.MessagesDataSet ? "Id" : MessagingReportDataSource.ConversationIdField;
+        var query = new ReportQueryDefinition
+        {
+            DataSets = [new ReportDataSetReference { Alias = "M", Source = MessagingReportDataSource.SourceName, DataSet = dataSet }],
+            Columns = [ReportDesignerTestServices.Column("id", "M." + idField)],
+        };
+        query.Filters.Add(new ReportFilterDefinition { Id = "conversation", Field = "M." + field, Stage = ReportFilterStage.Rows, Operator = DataFilterOperator.Equals, Values = ["CONVERSATION-1"] });
+        var context = ReportDesignerTestServices.Context(_start.AddDays(5));
+        context.DataSourceContext = new DataSourceContext { User = _user };
+
+        // Act
+        var result = await ReportDesignerTestServices.Engine(new TestDataSourceEntry(MessagingReportDataSource.SourceName, Source(session))).ExecuteAsync(query, context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(expected, result.Rows.Select(row => (string)row[0]).Order(StringComparer.Ordinal));
+    }
+
+    [Theory]
+    [InlineData(MessagingReportDataSource.ConversationsDataSet, MessagingReportDataSource.ConversationIdField)]
+    [InlineData(MessagingReportDataSource.MessagesDataSet, "ConversationId")]
+    public async Task Query_JoinKeys_ReadOnlyTheMatchingConversation(string dataSet, string field)
+    {
+        // Arrange
+        await using var session = _store.CreateSession();
+        var source = Source(session);
+        var joined = Query(dataSet, field);
+        joined.Conditions.Add(new DataCondition { Field = field, Operator = DataFilterOperator.In, Values = ["conversation-1", "missing"], IsJoinKey = true });
+
+        // A viewer's filter on the same key in another case does not take away the join's keys.
+        var joinedAndFiltered = Query(dataSet, field);
+        joinedAndFiltered.Conditions.Add(new DataCondition { Field = field, Operator = DataFilterOperator.In, Values = ["conversation-1"], IsJoinKey = true });
+        joinedAndFiltered.Conditions.Add(Condition(field, DataFilterOperator.Equals, "CONVERSATION-1"));
+
+        var empty = Query(dataSet, field);
+        empty.Conditions.Add(new DataCondition { Field = field, Operator = DataFilterOperator.In, Values = [], IsJoinKey = true });
+
+        // Act
+        var joinedRows = Rows(await ReportDesignerTestServices.ReadAsync(source, joined, TestContext.Current.CancellationToken));
+        var joinedAndFilteredRows = Rows(await ReportDesignerTestServices.ReadAsync(source, joinedAndFiltered, TestContext.Current.CancellationToken));
+        var none = await ReportDesignerTestServices.ReadAsync(source, empty, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotEmpty(joinedRows);
+        Assert.All(joinedRows, row => Assert.Equal("conversation-1", row[field]));
+        Assert.Equal(joinedRows.Count, joinedAndFilteredRows.Count);
+        Assert.Empty(none.Rows);
     }
 
     [Fact]

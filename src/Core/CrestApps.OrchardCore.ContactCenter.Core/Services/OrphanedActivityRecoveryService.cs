@@ -32,6 +32,11 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
 
     private const string OrphanRecoveredReasonCode = "orphaned-recovered";
 
+    /// <summary>
+    /// The reason recorded on an inbound call whose caller hung up before any agent answered.
+    /// </summary>
+    internal const string CallerAbandonedReasonCode = "caller-abandoned";
+
     private readonly ISession _session;
     private readonly IInteractionManager _interactionManager;
     private readonly IActivityReservationManager _reservationManager;
@@ -42,6 +47,7 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
     private readonly IClock _clock;
     private readonly ILogger _logger;
     private readonly IDialerAttemptFinalizer _dialerAttemptFinalizer;
+    private readonly IInteractionEventStore _eventStore;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrphanedActivityRecoveryService"/> class.
@@ -59,6 +65,7 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
     /// The finalizer that dispositions a campaign attempt that ended before an agent was connected, when the call's own
     /// end did not (the event was lost or failed), instead of dialing it again or failing it.
     /// </param>
+    /// <param name="eventStore">The interaction event log, which says whether an inbound caller abandoned the call.</param>
     public OrphanedActivityRecoveryService(
         ISession session,
         IInteractionManager interactionManager,
@@ -69,7 +76,8 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
         IQueueItemManager queueItemManager,
         IClock clock,
         ILogger<OrphanedActivityRecoveryService> logger,
-        IDialerAttemptFinalizer dialerAttemptFinalizer)
+        IDialerAttemptFinalizer dialerAttemptFinalizer,
+        IInteractionEventStore eventStore)
     {
         _session = session;
         _interactionManager = interactionManager;
@@ -81,6 +89,7 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
         _clock = clock;
         _logger = logger;
         _dialerAttemptFinalizer = dialerAttemptFinalizer;
+        _eventStore = eventStore;
     }
 
     /// <inheritdoc/>
@@ -181,10 +190,29 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
             return false;
         }
 
+        // The call is over but its agent is still wrapping it up, and the disposition they give is what finishes the
+        // record. Live, an agent taking longer than the grace period over a call an AI handed them had it failed under
+        // them. A wrap-up nobody finishes is closed by the agent availability recovery once it runs past the longest
+        // allowed, and the record is recovered on the pass after that.
+        if (interaction is { WrapUpStartedUtc: not null, WrapUpCompletedUtc: null })
+        {
+            return false;
+        }
+
         // A campaign call that ended before any agent was connected is the dialer's to disposition: its own end should
         // have done it, and when that was lost this finishes it the same way rather than dialing it again or failing it.
         if (await TryFinalizeDialerAttemptAsync(interaction, cancellationToken))
         {
+            return true;
+        }
+
+        // An inbound caller who hung up before any agent answered -- in the phone menu or while waiting -- abandoned
+        // the call. Nothing else closes the record of such a call, and failing it here reported every caller who gave
+        // up as a call that broke: live, two callers who hung up in the menu were both recorded as failed.
+        if (await IsAbandonedInboundCallAsync(interaction, cancellationToken))
+        {
+            await CloseAsync(activity, now, ActivityStatus.Cancelled, CallerAbandonedReasonCode, cancellationToken);
+
             return true;
         }
 
@@ -260,17 +288,7 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
 
     private async Task TerminateAsync(OmnichannelActivity activity, DateTime now, CancellationToken cancellationToken)
     {
-        await DropQueueItemAsync(activity.ItemId, requeue: false, cancellationToken);
-
-        var workState = await ClearWorkStateAsync(activity.ItemId, ActivityAssignmentStatus.Released, cancellationToken);
-
-        await _activityWriter.UpdateAsync(activity.ItemId, target =>
-        {
-            target.Status = ActivityStatus.Failed;
-            target.TerminalReasonCode = OrphanRecoveredReasonCode;
-            target.CompletedUtc = now;
-            ContactCenterWorkStateProjector.Apply(target, workState);
-        }, cancellationToken);
+        await CloseAsync(activity, now, ActivityStatus.Failed, OrphanRecoveredReasonCode, cancellationToken);
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
@@ -278,6 +296,51 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
                 "Recovered orphaned Contact Center activity '{ActivityItemId}' to Failed because it may have connected; it was not re-dialed.",
                 activity.ItemId.SanitizeLogValue());
         }
+    }
+
+    private async Task CloseAsync(OmnichannelActivity activity, DateTime now, ActivityStatus status, string reasonCode, CancellationToken cancellationToken)
+    {
+        await DropQueueItemAsync(activity.ItemId, requeue: false, cancellationToken);
+
+        var workState = await ClearWorkStateAsync(activity.ItemId, ActivityAssignmentStatus.Released, cancellationToken);
+
+        await _activityWriter.UpdateAsync(activity.ItemId, target =>
+        {
+            target.Status = status;
+            target.TerminalReasonCode = reasonCode;
+            target.CompletedUtc = now;
+            ContactCenterWorkStateProjector.Apply(target, workState);
+        }, cancellationToken);
+
+        if (status != ActivityStatus.Failed && _logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Closed orphaned Contact Center activity '{ActivityItemId}' as {Status} ({ReasonCode}).",
+                activity.ItemId.SanitizeLogValue(),
+                status,
+                reasonCode);
+        }
+    }
+
+    private async Task<bool> IsAbandonedInboundCallAsync(Interaction interaction, CancellationToken cancellationToken)
+    {
+        if (interaction is not { Direction: InteractionDirection.Inbound } || _eventStore is null)
+        {
+            return false;
+        }
+
+        // Only a recorded abandon: an inbound call with no events at all reads as abandoned to the classifier, and a
+        // record is only closed here on evidence.
+        var events = await _eventStore.GetByAggregateWindowAsync(
+            nameof(Interaction),
+            InteractionOutcomeClassifier.EvidenceEventTypes,
+            [interaction.ItemId],
+            interaction.CreatedUtc,
+            (interaction.EndedUtc ?? interaction.CreatedUtc).AddDays(1),
+            cancellationToken);
+
+        return events.Any(value => value?.EventType == ContactCenterConstants.Events.CallAbandoned) &&
+            InteractionOutcomeClassifier.FromEvents(events).IsAbandoned(interaction);
     }
 
     private static bool WasAnsweredByMachine(Interaction interaction)

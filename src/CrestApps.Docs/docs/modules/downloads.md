@@ -103,7 +103,7 @@ The **Download entitlements** data set (`DownloadEntitlements`) has one row per 
 
 ## Reports to adapt
 
-The **Reports: download reports to adapt** recipe (`DownloadsReportBuilderReports`) turns on the Report Builder and adds a report built from this data set, under the **Store** category. It shows what the built-in **Downloads** report shows, so you can open it in the builder, change it, and save it as your own. The person who runs the recipe owns it, and it reads with that person's access.
+The **Reports: download reports to adapt** recipe (`DownloadsReportBuilderReports`) turns on the Report Builder and adds a report built from this data set, in the **Store** report group. It shows what the built-in **Downloads** report shows, so you can open it in the builder, change it, and save it as your own. The person who runs the recipe owns it, and it reads with that person's access.
 
 | Report | Built from | Matches the built-in report |
 | --- | --- | --- |

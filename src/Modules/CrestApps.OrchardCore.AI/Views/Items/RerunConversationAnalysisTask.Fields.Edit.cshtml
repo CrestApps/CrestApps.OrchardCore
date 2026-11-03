@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.AI.Workflows.ViewModels
+
+@model RerunConversationAnalysisTaskViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="SessionId">
+    <label class="ocat-label ocat-label-required" asp-for="SessionId">@T["Conversation"]</label>
+    <div class="ocat-end">
+        <input type="text" class="form-control font-monospace" asp-for="SessionId" />
+        <span asp-validation-for="SessionId"></span>
+        <span class="hint">@T["A Liquid expression for the AI session to analyze again with the profile's current post-session tasks and conversion goals. The new results are in <code>Workflow.Output.Results</code>."]</span>
+    </div>
+</div>

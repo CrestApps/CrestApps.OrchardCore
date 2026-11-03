@@ -481,6 +481,7 @@ public sealed class ReportViewSnapshotTests : IAsyncLifetime
         return new ReportDesignService(
             Catalog<ReportDesign>(),
             views,
+            Catalog<ReportGroup>(),
             new InMemorySharedLinkManager(),
             services.GetRequiredService<ReportViewSnapshotStore>(),
             services.GetRequiredService<ReportQueryPlanner>(),

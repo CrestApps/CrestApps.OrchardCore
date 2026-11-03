@@ -7,6 +7,7 @@ using CrestApps.Core.AI.ResponseHandling;
 using CrestApps.Core.AI.Security;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
+using CrestApps.OrchardCore.AI.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -95,6 +96,12 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
             !string.IsNullOrWhiteSpace(personaMetadata.PersonaId))
         {
             chatSession.PersonaId = personaMetadata.PersonaId;
+        }
+
+        // Kept for reporting: the version of the profile that answers, so versions can be compared.
+        if (profile.TryGet<AIProfileVersionMetadata>(out var versionMetadata) && versionMetadata.Version > 0)
+        {
+            chatSession.Put(new AIProfileVersionMetadata { Version = versionMetadata.Version });
         }
 
         var user = _httpContextAccessor.HttpContext?.User;

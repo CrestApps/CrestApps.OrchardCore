@@ -29,6 +29,23 @@ public sealed class ReportVisualDefinition
     public int Width { get; set; } = 12;
 
     /// <summary>
+    /// Gets or sets the identifier of the container the visual is shown in, or <see langword="null"/> to show it on its
+    /// own. A container is placed where its first visual is, and holds its visuals in their order.
+    /// </summary>
+    public string ContainerId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the <see cref="ReportNamedQuery"/> whose result the visual shows, or
+    /// <see langword="null"/> for the report's main query.
+    /// </summary>
+    public string QueryId { get; set; }
+
+    /// <summary>
+    /// Gets or sets what clicking the visual does, or <see langword="null"/> when clicking it does nothing.
+    /// </summary>
+    public ReportVisualAction Action { get; set; }
+
+    /// <summary>
     /// Gets or sets the chart type, when <see cref="Type"/> is <see cref="ReportVisualType.Chart"/>.
     /// </summary>
     public ReportChartType ChartType { get; set; }

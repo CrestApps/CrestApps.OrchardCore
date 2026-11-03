@@ -412,7 +412,7 @@ The gateway's customer identifier, the history messages and what the entitlement
 
 ## Reports to adapt
 
-The **Reports: subscription reports to adapt** recipe (`SubscriptionsReportBuilderReports`) turns on the Report Builder and adds reports built from the `Subscriptions` data set, under the **Store** category. They show what the built-in reports they match show, so you can open one in the builder, change it, and save it as your own. The person who runs the recipe owns them, and they read with that person's access.
+The **Reports: subscription reports to adapt** recipe (`SubscriptionsReportBuilderReports`) turns on the Report Builder and adds reports built from the `Subscriptions` data set, in the **Store** report group. They show what the built-in reports they match show, so you can open one in the builder, change it, and save it as your own. The person who runs the recipe owns them, and they read with that person's access.
 
 | Report | Built from | Matches the built-in report |
 | --- | --- | --- |

@@ -518,7 +518,7 @@ public sealed class OrderReportDataSourceTests : IAsyncLifetime
         Assert.Equal(
             ["store-sales-by-day", "store-sales-by-product", "store-sales-by-country", "store-tax-by-jurisdiction", "store-discounts", "store-refunds", "store-disputes", "store-orders-to-ship"],
             designs.Select(design => design.ItemId));
-        Assert.All(designs, design => Assert.Equal("Store", design.Category));
+        Assert.All(ReportRecipeDesigns.GroupPaths("CrestApps.OrchardCore.Orders", "commerce-report-builder-reports.recipe.json"), group => Assert.Equal("Store", group));
 
         // Three orders were paid, one a day; the canceled one never was.
         Assert.Equal(3, results["store-sales-by-day"].Rows.Count);

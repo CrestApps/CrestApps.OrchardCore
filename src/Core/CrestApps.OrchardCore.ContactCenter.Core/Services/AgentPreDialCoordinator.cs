@@ -252,32 +252,45 @@ public sealed partial class AgentPreDialCoordinator : IAgentPreDialCoordinator
             return false;
         }
 
-        await using var acquiredLock = locker;
+        AgentPreDialLeg joinedLeg;
 
-        var leg = await _store.FindAsync(reservationId, cancellationToken);
-
-        if (leg is null)
+        await using (locker)
         {
-            return false;
+            var leg = await _store.FindAsync(reservationId, cancellationToken);
+
+            if (leg is null)
+            {
+                return false;
+            }
+
+            if (leg.BridgedUtc.HasValue)
+            {
+                return true;
+            }
+
+            leg.CallerReadyUtc ??= _clock.UtcNow;
+
+            if (!leg.AgentAnsweredUtc.HasValue)
+            {
+                await SaveAsync(leg, cancellationToken);
+
+                return false;
+            }
+
+            // The agent's device answered first; the caller being ready is the second half.
+            if (!await BridgeAsync(leg, cancellationToken))
+            {
+                return false;
+            }
+
+            joinedLeg = leg;
         }
 
-        if (leg.BridgedUtc.HasValue)
-        {
-            return true;
-        }
+        // This runs inside the answer command that readied the caller, so the join is committed in a scope of its own, and
+        // only once the offer's lock is released (see RecordJoinedAsync).
+        await RecordJoinedAsync(joinedLeg, inOwnScope: true);
 
-        leg.CallerReadyUtc ??= _clock.UtcNow;
-
-        if (leg.AgentAnsweredUtc.HasValue)
-        {
-            // The agent's device answered first; the caller being ready is the second half. This runs inside the answer
-            // command that readied the caller, so the join is committed in a scope of its own (see RecordJoinedAsync).
-            return await BridgeAsync(leg, recordInOwnScope: true, cancellationToken);
-        }
-
-        await SaveAsync(leg, cancellationToken);
-
-        return false;
+        return true;
     }
 
     /// <inheritdoc/>
@@ -305,138 +318,77 @@ public sealed partial class AgentPreDialCoordinator : IAgentPreDialCoordinator
             return;
         }
 
-        await using var acquiredLock = locker;
+        AgentPreDialLeg joinedLeg = null;
 
-        var leg = await _store.FindAsync(reservationId, cancellationToken);
-
-        if (leg is null || !string.Equals(leg.AgentLegId, agentLegId, StringComparison.Ordinal))
+        await using (locker)
         {
-            // Nothing is tracking this leg any more: its offer ended and was released. It must not be joined to
-            // anyone, and left up it would sit in the agent's ear until it timed out.
-            await HangupAsync(providerName, agentLegId, cancellationToken);
+            var leg = await _store.FindAsync(reservationId, cancellationToken);
 
-            return;
-        }
-
-        if (leg.BridgedUtc.HasValue)
-        {
-            // A redelivered webhook -- or the retry of one whose work failed after the bridge, which is marked before the
-            // join is recorded and outside the work's own transaction (a concurrent update of the call refused its save).
-            // Returning left the agent talking to the customer while still shown "Waiting for a connected call". The
-            // join is recorded again, which changes nothing when it already was.
-            await RecordJoinedAsync(leg, inOwnScope: false);
-
-            return;
-        }
-
-        var reservation = await ReadReservationAsync(reservationId);
-
-        if (reservation is null || !string.Equals(reservation.AgentId, leg.AgentId, StringComparison.Ordinal))
-        {
-            await ReleaseLegAsync(leg, cancellationToken);
-
-            return;
-        }
-
-        switch (reservation.Status)
-        {
-            case ReservationStatus.Pending:
-                // The agent's device answered as the agent clicked, ahead of the accept. The accept joins it.
-                leg.AgentAnsweredUtc ??= _clock.UtcNow;
-                await SaveAsync(leg, cancellationToken);
-                break;
-
-            case ReservationStatus.Accepted:
-                leg.AgentAnsweredUtc ??= _clock.UtcNow;
-
-                if (leg.CallerReadyUtc.HasValue)
-                {
-                    await BridgeAsync(leg, recordInOwnScope: false, cancellationToken);
-                }
-                else
-                {
-                    // Also a parked leg the agent's device answered on arrival: it waits for the customer to answer.
-                    await SaveAsync(leg, cancellationToken);
-                }
-
-                break;
-
-            default:
-                // Declined, expired, revoked or re-offered: this leg belongs to an offer the agent no longer holds.
-                await ReleaseLegAsync(leg, cancellationToken);
-                break;
-        }
-    }
-
-    /// <inheritdoc/>
-    public async Task OnAgentLegEndedAsync(
-        string providerName,
-        string reservationId,
-        string agentLegId,
-        HangupCause? cause,
-        CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrEmpty(reservationId) || string.IsNullOrEmpty(agentLegId))
-        {
-            return;
-        }
-
-        (var locker, var locked) = await AcquireAsync(reservationId);
-
-        if (!locked)
-        {
-            return;
-        }
-
-        await using var acquiredLock = locker;
-
-        var leg = await _store.FindAsync(reservationId, cancellationToken);
-
-        if (leg is null || !string.Equals(leg.AgentLegId, agentLegId, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        await _store.RemoveAsync(leg, cancellationToken);
-
-        if (leg.BridgedUtc.HasValue)
-        {
-            // The agent's leg of a conversation that took place; its end is the call's own business.
-            return;
-        }
-
-        if (leg.ParkedForDialedCall && !leg.CallerReadyUtc.HasValue)
-        {
-            // A parked leg is only a head start. Lost before the customer answered, it fails nothing: the answer finds no
-            // parked leg and rings the agent the ordinary way.
-            if (_logger.IsEnabled(LogLevel.Information))
+            if (leg is null || !string.Equals(leg.AgentLegId, agentLegId, StringComparison.Ordinal))
             {
-                _logger.LogInformation(
-                    "The parked agent leg '{AgentLegId}' of reservation '{ReservationId}' ended before the customer answered ({HangupCause}); the answer will ring the agent.",
-                    agentLegId.SanitizeLogValue(),
-                    reservationId.SanitizeLogValue(),
-                    cause);
+                // Nothing is tracking this leg any more: its offer ended and was released. It must not be joined to
+                // anyone, and left up it would sit in the agent's ear until it timed out.
+                await HangupAsync(providerName, agentLegId, cancellationToken);
+
+                return;
             }
 
-            return;
+            if (leg.BridgedUtc.HasValue)
+            {
+                // A redelivered webhook -- or the retry of one whose work failed after the bridge, which is marked before
+                // the join is recorded and outside the work's own transaction (a concurrent update of the call refused its
+                // save). Returning left the agent talking to the customer while still shown "Waiting for a connected
+                // call". The join is recorded again, which changes nothing when it already was.
+                joinedLeg = leg;
+            }
+            else
+            {
+                var reservation = await ReadReservationAsync(reservationId);
+
+                if (reservation is null || !string.Equals(reservation.AgentId, leg.AgentId, StringComparison.Ordinal))
+                {
+                    await ReleaseLegAsync(leg, cancellationToken);
+
+                    return;
+                }
+
+                switch (reservation.Status)
+                {
+                    case ReservationStatus.Pending:
+                        // The agent's device answered as the agent clicked, ahead of the accept. The accept joins it.
+                        leg.AgentAnsweredUtc ??= _clock.UtcNow;
+                        await SaveAsync(leg, cancellationToken);
+                        break;
+
+                    case ReservationStatus.Accepted:
+                        leg.AgentAnsweredUtc ??= _clock.UtcNow;
+
+                        if (leg.CallerReadyUtc.HasValue)
+                        {
+                            if (await BridgeAsync(leg, cancellationToken))
+                            {
+                                joinedLeg = leg;
+                            }
+                        }
+                        else
+                        {
+                            // Also a parked leg the agent's device answered on arrival: it waits for the customer to answer.
+                            await SaveAsync(leg, cancellationToken);
+                        }
+
+                        break;
+
+                    default:
+                        // Declined, expired, revoked or re-offered: this leg belongs to an offer the agent no longer holds.
+                        await ReleaseLegAsync(leg, cancellationToken);
+                        break;
+                }
+            }
         }
 
-        var reservation = await ReadReservationAsync(reservationId);
-
-        if (reservation?.Status == ReservationStatus.Accepted &&
-            string.Equals(reservation.AgentId, leg.AgentId, StringComparison.Ordinal))
+        if (joinedLeg is not null)
         {
-            // The agent accepted, and the leg that was to carry them to the caller is gone before it was joined. This
-            // is the same failure as an agent leg that could not be reached, and ends the same way.
-            _logger.LogWarning(
-                "The pre-dialed agent leg of accepted offer '{ReservationId}' ended before it was joined to the caller.",
-                reservationId.SanitizeLogValue());
-
-            await _agentLegFailureService.FailAsync(
-                leg.ProviderName,
-                leg.ProviderCallId,
-                cause ?? HangupCause.NoAnswer,
-                cancellationToken);
+            await RecordJoinedAsync(joinedLeg, inOwnScope: false);
         }
     }
 
@@ -556,7 +508,8 @@ public sealed partial class AgentPreDialCoordinator : IAgentPreDialCoordinator
         await ReleaseAsync(reservationId, cancellationToken);
     }
 
-    private async Task<bool> BridgeAsync(AgentPreDialLeg leg, bool recordInOwnScope, CancellationToken cancellationToken)
+    // Joins the two; the caller records the join once it has released the offer's lock (see RecordJoinedAsync).
+    private async Task<bool> BridgeAsync(AgentPreDialLeg leg, CancellationToken cancellationToken)
     {
         if (_voiceProviderResolver.Get(leg.ProviderName) is not IContactCenterVoiceAgentPreDialProvider provider)
         {
@@ -585,8 +538,6 @@ public sealed partial class AgentPreDialCoordinator : IAgentPreDialCoordinator
                     leg.ProviderCallId.SanitizeLogValue());
             }
 
-            await RecordJoinedAsync(leg, recordInOwnScope);
-
             return true;
         }
 
@@ -612,6 +563,11 @@ public sealed partial class AgentPreDialCoordinator : IAgentPreDialCoordinator
     // the agent still Reserved, shown "Waiting for a connected call" and no record. Inside that command nothing would
     // commit it, so it is committed in a scope of its own; it is never cancelled, as the bridge cannot be taken back.
     // Recording it again, as the command's projection or a redelivered answer then does, changes nothing.
+    //
+    // Never recorded while holding the offer's lock. The call's answer webhook writes the same call in its transaction and
+    // then waits on that lock to take the parked leg, so recording under it waited on the webhook's row locks while the
+    // webhook waited on the lock: both stalled until the lock timed out, the join lost its save, and by then the answer
+    // command's own timeout had abandoned it, leaving the agent Reserved with no record until the customer hung up.
     private async Task RecordJoinedAsync(AgentPreDialLeg leg, bool inOwnScope)
     {
         try

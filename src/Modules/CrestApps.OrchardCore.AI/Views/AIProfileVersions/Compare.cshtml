@@ -1,0 +1,162 @@
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AIProfileVersionCompareViewModel
+
+@{
+    var profileName = Model.Profile.DisplayText ?? Model.Profile.Name;
+    var changed = Model.Rows.Count(row => row.Changed);
+    var left = T["Version {0}", Model.Version.Version];
+    var right = Model.Other is null ? T["Now (version {0})", Model.CurrentVersion] : T["Version {0}", Model.Other.Version];
+    var sectionTitles = new Dictionary<string, string>
+    {
+        ["General"] = T["General"].Value,
+        ["Instructions"] = T["Instructions"].Value,
+        ["Parameters"] = T["Parameters"].Value,
+        ["Capabilities"] = T["Capabilities"].Value,
+        ["Prompt Security"] = T["Prompt Security"].Value,
+        ["Data Processing & Metrics"] = T["Data Processing & Metrics"].Value,
+        ["Other"] = T["Other"].Value,
+    };
+}
+
+<zone Name="Title">
+    <breadcrumb name="AIProfileVersionsCompare" title="@T["Version {0}", Model.Version.Version]">
+        <breadcrumb-item id="AIProfiles" action="Index" controller="Profiles" area="CrestApps.OrchardCore.AI" permission="@AIPermissions.ManageAIProfiles.Name">@T["AI Profiles"]</breadcrumb-item>
+        <breadcrumb-item id="AIProfile" action="Edit" controller="Profiles" area="CrestApps.OrchardCore.AI" route-id="@Model.Profile.ItemId">@profileName</breadcrumb-item>
+        <breadcrumb-item id="AIProfileVersions" action="Index" controller="AIProfileVersions" area="CrestApps.OrchardCore.AI" route-profileId="@Model.Profile.ItemId">@T["Versions"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 gy-2 align-items-center">
+            <div class="col-12 col-lg">
+                @if (changed == 0)
+                {
+                    <span>@T["{0} and {1} are the same.", left, right]</span>
+                }
+                else if (changed == 1)
+                {
+                    <span>@T["One setting differs between {0} and {1}.", left, right]</span>
+                }
+                else
+                {
+                    <span>@T["{0} settings differ between {1} and {2}.", changed, left, right]</span>
+                }
+            </div>
+            <div class="col-auto">
+                <form method="get" asp-action="Compare" asp-route-id="@Model.Version.ItemId" class="d-flex align-items-center gap-2">
+                    <label for="CompareWith" class="text-nowrap mb-0">@T["Compare with"]</label>
+                    <select id="CompareWith" name="with" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="" selected="@(Model.Other is null)">@T["The profile now (version {0})", Model.CurrentVersion]</option>
+                        @foreach (var version in Model.Versions.Where(version => version.ItemId != Model.Version.ItemId && version.Version != Model.CurrentVersion))
+                        {
+                            <option value="@version.ItemId" selected="@(Model.Other?.ItemId == version.ItemId)">@T["Version {0}", version.Version]@(string.IsNullOrWhiteSpace(version.Note) ? "" : " – " + version.Note)</option>
+                        }
+                    </select>
+                </form>
+            </div>
+            <div class="col-auto">
+                <div class="form-check form-switch mb-0">
+                    <input type="checkbox" class="form-check-input" id="OnlyChanges" data-only-changes />
+                    <label class="form-check-label" for="OnlyChanges">@T["Only differences"]</label>
+                </div>
+            </div>
+            @if (Model.Version.Version != Model.CurrentVersion)
+            {
+                <div class="col-auto">
+                    <form asp-action="Restore" asp-route-id="@Model.Version.ItemId" method="post" class="no-multisubmit">
+                        <button type="submit" class="btn btn-primary btn-sm">@T["Restore version {0}", Model.Version.Version]</button>
+                    </form>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table align-top" data-version-compare>
+        <thead>
+            <tr>
+                <th scope="col" class="w-25">@T["Setting"]</th>
+                <th scope="col">@left</th>
+                <th scope="col">@right</th>
+            </tr>
+        </thead>
+        @foreach (var section in Model.Rows.GroupBy(row => row.Section ?? "Other"))
+        {
+            var sectionChanged = section.Any(row => row.Changed);
+
+            <tbody data-section data-changed="@(sectionChanged ? "true" : "false")">
+                <tr class="table-light">
+                    <th scope="rowgroup" colspan="3">
+                        @(sectionTitles.TryGetValue(section.Key, out var title) ? title : section.Key)
+                        @if (sectionChanged)
+                        {
+                            <span class="badge ta-badge fw-normal ms-1">@T["{0} changed", section.Count(row => row.Changed)]</span>
+                        }
+                    </th>
+                </tr>
+                @foreach (var row in section)
+                {
+                    <tr class="@(row.Changed ? "table-warning" : null)" data-changed="@(row.Changed ? "true" : "false")">
+                        <th scope="row" class="fw-normal">
+                            @row.Label
+                            @if (row.Changed)
+                            {
+                                <span class="badge ta-badge fw-normal ms-1" title="@T["Changed"]"><i class="fa-solid fa-pen text-warning" aria-hidden="true"></i> @T["Changed"]</span>
+                            }
+                        </th>
+                        @foreach (var value in new[] { row.Then, row.Now })
+                        {
+                            <td>
+                                @if (string.IsNullOrEmpty(value))
+                                {
+                                    <span class="text-muted">@T["(empty)"]</span>
+                                }
+                                else if (row.IsCode)
+                                {
+                                    <pre class="mb-0 small text-wrap text-break"><code>@value</code></pre>
+                                }
+                                else if (row.Multiline)
+                                {
+                                    <div class="text-break" style="white-space: pre-wrap">@value</div>
+                                }
+                                else
+                                {
+                                    <span class="text-break">@value</span>
+                                }
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        }
+    </table>
+</div>
+
+<script at="Foot">
+    (function () {
+        var toggle = document.querySelector('[data-only-changes]');
+        var table = document.querySelector('[data-version-compare]');
+
+        if (!toggle || !table) {
+            return;
+        }
+
+        var apply = function () {
+            var only = toggle.checked;
+
+            table.querySelectorAll('tbody[data-section]').forEach(function (section) {
+                section.classList.toggle('d-none', only && section.dataset.changed !== 'true');
+
+                section.querySelectorAll('tr[data-changed]').forEach(function (row) {
+                    row.classList.toggle('d-none', only && row.dataset.changed !== 'true');
+                });
+            });
+        };
+
+        toggle.addEventListener('change', apply);
+    })();
+</script>

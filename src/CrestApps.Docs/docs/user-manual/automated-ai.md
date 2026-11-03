@@ -56,7 +56,13 @@ While the conversation runs:
 
 Follow the same steps with **Phone** as the channel and an address used for voice calls. The AI places each call, talks with the person who answers, and hangs up when the conversation is done. Before every call the contact is checked against opt-outs, national do-not-call registries, and the calling window, which needs the **Contact Center Outbound Dialer** feature.
 
-### When a voicemail answers
+### Phone menus, keys and call screening
+
+On every AI phone call the AI can press keys. When a business answers with an automated menu, the AI listens to the options and presses the key, or enters the extension it was given, that gets it to the right person. When a phone screens the call by asking who is calling and why, the AI says its name, the business and the reason in one sentence, and waits.
+
+When the caller presses keys on their phone, the AI hears them as part of the conversation, for example when it asks them to enter an account number.
+
+## When a voicemail answers
 
 When a voicemail or answering machine answers, the AI does not talk to the recording. It lets the greeting and the tone finish, leaves one short message (who is calling, why, and that it will try again, with no questions) and hangs up. On a profile that holds the call as a live conversation, the message is spoken in the same voice and the same language as the rest of the call. The activity is completed with the disposition for the *Answering machine* outcome when the subject flow has one (see [Dispositions](dispositions.md#outcomes)), and its notes say the call reached voicemail and left a message.
 
@@ -114,7 +120,7 @@ This needs the **SMS Omnichannel Automation** and **SMS Messaging Channel** feat
 
 ## When the conversation ends
 
-The AI picks a disposition using your hints and what the customer said, the summary is saved as the activity's notes, and the subject flow runs exactly as if an agent had completed it. When the customer never spoke, or decided nothing your dispositions record, no disposition is picked for them: the call takes the one for its outcome, such as the one wired to **Try Again** so the contact is called again, or the one for *No answer* or *Disconnected* (see [Dispositions](dispositions.md#outcomes)). Open **Review AI conversation** on the activity to read the full transcript.
+The AI picks a disposition using your hints and what the customer said, the summary is saved as the activity's notes, and the subject flow runs exactly as if an agent had completed it. When the customer never spoke, or decided nothing your dispositions record, no disposition is picked for them: the call takes the one for its outcome, such as the one wired to **Try Again** so the contact is called again, or the one for *No answer* or *Disconnected* (see [Dispositions](dispositions.md#outcomes)). Open **Review AI conversation** on the activity to read the full transcript. When the profile's [AI persona](../ai/personas.md) has a **Language**, the summary is written in that language, and so is the briefing an agent reads when a call is handed to them.
 
 To find it, open the contact from **Interaction Center > Contacts**, click **List Activities**, and look under **Completed Activities**: each completed AI activity shows its disposition, channel and summary, with a **Review AI conversation** button. The transcript is read-only: the page says the conversation was handled automatically, and there is no reply box. The screencast opens a completed AI phone call and reads the whole conversation:
 
@@ -127,3 +133,5 @@ If the AI's live voice connection drops in the middle of a call, the platform fi
 ### Live agent handoff
 
 If the subject allows **live agent handoff**, the AI can pass the customer to the handoff queue when they ask for a person, look like a qualified lead, or are frustrated. SMS conversations appear in the [Messaging workspace](messaging.md); calls ring an agent in the queue.
+
+On a call, the AI tells the caller in its own words that it is connecting them. When nobody in the queue is free, the caller then hears that they are in the queue; when the queue is closed and a callback is booked instead, they hear that someone will call them back, and the call ends. Those two lines are English, read by the telephony provider's voice, so they are said only when the profile's [AI persona](../ai/personas.md) speaks English or names no language; on a call held in another language the caller hears only the AI's own words.

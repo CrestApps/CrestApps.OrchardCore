@@ -49,6 +49,9 @@ public sealed partial class RealtimeVoiceConversationRunner
 
         AttachTool(orchestration, EndCallTool.ToolName, "Ends the phone call once the conversation is over.");
 
+        // A call the AI placed may be answered by a phone menu, which only keys get through.
+        AttachTool(orchestration, PressKeysTool.ToolName, "Presses keys on the phone keypad to get through a phone menu.");
+
         // Escalation, when this call has somewhere to escalate to. The tool and the guidance travel together:
         // a tool the model is never told about is not used, and guidance without a tool has the model promising
         // a transfer that nothing performs.
@@ -85,13 +88,7 @@ public sealed partial class RealtimeVoiceConversationRunner
         orchestration.SystemMessageBuilder.AppendLine();
         orchestration.SystemMessageBuilder.AppendLine("## Who you are calling");
         orchestration.SystemMessageBuilder.AppendLine();
-        orchestration.SystemMessageBuilder.AppendLine(
-            string.IsNullOrWhiteSpace(call?.ContactName)
-                ? "You do not know the name of the person you are calling. Do not use a name, and never guess or " +
-                  "invent one; ask who you are speaking with if you need it."
-                : $"You are calling {call.ContactName}. That is the only name you may use for them. Never use any " +
-                  "other name, and never guess or invent one — if the person says they are somebody else, believe " +
-                  "them and adjust.");
+        orchestration.SystemMessageBuilder.AppendLine(VoiceCallGuidance.WhoYouAreCalling(call?.ContactName));
 
         // The tenant's notice that the call is recorded, ahead of the guidance about the opening it belongs to.
         var recordingDisclosure = VoiceCallGuidance.RecordingDisclosure(call?.RecordingDisclosure);
@@ -118,6 +115,7 @@ public sealed partial class RealtimeVoiceConversationRunner
         orchestration.SystemMessageBuilder.AppendLine("## Ending the call");
         orchestration.SystemMessageBuilder.AppendLine();
         orchestration.SystemMessageBuilder.AppendLine(VoiceCallGuidance.EndingTheCall);
+        orchestration.SystemMessageBuilder.AppendLine(VoiceCallGuidance.PhoneMenusAndScreening);
     }
 
     /// <summary>
@@ -210,7 +208,7 @@ public sealed partial class RealtimeVoiceConversationRunner
 
             if (conversation is not null)
             {
-                await AskForTheGreetingAsync(conversation, cancellationToken);
+                await AskForTheGreetingAsync(conversation, context, cancellationToken);
             }
         }
         catch
@@ -275,12 +273,25 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// customer as a generic assistant ("Hi there! I'm ChatGPT"). What the opening must be is said in the session's
     /// own instructions instead (see VoiceCallGuidance.WhenTalkedOver).
     /// </para>
+    /// <para>
+    /// A call with a recording disclosure is the exception: its greeting is asked for with the session's instructions
+    /// followed by the disclosure to begin with. Told only in the session's instructions, live, the model opened with
+    /// its own words for the notice.
+    /// </para>
     /// </remarks>
-    private async Task AskForTheGreetingAsync(IRealtimeConversation conversation, CancellationToken cancellationToken)
+    private async Task AskForTheGreetingAsync(IRealtimeConversation conversation, RealtimeVoiceConversationContext context, CancellationToken cancellationToken)
     {
+        var opening = VoiceCallGuidance.OpeningWithDisclosure(context?.RecordingDisclosure);
+
+        // A disclosure is heard to the end: see the Opening partial.
+        Volatile.Write(ref _protectOpening, opening is null ? 0 : 1);
+
         // Quick to hear the caller's first words, then the configured detector: see the Opening partial.
         await ApplyOpeningTurnDetectionAsync(conversation, cancellationToken);
-        await conversation.RequestUnpromptedResponseAsync(cancellationToken: cancellationToken);
+
+        await conversation.RequestUnpromptedResponseAsync(
+            opening is null ? null : WithSessionInstructions(opening),
+            cancellationToken);
     }
 
     // The conversation could not be started, so a stream that opened anyway has nothing to carry.
@@ -314,6 +325,8 @@ public sealed partial class RealtimeVoiceConversationRunner
         try
         {
             using var usageScope = AIUsageScope.Begin(contextType: AIUsageCategories.Voice);
+            var (voice, speechLanguage) = await SelectCallSpeechAsync(ShellScope.Services, context, cancellationToken);
+
             return await _orchestrator.StartAsync(new RealtimeOrchestrationRequest
             {
                 Resource = context.Profile,
@@ -324,7 +337,12 @@ public sealed partial class RealtimeVoiceConversationRunner
                 // profile itself. Only the activity was read before, and a batch does not set a voice unless
                 // somebody picks one — so the voice an operator selected on the profile was silently ignored and
                 // every realtime call used the model's default, whatever the profile said.
-                Voice = await ResolveVoiceAsync(context, cancellationToken),
+                Voice = voice,
+
+                // The language the caller is transcribed in, and the one the model is held to. Not given one, the
+                // transcription guessed each phrase's language on its own: live, a Greek caller's greeting came back
+                // as Finnish, and the call's summary and outcome were then written from that transcript.
+                SpeechLanguage = speechLanguage,
 
                 // A caller who talks over the assistant is interrupting a person as far as they are concerned,
                 // and being talked through is the single most common complaint about automated calls.
@@ -373,9 +391,16 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// </remarks>
     /// <param name="prompt">What this response is for.</param>
     private string WithSessionInstructions(string prompt)
-    {
-        var sessionInstructions = _sessionInstructions?.ToString();
+        => WithSessionInstructions(_sessionInstructions?.ToString(), prompt);
 
+    /// <summary>
+    /// The instructions for one prompted response: <paramref name="sessionInstructions"/>, followed by what this
+    /// response is for.
+    /// </summary>
+    /// <param name="sessionInstructions">The instructions the session was opened with.</param>
+    /// <param name="prompt">What this response is for.</param>
+    internal static string WithSessionInstructions(string sessionInstructions, string prompt)
+    {
         if (string.IsNullOrWhiteSpace(sessionInstructions))
         {
             return prompt;
@@ -385,26 +410,46 @@ public sealed partial class RealtimeVoiceConversationRunner
     }
 
     /// <summary>
-    /// The voice this call should be spoken in: the one the activity was loaded with, then the one configured on
-    /// the profile, then the voice of the persona the profile links to.
+    /// How this call is spoken and heard: the voice it is spoken in, and the language the caller is transcribed in.
     /// </summary>
     /// <remarks>
-    /// The activity only carries a voice when the inventory load explicitly chose one, which is the exception
-    /// rather than the rule. Reading only the activity therefore threw away the profile's own setting, so an
-    /// operator who picked a voice there heard the model's default on every call and had no way to tell why.
-    /// The persona's voice goes through the same resolver the chat hubs use, so it is skipped on a deployment of
-    /// another provider rather than sending the call a voice that provider does not have. Without the AI Personas
-    /// feature there is no persona and the profile's voice is used.
+    /// <para>
+    /// The voice is the one the activity was loaded with, then the one configured on the profile, then the voice of
+    /// the persona the profile links to. The activity only carries a voice when the inventory load explicitly chose
+    /// one, which is the exception rather than the rule. Reading only the activity therefore threw away the
+    /// profile's own setting, so an operator who picked a voice there heard the model's default on every call and
+    /// had no way to tell why. The persona's voice goes through the same resolver the chat hubs use, so it is skipped
+    /// on a deployment of another provider rather than sending the call a voice that provider does not have.
+    /// </para>
+    /// <para>
+    /// The language is the persona's, as the turn-based loop speaks and listens in it (see
+    /// <see cref="VoiceAgentConversationLoop.SelectCallSpeechAsync"/>): the language part of its tag only, <c>el</c>
+    /// for <c>el-GR</c>, because OpenAI's realtime transcription takes an ISO-639-1 code and its client passes the
+    /// value on as it is given. A persona with no language leaves it to the model, as before.
+    /// </para>
+    /// <para>
+    /// Without the AI Personas feature, or outside a shell scope, there is no persona: the profile's voice is used,
+    /// and no language is given.
+    /// </para>
     /// </remarks>
+    /// <param name="services">The tenant's services, or <see langword="null"/> outside a shell scope.</param>
     /// <param name="context">The call being held.</param>
     /// <param name="cancellationToken">The call's token.</param>
-    private static async Task<string> ResolveVoiceAsync(RealtimeVoiceConversationContext context, CancellationToken cancellationToken)
+    internal static async Task<(string Voice, string SpeechLanguage)> SelectCallSpeechAsync(
+        IServiceProvider services,
+        RealtimeVoiceConversationContext context,
+        CancellationToken cancellationToken)
     {
+        var persona = services is null
+            ? null
+            : await services.ResolvePersonaAsync(context.Profile, cancellationToken);
+        var speechLanguage = LanguagePart(persona?.Language);
+
         var activityVoice = context.Activity?.TextToSpeechVoiceId;
 
         if (!string.IsNullOrWhiteSpace(activityVoice))
         {
-            return activityVoice.Trim();
+            return (activityVoice.Trim(), speechLanguage);
         }
 
         string profileVoice = null;
@@ -416,19 +461,25 @@ public sealed partial class RealtimeVoiceConversationRunner
             profileVoice = settings.VoiceName.Trim();
         }
 
-        var services = ShellScope.Services;
-
         if (services is null)
         {
-            return profileVoice;
+            return (profileVoice, speechLanguage);
         }
 
-        var persona = await services.ResolvePersonaAsync(context.Profile, cancellationToken);
         var voice = await services.SelectPersonaVoiceAsync(persona, profileVoice, context.RealtimeDeploymentName, defaultVoice: null, cancellationToken);
 
         // Nothing chosen anywhere: let the deployment use whatever it defaults to.
-        return string.IsNullOrWhiteSpace(voice)
-            ? null
-            : voice.Trim();
+        return (string.IsNullOrWhiteSpace(voice) ? null : voice.Trim(), speechLanguage);
+    }
+
+    // The language part of a BCP-47 tag (el for el-GR), or null when there is none.
+    private static string LanguagePart(string language)
+    {
+        if (string.IsNullOrWhiteSpace(language))
+        {
+            return null;
+        }
+
+        return language.Trim().Split('-', '_')[0].ToLowerInvariant();
     }
 }

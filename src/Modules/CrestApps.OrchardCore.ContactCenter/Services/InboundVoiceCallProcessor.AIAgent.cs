@@ -1,4 +1,5 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -14,6 +15,7 @@ public sealed partial class InboundVoiceCallProcessor
 {
     private const string AIAgentReasonCode = "ai_agent";
     private const string AIAgentUnavailableReasonCode = "ai_agent_unavailable";
+    private const string AIAgentDeclinedReasonCode = "ai_agent_declined";
 
     /// <remarks>
     /// The call is recorded as an automated activity with the entry point's AI profile, and answered once the routing
@@ -67,8 +69,44 @@ public sealed partial class InboundVoiceCallProcessor
             return result;
         }
 
-        var activity = await CreateActivityAsync(endpoint, flow, fromAddress, contactItemIds, now, plan.TargetAIProfileId);
+        // The AI Conversation Starting workflows run before the activity is first written, so the profile they choose
+        // and the variables they set are on it from the start.
+        AIConversationStartingResult starting = null;
+
+        var activity = await CreateActivityAsync(
+            endpoint,
+            flow,
+            fromAddress,
+            contactItemIds,
+            now,
+            plan.TargetAIProfileId,
+            async created => starting = await _conversationStarting.StartingAsync(created, cancellationToken));
+
         result.ActivityItemId = activity.ItemId;
+
+        if (starting?.Declined == true)
+        {
+            var declinedInteraction = await CreateInteractionAsync(inboundEvent, activity, null, fromAddress, serviceAddress, null, null, null, plan.EntryPoint);
+            result.InteractionId = declinedInteraction.ItemId;
+            result.Routed = false;
+            result.Reason = string.IsNullOrWhiteSpace(starting.DeclineReason)
+                ? "The AI voice agent's starting workflow declined the call."
+                : starting.DeclineReason;
+            result.ReasonCode = AIAgentDeclinedReasonCode;
+
+            await TerminalizeInboundAsync(
+                activity,
+                declinedInteraction,
+                ActivityStatus.Cancelled,
+                InteractionStatus.Failed,
+                AIAgentDeclinedReasonCode,
+                ProviderCommandType.Reject,
+                now,
+                cancellationToken);
+
+            return result;
+        }
+
         result.Routed = true;
         result.Reason = "The call is answered by the entry point's AI voice agent.";
         result.ReasonCode = AIAgentReasonCode;

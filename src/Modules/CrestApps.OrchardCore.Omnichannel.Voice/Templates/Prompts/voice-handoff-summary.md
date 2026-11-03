@@ -10,8 +10,13 @@ short briefing the agent can read in a few seconds.
 
 In 2-4 plain sentences, with no preamble, labels, headings or quotes, say:
 
-- what the customer wants, and the facts they gave (for example vehicle, budget, timeline, trade-in, contact details);
+- what the customer wants, and the facts they gave (for example what it is about, dates, places, contact details);
 - anything they asked that the assistant did not answer;
 - why they asked for, or were passed to, a person.
 
 Only state what the transcript shows. If the customer said little, say so plainly rather than filling the gaps.
+{% if Language %}
+
+Write the briefing in {{ Language }}, the language of the call and of the agent reading it, even though these
+instructions are in English.
+{% endif %}

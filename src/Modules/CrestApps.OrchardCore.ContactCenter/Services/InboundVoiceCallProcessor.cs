@@ -53,6 +53,7 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
     private readonly IInboundPriorityResolver _priorityResolver;
     private readonly IEnumerable<IInboundAIVoiceAnswerer> _aiVoiceAnswerers;
     private readonly IEnumerable<IRecordingDisclosureProvider> _disclosureProviders;
+    private readonly IOmnichannelAIConversationStarting _conversationStarting;
     private readonly YesSqlSession _session;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -83,6 +84,7 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
     /// <param name="auditRecorder">The recorder that writes each inbound call's interaction to the audit log.</param>
     /// <param name="priorityResolver">The resolver that raises a caller above the configured priority from what is known about them.</param>
     /// <param name="disclosureProviders">The recording disclosure, registered only while call recording is enabled.</param>
+    /// <param name="conversationStarting">Runs the AI Conversation Starting workflows of a call an AI voice agent answers.</param>
     /// <param name="session">The session used to read the caller's earlier calls and callbacks for the priority contributors.</param>
     /// <param name="clock">The clock used to stamp times.</param>
     /// <param name="coordinationOptions">The distributed-lock timings this deployment coordinates inbound routing with.</param>
@@ -110,6 +112,7 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
         IInboundPriorityResolver priorityResolver,
         IEnumerable<IInboundAIVoiceAnswerer> aiVoiceAnswerers,
         IEnumerable<IRecordingDisclosureProvider> disclosureProviders,
+        IOmnichannelAIConversationStarting conversationStarting,
         YesSqlSession session,
         IClock clock,
         IOptions<ContactCenterCoordinationOptions> coordinationOptions,
@@ -137,6 +140,7 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
         _priorityResolver = priorityResolver;
         _aiVoiceAnswerers = aiVoiceAnswerers;
         _disclosureProviders = disclosureProviders;
+        _conversationStarting = conversationStarting;
         _session = session;
         _clock = clock;
         _logger = logger;

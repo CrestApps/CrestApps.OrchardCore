@@ -173,7 +173,7 @@ The store's note on a shipment, the links to its label and tracking page, and th
 
 ## Reports to adapt
 
-The **Reports: shipping reports to adapt** recipe (`ShippingReportBuilderReports`) turns on the Report Builder and adds a report built from these data sets, under the **Store** category. It shows the carriers part of the built-in **Shipping times** report, so you can open it in the builder, change it, and save it as your own. The person who runs the recipe owns it, and it reads with that person's access.
+The **Reports: shipping reports to adapt** recipe (`ShippingReportBuilderReports`) turns on the Report Builder and adds a report built from these data sets, in the **Store** report group. It shows the carriers part of the built-in **Shipping times** report, so you can open it in the builder, change it, and save it as your own. The person who runs the recipe owns it, and it reads with that person's access.
 
 | Report | Built from | Matches the built-in report |
 | --- | --- | --- |

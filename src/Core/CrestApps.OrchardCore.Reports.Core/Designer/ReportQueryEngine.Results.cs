@@ -16,7 +16,7 @@ public sealed partial class ReportQueryEngine
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var plan = run.Plan;
-        var aggregation = plan.IsAggregated ? new Aggregation(plan, run.Weighted) : null;
+        var aggregation = plan.IsAggregated ? new Aggregation(plan, run.Weighted, run.Spellings) : null;
         var outputs = aggregation is null
             ? ProjectAsync(plan, rows, cancellationToken)
             : AggregateAsync(run, aggregation, rows, cancellationToken);
@@ -149,7 +149,7 @@ public sealed partial class ReportQueryEngine
 
         if (run.GroupedRows is { } groupedRows)
         {
-            var aggregation = new Aggregation(plan, run.Weighted);
+            var aggregation = new Aggregation(plan, run.Weighted, run.Spellings);
 
             foreach (var ids in run.Groupings)
             {
@@ -183,21 +183,23 @@ public sealed partial class ReportQueryEngine
         var plan = run.Plan;
         var dimensions = aggregation.DimensionColumns;
         var allPositions = Enumerable.Range(0, dimensions.Length).ToArray();
-        var keptKeys = kept.Select(values => DataKeys.Build(values, dimensions, ignoreCase: false)).ToHashSet(StringComparer.Ordinal);
+        // The kept groups show the smallest spelling of their text and the rows hold the one they are grouped under, so
+        // they are matched without regard to case.
+        var keptKeys = kept.Select(values => DataKeys.Build(values, dimensions, ignoreCase: true)).ToHashSet(StringComparer.Ordinal);
         var subset = indexes.Where(index => index >= 0 && index < plan.Columns.Count && !plan.Columns[index].IsMeasure).ToArray();
         var positions = subset.Select(index => Array.IndexOf(dimensions, index)).ToArray();
         var order = new Dictionary<string, int>(StringComparer.Ordinal);
 
         for (var position = 0; position < kept.Count; position++)
         {
-            order.TryAdd(DataKeys.Build(kept[position], subset, ignoreCase: false), position);
+            order.TryAdd(DataKeys.Build(kept[position], subset, ignoreCase: true), position);
         }
 
         async IAsyncEnumerable<object[]> RowsOfKeptGroups([EnumeratorCancellation] CancellationToken token = default)
         {
             await foreach (var row in ToAsync(groupedRows.Read(), token).WithCancellation(token))
             {
-                if (keptKeys.Contains(DataKeys.Build(row, allPositions, ignoreCase: false)))
+                if (keptKeys.Contains(DataKeys.Build(row, allPositions, ignoreCase: true)))
                 {
                     yield return row;
                 }
@@ -214,7 +216,7 @@ public sealed partial class ReportQueryEngine
         {
             var values = aggregation.ToValues(group, subset, expressionContext);
 
-            groups.Add((order.GetValueOrDefault(DataKeys.Build(values, subset, ignoreCase: false), int.MaxValue), values));
+            groups.Add((order.GetValueOrDefault(DataKeys.Build(values, subset, ignoreCase: true), int.MaxValue), values));
         }
 
         return groups
@@ -223,7 +225,8 @@ public sealed partial class ReportQueryEngine
             .ToArray();
     }
 
-    // Groups the rows of a result that isn't grouped, adding up the numbers of the other columns.
+    // Groups the rows of a result that isn't grouped, adding up the numbers of the other columns. Text that differs only
+    // in case is one group, shown with its smallest spelling in ordinal order.
     private static ReportResultGroup[] RegroupRows(ReportQueryPlan plan, IReadOnlyList<object[]> rows, IReadOnlyList<int> dimensionIndexes)
     {
         var dimensions = dimensionIndexes
@@ -234,7 +237,7 @@ public sealed partial class ReportQueryEngine
 
         foreach (var row in rows)
         {
-            var key = DataKeys.Build(row, dimensions, ignoreCase: false);
+            var key = DataKeys.Build(row, dimensions, ignoreCase: true);
 
             if (!groups.TryGetValue(key, out var values))
             {
@@ -253,6 +256,11 @@ public sealed partial class ReportQueryEngine
             {
                 if (dimensions.Contains(index))
                 {
+                    if (row[index] is string text && values[index] is string shown && string.CompareOrdinal(text, shown) < 0)
+                    {
+                        values[index] = text;
+                    }
+
                     continue;
                 }
 
@@ -290,17 +298,71 @@ public sealed partial class ReportQueryEngine
         return DataFieldTransforms.Apply(column.Definition.Transform, row[column.Field.Slot]);
     }
 
+    // The spellings of text that differs only in case, by column. Orchard Core's aggregator compares text exactly, so a
+    // value is grouped under the first spelling read; a group shows the smallest spelling in ordinal order, which is the
+    // same whatever order the rows come in and whether the database or the engine grouped them.
+    private sealed class TextSpellings
+    {
+        private readonly Dictionary<int, Dictionary<string, Spelling>> _columns = [];
+
+        // The spelling a value of a column is grouped under.
+        public object Group(int column, object value)
+        {
+            if (value is not string text)
+            {
+                return value;
+            }
+
+            if (!_columns.TryGetValue(column, out var spellings))
+            {
+                _columns[column] = spellings = new Dictionary<string, Spelling>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            if (!spellings.TryGetValue(text, out var spelling))
+            {
+                spellings[text] = new Spelling(text);
+
+                return text;
+            }
+
+            if (string.CompareOrdinal(text, spelling.Shown) < 0)
+            {
+                spelling.Shown = text;
+            }
+
+            return spelling.Grouped;
+        }
+
+        // The spelling a group of a column shows.
+        public object Show(int column, object value)
+        {
+            return value is string text && _columns.TryGetValue(column, out var spellings) && spellings.TryGetValue(text, out var spelling)
+                ? spelling.Shown
+                : value;
+        }
+
+        // Shown starts as the spelling a value is grouped under and keeps the smallest one read.
+        private sealed record Spelling(string Grouped)
+        {
+            public string Shown { get; set; } = Grouped;
+        }
+    }
+
     // How a grouped result reduces a row to what its groups need: the values of its dimensions, then what each measure
-    // aggregates, and how a group of these reduced rows gives the values of the columns.
+    // aggregates, and how a group of these reduced rows gives the values of the columns. Text that differs only in case
+    // groups and counts as one value, like filters and joins compare it, and a group, or its smallest or largest text,
+    // shows the smallest spelling.
     private sealed class Aggregation
     {
         private readonly ReportQueryPlan _plan;
         private readonly int? _weightSlot;
         private readonly MeasureColumn[] _measureColumns;
+        private readonly TextSpellings _spellings;
 
-        public Aggregation(ReportQueryPlan plan, bool weighted)
+        public Aggregation(ReportQueryPlan plan, bool weighted, TextSpellings spellings)
         {
             _plan = plan;
+            _spellings = spellings;
             _weightSlot = weighted ? plan.Width : null;
             DimensionColumns = Enumerable.Range(0, plan.Columns.Count).Where(index => !plan.Columns[index].IsMeasure).ToArray();
 
@@ -362,7 +424,7 @@ public sealed partial class ReportQueryEngine
 
             for (var index = 0; index < DimensionColumns.Length; index++)
             {
-                reduced[index] = ColumnValue(_plan.Columns[DimensionColumns[index]], row);
+                reduced[index] = _spellings.Group(DimensionColumns[index], ColumnValue(_plan.Columns[DimensionColumns[index]], row));
             }
 
             var position = DimensionColumns.Length;
@@ -389,7 +451,11 @@ public sealed partial class ReportQueryEngine
                         break;
 
                     default:
-                        reduced[position++] = ColumnValue(column, row);
+                        var value = ColumnValue(column, row);
+
+                        reduced[position++] = column.Definition.Aggregate is DataAggregate.CountDistinct or DataAggregate.Min or DataAggregate.Max
+                            ? _spellings.Group(measure.ColumnIndex, value)
+                            : value;
                         break;
                 }
             }
@@ -404,7 +470,7 @@ public sealed partial class ReportQueryEngine
 
             for (var index = 0; index < dimensionColumns.Length; index++)
             {
-                values[dimensionColumns[index]] = group[index];
+                values[dimensionColumns[index]] = _spellings.Show(dimensionColumns[index], group[index]);
             }
 
             var results = dimensionColumns.Length;
@@ -418,7 +484,7 @@ public sealed partial class ReportQueryEngine
                 {
                     MeasureKind.Weight => DataFieldTransforms.Apply(column.Definition.Transform, DataValues.Coerce(group[start], DataFieldType.Integer) ?? 0L),
                     MeasureKind.Formula => DataFieldTransforms.Apply(column.Definition.Transform, Evaluate(column.Field.Expression, group[start..(start + measure.Count)], context)),
-                    _ => group[start],
+                    _ => _spellings.Show(measure.ColumnIndex, group[start]),
                 };
             }
 

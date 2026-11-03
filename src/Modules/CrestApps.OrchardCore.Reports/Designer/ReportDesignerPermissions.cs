@@ -26,6 +26,12 @@ public static class ReportDesignerPermissions
     public static readonly Permission ViewAllReportDesigns = new("ViewAllReportDesigns", LocalizationSource.Create("View all custom reports", typeof(ReportDesignerPermissions)), [ManageAllReportDesigns]);
 
     /// <summary>
+    /// Allows creating, changing, and deleting the groups that designed reports are listed under. Anyone who designs
+    /// reports can place a report in an existing group.
+    /// </summary>
+    public static readonly Permission ManageReportGroups = new("ManageReportGroups", LocalizationSource.Create("Manage report groups", typeof(ReportDesignerPermissions)), [ManageAllReportDesigns]);
+
+    /// <summary>
     /// Allows sharing designed reports with anonymous visitors and through share links. People with this permission
     /// can publish data they can read to anyone who has the link.
     /// </summary>

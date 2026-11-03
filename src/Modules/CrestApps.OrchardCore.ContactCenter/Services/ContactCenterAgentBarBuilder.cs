@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContactCenter.Hubs;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Telephony;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -70,6 +71,7 @@ public sealed class ContactCenterAgentBarBuilder : IContactCenterAgentBarBuilder
                 "Index",
                 "AgentWorkspace",
                 new { area = ContactCenterConstants.Feature.Area }),
+            SoftPhoneUrl = _linkGenerator.GetPathByName(httpContext, TelephonyConstants.RouteNames.SoftPhonePage),
             AntiForgeryToken = tokens.RequestToken,
             Dispositions = [.. dispositions.Select(disposition => new WorkspaceLookupViewModel
             {

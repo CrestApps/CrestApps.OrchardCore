@@ -370,6 +370,7 @@ public sealed class OmnichannelWorkflowTaskTests
             manager.Object,
             processors,
             CreateEchoEvaluator().Object,
+            Mock.Of<CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelAIConversationStarting>(),
             NullLogger<StartOmnichannelActivityTask>.Instance,
             new PassThroughStringLocalizer<StartOmnichannelActivityTask>())
         {

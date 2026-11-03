@@ -39,4 +39,9 @@ public enum AIVoiceSessionOutcome
     /// The conversation failed: the call ended in a failed state, or the live session reported an error.
     /// </summary>
     Failed = 6,
+
+    /// <summary>
+    /// The assistant transferred the call to a phone number.
+    /// </summary>
+    Transferred = 7,
 }

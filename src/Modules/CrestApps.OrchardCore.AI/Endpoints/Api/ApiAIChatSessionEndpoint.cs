@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using OrchardCore;
 using OrchardCore.Liquid;
 
 namespace CrestApps.OrchardCore.AI.Endpoints.Api;
@@ -23,7 +24,10 @@ internal static class ApiAIChatSessionEndpoint
     {
         _ = builder.MapGet("api/ai/chat/session", HandleAsync)
             .DisableAntiforgery()
-            .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = "Api" });
+            .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = OrchardCoreConstants.AuthenticationSchemes.Api })
+            .WithTags(AIConversationsApiEndpoints.ChatTag)
+            .WithName("GetAIChatSession")
+            .WithSummary("Gets a chat session of an AI profile with its messages.");
 
         return builder;
     }

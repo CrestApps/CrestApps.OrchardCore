@@ -25,6 +25,12 @@ public sealed class OmnichannelAutomationOptionsValidator : IValidateOptions<Omn
         RequirePositive(failures, options.MaxProcessingAttempts, nameof(options.MaxProcessingAttempts));
         RequirePositive(failures, options.RetryDelayMinutes, nameof(options.RetryDelayMinutes));
 
+        // Zero means no cap, so only a negative cap is a mistake.
+        if (options.MaxConcurrentAICalls < 0)
+        {
+            failures.Add($"'{Section}:{nameof(options.MaxConcurrentAICalls)}' cannot be negative; use zero for no limit.");
+        }
+
         if (options.ProcessorBatchSize > options.MaxActivitiesPerInvocation)
         {
             failures.Add(

@@ -1,0 +1,18 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIProfileVersionEntry>
+
+@if (!Model.Value.IsCurrent)
+{
+    <a asp-action="Restore"
+       asp-controller="AIProfileVersions"
+       asp-area="CrestApps.OrchardCore.AI"
+       asp-route-id="@Model.Value.Version.ItemId"
+       class="dropdown-item"
+       data-url-af="RemoveUrl UnsafeUrl"
+       data-title="@T["Restore version {0}", Model.Value.Version.Version]"
+       data-message="@T["The profile takes back this version's settings. The restore is saved as a new version, so nothing is lost."]"
+       data-ok-text="@T["Restore"]"
+       data-cancel-text="@T["Cancel"]">@T["Restore"]</a>
+}

@@ -41,6 +41,11 @@ public sealed class VoiceAgentEvent
     public bool TranscriptionIsFinal { get; set; }
 
     /// <summary>
+    /// Gets or sets the keys the caller pressed, for <see cref="VoiceAgentEventKind.DigitsReceived"/>.
+    /// </summary>
+    public string Digits { get; set; }
+
+    /// <summary>
     /// Gets or sets who the provider says answered, on an <see cref="VoiceAgentEventKind.AnswererDetected"/> event.
     /// </summary>
     public VoiceAgentAnswerer Answerer { get; set; }

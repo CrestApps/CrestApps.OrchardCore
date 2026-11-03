@@ -155,6 +155,8 @@ public sealed class DialerStartup : StartupBase
         services
             .AddScoped<TelnyxContactCenterVoiceProvider>()
             .AddScoped<IContactCenterVoiceProvider>(sp => sp.GetRequiredService<TelnyxContactCenterVoiceProvider>())
+            // Whether an agent signed in to take calls has a phone open, for the agent's screens.
+            .AddScoped<IAgentPhoneStatusProvider, TelnyxAgentPhoneStatusProvider>()
             // The number the contact center calls out from is its own, so a transfer can never be sent back to it.
             .AddScoped<IContactCenterOwnNumberSource, TelnyxOwnNumberSource>()
             .AddSingleton<IProviderIdentityProvider, TelnyxProviderIdentityProvider>()

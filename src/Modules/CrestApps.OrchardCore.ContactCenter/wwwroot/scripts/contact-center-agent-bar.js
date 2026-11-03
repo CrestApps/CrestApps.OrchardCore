@@ -518,14 +518,23 @@
 					reason || "",
 					offer ? offer.reservationId : "",
 					active ? active.interactionId + ":" + active.status : "",
-					pendingDial ? pendingDial.interactionId + ":" + (showsDialProgress(pendingDial) ? normalizeDialPhase(pendingDial) : "Waiting") : ""
+					pendingDial ? pendingDial.interactionId + ":" + (showsDialProgress(pendingDial) ? normalizeDialPhase(pendingDial) : "Waiting") : "",
+					isPhoneMissing() ? "no-phone" : ""
 				].join("|");
 				if (signature === activeSignature) return;
 				activeSignature = signature;
 				logActiveChange(active);
 				logPendingDialChange(pendingDial);
-				inner.innerHTML = "<div class=\"cc-agent-bar__top\">" + renderPresence(status) + renderTail() + "</div><div class=\"cc-bar__context\" data-cc-context>" + renderContext(offer, active, pendingDial) + "</div>";
+				inner.innerHTML = "<div class=\"cc-agent-bar__top\">" + renderPresence(status) + renderTail() + "</div>" + renderPhoneMissing() + "<div class=\"cc-bar__context\" data-cc-context>" + renderContext(offer, active, pendingDial) + "</div>";
 				bindEvents();
+			}
+			function isPhoneMissing() {
+				return !!(state && state.isSignedIn && state.phoneOpen === false);
+			}
+			function renderPhoneMissing() {
+				if (!isPhoneMissing()) return "";
+				var link = config.softPhoneUrl ? " <a class=\"cc-bar__open-phone\" href=\"" + escapeHtml(config.softPhoneUrl) + "\" target=\"_blank\" rel=\"noopener\"><i class=\"fa-solid fa-phone\" aria-hidden=\"true\"></i> " + escapeHtml(label("openPhone", "Open the phone")) + "</a>" : "";
+				return "<div class=\"cc-bar__no-phone\" role=\"alert\" data-cc-no-phone>" + escapeHtml(label("noPhoneOpen", "You are signed in to take calls, but no phone of yours is open, so calls cannot reach you.")) + link + "</div>";
 			}
 			function renderPresence(status) {
 				return "<div class=\"cc-bar__presence\" data-cc-presence><span class=\"cc-bar__presence-chip\" title=\"" + escapeHtml(label("presenceReadonly", "Change your status from the soft phone")) + "\"><span class=\"cc-bar__dot is-" + escapeHtml(status.toLowerCase()) + "\"></span><span class=\"cc-bar__presence-label\">" + escapeHtml(presenceText()) + "</span></span></div>";
@@ -759,7 +768,7 @@
 			refresh();
 			window.setInterval(tick, 1e3);
 			window.setInterval(function() {
-				if (state && (state.activeInteraction || state.pendingDial || presenceStatus() === "Busy" || presenceStatus() === "Reserved")) refresh();
+				if (state && (state.activeInteraction || state.pendingDial || presenceStatus() === "Busy" || presenceStatus() === "Reserved" || isPhoneMissing())) refresh();
 			}, 12e3);
 		}
 		function boot() {

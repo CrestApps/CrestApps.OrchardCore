@@ -34,4 +34,10 @@ public sealed class OmnichannelAutomationOptions
     /// number of attempts already made.
     /// </summary>
     public int RetryDelayMinutes { get; set; } = 5;
+
+    /// <summary>
+    /// Gets or sets how many automated AI phone calls may be ringing or in progress at once. The pass places no more
+    /// than that, and leaves the rest due for its next run. Zero places as many as are due.
+    /// </summary>
+    public int MaxConcurrentAICalls { get; set; }
 }

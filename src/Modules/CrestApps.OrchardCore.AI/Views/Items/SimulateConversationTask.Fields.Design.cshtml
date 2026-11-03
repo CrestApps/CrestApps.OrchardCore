@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.AI.Workflows.Models
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SimulateConversationTask>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-vial" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Simulate AI Conversation"])
+    </h4>
+</header>

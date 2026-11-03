@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.Reports.Models;
-using PdfSharp.Drawing;
 
 namespace CrestApps.OrchardCore.Reports.Pdf.Services;
 
@@ -26,14 +25,12 @@ internal sealed class ReportPdfTableLayout
 
     private readonly double[] _minimum;
     private readonly double[] _preferred;
-    private readonly double[] _characterWidth;
 
-    private ReportPdfTableLayout(double fontSize, double[] minimum, double[] preferred, double[] characterWidth)
+    private ReportPdfTableLayout(double fontSize, double[] minimum, double[] preferred)
     {
         FontSize = fontSize;
         _minimum = minimum;
         _preferred = preferred;
-        _characterWidth = characterWidth;
     }
 
     /// <summary>
@@ -60,11 +57,11 @@ internal sealed class ReportPdfTableLayout
     /// Measures a table section.
     /// </summary>
     /// <param name="section">The table section.</param>
-    /// <param name="graphics">A context to measure text with.</param>
-    /// <param name="fontFamily">The font the table is written in.</param>
+    /// <param name="font">The bold face. Headers and totals are bold, and a little room to spare costs nothing, so
+    /// every value is measured bold.</param>
     /// <param name="baseFontSize">The font size of the text of the report.</param>
     /// <returns>The layout, or <see langword="null"/> when the table has no column.</returns>
-    public static ReportPdfTableLayout Measure(ReportSection section, XGraphics graphics, string fontFamily, double baseFontSize)
+    public static ReportPdfTableLayout Measure(ReportSection section, ReportPdfFont font, double baseFontSize)
     {
         var columns = section.Columns ?? [];
         var rows = (section.Rows ?? []).Where(row => row is not null).ToList();
@@ -82,15 +79,12 @@ internal sealed class ReportPdfTableLayout
             _ => baseFontSize - 1,
         };
 
-        // Bold is measured throughout: headers and totals are bold, and a little room to spare costs nothing.
-        var font = new XFont(fontFamily, fontSize, XFontStyleEx.Bold);
         var minimum = new double[columnCount];
         var preferred = new double[columnCount];
-        var characterWidth = new double[columnCount];
 
         for (var index = 0; index < columnCount; index++)
         {
-            var header = index < columns.Count ? columns[index]?.Label : null;
+            var header = font.Prepare(index < columns.Count ? columns[index]?.Label : null);
             var longestWord = LongestWord(header);
             var longestHeaderWord = longestWord;
             var longestValue = string.Empty;
@@ -102,7 +96,9 @@ internal sealed class ReportPdfTableLayout
                     continue;
                 }
 
-                foreach (var line in cells[index].Split('\n'))
+                var value = font.Prepare(cells[index]);
+
+                foreach (var line in value.Split('\n'))
                 {
                     if (line.Length > longestValue.Length)
                     {
@@ -110,7 +106,7 @@ internal sealed class ReportPdfTableLayout
                     }
                 }
 
-                var word = LongestWord(cells[index]);
+                var word = LongestWord(value);
 
                 if (word.Length > longestWord.Length)
                 {
@@ -120,15 +116,14 @@ internal sealed class ReportPdfTableLayout
 
             var measuredWord = longestWord.Length > MaxWordCharacters ? longestWord[..MaxWordCharacters] : longestWord;
             var measuredValue = longestValue.Length > MaxPreferredCharacters ? longestValue[..MaxPreferredCharacters] : longestValue;
-            var wordWidth = Width(graphics, measuredWord, font);
+            var wordWidth = font.Measure(measuredWord, fontSize);
 
             // A header wraps between its words, but asks for its whole width when its column is one of short values.
-            minimum[index] = Math.Max(wordWidth, Width(graphics, longestHeaderWord, font)) + CellPadding;
-            preferred[index] = Math.Max(minimum[index], Math.Max(Width(graphics, measuredValue, font), Width(graphics, header ?? string.Empty, font)) + CellPadding);
-            characterWidth[index] = measuredWord.Length > 0 ? wordWidth / measuredWord.Length : fontSize * 0.6;
+            minimum[index] = Math.Max(wordWidth, font.Measure(longestHeaderWord, fontSize)) + CellPadding;
+            preferred[index] = Math.Max(minimum[index], Math.Max(font.Measure(measuredValue, fontSize), font.Measure(LongestLine(header), fontSize)) + CellPadding);
         }
 
-        return new ReportPdfTableLayout(fontSize, minimum, preferred, characterWidth);
+        return new ReportPdfTableLayout(fontSize, minimum, preferred);
     }
 
     /// <summary>
@@ -169,21 +164,6 @@ internal sealed class ReportPdfTableLayout
         return [.. _minimum.Select((column, index) => column + ((width - minimum) * (_preferred[index] - column) / flexible))];
     }
 
-    /// <summary>
-    /// Gets how many characters of a word fit on a line of each column; a longer word is broken.
-    /// </summary>
-    /// <param name="widths">The widths of the columns, in points.</param>
-    /// <returns>The characters per line of each column.</returns>
-    public int[] GetCharactersPerLine(double[] widths)
-    {
-        return [.. widths.Select((width, index) => Math.Max(1, (int)Math.Floor((width - CellPadding) / _characterWidth[index])))];
-    }
-
-    private static double Width(XGraphics graphics, string text, XFont font)
-    {
-        return string.IsNullOrEmpty(text) ? 0 : graphics.MeasureString(text, font).Width;
-    }
-
     private static string LongestWord(string value)
     {
         if (string.IsNullOrEmpty(value))
@@ -191,7 +171,12 @@ internal sealed class ReportPdfTableLayout
             return string.Empty;
         }
 
-        return value.Split([' ', '\n', '\r', '\t'], StringSplitOptions.RemoveEmptyEntries)
+        return value.Split([' ', '\n'], StringSplitOptions.RemoveEmptyEntries)
             .MaxBy(word => word.Length) ?? string.Empty;
+    }
+
+    private static string LongestLine(string value)
+    {
+        return value.Split('\n').MaxBy(line => line.Length) ?? string.Empty;
     }
 }

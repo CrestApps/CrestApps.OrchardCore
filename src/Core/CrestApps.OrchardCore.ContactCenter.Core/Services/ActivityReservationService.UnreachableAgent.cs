@@ -6,8 +6,8 @@ using Microsoft.Extensions.Logging;
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <summary>
-/// Releasing an accepted offer whose agent's phone could not be reached: the caller goes where the queue sends an
-/// offer nobody answered, and the agent is set Away instead of being offered the next caller.
+/// Releasing an offer whose agent's phone could not be reached, accepted or still ringing: the caller goes where the
+/// queue sends an offer nobody answered, and the agent is set Away instead of being offered the next caller.
 /// </summary>
 public sealed partial class ActivityReservationService
 {
@@ -50,6 +50,55 @@ public sealed partial class ActivityReservationService
 
         _logger.LogWarning(
             "Released accepted offer '{ReservationId}' for activity '{ActivityItemId}' because agent '{AgentId}' could not be reached; the caller follows the unanswered-offer action of queue '{QueueId}' and the agent was set away.",
+            reservation.ItemId.SanitizeLogValue(),
+            reservation.ActivityItemId.SanitizeLogValue(),
+            reservation.AgentId.SanitizeLogValue(),
+            reservation.QueueId.SanitizeLogValue());
+
+        return reservation;
+    }
+
+    /// <inheritdoc/>
+    public async Task<ActivityReservation> ReleaseUnreachableOfferAsync(string reservationId, string agentId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(reservationId);
+        ArgumentException.ThrowIfNullOrEmpty(agentId);
+
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            GetReservationLockKey(reservationId),
+            _coordinationOptions.ReservationLockTimeout,
+            _coordinationOptions.ReservationLockExpiration);
+
+        if (!locked)
+        {
+            return null;
+        }
+
+        await using var acquiredLock = locker;
+
+        var reservation = await _reservationManager.FindByIdAsync(reservationId, cancellationToken);
+
+        // Waiting out the ring window would only keep the caller listening to nothing: the phone it rings is not there.
+        // An offer the agent already answered, declined or let ring out was settled by that, and a direct line or a
+        // campaign's call has no next agent in line to hand it to.
+        if (reservation is null ||
+            reservation.Status != ReservationStatus.Pending ||
+            !string.Equals(reservation.AgentId, agentId, StringComparison.Ordinal) ||
+            ContactCenterConstants.IsDirectRoutingQueue(reservation.QueueId) ||
+            ContactCenterConstants.IsCampaignQueue(reservation.QueueId))
+        {
+            return null;
+        }
+
+        await ReleaseAsync(reservation, ReservationStatus.Expired, cancellationToken, agentUnreachable: true);
+
+        await CommitTransitionAsync(
+            reservation.ActivityItemId,
+            reservation.AgentId,
+            cancellationToken);
+
+        _logger.LogWarning(
+            "Released offer '{ReservationId}' for activity '{ActivityItemId}' as unanswered because the phone of agent '{AgentId}' refused it as unavailable; the caller follows the unanswered-offer action of queue '{QueueId}' and the agent was set away.",
             reservation.ItemId.SanitizeLogValue(),
             reservation.ActivityItemId.SanitizeLogValue(),
             reservation.AgentId.SanitizeLogValue(),

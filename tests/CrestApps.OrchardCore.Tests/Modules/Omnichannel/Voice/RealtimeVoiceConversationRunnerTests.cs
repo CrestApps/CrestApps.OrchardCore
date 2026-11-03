@@ -287,6 +287,54 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
     }
 
     [Fact]
+    public async Task TheCallersKeysAndASupervisorNote_AreAddedToTheConversation()
+    {
+        // Arrange
+        // Live: keys given as one reply's instructions replaced the session's for it, so they were answered in
+        // Spanish on an English call, once per key, and were gone by the next turn.
+        var harness = new RealtimeHarness();
+        using var handoff = new CancellationTokenSource();
+        harness.HandoffRequested = handoff.Token;
+        harness.Conversation.KeepAlive = true;
+        harness.Media.KeepAlive = true;
+
+        var run = harness.RunAsync();
+        var activityId = harness.Activity.ItemId;
+
+        // The session registers for commands once it holds the call.
+        while (!await harness.Commands.SendAsync(activityId, new AIVoiceCallCommand(AIVoiceCallCommandKind.KeysPressed, "1")))
+        {
+            await Task.Delay(10, TestContext.Current.CancellationToken);
+        }
+
+        // Act
+        await harness.Commands.SendAsync(activityId, new AIVoiceCallCommand(AIVoiceCallCommandKind.KeysPressed, "2"));
+        await harness.Commands.SendAsync(activityId, new AIVoiceCallCommand(AIVoiceCallCommandKind.KeysPressed, "3"));
+        await harness.Commands.SendAsync(activityId, new AIVoiceCallCommand(AIVoiceCallCommandKind.Instruct, "Offer a test drive on Saturday."));
+
+        var waitedUntil = DateTime.UtcNow + TimeSpan.FromSeconds(10);
+
+        while (harness.Conversation.Added.Count < 2 && DateTime.UtcNow < waitedUntil)
+        {
+            await Task.Delay(20, TestContext.Current.CancellationToken);
+        }
+
+        await handoff.CancelAsync();
+        await run;
+
+        // Assert
+        var added = harness.Conversation.Added.ToArray();
+
+        Assert.Equal(2, added.Length);
+        Assert.Contains((ChatRole.System, VoiceAgentConversationLoop.SupervisorNoteGuidance("Offer a test drive on Saturday.")), added);
+        Assert.Contains((ChatRole.User, VoiceAgentConversationLoop.KeysPressedTurn("123")), added);
+
+        // Each is answered under the session's own instructions, never instructions of its own.
+        Assert.DoesNotContain(harness.Conversation.Unprompted, instructions => instructions.Contains("123", StringComparison.Ordinal));
+        Assert.DoesNotContain(harness.Conversation.Unprompted, instructions => instructions.Contains("test drive", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task ATransferStillLetsTheAssistantFinishSayingItIsTransferring()
     {
         // Arrange
@@ -945,6 +993,13 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
 
         Assert.Contains(VoiceCallGuidance.RecordingDisclosureHeading, systemMessage);
         Assert.Contains("\"This call may be recorded for quality assurance and training purposes.\"", systemMessage);
+
+        // And the greeting itself is asked for with the disclosure as its first words, under the session's own
+        // instructions so it keeps the persona: told only in the instructions, live, the model reworded it.
+        var greeting = harness.Conversation.Unprompted[0];
+
+        Assert.StartsWith(systemMessage.TrimEnd(), greeting, StringComparison.Ordinal);
+        Assert.EndsWith(VoiceCallGuidance.OpeningWithDisclosure(harness.RecordingDisclosure), greeting, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1350,11 +1405,18 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
                 promptStore.Object,
                 sessionManager.Object,
                 DocumentSession.Object,
+                new CrestApps.OrchardCore.Omnichannel.Core.Services.OmnichannelConversationContextFactory(Mock.Of<global::OrchardCore.ContentManagement.IContentManager>(), Mock.Of<CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign>>(), Mock.Of<CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointStore>()),
+                Commands, Mock.Of<CrestApps.OrchardCore.AI.Core.Conversations.IAIConversationTurnNotifier>(),
                 clock.Object,
                 NullLogger<RealtimeVoiceConversationRunner>.Instance);
         }
 
         public Mock<ISession> DocumentSession { get; }
+
+        /// <summary>
+        /// Where a supervisor's notes and the caller's keys are sent to the session holding the call.
+        /// </summary>
+        public CrestApps.OrchardCore.Omnichannel.Voice.Services.AIVoiceCallCommands Commands { get; } = new();
 
         /// <summary>
         /// When set, the call's audio stream is still connecting until this completes, the way a provider takes most
@@ -1438,6 +1500,11 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         public CancellationToken MachineGreetingEnded { get; set; }
 
         /// <summary>
+        /// The token the loop passes when the assistant has pressed keys on the call.
+        /// </summary>
+        public CancellationToken PhoneMenuReached { get; set; }
+
+        /// <summary>
         /// What the loop passes to end the call on voicemail once the session has left its message.
         /// </summary>
         public Action EndCallOnVoicemail { get; set; }
@@ -1505,6 +1572,7 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
                 EndCallRequests = EndCallRequests,
                 AnsweredByMachine = AnsweredByMachine,
                 MachineGreetingEnded = MachineGreetingEnded,
+                PhoneMenuReached = PhoneMenuReached,
                 EndCallOnVoicemail = EndCallOnVoicemail,
                 HandoffInstructions = HandoffInstructions,
                 ContactName = ContactName,
@@ -1673,6 +1741,18 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         public List<string> Unprompted { get; } = [];
 
         public List<string> Standalone { get; } = [];
+
+        /// <summary>
+        /// The messages added to the conversation other than through the caller's audio, in order.
+        /// </summary>
+        public System.Collections.Concurrent.ConcurrentQueue<(ChatRole Role, string Text)> Added { get; } = new();
+
+        public Task AddMessageAsync(ChatRole role, string text, CancellationToken cancellationToken = default)
+        {
+            Added.Enqueue((role, text));
+
+            return Task.CompletedTask;
+        }
 
         public Task RequestUnpromptedResponseAsync(string instructions = null, CancellationToken cancellationToken = default)
         {

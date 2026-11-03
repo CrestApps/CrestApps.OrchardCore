@@ -64,6 +64,16 @@ public sealed class ProfileBuilderSession : CatalogItem, IModifiedUtcAwareModel
     public ProfileBuilderReplay LastReplay { get; set; }
 
     /// <summary>
+    /// Gets or sets how the session runs simulated conversations.
+    /// </summary>
+    public ProfileBuilderSimulationSettings SimulationSettings { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the simulated conversations, oldest first. Only the most recent are kept.
+    /// </summary>
+    public List<ProfileBuilderSimulation> Simulations { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets when the session was created.
     /// </summary>
     public DateTime CreatedUtc { get; set; }

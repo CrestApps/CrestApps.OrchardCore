@@ -30,12 +30,44 @@ public sealed partial class RealtimeVoiceConversationRunner
     // One while the call is still on the opening detector.
     private int _openingDetector;
 
+    // One when the call opens with a recording disclosure, which is played to the end however the caller answers.
+    private int _protectOpening;
+
+    // One once the opening response has been generated; its speech can still be playing.
+    private int _openingGenerated;
+
+    // When the opening's speech finishes playing, once it has been generated.
+    private long _openingPlaysUntilTicks;
+
+    /// <summary>
+    /// Whether the opening line is still to be heard in full and may not be talked over.
+    /// </summary>
+    /// <remarks>
+    /// A recording disclosure has to be heard. Live, a caller's "Hello" a second into the opening stopped it after
+    /// 0.8 seconds of the notice, and the model went on without giving it again.
+    /// </remarks>
+    /// <param name="nowTicks">The current time, in UTC ticks.</param>
+    private bool OpeningMayNotBeTalkedOver(long nowTicks)
+        => Volatile.Read(ref _protectOpening) == 1 &&
+            (Volatile.Read(ref _openingGenerated) == 0 || nowTicks < Interlocked.Read(ref _openingPlaysUntilTicks));
+
+    /// <summary>
+    /// Notes a response finishing being generated: the first is the opening, which plays until its speech is over.
+    /// </summary>
+    private void OpeningResponseCompleted()
+    {
+        if (Volatile.Read(ref _protectOpening) == 1 && Interlocked.CompareExchange(ref _openingGenerated, 1, 0) == 0)
+        {
+            Interlocked.Exchange(ref _openingPlaysUntilTicks, Interlocked.Read(ref _assistantSpeechEndsTicks));
+        }
+    }
+
     private async Task ApplyOpeningTurnDetectionAsync(IRealtimeConversation conversation, CancellationToken cancellationToken)
     {
         try
         {
             await conversation.UpdateTurnDetectionAsync(
-                allowInterruption: true,
+                allowInterruption: Volatile.Read(ref _protectOpening) == 0,
                 silenceDurationMs: OpeningSilenceDurationMilliseconds,
                 vadThreshold: TelephonyVadThreshold,
                 turnDetectionType: RealtimeTurnDetectionTypes.ServerVad,

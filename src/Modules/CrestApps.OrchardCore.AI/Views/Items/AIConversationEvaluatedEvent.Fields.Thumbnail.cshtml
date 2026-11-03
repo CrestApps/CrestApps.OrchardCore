@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.AI.Workflows.Models
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AIConversationEvaluatedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-clipboard-check" aria-hidden="true"></i>
+    @T["AI Conversation Evaluated"]
+</h4>
+<p>@T["Runs when an AI conversation, real or simulated, has been evaluated."]</p>

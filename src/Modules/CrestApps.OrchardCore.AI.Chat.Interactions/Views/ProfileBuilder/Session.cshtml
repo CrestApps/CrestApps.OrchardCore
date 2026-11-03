@@ -30,6 +30,8 @@
             replay = Url.Action("Replay", "ProfileBuilder", new { area = ChatInteractionsConstants.Feature.ChatInteractions, id = Model.Session.ItemId }),
             settings = Url.Action("Settings", "ProfileBuilder", new { area = ChatInteractionsConstants.Feature.ChatInteractions, id = Model.Session.ItemId }),
             saveProfile = Url.Action("SaveProfile", "ProfileBuilder", new { area = ChatInteractionsConstants.Feature.ChatInteractions, id = Model.Session.ItemId }),
+            simulationSettings = Url.Action("SimulationSettings", "ProfileBuilder", new { area = ChatInteractionsConstants.Feature.ChatInteractions, id = Model.Session.ItemId }),
+            simulate = Url.Action("Simulate", "ProfileBuilder", new { area = ChatInteractionsConstants.Feature.ChatInteractions, id = Model.Session.ItemId }),
         },
         linkedProfileTitle,
         strings = new
@@ -59,12 +61,25 @@
             fail = T["Fail"].Value,
             unknown = T["Unclear"].Value,
             revision = T["Revision {0}"].Value,
+            noSimulations = T["No simulation has run yet."].Value,
+            scenarioRequired = T["Describe at least one customer to play."].Value,
+            simulating = T["Round {0}: the customers are talking to the assistant..."].Value,
+            simulationImproved = T["Round {0} found problems. The coach wrote revision {1}; testing it next..."].Value,
+            simulationPassed = T["Every conversation passed in round {0}."].Value,
+            simulationFinished = T["The run is over after round {0}. Read the judge's findings below, or run it again."].Value,
+            simulationStopped = T["Stopped after round {0}."].Value,
+            round = T["Round {0}"].Value,
+            score = T["Score {0}"].Value,
+            transcript = T["Conversation"].Value,
+            customer = T["Customer"].Value,
+            assistant = T["Assistant"].Value,
             sources = new
             {
                 Initial = T["Start"].Value,
                 Feedback = T["Feedback"].Value,
                 Manual = T["Manual edit"].Value,
                 Restore = T["Restore"].Value,
+                Simulation = T["Simulation"].Value,
             },
             kinds = new
             {
@@ -113,6 +128,9 @@
                         <button class="nav-item nav-link" id="pb-tab-revisions" data-bs-toggle="tab" data-bs-target="#pb-pane-revisions" type="button" role="tab" aria-controls="pb-pane-revisions" aria-selected="false">@T["Revisions"]</button>
                     </li>
                     <li class="nav-item pe-md-2" role="presentation">
+                        <button class="nav-item nav-link" id="pb-tab-simulate" data-bs-toggle="tab" data-bs-target="#pb-pane-simulate" type="button" role="tab" aria-controls="pb-pane-simulate" aria-selected="false">@T["Simulate"]</button>
+                    </li>
+                    <li class="nav-item pe-md-2" role="presentation">
                         <button class="nav-item nav-link" id="pb-tab-replay" data-bs-toggle="tab" data-bs-target="#pb-pane-replay" type="button" role="tab" aria-controls="pb-pane-replay" aria-selected="false">@T["Replay"]</button>
                     </li>
                     <li class="nav-item" role="presentation">
@@ -147,6 +165,66 @@
                     <div class="tab-pane fade" id="pb-pane-revisions" role="tabpanel" aria-labelledby="pb-tab-revisions">
                         <p class="small text-muted">@T["Every change to the instructions is kept here. Restore one to make it current again."]</p>
                         <div id="pb-revision-list" class="d-flex flex-column gap-2 small"></div>
+                    </div>
+
+                    <div class="tab-pane fade" id="pb-pane-simulate" role="tabpanel" aria-labelledby="pb-tab-simulate">
+                        <p class="small text-muted">@T["One model plays each customer below against the current instructions, tools included, and another model judges every conversation. When one fails, the coach rewrites the instructions from what the judge found, and the next round tests the new revision, until every conversation passes or the rounds run out."]</p>
+                        <div class="mb-2">
+                            <label for="pb-sim-scenarios" class="form-label fw-semibold">@T["Customers to play"]</label>
+                            <textarea id="pb-sim-scenarios" class="form-control" rows="6" placeholder="@T["Who the customer is, what they want and how they behave. Leave a blank line between customers. For example: Dana is angry that her order 1001 is a week late, and wants a refund."]"></textarea>
+                            <span class="hint dashed">@T["Up to five customers, separated by a blank line."]</span>
+                        </div>
+                        <div class="mb-2">
+                            <label for="pb-sim-criteria" class="form-label fw-semibold">@T["What every conversation must achieve"]</label>
+                            <textarea id="pb-sim-criteria" class="form-control" rows="3" placeholder="@T["One per line. For example: Confirms the order number before acting on it."]"></textarea>
+                        </div>
+                        <div class="row g-2 mb-2">
+                            <div class="col-6">
+                                <label for="pb-sim-customer-deployment" class="form-label small fw-semibold">@T["Customer model"]</label>
+                                <select id="pb-sim-customer-deployment" class="form-select form-select-sm">
+                                    <option value="">@T["Utility deployment"]</option>
+                                    @foreach (var deployment in coachDeployments)
+                                    {
+                                        <option value="@deployment.Name">@deployment.Name</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label for="pb-sim-judge-deployment" class="form-label small fw-semibold">@T["Judge model"]</label>
+                                <select id="pb-sim-judge-deployment" class="form-select form-select-sm">
+                                    <option value="">@T["Utility deployment"]</option>
+                                    @foreach (var deployment in coachDeployments)
+                                    {
+                                        <option value="@deployment.Name">@deployment.Name</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-4">
+                                <label for="pb-sim-turns" class="form-label small fw-semibold">@T["Turns"]</label>
+                                <input id="pb-sim-turns" type="number" min="1" max="20" class="form-control form-control-sm" />
+                            </div>
+                            <div class="col-4">
+                                <label for="pb-sim-rounds" class="form-label small fw-semibold">@T["Rounds"]</label>
+                                <input id="pb-sim-rounds" type="number" min="1" max="5" class="form-control form-control-sm" />
+                            </div>
+                            <div class="col-4">
+                                <label for="pb-sim-passing-score" class="form-label small fw-semibold">@T["Passing score"]</label>
+                                <input id="pb-sim-passing-score" type="number" min="0" max="100" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input type="checkbox" class="form-check-input" id="pb-sim-improve" />
+                            <label class="form-check-label" for="pb-sim-improve">@T["Rewrite the instructions when a conversation fails"]</label>
+                            <span class="hint dashed">@T["The assistant answers with its own deployment, so three models take part: the assistant, the customer and the judge, and the coach rewrites. Use different models for the customer and the judge for a fairer test."]</span>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <button type="button" class="btn btn-primary" id="pb-sim-run">
+                                <i class="fa-solid fa-people-arrows me-1" aria-hidden="true"></i>@T["Run simulation"]
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary d-none" id="pb-sim-stop">@T["Stop after this round"]</button>
+                        </div>
+                        <div class="small mb-3" id="pb-sim-status" role="status" aria-live="polite"></div>
+                        <div id="pb-sim-results" class="d-flex flex-column gap-2 small"></div>
                     </div>
 
                     <div class="tab-pane fade" id="pb-pane-replay" role="tabpanel" aria-labelledby="pb-tab-replay">

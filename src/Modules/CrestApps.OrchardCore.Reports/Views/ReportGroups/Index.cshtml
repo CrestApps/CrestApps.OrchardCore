@@ -1,0 +1,38 @@
+@model ReportGroupsIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="ReportGroupsIndex" title="@T["Report Groups"]" />
+</zone>
+
+@* The post form of the row actions takes its antiforgery token from the page. *@
+@Html.AntiForgeryToken()
+
+<form method="get" asp-action="Index">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input name="q" value="@Model.Search" class="form-control" placeholder="@T["Search groups"]" type="search" autofocus autocomplete="off" aria-label="@T["Search groups"]" />
+                        <button type="submit" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-secondary create" asp-route="ReportGroupsCreate">@T["Add Group"]</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* The groups, each followed by the groups nested in it, rendered by the AdminList shape in the layout (List or Grid) the site or the user picked. *@
+    <admin-list name="ReportGroups" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> Add a group to list reports under it in the admin menu."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Group"]" />
+            <admin-list-column name="Contents" position="30" title="@T["Holds"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>

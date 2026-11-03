@@ -41,6 +41,17 @@ public sealed class AIVoiceSessionOutcomesTests
     }
 
     [Fact]
+    public void ATurnBasedCall_TheAITransferredToANumber_IsTransferred()
+    {
+        // Arrange
+        var activity = new OmnichannelActivity { AiEscalated = true, Status = ActivityStatus.InProgress };
+        activity.Put(new AICallTransfer { PhoneNumber = "+15551234567" });
+
+        // Act & Assert
+        Assert.Equal(AIVoiceSessionOutcome.Transferred, AIVoiceSessionOutcomes.ForTurnBased(activity, Said(), wasAnswered: true));
+    }
+
+    [Fact]
     public void ATurnBasedCallNobodyAnswered_IsNoAnswer_EvenOnceTheExpiryPassHasFailedIt()
     {
         // Arrange

@@ -1,0 +1,34 @@
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AIProfileVersionsViewModel
+
+@{
+    var profileName = Model.Profile.DisplayText ?? Model.Profile.Name;
+}
+
+<zone Name="Title">
+    <breadcrumb name="AIProfileVersions" title="@T["Versions"]">
+        <breadcrumb-item id="AIProfiles" action="Index" controller="Profiles" area="CrestApps.OrchardCore.AI" permission="@AIPermissions.ManageAIProfiles.Name">@T["AI Profiles"]</breadcrumb-item>
+        <breadcrumb-item id="AIProfile" action="Edit" controller="Profiles" area="CrestApps.OrchardCore.AI" route-id="@Model.Profile.ItemId">@profileName</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<p class="text-muted">
+    @T["Every save of the profile is kept as a version. Compare a version with the profile as it is now, or restore it: the restore is saved as a new version, so nothing is lost. Each conversation records the version that answered it, for reports."]
+</p>
+
+@* The form gives the Restore actions their antiforgery token. *@
+<form method="post" class="no-multisubmit">
+    <admin-list name="AIProfileVersions" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> The profile has no saved versions yet. The next save keeps the first one."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Version"]" />
+            <admin-list-column name="Note" position="30" title="@T["Note"]" />
+            <admin-list-column name="Saved" position="40" title="@T["Saved"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>

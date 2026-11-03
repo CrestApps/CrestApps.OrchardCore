@@ -60,6 +60,11 @@ public enum ProfileBuilderRevisionSource
     /// The author restored an earlier revision.
     /// </summary>
     Restore,
+
+    /// <summary>
+    /// Rewritten by the coach after simulated conversations failed.
+    /// </summary>
+    Simulation,
 }
 
 /// <summary>

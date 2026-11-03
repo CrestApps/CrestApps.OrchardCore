@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Chat.Services;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -44,6 +45,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
         var promptStore = serviceProvider.GetRequiredService<IAIChatSessionPromptStore>();
         var postCloseProcessor = serviceProvider.GetRequiredService<AIChatSessionPostCloseProcessor>();
         var storeCommitter = serviceProvider.GetRequiredService<IStoreCommitter>();
+        var closer = serviceProvider.GetRequiredService<AIChatSessionCloser>();
         var logger = serviceProvider.GetRequiredService<ILogger<AIChatSessionCloseBackgroundTask>>();
 
         var utcNow = clock.UtcNow;
@@ -56,7 +58,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
                 break;
             }
 
-            await CloseInactiveSessionsAsync(serviceProvider, sessionStore, promptStore, postCloseProcessor, profile, utcNow, logger, cancellationToken);
+            await CloseInactiveSessionsAsync(closer, sessionStore, promptStore, profile, utcNow, logger, cancellationToken);
             await RetryPendingProcessingAsync(serviceProvider, sessionStore, promptStore, postCloseProcessor, profile, utcNow, logger, cancellationToken);
         }
 
@@ -64,10 +66,9 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
     }
 
     private static async Task CloseInactiveSessionsAsync(
-        IServiceProvider serviceProvider,
+        AIChatSessionCloser closer,
         IAIChatSessionStore sessionStore,
         IAIChatSessionPromptStore promptStore,
-        AIChatSessionPostCloseProcessor postCloseProcessor,
         AIProfile profile,
         DateTime utcNow,
         ILogger logger,
@@ -84,21 +85,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
             }
 
             var prompts = await promptStore.GetPromptsAsync(chatSession.SessionId);
-            chatSession.Status = DetermineInactiveSessionStatus(prompts);
-            chatSession.ClosedAtUtc = utcNow;
-
-            if (postCloseProcessor.QueueIfNeeded(profile, chatSession))
-            {
-                await postCloseProcessor.ProcessAsync(profile, chatSession, prompts, cancellationToken);
-            }
-            else
-            {
-                chatSession.PostSessionProcessingStatus = PostSessionProcessingStatus.None;
-            }
-
-            await sessionStore.SaveAsync(chatSession, cancellationToken);
-
-            await TriggerSessionClosedWorkflowAsync(serviceProvider, profile, chatSession, logger);
+            await closer.CloseAsync(profile, chatSession, prompts, cancellationToken);
 
             if (logger.IsEnabled(LogLevel.Debug))
             {
@@ -173,48 +160,6 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
             : _defaultInactivityTimeout;
     }
 
-    private static ChatSessionStatus DetermineInactiveSessionStatus(IReadOnlyList<AIChatSessionPrompt> prompts)
-    {
-        return prompts.Any(prompt => prompt.Role == ChatRole.User)
-            ? ChatSessionStatus.Closed
-            : ChatSessionStatus.Abandoned;
-    }
-
-    private static async Task TriggerSessionClosedWorkflowAsync(
-        IServiceProvider serviceProvider,
-        AIProfile profile,
-        AIChatSession chatSession,
-        ILogger logger)
-    {
-        var workflowManager = serviceProvider.GetService<IWorkflowManager>();
-
-        if (workflowManager is null)
-        {
-            return;
-        }
-
-        try
-        {
-            var input = new Dictionary<string, object>
-            {
-                { "SessionId", chatSession.SessionId },
-                { "ProfileId", profile.ItemId },
-                { "Session", chatSession },
-                { "Profile", profile },
-                { "ClosedAtUtc", chatSession.ClosedAtUtc },
-            };
-
-            await workflowManager.TriggerEventAsync(
-                nameof(AIChatSessionClosedEvent),
-                input,
-                correlationId: chatSession.SessionId);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to trigger AIChatSessionClosedEvent for session '{SessionId}'.", chatSession.SessionId);
-        }
-    }
-
     private static async Task TriggerPostProcessedWorkflowAsync(
         IServiceProvider serviceProvider,
         AIProfile profile,
@@ -238,6 +183,8 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
                 { "Profile", profile },
                 { "Results", chatSession.PostSessionResults },
             };
+
+            await AIChatSessionCloser.AddTranscriptAsync(serviceProvider, input, chatSession);
 
             await workflowManager.TriggerEventAsync(
                 nameof(AIChatSessionPostProcessedEvent),

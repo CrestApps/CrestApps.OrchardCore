@@ -337,7 +337,7 @@ public sealed class SubscriptionReportDataSourceTests : IAsyncLifetime
 
         // Assert
         Assert.Equal(["subscriptions-new", "subscriptions-expiring"], designs.Select(design => design.ItemId));
-        Assert.All(designs, design => Assert.Equal("Store", design.Category));
+        Assert.All(ReportRecipeDesigns.GroupPaths("CrestApps.OrchardCore.Subscriptions", "subscriptions-report-builder-reports.recipe.json"), group => Assert.Equal("Store", group));
 
         // The three subscriptions started in the same month.
         var started = Assert.Single(results["subscriptions-new"].Rows);

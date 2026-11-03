@@ -426,7 +426,7 @@ public sealed class ShippingReportDataSourceTests : IAsyncLifetime
 
         // Assert
         Assert.Equal(["shipping-by-carrier"], designs.Select(design => design.ItemId));
-        Assert.All(designs, design => Assert.Equal("Store", design.Category));
+        Assert.All(ReportRecipeDesigns.GroupPaths("CrestApps.OrchardCore.Shipping", "shipping-report-builder-reports.recipe.json"), group => Assert.Equal("Store", group));
 
         // Two shipments were sent, one by each carrier; the one being packed is left out. The UPS one took two days less
         // the two hours it waited to leave.

@@ -682,6 +682,9 @@ Keys: `ProcessorLeaseMilliseconds` (default `600000`), `ProcessorBatchSize` (`10
 `MaxActivitiesPerInvocation` (`1000`), `MaxProcessingAttempts` (`5`), `RetryDelayMinutes` (`5`). Every value
 must be greater than zero, and the batch size cannot exceed `MaxActivitiesPerInvocation`.
 
+`MaxConcurrentAICalls` (default `0`, no limit) caps how many automated AI phone calls may be ringing or in progress
+at once. The pass, which runs every minute, places no more than that and leaves the rest due for its next run.
+
 ```json
 {
   "OrchardCore": {

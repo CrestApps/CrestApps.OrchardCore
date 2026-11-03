@@ -30,7 +30,7 @@
           "itemId": "inventory-stock-on-hand",
           "displayText": "Stock on hand",
           "description": "Every counted item with its units on hand, held for orders and available, the ones running out first. It shows stock as it is when it runs.",
-          "category": "Store",
+          "group": "Store",
           "query": {
             "dataSets": [
               { "alias": "i", "source": "Inventory", "dataSet": "StockItems", "displayName": "Stock items" }
@@ -60,7 +60,7 @@
           "itemId": "inventory-stock-movements",
           "displayText": "Stock movements",
           "description": "What each item received, sold, got back and was corrected by in the period, with what is on hand now, the most sold first.",
-          "category": "Store",
+          "group": "Store",
           "query": {
             "dataSets": [
               { "alias": "m", "source": "Inventory", "dataSet": "StockMovements", "displayName": "Stock movements" },

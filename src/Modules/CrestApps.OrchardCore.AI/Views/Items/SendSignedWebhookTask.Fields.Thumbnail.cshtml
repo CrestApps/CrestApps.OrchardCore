@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.AI.Workflows.Models
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SendSignedWebhookTask>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+    @T["Send Signed Webhook"]
+</h4>
+<p>@T["Posts JSON to another system, signed so it can check the request came from this site."]</p>

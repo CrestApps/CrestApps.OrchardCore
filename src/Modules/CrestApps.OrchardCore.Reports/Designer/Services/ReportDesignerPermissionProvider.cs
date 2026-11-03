@@ -11,6 +11,7 @@ internal sealed class ReportDesignerPermissionProvider : IPermissionProvider
         ReportDesignerPermissions.ManageAllReportDesigns,
         ReportDesignerPermissions.ManageOwnReportDesigns,
         ReportDesignerPermissions.ViewAllReportDesigns,
+        ReportDesignerPermissions.ManageReportGroups,
         ReportDesignerPermissions.ShareReportsPublicly,
     ];
 

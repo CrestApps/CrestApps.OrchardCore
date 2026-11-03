@@ -325,6 +325,7 @@ public sealed class InboundVoiceVoicemailDispatchTests
                 new InboundPriorityResolver([], NullLogger<InboundPriorityResolver>.Instance),
                 [],
                 [],
+                Mock.Of<CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelAIConversationStarting>(),
                 new Mock<global::YesSql.ISession> { DefaultValue = DefaultValue.Mock }.Object,
                 clock.Object,
                 Options.Create(new ContactCenterCoordinationOptions()),

@@ -34,7 +34,8 @@ public sealed class Startup : StartupBase
         services.AddScoped<VoiceAgentConversationLoop>();
         services.AddScoped<IVoiceAgentConversationLoop>(serviceProvider => serviceProvider.GetRequiredService<VoiceAgentConversationLoop>());
         services.AddScoped<IRealtimeCallCompletionRunner, RealtimeCallCompletionRunner>();
-        services.AddScoped<ITurnBasedSilenceWatchdog, TurnBasedSilenceWatchdog>();
+        services.AddSingleton<ITurnBasedSilenceWatchdog, TurnBasedSilenceWatchdog>();
+        services.AddSingleton<ITurnBasedCallerKeys, TurnBasedCallerKeys>();
 
         // A live conversation runs in this process, so when the node begins to stop each one is ended and its
         // caller handed on, rather than left on a line that falls silent. A singleton, so the registration on the
@@ -54,6 +55,11 @@ public sealed class Startup : StartupBase
         // calls only, and forgets each as it ends.
         services.AddSingleton<IAnsweringMachineSignals, AnsweringMachineSignals>();
 
+        // A supervisor's request reaches the live session holding an AI call through this registry, a singleton
+        // because the session and the request run in different scopes.
+        services.AddSingleton<IAIVoiceCallCommands, AIVoiceCallCommands>();
+        services.AddScoped<IAIVoiceCallSupervision, AIVoiceCallSupervision>();
+
         // The AI usage report's per-call summaries. The tracker outlives requests, because a turn-based call's
         // measurements span many of them; the store is the analytics feature's, and records nothing without it.
         services.AddSingleton<IAIVoiceSessionTracker, AIVoiceSessionTracker>();
@@ -65,6 +71,12 @@ public sealed class Startup : StartupBase
         services.AddCoreAITool<EndCallTool>(EndCallTool.ToolName)
             .WithTitle(S["End the call"])
             .WithDescription(S["Lets an automated call hang up once the conversation is over."])
+            .WithCategory(S["Omnichannel"]);
+
+        // Pressing keys is part of every automated call too: the AI may reach a phone menu on the other end.
+        services.AddCoreAITool<PressKeysTool>(PressKeysTool.ToolName)
+            .WithTitle(S["Press keys"])
+            .WithDescription(S["Lets an automated call press keys to get through a phone menu."])
             .WithCategory(S["Omnichannel"]);
 
         // Speech-to-speech needs a bidirectional media path to the caller's leg, which only the Contact Center

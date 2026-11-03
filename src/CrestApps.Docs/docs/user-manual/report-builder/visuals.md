@@ -85,4 +85,6 @@ For example, *Assigned to* as rows, *Status* across, and the number of rows as t
 
 Charts, metrics, pivot tables, totals and subtotals add up the underlying rows again rather than adding the numbers shown. An average stays a true average and a distinct count stays distinct, even in a total.
 
-Next: [Join data sets](joins.md).
+To put data grouped several ways on one page, frame visuals in scrolling containers, or let people click a row or a chart to filter the other visuals, see [Interactive dashboards](dashboards.md).
+
+Next: [Interactive dashboards](dashboards.md).

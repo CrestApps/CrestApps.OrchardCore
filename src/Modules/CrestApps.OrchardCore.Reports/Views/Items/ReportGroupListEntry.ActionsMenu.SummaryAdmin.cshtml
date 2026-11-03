@@ -1,0 +1,17 @@
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ReportGroupListEntry>
+
+@{
+    var entry = Model.Value;
+}
+
+<a asp-route="ReportGroupsCreate" asp-route-parentId="@entry.Group.ItemId" class="dropdown-item">@T["Add a group inside"]</a>
+
+<a asp-route="ReportGroupsDelete"
+   asp-route-id="@entry.Group.ItemId"
+   class="dropdown-item text-danger"
+   data-url-af="RemoveUrl UnsafeUrl"
+   data-message="@(entry.GroupCount + entry.ReportCount > 0 ? T["This group still holds groups or reports, so it will be kept. Move them first."] : T["Are you sure you want to delete this group?"])"
+   data-ok-text="@T["Yes"]"
+   data-cancel-text="@T["Cancel"]">@T["Delete"]</a>

@@ -11,6 +11,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;
 using CrestApps.Core.Templates.Services;
+using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -67,6 +68,43 @@ public sealed class VoiceCallConclusionWiringTests
         Assert.Same(harness.Activity, run.Activity);
         Assert.Equal("disposition-callback", run.Disposition.ItemId);
         Assert.Same(harness.Contact, run.Contact);
+    }
+
+    [Fact]
+    public async Task AConcludedCall_ClosesItsAIConversationAtOnce()
+    {
+        // Arrange
+        // The call is over, so its conversation is too: closing it now runs the analysis, the contact's memory and
+        // the closed workflows straight away, rather than after the profile's inactivity timeout.
+        var harness = new ConclusionHarness();
+        harness.Offers("disposition-interested", "Interested");
+        harness.ModelReturns(dispositionId: "disposition-interested", summary: "The customer wants a quote.");
+
+        // Act
+        await harness.ConcludeAsync();
+
+        // Assert
+        harness.Closer.Verify(closer => closer.CloseAsync("session-1", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ACallWhoseConversationCouldNotBeClosed_IsStillConcluded()
+    {
+        // Arrange
+        // The inactivity close picks the conversation up later, so a failure here must not undo the conclusion.
+        var harness = new ConclusionHarness();
+        harness.Offers("disposition-interested", "Interested");
+        harness.ModelReturns(dispositionId: "disposition-interested", summary: "The customer wants a quote.");
+        harness.Closer
+            .Setup(closer => closer.CloseAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("The store is unavailable."));
+
+        // Act
+        await harness.ConcludeAsync();
+
+        // Assert
+        Assert.Equal(ActivityStatus.Completed, harness.Activity.Status);
+        Assert.Single(harness.Executor.Runs);
     }
 
     [Fact]
@@ -476,6 +514,38 @@ public sealed class VoiceCallConclusionWiringTests
         public string ContactEmail { get; set; }
     }
 
+    [Fact]
+    public async Task ACallWhosePersonaSpeaksGreek_IsReviewedWithTheSummaryAskedForInGreek()
+    {
+        // Arrange
+        // The review is asked for in English, and an English prompt is answered in English: live, a call held in
+        // Greek was summarized in English for an office that works in Greek.
+        var harness = new ConclusionHarness(personaLanguage: "el-GR");
+        harness.Offers("disposition-interested", "Interested");
+        harness.ModelReturns(dispositionId: "disposition-interested", summary: "Ο πελάτης θέλει προσφορά.");
+
+        // Act
+        await harness.ConcludeAsync();
+
+        // Assert
+        Assert.Equal("Greek", harness.ReviewPromptArguments["Language"]);
+    }
+
+    [Fact]
+    public async Task ACallWhosePersonaNamesNoLanguage_IsReviewedAsBefore()
+    {
+        // Arrange
+        var harness = new ConclusionHarness();
+        harness.Offers("disposition-interested", "Interested");
+        harness.ModelReturns(dispositionId: "disposition-interested", summary: "The customer wants a quote by Friday.");
+
+        // Act
+        await harness.ConcludeAsync();
+
+        // Assert
+        Assert.Null(harness.ReviewPromptArguments["Language"]);
+    }
+
     /// <summary>
     /// Wires the conclusion up to doubles: an in-memory activity and transcript, a catalog of the dispositions the
     /// subject's actions are wired to, a model that answers on request, and a recording executor standing in for
@@ -488,7 +558,8 @@ public sealed class VoiceCallConclusionWiringTests
         private readonly VoiceAgentConversationLoop _loop;
         private readonly IServiceProvider _services;
 
-        public ConclusionHarness()
+        /// <param name="personaLanguage">The language of the persona the call's profile speaks as; none by default.</param>
+        public ConclusionHarness(string personaLanguage = null)
         {
             Activity = new OmnichannelActivity
             {
@@ -626,7 +697,13 @@ public sealed class VoiceCallConclusionWiringTests
                     VoiceTemplateIds.ConclusionAnalysis,
                     It.IsAny<IDictionary<string, object>>(),
                     It.IsAny<CancellationToken>()))
+                .Callback<string, IDictionary<string, object>, CancellationToken>((_, arguments, _) => ReviewPromptArguments = arguments)
                 .ReturnsAsync("Review the call and choose one of the dispositions offered.");
+
+            var personaResolver = new Mock<IAIPersonaResolver>();
+            personaResolver
+                .Setup(resolver => resolver.ResolveAsync(It.IsAny<ExtensibleEntity>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new ResolvedAIPersona { Id = "receptionist", Language = personaLanguage });
 
             // The conclusion runs in a deferred shell scope and resolves everything it needs from that scope's
             // service provider rather than from the loop's own constructor, so this provider -- not the
@@ -649,7 +726,9 @@ public sealed class VoiceCallConclusionWiringTests
                 .AddSingleton(dispositionCatalog.Object)
                 .AddSingleton(actionCatalog.Object)
                 .AddSingleton(templateService.Object)
+                .AddSingleton(personaResolver.Object)
                 .AddSingleton<ISubjectActionExecutor>(Executor)
+                .AddSingleton(Closer.Object)
                 .AddSingleton(Options.Create(_documentJsonOptions))
                 .AddSingleton<IClock>(new StubClock(_now))
                 .AddSingleton(Mock.Of<ISession>())
@@ -683,9 +762,13 @@ public sealed class VoiceCallConclusionWiringTests
                 Mock.Of<IVoiceAgentMediaProviderResolver>(),
                 Mock.Of<IRealtimeVoiceConversationRunner>(),
                 Mock.Of<ITurnBasedSilenceWatchdog>(),
+                Mock.Of<ITurnBasedCallerKeys>(),
                 Mock.Of<IAIVoiceSessionTracker>(),
                 new FakeAIVoiceCallShutdown(),
                 Mock.Of<ILiquidTemplateManager>(),
+                Mock.Of<CrestApps.Core.AI.Tooling.IToolRegistry>(),
+                new CrestApps.OrchardCore.Omnichannel.Core.Services.OmnichannelConversationContextFactory(ContentManager.Object, Mock.Of<CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign>>(), Mock.Of<CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointStore>()),
+                new CrestApps.OrchardCore.Omnichannel.Voice.Services.AIVoiceCallCommands(), Mock.Of<CrestApps.OrchardCore.AI.Core.Conversations.IAIConversationTurnNotifier>(), null,
                 ContentManager.Object,
                 new StubClock(_now),
                 NullLogger<VoiceAgentConversationLoop>.Instance,
@@ -693,6 +776,11 @@ public sealed class VoiceCallConclusionWiringTests
         }
 
         public OmnichannelActivity Activity { get; }
+
+        /// <summary>
+        /// What the review's prompt was rendered with.
+        /// </summary>
+        public IDictionary<string, object> ReviewPromptArguments { get; private set; }
 
         public ContentItem Contact { get; }
 
@@ -703,6 +791,8 @@ public sealed class VoiceCallConclusionWiringTests
         public List<SubjectAction> SubjectActions { get; } = [];
 
         public RecordingSubjectActionExecutor Executor { get; } = new();
+
+        public Mock<IAIChatSessionCloser> Closer { get; } = new();
 
         public StubChatClient Model { get; } = new();
 

@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.AI.Workflows.Models
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SplitTrafficTask>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-code-branch" aria-hidden="true"></i>
+    @T["Split Traffic"]
+</h4>
+<p>@T["Sends each run down one of several weighted outcomes, for an A/B test or a sample."]</p>

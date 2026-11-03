@@ -307,6 +307,75 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         Assert.True(await run);
     }
 
+    [Fact]
+    public async Task AMachineTheAssistantHasPressedKeysOn_IsAPhoneMenu_AndIsLeftNoMessage()
+    {
+        // Arrange
+        // A business's menu is a machine to the provider. Live, the assistant pressed the key for the person it was
+        // calling, the call was then reported as a machine, and a message was left on the menu and the call hung up.
+        var harness = new RealtimeHarness();
+        var endCall = harness.UseEndCallTurn();
+        using var machine = new CancellationTokenSource();
+        using var menu = new CancellationTokenSource();
+        harness.AnsweredByMachine = machine.Token;
+        harness.PhoneMenuReached = menu.Token;
+        harness.Conversation.KeepAlive = true;
+        harness.Media.KeepAlive = true;
+
+        var run = harness.RunAsync();
+        await WaitUntilAsync(() => harness.Conversation.Unprompted.Count == 1);
+        await menu.CancelAsync();
+
+        // Act
+        await machine.CancelAsync();
+        await Task.Delay(TimeSpan.FromMilliseconds(300), TestContext.Current.CancellationToken);
+        QueueResponse(harness, "Hi, is this Amani?");
+        await WaitUntilAsync(() => harness.Media.WrittenAudio.Count > 0);
+
+        // Assert
+        // The line was never taken from the model, and no message was asked for.
+        Assert.Equal(0, harness.Media.Clears);
+        Assert.Single(harness.Conversation.Unprompted);
+        Assert.False(endCall.EndCallRequested);
+
+        await LetTheCallGoAsync(harness, run);
+    }
+
+    [Fact]
+    public async Task KeysPressedWhileTheGreetingPlays_TurnTheMachineIntoAPhoneMenu_AndTheConversationCarriesOn()
+    {
+        // Arrange
+        var harness = new RealtimeHarness();
+        var endCall = harness.UseEndCallTurn();
+        using var machine = new CancellationTokenSource();
+        using var greetingEnded = new CancellationTokenSource();
+        using var menu = new CancellationTokenSource();
+        harness.AnsweredByMachine = machine.Token;
+        harness.MachineGreetingEnded = greetingEnded.Token;
+        harness.PhoneMenuReached = menu.Token;
+        harness.Conversation.KeepAlive = true;
+        harness.Media.KeepAlive = true;
+
+        var run = harness.RunAsync();
+        await WaitUntilAsync(() => harness.Conversation.Unprompted.Count == 1);
+        await machine.CancelAsync();
+        await WaitUntilAsync(() => harness.Media.Clears == 1);
+
+        // Act
+        await menu.CancelAsync();
+        await WaitUntilAsync(() => harness.Conversation.TurnDetectionUpdates[^1].AllowInterruption);
+        await greetingEnded.CancelAsync();
+        QueueResponse(harness, "Hi, is this Amani?");
+        await WaitUntilAsync(() => harness.Media.WrittenAudio.Count > 0);
+
+        // Assert
+        // What the model says reaches the line again, and the end of the menu's greeting asks for no message.
+        Assert.Single(harness.Conversation.Unprompted);
+        Assert.False(endCall.EndCallRequested);
+
+        await LetTheCallGoAsync(harness, run);
+    }
+
     // One complete response from the model: it starts, speaks, its transcript lands, and it completes.
     private static void QueueResponse(RealtimeHarness harness, string text)
         => harness.Conversation.Queue(

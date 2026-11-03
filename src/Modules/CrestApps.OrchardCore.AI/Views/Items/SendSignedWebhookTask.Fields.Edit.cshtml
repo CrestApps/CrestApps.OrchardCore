@@ -1,0 +1,46 @@
+@using CrestApps.OrchardCore.AI.Workflows.ViewModels
+
+@model SendSignedWebhookTaskViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Url">
+    <label class="ocat-label ocat-label-required" asp-for="Url">@T["URL"]</label>
+    <div class="ocat-end">
+        <input type="text" class="form-control" asp-for="Url" placeholder="https://example.com/hooks/conversations" />
+        <span asp-validation-for="Url"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="EventName">@T["Event name"]</label>
+    <div class="ocat-end">
+        <input type="text" class="form-control" asp-for="EventName" placeholder="conversation.evaluated" />
+        <span class="hint">@T["Sent in the <code>X-Webhook-Event</code> header, so one receiver can handle several webhooks."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Body">
+    <label class="ocat-label" asp-for="Body">@T["Body"]</label>
+    <div class="ocat-end">
+        <textarea class="form-control font-monospace" asp-for="Body" rows="5"></textarea>
+        <span asp-validation-for="Body"></span>
+        <span class="hint">@T["The JSON to send, as a Liquid template. The default sends everything the workflow started with."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Secret">
+    <label class="ocat-label@(Model.HasSecret ? null : " ocat-label-required")" asp-for="Secret">@T["Signing secret"]</label>
+    <div class="ocat-end">
+        <input type="password" class="form-control" asp-for="Secret" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" placeholder="@(Model.HasSecret ? T["Saved. Leave empty to keep it."].Value : null)" />
+        <span asp-validation-for="Secret"></span>
+        <span class="hint">@T["Shared with the receiver and kept encrypted. Each request carries <code>X-Webhook-Timestamp</code> and <code>X-Webhook-Signature</code>: <code>v1=</code> and the hex HMAC-SHA256 of the timestamp, a dot and the body, keyed with this secret."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="MaxAttempts">
+    <label class="ocat-label" asp-for="MaxAttempts">@T["Attempts"]</label>
+    <div class="ocat-end">
+        <input type="number" class="form-control" asp-for="MaxAttempts" min="1" max="5" />
+        <span asp-validation-for="MaxAttempts"></span>
+        <span class="hint">@T["How many times to try when the receiver times out, is busy or fails, a few seconds apart. The result is in <code>Workflow.Output.Webhook</code>."]</span>
+    </div>
+</div>

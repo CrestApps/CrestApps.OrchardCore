@@ -1,0 +1,6 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIProfileVersionEntry>
+
+<a asp-action="Compare" asp-controller="AIProfileVersions" asp-area="CrestApps.OrchardCore.AI" asp-route-id="@Model.Value.Version.ItemId" class="btn btn-primary btn-sm">@T["Compare"]</a>

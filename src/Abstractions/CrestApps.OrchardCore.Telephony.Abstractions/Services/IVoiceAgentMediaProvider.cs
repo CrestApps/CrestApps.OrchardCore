@@ -80,4 +80,27 @@ public interface IVoiceAgentMediaProvider
     /// <param name="providerCallId">The provider's identifier for the caller's leg.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task<bool> HangupAsync(string providerCallId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Plays keypad tones to the party at the other end of the call, such as the options of a phone menu.
+    /// </summary>
+    /// <param name="providerCallId">The provider's identifier for the caller's leg.</param>
+    /// <param name="digits">The keys: 0 to 9, * and #, with w for a half-second pause and W for a second.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see langword="true"/> when the provider played them; a provider that cannot returns
+    /// <see langword="false"/>.</returns>
+    Task<bool> SendDigitsAsync(string providerCallId, string digits, CancellationToken cancellationToken = default)
+        => Task.FromResult(false);
+
+    /// <summary>
+    /// Transfers the caller to a phone number: the provider rings the number and connects the caller to whoever
+    /// answers.
+    /// </summary>
+    /// <param name="providerCallId">The provider's identifier for the caller's leg.</param>
+    /// <param name="phoneNumber">The number to ring, in E.164 form.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see langword="true"/> when the provider accepted the transfer; a provider that cannot returns
+    /// <see langword="false"/>.</returns>
+    Task<bool> TransferAsync(string providerCallId, string phoneNumber, CancellationToken cancellationToken = default)
+        => Task.FromResult(false);
 }

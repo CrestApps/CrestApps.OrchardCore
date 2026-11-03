@@ -1,0 +1,62 @@
+@using CrestApps.OrchardCore.AI.Workflows.ViewModels
+
+@model CheckConversationMetricTaskViewModel
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="Metric">@T["Metric"]</label>
+    <div class="ocat-end">
+        <select class="form-select" asp-for="Metric" asp-items="Model.Metrics"></select>
+        <span class="hint">@T["Rates are percentages. Conversation metrics need AI Chat Session Analytics, QA metrics need Evaluate AI Conversation workflows, and call metrics need AI phone calls."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="ProfileId">@T["Profile"]</label>
+    <div class="ocat-end">
+        <select class="form-select" asp-for="ProfileId" asp-items="Model.Profiles">
+            <option value="">@T["All profiles"]</option>
+        </select>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="ocat-wrapper">
+            <label class="ocat-label" asp-for="Condition">@T["Alert when the value"]</label>
+            <div class="ocat-end">
+                <select class="form-select" asp-for="Condition" asp-items="Model.Conditions"></select>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="ocat-wrapper" asp-validation-class-for="Threshold">
+            <label class="ocat-label" asp-for="Threshold">@T["Threshold"]</label>
+            <div class="ocat-end">
+                <input type="number" class="form-control" asp-for="Threshold" step="any" />
+                <span asp-validation-for="Threshold"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="ocat-wrapper" asp-validation-class-for="WindowMinutes">
+            <label class="ocat-label" asp-for="WindowMinutes">@T["Window (minutes)"]</label>
+            <div class="ocat-end">
+                <input type="number" class="form-control" asp-for="WindowMinutes" min="1" />
+                <span asp-validation-for="WindowMinutes"></span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="ocat-wrapper" asp-validation-class-for="MinimumSampleSize">
+            <label class="ocat-label" asp-for="MinimumSampleSize">@T["Fewest samples"]</label>
+            <div class="ocat-end">
+                <input type="number" class="form-control" asp-for="MinimumSampleSize" min="0" />
+                <span asp-validation-for="MinimumSampleSize"></span>
+            </div>
+        </div>
+    </div>
+</div>
+<span class="hint">@T["Start the workflow with a Timer. <strong>Alert started</strong> and <strong>Resolved</strong> are taken once at each change, so connect them to Notify or Send Email. The measurement is in <code>Workflow.Output.Alert</code>."]</span>

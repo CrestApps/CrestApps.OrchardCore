@@ -12,6 +12,7 @@ public sealed class AnsweringMachineSignal
 {
     private readonly CancellationTokenSource _machineDetected = new();
     private readonly CancellationTokenSource _greetingEnded = new();
+    private readonly CancellationTokenSource _phoneMenuReached = new();
 
     internal AnsweringMachineSignal(DateTime createdUtc)
     {
@@ -30,6 +31,12 @@ public sealed class AnsweringMachineSignal
     public CancellationToken GreetingEnded => _greetingEnded.Token;
 
     /// <summary>
+    /// Gets a token that is cancelled once the assistant has pressed keys on the call, which makes the machine that
+    /// answered a phone menu rather than a voicemail.
+    /// </summary>
+    public CancellationToken PhoneMenuReached => _phoneMenuReached.Token;
+
+    /// <summary>
     /// Gets when the call's signals were first asked for or reported, so a call nobody forgot is dropped eventually.
     /// </summary>
     internal DateTime CreatedUtc { get; }
@@ -39,4 +46,7 @@ public sealed class AnsweringMachineSignal
 
     internal void ReportGreetingEnded()
         => _greetingEnded.Cancel();
+
+    internal void ReportPhoneMenuReached()
+        => _phoneMenuReached.Cancel();
 }

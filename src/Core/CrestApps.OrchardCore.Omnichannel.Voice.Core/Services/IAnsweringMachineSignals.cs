@@ -34,6 +34,18 @@ public interface IAnsweringMachineSignals
     void GreetingEnded(string providerName, string providerCallId);
 
     /// <summary>
+    /// Records that the assistant pressed keys on the call, so the machine that answered is a phone menu it is getting
+    /// through rather than a voicemail to leave a message on.
+    /// </summary>
+    /// <remarks>
+    /// A business's phone menu is a machine as far as the provider's detection can tell. Live, the assistant pressed
+    /// the key for the person it was calling, and the call was taken for a voicemail, left a message and hung up on.
+    /// </remarks>
+    /// <param name="providerName">The technical name of the telephony provider carrying the call.</param>
+    /// <param name="providerCallId">The provider's identifier for the call leg.</param>
+    void PhoneMenuReached(string providerName, string providerCallId);
+
+    /// <summary>
     /// The signals for one call, to watch while the call is held.
     /// </summary>
     /// <param name="providerName">The technical name of the telephony provider carrying the call.</param>

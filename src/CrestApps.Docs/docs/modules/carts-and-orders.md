@@ -368,7 +368,7 @@ The main date of the orders and their entries is when the order was placed, sinc
 
 ### Store reports to adapt
 
-The **Reports: store reports to adapt** recipe (`CommerceReportBuilderReports`) turns on the Report Builder and adds reports built from these data sets, under the **Store** category. They show what the built-in reports above show, so you can open one in the builder, change it, and save it as your own. The person who runs the recipe owns them, and they read with that person's access.
+The **Reports: store reports to adapt** recipe (`CommerceReportBuilderReports`) turns on the Report Builder and adds reports built from these data sets, in the **Store** report group. They show what the built-in reports above show, so you can open one in the builder, change it, and save it as your own. The person who runs the recipe owns them, and they read with that person's access.
 
 | Report | Built from | Matches the built-in report |
 | --- | --- | --- |

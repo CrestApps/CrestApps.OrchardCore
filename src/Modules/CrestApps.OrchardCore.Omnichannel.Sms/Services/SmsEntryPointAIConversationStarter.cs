@@ -41,6 +41,7 @@ public sealed class SmsEntryPointAIConversationStarter : IMessagingAIConversatio
     private readonly IContentManager _contentManager;
     private readonly ILocalLock _localLock;
     private readonly ISession _session;
+    private readonly IOmnichannelAIConversationStarting _conversationStarting;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -62,6 +63,7 @@ public sealed class SmsEntryPointAIConversationStarter : IMessagingAIConversatio
     /// <param name="contentManager">Reads the contact and creates the subject.</param>
     /// <param name="localLock">Serializes starts for one customer on one number.</param>
     /// <param name="session">Commits the new conversation before the lock is released.</param>
+    /// <param name="conversationStarting">Runs the AI Conversation Starting workflows before the conversation is created.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
     public SmsEntryPointAIConversationStarter(
@@ -77,6 +79,7 @@ public sealed class SmsEntryPointAIConversationStarter : IMessagingAIConversatio
         IContentManager contentManager,
         ILocalLock localLock,
         ISession session,
+        IOmnichannelAIConversationStarting conversationStarting,
         IClock clock,
         ILogger<SmsEntryPointAIConversationStarter> logger)
     {
@@ -92,6 +95,7 @@ public sealed class SmsEntryPointAIConversationStarter : IMessagingAIConversatio
         _contentManager = contentManager;
         _localLock = localLock;
         _session = session;
+        _conversationStarting = conversationStarting;
         _clock = clock;
         _logger = logger;
     }
@@ -191,6 +195,12 @@ public sealed class SmsEntryPointAIConversationStarter : IMessagingAIConversatio
 
             var activity = await CreateConversationAsync(message, address, profile, cancellationToken);
 
+            if (activity is null)
+            {
+                // A starting workflow declined the conversation; the text is left to people.
+                return false;
+            }
+
             // Committed now, while the lock is held: the other delivery of this customer's texts, and the other handler
             // of this one, must find the conversation rather than start a second.
             await _session.SaveChangesAsync(cancellationToken);
@@ -245,17 +255,6 @@ public sealed class SmsEntryPointAIConversationStarter : IMessagingAIConversatio
                 string.Equals(candidate.Channel, OmnichannelConstants.Channels.Sms, StringComparison.OrdinalIgnoreCase) &&
                 address.IsKnownAs(candidate.ChannelEndpointId));
 
-        var chatSession = new AIChatSession
-        {
-            SessionId = UniqueId.GenerateId(),
-            ProfileId = profile.ItemId,
-            CreatedUtc = now,
-            LastActivityUtc = now,
-            Title = "Automated SMS conversation",
-        };
-
-        await _chatSessionManager.SaveAsync(chatSession, cancellationToken);
-
         var activity = await _activityManager.NewAsync(cancellationToken: cancellationToken);
         activity.Kind = ActivityKind.Sms;
         activity.Source = ActivitySources.Inbound;
@@ -263,7 +262,6 @@ public sealed class SmsEntryPointAIConversationStarter : IMessagingAIConversatio
         activity.ChannelEndpointId = address.ItemId;
         activity.InteractionType = ActivityInteractionType.Automated;
         activity.AIProfileId = profile.ItemId;
-        activity.AISessionId = chatSession.SessionId;
         activity.PreferredDestination = message.CustomerAddress;
         activity.CampaignId = flow?.CampaignId;
         activity.SubjectContentType = flow?.SubjectContentType;
@@ -300,6 +298,35 @@ public sealed class SmsEntryPointAIConversationStarter : IMessagingAIConversatio
                 activity.ContactResolvedUtc = now;
             }
         }
+
+        // The AI Conversation Starting workflows run before anything is written: they can set the variables the
+        // conversation starts with, choose its profile, or decline it.
+        var starting = await _conversationStarting.StartingAsync(activity, cancellationToken);
+
+        if (starting?.Declined == true)
+        {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "A starting workflow declined the AI conversation for a text to number '{AddressId}': {Reason}",
+                    address.ItemId.SanitizeLogValue(),
+                    starting.DeclineReason.SanitizeLogValue());
+            }
+
+            return null;
+        }
+
+        var chatSession = new AIChatSession
+        {
+            SessionId = UniqueId.GenerateId(),
+            ProfileId = activity.AIProfileId,
+            CreatedUtc = now,
+            LastActivityUtc = now,
+            Title = "Automated SMS conversation",
+        };
+
+        await _chatSessionManager.SaveAsync(chatSession, cancellationToken);
+        activity.AISessionId = chatSession.SessionId;
 
         await _activityManager.CreateAsync(activity, cancellationToken);
 

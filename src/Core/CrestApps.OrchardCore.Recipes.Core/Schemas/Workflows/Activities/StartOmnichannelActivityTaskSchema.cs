@@ -20,7 +20,7 @@ public sealed class StartOmnichannelActivityTaskSchema : WorkflowActivitySchemaD
     protected override string Description => "Starts an automated omnichannel activity now: places the outbound call for a Phone activity, or sends the opening message for an SMS activity. The activity's own channel decides which.";
 
     /// <inheritdoc />
-    protected override IEnumerable<string> Outcomes => ["Done", "Already Started", "Failed"];
+    protected override IEnumerable<string> Outcomes => ["Done", "Already Started", "Failed", "Declined"];
 
     /// <inheritdoc />
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)

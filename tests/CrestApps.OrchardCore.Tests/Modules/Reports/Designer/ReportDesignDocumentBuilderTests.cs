@@ -298,6 +298,52 @@ public sealed class ReportDesignDocumentBuilderTests : IDisposable
             section.Rows.Select(row => row.Cells.ToArray()));
     }
 
+    [Fact]
+    public async Task AddContainers_PlacesContainersInTheOrderOfTheirFirstSections()
+    {
+        // Arrange
+        var query = RevenueByRegionAndCustomer();
+        ReportVisualDefinition[] visuals =
+        [
+            new() { Id = "totals", Type = ReportVisualType.Metrics, ValueColumnIds = ["revenue"] },
+            new() { Id = "table", Type = ReportVisualType.Table, ContainerId = "detail" },
+            new() { Id = "chart", Type = ReportVisualType.Chart, CategoryColumnId = "region", ValueColumnIds = ["revenue"], ContainerId = "trend" },
+            new() { Id = "second", Type = ReportVisualType.Table, ContainerId = "detail" },
+        ];
+        var document = DocumentBuilder().Build("Revenue", visuals, await RunAsync(query, visuals, SalesData()));
+
+        // Act
+        ReportDesignDocumentBuilder.AddContainers(document,
+        [
+            new ReportContainerDefinition { Id = "trend", Title = "Trend", Width = 6, Height = 9000 },
+            new ReportContainerDefinition { Id = "detail", Title = "Detail", Width = 6, Height = 320 },
+            new ReportContainerDefinition { Id = "unused", Title = "Unused" },
+        ]);
+
+        // Assert
+        Assert.Equal(["detail", "trend"], document.Containers.Select(container => container.Id));
+        Assert.Equal(320, document.Containers[0].Height);
+        Assert.Equal(ReportContainerDefinition.MaxHeight, document.Containers[1].Height);
+        Assert.Equal(["totals", "table", "chart", "second"], document.Sections.Select(section => section.Id));
+        Assert.Equal([null, "detail", "trend", "detail"], document.Sections.Select(section => section.ContainerId));
+    }
+
+    [Fact]
+    public async Task AddContainers_ShowsASectionOfAMissingContainerOnItsOwn()
+    {
+        // Arrange
+        var query = RevenueByRegionAndCustomer();
+        ReportVisualDefinition[] visuals = [new() { Id = "table", Type = ReportVisualType.Table, ContainerId = "gone" }];
+        var document = DocumentBuilder().Build("Revenue", visuals, await RunAsync(query, visuals, SalesData()));
+
+        // Act
+        ReportDesignDocumentBuilder.AddContainers(document, []);
+
+        // Assert
+        Assert.Empty(document.Containers);
+        Assert.Null(Assert.Single(document.Sections).ContainerId);
+    }
+
     private static ReportQueryDefinition RevenueByRegionAndCustomer()
     {
         var query = CustomersWithOrders();

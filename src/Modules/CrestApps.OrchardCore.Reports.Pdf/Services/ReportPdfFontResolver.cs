@@ -1,26 +1,17 @@
-using System.Collections.Concurrent;
-using PdfSharp.Fonts;
-
 namespace CrestApps.OrchardCore.Reports.Pdf.Services;
 
 /// <summary>
-/// A best-effort <see cref="IFontResolver"/> for hosts where PDFsharp cannot read system fonts on its own
-/// (Linux and macOS). It serves the fonts installed in the operating system's font directories: the family a
-/// document asks for when it is installed, otherwise the installed font that stands in for it — Liberation
-/// Sans, Serif and Mono first, because they have the widths of Arial, Times New Roman and Courier New, so a
-/// document lays out as it does on Windows — and the bold, italic and bold italic faces of that font.
+/// Finds the installed TrueType font a report PDF is written in: the family a document asks for when it is installed,
+/// otherwise the installed font that stands in for it — Liberation Sans first, because it has the widths of Arial, so
+/// a document lays out as it does on Windows — and the bold face of that font. It reads the font folders of Windows,
+/// Linux and macOS.
 /// </summary>
 /// <remarks>
-/// The same resolver as CrestApps.Core's PDF documents, where it is internal. PDFsharp holds one resolver for the
-/// whole process, so whichever of them is set first serves both.
-/// <para>
-/// A style is simulated only when the font has no face for it, and the text still comes out with a real
-/// bold or italic face wherever one is installed, so it reads as bold or italic to anything that reads the
-/// PDF back. When no font of a kind is installed, any installed font is used rather than failing the
-/// document.
-/// </para>
+/// Faces are told apart by their file names: <c>LiberationSans-Bold.ttf</c> on Linux and macOS, and
+/// <c>arialbd.ttf</c> beside <c>arial.ttf</c> on Windows. When no sans-serif font is installed, any installed font is
+/// used rather than failing the document.
 /// </remarks>
-internal sealed class ReportPdfFontResolver : IFontResolver
+internal sealed class ReportPdfFontResolver
 {
     private const int MaxFontFiles = 5000;
 
@@ -35,9 +26,8 @@ internal sealed class ReportPdfFontResolver : IFontResolver
     // Families are compared by their letters and digits only, lowercased: "Liberation Sans" and
     // "LiberationSans-Bold.ttf" both read "liberationsans".
     private static readonly string[] _sansFamilies = ["liberationsans", "arimo", "arial", "helvetica", "dejavusans", "freesans", "notosans", "opensans", "roboto", "ubuntu"];
-    private static readonly string[] _serifFamilies = ["liberationserif", "tinos", "timesnewroman", "times", "dejavuserif", "freeserif", "notoserif"];
-    private static readonly string[] _monoFamilies = ["liberationmono", "cousine", "couriernew", "courier", "dejavusansmono", "freemono", "notosansmono", "ubuntumono"];
 
+    // The one-letter suffixes are the ones of the Windows fonts, such as "consolab" and "consolaz".
     private static readonly (string Suffix, FontStyle Style)[] _styleSuffixes =
     [
         ("bolditalic", FontStyle.BoldItalic),
@@ -51,14 +41,19 @@ internal sealed class ReportPdfFontResolver : IFontResolver
         ("regular", FontStyle.Regular),
         ("book", FontStyle.Regular),
         ("roman", FontStyle.Regular),
+        ("b", FontStyle.Bold),
+        ("i", FontStyle.Italic),
+        ("z", FontStyle.BoldItalic),
     ];
 
     private readonly Dictionary<string, Dictionary<FontStyle, string>> _families;
     private readonly Dictionary<string, string> _files;
-    private readonly ConcurrentDictionary<string, byte[]> _data = new(StringComparer.Ordinal);
     private readonly string _fallbackFamily;
 
-    private ReportPdfFontResolver(Dictionary<string, Dictionary<FontStyle, string>> families, Dictionary<string, string> files, string fallbackFamily)
+    private ReportPdfFontResolver(
+        Dictionary<string, Dictionary<FontStyle, string>> families,
+        Dictionary<string, string> files,
+        string fallbackFamily)
     {
         _families = families;
         _files = files;
@@ -110,19 +105,26 @@ internal sealed class ReportPdfFontResolver : IFontResolver
     /// <returns>The resolver, or <see langword="null"/> when there is no file.</returns>
     internal static ReportPdfFontResolver FromFiles(IEnumerable<string> paths)
     {
-        var families = new Dictionary<string, Dictionary<FontStyle, string>>(StringComparer.Ordinal);
-        var files = new Dictionary<string, string>(StringComparer.Ordinal);
+        var faces = new Dictionary<string, string>(StringComparer.Ordinal);
 
         foreach (var path in paths ?? [])
         {
             var faceName = Path.GetFileNameWithoutExtension(path);
 
-            if (string.IsNullOrEmpty(faceName) || files.ContainsKey(faceName))
+            if (!string.IsNullOrEmpty(faceName))
             {
-                continue;
+                faces.TryAdd(faceName, path);
             }
+        }
 
-            var (family, style) = Parse(faceName);
+        // A Windows face, such as "arialbd", is read as a style of the family whose regular file is installed.
+        var names = faces.Keys.Select(Normalize).ToHashSet(StringComparer.Ordinal);
+        var families = new Dictionary<string, Dictionary<FontStyle, string>>(StringComparer.Ordinal);
+        var files = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var (faceName, path) in faces)
+        {
+            var (family, style) = Parse(faceName, names);
 
             if (family.Length == 0)
             {
@@ -153,59 +155,18 @@ internal sealed class ReportPdfFontResolver : IFontResolver
     }
 
     /// <summary>
-    /// Reads the file of a face.
-    /// </summary>
-    /// <param name="faceName">The face name <see cref="ResolveTypeface"/> returned.</param>
-    /// <returns>The font file.</returns>
-    public byte[] GetFont(string faceName)
-    {
-        if (!_files.TryGetValue(faceName ?? string.Empty, out var path))
-        {
-            path = _files[Face(_fallbackFamily, FontStyle.Regular).FaceName];
-        }
-
-        return _data.GetOrAdd(path, File.ReadAllBytes);
-    }
-
-    /// <summary>
-    /// Chooses the installed face for a family and style.
+    /// Chooses the installed file for a family and weight.
     /// </summary>
     /// <param name="familyName">The family the document asks for.</param>
     /// <param name="isBold">Whether it asks for bold.</param>
-    /// <param name="isItalic">Whether it asks for italic.</param>
-    /// <returns>The face, and the styles PDFsharp has to simulate because the font has no face for them.</returns>
-    public FontResolverInfo ResolveTypeface(string familyName, bool isBold, bool isItalic)
+    /// <returns>The path of the file, and whether the font has no bold face, so bold has to be simulated.</returns>
+    public (string Path, bool SimulateBold) Resolve(string familyName, bool isBold)
     {
-        var family = Choose(Normalize(familyName));
-        var wanted = (isBold, isItalic) switch
-        {
-            (true, true) => FontStyle.BoldItalic,
-            (true, false) => FontStyle.Bold,
-            (false, true) => FontStyle.Italic,
-            _ => FontStyle.Regular,
-        };
+        var requested = Normalize(familyName);
+        var family = _families.ContainsKey(requested) ? requested : _fallbackFamily;
+        var (faceName, style) = Face(family, isBold ? FontStyle.Bold : FontStyle.Regular);
 
-        var (faceName, style) = Face(family, wanted);
-        var hasBold = style is FontStyle.Bold or FontStyle.BoldItalic;
-        var hasItalic = style is FontStyle.Italic or FontStyle.BoldItalic;
-
-        return new FontResolverInfo(faceName, isBold && !hasBold, isItalic && !hasItalic);
-    }
-
-    private string Choose(string requested)
-    {
-        if (requested.Length > 0 && _families.ContainsKey(requested))
-        {
-            return requested;
-        }
-
-        var candidates = IsMono(requested)
-            ? _monoFamilies
-            : IsSerif(requested)
-                ? _serifFamilies
-                : _sansFamilies;
-
-        return candidates.FirstOrDefault(_families.ContainsKey) ?? _fallbackFamily;
+        return (_files[faceName], isBold && style is not (FontStyle.Bold or FontStyle.BoldItalic));
     }
 
     private (string FaceName, FontStyle Style) Face(string family, FontStyle wanted)
@@ -217,13 +178,9 @@ internal sealed class ReportPdfFontResolver : IFontResolver
             return (exact, wanted);
         }
 
-        // Without a bold italic face, the bold one is closer than the italic one: weight shows more.
-        var nearest = wanted switch
-        {
-            FontStyle.BoldItalic => new[] { FontStyle.Bold, FontStyle.Italic, FontStyle.Regular },
-            FontStyle.Bold or FontStyle.Italic => [FontStyle.Regular],
-            _ => [FontStyle.Bold, FontStyle.Italic, FontStyle.BoldItalic],
-        };
+        FontStyle[] nearest = wanted == FontStyle.Bold
+            ? [FontStyle.Regular]
+            : [FontStyle.Bold, FontStyle.Italic, FontStyle.BoldItalic];
 
         foreach (var style in nearest)
         {
@@ -238,7 +195,7 @@ internal sealed class ReportPdfFontResolver : IFontResolver
         return (any.Value, any.Key);
     }
 
-    private static (string Family, FontStyle Style) Parse(string faceName)
+    private static (string Family, FontStyle Style) Parse(string faceName, HashSet<string> names)
     {
         var normalized = Normalize(faceName);
 
@@ -247,14 +204,17 @@ internal sealed class ReportPdfFontResolver : IFontResolver
             // A suffix only counts as a style when something is left for the family: "Bold.ttf" is not a family.
             if (normalized.Length > suffix.Length + 2 && normalized.EndsWith(suffix, StringComparison.Ordinal))
             {
-                // "Italic" inside "BoldItalic" was matched first; short suffixes need the separator the file
-                // name wrote, so "Credit.ttf" is not read as an italic "Cred".
-                if (suffix.Length <= 2 && !HasSeparatorBefore(faceName, suffix.Length))
+                var family = normalized[..^suffix.Length];
+
+                // "Italic" inside "BoldItalic" was matched first. A short suffix needs the separator the file name
+                // wrote, or the regular file of its family beside it: "Credit.ttf" is not an italic "Cred", but
+                // "arialbd.ttf" is the bold "arial".
+                if (suffix.Length <= 2 && !HasSeparatorBefore(faceName, suffix.Length) && !names.Contains(family))
                 {
                     continue;
                 }
 
-                return (normalized[..^suffix.Length], style);
+                return (family, style);
             }
         }
 
@@ -273,31 +233,30 @@ internal sealed class ReportPdfFontResolver : IFontResolver
         return new string((name ?? string.Empty).Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
     }
 
-    private static bool IsMono(string family)
-    {
-        return family.Contains("mono", StringComparison.Ordinal) ||
-            family.Contains("courier", StringComparison.Ordinal) ||
-            family.Contains("consol", StringComparison.Ordinal) ||
-            family.Contains("menlo", StringComparison.Ordinal) ||
-            family.Contains("code", StringComparison.Ordinal);
-    }
-
-    private static bool IsSerif(string family)
-    {
-        return (family.Contains("serif", StringComparison.Ordinal) && !family.Contains("sansserif", StringComparison.Ordinal)) ||
-            family.Contains("times", StringComparison.Ordinal) ||
-            family.Contains("georgia", StringComparison.Ordinal) ||
-            family.Contains("garamond", StringComparison.Ordinal) ||
-            family.Contains("cambria", StringComparison.Ordinal) ||
-            family.Contains("palatino", StringComparison.Ordinal) ||
-            family.Contains("bookman", StringComparison.Ordinal);
-    }
-
     private static List<string> FindFontFiles()
     {
         var files = new List<string>();
-        var directories = _fontDirectories.ToList();
+        var directories = new List<string>();
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+        // On Linux and macOS, the fonts folder of .NET is one of the folders of the home directory below.
+        if (OperatingSystem.IsWindows())
+        {
+            var windows = Environment.GetFolderPath(Environment.SpecialFolder.Fonts);
+            var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+
+            if (!string.IsNullOrEmpty(windows))
+            {
+                directories.Add(windows);
+            }
+
+            if (!string.IsNullOrEmpty(local))
+            {
+                directories.Add(Path.Combine(local, "Microsoft", "Windows", "Fonts"));
+            }
+        }
+
+        directories.AddRange(_fontDirectories);
 
         if (!string.IsNullOrEmpty(home))
         {
@@ -317,13 +276,9 @@ internal sealed class ReportPdfFontResolver : IFontResolver
             {
                 files.AddRange(Directory.EnumerateFiles(directory, "*.ttf", SearchOption.AllDirectories).Take(MaxFontFiles - files.Count));
             }
-            catch (IOException)
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
                 // A directory that cannot be read is skipped; the others may still hold fonts.
-            }
-            catch (UnauthorizedAccessException)
-            {
-                // Likewise.
             }
 
             if (files.Count >= MaxFontFiles)

@@ -139,4 +139,30 @@ public sealed class TelnyxVoiceAgentMediaProvider : IVoiceAgentMediaProvider
 
         return result.Succeeded;
     }
+
+    /// <inheritdoc/>
+    public async Task<bool> SendDigitsAsync(string providerCallId, string digits, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(providerCallId) || string.IsNullOrWhiteSpace(digits))
+        {
+            return false;
+        }
+
+        var result = await _apiClient.SendDtmfAsync(providerCallId, digits, cancellationToken);
+
+        return result.Succeeded;
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> TransferAsync(string providerCallId, string phoneNumber, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(providerCallId) || string.IsNullOrWhiteSpace(phoneNumber))
+        {
+            return false;
+        }
+
+        var result = await _apiClient.TransferAsync(providerCallId, phoneNumber.Trim(), cancellationToken: cancellationToken);
+
+        return result.Succeeded;
+    }
 }

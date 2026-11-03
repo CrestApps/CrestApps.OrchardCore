@@ -42,4 +42,19 @@ public static class AIUsageFeaturePurposes
     /// Replaying and judging the replies an AI Profile Builder author gave feedback on.
     /// </summary>
     public const string ProfileBuilderReplay = "ProfileBuilderReplay";
+
+    /// <summary>
+    /// Scoring a conversation against its quality criteria.
+    /// </summary>
+    public const string ConversationEvaluation = "ConversationEvaluation";
+
+    /// <summary>
+    /// Playing the customer in a simulated test conversation.
+    /// </summary>
+    public const string ConversationSimulation = "ConversationSimulation";
+
+    /// <summary>
+    /// Rewriting what the AI remembers about a contact after a conversation.
+    /// </summary>
+    public const string ContactMemory = "ContactMemory";
 }

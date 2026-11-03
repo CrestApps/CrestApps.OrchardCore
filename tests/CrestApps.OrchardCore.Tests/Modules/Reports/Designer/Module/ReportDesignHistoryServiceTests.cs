@@ -434,6 +434,7 @@ public sealed class ReportDesignHistoryServiceTests : IAsyncLifetime
         var designService = new ReportDesignService(
             designs,
             Catalog<ReportView>(),
+            Catalog<ReportGroup>(),
             _sharedLinks,
             new ReportViewSnapshotStore(session),
             Planner(SalesData()),

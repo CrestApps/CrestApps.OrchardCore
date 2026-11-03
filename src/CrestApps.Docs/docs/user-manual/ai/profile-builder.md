@@ -60,6 +60,22 @@ You can also edit the instructions in **Settings** yourself at any time. Your ed
 
 If the chat deployment has a conversation deployment, you can role-play by voice. Feedback works on spoken replies too, but they cannot be regenerated, because they were already heard. After feedback, end the voice conversation and start it again to use the new instructions.
 
+## Improve it with simulated customers
+
+Instead of playing the customer yourself, you can let models do it. On the **Simulate** tab:
+
+1. Under **Customers to play**, describe each customer: who they are, what they want and how they behave, with a blank line between customers. For example: *Dana is angry that her order 1001 is a week late and wants a refund.* Up to five.
+2. Under **What every conversation must achieve**, write one condition per line, such as *Confirms the order number before acting on it*.
+3. Choose the **Customer model** that plays the customers and the **Judge model** that scores each conversation. The assistant answers with the session's own deployment, so three models take part; a different customer and judge give a fairer test.
+4. Set the **Turns** per conversation, the most **Rounds**, and the **Passing score** out of 100.
+5. Leave **Rewrite the instructions when a conversation fails** on, and click **Run simulation**.
+
+Each round, every customer talks to the current instructions, with the session's tools, and the judge scores each conversation and says what went wrong. When a conversation fails, the coach rewrites the instructions from what the judge found, as it does from your feedback, and the next round tests the new revision. The run stops when every conversation passes, when the rounds run out, or when you click **Stop after this round**.
+
+The results list each conversation with its score, the judge's findings and the transcript, newest first. Each rewrite is a revision marked **Simulation** under **Revisions**, so you can compare or restore it like any other, and its findings join the feedback that **Replay** checks.
+
+Tools run during a simulation as they do in a real conversation, told it is a simulation through `Workflow.Input.Simulation`. Make tool workflows that act on the outside world answer with test data when it is true.
+
 ## Revisions
 
 <YouTube video="ai-profile-builder" title="Video of the revision history and of replaying earlier feedback" start={203} end={237} />

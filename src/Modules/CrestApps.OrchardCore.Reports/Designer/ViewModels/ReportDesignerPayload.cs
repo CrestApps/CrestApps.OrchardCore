@@ -25,9 +25,9 @@ public class ReportDesignerPayload
     public string Description { get; set; }
 
     /// <summary>
-    /// Gets or sets the report category.
+    /// Gets or sets the identifier of the report's group, or <see langword="null"/> for a report in no group.
     /// </summary>
-    public string Category { get; set; }
+    public string GroupId { get; set; }
 
     /// <summary>
     /// Gets or sets the query.
@@ -38,6 +38,16 @@ public class ReportDesignerPayload
     /// Gets or sets the report visuals.
     /// </summary>
     public IList<ReportVisualDefinition> Visuals { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the containers that frame the visuals.
+    /// </summary>
+    public IList<ReportContainerDefinition> Containers { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the queries the report runs besides its main query.
+    /// </summary>
+    public IList<ReportNamedQuery> Queries { get; set; } = [];
 
     /// <summary>
     /// Gets or sets a value indicating whether the report is pinned to the admin menu.
@@ -68,6 +78,11 @@ public class ReportDesignerPayload
     /// Gets or sets the values entered for exposed filters in the preview.
     /// </summary>
     public Dictionary<string, IList<string>> FilterValues { get; set; }
+
+    /// <summary>
+    /// Gets or sets the values picked by clicking the preview's visuals, as keys by visual identifier.
+    /// </summary>
+    public Dictionary<string, IList<string>> Selections { get; set; }
 
     /// <summary>
     /// Gets or sets the revision of the report the builder's changes are based on.
@@ -134,9 +149,11 @@ public class ReportDesignerPayload
             Id = design.ItemId,
             DisplayText = design.DisplayText,
             Description = design.Description,
-            Category = design.Category,
+            GroupId = design.GroupId,
             Query = design.Query,
             Visuals = design.Visuals,
+            Containers = design.Containers,
+            Queries = design.Queries,
             ShowInAdminMenu = design.ShowInAdminMenu,
             AllowExport = design.AllowExport,
             SharedUserNames = design.SharedUserNames,
@@ -174,9 +191,11 @@ public class ReportDesignerPayload
             ItemId = Id,
             DisplayText = DisplayText,
             Description = Description,
-            Category = Category,
+            GroupId = GroupId,
             Query = Query,
             Visuals = Visuals,
+            Containers = Containers,
+            Queries = Queries,
             ShowInAdminMenu = ShowInAdminMenu,
             AllowExport = AllowExport,
             SharedUserNames = SharedUserNames,

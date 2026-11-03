@@ -120,7 +120,7 @@ public sealed partial class VoiceAgentConversationLoop
     /// </summary>
     /// <param name="activity">The activity being handed off.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    private async Task RecordHandoffAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
+    private async Task RecordHandoffAsync(OmnichannelActivity activity, CancellationToken cancellationToken, Action<OmnichannelActivity> mark = null)
     {
         // Re-read: the handoff moved this row through another service, so the copy held here is already stale.
         var current = await _activityStore.FindByIdAsync(activity.ItemId, cancellationToken);
@@ -129,8 +129,9 @@ public sealed partial class VoiceAgentConversationLoop
         {
             var cleared = current.Properties.Remove(nameof(PendingVoiceHandoff));
 
-            if (cleared || !current.AiEscalated)
+            if (cleared || !current.AiEscalated || mark is not null)
             {
+                mark?.Invoke(current);
                 current.AiEscalated = true;
                 await _activityStore.UpdateAsync(current, cancellationToken);
             }
@@ -139,6 +140,7 @@ public sealed partial class VoiceAgentConversationLoop
         // Also on the in-memory copy the caller is still holding, so a second pass inside this same scope sees
         // the call as handed over rather than re-reading it from a row it has not reloaded.
         activity.Properties?.Remove(nameof(PendingVoiceHandoff));
+        mark?.Invoke(activity);
         activity.AiEscalated = true;
     }
 
@@ -256,7 +258,7 @@ public sealed partial class VoiceAgentConversationLoop
         // turn-based loop uses, so a handoff means the same thing on both.
         if (completion.HandoffRequested)
         {
-            await PerformVoiceHandoffAsync(voiceEvent, media, activity, completion.SessionEndedUtc ?? _clock.UtcNow, cancellationToken);
+            await PerformVoiceHandoffAsync(voiceEvent, media, activity, completion.SessionEndedUtc ?? _clock.UtcNow, announced: true, cancellationToken);
 
             return;
         }
@@ -298,12 +300,15 @@ public sealed partial class VoiceAgentConversationLoop
     /// <param name="activity">The activity being handed off.</param>
     /// <param name="conversationEndedUtc">When the assistant's conversation ended: the end of a live session, or the
     /// end of the closing line on a turn-based call. A handed-off conversation is reported ended then.</param>
+    /// <param name="announced">Whether the model asked for the transfer, and so has already told the caller it is
+    /// connecting them; not when the loop hands over a caller whose session was lost.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     private async Task PerformVoiceHandoffAsync(
         VoiceAgentEvent voiceEvent,
         IVoiceAgentMediaProvider media,
         OmnichannelActivity activity,
         DateTime conversationEndedUtc,
+        bool announced,
         CancellationToken cancellationToken)
     {
         // Once is all a call is handed over. A transfer recorded by a turn that was still in flight, or a
@@ -325,6 +330,25 @@ public sealed partial class VoiceAgentConversationLoop
 
         var (handoffService, flowSettings) = await ResolveVoiceHandoffAsync(activity, cancellationToken);
 
+        // A supervisor taking the call over is rung directly, whatever the subject's handoff settings say: the person
+        // asked for the caller, and the subject's queue may not exist at all.
+        var takeOver = activity.TryGet<AITakeOverRequest>(out var takeOverRequest) && !string.IsNullOrEmpty(takeOverRequest.TargetAgentId)
+            ? takeOverRequest
+            : null;
+
+        // A transfer to a phone number leaves the platform: the provider rings the number and connects the caller.
+        if (takeOverRequest is not null && string.IsNullOrEmpty(takeOverRequest.TargetAgentId) && !string.IsNullOrEmpty(takeOverRequest.TargetPhoneNumber))
+        {
+            await TransferToNumberAsync(voiceEvent, media, activity, takeOverRequest.TargetPhoneNumber, cancellationToken);
+
+            return;
+        }
+
+        if (takeOver is not null)
+        {
+            handoffService = _handoffServices?.FirstOrDefault(candidate => candidate.CanHandle(OmnichannelConstants.Channels.Phone));
+        }
+
         if (handoffService is null)
         {
             _logger.LogWarning("An AI voice handoff was requested for Activity {ActivityId} but no handoff destination is available; ending the call.", activity.ItemId.SanitizeLogValue());
@@ -340,8 +364,11 @@ public sealed partial class VoiceAgentConversationLoop
             result = await handoffService.RequestHandoffAsync(new OmnichannelHandoffRequest
             {
                 Activity = activity,
-                TargetQueueId = flowSettings.HandoffQueueId,
-                Reason = "The automated assistant escalated the call to a live agent.",
+                TargetQueueId = takeOver is null ? flowSettings?.HandoffQueueId : null,
+                TargetAgentId = takeOver?.TargetAgentId,
+                Reason = takeOver is null
+                    ? "The automated assistant escalated the call to a live agent."
+                    : SupervisorTookOverReason,
                 ContactAddress = activity.PreferredDestination,
                 ProviderName = voiceEvent.ProviderName,
                 ProviderCallId = voiceEvent.ProviderCallId,
@@ -385,7 +412,15 @@ public sealed partial class VoiceAgentConversationLoop
                 _logger.LogInformation("AI voice Activity {ActivityId} could not route live (after hours); a callback was scheduled.", activity.ItemId.SanitizeLogValue());
             }
 
-            const string closing = "Thanks for your patience. Our specialists aren't available right now, so we've scheduled a callback and someone will reach out to you shortly. Goodbye.";
+            var closing = HandoffLine(result.Disposition, announced);
+
+            // A call held in another language is not told in English; it ends after the assistant's own line.
+            if (!await IsHeldInEnglishAsync(media, activity, cancellationToken))
+            {
+                await media.HangupAsync(voiceEvent.ProviderCallId, cancellationToken);
+
+                return;
+            }
 
             if (!string.IsNullOrWhiteSpace(activity.AISessionId))
             {
@@ -417,16 +452,15 @@ public sealed partial class VoiceAgentConversationLoop
         // written now; a live session was summarized when it ended, and an unmeasured call is left to the hangup.
         await RecordTurnBasedSessionAsync(voiceEvent, activity, AIVoiceSessionOutcome.HandedToAgent, conversationEndedUtc, onlyWhenMeasured: true);
 
-        // "Connecting you now" and "you are in a queue" are different promises. Saying the first to a caller
-        // nobody is free to take leaves them listening to silence, waiting for a person who was never offered
-        // the call, so each disposition gets its own line.
         var routed = result.Disposition == HandoffDisposition.Routed;
+        var handoffLine = HandoffLine(result.Disposition, announced);
 
-        var handoffLine = routed
-            ? "Thanks for waiting. I'm connecting you to a specialist now."
-            : "Thanks for waiting. All of our specialists are busy right now, so I've placed you in the queue and the next available person will be with you shortly.";
-
-        await SpeakAsync(media, voiceEvent.ProviderCallId, activity, handoffLine, cancellationToken);
+        // Looked up only when there is a line to say: a call the model put through, the usual handoff, has nothing more
+        // to hear, and reading the persona for it is work the caller gains nothing from.
+        if (handoffLine is not null && await IsHeldInEnglishAsync(media, activity, cancellationToken))
+        {
+            await SpeakAsync(media, voiceEvent.ProviderCallId, activity, handoffLine, cancellationToken);
+        }
 
         // The agent taking the call should not have to ask the customer to repeat themselves.
         SummarizeForTheAgentAfterCommit(activity.ItemId);
@@ -438,5 +472,66 @@ public sealed partial class VoiceAgentConversationLoop
                 activity.ItemId.SanitizeLogValue(),
                 routed ? "the call was offered to an available agent" : "the call is held while the queue waits for one");
         }
+    }
+
+    /// <summary>
+    /// What the caller is told when an agent is offered the call and nobody has told them yet.
+    /// </summary>
+    internal const string ConnectingLine = "Thanks for waiting. I'm connecting you to a specialist now.";
+
+    /// <summary>
+    /// What the caller is told once nobody is free to take them yet.
+    /// </summary>
+    internal const string WaitingInQueueLine = "Thanks for waiting. All of our specialists are busy right now, so I've placed you in the queue and the next available person will be with you shortly.";
+
+    /// <summary>
+    /// What the caller is told when the queue is closed and a callback was booked instead.
+    /// </summary>
+    internal const string CallbackScheduledLine = "Thanks for your patience. Our specialists aren't available right now, so we've scheduled a callback and someone will reach out to you shortly. Goodbye.";
+
+    /// <summary>
+    /// The English line the loop speaks itself once the caller has been handed on, or <see langword="null"/> for none.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A call the model asked to transfer is not told again that it is being put through. The transfer tool has the
+    /// model tell the caller it is connecting them, in its own words and in the language of the call, and a fixed
+    /// "I'm connecting you to a specialist now" after it said the same thing twice, in the provider's voice instead of
+    /// the assistant's. A caller handed over because the assistant's session was lost has been told nothing, and still
+    /// hears it.
+    /// </para>
+    /// <para>
+    /// "You are in a queue" and "we will call you back" are different promises from "connecting you", and are still
+    /// said, but only on a call held in English (<see cref="IsHeldInEnglishAsync"/>), because they are English
+    /// sentences. On the AI-0 walk a Greek call heard them in English: the provider had no Greek voice to read them in,
+    /// and would have read Greek text no better.
+    /// </para>
+    /// </remarks>
+    /// <param name="disposition">What the handoff did with the caller.</param>
+    /// <param name="announced">Whether the model asked for the transfer, and so already told the caller.</param>
+    internal static string HandoffLine(HandoffDisposition disposition, bool announced)
+    {
+        return disposition switch
+        {
+            HandoffDisposition.Routed => announced ? null : ConnectingLine,
+            HandoffDisposition.WaitingInQueue => WaitingInQueueLine,
+            HandoffDisposition.CallbackScheduled => CallbackScheduledLine,
+            _ => null,
+        };
+    }
+
+    /// <summary>
+    /// Whether the call is held in English: the AI persona names no language, or names English.
+    /// </summary>
+    /// <remarks>
+    /// Read from the persona, not from how the line is currently spoken: once the provider refuses the persona's
+    /// language, the rest of the call event is spoken in its default English voice, and that says nothing about the
+    /// language the caller was spoken to in.
+    /// </remarks>
+    private async Task<bool> IsHeldInEnglishAsync(IVoiceAgentMediaProvider media, OmnichannelActivity activity, CancellationToken cancellationToken)
+    {
+        await GetCallSpeechAsync(media, activity, cancellationToken);
+
+        return _callHeldInEnglish;
     }
 }

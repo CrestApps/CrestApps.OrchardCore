@@ -218,7 +218,7 @@ public sealed class TelnyxAgentLegRedeliveryTests
     }
 
     [Fact]
-    public async Task APreDialedAgentLeg_ThatCouldNotBeRungAgain_EndsTheWayItAlwaysDid()
+    public async Task APreDialedAgentLeg_RefusedAsUnavailable_ThatCouldNotBeRungAgain_IsReportedAsAPhoneThatCannotRing()
     {
         // Arrange
         var resolver = new Mock<ITelnyxAgentEndpointResolver>();
@@ -238,9 +238,38 @@ public sealed class TelnyxAgentLegRedeliveryTests
             TestContext.Current.CancellationToken);
 
         // Assert
+        // The offer on the agent's screen can no longer be answered: the coordinator hands the caller on.
         coordinator.Verify(
-            value => value.OnAgentLegEndedAsync("Telnyx", "r1", "leg-1", HangupCause.NoAnswer, It.IsAny<CancellationToken>()),
+            value => value.OnAgentPhoneUnreachableAsync("Telnyx", "r1", "leg-1", HangupCause.NoAnswer, It.IsAny<CancellationToken>()),
             Times.Once);
+        coordinator.Verify(
+            value => value.OnAgentLegEndedAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<HangupCause?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Theory]
+    [InlineData("486", "USER_BUSY")]
+    [InlineData("487", "ORIGINATOR_CANCEL")]
+    public async Task APreDialedAgentLeg_ThatEndedForAnyOtherReason_EndsTheWayItAlwaysDid(string sipCause, string hangupCause)
+    {
+        // Arrange
+        // A phone that was there and said no, or a leg hung up because the offer ended, is no reason to hand the caller on.
+        var coordinator = new Mock<IAgentPreDialCoordinator>();
+        var handler = Provider(agentLegState: null);
+        var orchestrator = CreateOrchestrator(handler, new Mock<ITelnyxAgentEndpointResolver>().Object, coordinator: coordinator.Object);
+
+        // Act
+        await orchestrator.AdvanceAsync(
+            AgentLegHangup(TelnyxOutboundBridgeState.ContactCenterPreDialedAgentLegIntent, sipCause, hangupCause),
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        coordinator.Verify(
+            value => value.OnAgentLegEndedAsync("Telnyx", "r1", "leg-1", It.IsAny<HangupCause?>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        coordinator.Verify(
+            value => value.OnAgentPhoneUnreachableAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<HangupCause?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     private static TelnyxOutboundBridgeState ExtensionAgentLegState()

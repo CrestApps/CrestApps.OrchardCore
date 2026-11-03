@@ -349,6 +349,7 @@ public sealed class ContactCenterWorkflowsStartup : StartupBase
         // Omnichannel Activities feature this one already depends on. Registering it here rather than under the
         // Dialer keeps an SMS-only tenant from having to enable outbound voice to send a message from a workflow.
         services.AddActivity<StartOmnichannelActivityTask, StartOmnichannelActivityTaskDisplayDriver>();
+        services.AddActivity<AICallActionTask, AICallActionTaskDisplayDriver>();
     }
 }
 

@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using CrestApps.Core.AI.Guardrails;
+using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
@@ -10,11 +11,14 @@ using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Handlers;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.AI.Orchestration;
 using CrestApps.Core.AI.Resilience;
+using CrestApps.Core.AI.Tooling;
 using CrestApps.Core.Services;
 using CrestApps.Core.Support;
 using CrestApps.Core.Templates.Services;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -88,6 +92,10 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     private readonly IOmnichannelActivityStore _omnichannelActivityStore;
     private readonly IEnumerable<IOmnichannelHandoffService> _handoffServices;
     private readonly ILocalLock _localLock;
+    private readonly IToolRegistry _toolRegistry;
+    private readonly IOmnichannelConversationContextFactory _conversationContextFactory;
+    private readonly IAIConversationTurnNotifier _turnNotifier;
+    private readonly AIGuardrailService _guardrails;
     private readonly IEnumerable<IMessagingAIConversationStarter> _aiConversationStarters;
     private readonly DocumentJsonSerializerOptions _jsonSerializerOptions;
     private readonly Redactor _addressRedactor;
@@ -115,6 +123,9 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     /// <param name="jsonSerializerOptions">The json serializer options.</param>
     /// <param name="aiConversationStarters">Start an AI conversation for a text to a number routed to an AI agent.</param>
     /// <param name="redactorProvider">The redactor provider used to redact sensitive values before logging.</param>
+    /// <param name="toolRegistry">The tool registry, which supplies the profile's tools for each reply.</param>
+    /// <param name="conversationContextFactory">Describes the thread as a conversation for the system message, tools and workflows.</param>
+    /// <param name="turnNotifier">Tells the conversation turn handlers about each saved turn.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public SmsOmnichannelEventHandler(
@@ -140,6 +151,10 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         IEnumerable<IMessagingAIConversationStarter> aiConversationStarters,
         IOptions<DocumentJsonSerializerOptions> jsonSerializerOptions,
         IRedactorProvider redactorProvider,
+        IToolRegistry toolRegistry,
+        IOmnichannelConversationContextFactory conversationContextFactory,
+        IAIConversationTurnNotifier turnNotifier,
+        AIGuardrailService guardrails,
         ILogger<SmsOmnichannelEventHandler> logger,
         IStringLocalizer<SmsOmnichannelEventHandler> stringLocalizer)
     {
@@ -163,6 +178,10 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         _handoffServices = handoffServices;
         _localLock = localLock;
         _aiConversationStarters = aiConversationStarters;
+        _toolRegistry = toolRegistry;
+        _guardrails = guardrails;
+        _conversationContextFactory = conversationContextFactory;
+        _turnNotifier = turnNotifier;
 
         _jsonSerializerOptions = jsonSerializerOptions.Value;
         _addressRedactor = redactorProvider.GetRedactor(LogDataClassifications.AddressSet);
@@ -342,6 +361,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             // The prompt remembers the provider's message id, so the handoff can tell the human thread which text
             // this was and the thread never records the same message twice.
             await _promptStore.CreateAsync(SmsHandoffTranscript.CreateCustomerPrompt(chatSession.SessionId, omnichannelEvent.Message, _clock.UtcNow), cancellationToken);
+            await _turnNotifier.NotifyAsync(chatSession, AIConversationTurn.CustomerRole, omnichannelEvent.Message?.Content, cancellationToken);
         }
 
         // One AI response per conversation at a time. Register this turn as the active generation, cancelling any
@@ -458,61 +478,92 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                     string bestChoice;
 
-                    try
+                    // Texts the profile's guardrails refuse are answered with its placeholder reply, without asking
+                    // the model, so a refused request never reaches the tools either.
+                    var refusedText = AIGuardrailService.IsOn(profile, AIGuardrailDirection.Customer)
+                        ? await _guardrails.CheckAsync(profile, string.Join(Environment.NewLine, pendingInbound.Select(prompt => prompt.Content)), AIGuardrailDirection.Customer, chatSession.SessionId, generationToken)
+                        : null;
+
+                    if (refusedText is not null)
                     {
-                        var context = await _completionContextBuilder.BuildAsync(profile, cancellationToken: generationToken);
-                        context.AdditionalProperties["Session"] = chatSession;
-
-                        // When a live agent is available, enable the transfer tool for this turn and guide the model
-                        // on when to escalate. Guidance is injected as a leading system message so it never leaks into
-                        // the separate should-respond evaluation above, which runs on the un-augmented transcript.
-                        if (handoffAvailable)
+                        bestChoice = refusedText.Reply;
+                    }
+                    else
+                    {
+                        try
                         {
-                            AttachTransferToAgentTool(context);
+                            // The conversation this reply belongs to, current while the request is built (the system
+                            // message is rendered with its values) and while the profile's tools run.
+                            var conversationContext = await _conversationContextFactory.CreateAsync(activity, chatSession, profile, generationToken);
+                            using var conversationScope = AIConversationScope.Begin(conversationContext);
+                            using var invocationScope = AIInvocationScope.Begin();
+                            invocationScope.Context.ToolExecutionContext = new AIToolExecutionContext(profile);
+                            invocationScope.Context.ChatSession = chatSession;
 
-                            var handoffInstructions = OmnichannelHandoffHelper.BuildHandoffInstructions(flowSettings);
+                            var context = await _completionContextBuilder.BuildAsync(profile, cancellationToken: generationToken);
+                            context.AdditionalProperties["Session"] = chatSession;
+                            invocationScope.Context.CompletionContext = context;
 
-                            if (!string.IsNullOrEmpty(handoffInstructions))
+                            // The profile's tools, plus the transfer tool when a live agent is available. The completion
+                            // service is called directly rather than through the orchestrator, so they must be attached
+                            // here or the model sees no tools at all.
+                            await AIConversationTools.AttachAsync(
+                                _toolRegistry,
+                                context,
+                                handoffAvailable
+                                    ? [AIConversationTools.SystemTool(OmnichannelHandoffHelper.TransferToAgentToolName, "Transfers the current conversation to a live human agent.")]
+                                    : [],
+                                generationToken);
+
+                            // When a live agent is available, guide the model on when to escalate. Guidance is injected
+                            // as a leading system message so it never leaks into the separate should-respond evaluation
+                            // above, which runs on the un-augmented transcript.
+                            if (handoffAvailable)
                             {
-                                transcript.Insert(0, new ChatMessage(ChatRole.System, handoffInstructions));
+                                var handoffInstructions = OmnichannelHandoffHelper.BuildHandoffInstructions(flowSettings);
+
+                                if (!string.IsNullOrEmpty(handoffInstructions))
+                                {
+                                    transcript.Insert(0, new ChatMessage(ChatRole.System, handoffInstructions));
+                                }
+                            }
+
+                            var deployment = await _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.Chat, deploymentName: context.ChatDeploymentName, cancellationToken: generationToken)
+                                ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for AI profile '{profile.ItemId}'.");
+
+                            // One AI request per turn, cancelled by generationToken the moment a newer inbound message arrives.
+                            // A cancelled request unwinds the whole turn so the newer message regenerates the single reply
+                            // against the full history, rather than this stale request answering a superseded transcript.
+                            // The completion auto-invokes the transfer tool when the model decides to escalate; the tool
+                            // records the decision on the scoped turn, which we reset first and read back afterwards.
+                            _handoffTurn.Reset();
+
+                            using var usageScope = AIUsageScope.Begin(contextType: AIUsageCategories.Sms);
+                            var completion = await _aICompletionService.CompleteAsync(deployment, transcript, context, generationToken);
+
+                            bestChoice = completion?.Messages?.FirstOrDefault()?.Text;
+                            handoffRequested = handoffAvailable && _handoffTurn.HandoffRequested;
+
+                            if (handoffRequested)
+                            {
+                                handoffReason = _handoffTurn.Reason;
                             }
                         }
-
-                        var deployment = await _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.Chat, deploymentName: context.ChatDeploymentName, cancellationToken: generationToken)
-                            ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for AI profile '{profile.ItemId}'.");
-
-                        // One AI request per turn, cancelled by generationToken the moment a newer inbound message arrives.
-                        // A cancelled request unwinds the whole turn so the newer message regenerates the single reply
-                        // against the full history, rather than this stale request answering a superseded transcript.
-                        // The completion auto-invokes the transfer tool when the model decides to escalate; the tool
-                        // records the decision on the scoped turn, which we reset first and read back afterwards.
-                        _handoffTurn.Reset();
-
-                        using var usageScope = AIUsageScope.Begin(contextType: AIUsageCategories.Sms);
-                        var completion = await _aICompletionService.CompleteAsync(deployment, transcript, context, generationToken);
-
-                        bestChoice = completion?.Messages?.FirstOrDefault()?.Text;
-                        handoffRequested = handoffAvailable && _handoffTurn.HandoffRequested;
-
-                        if (handoffRequested)
+                        catch (Exception ex) when (generationToken.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
                         {
-                            handoffReason = _handoffTurn.Reason;
+                            // A newer inbound message superseded this turn mid-generation. The cancellation can surface
+                            // wrapped — the AI client turns the aborted HTTP call into its own exception type rather than an
+                            // OperationCanceledException — so key off the token, not the exception type. Unwind as a
+                            // supersede (not a failure) so the newer turn composes the one consolidated reply and this turn
+                            // does not log a spurious error or strand the conversation.
+                            throw new OperationCanceledException("The SMS reply generation was superseded by a newer inbound message.", ex, generationToken);
                         }
-                    }
-                    catch (Exception ex) when (generationToken.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
-                    {
-                        // A newer inbound message superseded this turn mid-generation. The cancellation can surface
-                        // wrapped — the AI client turns the aborted HTTP call into its own exception type rather than an
-                        // OperationCanceledException — so key off the token, not the exception type. Unwind as a
-                        // supersede (not a failure) so the newer turn composes the one consolidated reply and this turn
-                        // does not log a spurious error or strand the conversation.
-                        throw new OperationCanceledException("The SMS reply generation was superseded by a newer inbound message.", ex, generationToken);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "AI Completion failed for Activity {ActivityId} using AI profile {ProfileId}.", activity.ItemId.SanitizeLogValue(), profile.ItemId.SanitizeLogValue());
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "AI Completion failed for Activity {ActivityId} using AI profile {ProfileId}.", activity.ItemId.SanitizeLogValue(), profile.ItemId.SanitizeLogValue());
 
-                        break;
+                            break;
+                        }
                     }
 
                     if (string.IsNullOrWhiteSpace(bestChoice))
@@ -529,6 +580,18 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                     {
                         hangupRequested = true;
                         bestChoice = bestChoice.Replace(HangupMarker, string.Empty, StringComparison.Ordinal).Trim();
+                    }
+
+                    // A reply the guardrails refuse is replaced before it is sent. What the model decided to do (hand
+                    // over, wrap up) stands; only its words change.
+                    if (refusedText is null && !string.IsNullOrWhiteSpace(bestChoice) && AIGuardrailService.IsOn(profile, AIGuardrailDirection.Reply))
+                    {
+                        var refusedReply = await _guardrails.CheckAsync(profile, bestChoice, AIGuardrailDirection.Reply, chatSession.SessionId, generationToken);
+
+                        if (refusedReply is not null)
+                        {
+                            bestChoice = refusedReply.Reply;
+                        }
                     }
 
                     // handoffRequested was set from the transfer tool the model invoked during the completion above.
@@ -605,6 +668,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                     // That is exactly the growing "N customer message(s) owed" and the back-to-back assistant
                     // messages seen in a burst. Flushing inside the lock makes the reply visible to the next turn.
                     await _session.SaveChangesAsync(cancellationToken);
+                    await _turnNotifier.NotifyAsync(chatSession, AIConversationTurn.AssistantRole, bestChoice, cancellationToken);
 
                     chatSession.LastActivityUtc = _clock.UtcNow;
                     handledTurn = true;
@@ -1080,29 +1144,6 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
             return null;
         }
-    }
-
-    // Attaches the transfer-to-agent tool to this single completion. The automated conversation calls the completion
-    // service directly rather than through the tool orchestrator, so the scoped-tool key the function-invocation
-    // service handler reads is otherwise never populated here and no tools reach the model at all. We register the
-    // transfer tool as a scoped system-tool entry for this turn only (the context is built per turn and never
-    // persisted), so the model can actually invoke it. Enabling it through the profile's tool-name list does not
-    // work: the profile tool provider reads the names snapshotted when the context was built and, either way, skips
-    // system tools — which the transfer tool is.
-    private static void AttachTransferToAgentTool(AICompletionContext context)
-    {
-        var entry = new ToolRegistryEntry
-        {
-            Id = OmnichannelHandoffHelper.TransferToAgentToolName,
-            Name = OmnichannelHandoffHelper.TransferToAgentToolName,
-            Description = "Transfers the current conversation to a live human agent.",
-            Source = ToolRegistryEntrySource.System,
-            CreateAsync = serviceProvider => ValueTask.FromResult(
-                serviceProvider.GetKeyedService<AITool>(OmnichannelHandoffHelper.TransferToAgentToolName)),
-        };
-
-        context.AdditionalProperties[FunctionInvocationAICompletionServiceHandler.ScopedEntriesKey] =
-            new List<ToolRegistryEntry> { entry };
     }
 
     private async Task<SubjectFlowSettings> FindFlowSettingsAsync(

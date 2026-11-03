@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.AI.Workflows.Models
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CheckConversationMetricTask>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-bell" aria-hidden="true"></i>
+    @T["Check AI Conversation Metric"]
+</h4>
+<p>@T["Measures an AI conversation metric over the last window and says when it crosses a threshold and when it is back."]</p>

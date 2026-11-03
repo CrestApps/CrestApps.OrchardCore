@@ -1,0 +1,25 @@
+@using CrestApps.OrchardCore.AI.Chat.ViewModels
+
+@model EditAIProfileContactMemoryViewModel
+
+<h5>@T["Contact memory"]</h5>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="UseMemory" />
+            <label class="form-check-label" asp-for="UseMemory">@T["Use contact memory"]</label>
+            <span class="hint dashed">@T["When the conversation is with a known contact, on a call or a text, the AI starts with what it remembers about them from earlier conversations."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="SaveMemory" />
+            <label class="form-check-label" asp-for="SaveMemory">@T["Save to contact memory"]</label>
+            <span class="hint dashed">@T["When a conversation with a known contact ends, the utility model rewrites the contact's memory note: what is still open, preferences and facts that are still true, in at most 2,000 characters. The note is on the contact's editor."]</span>
+        </div>
+    </div>
+</div>

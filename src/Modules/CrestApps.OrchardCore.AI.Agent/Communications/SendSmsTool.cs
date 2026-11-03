@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CrestApps.Core.AI.Extensions;
+using CrestApps.OrchardCore.AI.Core.Conversations;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -25,7 +26,7 @@ public sealed class SendSmsTool : AIFunction
       "properties": {
         "phone": {
           "type": "string",
-          "description": "This must be internationally formatted phone number starting with +."
+          "description": "This must be internationally formatted phone number starting with +. Leave it out to text the customer this phone call or text conversation is with."
         },
         "body": {
           "type": "string",
@@ -34,7 +35,6 @@ public sealed class SendSmsTool : AIFunction
       },
       "additionalProperties": false,
       "required": [
-        "phone",
         "body"
       ]
     }
@@ -69,7 +69,15 @@ public sealed class SendSmsTool : AIFunction
         var smsService = arguments.Services.GetRequiredService<ISmsService>();
         var phoneFormatValidator = arguments.Services.GetRequiredService<IPhoneFormatValidator>();
 
-        if (!arguments.TryGetFirstString("phone", out var phone))
+        // On a phone call or a text thread the customer's own number is the one to text when the model names none.
+        if (!arguments.TryGetFirstString("phone", out var phone) &&
+            AIConversationScope.Current is { Channel: AIConversationChannels.Phone or AIConversationChannels.Sms } conversation &&
+            !string.IsNullOrWhiteSpace(conversation.CustomerAddress))
+        {
+            phone = conversation.CustomerAddress;
+        }
+
+        if (string.IsNullOrWhiteSpace(phone))
         {
             logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "phone");
 

@@ -1,19 +1,52 @@
+@using CrestApps.Core.AI
 @using CrestApps.Core.AI.Models
 @using CrestApps.Core.Models
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.Core.Models
 @using CrestApps.OrchardCore.Core.Models
 @using Microsoft.AspNetCore.Mvc.Localization
 @using OrchardCore.DisplayManagement
 
 @model ListSourceCatalogEntryViewModel<AIProfileTemplate>
 
+@{
+    // A category of System Prompt templates, such as the speaking styles or the guardrail topics, gets a page of its own.
+    var category = ViewData["Category"] as string;
+    var shipped = ViewData["ShippedTemplates"] as IReadOnlyList<string> ?? [];
+    var isStyles = string.Equals(category, AISpeakingStyles.Category, StringComparison.OrdinalIgnoreCase);
+    var isTopics = string.Equals(category, AIGuardrailTopics.Category, StringComparison.OrdinalIgnoreCase);
+    var pageTitle = isStyles ? T["Speaking Styles"] : isTopics ? T["Guardrail Topics"] : category is null ? T["AI Templates"] : T["Templates: {0}", category];
+    var addLabel = isStyles ? T["Add Speaking Style"] : isTopics ? T["Add Guardrail Topic"] : T["Add Template"];
+}
+
 <zone Name="Title">
-    <breadcrumb name="AITemplates" title="@T["AI Templates"]" />
+    <breadcrumb name="AITemplates" title="@pageTitle" />
 </zone>
+
+@if (category is not null)
+{
+    <p class="text-muted">
+        @if (isStyles)
+        {
+            @T["A speaking style is a section added to the end of an AI profile's instructions. Choose them on each profile, under Speaking Style. The text you write is what the AI reads."]
+        }
+        else if (isTopics)
+        {
+            @T["A guardrail topic is something AI profiles refuse to discuss. Choose them on each profile, under Guardrails. The text you write tells the model what falls under the topic."]
+        }
+        @if (shipped.Count > 0)
+        {
+            <br />
+            @T["Built in, and not editable here: {0}.", string.Join(", ", shipped)]
+        }
+    </p>
+}
 
 @* The form is necessary to generate an antiforgery token for the delete and toggle actions. *@
 <form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-client-side-search="false">
     <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
     <input asp-for="Options.BulkAction" type="hidden" />
+    <input type="hidden" name="category" value="@category" />
     <input type="submit" name="submit.BulkAction" class="visually-hidden" />
 
     <div class="card text-bg-theme mb-3 position-sticky action-bar">
@@ -26,7 +59,14 @@
                     </div>
                 </div>
                 <div class="col-auto">
-                    <button type="button" class="btn btn-secondary create" data-bs-toggle="modal" data-bs-target="#modalAddTemplate">@T["Add Template"]</button>
+                    @if (category is null)
+                    {
+                        <button type="button" class="btn btn-secondary create" data-bs-toggle="modal" data-bs-target="#modalAddTemplate">@addLabel</button>
+                    }
+                    else
+                    {
+                        <a class="btn btn-secondary create" asp-action="Create" asp-route-source="@AITemplateSources.SystemPrompt" asp-route-category="@category">@addLabel</a>
+                    }
                 </div>
             </div>
         </div>
@@ -35,7 +75,7 @@
     @* The templates, the toolbar and the pager are rendered by the AdminList shape, in the layout (List or Grid) the site or the user picked. *@
     <admin-list name="AITemplates" context="Model.List"
                 bulk-actions="Model.Options.BulkActions"
-                empty-message="@T["<strong>Nothing here!</strong> There are no templates at the moment."]">
+                empty-message="@(category is null ? T["<strong>Nothing here!</strong> There are no templates at the moment."] : T["<strong>None of your own yet.</strong> Click {0} to add one.", addLabel])">
         <admin-list-list item-css-class="list-group-item" />
         <admin-list-grid>
             <admin-list-column type="Select" />

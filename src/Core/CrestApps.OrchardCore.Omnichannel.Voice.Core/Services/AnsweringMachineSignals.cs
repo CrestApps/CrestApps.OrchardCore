@@ -55,6 +55,15 @@ internal sealed class AnsweringMachineSignals : IAnsweringMachineSignals
     }
 
     /// <inheritdoc/>
+    public void PhoneMenuReached(string providerName, string providerCallId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(providerName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(providerCallId);
+
+        GetOrAdd(providerName, providerCallId).ReportPhoneMenuReached();
+    }
+
+    /// <inheritdoc/>
     public AnsweringMachineSignal Watch(string providerName, string providerCallId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(providerName);

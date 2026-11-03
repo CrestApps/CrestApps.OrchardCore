@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.AI.Workflows.Models
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AIToolCalledEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i>
+    @T["AI Tool Called"]
+</h4>
+<p>@T["Runs when the AI calls this workflow as a tool. Answer with Set Output."]</p>

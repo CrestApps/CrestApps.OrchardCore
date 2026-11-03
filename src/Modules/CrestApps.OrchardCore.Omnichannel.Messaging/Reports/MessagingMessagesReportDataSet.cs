@@ -102,7 +102,11 @@ public sealed class MessagingMessagesReportDataSet : RecordDataSet<MessagingRepo
         var (from, to) = DataConditions.DateRange(query.Conditions, CreatedUtcField);
         string[] conversationIds = null;
 
-        if (DataConditions.Keys(query.Conditions, "ConversationId") is { } keys)
+        // Only the keys of a join are matched exactly. A viewer's filter on the conversation is left to the consumer, which
+        // compares text without regard to case, as an exact match in the database could drop a row it keeps.
+        var joinKeys = query.Conditions?.Where(condition => condition is { IsJoinKey: true }).ToArray() ?? [];
+
+        if (DataConditions.Keys(joinKeys, "ConversationId") is { } keys)
         {
             if (keys.Count == 0)
             {

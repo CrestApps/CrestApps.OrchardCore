@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Designer.Models;
 using CrestApps.OrchardCore.Reports.Designer.Recipes;
+using CrestApps.OrchardCore.Reports.Designer.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Moq;
@@ -135,10 +136,56 @@ public sealed class ReportDesignsRecipeStepTests
         Assert.Null((await designs.FindByIdAsync("ready-made", TestContext.Current.CancellationToken)).OwnerId);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_ImportsGroups_AndPlacesEachReportInTheGroupItNames()
+    {
+        // Arrange
+        var designs = Catalog<ReportDesign>();
+        var groups = Catalog(new ReportGroup { ItemId = "store", DisplayText = "Store" });
+        var step = Step(designs, Catalog<ReportView>(), groups: groups);
+        var context = Context(new JsonObject
+        {
+            ["name"] = ReportDesignsRecipeStep.Name,
+            ["Groups"] = new JsonArray(
+                // The nested group comes first: parents are checked once every group is in.
+                new JsonObject { ["itemId"] = "regional", ["displayText"] = "Regional", ["parentId"] = "sales", ["order"] = 2 },
+                new JsonObject { ["itemId"] = "sales", ["displayText"] = "Sales" },
+                new JsonObject { ["itemId"] = "loop-a", ["displayText"] = "Loop A", ["parentId"] = "loop-b" },
+                new JsonObject { ["itemId"] = "loop-b", ["displayText"] = "Loop B", ["parentId"] = "loop-a" }),
+            ["Reports"] = new JsonArray(
+                new JsonObject { ["itemId"] = "by-id", ["displayText"] = "By id", ["groupId"] = "regional" },
+                new JsonObject { ["itemId"] = "by-path", ["displayText"] = "By path", ["group"] = "store / Inventory" },
+                new JsonObject { ["itemId"] = "by-category", ["displayText"] = "By category", ["category"] = "Billing" },
+                new JsonObject { ["itemId"] = "missing", ["displayText"] = "Missing", ["groupId"] = "deleted" }),
+        });
+
+        // Act
+        await step.ExecuteAsync(context);
+
+        // Assert
+        Assert.Empty(context.Errors);
+        var tree = new ReportGroupTree(await groups.GetAllAsync(TestContext.Current.CancellationToken));
+        Assert.Equal("Sales / Regional", tree.GetPathText("regional"));
+        Assert.Equal(2, tree.Find("regional").Order);
+        Assert.Null(tree.Find("loop-a").ParentId);
+        Assert.Null(tree.Find("loop-b").ParentId);
+
+        async Task<string> PathOf(string id) => tree.GetPathText((await designs.FindByIdAsync(id, TestContext.Current.CancellationToken)).GroupId);
+
+        Assert.Equal("Sales / Regional", await PathOf("by-id"));
+        Assert.Equal("Store / Inventory", await PathOf("by-path"));
+        Assert.Equal("Billing", await PathOf("by-category"));
+        Assert.Null(await PathOf("missing"));
+#pragma warning disable CS0618 // The category of a report written before report groups is cleared once it names its group.
+        Assert.Null((await designs.FindByIdAsync("by-category", TestContext.Current.CancellationToken)).Category);
+#pragma warning restore CS0618
+    }
+
     private static ReportDesignsRecipeStep Step(
         CrestApps.Core.Services.ICatalog<ReportDesign> designs,
         CrestApps.Core.Services.ICatalog<ReportView> views,
-        System.Security.Claims.ClaimsPrincipal importer = null)
+        System.Security.Claims.ClaimsPrincipal importer = null,
+        CrestApps.Core.Services.ICatalog<ReportGroup> groups = null)
     {
         var alice = Mock.Of<IUser>();
         var importerUser = Mock.Of<IUser>();
@@ -157,7 +204,9 @@ public sealed class ReportDesignsRecipeStepTests
             HttpContext = importer is null ? null : new DefaultHttpContext { User = importer },
         };
 
-        return new ReportDesignsRecipeStep(designs, views, NoSnapshots(), userManager.Object, httpContextAccessor, clock.Object, new PassThroughStringLocalizer<ReportDesignsRecipeStep>());
+        var groupService = new ReportGroupService(groups ?? Catalog<ReportGroup>(), designs, clock.Object, new PassThroughStringLocalizer<ReportGroupService>());
+
+        return new ReportDesignsRecipeStep(designs, views, groupService, NoSnapshots(), userManager.Object, httpContextAccessor, clock.Object, new PassThroughStringLocalizer<ReportDesignsRecipeStep>());
     }
 
     private static RecipeExecutionContext Context(JsonObject step)

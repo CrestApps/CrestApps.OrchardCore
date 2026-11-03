@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -9,6 +10,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 public sealed class ContactCenterScopeExecutor : IContactCenterScopeExecutor
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly IShellHost _shellHost;
+    private readonly ShellSettings _shellSettings;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterScopeExecutor"/> class.
@@ -17,6 +20,11 @@ public sealed class ContactCenterScopeExecutor : IContactCenterScopeExecutor
     public ContactCenterScopeExecutor(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
+
+        // Taken now, while the scope this executor came from is alive: work that outlives that scope (a provider command
+        // its timeout gave up waiting on, which keeps running) finds it disposed, and no shell scope current any more.
+        _shellHost = serviceProvider.GetService<IShellHost>();
+        _shellSettings = serviceProvider.GetService<ShellSettings>();
     }
 
     /// <inheritdoc/>
@@ -27,8 +35,7 @@ public sealed class ContactCenterScopeExecutor : IContactCenterScopeExecutor
 
         if (ShellScope.Current is null)
         {
-            await using var scope = _serviceProvider.CreateAsyncScope();
-            await operation(scope.ServiceProvider.GetRequiredService<TContext>());
+            await ExecuteOutsideShellScopeAsync(services => operation(services.GetRequiredService<TContext>()));
 
             return;
         }
@@ -44,8 +51,7 @@ public sealed class ContactCenterScopeExecutor : IContactCenterScopeExecutor
 
         if (ShellScope.Current is null)
         {
-            await using var scope = _serviceProvider.CreateAsyncScope();
-            await operation(scope.ServiceProvider);
+            await ExecuteOutsideShellScopeAsync(operation);
 
             return;
         }
@@ -83,5 +89,22 @@ public sealed class ContactCenterScopeExecutor : IContactCenterScopeExecutor
         ShellScope.AddDeferredTask(_ => operation());
 
         return true;
+    }
+
+    // With no shell scope current -- never started, or ended under work still running -- the work gets a scope of the
+    // tenant's own, which belongs to the shell rather than to whatever scope this executor was resolved from.
+    private async Task ExecuteOutsideShellScopeAsync(Func<IServiceProvider, Task> operation)
+    {
+        if (_shellHost is not null && _shellSettings is not null)
+        {
+            var shellScope = await _shellHost.GetScopeAsync(_shellSettings);
+
+            await shellScope.UsingAsync(scope => operation(scope.ServiceProvider));
+
+            return;
+        }
+
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        await operation(scope.ServiceProvider);
     }
 }

@@ -1,0 +1,20 @@
+@using System.Globalization
+@using CrestApps.OrchardCore.AI.ViewModels
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIProfileVersionEntry>
+
+@{
+    var savedUtc = Model.Value.Version.CreatedUtc;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: savedUtc, Format: "g"))">
+    <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
+    <time datetime="@savedUtc.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture)">@await DisplayAsync(await New.Timespan(Utc: savedUtc))</time>
+</span>
+@if (!string.IsNullOrEmpty(Model.Value.Version.Author))
+{
+    <span class="badge ta-badge fw-normal" title="@T["Saved by"]">
+        <i class="fa-solid fa-user text-secondary" aria-hidden="true"></i> @Model.Value.Version.Author
+    </span>
+}

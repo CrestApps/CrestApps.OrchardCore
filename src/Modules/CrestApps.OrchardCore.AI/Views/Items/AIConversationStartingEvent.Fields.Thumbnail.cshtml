@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.AI.Workflows.Models
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AIConversationStartingEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-play" aria-hidden="true"></i>
+    @T["AI Conversation Starting"]
+</h4>
+<p>@T["Runs before an AI conversation's first message, to set its variables, choose its AI profile, or decline it."]</p>

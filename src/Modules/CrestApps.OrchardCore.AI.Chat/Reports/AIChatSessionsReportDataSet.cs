@@ -1,9 +1,11 @@
 using System.Runtime.CompilerServices;
+using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using CrestApps.OrchardCore.AI.Chat.Services;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer.DataSources;
@@ -79,6 +81,7 @@ public sealed class AIChatSessionsReportDataSet : RecordDataSet<AIChatReportReco
             record => record.Document.UserId, details).Identifier(new DataFieldReference(ReportsConstants.UsersDataSource, ReportsConstants.UsersDataSet, ReportsConstants.UserIdField));
         AddField("Status", S["Status"], DataFieldType.Text, record => record.Document.Status, details);
         AddField("ResponseHandlerName", S["Response handler"], DataFieldType.Text, record => record.Document.ResponseHandlerName, details);
+        AddField("ProfileVersion", S["Profile version"], DataFieldType.Integer, record => record.Document.TryGet<AIProfileVersionMetadata>(out var version) ? version.Version : (int?)null, details);
         AddField("CreatedUtc", S["Created"], DataFieldType.DateTime, record => record.Document.CreatedUtc, activity);
         AddField("ModifiedUtc", S["Modified"], DataFieldType.DateTime, record => record.Document.ModifiedUtc, activity);
         AddField(LastActivityUtcField, S["Last activity"], DataFieldType.DateTime, record => record.Document.LastActivityUtc, activity);
@@ -101,9 +104,13 @@ public sealed class AIChatSessionsReportDataSet : RecordDataSet<AIChatReportReco
         var (from, to) = DataConditions.DateRange(query.Conditions, LastActivityUtcField);
         var keyFilters = new List<(string Field, string[] Values)>();
 
+        // Only the keys of a join are matched exactly. A viewer's filter on a key field is left to the consumer, which
+        // compares text without regard to case, as an exact match in the database could drop a row it keeps.
+        var joinKeys = query.Conditions?.Where(condition => condition is { IsJoinKey: true }).ToArray() ?? [];
+
         foreach (var field in _keyFields)
         {
-            if (DataConditions.Keys(query.Conditions, field) is not { } keys)
+            if (DataConditions.Keys(joinKeys, field) is not { } keys)
             {
                 continue;
             }

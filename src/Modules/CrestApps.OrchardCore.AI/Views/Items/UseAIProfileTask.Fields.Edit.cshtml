@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.AI.Workflows.ViewModels
+
+@model UseAIProfileTaskViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="ProfileId">
+    <label class="ocat-label ocat-label-required" asp-for="ProfileId">@T["Profile"]</label>
+    <div class="ocat-end">
+        <select class="form-select" asp-for="ProfileId" asp-items="Model.Profiles">
+            <option value="">@T["Choose a profile"]</option>
+        </select>
+        <span asp-validation-for="ProfileId"></span>
+        <span class="hint">@T["The AI profile that answers the conversation. Use it in an AI Conversation Starting workflow."]</span>
+    </div>
+</div>

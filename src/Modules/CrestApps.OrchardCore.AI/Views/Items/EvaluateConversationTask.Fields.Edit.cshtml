@@ -1,0 +1,38 @@
+@using CrestApps.OrchardCore.AI.Workflows.ViewModels
+
+@model EvaluateConversationTaskViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Criteria">
+    <label class="ocat-label" asp-for="Criteria">@T["Criteria"]</label>
+    <div class="ocat-end">
+        <textarea class="form-control" asp-for="Criteria" rows="5" placeholder="@T["The assistant confirmed the appointment date and time"]"></textarea>
+        <span asp-validation-for="Criteria"></span>
+        <span class="hint">@T["One condition a successful conversation meets per line. Liquid is supported. The conversation passes when every criterion is met and the score reaches the passing score. Without criteria it is scored on resolution, accuracy, tool use, tone and transfers."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="PassingScore">
+    <label class="ocat-label" asp-for="PassingScore">@T["Passing score"]</label>
+    <div class="ocat-end">
+        <input type="number" class="form-control" asp-for="PassingScore" min="0" max="100" />
+        <span asp-validation-for="PassingScore"></span>
+        <span class="hint">@T["The lowest score out of 100 that passes."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="SessionId">
+    <label class="ocat-label" asp-for="SessionId">@T["Conversation"]</label>
+    <div class="ocat-end">
+        <input type="text" class="form-control font-monospace" asp-for="SessionId" />
+        <span asp-validation-for="SessionId"></span>
+        <span class="hint">@T["A Liquid expression for the AI session to evaluate. The default is the session the AI Chat Session Closed or Post-Processed event was raised for."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="Label">@T["Label"]</label>
+    <div class="ocat-end">
+        <input type="text" class="form-control" asp-for="Label" />
+        <span class="hint">@T["Optional. Groups evaluations in reports, for example a QA cohort or the outcome of a Split Traffic task: <code>{{ Workflow.Properties.Variant }}</code>."]</span>
+    </div>
+</div>

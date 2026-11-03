@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.AI.Workflows.Models
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AIGuardrailTriggeredEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+    @T["AI Guardrail Triggered"]
+</h4>
+<p>@T["Runs when a guardrail refused what the customer said or the AI's reply."]</p>

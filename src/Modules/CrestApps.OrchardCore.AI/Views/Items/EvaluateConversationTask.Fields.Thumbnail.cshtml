@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.AI.Workflows.Models
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<EvaluateConversationTask>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-clipboard-check" aria-hidden="true"></i>
+    @T["Evaluate AI Conversation"]
+</h4>
+<p>@T["Scores a finished AI conversation against your criteria and keeps the result for QA reports and alerts."]</p>

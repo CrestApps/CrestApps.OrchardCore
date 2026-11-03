@@ -1,0 +1,9 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model OmnichannelContactMemoryViewModel
+
+<div class="mb-3">
+    <label asp-for="AIMemory" class="form-label">@T["What the AI remembers"]</label>
+    <textarea asp-for="AIMemory" class="form-control" rows="4" maxlength="2000"></textarea>
+    <span class="hint">@T["A short note the AI keeps about this contact from earlier calls, texts and chats, and reads at the start of each conversation when its profile uses contact memory. It is rewritten after each conversation. Edit it to correct it, or empty it to make the AI forget."]</span>
+</div>

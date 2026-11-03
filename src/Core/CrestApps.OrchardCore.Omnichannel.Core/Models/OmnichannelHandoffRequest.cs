@@ -20,6 +20,12 @@ public sealed class OmnichannelHandoffRequest
     public string TargetQueueId { get; set; }
 
     /// <summary>
+    /// Gets or sets the agent profile of the one person to ring, instead of a queue. Used when someone takes a
+    /// conversation over from the AI; <see cref="TargetQueueId"/> is then ignored.
+    /// </summary>
+    public string TargetAgentId { get; set; }
+
+    /// <summary>
     /// Gets or sets a short reason for the escalation (for example "customer requested a human").
     /// </summary>
     public string Reason { get; set; }

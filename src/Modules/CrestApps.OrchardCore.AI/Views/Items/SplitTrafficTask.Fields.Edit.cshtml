@@ -1,0 +1,20 @@
+@using CrestApps.OrchardCore.AI.Workflows.ViewModels
+
+@model SplitTrafficTaskViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Variants">
+    <label class="ocat-label ocat-label-required" asp-for="Variants">@T["Outcomes"]</label>
+    <div class="ocat-end">
+        <textarea class="form-control font-monospace" asp-for="Variants" rows="4" placeholder="A: 50&#10;B: 50"></textarea>
+        <span asp-validation-for="Variants"></span>
+        <span class="hint">@T["One <code>name: weight</code> per line. Each name becomes an outcome, taken in proportion to its weight. For a 20% sample, write <code>Evaluate: 20</code> and <code>Skip: 80</code>."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="StickyKey">@T["Keep the same outcome for"]</label>
+    <div class="ocat-end">
+        <input type="text" class="form-control font-monospace" asp-for="StickyKey" placeholder="{{ Workflow.Input.CustomerAddress }}" />
+        <span class="hint">@T["Optional. A Liquid expression, such as the customer's phone number: the same value always takes the same outcome. Leave it empty to pick at random each time. The outcome taken is in <code>Workflow.Properties.Variant</code>."]</span>
+    </div>
+</div>

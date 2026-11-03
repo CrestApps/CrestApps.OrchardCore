@@ -1,0 +1,77 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.Workflows.ViewModels
+
+@model CreateAIActivityTaskViewModel
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="Channel">@T["Channel"]</label>
+    <div class="ocat-end">
+        <select class="form-select" asp-for="Channel">
+            <option value="Phone">@T["Phone call"]</option>
+            <option value="SMS">@T["Text message"]</option>
+        </select>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="AIProfileId">
+    <label class="ocat-label ocat-label-required" asp-for="AIProfileId">@T["AI profile"]</label>
+    <div class="ocat-end">
+        <select class="form-select" asp-for="AIProfileId" asp-items="Model.Profiles">
+            <option value="">@T["Choose a profile"]</option>
+        </select>
+        <span asp-validation-for="AIProfileId"></span>
+        <span class="hint">@T["The AI profile that holds the conversation."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="ChannelEndpointId">@T["From"]</label>
+    <div class="ocat-end">
+        <select class="form-select" asp-for="ChannelEndpointId" asp-items="Model.Endpoints">
+            <option value="">@T["The default number"]</option>
+        </select>
+        <span class="hint">@T["The number the call or text comes from."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Destination">
+    <label class="ocat-label ocat-label-required" asp-for="Destination">@T["To"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="Destination" />
+        <span asp-validation-for="Destination"></span>
+        <span class="hint">@T["A Liquid expression resolving the customer's phone number, for example <code>{{ Workflow.Input.phone }}</code>."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ContactContentItemId">
+    <label class="ocat-label" asp-for="ContactContentItemId">@T["Contact"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="ContactContentItemId" />
+        <span asp-validation-for="ContactContentItemId"></span>
+        <span class="hint">@T["Optional. A Liquid expression resolving the contact's content item id, so the AI knows who it is talking to."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="SubjectContentType">@T["Subject type"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="SubjectContentType" />
+        <span class="hint">@T["Optional. The technical name of the subject content type, which gives the conversation its dispositions and hand-off."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="CampaignId">@T["Campaign"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="CampaignId" />
+        <span class="hint">@T["Optional. The identifier of the campaign the activity belongs to."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Variables">
+    <label class="ocat-label" asp-for="Variables">@T["Variables"]</label>
+    <div class="ocat-end">
+        <textarea class="form-control font-monospace" asp-for="Variables" rows="4"></textarea>
+        <span asp-validation-for="Variables"></span>
+        <span class="hint">@T["Optional. The variables the conversation starts with, one <code>name: value</code> per line. Liquid is supported. The AI profile's instructions read them as <code>{{ Variables.name }}</code>."]</span>
+    </div>
+</div>

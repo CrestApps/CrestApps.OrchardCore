@@ -41,19 +41,21 @@ Everything is under **Reports** in the admin menu:
 | **Report Builder** | People who may build reports. | The list of every report you can open, and **New Report**. |
 | **Shared Reports** | People who may not build reports but can run at least one report. | The list of the reports shared with you. |
 | **Report Views** | People who may build reports. | The list of [reusable views](views.md). |
-| *A category*, such as **Custom Reports** | Everyone who can run a report pinned to the menu. | The reports put in the admin menu, grouped by their category. |
+| **Report Groups** | People who may manage report groups. | The list of [report groups](share-and-run.md#organize-reports-into-groups). |
+| *A group*, such as **Sales** | Everyone who can run a report pinned to the menu in that group. | The reports put in the admin menu in that group, and the groups nested in it. |
+| *A report* | Everyone who can run it. | A report put in the admin menu that is in no group. |
 
 ## Work with the list of reports
 
 The **Report Builder** page lists the reports you can open.
 
-- Type in **Search reports** to find a report by its title or category, and press Enter or click the search button.
+- Type in **Search reports** to find a report by its title or group, and press Enter or click the search button.
 - **New Report** opens the builder on a new report. It is shown to people who build reports.
 - The header of the list says how many reports it shows. If you build reports, the **Status** menu on the right of it shows **All** reports, only the **Published** ones, or only the ones **Not published**.
 
 Reports you started but never published are listed first, with a **Not published** badge. Only you, and the people who manage every report, can see them. Click **Edit** to keep working on one, or choose **Delete** from its actions to throw it away.
 
-Each published report shows its category, a **Menu** badge when it is in the admin menu, a **Shared** badge when it is shared with other people, and **Yours** or the name of its owner. The buttons depend on what you may do:
+Each published report shows its group, a **Menu** badge when it is in the admin menu, a **Shared** badge when it is shared with other people, and **Yours** or the name of its owner. The buttons depend on what you may do:
 
 | Button | What it does |
 | --- | --- |
@@ -68,7 +70,7 @@ The builder fills the window. At the top are the report's title, a few words tha
 
 | Tab | What you do there |
 | --- | --- |
-| **Settings** | Give the report a title, description and category, put it in the admin menu, and choose whether people may export it. |
+| **Settings** | Give the report a title, description and group, put it in the admin menu, and choose whether people may export it. |
 | **Design** | Build the report. The builder opens on this tab. |
 | **Data model** | See your data sets as cards and join them by dragging one column onto another. See [Join data sets](joins.md). |
 | **Sharing** | Choose the people and roles who may run the report, and send people links to it. See [Share and run reports](share-and-run.md). |

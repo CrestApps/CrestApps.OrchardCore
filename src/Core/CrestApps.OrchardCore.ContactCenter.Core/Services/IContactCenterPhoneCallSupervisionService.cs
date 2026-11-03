@@ -51,6 +51,17 @@ public interface IContactCenterPhoneCallSupervisionService
     Task<SupervisorEngagementResult> EngageAsync(string key, string supervisorUserId, ClaimsPrincipal principal, MonitorMode mode, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Starts listening to a call the AI voice agent is holding, on the supervisor's own soft phone.
+    /// </summary>
+    /// <param name="activityId">The AI call's activity.</param>
+    /// <param name="providerName">The telephony provider carrying the call.</param>
+    /// <param name="customerLegId">The provider's identifier of the customer's leg.</param>
+    /// <param name="supervisorUserId">The supervisor.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>Whether the listen started.</returns>
+    Task<SupervisorEngagementResult> ListenToAICallAsync(string activityId, string providerName, string customerLegId, string supervisorUserId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Changes the supervisor's engagement on a phone call to another mode, on the same leg.
     /// </summary>
     Task<SupervisorEngagementResult> SwitchModeAsync(string key, string supervisorUserId, ClaimsPrincipal principal, MonitorMode mode, CancellationToken cancellationToken = default);

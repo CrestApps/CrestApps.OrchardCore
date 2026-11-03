@@ -251,7 +251,7 @@ public sealed class DownloadReportDataSourceTests : IAsyncLifetime
 
         // Assert
         Assert.Equal(["downloads-by-product"], designs.Select(design => design.ItemId));
-        Assert.All(designs, design => Assert.Equal("Store", design.Category));
+        Assert.All(ReportRecipeDesigns.GroupPaths("CrestApps.OrchardCore.Downloads", "downloads-report-builder-reports.recipe.json"), group => Assert.Equal("Store", group));
 
         // The guide has three links: one used up, one taken back, and one still working. The notes' link expired unused.
         var downloads = results["downloads-by-product"];

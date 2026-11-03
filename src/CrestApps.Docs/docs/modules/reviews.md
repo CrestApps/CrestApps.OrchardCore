@@ -78,7 +78,7 @@ The **Product reviews** data set (`ProductReviews`) has one row per review, newe
 
 ## Reports to adapt
 
-The **Reports: product review reports to adapt** recipe (`ReviewsReportBuilderReports`) turns on the Report Builder and adds reports built from this data set, under the **Store** category. Together they show what the built-in **Product reviews** report shows, so you can open one in the builder, change it, and save it as your own. The person who runs the recipe owns them, and they read with that person's access.
+The **Reports: product review reports to adapt** recipe (`ReviewsReportBuilderReports`) turns on the Report Builder and adds reports built from this data set, in the **Store** report group. Together they show what the built-in **Product reviews** report shows, so you can open one in the builder, change it, and save it as your own. The person who runs the recipe owns them, and they read with that person's access.
 
 | Report | Built from | Matches the built-in report |
 | --- | --- | --- |

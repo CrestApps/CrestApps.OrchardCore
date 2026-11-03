@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.AI.Workflows.Models
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<RerunConversationAnalysisTask>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+    @T["Rerun AI Conversation Analysis"]
+</h4>
+<p>@T["Runs a finished conversation's post-session tasks and conversion goals again."]</p>

@@ -49,7 +49,7 @@ internal static class AIVoiceSessionOutcomes
 
         if (activity.AiEscalated)
         {
-            return AIVoiceSessionOutcome.HandedToAgent;
+            return activity.Has<AICallTransfer>() ? AIVoiceSessionOutcome.Transferred : AIVoiceSessionOutcome.HandedToAgent;
         }
 
         // Before the failed status: the no-response expiry pass fails a call nobody picked up, and that call is

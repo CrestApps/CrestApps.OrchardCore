@@ -71,7 +71,8 @@ public static class TelnyxCallEventParser
                 RecordingEndedUtc = ReadDateTime(payload, "recording_ended_at"),
                 TranscriptionText = ReadNestedString(payload, "transcription_data", "transcript"),
                 TranscriptionIsFinal = ReadNestedBool(payload, "transcription_data", "is_final"),
-                Digits = ReadString(payload, "digits"),
+                // A gather reports what was collected as "digits"; a single key press, "digit".
+                Digits = ReadString(payload, "digits") ?? ReadString(payload, "digit"),
 
                 // Read only for the gather event, for the same reason as the detection result below: "status" is too
                 // common a field name to trust on any other event.

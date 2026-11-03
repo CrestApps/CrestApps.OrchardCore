@@ -52,6 +52,12 @@ public sealed class AgentBarViewModel
     public string WorkspaceUrl { get; set; }
 
     /// <summary>
+    /// Gets or sets the URL of the standalone soft phone page, offered when the agent is signed in with no phone open,
+    /// or <see langword="null"/> when the page is not enabled.
+    /// </summary>
+    public string SoftPhoneUrl { get; set; }
+
+    /// <summary>
     /// Gets or sets the request verification token used for the bar's POST actions.
     /// </summary>
     public string AntiForgeryToken { get; set; }

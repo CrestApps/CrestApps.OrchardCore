@@ -108,6 +108,7 @@ public sealed class ReportsHubTests
         var designService = new ReportDesignService(
             Catalog(new ReportDesign { ItemId = "r1", DisplayText = "Sales", OwnerId = "owner" }),
             Catalog<ReportView>(),
+            Catalog<ReportGroup>(),
             new InMemorySharedLinkManager(),
             NoSnapshots(),
             Planner(SalesData()),

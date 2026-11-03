@@ -64,6 +64,14 @@ In a voice conversation the reply has already been spoken, so regenerate is not 
 
 Replay groups feedback by situation (the same user message at the same point in a conversation), answers each situation again with the current settings, and asks the `profile-builder-replay-judge` template to mark each answer **Pass**, **Fail** or **Unknown** against all the feedback given on it. At most 20 situations are replayed, the most recent ones. Tools are not offered during a replay, so replaying a conversation never repeats an action such as sending a message.
 
+## Simulation
+
+`ProfileBuilderSimulator.RunRoundAsync` runs one round of the session's `SimulationSettings`: each scenario through `AIConversationSimulator` (the customer on `CustomerDeploymentName`, the assistant on a profile built from the linked profile, or a new one, with `ProfileBuilderProfileMapper.CopyToProfile`, so the linked profile's knowledge and tools take part), judged by `IAIConversationEvaluator` on `JudgeDeploymentName`. Results are kept in `ProfileBuilderSession.Simulations` (the most recent 60).
+
+When a conversation fails and `Improve` is on, the lowest-scoring one becomes a `ProfileBuilderFeedback` whose comment lists every failed conversation's score, summary, problems and unmet criteria, anchored on the assistant line a problem quotes (or the last reply). The coach rewrites the settings from it as a revision with the source `Simulation`, so the feedback ledger, **Replay** and later rewrites all see it.
+
+Each round is one request (`POST Simulate?runId=`), so no request runs for minutes; the page posts again with the run until the response says `finished`: every conversation passed, the rounds ran out, or the coach could not rewrite. After each round the page writes the new settings into the settings panel, so its autosave keeps them.
+
 ## Saving the result
 
 - **Create AI profile** creates a chat profile with the session's system message, opening message (`AIProfileMetadata.InitialPrompt`), parameters, chat and utility deployments, orchestrator, tools, agents, MCP and agent-to-agent connections, tool instances, data source and retrieval settings, model parameters and prompt templates. A conversation deployment sets the profile's chat mode to conversation with the same deployment and voice.
