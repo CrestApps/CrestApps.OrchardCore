@@ -108,7 +108,7 @@
                 {
                     var pane = sections[i];
 
-                    <div class="tab-pane fade@(i == 0 ? " show active" : null)" id="@pane.Key" role="tabpanel" aria-labelledby="@(pane.Key)-nav" tabindex="0">
+                    <div class="tab-pane@(i == 0 ? " active" : null)" id="@pane.Key" role="tabpanel" aria-labelledby="@(pane.Key)-nav" tabindex="0">
                         @foreach (var shape in pane.Shapes.OrderBy(shape => shape.Metadata.Position, FlatPositionComparer.Instance))
                         {
                             @await DisplayAsync(shape)

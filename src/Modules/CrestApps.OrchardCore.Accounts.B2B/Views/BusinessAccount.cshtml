@@ -126,6 +126,7 @@ else
                     <th scope="col">@T["Placed"]</th>
                     <th scope="col">@T["Buyer"]</th>
                     <th scope="col">@T["PO"]</th>
+                    <th scope="col">@T["Status"]</th>
                     <th scope="col" class="text-end">@T["Total"]</th>
                 </tr>
             </thead>
@@ -137,6 +138,23 @@ else
                         <td>@await DateAsync(order.CreatedUtc)</td>
                         <td>@order.CustomerName</td>
                         <td>@order.PurchaseOrderNumber</td>
+                        <td>
+                            @switch (order.Status)
+                            {
+                                case CrestApps.OrchardCore.Orders.Core.Models.OrderStatus.Paid:
+                                    <span class="badge text-bg-success">@T["Paid"]</span>
+                                    break;
+                                case CrestApps.OrchardCore.Orders.Core.Models.OrderStatus.AwaitingPayment:
+                                    <span class="badge text-bg-warning">@T["Awaiting payment"]</span>
+                                    break;
+                                case CrestApps.OrchardCore.Orders.Core.Models.OrderStatus.Canceled:
+                                    <span class="badge text-bg-secondary">@T["Canceled"]</span>
+                                    break;
+                                default:
+                                    <span class="badge text-bg-light">@T["Draft"]</span>
+                                    break;
+                            }
+                        </td>
                         <td class="text-end">@ProductPriceFormatter.Format(order.Total ?? order.Subtotal, order.Currency)</td>
                     </tr>
                 }

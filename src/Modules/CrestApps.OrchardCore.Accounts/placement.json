@@ -1,42 +1,53 @@
 {
   "TitlePart": [
     {
-      "contentPart": [ "AccountPart" ],
+      "contentPart": [
+        "AccountPart"
+      ],
       "displayType": "DetailAdmin",
       "place": "-"
     }
   ],
   "ListPartHeaderAdmin": [
     {
-      "contentPart": [ "AccountPart" ],
-      "displayType": "DetailAdmin",
-      "place": "Content:1#Records;100"
+      "contentPart": [
+        "AccountPart"
+      ],
+      "place": "-"
     }
   ],
   "ListPartNavigationAdmin": [
     {
-      "contentPart": [ "AccountPart" ],
+      "contentPart": [
+        "AccountPart"
+      ],
       "displayType": "DetailAdmin",
       "place": "Header:5"
     }
   ],
   "ListPartDetailAdminSearchPanel": [
     {
-      "contentPart": [ "AccountPart" ],
+      "contentPart": [
+        "AccountPart"
+      ],
       "displayType": "DetailAdmin",
       "place": "Content:3#Records;100"
     }
   ],
   "ListPartDetailAdmin": [
     {
-      "contentPart": [ "AccountPart" ],
+      "contentPart": [
+        "AccountPart"
+      ],
       "displayType": "DetailAdmin",
       "place": "Content:10#Records;100"
     }
   ],
   "ListPart": [
     {
-      "contentPart": [ "AccountPart" ],
+      "contentPart": [
+        "AccountPart"
+      ],
       "displayType": "DetailAdmin",
       "place": "Content:10#Records;100"
     }

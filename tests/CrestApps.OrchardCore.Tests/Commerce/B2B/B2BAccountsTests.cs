@@ -260,6 +260,35 @@ public sealed class B2BAccountsTests
         Assert.Equal(40m, invoices[0].TotalAmount);
     }
 
+    [Fact]
+    public async Task ABuyerShipsToTheAccountsLocations_OnceEach_WithTheAccountsNameShownOnce()
+    {
+        // Arrange - one location has no street to ship to; another was saved with the name as both recipient and company.
+        var account = TestB2BAccounts.Create(
+            configure: part => part.Terms = new AccountTerms(),
+            members: [new AccountMember { UserId = BuyerId }],
+            locations:
+            [
+                new AccountLocation { LocationId = "hq", Name = "Head office", Address = new CrestApps.OrchardCore.Addresses.Models.Address { Name = "Fabrikam Ltd", Company = "Fabrikam Ltd", AddressLine1 = "500 Commerce Way", City = "Reno", Region = "NV", PostalCode = "89501", Country = "US" } },
+                new AccountLocation { LocationId = "empty", Name = "Somewhere", Address = new CrestApps.OrchardCore.Addresses.Models.Address { Country = "US" } },
+            ]);
+        var source = new AccountLocationsShippingAddressSource(B2BAccounts(account));
+
+        // Act
+        var options = await source.GetAddressesAsync(BuyerId, TestContext.Current.CancellationToken);
+        var none = await new AccountLocationsShippingAddressSource(B2BAccounts(TestB2BAccounts.Create(configure: part => part.Enabled = false, members: [new AccountMember { UserId = BuyerId }]))).GetAddressesAsync(BuyerId, TestContext.Current.CancellationToken);
+
+        // Assert
+        var option = Assert.Single(options);
+        Assert.Equal("account-location-hq", option.AddressId);
+        Assert.Equal("Head office", option.Label);
+        Assert.Equal("Fabrikam Ltd", option.Description);
+        Assert.Null(option.Address.Name);
+        Assert.Equal("Fabrikam Ltd", option.Address.Company);
+        Assert.Equal("500 Commerce Way", option.Address.AddressLine1);
+        Assert.Empty(none);
+    }
+
     private static CrestApps.OrchardCore.Transactions.Models.Transaction Invoice(
         decimal total,
         CrestApps.OrchardCore.Transactions.Models.TransactionStatus status,

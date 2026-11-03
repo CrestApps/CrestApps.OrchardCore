@@ -79,7 +79,7 @@ internal sealed class AccountLocationsPartDisplayDriver : ContentPartDisplayDriv
                 continue;
             }
 
-            row.Address.Name = accountName;
+            row.Address.Name = null;
             row.Address.Company = accountName;
 
             var result = await _addressEditor.ValidateAsync(row.Address, context.Updater.ModelState, AddressPrefix(i), options);

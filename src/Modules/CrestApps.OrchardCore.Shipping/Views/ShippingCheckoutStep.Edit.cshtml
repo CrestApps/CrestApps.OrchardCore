@@ -55,6 +55,10 @@
                         {
                             <span class="badge text-bg-light border ms-1">@T["Default"]</span>
                         }
+                        @if (!string.IsNullOrEmpty(address.Description))
+                        {
+                            <span class="badge text-bg-light border ms-1"><i class="fa-solid fa-building me-1" aria-hidden="true"></i>@address.Description</span>
+                        }
                     </label>
                 </div>
             }

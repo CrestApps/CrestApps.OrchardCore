@@ -31,7 +31,7 @@ The feature's migration defines `B2BAccountPart` and adds it to the `Account` ty
 The account's name is its title. `B2BAccount` reads an account content item together with its part: `AccountId` (the content item id), `Name`, `IsEnabled` (the part is on and the version is published) and the part's values, plus:
 
 - `Buyers`: an `AccountBuyer` for each of the account's members, with their `Role` (`AccountMemberRole.Member` or `Admin`), their `OrderLimit` and their `ContactContentItemId`. Buyers are read, never stored: add or remove a buyer by adding or removing the member.
-- `Locations`: the account's `AccountLocation`s, offered at checkout.
+- `Locations`: the account's `AccountLocation`s. With Shipping on, `AccountLocationsShippingAddressSource` (an `IShippingAddressSource`) offers them on the Shipping step of a buyer's checkout while the account buys as a business, labelled with the account's name; a buyer without a default address of their own starts with the first one.
 
 ### Indexes
 
