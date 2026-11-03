@@ -299,7 +299,7 @@ The AI tools (`workforceWhoIsWorking`, `workforceMySchedule`, `workforceTimeOffB
 
 ## Reports
 
-The `Workforce` report data source (`WorkforceReportDataSource`) holds the `IWorkforceReportDataSet` data sets each feature adds: `WorkforcePunches`, `WorkforceTimesheetLines`, `WorkforceAttendanceExceptions` (Time Clock), `WorkforceTimeOffRequests` (Time Off) and `WorkforcePredictabilityPay` (Labor Rules). `WorkforceReportDataSet<TRecord, TIndex>` reads them through their index, limits the rows to the teams the reader manages (`IWorkforceScopeService`, by the index's team column) and adds the worker's and team's names.
+The `Workforce` report data source (`WorkforceReportDataSource`) holds the `IWorkforceReportDataSet` data sets each feature adds: `WorkforceWorkers` (always, View workers, by main team), `WorkforceScheduleChanges` (Shift Planning, Plan team schedules: every change to a published schedule, with its hours of notice and whether the worker asked), `WorkforcePunches`, `WorkforceTimesheetLines`, `WorkforceAttendanceExceptions` (Time Clock), `WorkforceTimeOffRequests` (Time Off) and `WorkforcePredictabilityPay` (Labor Rules). `WorkforceReportDataSet<TRecord, TIndex>` reads them through their index, limits the rows to the teams the reader manages (`IWorkforceScopeService`, by the index's team column) and adds the worker's and team's names.
 
 ## HTTP API
 

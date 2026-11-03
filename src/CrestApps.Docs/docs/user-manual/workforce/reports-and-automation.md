@@ -32,13 +32,15 @@ With **Reports** on, the report builder has a **Workforce** data source. Each da
 
 | Data set | One row per | Needs |
 | --- | --- | --- |
+| **Workers** | Worker: main team, employment, status, contracted hours, when hired and when they left | View workers |
+| **Schedule changes** | Change to a published schedule: added, moved, reassigned, swapped or removed, for whom, how many hours before the shift, whether the worker asked, and why | Plan team schedules, with Shift Planning |
 | **Punches** | Punch: when, what, from where, at the site or not, corrected or removed | Approve timesheets, with the Time Clock |
 | **Timesheet lines** | Line of a timesheet: day, pay code, hours, where they came from, and the timesheet's period and status | Approve timesheets, with the Time Clock |
 | **Attendance exceptions** | Exception: kind, day, minutes, points and status | Approve timesheets, with the Time Clock |
 | **Time-off requests** | Request: dates, amount, status, when asked for and decided | Approve time off, with Time Off |
 | **Predictability pay** | Entry: the change, the notice, the premium and its status | Approve predictability pay, with Labor Rules |
 
-For example, a report of **Timesheet lines** grouped by team and pay code shows overtime hours by team for a pay period.
+For example, a report of **Timesheet lines** grouped by team and pay code shows overtime hours by team for a pay period, and one of **Schedule changes** grouped by team, counting those the worker didn't ask for, shows how often each team's schedule changes after it is published.
 
 ## Workflows
 
