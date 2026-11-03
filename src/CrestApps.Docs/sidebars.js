@@ -227,7 +227,7 @@ const sidebars = {
                 'user-manual/administration/content-access-control',
                 'user-manual/administration/content-fields',
                 'user-manual/administration/import-and-export',
-                'user-manual/administration/structured-data',
+                'user-manual/administration/advanced-seo',
                 'user-manual/administration/nlweb',
                 'user-manual/data-connectors',
                 'user-manual/administration/do-not-call-lists',
@@ -466,7 +466,7 @@ const sidebars = {
                 'modules/phone-number-verifications-twilio',
                 'modules/recipes',
                 'modules/reports',
-                'modules/structured-data',
+                'modules/advanced-seo',
                 {
                     type: 'category',
                     label: 'Report Builder',

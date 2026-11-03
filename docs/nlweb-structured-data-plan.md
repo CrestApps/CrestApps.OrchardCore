@@ -6,14 +6,16 @@ Status: phases 1–5 implemented on branch `claude/nlweb-search-orchardcore-46cb
 
 | Area | Built |
 | --- | --- |
-| Features | **One feature per module.** `CrestApps.OrchardCore.Seo` (Structured Data) and `CrestApps.OrchardCore.NLWeb`, which depends on it. Every integration is a `[RequireFeatures]` startup, so nothing else has to be enabled by hand: Orchard Core SEO, Search, Rate Limits, AI, AI Data Sources, Products and Reviews. |
+| Features | **One feature per module.** `CrestApps.OrchardCore.Seo` (Advanced SEO, first called Structured Data) and `CrestApps.OrchardCore.NLWeb`, which depends on it. Every integration is a `[RequireFeatures]` startup, so nothing else has to be enabled by hand: Orchard Core SEO, Search, Rate Limits, AI, AI Data Sources, Products and Reviews. |
 | Projects | `src/Abstractions/CrestApps.OrchardCore.Seo.Abstractions`, `src/Modules/CrestApps.OrchardCore.Seo`, `src/Core/CrestApps.OrchardCore.NLWeb.Core` and `src/Modules/CrestApps.OrchardCore.NLWeb`. |
 | Protocol location | The protocol is in `CrestApps.OrchardCore.NLWeb.Core`, which has **no Orchard Core dependency**, instead of a new CrestApps.Core package. Moving it to CrestApps.Core later is a namespace change. It avoids publishing a Core preview first. |
 | Sites (sub-corpora) | **No separate catalog or admin list.** The settings select the search indexes, and `query.site` picks one of them by name. The first index is the default. |
 | MCP | `ask` is a selectable **AI tool**, so the MCP server, WebMCP and AI profiles can offer it. The anonymous public MCP binding (option A, optional authentication on the MCP server) is **not built yet**. |
+| Content types | **Opt-in Schema.org part** (`SchemaOrgPart`) instead of type settings with a Liquid map. Its settings editor lists the types, their properties with Google's required/recommended levels, and a suggested source for each (field, item value, fixed, editor-entered or Liquid); `SchemaOrgSuggestions` mirrors the editor's rules for the AI tools. Types without the part publish nothing about their items, except parts in `StructuredDataOptions.SelfDescribingParts` (products). NLWeb answers still describe every item. |
+| AI tools and code | `getSchemaOrgOptions`, `configureContentTypeSchemaOrg` and `configureSiteStructuredData` when AI is on. Pages that are not content items describe themselves with `IPageStructuredData.MainEntity`/`AddJsonLd`, the `<structured-data>` tag helper or the `structured_data` Liquid filter; the script is built on the `Layout` shape's display so views can still add to it. |
 | UI | **No "Ask this site" widget yet.** The settings screens are done. |
 | Index handler | The structured data fields in content indexes are **not built**, because Azure AI Search indexes reject fields their schema does not declare. NLWeb filters by `itemType` after it loads the results. |
-| Not built yet (phase 6) | `/await` promises (`/await` answers `UNKNOWN_PROMISE`), the `chatgpt_app` format, the Who endpoint, AG-UI/A2UI writers, the upstream Orchard Core PRs, events and breadcrumb providers, and the editor preview tab. |
+| Not built yet (phase 6) | `/await` promises (`/await` answers `UNKNOWN_PROMISE`), the `chatgpt_app` format, the Who endpoint, AG-UI/A2UI writers, the upstream Orchard Core PRs, events and breadcrumb providers. |
 
 ## 1. Short answers
 

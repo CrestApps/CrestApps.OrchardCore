@@ -17,6 +17,9 @@ internal sealed class PageStructuredData : IPageStructuredData
     public bool Suppressed { get; set; }
 
     /// <inheritdoc/>
+    public JsonObject MainEntity { get; set; }
+
+    /// <inheritdoc/>
     public IReadOnlyList<JsonObject> Nodes => _nodes;
 
     /// <inheritdoc/>

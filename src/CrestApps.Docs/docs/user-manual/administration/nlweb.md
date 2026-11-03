@@ -12,7 +12,7 @@ technical_manual:
 | --- | --- |
 | **Menu** | Settings > Search > NLWeb |
 | **Permission** | Ask the site questions with NLWeb (everyone has it at first); Manage the NLWeb settings (to change the settings) |
-| **Feature** | NLWeb (it turns on Structured Data too) |
+| **Feature** | NLWeb (it turns on Advanced SEO too) |
 
 <AskYourAdmin />
 
@@ -63,5 +63,5 @@ Everyone can ask questions at first, including visitors who are not signed in, b
 
 ## Tips
 
-- What NLWeb returns about each content item is its structured data. To improve the answers, describe your content types well in [Structured Data](structured-data.md).
+- What NLWeb returns about each content item is its structured data. To improve the answers, add the Schema.org part to your content types and describe them well; see [Advanced SEO](advanced-seo.md).
 - When the search indexes change, for example when you add a content type to an index, rebuild the index so NLWeb finds the new content.

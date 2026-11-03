@@ -11,7 +11,7 @@ user_manual:
 | **Module** | `CrestApps.OrchardCore.NLWeb` |
 | **Feature** | NLWeb (`CrestApps.OrchardCore.NLWeb`) |
 | **Category** | Search |
-| **Depends on** | [Structured Data](structured-data.md) (`CrestApps.OrchardCore.Seo`), enabled with it |
+| **Depends on** | [Advanced SEO](advanced-seo.md) (`CrestApps.OrchardCore.Seo`), enabled with it |
 
 [NLWeb](https://github.com/nlweb-ai/NLWeb) is an open protocol that lets agents ask a web site questions in natural language. It is being standardized in a W3C Community Group. The site answers with the matching items as schema.org objects.
 
@@ -19,7 +19,7 @@ This module implements NLWeb for Orchard Core:
 
 - **Endpoints.** It answers at the root of the tenant: `POST /ask`, `GET /ask` (the original protocol), and `POST /await`.
 - **Search.** It searches with Orchard Core's search providers, and with AI data sources by meaning.
-- **Results.** It describes each result with the same schema.org data the content item's page publishes, through the [Structured Data](structured-data.md) engine.
+- **Results.** It describes each result with the same schema.org data the content item's page publishes, through the [Advanced SEO](advanced-seo.md) structured data engine.
 
 The settings screen is described in the User Manual under [NLWeb](../user-manual/administration/nlweb.md).
 

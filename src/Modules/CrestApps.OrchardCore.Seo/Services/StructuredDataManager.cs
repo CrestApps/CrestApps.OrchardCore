@@ -1,10 +1,12 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Seo.Models;
+using CrestApps.OrchardCore.Seo.SchemaOrg;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 
@@ -16,11 +18,11 @@ namespace CrestApps.OrchardCore.Seo.Services;
 internal sealed class StructuredDataManager : IStructuredDataManager
 {
     private readonly IEnumerable<IStructuredDataProvider> _providers;
-    private readonly IContentManager _contentManager;
     private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly ContentItemUrlResolver _urlResolver;
     private readonly ISiteService _siteService;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly LinkGenerator _linkGenerator;
+    private readonly StructuredDataOptions _options;
     private readonly ILogger _logger;
 
     private IStructuredDataProvider[] _orderedProviders;
@@ -29,34 +31,34 @@ internal sealed class StructuredDataManager : IStructuredDataManager
     /// Initializes a new instance of the <see cref="StructuredDataManager"/> class.
     /// </summary>
     /// <param name="providers">The structured data providers.</param>
-    /// <param name="contentManager">The content manager.</param>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
+    /// <param name="urlResolver">The resolver of content item URLs.</param>
     /// <param name="siteService">The site service.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
-    /// <param name="linkGenerator">The link generator, which builds the URL of a content item.</param>
+    /// <param name="options">The structured data options.</param>
     /// <param name="logger">The logger.</param>
     public StructuredDataManager(
         IEnumerable<IStructuredDataProvider> providers,
-        IContentManager contentManager,
         IContentDefinitionManager contentDefinitionManager,
+        ContentItemUrlResolver urlResolver,
         ISiteService siteService,
         IHttpContextAccessor httpContextAccessor,
-        LinkGenerator linkGenerator,
+        IOptions<StructuredDataOptions> options,
         ILogger<StructuredDataManager> logger)
     {
         _providers = providers;
-        _contentManager = contentManager;
         _contentDefinitionManager = contentDefinitionManager;
+        _urlResolver = urlResolver;
         _siteService = siteService;
         _httpContextAccessor = httpContextAccessor;
-        _linkGenerator = linkGenerator;
+        _options = options.Value;
         _logger = logger;
     }
 
     /// <inheritdoc/>
-    public async Task<JsonObject> BuildPageDocumentAsync(ContentItem contentItem, IEnumerable<JsonObject> additionalNodes = null)
+    public async Task<JsonObject> BuildPageDocumentAsync(ContentItem contentItem, IEnumerable<JsonObject> additionalNodes = null, JsonObject pageEntity = null)
     {
-        var context = await BuildContextAsync(contentItem, StructuredDataPurpose.Page);
+        var context = await BuildContextAsync(contentItem, StructuredDataPurpose.Page, pageEntity);
 
         var graph = new JsonLdGraph();
 
@@ -86,7 +88,7 @@ internal sealed class StructuredDataManager : IStructuredDataManager
     {
         ArgumentNullException.ThrowIfNull(contentItem);
 
-        var context = await BuildContextAsync(contentItem, purpose);
+        var context = await BuildContextAsync(contentItem, purpose, pageEntity: null);
 
         if (context.MainEntity is null)
         {
@@ -103,26 +105,42 @@ internal sealed class StructuredDataManager : IStructuredDataManager
         return entity;
     }
 
-    private async Task<StructuredDataContext> BuildContextAsync(ContentItem contentItem, StructuredDataPurpose purpose)
+    private async Task<StructuredDataContext> BuildContextAsync(ContentItem contentItem, StructuredDataPurpose purpose, JsonObject pageEntity)
     {
         var context = new StructuredDataContext(contentItem, purpose, await GetBaseUrlAsync());
 
         if (contentItem is not null)
         {
-            var typeSettings = await GetTypeSettingsAsync(contentItem.ContentType);
+            var definition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentItem.ContentType);
+            var schemaOrgPart = SchemaOrgPartDefinitions.Find(definition);
 
-            if (!typeSettings.Disabled)
+            if (IsDescribed(contentItem, definition, schemaOrgPart, purpose))
             {
-                context.ConfiguredType = typeSettings.SchemaType?.Trim();
-                context.Url = await GetContentItemUrlAsync(contentItem, context);
+                context.ConfiguredType = schemaOrgPart?.GetSettings<SchemaOrgPartSettings>().SchemaType?.Trim();
+                context.Url = await _urlResolver.GetUrlAsync(contentItem, context);
 
                 // The type is set before the providers run, so they can rely on it; a provider can still suggest a
-                // more specific one, such as Product, when the content type settings chose none.
+                // more specific one, such as Product, when the Schema.org part chose none.
                 context.MainEntity = new JsonObject
                 {
                     [StructuredDataConstants.Keywords.Type] = GetDefaultType(context),
                 };
             }
+        }
+
+        var mergePageEntity = context.MainEntity is not null;
+
+        // A page that code describes, such as a hard-coded About page, gets its node before the providers run, so it
+        // gets the page's URL, the publisher and the web site like a content item's node.
+        if (pageEntity is not null && context.MainEntity is null)
+        {
+            context.MainEntity = (JsonObject)pageEntity.DeepClone();
+            context.MainEntity.Remove(StructuredDataConstants.Keywords.Context);
+            context.ConfiguredType = JsonLd.GetType(context.MainEntity);
+            context.Url = context.ToAbsoluteUrl(JsonLd.GetString(context.MainEntity, "url")) ?? GetRequestUrl(context);
+
+            JsonLd.SetIfNotEmpty(context.MainEntity, "url", context.Url);
+            context.MainEntity[StructuredDataConstants.Keywords.Type] = GetDefaultType(context);
         }
 
         foreach (var provider in GetOrderedProviders())
@@ -138,12 +156,28 @@ internal sealed class StructuredDataManager : IStructuredDataManager
             }
         }
 
+        // What code says about a page that shows a content item comes last, so it overrides the item's data.
+        if (mergePageEntity && pageEntity is not null)
+        {
+            var properties = (JsonObject)pageEntity.DeepClone();
+            properties.Remove(StructuredDataConstants.Keywords.Context);
+
+            JsonLd.Merge(context.MainEntity, properties);
+        }
+
         if (context.MainEntity is not null)
         {
             CompleteMainEntity(context);
         }
 
         return context;
+    }
+
+    private string GetRequestUrl(StructuredDataContext context)
+    {
+        var request = _httpContextAccessor.HttpContext?.Request;
+
+        return request is null ? null : context.ToAbsoluteUrl($"{request.PathBase}{request.Path}");
     }
 
     private static void CompleteMainEntity(StructuredDataContext context)
@@ -176,29 +210,29 @@ internal sealed class StructuredDataManager : IStructuredDataManager
     private IStructuredDataProvider[] GetOrderedProviders()
         => _orderedProviders ??= _providers.OrderBy(provider => provider.Order).ToArray();
 
-    private async Task<StructuredDataTypeSettings> GetTypeSettingsAsync(string contentType)
+    /// <summary>
+    /// Decides whether the structured data describes a content item. A page describes the items whose content type has
+    /// the Schema.org part, unless an editor turned it off, and the items of a part a module describes, such as a
+    /// product. An answer describes every item, so an agent always gets at least its name and URL.
+    /// </summary>
+    /// <param name="contentItem">The content item.</param>
+    /// <param name="definition">Its content type definition.</param>
+    /// <param name="schemaOrgPart">The Schema.org part of the content type, if it has one.</param>
+    /// <param name="purpose">What the structured data is built for.</param>
+    /// <returns><see langword="true"/> when the structured data describes the content item.</returns>
+    private bool IsDescribed(ContentItem contentItem, ContentTypeDefinition definition, ContentTypePartDefinition schemaOrgPart, StructuredDataPurpose purpose)
     {
-        var definition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentType);
-
-        return definition?.GetSettings<StructuredDataTypeSettings>() ?? new StructuredDataTypeSettings();
-    }
-
-    private async Task<string> GetContentItemUrlAsync(ContentItem contentItem, StructuredDataContext context)
-    {
-        var metadata = await _contentManager.PopulateAspectAsync<ContentItemMetadata>(contentItem);
-
-        if (metadata.DisplayRouteValues is null)
+        if (purpose != StructuredDataPurpose.Page)
         {
-            return null;
+            return true;
         }
 
-        var httpContext = _httpContextAccessor.HttpContext;
+        if (schemaOrgPart is not null)
+        {
+            return !(contentItem.TryGet<SchemaOrgPart>(out var part) && part.Disabled);
+        }
 
-        var path = httpContext is null
-            ? _linkGenerator.GetPathByRouteValues(routeName: null, metadata.DisplayRouteValues)
-            : _linkGenerator.GetPathByRouteValues(httpContext, routeName: null, metadata.DisplayRouteValues);
-
-        return context.ToAbsoluteUrl(path);
+        return definition?.Parts.Any(part => _options.SelfDescribingParts.Contains(part.PartDefinition.Name)) == true;
     }
 
     private async Task<string> GetBaseUrlAsync()

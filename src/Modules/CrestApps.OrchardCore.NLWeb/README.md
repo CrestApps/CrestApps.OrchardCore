@@ -1,10 +1,10 @@
 # CrestApps.OrchardCore.NLWeb
 
-Lets people and AI agents ask the site questions in natural language with the [NLWeb](https://github.com/nlweb-ai/NLWeb) protocol. The site answers at `/ask` with the matching content items, each described with the schema.org object its page publishes (from the Structured Data module).
+Lets people and AI agents ask the site questions in natural language with the [NLWeb](https://github.com/nlweb-ai/NLWeb) protocol. The site answers at `/ask` with the matching content items, each described with the schema.org object its page publishes (from the Advanced SEO module).
 
 ## Feature
 
-One feature, **NLWeb** (`CrestApps.OrchardCore.NLWeb`). It depends on Structured Data. Everything else switches on by itself through `[RequireFeatures]` startups:
+One feature, **NLWeb** (`CrestApps.OrchardCore.NLWeb`). It depends on Advanced SEO. Everything else switches on by itself through `[RequireFeatures]` startups:
 
 | Enabled module | What it adds |
 | --- | --- |

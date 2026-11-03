@@ -15,8 +15,13 @@ public interface IStructuredDataManager
     /// </summary>
     /// <param name="contentItem">The content item the page displays, or <see langword="null"/>.</param>
     /// <param name="additionalNodes">Other nodes to include, such as nodes a theme added to the page.</param>
+    /// <param name="pageEntity">
+    /// The node code gave the page, such as an <c>AboutPage</c> (see <see cref="IPageStructuredData.MainEntity"/>), or
+    /// <see langword="null"/>. It describes a page without a described content item, and adds its properties to the
+    /// content item's node otherwise.
+    /// </param>
     /// <returns>The document, or <see langword="null"/> when there is nothing to write.</returns>
-    Task<JsonObject> BuildPageDocumentAsync(ContentItem contentItem, IEnumerable<JsonObject> additionalNodes = null);
+    Task<JsonObject> BuildPageDocumentAsync(ContentItem contentItem, IEnumerable<JsonObject> additionalNodes = null, JsonObject pageEntity = null);
 
     /// <summary>
     /// Builds the schema.org object that describes one content item, with its own <c>@context</c>.

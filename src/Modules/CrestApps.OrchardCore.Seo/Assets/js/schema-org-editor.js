@@ -1,0 +1,986 @@
+// @ts-check
+/*
+ * The editor of the Schema.org part's settings.
+ *
+ * Pick a schema.org type from the list and the editor offers that type's properties, the required and recommended
+ * ones first, each with the value it should most likely take: one of the content type's fields, a value every item
+ * has (its title, author, dates…), the site's publisher, a fixed value, a value editors enter on each item, or Liquid.
+ * "Add suggested properties" fills the table in one click; every row can be changed or removed, and any other
+ * property can be added. A preview shows the shape of the JSON-LD the pages will publish.
+ *
+ * The script writes the type and the rows to two hidden inputs, which the server reads and checks when the form is
+ * saved.
+ */
+(function () {
+  'use strict';
+
+  // The properties the site fills in for every item without a mapping, and where it takes them from.
+  var AUTOMATIC = {
+    name: 'Item:DisplayText',
+    url: 'Item:Url',
+    description: 'Item:Summary',
+    dateCreated: 'Item:CreatedUtc',
+    datePublished: 'Item:PublishedUtc',
+    dateModified: 'Item:ModifiedUtc',
+    inLanguage: 'Item:Language',
+  };
+
+  // The kinds of value each kind of property can take.
+  var COMPATIBLE = {
+    Text: ['Text', 'LongText', 'Number', 'Url', 'Object'],
+    LongText: ['LongText', 'Text'],
+    TextList: ['TextList', 'Text', 'LongText'],
+    Url: ['Url', 'Image'],
+    Image: ['Image', 'Url'],
+    Date: ['Date', 'DateTime'],
+    DateTime: ['DateTime', 'Date'],
+    Duration: ['Text'],
+    Number: ['Number', 'Text'],
+    Boolean: ['Boolean'],
+    Enumeration: ['Text'],
+    Object: ['Object', 'Text'],
+    Json: ['Text', 'LongText'],
+  };
+
+  // Other words a field may be named for a property.
+  var SYNONYMS = {
+    image: ['photo', 'picture', 'thumbnail', 'cover', 'banner', 'hero'],
+    thumbnailurl: ['thumbnail', 'image', 'photo', 'poster'],
+    description: ['summary', 'teaser', 'excerpt', 'intro', 'abstract'],
+    keywords: ['tags', 'categories', 'topics'],
+    author: ['writer', 'by', 'owner'],
+    startdate: ['start', 'begins', 'from', 'date'],
+    enddate: ['end', 'ends', 'until'],
+    price: ['cost', 'amount'],
+    address: ['location', 'venue', 'street'],
+    telephone: ['phone', 'tel', 'mobile'],
+    headline: ['title'],
+    sku: ['code', 'productcode'],
+    articlebody: ['body', 'content', 'text'],
+    performer: ['artist', 'speaker', 'band'],
+    organizer: ['host'],
+    recipeingredient: ['ingredients', 'ingredient'],
+    recipeinstructions: ['instructions', 'method', 'steps', 'directions'],
+    duration: ['length', 'runtime'],
+    embedurl: ['video', 'youtube'],
+    logo: ['logo'],
+    brand: ['manufacturer', 'make'],
+  };
+
+  function normalize(text) {
+    return String(text || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  // "startDate" → "Start date"; "offers.price" → "Offers › Price".
+  function humanize(name) {
+    return String(name || '')
+      .split('.')
+      .map(function (segment) {
+        var words = segment.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/([A-Z])([A-Z][a-z])/g, '$1 $2').toLowerCase();
+
+        return words.charAt(0).toUpperCase() + words.slice(1);
+      })
+      .join(' › ');
+  }
+
+  function findType(data, typeName) {
+    var types = (data && data.types) || [];
+
+    for (var i = 0; i < types.length; i++) {
+      if (normalize(types[i].name) === normalize(typeName)) {
+        return types[i];
+      }
+    }
+
+    return null;
+  }
+
+  // The properties of a type, or the generic ones of a type the vocabulary does not list.
+  function propertiesOf(data, typeName) {
+    var type = findType(data, typeName);
+
+    return (type ? type.properties : data && data.fallbackProperties) || [];
+  }
+
+  function findProperty(data, typeName, name) {
+    var properties = propertiesOf(data, typeName);
+
+    for (var i = 0; i < properties.length; i++) {
+      if (properties[i].name === name) {
+        return properties[i];
+      }
+    }
+
+    return null;
+  }
+
+  function isCompatible(propertyKind, sourceKind) {
+    return (COMPATIBLE[propertyKind] || ['Text']).indexOf(sourceKind) >= 0;
+  }
+
+  // How much a field's name says it holds the property: the same name, a known other name, or one inside the other.
+  function nameScore(property, source) {
+    var key = String(source.key || '');
+    var field = normalize(key.slice(key.lastIndexOf('.') + 1));
+    var name = normalize(String(property.name).split('.').pop());
+
+    if (!field || !name) {
+      return 0;
+    }
+
+    if (field === name) {
+      return 50;
+    }
+
+    var synonyms = SYNONYMS[normalize(property.name)] || SYNONYMS[name] || [];
+
+    for (var i = 0; i < synonyms.length; i++) {
+      if (field === synonyms[i]) {
+        return 40;
+      }
+    }
+
+    for (var j = 0; j < synonyms.length; j++) {
+      if (field.indexOf(synonyms[j]) >= 0) {
+        return 20;
+      }
+    }
+
+    if (name.length > 3 && (field.indexOf(name) >= 0 || name.indexOf(field) >= 0)) {
+      return 20;
+    }
+
+    return 0;
+  }
+
+  // How well a value of the content type fits a property; 0 or less when it should not be suggested.
+  function scoreSource(property, source) {
+    var suggestions = property.suggestions || [];
+    var suggested = suggestions.indexOf(source.key);
+    var isField = String(source.key).indexOf('Field:') === 0;
+
+    if (isField) {
+      if (!isCompatible(property.kind, source.kind)) {
+        return 0;
+      }
+
+      var score = nameScore(property, source);
+
+      // A field of the very kind a property needs, such as the only image of a recipe, fits even with another name.
+      if (score === 0 && source.kind === property.kind && (property.kind === 'Image' || property.kind === 'TextList')) {
+        score = 15;
+      }
+
+      if (score > 0 && source.kind === property.kind) {
+        score += 5;
+      }
+
+      return score;
+    }
+
+    // The values every item has are only suggested where the vocabulary says they fit, below a field named for it.
+    return suggested >= 0 ? 30 - suggested : 0;
+  }
+
+  // Where a property should most likely take its value from.
+  function suggestMapping(property, sources) {
+    var best = null;
+    var bestScore = 0;
+
+    (sources || []).forEach(function (source) {
+      var score = scoreSource(property, source);
+
+      if (score > bestScore) {
+        best = source;
+        bestScore = score;
+      }
+    });
+
+    if (best) {
+      return { name: property.name, source: 'Content', value: best.key, score: bestScore };
+    }
+
+    if (property.liquidExample) {
+      return { name: property.name, source: 'Liquid', value: property.liquidExample, score: 0 };
+    }
+
+    return { name: property.name, source: 'Editor', value: null, score: 0 };
+  }
+
+  // An object such as "offers" is written by its dotted properties, such as "offers.price", so it needs no row.
+  function hasChildren(properties, name) {
+    for (var i = 0; i < properties.length; i++) {
+      if (properties[i].name.indexOf(name + '.') === 0) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // The rows "Add suggested properties" adds: the required and recommended properties not mapped yet, and the
+  // optional ones a field is clearly named for. Properties the site already fills in are left out unless a field
+  // gives a better value.
+  function suggestMappings(data, typeName, mappings) {
+    var properties = propertiesOf(data, typeName);
+    var mapped = {};
+    var usedSources = {};
+    var result = [];
+
+    (mappings || []).forEach(function (mapping) {
+      mapped[mapping.name] = true;
+
+      if (mapping.source === 'Content') {
+        usedSources[mapping.value] = true;
+      }
+    });
+
+    // The required and recommended properties take their fields first, so an optional one never takes a field from them.
+    var rank = { Required: 0, Recommended: 1 };
+    var ordered = properties.slice().sort(function (a, b) {
+      return (rank[a.level] === undefined ? 2 : rank[a.level]) - (rank[b.level] === undefined ? 2 : rank[b.level]);
+    });
+
+    ordered.forEach(function (property) {
+      if (mapped[property.name] || hasChildren(properties, property.name)) {
+        return;
+      }
+
+      var suggestion = suggestMapping(property, data.sources);
+      var automatic = AUTOMATIC[property.name];
+
+      if (automatic && (suggestion.source !== 'Content' || suggestion.value === automatic)) {
+        return;
+      }
+
+      // An optional property is only worth a row for a field of its own, not one another row already uses.
+      if (property.level === 'Optional' && !(suggestion.source === 'Content' && suggestion.score >= 40 && !usedSources[suggestion.value])) {
+        return;
+      }
+
+      if (suggestion.source === 'Content') {
+        usedSources[suggestion.value] = true;
+      }
+
+      result.push({ name: suggestion.name, source: suggestion.source, value: suggestion.value });
+    });
+
+    return result;
+  }
+
+  // The required properties that have no row and that the site does not fill in.
+  function missingRequired(data, typeName, mappings) {
+    var properties = propertiesOf(data, typeName);
+    var mapped = {};
+
+    (mappings || []).forEach(function (mapping) {
+      mapped[mapping.name] = true;
+    });
+
+    return properties
+      .filter(function (property) {
+        if (property.level !== 'Required' || mapped[property.name] || AUTOMATIC[property.name]) {
+          return false;
+        }
+
+        // An object is there when one of its properties is.
+        for (var name in mapped) {
+          if (name.indexOf(property.name + '.') === 0) {
+            return false;
+          }
+        }
+
+        return true;
+      })
+      .map(function (property) {
+        return property.name;
+      });
+  }
+
+  // The shape of the JSON-LD the pages publish, with a placeholder for each value.
+  function previewJson(data, typeName, mappings, labels) {
+    var sourcesByKey = {};
+    var text = labels || {};
+
+    (data.sources || []).forEach(function (source) {
+      sourcesByKey[source.key] = source;
+    });
+
+    var root = { '@context': 'https://schema.org', '@type': typeName || 'WebPage' };
+
+    (mappings || []).forEach(function (mapping) {
+      if (!mapping.name) {
+        return;
+      }
+
+      var value;
+
+      if (mapping.source === 'Content') {
+        var source = sourcesByKey[mapping.value];
+
+        value = '‹' + (source ? source.text : mapping.value || '?') + '›';
+      } else if (mapping.source === 'Fixed') {
+        value = mapping.value || '';
+      } else if (mapping.source === 'Liquid') {
+        value = '‹' + (text.liquid || 'Liquid') + '›';
+      } else {
+        value = '‹' + (text.entered || 'entered on each item') + '›';
+      }
+
+      var segments = String(mapping.name).split('.');
+      var target = root;
+
+      for (var i = 0; i < segments.length - 1; i++) {
+        if (typeof target[segments[i]] !== 'object' || target[segments[i]] === null) {
+          var path = segments.slice(0, i + 1).join('.');
+          var property = findProperty(data, typeName, path);
+
+          target[segments[i]] = property && property.objectType ? { '@type': property.objectType } : {};
+        }
+
+        target = target[segments[i]];
+      }
+
+      var last = segments[segments.length - 1];
+      var definition = findProperty(data, typeName, mapping.name);
+
+      if (definition && definition.kind === 'Object' && definition.objectType && typeof value === 'string') {
+        target[last] = { '@type': definition.objectType, name: value };
+      } else {
+        target[last] = value;
+      }
+    });
+
+    return root;
+  }
+
+  globalThis.CrestAppsSchemaOrgEditor = {
+    humanize: humanize,
+    findType: findType,
+    propertiesOf: propertiesOf,
+    findProperty: findProperty,
+    isCompatible: isCompatible,
+    scoreSource: scoreSource,
+    suggestMapping: suggestMapping,
+    suggestMappings: suggestMappings,
+    missingRequired: missingRequired,
+    previewJson: previewJson,
+  };
+
+  if (typeof document === 'undefined' || !document.querySelectorAll) {
+    return;
+  }
+
+  function el(tag, attributes, children) {
+    var element = document.createElement(tag);
+
+    Object.keys(attributes || {}).forEach(function (name) {
+      var value = attributes[name];
+
+      if (value === null || value === undefined || value === false) {
+        return;
+      }
+
+      if (name === 'text') {
+        element.textContent = value;
+      } else if (name === 'className') {
+        element.className = value;
+      } else if (name.indexOf('on') === 0) {
+        element.addEventListener(name.slice(2), value);
+      } else {
+        element.setAttribute(name, value === true ? '' : value);
+      }
+    });
+
+    (children || []).forEach(function (child) {
+      if (child) {
+        element.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
+      }
+    });
+
+    return element;
+  }
+
+  function option(value, text, selected) {
+    var element = el('option', { value: value, text: text });
+
+    element.selected = !!selected;
+
+    return element;
+  }
+
+  function levelBadge(level, labels) {
+    if (level === 'Required') {
+      return el('span', { className: 'badge text-bg-danger ms-1', text: labels.required });
+    }
+
+    if (level === 'Recommended') {
+      return el('span', { className: 'badge text-bg-info ms-1', text: labels.recommended });
+    }
+
+    return null;
+  }
+
+  function init(wrapper) {
+    var typeInput = /** @type {HTMLInputElement} */ (wrapper.querySelector('[data-schema-type]'));
+    var propertiesInput = /** @type {HTMLInputElement} */ (wrapper.querySelector('[data-schema-properties]'));
+    var dataElement = wrapper.querySelector('[data-schema-data]');
+    var labelsElement = wrapper.querySelector('[data-schema-labels]');
+    var root = wrapper.querySelector('[data-schema-root]');
+
+    if (!typeInput || !propertiesInput || !dataElement || !labelsElement || !root) {
+      return;
+    }
+
+    var data = JSON.parse(dataElement.textContent || '{}');
+    var labels = JSON.parse(labelsElement.textContent || '{}');
+    var state = {
+      type: typeInput.value || '',
+      custom: false,
+      mappings: [],
+    };
+
+    try {
+      state.mappings = JSON.parse(propertiesInput.value || '[]') || [];
+    } catch (e) {
+      state.mappings = [];
+    }
+
+    state.custom = !!state.type && !findType(data, state.type);
+
+    var preview;
+
+    function save() {
+      typeInput.value = state.type;
+      propertiesInput.value = JSON.stringify(state.mappings.map(function (mapping) {
+        return { name: mapping.name, source: mapping.source, value: mapping.source === 'Editor' ? null : mapping.value };
+      }));
+
+      if (preview) {
+        preview.textContent = JSON.stringify(previewJson(data, state.type, state.mappings, labels), null, 2);
+      }
+    }
+
+    function setType(name) {
+      state.type = name;
+
+      // A type chosen for an empty table starts with its suggested properties.
+      if (state.mappings.length === 0 && name) {
+        state.mappings = suggestMappings(data, name, []);
+      }
+
+      render();
+    }
+
+    function renderTypePicker() {
+      var groups = {};
+      var order = [];
+
+      (data.types || []).forEach(function (type) {
+        if (!type.group) {
+          return;
+        }
+
+        if (!groups[type.group]) {
+          groups[type.group] = [];
+          order.push(type.group);
+        }
+
+        groups[type.group].push(type);
+      });
+
+      var select = el('select', { className: 'form-select', id: wrapper.id + '-type', 'aria-describedby': wrapper.id + '-type-hint' });
+
+      select.appendChild(option('', labels.chooseType, !state.type));
+
+      order.forEach(function (group) {
+        var optgroup = el('optgroup', { label: group });
+
+        groups[group].forEach(function (type) {
+          optgroup.appendChild(option(type.name, type.name, !state.custom && normalize(type.name) === normalize(state.type)));
+        });
+
+        select.appendChild(optgroup);
+      });
+
+      select.appendChild(option('*', labels.otherType, state.custom));
+
+      select.addEventListener('change', function () {
+        if (select.value === '*') {
+          state.custom = true;
+          setType('');
+
+          return;
+        }
+
+        state.custom = false;
+        setType(select.value);
+      });
+
+      var children = [select];
+
+      if (state.custom) {
+        var custom = el('input', {
+          className: 'form-control mt-2',
+          value: state.type,
+          placeholder: 'MusicEvent',
+          'aria-label': labels.otherType,
+        });
+
+        custom.addEventListener('change', function () {
+          setType(custom.value.trim());
+        });
+
+        children.push(custom);
+      }
+
+      var type = findType(data, state.type);
+      var hint = el('div', { className: 'hint', id: wrapper.id + '-type-hint' });
+
+      if (type) {
+        hint.appendChild(document.createTextNode(type.description + ' '));
+        hint.appendChild(el('a', { href: 'https://schema.org/' + type.name, target: '_blank', rel: 'noopener', text: labels.schemaOrgPage }));
+
+        if (type.guideUrl) {
+          hint.appendChild(document.createTextNode(' · '));
+          hint.appendChild(el('a', { href: type.guideUrl, target: '_blank', rel: 'noopener', text: labels.googleGuide }));
+        }
+      } else {
+        hint.textContent = state.custom ? labels.otherTypeHint : labels.typeHint;
+      }
+
+      children.push(hint);
+
+      return el('div', { className: 'ocat-wrapper' }, [
+        el('label', { className: 'ocat-label', for: wrapper.id + '-type', text: labels.type }),
+        el('div', { className: 'ocat-end' }, children),
+      ]);
+    }
+
+    function renderValueCell(mapping, property) {
+      if (mapping.source === 'Content') {
+        return el('span', { className: 'text-muted small', text: labels.fromContent });
+      }
+
+      if (mapping.source === 'Editor') {
+        return el('span', { className: 'text-muted small', text: labels.editorEnters });
+      }
+
+      if (mapping.source === 'Liquid') {
+        var textarea = el('textarea', {
+          className: 'form-control font-monospace',
+          rows: 2,
+          'aria-label': labels.liquid,
+          placeholder: '{{ ContentItem.DisplayText }}',
+        });
+
+        textarea.value = mapping.value || '';
+        textarea.addEventListener('input', function () {
+          mapping.value = textarea.value;
+          save();
+        });
+
+        var cell = [textarea];
+
+        if (property && property.liquidExample && !mapping.value) {
+          cell.push(el('button', {
+            type: 'button',
+            className: 'btn btn-link btn-sm p-0',
+            text: labels.useExample,
+            onclick: function () {
+              mapping.value = property.liquidExample;
+              render();
+            },
+          }));
+        }
+
+        return el('div', {}, cell);
+      }
+
+      // A fixed value.
+      if (property && property.kind === 'Enumeration' && property.options && property.options.length > 0) {
+        var select = el('select', { className: 'form-select', 'aria-label': labels.value });
+
+        select.appendChild(option('', '', !mapping.value));
+        property.options.forEach(function (item) {
+          select.appendChild(option(item.value, item.text, item.value === mapping.value));
+        });
+
+        select.addEventListener('change', function () {
+          mapping.value = select.value;
+          save();
+        });
+
+        return select;
+      }
+
+      var inputType = property && property.kind === 'Number' ? 'number' : property && (property.kind === 'Url' || property.kind === 'Image') ? 'url' : 'text';
+      var input = el('input', { className: 'form-control', type: inputType, step: inputType === 'number' ? 'any' : null, 'aria-label': labels.value });
+
+      input.value = mapping.value || '';
+      input.addEventListener('input', function () {
+        mapping.value = input.value;
+        save();
+      });
+
+      return input;
+    }
+
+    function renderSourceSelect(mapping, property) {
+      var select = el('select', { className: 'form-select', 'aria-label': labels.valueFrom });
+      var groups = {};
+      var order = [];
+
+      (data.sources || []).forEach(function (source) {
+        if (!groups[source.group]) {
+          groups[source.group] = [];
+          order.push(source.group);
+        }
+
+        groups[source.group].push(source);
+      });
+
+      var best = property ? suggestMapping(property, data.sources) : null;
+
+      order.forEach(function (group) {
+        var optgroup = el('optgroup', { label: group });
+
+        groups[group].forEach(function (source) {
+          var fits = !property || isCompatible(property.kind, source.kind);
+          var text = source.text + (best && best.source === 'Content' && best.value === source.key ? ' ★' : '');
+          var item = option('Content|' + source.key, text, mapping.source === 'Content' && mapping.value === source.key);
+
+          if (!fits) {
+            item.className = 'text-muted';
+          }
+
+          optgroup.appendChild(item);
+        });
+
+        select.appendChild(optgroup);
+      });
+
+      var other = el('optgroup', { label: labels.other });
+
+      other.appendChild(option('Fixed', labels.fixed, mapping.source === 'Fixed'));
+      other.appendChild(option('Editor', labels.editor, mapping.source === 'Editor'));
+      other.appendChild(option('Liquid', labels.liquid, mapping.source === 'Liquid'));
+      select.appendChild(other);
+
+      if (mapping.source === 'Content' && !select.value) {
+        // A field that was removed from the content type is still listed, so the row does not change by itself.
+        select.insertBefore(option('Content|' + mapping.value, mapping.value + ' (' + labels.missing + ')', true), select.firstChild);
+      }
+
+      select.addEventListener('change', function () {
+        var value = select.value;
+
+        if (value.indexOf('Content|') === 0) {
+          mapping.source = 'Content';
+          mapping.value = value.slice('Content|'.length);
+        } else {
+          mapping.source = value;
+          mapping.value = null;
+        }
+
+        render();
+      });
+
+      return select;
+    }
+
+    // Whether each property's card is open; rows loaded with the page start closed, rows added start open.
+    var expanded = new WeakMap();
+
+    function sourceSummary(mapping) {
+      if (mapping.source === 'Content') {
+        var match = (data.sources || []).filter(function (source) {
+          return source.key === mapping.value;
+        })[0];
+
+        return match ? match.text : mapping.value || '';
+      }
+
+      if (mapping.source === 'Fixed') {
+        return '"' + (mapping.value || '') + '"';
+      }
+
+      return mapping.source === 'Liquid' ? labels.liquid : labels.editor;
+    }
+
+    function field(label, control, hint) {
+      return el('div', { className: 'ocat-wrapper' }, [
+        el('label', { className: 'ocat-label', text: label }),
+        el('div', { className: 'ocat-end' }, [control, hint || null]),
+      ]);
+    }
+
+    function renderPropertyField(mapping, index, properties, property) {
+      var select = el('select', { className: 'form-select', 'aria-label': labels.property });
+      var used = {};
+
+      state.mappings.forEach(function (other, otherIndex) {
+        if (otherIndex !== index) {
+          used[other.name] = true;
+        }
+      });
+
+      [['Required', labels.required], ['Recommended', labels.recommended], ['Optional', labels.optional]].forEach(function (level) {
+        var optgroup = el('optgroup', { label: level[1] });
+
+        properties.forEach(function (candidate) {
+          if (candidate.level === level[0] && (!used[candidate.name] || candidate.name === mapping.name)) {
+            optgroup.appendChild(option(candidate.name, candidate.name, candidate.name === mapping.name));
+          }
+        });
+
+        if (optgroup.children.length > 0) {
+          select.appendChild(optgroup);
+        }
+      });
+
+      select.appendChild(option('*', labels.otherProperty, !property));
+
+      select.addEventListener('change', function () {
+        if (select.value === '*') {
+          mapping.name = '';
+          render();
+
+          return;
+        }
+
+        var chosen = findProperty(data, state.type, select.value);
+        var suggestion = chosen ? suggestMapping(chosen, data.sources) : { source: 'Editor', value: null };
+
+        mapping.name = select.value;
+        mapping.source = suggestion.source;
+        mapping.value = suggestion.value;
+        render();
+      });
+
+      var control = el('div', {}, [select]);
+
+      if (!property) {
+        var custom = el('input', { className: 'form-control mt-1 font-monospace', value: mapping.name || '', placeholder: 'offers.priceCurrency', 'aria-label': labels.otherProperty });
+
+        custom.addEventListener('change', function () {
+          mapping.name = custom.value.trim();
+          render();
+        });
+
+        control.appendChild(custom);
+      }
+
+      return field(labels.property, control, property ? el('span', { className: 'hint', text: property.description }) : null);
+    }
+
+    function move(index, offset) {
+      var target = index + offset;
+
+      if (target < 0 || target >= state.mappings.length) {
+        return;
+      }
+
+      var item = state.mappings.splice(index, 1)[0];
+
+      state.mappings.splice(target, 0, item);
+      render();
+    }
+
+    function headerButton(icon, title, onclick, className) {
+      return el('button', {
+        type: 'button',
+        className: className || 'btn btn-outline-secondary',
+        title: title,
+        'aria-label': title,
+        onclick: onclick,
+      }, [el('i', { className: icon, 'aria-hidden': 'true' })]);
+    }
+
+    // One property, laid out like a bag item: a header to open, move and delete it, and its editor in the body.
+    function renderCard(mapping, index, properties) {
+      var property = findProperty(data, state.type, mapping.name);
+      var open = expanded.get(mapping) === true;
+      var title = mapping.name ? humanize(mapping.name) : labels.newProperty;
+
+      function toggle() {
+        expanded.set(mapping, !open);
+        render();
+      }
+
+      var heading = el('span', { className: 'flex-grow-1 text-truncate', role: 'button', onclick: toggle }, [
+        el('span', { className: 'text-body fw-semibold', text: title }),
+        mapping.name ? el('span', { className: 'hint dashed ms-1', text: mapping.name }) : null,
+        property ? levelBadge(property.level, labels) : null,
+        el('span', { className: 'ms-2 small', text: '← ' + sourceSummary(mapping) }),
+      ]);
+
+      var header = el('div', { className: 'widget-editor-header card-header text-muted py-1 ps-2 pe-1 d-flex align-items-center gap-2' }, [
+        headerButton(open ? 'fa-solid fa-angle-down' : 'fa-solid fa-angle-right', open ? labels.collapse : labels.expand, toggle, 'btn btn-outline-secondary btn-sm widget-editor-btn-toggle'),
+        heading,
+        el('div', { className: 'btn-group btn-group-sm' }, [
+          headerButton('fa-solid fa-arrow-up', labels.moveUp, function () {
+            move(index, -1);
+          }),
+          headerButton('fa-solid fa-arrow-down', labels.moveDown, function () {
+            move(index, 1);
+          }),
+          headerButton('fa-solid fa-trash', labels.remove + ' ' + (mapping.name || ''), function () {
+            state.mappings.splice(index, 1);
+            render();
+          }, 'btn btn-danger widget-delete'),
+        ]),
+      ]);
+
+      var card = el('div', { className: 'widget widget-editor card mb-2' + (open ? '' : ' collapsed') }, [header]);
+
+      if (open) {
+        card.appendChild(el('div', { className: 'widget-editor-body card-body' }, [
+          renderPropertyField(mapping, index, properties, property),
+          field(labels.valueFrom, renderSourceSelect(mapping, property), null),
+          field(labels.value, renderValueCell(mapping, property), null),
+        ]));
+      }
+
+      return card;
+    }
+
+    function renderAddMenu() {
+      var properties = propertiesOf(data, state.type);
+      var used = {};
+      var menu = el('ul', { className: 'dropdown-menu' });
+
+      state.mappings.forEach(function (mapping) {
+        used[mapping.name] = true;
+      });
+
+      function add(mapping) {
+        expanded.set(mapping, true);
+        state.mappings.push(mapping);
+        render();
+      }
+
+      [['Required', labels.required], ['Recommended', labels.recommended], ['Optional', labels.optional]].forEach(function (level) {
+        var items = properties.filter(function (property) {
+          return property.level === level[0] && !used[property.name];
+        });
+
+        if (items.length === 0) {
+          return;
+        }
+
+        menu.appendChild(el('li', {}, [el('h6', { className: 'dropdown-header', text: level[1] })]));
+
+        items.forEach(function (property) {
+          menu.appendChild(el('li', {}, [el('button', {
+            type: 'button',
+            className: 'dropdown-item',
+            text: property.name,
+            title: property.description,
+            onclick: function () {
+              add(suggestMapping(property, data.sources));
+            },
+          })]));
+        });
+      });
+
+      menu.appendChild(el('li', {}, [el('hr', { className: 'dropdown-divider' })]));
+      menu.appendChild(el('li', {}, [el('button', {
+        type: 'button',
+        className: 'dropdown-item',
+        text: labels.otherProperty,
+        onclick: function () {
+          add({ name: '', source: 'Fixed', value: '' });
+        },
+      })]));
+
+      menu.style.maxHeight = '22rem';
+      menu.style.overflowY = 'auto';
+
+      return el('div', { className: 'btn-group dropup' }, [
+        el('button', {
+          type: 'button',
+          className: 'btn btn-primary btn-sm dropdown-toggle',
+          'data-bs-toggle': 'dropdown',
+          'aria-expanded': 'false',
+        }, [el('i', { className: 'fa-solid fa-plus me-1', 'aria-hidden': 'true' }), labels.addProperty]),
+        menu,
+      ]);
+    }
+
+    function render() {
+      root.textContent = '';
+      root.appendChild(renderTypePicker());
+
+      if (!state.type) {
+        save();
+
+        return;
+      }
+
+      var properties = propertiesOf(data, state.type);
+      var missing = missingRequired(data, state.type, state.mappings);
+      var suggestions = suggestMappings(data, state.type, state.mappings);
+
+      root.appendChild(el('h6', { className: 'mt-3', text: labels.properties }));
+      root.appendChild(el('div', { className: 'hint mb-2', text: labels.automatic }));
+
+      if (missing.length > 0) {
+        root.appendChild(el('div', { className: 'alert alert-warning py-2', role: 'status' }, [
+          el('i', { className: 'fa-solid fa-triangle-exclamation me-1', 'aria-hidden': 'true' }),
+          labels.missingRequired + ' ',
+          el('strong', { text: missing.join(', ') }),
+        ]));
+      }
+
+      var list = el('div', { className: 'widget-container mb-2' });
+
+      state.mappings.forEach(function (mapping, index) {
+        list.appendChild(renderCard(mapping, index, properties));
+      });
+
+      if (state.mappings.length === 0) {
+        list.appendChild(el('p', { className: 'text-muted', text: labels.noProperties }));
+      }
+
+      root.appendChild(list);
+
+      root.appendChild(el('div', { className: 'd-flex flex-wrap gap-2 align-items-center' }, [
+        renderAddMenu(),
+        el('button', {
+          type: 'button',
+          className: 'btn btn-outline-primary btn-sm',
+          disabled: suggestions.length === 0,
+          onclick: function () {
+            state.mappings = state.mappings.concat(suggestMappings(data, state.type, state.mappings));
+            render();
+          },
+        }, [el('i', { className: 'fa-solid fa-wand-magic-sparkles me-1', 'aria-hidden': 'true' }), labels.addSuggested + (suggestions.length ? ' (' + suggestions.length + ')' : '')]),
+      ]));
+
+      preview = el('pre', { className: 'bg-body-tertiary border rounded p-2 small mb-0', style: 'max-height: 20rem; overflow: auto' });
+
+      root.appendChild(el('details', { className: 'mt-3' }, [
+        el('summary', { text: labels.preview }),
+        el('div', { className: 'hint mb-1', text: labels.previewHint }),
+        preview,
+      ]));
+
+      save();
+    }
+
+    render();
+  }
+
+  function initAll() {
+    document.querySelectorAll('[data-schema-org-editor]').forEach(function (wrapper) {
+      init(wrapper);
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAll);
+  } else {
+    initAll();
+  }
+})();

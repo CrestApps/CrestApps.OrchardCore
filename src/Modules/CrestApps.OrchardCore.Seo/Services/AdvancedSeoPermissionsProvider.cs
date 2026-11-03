@@ -5,18 +5,18 @@ using OrchardCore.Security.Permissions;
 namespace CrestApps.OrchardCore.Seo.Services;
 
 /// <summary>
-/// Provides the permissions of the structured data feature.
+/// Provides the permissions of the Advanced SEO feature.
 /// </summary>
-public sealed class StructuredDataPermissionsProvider : IPermissionProvider
+public sealed class AdvancedSeoPermissionsProvider : IPermissionProvider
 {
     /// <summary>
-    /// Lets a user change the structured data settings.
+    /// Lets a user change the advanced SEO settings.
     /// </summary>
-    public static readonly Permission ManageStructuredDataSettings = new("ManageStructuredDataSettings", LocalizationSource.Create<StructuredDataPermissionsProvider>("Manage the structured data settings"));
+    public static readonly Permission ManageAdvancedSeoSettings = new("ManageAdvancedSeoSettings", LocalizationSource.Create<AdvancedSeoPermissionsProvider>("Manage the advanced SEO settings"));
 
     private readonly IEnumerable<Permission> _allPermissions =
     [
-        ManageStructuredDataSettings,
+        ManageAdvancedSeoSettings,
     ];
 
     /// <summary>

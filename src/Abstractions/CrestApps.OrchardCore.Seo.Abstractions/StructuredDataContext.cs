@@ -48,12 +48,13 @@ public sealed class StructuredDataContext
 
     /// <summary>
     /// Gets or sets the node that describes <see cref="ContentItem"/>. Providers add properties to it. It is
-    /// <see langword="null"/> when there is no content item or when its content type publishes no structured data.
+    /// <see langword="null"/> when there is no content item, or when the page publishes no structured data about it: its
+    /// content type has no Schema.org part and no part a module describes, or an editor turned it off.
     /// </summary>
     public JsonObject MainEntity { get; set; }
 
     /// <summary>
-    /// Gets or sets the schema.org type the content type settings give the content item, if any. Providers should not
+    /// Gets or sets the schema.org type the Schema.org part's settings give the content item, if any. Providers should not
     /// replace the <c>@type</c> of <see cref="MainEntity"/> when this is set.
     /// </summary>
     public string ConfiguredType { get; set; }
@@ -70,7 +71,7 @@ public sealed class StructuredDataContext
     public IDictionary<string, object> Properties { get; } = new Dictionary<string, object>(StringComparer.Ordinal);
 
     /// <summary>
-    /// Sets the <c>@type</c> of <see cref="MainEntity"/> unless the content type settings already chose one.
+    /// Sets the <c>@type</c> of <see cref="MainEntity"/> unless the Schema.org part's settings already chose one.
     /// </summary>
     /// <param name="type">The schema.org type.</param>
     public void SuggestType(string type)

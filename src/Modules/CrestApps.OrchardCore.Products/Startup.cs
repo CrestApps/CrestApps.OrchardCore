@@ -343,7 +343,8 @@ public sealed class ApiStartup : StartupBase
 }
 
 /// <summary>
-/// Describes products with schema.org (a Product with its offer) when the Structured Data feature is enabled.
+/// Describes products with schema.org (a Product with its offer) when the Advanced SEO feature is enabled. Product pages are
+/// described without the Schema.org part.
 /// </summary>
 [RequireFeatures(StructuredDataConstants.Feature.Area)]
 public sealed class StructuredDataStartup : StartupBase
@@ -351,5 +352,6 @@ public sealed class StructuredDataStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IStructuredDataProvider, ProductStructuredDataProvider>();
+        services.Configure<StructuredDataOptions>(options => options.SelfDescribingParts.Add(nameof(ProductPart)));
     }
 }

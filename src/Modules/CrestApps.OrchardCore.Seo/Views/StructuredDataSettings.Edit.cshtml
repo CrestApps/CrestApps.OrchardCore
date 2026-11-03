@@ -1,65 +1,75 @@
 @model StructuredDataSettingsViewModel
 
-<p class="text-muted">@T["Structured data describes the site and its pages with the schema.org vocabulary, in a JSON-LD script in the head of each page. Search engines use it for rich results, and AI agents use it to understand the content."]</p>
+<div class="card mb-3">
+    <div class="card-header"><h5 class="card-title mb-0">@T["Structured data"]</h5></div>
+    <div class="card-body">
+        <p class="hint">@T["Structured data describes the site and its pages with the schema.org vocabulary, in a JSON-LD script in the head of each page. Search engines use it for rich results, and AI agents use it to understand the content. To describe a content type's items, add the Schema.org part to the content type."]</p>
 
-<div class="ocat-wrapper">
-    <div class="ocat-end-offset">
-        <div class="form-check">
-            <input type="checkbox" class="form-check-input" asp-for="RenderOnPages" />
-            <label class="form-check-label" asp-for="RenderOnPages">@T["Add structured data to pages"]</label>
-            <span class="hint dashed">@T["When enabled, every front-end page gets a JSON-LD script that describes the site and the content item the page displays. The JSON-LD that editors type in the SEO part is merged into it."]</span>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="RenderOnPages" />
+                    <label class="form-check-label" asp-for="RenderOnPages">@T["Add structured data to pages"]</label>
+                    <span class="hint dashed">@T["When enabled, every front-end page gets a JSON-LD script that describes the site and, when its content type has the Schema.org part, the content item the page displays. The JSON-LD that editors type in the SEO part is merged into it."]</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="IncludeWebSite" />
+                    <label class="form-check-label" asp-for="IncludeWebSite">@T["Describe the web site"]</label>
+                    <span class="hint dashed">@T["When enabled, each page names the web site it belongs to and its publisher."]</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="IncludeSearchAction" />
+                    <label class="form-check-label" asp-for="IncludeSearchAction">@T["Describe the site search"]</label>
+                    <span class="hint dashed">@T["When enabled, and the Search feature is on, the web site tells search engines how to search it, so they can show a search box for the site."]</span>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-<div class="ocat-wrapper" asp-validation-class-for="PublisherType">
-    <label asp-for="PublisherType" class="ocat-label">@T["Publisher"]</label>
-    <div class="ocat-end">
-        <select asp-for="PublisherType" asp-items="Model.PublisherTypes" class="form-select"></select>
-        <span class="hint">@T["Who publishes the site: an organization, such as a company, or one person."]</span>
-    </div>
-</div>
-
-<div class="ocat-wrapper" asp-validation-class-for="PublisherName">
-    <label asp-for="PublisherName" class="ocat-label">@T["Publisher name"]</label>
-    <div class="ocat-end">
-        <input asp-for="PublisherName" class="form-control" />
-        <span class="hint">@T["Leave empty to use the site name."]</span>
-    </div>
-</div>
-
-<div class="ocat-wrapper" asp-validation-class-for="PublisherLogoUrl">
-    <label asp-for="PublisherLogoUrl" class="ocat-label">@T["Logo URL"]</label>
-    <div class="ocat-end">
-        <input asp-for="PublisherLogoUrl" class="form-control" placeholder="/media/logo.png" />
-        <span class="hint">@T["The URL of the organization's logo, or of the person's photo. A URL that starts with a slash is on this site."]</span>
-    </div>
-</div>
-
-<div class="ocat-wrapper" asp-validation-class-for="SameAs">
-    <label asp-for="SameAs" class="ocat-label">@T["Profiles on other sites"]</label>
-    <div class="ocat-end">
-        <textarea asp-for="SameAs" class="form-control" rows="3" placeholder="https://www.linkedin.com/company/example"></textarea>
-        <span class="hint">@T["One absolute URL per line, such as the publisher's social network pages."]</span>
-    </div>
-</div>
-
-<div class="ocat-wrapper">
-    <div class="ocat-end-offset">
-        <div class="form-check">
-            <input type="checkbox" class="form-check-input" asp-for="IncludeWebSite" />
-            <label class="form-check-label" asp-for="IncludeWebSite">@T["Describe the web site"]</label>
-            <span class="hint dashed">@T["When enabled, each page names the web site it belongs to and its publisher."]</span>
+<div class="card mb-3">
+    <div class="card-header"><h5 class="card-title mb-0">@T["Publisher"]</h5></div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="PublisherType">
+            <label asp-for="PublisherType" class="ocat-label">@T["Publisher"]</label>
+            <div class="ocat-end">
+                <select asp-for="PublisherType" asp-items="Model.PublisherTypes" class="form-select"></select>
+                <span class="hint">@T["Who publishes the site: an organization, such as a company, or one person."]</span>
+            </div>
         </div>
-    </div>
-</div>
 
-<div class="ocat-wrapper">
-    <div class="ocat-end-offset">
-        <div class="form-check">
-            <input type="checkbox" class="form-check-input" asp-for="IncludeSearchAction" />
-            <label class="form-check-label" asp-for="IncludeSearchAction">@T["Describe the site search"]</label>
-            <span class="hint dashed">@T["When enabled, and the Search feature is on, the web site tells search engines how to search it, so they can show a search box for the site."]</span>
+        <div class="ocat-wrapper" asp-validation-class-for="PublisherName">
+            <label asp-for="PublisherName" class="ocat-label">@T["Publisher name"]</label>
+            <div class="ocat-end">
+                <input asp-for="PublisherName" class="form-control" />
+                <span class="hint">@T["Leave empty to use the site name."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="PublisherLogoUrl">
+            <label asp-for="PublisherLogoUrl" class="ocat-label">@T["Logo URL"]</label>
+            <div class="ocat-end">
+                <input asp-for="PublisherLogoUrl" class="form-control" placeholder="/media/logo.png" />
+                <span class="hint">@T["The URL of the organization's logo, or of the person's photo. A URL that starts with a slash is on this site."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="SameAs">
+            <label asp-for="SameAs" class="ocat-label">@T["Profiles on other sites"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="SameAs" class="form-control" rows="3" placeholder="https://www.linkedin.com/company/example"></textarea>
+                <span class="hint">@T["One absolute URL per line, such as the publisher's social network pages."]</span>
+            </div>
         </div>
     </div>
 </div>

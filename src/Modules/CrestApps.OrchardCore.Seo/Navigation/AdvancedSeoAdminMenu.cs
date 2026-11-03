@@ -6,9 +6,9 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.Seo.Navigation;
 
 /// <summary>
-/// Settings › Search › Search Engine Optimization › Structured Data, beside Orchard Core's Robots settings.
+/// Settings › Search › Search Engine Optimization › Advanced SEO, beside Orchard Core's Robots settings.
 /// </summary>
-public sealed class StructuredDataAdminMenu : AdminNavigationProvider
+public sealed class AdvancedSeoAdminMenu : AdminNavigationProvider
 {
     private static readonly RouteValueDictionary _settingsRouteValues = new()
     {
@@ -19,10 +19,10 @@ public sealed class StructuredDataAdminMenu : AdminNavigationProvider
     internal readonly IStringLocalizer S;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="StructuredDataAdminMenu"/> class.
+    /// Initializes a new instance of the <see cref="AdvancedSeoAdminMenu"/> class.
     /// </summary>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public StructuredDataAdminMenu(IStringLocalizer<StructuredDataAdminMenu> stringLocalizer)
+    public AdvancedSeoAdminMenu(IStringLocalizer<AdvancedSeoAdminMenu> stringLocalizer)
     {
         S = stringLocalizer;
     }
@@ -36,10 +36,10 @@ public sealed class StructuredDataAdminMenu : AdminNavigationProvider
                     .Add(S["Search Engine Optimization"], S["Search Engine Optimization"].PrefixPosition(), seo => seo
                         .AddClass("seo")
                         .Id("seo")
-                        .Add(S["Structured Data"], S["Structured Data"].PrefixPosition(), structuredData => structuredData
-                            .Id("structuredDataSettings")
+                        .Add(S["Advanced SEO"], S["Advanced SEO"].PrefixPosition(), advancedSeo => advancedSeo
+                            .Id("advancedSeoSettings")
                             .Action("Index", "Admin", _settingsRouteValues)
-                            .Permission(StructuredDataPermissionsProvider.ManageStructuredDataSettings)
+                            .Permission(AdvancedSeoPermissionsProvider.ManageAdvancedSeoSettings)
                             .LocalNav()
                         )
                     )

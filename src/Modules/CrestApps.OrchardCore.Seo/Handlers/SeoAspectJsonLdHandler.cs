@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.Seo.Models;
+using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Handlers;
-using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.Seo.Models;
 using OrchardCore.Settings;
 
@@ -18,19 +18,14 @@ namespace CrestApps.OrchardCore.Seo.Handlers;
 internal sealed class SeoAspectJsonLdHandler : ContentHandlerBase
 {
     private readonly ISiteService _siteService;
-    private readonly IContentDefinitionManager _contentDefinitionManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SeoAspectJsonLdHandler"/> class.
     /// </summary>
     /// <param name="siteService">The site service.</param>
-    /// <param name="contentDefinitionManager">The content definition manager.</param>
-    public SeoAspectJsonLdHandler(
-        ISiteService siteService,
-        IContentDefinitionManager contentDefinitionManager)
+    public SeoAspectJsonLdHandler(ISiteService siteService)
     {
         _siteService = siteService;
-        _contentDefinitionManager = contentDefinitionManager;
     }
 
     /// <inheritdoc/>
@@ -47,14 +42,8 @@ internal sealed class SeoAspectJsonLdHandler : ContentHandlerBase
 
             var settings = await _siteService.GetSettingsAsync<StructuredDataSettings>();
 
-            if (!settings.RenderOnPages)
-            {
-                return;
-            }
-
-            var definition = await _contentDefinitionManager.GetTypeDefinitionAsync(context.ContentItem.ContentType);
-
-            if (definition?.GetSettings<StructuredDataTypeSettings>()?.Disabled == true)
+            // An item whose structured data is turned off keeps the JSON-LD its editor typed, as Orchard Core writes it.
+            if (!settings.RenderOnPages || (context.ContentItem.TryGet<SchemaOrgPart>(out var schemaOrgPart) && schemaOrgPart.Disabled))
             {
                 return;
             }

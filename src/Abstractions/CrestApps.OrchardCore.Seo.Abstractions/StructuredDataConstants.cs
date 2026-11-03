@@ -1,7 +1,7 @@
 namespace CrestApps.OrchardCore.Seo;
 
 /// <summary>
-/// Provides the constants of the structured data (schema.org JSON-LD) feature.
+/// Provides the constants of the Advanced SEO feature and its structured data (schema.org JSON-LD).
 /// </summary>
 public static class StructuredDataConstants
 {
@@ -11,9 +11,9 @@ public static class StructuredDataConstants
     public const string SchemaOrgContext = "https://schema.org";
 
     /// <summary>
-    /// The settings group of the structured data site settings.
+    /// The settings group of the Advanced SEO site settings.
     /// </summary>
-    public const string SettingsGroupId = "structured-data";
+    public const string SettingsGroupId = "advanced-seo";
 
     /// <summary>
     /// The schema.org type used for a content item that has a URL but no other type.
@@ -31,7 +31,7 @@ public static class StructuredDataConstants
     public static class Feature
     {
         /// <summary>
-        /// The structured data feature.
+        /// The Advanced SEO feature.
         /// </summary>
         public const string Area = "CrestApps.OrchardCore.Seo";
     }

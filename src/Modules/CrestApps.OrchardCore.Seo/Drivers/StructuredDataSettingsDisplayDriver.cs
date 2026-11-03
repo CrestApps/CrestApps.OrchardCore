@@ -13,7 +13,7 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Seo.Drivers;
 
 /// <summary>
-/// Settings › Search › Search Engine Optimization › Structured Data: the site's publisher and web site, and whether
+/// Settings › Search › Search Engine Optimization › Advanced SEO, Structured data: the site's publisher and web site, and whether
 /// pages get a JSON-LD script.
 /// </summary>
 internal sealed class StructuredDataSettingsDisplayDriver : SiteDisplayDriver<StructuredDataSettings>
@@ -61,13 +61,13 @@ internal sealed class StructuredDataSettingsDisplayDriver : SiteDisplayDriver<St
                 new SelectListItem(S["None"], string.Empty),
             ];
         }).Location("Content:1")
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, StructuredDataPermissionsProvider.ManageStructuredDataSettings))
+        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, AdvancedSeoPermissionsProvider.ManageAdvancedSeoSettings))
         .OnGroup(SettingsGroupId);
 
     /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(ISite site, StructuredDataSettings settings, UpdateEditorContext context)
     {
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, StructuredDataPermissionsProvider.ManageStructuredDataSettings))
+        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, AdvancedSeoPermissionsProvider.ManageAdvancedSeoSettings))
         {
             return null;
         }

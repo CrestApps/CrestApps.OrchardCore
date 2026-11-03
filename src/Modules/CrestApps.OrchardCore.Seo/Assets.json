@@ -1,0 +1,8 @@
+[
+  {
+    "action": "vite",
+    "name": "schema-org-editor.js",
+    "source": "Assets/js/schema-org-editor.js",
+    "dest": "wwwroot/scripts/schema-org-editor.js"
+  }
+]

@@ -22,9 +22,9 @@ public static class StructuredDataProviderOrder
     public const int SeoMeta = 500;
 
     /// <summary>
-    /// The schema.org properties the content type settings map with Liquid.
+    /// The schema.org properties the Schema.org part's settings map, and the values editors enter on it.
     /// </summary>
-    public const int ContentTypeMapping = 1000;
+    public const int SchemaOrgPart = 1000;
 
     /// <summary>
     /// The JSON-LD an editor typed on the content item. It runs last, so it overrides everything else.

@@ -85,7 +85,7 @@ public sealed class ReviewRequestsStartup : StartupBase
 }
 
 /// <summary>
-/// Adds a product's average review rating to its schema.org data when the Structured Data feature is enabled.
+/// Adds a product's average review rating to its schema.org data when the Advanced SEO feature is enabled.
 /// </summary>
 [RequireFeatures(StructuredDataConstants.Feature.Area)]
 public sealed class StructuredDataStartup : StartupBase

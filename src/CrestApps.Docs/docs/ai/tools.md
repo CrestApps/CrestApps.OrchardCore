@@ -203,6 +203,18 @@ The tool answers as the caller, with the **Ask the site questions with NLWeb** (
 | --- | --- |
 | `ask` | Asks the site a question in natural language (NLWeb) and returns the matching content items as schema.org objects, with a summary or an answer written from them when asked. Selectable on the MCP Server, WebMCP and AI profiles. |
 
+### Search Engine Optimization tools
+
+**Available when:** `CrestApps.OrchardCore.Seo` with `CrestApps.OrchardCore.AI` on
+
+The tools set up schema.org structured data. Changing a content type needs **Edit content types**, and changing the site settings needs **Manage the advanced SEO settings**. See [Advanced SEO](../modules/advanced-seo.md#ai-tools).
+
+| Function | Description |
+| --- | --- |
+| `getSchemaOrgOptions` | Lists the content types with their schema.org type and the types the editor knows; for a content type, its settings, the values its items can give, a type's properties and the suggested mappings. |
+| `configureContentTypeSchemaOrg` | Adds the Schema.org part to a content type if needed, sets its schema.org type and maps its properties, adding the suggested mappings unless told not to. Returns the required properties still missing. |
+| `configureSiteStructuredData` | Reads or changes the site's publisher, logo and profiles, and whether pages describe the web site and its search. |
+
 ### Calendar tools
 
 **Available when:** `CrestApps.OrchardCore.Calendars` with `CrestApps.OrchardCore.AI` on

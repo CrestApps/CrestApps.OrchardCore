@@ -7,9 +7,10 @@
     <Description>
       $(CrestAppsDescription)
 
-      Publishes schema.org structured data (JSON-LD) for the site and its content items: the organization and web
-      site, a schema.org type and Liquid property map per content type, and data other modules add, such as product
-      offers. Works with Orchard Core's SEO module and merges the JSON-LD editors type there.
+      Advanced SEO for Orchard Core. Publishes schema.org structured data (JSON-LD) for the site and its content
+      items: the organization and web site, a Schema.org part whose editor suggests each type's properties and maps
+      them to fields, and data other modules add, such as product offers. Works with Orchard Core's SEO module and
+      merges the JSON-LD editors type there.
     </Description>
     <PackageTags>$(PackageTags) OrchardCoreCMS SEO SchemaOrg JsonLd StructuredData</PackageTags>
   </PropertyGroup>
@@ -25,8 +26,10 @@
     <PackageReference Include="OrchardCore.ContentManagement.Display" />
     <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />
     <PackageReference Include="OrchardCore.ContentLocalization.Abstractions" />
+    <PackageReference Include="OrchardCore.Data.Abstractions" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.Liquid.Abstractions" />
+    <PackageReference Include="OrchardCore.Media.Abstractions" />
     <PackageReference Include="OrchardCore.Navigation.Core" />
     <PackageReference Include="OrchardCore.ResourceManagement" />
     <PackageReference Include="OrchardCore.Seo" />
@@ -37,6 +40,7 @@
   <ItemGroup>
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Seo.Abstractions/CrestApps.OrchardCore.Seo.Abstractions.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
   </ItemGroup>
 
 </Project>
