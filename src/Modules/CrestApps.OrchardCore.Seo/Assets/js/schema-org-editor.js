@@ -184,6 +184,7 @@
 
   // Where a property should most likely take its value from.
   function suggestMapping(property, sources) {
+    /** @type {{ key: string } | null} */
     var best = null;
     var bestScore = 0;
 
