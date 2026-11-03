@@ -36,6 +36,12 @@ Go to **Time Tracker > Time Entries**, find the entry by user name, stage or day
 
 With the Workforce time clock on, a worker's punches keep their day here: their **Time Entries** say **From the Time Clock**, open read-only, and are corrected with punches on the worker's timesheet. Their **My Time** says their time is kept by the time clock, with a link to My Work. See [Time Clock](./time-clock.md).
 
+## Time from the Contact Center
+
+With **Contact Center Time Tracker** on, agents' states are kept here while they are signed in: available, on a call, wrap-up, breaks and the rest, each in its stage. For a worker on the time clock, these take the place of their clocked work for that time.
+
+Go to **Time Tracker > Contact Center Stages** to choose the stage of each state. **Not tracked** leaves a state out. Under **Reasons**, give a reason a stage of its own, such as *Lunch* for a lunch break; **As its state** uses the state's stage. The usual states get a stage when the feature is turned on. These entries are read-only here; they come from the agent state log.
+
 ## Hours by category
 
 **Reports > Time Tracker > Hours by category** shows a row for each person, with a column for each category and the total, for the days you choose (this week at first). Tick **A row per day** to see each day apart. A stage's time adds to each of its categories, so the columns don't add up to the total.

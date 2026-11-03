@@ -1,10 +1,9 @@
 using CrestApps.Core.AI;
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.Recipes.Core;
-using CrestApps.OrchardCore.Workforce.ContactCenter.AI;
-using CrestApps.OrchardCore.Workforce.ContactCenter.Recipes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Workforce.ContactCenter.AI;
 using CrestApps.OrchardCore.Workforce.ContactCenter.BackgroundTasks;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Drivers;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Handlers;
@@ -12,10 +11,12 @@ using CrestApps.OrchardCore.Workforce.ContactCenter.Indexes;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Migrations;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Models;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Navigation;
+using CrestApps.OrchardCore.Workforce.ContactCenter.Recipes;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Reports;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Services;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Services.Forecasting;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Services.Intraday;
+using CrestApps.OrchardCore.Workforce.ContactCenter.TimeTracking;
 using CrestApps.OrchardCore.Workforce.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Workflows;
 using CrestApps.OrchardCore.Workforce.Reports;
@@ -32,6 +33,7 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Settings.Deployment;
 using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.Workforce.ContactCenter;
@@ -306,5 +308,37 @@ public sealed class AdherenceRecipesSchemaStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IRecipeStep, AdherenceRecipeStepSchema>();
+    }
+}
+
+/// <summary>
+/// Registers agents' states in Time Tracker: the sync after each state change, the stages page and the seeded stages.
+/// </summary>
+[Feature(WorkforceContactCenterConstants.Features.TimeTracker)]
+public sealed class ContactCenterTimeTrackerStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddWorkforceContactCenterTimeTracker();
+        services.AddScoped<IContactCenterEventHandler, AgentStateTimeTrackerHandler>();
+        services.AddDataMigration<ContactCenterTimeTrackerMigrations>();
+        services.AddNavigationProvider<ContactCenterTimeStagesAdminMenu>();
+    }
+}
+
+/// <summary>
+/// Lets the stages of agents' states be exported with a deployment.
+/// </summary>
+[Feature(WorkforceContactCenterConstants.Features.TimeTracker)]
+[RequireFeatures("OrchardCore.Deployment")]
+public sealed class ContactCenterTimeTrackerDeploymentStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddSiteSettingsPropertyDeploymentStep<ContactCenterTimeStages, ContactCenterTimeTrackerDeploymentStartup>(
+            S => S["Contact Center time stages"],
+            S => S["The Time Tracker stage of each agent state and break reason."]);
     }
 }

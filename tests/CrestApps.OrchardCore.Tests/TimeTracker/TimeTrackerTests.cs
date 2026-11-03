@@ -236,6 +236,53 @@ public sealed class TimeTrackerTests
     }
 
     [Fact]
+    public async Task ARangeSync_KeepsTheTimeBeforeItsRange_AndGoesOnWithTheEntryOfTheSameStage()
+    {
+        // Ana was available from 9:00; at 10:30 she took a call. Each sync only knows the last few minutes.
+        await using var kit = await Kit.CreateAsync();
+        var available = await kit.StageAsync("Available");
+        var onCall = await kit.StageAsync("On a call");
+
+        kit.Now = _nine.AddMinutes(30);
+        await kit.RangeSyncAsync(_nine.AddMinutes(-10), [], new TimeEntry { StageId = available.ItemId, StartUtc = _nine });
+        var first = Assert.Single(await kit.EntriesAsync());
+
+        kit.Now = _nine.AddMinutes(90);
+        await kit.RangeSyncAsync(_nine.AddMinutes(80), [], new TimeEntry { StageId = available.ItemId, StartUtc = _nine.AddMinutes(80), EndUtc = _nine.AddMinutes(90) }, new TimeEntry { StageId = onCall.ItemId, StartUtc = _nine.AddMinutes(90) });
+        var entries = await kit.EntriesAsync();
+
+        Assert.Equal([(available.ItemId, _nine, (DateTime?)_nine.AddMinutes(90)), (onCall.ItemId, _nine.AddMinutes(90), null)], entries.Select(entry => (entry.StageId, entry.StartUtc, entry.EndUtc)));
+        Assert.Equal(first.ItemId, entries[0].ItemId);
+    }
+
+    [Fact]
+    public async Task ASyncThatOverridesAnotherClock_CutsItsTime_AndThatClocksNextSyncGoesAroundIt()
+    {
+        // The time clock says Ana works from 9:00; the contact center says she was on a call from 10:00 to 10:30.
+        await using var kit = await Kit.CreateAsync();
+        var work = await kit.StageAsync("Work");
+        var onCall = await kit.StageAsync("On a call");
+
+        kit.Now = _nine.AddHours(2);
+        await kit.SyncAsync(new TimeEntry { StageId = work.ItemId, StartUtc = _nine });
+        await kit.RangeSyncAsync(_nine.AddMinutes(50), [Kit.ClockId], new TimeEntry { StageId = onCall.ItemId, StartUtc = _nine.AddHours(1), EndUtc = _nine.AddMinutes(90) });
+        var cut = await kit.EntriesAsync();
+
+        await kit.SyncAsync(new TimeEntry { StageId = work.ItemId, StartUtc = _nine });
+        var again = await kit.EntriesAsync();
+
+        (string, DateTime, DateTime?, string)[] expected =
+        [
+            (work.ItemId, _nine, _nine.AddHours(1), Kit.ClockId),
+            (onCall.ItemId, _nine.AddHours(1), _nine.AddMinutes(90), Kit.CallsId),
+            (work.ItemId, _nine.AddMinutes(90), null, Kit.ClockId),
+        ];
+
+        Assert.Equal(expected, cut.Select(entry => (entry.StageId, entry.StartUtc, entry.EndUtc, entry.ManagedBy)));
+        Assert.Equal(expected, again.Select(entry => (entry.StageId, entry.StartUtc, entry.EndUtc, entry.ManagedBy)));
+    }
+
+    [Fact]
     public async Task TimeKeptByAnotherClock_CantBeSwitchedChangedOrRemovedHere()
     {
         await using var kit = await Kit.CreateAsync(clockKeepsAna: true);
@@ -267,6 +314,8 @@ public sealed class TimeTrackerTests
         public List<(TimeEntryChangeKind Kind, string Reason)> Changes { get; } = [];
 
         public const string ClockId = "Workforce.TimeClock";
+
+        public const string CallsId = "Workforce.ContactCenter";
 
         public static async Task<Kit> CreateAsync(bool clockKeepsAna = false)
         {
@@ -347,6 +396,24 @@ public sealed class TimeTrackerTests
                 ToUtc = _nine.AddDays(1),
                 BuildAsync = _ => Task.FromResult<IReadOnlyList<TimeEntry>>(desired),
             }));
+
+        // A sync that owns only its range, from a start to now, like the contact center's.
+        public Task<TimeTrackerResult> RangeSyncAsync(DateTime fromUtc, string[] overrides, params TimeEntry[] desired)
+            => Harness.RunAsync(services => services.GetRequiredService<ITimeTrackerService>().SyncAsync(new TimeEntrySync
+            {
+                UserId = "ana",
+                UserName = "ana",
+                ManagedBy = CallsId,
+                Source = TimeTrackerConstants.Sources.ContactCenter,
+                FromUtc = fromUtc,
+                ToUtc = Now.AddMinutes(1),
+                ReplacesRangeOnly = true,
+                Overrides = overrides,
+                BuildAsync = _ => Task.FromResult<IReadOnlyList<TimeEntry>>(desired),
+            }));
+
+        public Task<IReadOnlyList<TimeEntry>> EntriesAsync()
+            => Harness.RunAsync(services => services.GetRequiredService<ITimeTrackerService>().ListAsync(new TimeEntryQuery { UserIds = ["ana"] }), commit: false);
 
         public async Task<List<string>> ManagedIdsAsync()
             => [.. (await Harness.RunAsync(services => services.GetRequiredService<ITimeTrackerService>().ListAsync(new TimeEntryQuery { UserIds = ["ana"] }), commit: false))

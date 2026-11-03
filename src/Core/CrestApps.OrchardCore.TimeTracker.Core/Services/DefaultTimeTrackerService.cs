@@ -412,10 +412,11 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
         var now = _clock.UtcNow;
         var desired = (await sync.BuildAsync(cancellationToken) ?? [])
             .Where(entry => !string.IsNullOrEmpty(entry.StageId) && entry.StartUtc <= now && (entry.EndUtc ?? open) > sync.FromUtc && entry.StartUtc < sync.ToUtc)
-            .Select(entry => (Entry: entry, Start: Trim(entry.StartUtc), End: entry.EndUtc is { } end ? Trim(end) : open))
+            .Select(entry => (Entry: entry, Start: Trim(sync.ReplacesRangeOnly && entry.StartUtc < sync.FromUtc ? sync.FromUtc : entry.StartUtc), End: entry.EndUtc is { } end ? Trim(end) : open))
             .Where(piece => piece.End > piece.Start)
             .OrderBy(piece => piece.Start)
             .ToList();
+        var overrides = new HashSet<string>(sync.Overrides ?? [], StringComparer.Ordinal);
 
         // Read everything the new entries could touch, not only the range, so they are cut around all other time.
         var from = desired.Count > 0 && desired[0].Start < sync.FromUtc ? desired[0].Start : sync.FromUtc;
@@ -424,9 +425,36 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
         var existing = await _session.Query<TimeEntry, TimeEntryIndex>(index => index.UserId == sync.UserId && index.StartUtc < to && index.EndUtc > from, collection: TimeTrackerConstants.CollectionName)
             .ListAsync(cancellationToken);
         var unused = existing.Where(entry => entry.ManagedBy == sync.ManagedBy).ToList();
+        var overridden = existing.Where(entry => entry.ManagedBy is not null && overrides.Contains(entry.ManagedBy)).ToList();
         var ended = new List<TimeEntry>();
+        var kept = new List<(DateTime Start, DateTime End)>();
 
-        foreach (var left in existing.Where(entry => entry.ManagedBy != sync.ManagedBy && entry.EndUtc is null))
+        // A sync of a range keeps what it kept before the range: an entry running into it ends at its start, or goes
+        // on when the range starts in the same stage.
+        if (sync.ReplacesRangeOnly)
+        {
+            foreach (var before in unused.Where(entry => entry.StartUtc < sync.FromUtc).ToList())
+            {
+                unused.Remove(before);
+
+                var next = desired.FirstOrDefault(piece => piece.Start == sync.FromUtc);
+
+                if (next.Entry is not null && next.Entry.StageId == before.StageId && next.Entry.SourceRef == before.SourceRef)
+                {
+                    desired.Remove(next);
+                    before.EndUtc = next.End == open ? null : next.End;
+                }
+                else
+                {
+                    before.EndUtc = sync.FromUtc;
+                }
+
+                await _entries.UpdateAsync(before, cancellationToken);
+                kept.Add((before.StartUtc, before.EndUtc ?? open));
+            }
+        }
+
+        foreach (var left in existing.Where(entry => entry.ManagedBy != sync.ManagedBy && !overridden.Contains(entry) && entry.EndUtc is null))
         {
             if (desired.FirstOrDefault(piece => piece.Start > left.StartUtc) is { Entry: not null } next)
             {
@@ -436,12 +464,14 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
             }
         }
 
-        var others = existing.Where(entry => entry.ManagedBy != sync.ManagedBy).Select(entry => (Start: entry.StartUtc, End: entry.EndUtc ?? open)).OrderBy(span => span.Start).ToList();
+        var others = existing.Where(entry => entry.ManagedBy != sync.ManagedBy && !overridden.Contains(entry)).Select(entry => (Start: entry.StartUtc, End: entry.EndUtc ?? open)).OrderBy(span => span.Start).ToList();
 
         foreach (var (entry, start, end) in desired)
         {
             foreach (var (pieceStart, pieceEnd) in Subtract(start, end, others))
             {
+                kept.Add((pieceStart, pieceEnd));
+
                 DateTime? pieceEndUtc = pieceEnd == open ? null : pieceEnd;
                 var same = unused.FirstOrDefault(old => old.StageId == entry.StageId && old.StartUtc == pieceStart && old.EndUtc == pieceEndUtc && old.SourceRef == entry.SourceRef);
 
@@ -473,6 +503,49 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
         foreach (var old in unused)
         {
             await _entries.DeleteAsync(old, cancellationToken);
+        }
+
+        // The time of a clock this one overrides is cut around this clock's, which that clock does too when it syncs.
+        var ours = kept.OrderBy(span => span.Start).ToList();
+
+        foreach (var other in overridden)
+        {
+            var pieces = Subtract(other.StartUtc, other.EndUtc ?? open, ours).ToList();
+
+            if (pieces.Count == 1 && pieces[0].Start == other.StartUtc && pieces[0].End == (other.EndUtc ?? open))
+            {
+                continue;
+            }
+
+            if (pieces.Count == 0)
+            {
+                await _entries.DeleteAsync(other, cancellationToken);
+
+                continue;
+            }
+
+            other.StartUtc = pieces[0].Start;
+            other.EndUtc = pieces[0].End == open ? null : pieces[0].End;
+            await _entries.UpdateAsync(other, cancellationToken);
+
+            foreach (var (pieceStart, pieceEnd) in pieces.Skip(1))
+            {
+                await _entries.CreateAsync(new TimeEntry
+                {
+                    ItemId = CrestApps.Core.UniqueId.GenerateId(),
+                    UserId = other.UserId,
+                    UserName = other.UserName,
+                    StageId = other.StageId,
+                    StartUtc = pieceStart,
+                    EndUtc = pieceEnd == open ? null : pieceEnd,
+                    Source = other.Source,
+                    SourceRef = other.SourceRef,
+                    Note = other.Note,
+                    ManagedBy = other.ManagedBy,
+                    CreatedBy = other.CreatedBy,
+                    CreatedUtc = now,
+                }, cancellationToken);
+            }
         }
 
         await _session.SaveChangesAsync(cancellationToken);

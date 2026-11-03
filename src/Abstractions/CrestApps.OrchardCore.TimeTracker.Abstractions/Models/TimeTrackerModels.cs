@@ -397,6 +397,19 @@ public sealed class TimeEntrySync
     public DateTime ToUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the sync replaces only the time inside its range, such as the last minutes of a log it
+    /// reads as it grows: the clock's entry running into the range ends at its start, or goes on when the range starts
+    /// in the same stage. Otherwise every entry of the clock touching the range is replaced.
+    /// </summary>
+    public bool ReplacesRangeOnly { get; set; }
+
+    /// <summary>
+    /// Gets or sets the clocks whose entries this one's are kept over: theirs are cut around this clock's entries
+    /// instead of this clock's around theirs, such as contact center states over the time clock's work.
+    /// </summary>
+    public IReadOnlyCollection<string> Overrides { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets what builds the entries, read under the person's lock so two syncs never write stale time. Each
     /// needs its stage and start; an entry with no end is the one the person is in now.
     /// </summary>

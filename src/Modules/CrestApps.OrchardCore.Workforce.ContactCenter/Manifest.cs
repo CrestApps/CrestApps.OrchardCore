@@ -71,3 +71,16 @@ using OrchardCore.Modules.Manifest;
         ContactCenterConstants.Feature.IntervalStatistics,
     ]
 )]
+
+[assembly: Feature(
+    Id = WorkforceContactCenterConstants.Features.TimeTracker,
+    Name = "Contact Center Time Tracker",
+    Description = "Keeps agents' states in Time Tracker: available, on a call, wrap-up, breaks by reason and the rest, each in the stage you choose, over the time clock's work while they are signed in.",
+    Category = "Workforce",
+    Dependencies =
+    [
+        WorkforceContactCenterConstants.Features.ContactCenter,
+        ContactCenterConstants.Feature.IntervalStatistics,
+        "CrestApps.OrchardCore.TimeTracker",
+    ]
+)]
