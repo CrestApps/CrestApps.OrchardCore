@@ -81,6 +81,6 @@ The **Design** tab has three areas:
 - the middle, with the **Joins**, **Columns** and **Filters** rows, **Sort** and **Top rows**, and the live **Preview** under them;
 - the **Properties and visuals** pane on the right, where you change the column, filter or join you clicked, and add charts and other visuals.
 
-Each pane scrolls on its own. Collapse the **Data** pane, the **Properties and visuals** pane, or the **Columns and filters** section to give the preview more room; the builder remembers your choice.
+Each pane scrolls on its own. Collapse the **Data** pane, the **Properties and visuals** pane, or the **Columns and filters** section (the **Columns**, **Rows** and **Filters** shelves) to give the preview more room; the builder remembers your choice.
 
 Next: [Build a report](build-a-report.md).

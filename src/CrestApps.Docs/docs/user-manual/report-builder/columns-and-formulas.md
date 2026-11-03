@@ -26,13 +26,18 @@ Click a column on the **Columns** shelf to change it in **Properties** on the ri
 
 | Setting | What it does |
 | --- | --- |
-| **Header** | The column title. Left empty, the field name is used. |
+| **Header** | The column title. Left empty, the field name is used, with its aggregate and any calculation it is shown as. |
 | **Aggregate** | How a group of values is combined: **Count**, **Count distinct**, **Sum**, **Average**, **Minimum**, **Maximum** or **Median**. Pick **None** to group the report by this column. |
 | **Transform** | Changes each value first, such as **Month** to see revenue per month. See [Transforms](#transforms). |
 | **Format** | How values are shown, such as **N0** (whole numbers), **C2** (currency) or **MMM yyyy** (month and year). Click the question mark next to the box for a list of common formats. See [Formats](#formats). |
+| **Show as** | Shows a measure as a quick table calculation, such as a percent of total or a running total, instead of its plain values. See [Show values as a calculation](#show-values-as-a-calculation). |
+| **Shelf** | **Columns** or **Rows**. See [Lay out rows and columns](build-a-report.md#lay-out-rows-and-columns). |
 | **Hide from tables** | Keeps the column for grouping, charts and filters without showing it in tables. |
+| **Colors** | The colors of its header and cells, a color scale, and color rules. See [Colors](#colors). |
 
 The column also shows the technical name of its field, which is how you write the field in a formula.
+
+Most of these settings are also in the column's menu: click the arrow on the column, or right-click it.
 
 ### Aggregates
 
@@ -95,6 +100,62 @@ To pick a format, click the question mark next to the **Format** box. A short li
 
 The examples are written in US English. The report uses the language settings of the site, so separators, currency signs and month names follow them.
 
+## Show values as a calculation
+
+A measure can show each value compared with the others the table or chart shows, without writing a formula. Click the arrow on the measure and pick **Show as**, or set **Show as** under **Properties**.
+
+| Show as | Each value shows | Example with 300, 150 and 20 |
+| --- | --- | --- |
+| **Value** | The value itself. This is the default. | 300, 150, 20 |
+| **Percent of total** | Its share of the sum of the values it is computed along. | 63.8%, 31.9%, 4.3% |
+| **Running total** | The sum of the values up to it. | 300, 450, 470 |
+| **Difference from previous** | How much it changed from the value before it. The first value has none. | (empty), -150, -130 |
+| **Percent difference from previous** | How much it changed from the value before it, as a percentage of that value. | (empty), -50.0%, -86.7% |
+| **Rank** | Its rank, 1 for the largest. Equal values share a rank. | 1, 2, 3 |
+
+The calculation runs over the values in the order they are shown, so sort the report the way you want a running total or a difference to run, such as by month. With subtotals on, it follows the rows as they are grouped.
+
+A column with no **Header** of its own is named after its calculation, so people reading the report know what they see: *% of total Number of rows*, *Running total of Sum of Total*, *Change in Sum of Total*, *% change in Sum of Total* or *Rank of Number of rows*. Type a **Header** to name it yourself; its pill then shows a small badge for the calculation: **%**, **Σ**, **Δ**, **%Δ** or **#**.
+
+Totals rows, subtotal rows and the row totals of a cross-tab keep showing the plain totals, so the bottom of a **Percent of total** column still reads the total revenue rather than 100%.
+
+### Compute along
+
+In a cross-tab, pick which values each calculation runs over with **Compute along**, in the column's menu or under **Properties**:
+
+| Compute along | In a cross-tab | In a chart split into series |
+| --- | --- | --- |
+| **Down the rows** | Down each column, such as each region's share of a month's revenue. | Along the categories of each series. |
+| **Across the columns** | Across each row, such as each month's share of a region's revenue. | Across the series at each category, such as each customer's share of a region's revenue. |
+| **Over the whole table** | Over every cell, row by row, such as each cell's share of all the revenue. | Over every point. |
+
+A table without columns across the top, and a chart that isn't split into series, always compute down their rows or along their categories.
+
+### How calculated values are shown
+
+Percentages are shown with one decimal, such as 63.8%. To show them another way, set the column's **Format** to a percent format such as **P0** or **P2**. Ranks are shown as whole numbers. Running totals and differences use the column's own format. A rise is marked with a plus sign, such as +130 or +50.0%, and a fall with a minus sign.
+
+A chart of a percentage reads its axis in percent. Color rules and color scales compare the values shown: a percentage is a fraction, so a rule for *less than 20%* is written *less than 0.2*.
+
+Metrics show their plain totals, whatever the column is shown as.
+
+## Colors
+
+Colors help people spot problem areas at a glance, such as agents with a low score in red. Click a column and set its **Colors** under **Properties**. Click a color box to pick one of the common colors, a **Custom color**, or **None**.
+
+| Setting | What it does |
+| --- | --- |
+| **Header text**, **Header fill** | The colors of the column header. |
+| **Cell text**, **Cell fill** | The colors of every cell of the column. |
+| **Color scale** | Shades each number from a low color at the smallest value to a high color at the largest, like a heat map. Pick **Red, yellow, green**, **Green, yellow, red**, **White to blue**, **White to red**, or **Custom** to choose the low, middle and high colors. Choose whether it fills the cells or colors their text. Numbers only. |
+| **Color rules** | Color the cells whose value meets a condition, such as *less than 20*, *between 20 and 50*, *equals Sale* or *is empty*. Each rule fills the cell or colors the text. The first rule a value meets wins, so put the most important rule first with the arrow. |
+
+To color numbers in three bands, click **Add red, orange, green**. It adds three rules: below a value in red, between two values in orange, and from the second value in green. Type the two values, such as 20 and 50, in the rules.
+
+Rules win over the color scale, and the scale over the cell colors. A filled cell gets white or dark text, whichever reads better on its color. Totals and subtotals keep their own style. In a cross-tab, the colors of a measure color its cells.
+
+The colors also appear when the report is exported to Excel or PDF, and in reports emailed by workflows. CSV files hold no colors.
+
 ## Calculated fields
 
 <YouTube video="report-builder-formulas" title="Video overview of Report Builder formulas" />
@@ -107,6 +168,14 @@ A calculated field works out a new value with a formula, like a spreadsheet.
 2. Enter a **Label** (such as *Profit margin*) and a **Name** (a letter first, then letters, digits and underscores, such as *ProfitMargin*). Formulas use the name, so it cannot be changed later.
 3. Write the **Formula**. Click a field or function in the lists on the right to insert it.
 4. Click **Check**. The builder shows the result type, or what is wrong. Click **Apply**.
+
+You don't have to type common formulas:
+
+- In the formula window, click **ƒ** next to a field to insert a formula that suits its type around it: **Sum**, **Average**, **Minimum**, **Maximum**, **Median**, **Count** and **Count (distinct)**, and functions such as **Round to 2 decimals**, **Upper case**, **Year**, **Start of the month** or **Days until today**. The choices depend on the type of the field, as they do for a column's aggregates. When the label is empty, it is filled for you, such as *Sum of Total*.
+- In the **Data** pane, right-click a field (or click its **⋮** button) and pick **New calculated field**, then a formula. The formula window opens with the formula and a label written. Pick **Custom formula…** to start from the field alone.
+- Type in **Search functions** to find a function in the list, which is grouped by category.
+
+You can always edit the formula, combine formulas, or write your own.
 
 The new field appears under **Calculated fields**. Drag it onto **Columns**, **Filters** or a visual like any other field. A calculated field that gives a number is added with the **Sum** aggregate: when each row should show its own value, such as the wait of each call in minutes, set its **Aggregate** to **None** under **Properties**. Click the pencil next to it to change its formula, or **Delete** in the formula window to remove it.
 

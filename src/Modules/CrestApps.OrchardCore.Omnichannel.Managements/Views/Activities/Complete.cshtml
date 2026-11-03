@@ -33,18 +33,19 @@
     @Html.ValidationSummary()
     @await DisplayAsync(Model)
 
-    <button class="btn btn-primary" type="submit">@T["Complete"]</button>
-
-    @if (!string.IsNullOrEmpty(Model.ReturnUrl))
-    {
-        <a class="btn btn-secondary cancel" role="button" href="@Model.ReturnUrl">@T["Cancel"]</a>
-    }
-    else if (contactContentItem is null)
-    {
-        <a class="btn btn-secondary cancel" role="button" asp-action="Activities">@T["Cancel"]</a>
-    }
-    else
-    {
-        <a class="btn btn-secondary cancel" role="button" asp-action="List" asp-route-contentItemId="@contactContentItem.ContentItemId">@T["Cancel"]</a>
-    }
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Complete"]</button>
+        @if (!string.IsNullOrEmpty(Model.ReturnUrl))
+        {
+            <a class="btn btn-secondary cancel" role="button" href="@Model.ReturnUrl">@T["Cancel"]</a>
+        }
+        else if (contactContentItem is null)
+        {
+            <a class="btn btn-secondary cancel" role="button" asp-action="Activities">@T["Cancel"]</a>
+        }
+        else
+        {
+            <a class="btn btn-secondary cancel" role="button" asp-action="List" asp-route-contentItemId="@contactContentItem.ContentItemId">@T["Cancel"]</a>
+        }
+    </div>
 </form>

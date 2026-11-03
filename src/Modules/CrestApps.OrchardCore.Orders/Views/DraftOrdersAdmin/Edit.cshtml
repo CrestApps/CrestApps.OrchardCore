@@ -176,17 +176,18 @@
         </div>
     </div>
 
-    <div class="ocat-wrapper">
-        <div class="ocat-end-offset">
-            <div class="d-flex flex-wrap gap-2">
-                <button type="submit" name="submit" value="update" class="btn btn-secondary" formnovalidate>@T["Update prices"]</button>
-                <button type="submit" name="submit" value="save" class="btn btn-primary">@T["Save draft"]</button>
-                <a class="btn btn-outline-secondary" href="@(isNew ? Url.Action("Index", "OrdersAdmin") : Url.Action("Detail", "OrdersAdmin", new { orderId = Model.Order.ItemId }))">@T["Cancel"]</a>
+    @if (!Model.CanEmail)
+    {
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <p class="small text-warning">@T["Email isn't set up, so the invoice can't be emailed. You can still copy the order's pay link from its page."]</p>
             </div>
-            @if (!Model.CanEmail)
-            {
-                <p class="small text-warning mt-2">@T["Email isn't set up, so the invoice can't be emailed. You can still copy the order's pay link from its page."]</p>
-            }
         </div>
+    }
+
+    <div class="action-bar-bottom">
+        <button type="submit" name="submit" value="update" class="btn btn-secondary" formnovalidate>@T["Update prices"]</button>
+        <button type="submit" name="submit" value="save" class="btn btn-primary">@T["Save draft"]</button>
+        <a class="btn btn-outline-secondary" href="@(isNew ? Url.Action("Index", "OrdersAdmin") : Url.Action("Detail", "OrdersAdmin", new { orderId = Model.Order.ItemId }))">@T["Cancel"]</a>
     </div>
 </form>

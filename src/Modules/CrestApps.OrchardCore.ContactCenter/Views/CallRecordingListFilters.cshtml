@@ -6,6 +6,10 @@
     var model = (CallRecordingListViewModel)Model.ListModel;
 }
 
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+@* The date range has no change event of its own, so it applies with the Filter button; each picker submits on change. *@
 <div class="d-flex flex-wrap align-items-center gap-2 filter">
     @await Component.InvokeAsync("DateRangePicker", new
     {
@@ -19,18 +23,24 @@
         wrapperCssClass = "d-inline-block",
         toggleCssClass = "form-select form-select-sm",
     })
-    <select name="Direction" asp-items="model.DirectionOptions" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Direction"]" data-dropdown-align-right="auto" aria-label="@T["Direction"]">
-        <option value="">@T["Any direction"]</option>
-    </select>
-    <select name="Source" asp-items="model.SourceOptions" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Call type"]" data-dropdown-align-right="auto" aria-label="@T["Call type"]">
-        <option value="">@T["Any call"]</option>
-    </select>
-    @if (model.CanListEveryone)
-    {
-        <select name="AgentUserId" asp-items="model.AgentOptions" class="selectpicker" data-style="btn-sm" data-live-search="true" data-width="fit" title="@T["Any agent"]" data-live-search-placeholder="@T["Search agents"]" data-dropdown-align-right="auto" aria-label="@T["Agent"]">
-            <option value="">@T["Any agent"]</option>
-        </select>
-    }
     <button type="submit" class="btn btn-sm btn-secondary">@T["Filter"]</button>
     <a asp-action="Index" class="btn btn-sm btn-link">@T["Clear"]</a>
 </div>
+<div class="btn-group filter">
+    <select name="Direction" asp-items="model.DirectionOptions" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Direction"]" data-dropdown-align-right="auto" aria-label="@T["Direction"]" onchange="this.form.submit()">
+        <option value="">@T["Any direction"]</option>
+    </select>
+</div>
+<div class="btn-group filter">
+    <select name="Source" asp-items="model.SourceOptions" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Call type"]" data-dropdown-align-right="auto" aria-label="@T["Call type"]" onchange="this.form.submit()">
+        <option value="">@T["Any call"]</option>
+    </select>
+</div>
+@if (model.CanListEveryone)
+{
+    <div class="btn-group filter">
+        <select name="AgentUserId" asp-items="model.AgentOptions" class="selectpicker show-tick" data-style="btn-sm" data-live-search="true" data-width="fit" data-header="@T["Agent"]" data-live-search-placeholder="@T["Search agents"]" data-dropdown-align-right="auto" aria-label="@T["Agent"]" onchange="this.form.submit()">
+            <option value="">@T["Any agent"]</option>
+        </select>
+    </div>
+}

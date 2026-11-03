@@ -1,0 +1,22 @@
+[
+  {
+    "action": "copy",
+    "name": "webmcp-scripts",
+    "source": [
+      "node_modules/@crestapps/webmcp/dist/webmcp-polyfill.js",
+      "node_modules/@crestapps/webmcp/dist/webmcp-polyfill.LICENSE.txt",
+      "node_modules/@crestapps/webmcp/dist/webmcp.js",
+      "node_modules/@crestapps/webmcp/dist/webmcp.js.map",
+      "node_modules/@crestapps/webmcp/dist/webmcp.min.js",
+      "node_modules/@crestapps/webmcp/dist/webmcp.min.js.map",
+      "node_modules/@crestapps/webmcp/dist/webmcp-page-tools.js",
+      "node_modules/@crestapps/webmcp/dist/webmcp-page-tools.js.map",
+      "node_modules/@crestapps/webmcp/dist/webmcp-page-tools.min.js",
+      "node_modules/@crestapps/webmcp/dist/webmcp-page-tools.min.js.map"
+    ],
+    "dest": "wwwroot/scripts/",
+    "tags": [
+      "vendor"
+    ]
+  }
+]

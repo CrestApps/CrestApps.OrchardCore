@@ -32,6 +32,12 @@ public sealed class ReportSection
     public IList<ReportColumn> Columns { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the header rows shown above the column headers of a table, outermost first, whose cells group the
+    /// columns below them, such as the values of a cross-tab's outer dimensions. Empty for a table with one header row.
+    /// </summary>
+    public IList<ReportHeaderRow> HeaderRows { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the table rows, when <see cref="Kind"/> is <see cref="ReportSectionKind.Table"/>.
     /// </summary>
     public IList<ReportRow> Rows { get; set; } = [];
