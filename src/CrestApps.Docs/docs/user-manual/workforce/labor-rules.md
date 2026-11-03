@@ -29,6 +29,7 @@ Open **Workforce > Labor Rules** and choose **Add rule set**.
 | **Name** | The set's name, such as *California hourly staff*. |
 | **Jurisdiction** | The place or law the set follows, as a reminder. |
 | **Teams** | The teams it applies to, with the teams under them. |
+| **Workers** | Workers who follow the set on their own, whatever their teams, such as a minor or someone under a special agreement. Search them by name. |
 | **Employment types** | Leave empty for everyone, or pick types such as part time. |
 
 A worker gets one rule set: the one given to them alone, or else the nearest team's, starting with their own team and going up. A set limited to some employment types is skipped for other workers, who get the next set up the tree.

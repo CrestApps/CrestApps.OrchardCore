@@ -24,6 +24,7 @@ public sealed class LaborRuleSetsController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly ILaborRuleSetManager _setManager;
     private readonly ITeamManager _teamManager;
+    private readonly IWorkerManager _workerManager;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
@@ -42,6 +43,7 @@ public sealed class LaborRuleSetsController : Controller
         IAuthorizationService authorizationService,
         ILaborRuleSetManager setManager,
         ITeamManager teamManager,
+        IWorkerManager workerManager,
         INotifier notifier,
         IHtmlLocalizer<LaborRuleSetsController> htmlLocalizer,
         IStringLocalizer<LaborRuleSetsController> stringLocalizer)
@@ -49,6 +51,7 @@ public sealed class LaborRuleSetsController : Controller
         _authorizationService = authorizationService;
         _setManager = setManager;
         _teamManager = teamManager;
+        _workerManager = workerManager;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
@@ -119,6 +122,7 @@ public sealed class LaborRuleSetsController : Controller
                 Parameters = new Dictionary<string, string>(rule.Parameters, StringComparer.Ordinal),
             }).ToList(),
             WorkerCount = set.WorkerIds.Count,
+            WorkerIds = set.WorkerIds.ToArray(),
         };
 
         await PopulateAsync(model);
@@ -184,6 +188,7 @@ public sealed class LaborRuleSetsController : Controller
         set.Description = model.Description?.Trim();
         set.Jurisdiction = model.Jurisdiction?.Trim();
         set.TeamIds = (model.TeamIds ?? []).Where(teamId => !string.IsNullOrEmpty(teamId)).Distinct(StringComparer.Ordinal).ToList();
+        set.WorkerIds = (model.WorkerIds ?? []).Where(workerId => !string.IsNullOrEmpty(workerId)).Distinct(StringComparer.Ordinal).ToList();
         set.EmploymentTypes = (model.EmploymentTypes ?? []).Select(type => Enum.TryParse<EmploymentType>(type, out var parsed) ? parsed : (EmploymentType?)null).Where(type => type.HasValue).Select(type => type.Value).Distinct().ToList();
         set.Enabled = model.Enabled;
         set.Rules = model.Rules.Select(rule => new LaborRuleInstance
@@ -251,6 +256,7 @@ public sealed class LaborRuleSetsController : Controller
     private async Task PopulateAsync(LaborRuleSetEditViewModel model)
     {
         var teams = new HashSet<string>(model.TeamIds ?? [], StringComparer.Ordinal);
+        var chosen = new HashSet<string>(model.WorkerIds ?? [], StringComparer.Ordinal);
         var types = new HashSet<string>(model.EmploymentTypes ?? [], StringComparer.Ordinal);
         var rules = _setManager.ListRules();
 
@@ -258,6 +264,12 @@ public sealed class LaborRuleSetsController : Controller
         model.RuleOptions = rules.Select(rule => new SelectListItem(rule.DisplayName, rule.Key)).ToList();
         model.TeamOptions = (await _teamManager.ListTreeAsync(HttpContext.RequestAborted))
             .Select(item => new SelectListItem(new string(' ', item.Depth * 4) + item.Team.Name, item.Team.ItemId, teams.Contains(item.Team.ItemId)))
+            .ToList();
+        // Active workers, and any chosen before who have left, so saving doesn't drop them unseen.
+        model.WorkerOptions = (await _workerManager.GetAllAsync(HttpContext.RequestAborted))
+            .Where(worker => worker.Status == WorkerStatus.Active || chosen.Contains(worker.ItemId))
+            .OrderBy(worker => worker.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+            .Select(worker => new SelectListItem(string.IsNullOrEmpty(worker.EmployeeNumber) ? worker.DisplayName : $"{worker.DisplayName} ({worker.EmployeeNumber})", worker.ItemId, chosen.Contains(worker.ItemId)))
             .ToList();
         model.EmploymentOptions =
         [

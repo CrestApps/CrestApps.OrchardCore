@@ -47,6 +47,36 @@ public sealed class ShiftPlanningTests
     }
 
     [Fact]
+    public async Task APublishedShift_TakenOff_LeavesTheCalendarAndTheDraft_AndIsLogged()
+    {
+        await using var harness = await WorkforceTests.CreateAsync();
+        var team = await WorkforceTests.AddTeamAsync(harness, "Front desk", TeamKind.Team);
+        var ana = await PlanningKit.AddMemberAsync(harness, "Ana", team);
+        var period = await PlanningKit.CreatePeriodAsync(harness, team);
+
+        await PlanningKit.AddDraftAsync(harness, period, ana.ItemId, PlanningKit.Monday, new TimeOnly(9, 0), new TimeOnly(17, 0));
+        await PlanningKit.AddDraftAsync(harness, period, ana.ItemId, PlanningKit.Monday.AddDays(1), new TimeOnly(9, 0), new TimeOnly(17, 0));
+        await PlanningKit.PublishAsync(harness, period);
+
+        var monday = (await PlanningKit.ListShiftsAsync(harness, team))[0];
+        var removed = await harness.RunAsync(services => services.GetRequiredService<IShiftService>().RemoveAsync(monday.ItemId, ScheduleChangeInitiator.Employer, "Closed for the holiday", "manager"));
+        var again = await harness.RunAsync(services => services.GetRequiredService<IShiftService>().RemoveAsync(monday.ItemId, ScheduleChangeInitiator.Employer, "Twice", "manager"));
+
+        // Publishing again doesn't bring it back.
+        await PlanningKit.PublishAsync(harness, period);
+
+        var left = await PlanningKit.ListShiftsAsync(harness, team);
+        var drafts = await PlanningKit.ListDraftsAsync(harness, period);
+        var change = (await PlanningKit.ListChangesAsync(harness, period)).Single(item => item.Kind == ScheduleChangeKind.Removed);
+
+        Assert.True(removed.Succeeded, string.Join(" ", removed.Errors));
+        Assert.False(again.Succeeded);
+        Assert.Equal([PlanningKit.Monday.AddDays(1)], left.Select(shift => DateOnly.FromDateTime(CalendarTime.ToLocal(shift.StartUtc, "America/New_York"))));
+        Assert.Equal([PlanningKit.Monday.AddDays(1)], drafts.Select(draft => draft.Date));
+        Assert.Equal(("Closed for the holiday", ana.ItemId, monday.StartUtc), (change.Reason, change.WorkerId, change.BeforeStartUtc));
+    }
+
+    [Fact]
     public async Task Publish_PutsTheShiftsOnTheTeamCalendar_WithTheirSegmentsInUtc()
     {
         // Arrange

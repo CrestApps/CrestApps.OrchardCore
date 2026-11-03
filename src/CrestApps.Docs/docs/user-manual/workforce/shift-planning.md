@@ -115,6 +115,8 @@ Shifts with nobody are offered as [open shifts](#open-shifts). When the team has
 
 After the first publish, the button reads **Publish changes**. Publishing again adds new shifts, moves or reassigns the ones you changed, and removes the ones you deleted. Shifts you didn't touch stay as they are. If a shift can't be published, a warning says which one and why, and the others are still published.
 
+To change one shift now, without publishing the whole schedule, open it from the board. Under **On the published schedule**, enter a reason, then change its hours, give it to someone else, or take it off the schedule. Each change is checked against the labor rules, logged, and counts for predictability pay, unless you tick **The worker asked for it**. The draft follows, so the next publish keeps the change.
+
 **Change log** lists every shift added, moved, reassigned, swapped, filled from an open shift, removed or whose breaks changed after the first publish, newest first, with the version, who made the change and when. Changes a worker asked for, through a trade or a claim, are marked **Worker's request**. A schedule that was never published can be deleted from its **Actions** menu. A published one can't: remove its shifts and publish again instead.
 
 ## Open shifts

@@ -63,3 +63,56 @@
         </div>
     </div>
 </form>
+
+@if (!string.IsNullOrEmpty(Model.PublishedEventId))
+{
+    var culture = System.Globalization.CultureInfo.CurrentCulture;
+
+    <div class="card text-bg-theme mt-4 mb-3">
+        <div class="card-header">@T["On the published schedule"]</div>
+        <div class="card-body">
+            <p class="mb-3">
+                @T["{0}, {1} {2} to {3}.", Model.PublishedWorkerName ?? T["Nobody (open shift)"].Value, Model.PublishedStart?.ToString("ddd d MMM", culture), Model.PublishedStart?.ToString("t", culture), Model.PublishedEnd?.ToString("t", culture)]
+                <span class="hint d-block">@T["Saving above changes the draft, which takes effect when the schedule is published again. To change what the worker sees now, use these. Each is checked against the labor rules, logged, and counts for predictability pay unless the worker asked for it."]</span>
+            </p>
+            <form method="post" asp-action="PublishedShift" asp-route-periodId="@Model.PeriodId" asp-route-id="@Model.Id" class="no-multisubmit">
+                <div class="ocat-wrapper">
+                    <label for="published-reason" class="ocat-label">@T["Reason"]</label>
+                    <div class="ocat-end">
+                        <input id="published-reason" name="reason" class="form-control" placeholder="@T["Such as: the delivery moved to the afternoon"]" />
+                        <div class="form-check mt-2">
+                            <input id="published-worker-asked" name="workerAsked" type="checkbox" value="true" class="form-check-input" />
+                            <label for="published-worker-asked" class="form-check-label">@T["The worker asked for it"]</label>
+                            <span class="hint dashed">@T["No predictability pay is owed for a change the worker asked for."]</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <label class="ocat-label" for="published-start">@T["New hours"]</label>
+                    <div class="ocat-end">
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <input id="published-start" name="start" type="time" class="form-control" style="max-width: 9rem" value="@Model.PublishedStart?.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture)" aria-label="@T["Starts"]" />
+                            <span>@T["to"]</span>
+                            <input name="end" type="time" class="form-control" style="max-width: 9rem" value="@Model.PublishedEnd?.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture)" aria-label="@T["Ends"]" />
+                            <button type="submit" name="operation" value="times" class="btn btn-primary">@T["Change the hours now"]</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <label class="ocat-label" for="published-worker">@T["Give it to"]</label>
+                    <div class="ocat-end">
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <select id="published-worker" name="workerId" asp-items="Model.WorkerOptions" class="form-select" style="max-width: 24rem"></select>
+                            <button type="submit" name="operation" value="reassign" class="btn btn-secondary">@T["Give it to them now"]</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <div class="ocat-end-offset">
+                        <button type="submit" name="operation" value="remove" class="btn btn-outline-danger" onclick="return confirm(this.dataset.confirm)" data-confirm="@T["Take this shift off the published schedule now?"]">@T["Take it off the schedule now"]</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+}
