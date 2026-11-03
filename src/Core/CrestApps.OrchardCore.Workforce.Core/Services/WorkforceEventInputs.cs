@@ -40,6 +40,21 @@ internal static class WorkforceEventInputs
         };
     }
 
+    public static Dictionary<string, object> OpenShift(OpenShift shift)
+    {
+        return new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["TeamId"] = shift.TeamId,
+            ["OpenShiftId"] = shift.ItemId,
+            ["PeriodId"] = shift.PeriodId,
+            ["Date"] = Day(shift.Date),
+            ["StartUtc"] = Calendars.Core.CalendarTime.ToUtc(shift.Start, shift.TimeZoneId),
+            ["EndUtc"] = Calendars.Core.CalendarTime.ToUtc(shift.End, shift.TimeZoneId),
+            ["ClaimPolicy"] = shift.ClaimPolicy.ToString(),
+            ["ClaimDeadlineUtc"] = shift.ClaimDeadlineUtc,
+        };
+    }
+
     public static Dictionary<string, object> Punch(TimePunch punch)
     {
         return new Dictionary<string, object>(StringComparer.Ordinal)

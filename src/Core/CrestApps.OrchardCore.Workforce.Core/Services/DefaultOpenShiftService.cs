@@ -124,6 +124,7 @@ internal sealed class DefaultOpenShiftService : IOpenShiftService
         shift.ClaimDeadlineUtc = _posting.Deadline(shift, now);
 
         await _openShiftStore.CreateAsync(shift, cancellationToken);
+        await _posting.PostedAsync(shift, cancellationToken);
         result.Value = shift;
 
         return result;

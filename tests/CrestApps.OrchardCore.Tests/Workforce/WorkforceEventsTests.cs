@@ -88,6 +88,29 @@ public sealed class WorkforceEventsTests
     }
 
     [Fact]
+    public async Task AnOpenShift_RaisesPosted_ThenAssignedWhenFilled()
+    {
+        var events = new RecordingEvents();
+        await using var harness = await WorkforceTests.CreateAsync(services => services.AddSingleton<IWorkforceEvents>(events));
+        var team = await WorkforceTests.AddTeamAsync(harness, "Front desk", TeamKind.Team);
+        var ana = await PlanningKit.AddMemberAsync(harness, "Ana", team);
+        var period = await PlanningKit.CreatePeriodAsync(harness, team);
+
+        await PlanningKit.AddDraftAsync(harness, period, null, _monday, new TimeOnly(9, 0), new TimeOnly(17, 0));
+        await PlanningKit.PublishAsync(harness, period);
+
+        var posted = Assert.Single(events.Raised, raised => raised.Name == WorkforceEvents.OpenShiftPosted);
+        var openShiftId = (string)posted.Input["OpenShiftId"];
+
+        await harness.RunAsync(services => services.GetRequiredService<IOpenShiftService>().AssignAsync(openShiftId, ana.ItemId, "manager"));
+
+        var assigned = Assert.Single(events.Raised, raised => raised.Name == WorkforceEvents.ShiftAssigned);
+
+        Assert.Equal(team.ItemId, posted.Input["TeamId"]);
+        Assert.Equal(ana.ItemId, assigned.Input["WorkerId"]);
+    }
+
+    [Fact]
     public async Task TheTimeClock_RaisesPunchesTimesheetsExceptionsAndPoints()
     {
         var events = new RecordingEvents();

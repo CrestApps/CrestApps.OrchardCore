@@ -21,7 +21,7 @@ internal sealed class ShiftChangeEvents : IScheduleChangeHandler
 
         var name = change.Kind switch
         {
-            ScheduleChangeKind.Added => WorkforceEvents.ShiftAssigned,
+            ScheduleChangeKind.Added or ScheduleChangeKind.OpenShiftFilled => WorkforceEvents.ShiftAssigned,
             ScheduleChangeKind.Removed => WorkforceEvents.ShiftRemoved,
             _ => WorkforceEvents.ShiftChanged,
         };

@@ -33,5 +33,6 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddActivity<WorkforceShiftChangedEvent, WorkforceEventActivityDisplayDriver<WorkforceShiftChangedEvent>>();
         services.AddActivity<WorkforceShiftRemovedEvent, WorkforceEventActivityDisplayDriver<WorkforceShiftRemovedEvent>>();
         services.AddActivity<WorkforceTimeOffWaitlistPromotedEvent, WorkforceEventActivityDisplayDriver<WorkforceTimeOffWaitlistPromotedEvent>>();
+        services.AddActivity<WorkforceOpenShiftPostedEvent, WorkforceEventActivityDisplayDriver<WorkforceOpenShiftPostedEvent>>();
     }
 }

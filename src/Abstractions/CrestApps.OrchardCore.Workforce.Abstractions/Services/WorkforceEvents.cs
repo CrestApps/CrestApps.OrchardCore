@@ -88,4 +88,10 @@ public static class WorkforceEvents
     /// off events, with its new status.
     /// </summary>
     public const string TimeOffWaitlistPromoted = "WorkforceTimeOffWaitlistPromotedEvent";
+
+    /// <summary>
+    /// A shift with nobody was offered to the team, posted on its own or by a publish. Input: OpenShiftId, Date,
+    /// StartUtc, EndUtc, ClaimPolicy, ClaimDeadlineUtc. When it is filled, Shift Assigned follows.
+    /// </summary>
+    public const string OpenShiftPosted = "WorkforceOpenShiftPostedEvent";
 }

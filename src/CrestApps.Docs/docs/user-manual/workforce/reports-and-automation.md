@@ -56,6 +56,7 @@ With **Workflows** on, workflows can start from Workforce events, in the **Workf
 | **Timesheet Submitted**, **Timesheet Approved** | A timesheet is submitted or approved |
 | **Shift Assigned**, **Shift Changed**, **Shift Removed** | A shift is added to the published schedule for a worker; moved, given to someone else, swapped or its breaks changed; or taken off, however the change was made |
 | **Time Off Waitlist Promoted** | A waitlisted time-off request gets a place because another was canceled |
+| **Open Shift Posted** | A shift with nobody is offered to the team; when someone gets it, **Shift Assigned** follows |
 
 Each event can be limited to some teams. The workflow's input has the worker and team, and the ids of what happened, so later activities can look it up. For example, an **Attendance Exception Raised** workflow can email a team's manager about each no-show.
 
