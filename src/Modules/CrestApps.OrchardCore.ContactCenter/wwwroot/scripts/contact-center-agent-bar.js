@@ -424,7 +424,7 @@
 						autoOpenedWorkId = workKey;
 						collapsed = false;
 					}
-				} else if (!(state && (state.offer || state.activeInteraction || state.pendingDial))) {
+				} else if (!(state && (state.offer || state.activeInteraction || state.pendingDial)) && !barNotice) {
 					autoOpenedWorkId = null;
 					collapsed = true;
 				}
@@ -550,7 +550,7 @@
 			function renderBarNotice() {
 				if (!barNotice) return "";
 				var dismissTitle = label("dismiss", "Dismiss");
-				return "<div class=\"cc-bar__notice text-danger small\" role=\"alert\" data-cc-notice><span>" + escapeHtml(barNotice.message) + "</span><button type=\"button\" class=\"btn-close\" data-cc-notice-dismiss title=\"" + escapeHtml(dismissTitle) + "\" aria-label=\"" + escapeHtml(dismissTitle) + "\"></button></div>";
+				return "<div class=\"cc-bar__notice small\" role=\"alert\" data-cc-notice><span>" + escapeHtml(barNotice.message) + "</span><button type=\"button\" class=\"btn-close\" data-cc-notice-dismiss title=\"" + escapeHtml(dismissTitle) + "\" aria-label=\"" + escapeHtml(dismissTitle) + "\"></button></div>";
 			}
 			function showBarNotice(message, reservationId) {
 				var next = message ? {
@@ -563,6 +563,8 @@
 				}
 				barNotice = next;
 				activeSignature = null;
+				if (next) collapsed = false;
+				syncBarState();
 				renderBar();
 			}
 			function renderPresence(status) {

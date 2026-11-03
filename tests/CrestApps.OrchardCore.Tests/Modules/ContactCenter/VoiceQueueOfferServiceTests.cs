@@ -220,6 +220,25 @@ public sealed class VoiceQueueOfferServiceTests
         harness.AssertReservationNotReleased();
     }
 
+    // Injecting the dialer attempt service closed a loop: it places calls through the call router, which offers work
+    // through this service. The container resolved the two forever and every request on the site hung at startup.
+    [Fact]
+    public void TheOfferService_DoesNotTakeTheDialerAttemptServiceInItsConstructor()
+    {
+        // Arrange
+        var parameterTypes = typeof(VoiceQueueOfferService)
+            .GetConstructors()
+            .SelectMany(constructor => constructor.GetParameters())
+            .Select(parameter => parameter.ParameterType);
+
+        // Act
+        var takesTheDialer = parameterTypes.Any(type =>
+            type == typeof(IDialerAttemptService) || type == typeof(IEnumerable<IDialerAttemptService>));
+
+        // Assert
+        Assert.False(takesTheDialer);
+    }
+
     [Fact]
     public async Task APreviewRecordIsNotScreened_WhenTheDialerIsOff()
     {
@@ -391,8 +410,7 @@ public sealed class VoiceQueueOfferServiceTests
                 agentManager.Object,
                 interactionManager.Object,
                 activityManager.Object,
-                dialerProfileReader.Object,
-                dialerEnabled ? [_dialerAttempt.Object] : [],
+                CreateServiceProvider(dialerEnabled ? _dialerAttempt.Object : null, dialerProfileReader.Object),
                 _offerSynchronization.Object,
                 workManager.Object,
                 AuditRecorder,
@@ -427,6 +445,15 @@ public sealed class VoiceQueueOfferServiceTests
 
         public void WithActivity(string activityId, string source)
             => _activities[activityId] = new OmnichannelActivity { ItemId = activityId, Source = source };
+
+        private static IServiceProvider CreateServiceProvider(IDialerAttemptService dialerAttemptService, IDialerProfileReader dialerProfileReader)
+        {
+            var serviceProvider = new Mock<IServiceProvider>();
+            serviceProvider.Setup(x => x.GetService(typeof(IDialerAttemptService))).Returns(dialerAttemptService);
+            serviceProvider.Setup(x => x.GetService(typeof(IDialerProfileReader))).Returns(dialerProfileReader);
+
+            return serviceProvider.Object;
+        }
 
         public void MakeUndialable(string activityId)
             => _undialable.Add(activityId);

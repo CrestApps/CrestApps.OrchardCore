@@ -309,7 +309,8 @@ import { activityToAutoOpen, autoOpenWorkKey, readPoppedActivities, rememberPopp
                     autoOpenedWorkId = workKey;
                     collapsed = false;
                 }
-            } else if (!(state && (state.offer || state.activeInteraction || state.pendingDial))) {
+            } else if (!(state && (state.offer || state.activeInteraction || state.pendingDial)) && !barNotice) {
+                // A refusal the agent has not dismissed keeps the bar open: collapsed, it hid the reason nothing rang.
                 autoOpenedWorkId = null;
                 collapsed = true;
             }
@@ -546,7 +547,7 @@ import { activityToAutoOpen, autoOpenWorkKey, readPoppedActivities, rememberPopp
 
             var dismissTitle = label('dismiss', 'Dismiss');
 
-            return '<div class="cc-bar__notice text-danger small" role="alert" data-cc-notice>' +
+            return '<div class="cc-bar__notice small" role="alert" data-cc-notice>' +
                 '<span>' + escapeHtml(barNotice.message) + '</span>' +
                 '<button type="button" class="btn-close" data-cc-notice-dismiss title="' + escapeHtml(dismissTitle) + '" aria-label="' + escapeHtml(dismissTitle) + '"></button>' +
             '</div>';
@@ -563,6 +564,12 @@ import { activityToAutoOpen, autoOpenWorkKey, readPoppedActivities, rememberPopp
 
             barNotice = next;
             activeSignature = null;
+
+            if (next) {
+                collapsed = false;
+            }
+
+            syncBarState();
             renderBar();
         }
 

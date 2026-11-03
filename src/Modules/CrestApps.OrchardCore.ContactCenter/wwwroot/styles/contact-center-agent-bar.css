@@ -303,7 +303,7 @@ body .ta-content {
   border-radius: 0.35rem;
   background: rgba(255, 138, 128, 0.16);
   border: 1px solid rgba(255, 138, 128, 0.55);
-  color: #ffd6d1 !important;
+  color: #ffd6d1;
   font-size: 0.85em;
   line-height: 1.35;
 }
