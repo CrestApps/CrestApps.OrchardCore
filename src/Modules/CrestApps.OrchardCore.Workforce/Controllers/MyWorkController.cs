@@ -640,6 +640,9 @@ public sealed class MyWorkController : Controller
             Devices = (await _pushService.ListAsync(worker.ItemId, HttpContext.RequestAborted)).ToList(),
             FeedUrl = $"{Request.Scheme}://{Request.Host}{Request.PathBase}/my-work/feed/{token}.ics",
             PushPublicKey = await _pushService.GetPublicKeyAsync(HttpContext.RequestAborted),
+            ReminderMinutes = settings.ReminderMinutes,
+            QuietStart = settings.QuietStart?.ToString("HH:mm", CultureInfo.InvariantCulture),
+            QuietEnd = settings.QuietEnd?.ToString("HH:mm", CultureInfo.InvariantCulture),
         });
     }
 
@@ -650,7 +653,7 @@ public sealed class MyWorkController : Controller
     /// <param name="kinds">The kinds left on.</param>
     /// <returns>A redirect to the settings page.</returns>
     [HttpPost("my-work/settings")]
-    public async Task<IActionResult> SettingsPost(string[] channels, string[] kinds)
+    public async Task<IActionResult> SettingsPost(string[] channels, string[] kinds, int reminderMinutes, string quietStart, string quietEnd)
     {
         var (worker, denied) = await AuthorizeWorkerAsync();
 
@@ -664,7 +667,19 @@ public sealed class MyWorkController : Controller
         var settings = worker.TryGet<WorkerPortalSettings>(out var stored) ? stored : new WorkerPortalSettings();
 
         settings.DisabledChannels = _channels.Where(channel => channel.CanBeTurnedOff && !on.Contains(channel.Name)).Select(channel => channel.Name).ToList();
-        settings.DisabledKinds = Enum.GetValues<WorkforceNotificationKind>().Where(kind => !kindsOn.Contains(kind.ToString())).ToList();
+        // Only the kinds the page offers are changed; the others keep how they were.
+        var offered = KindLabels().Select(kind => kind.Kind).ToHashSet();
+
+        settings.DisabledKinds = [.. settings.DisabledKinds.Where(kind => !offered.Contains(kind)).Concat(offered.Where(kind => !kindsOn.Contains(kind.ToString())))];
+        settings.ReminderMinutes = reminderMinutes is 0 or 15 or 30 or 60 or 120 or 240 ? reminderMinutes : settings.ReminderMinutes;
+        settings.QuietStart = TimeOnly.TryParse(quietStart, CultureInfo.InvariantCulture, out var start) ? start : null;
+        settings.QuietEnd = TimeOnly.TryParse(quietEnd, CultureInfo.InvariantCulture, out var end) ? end : null;
+
+        if (settings.QuietStart is null || settings.QuietEnd is null)
+        {
+            settings.QuietStart = null;
+            settings.QuietEnd = null;
+        }
         worker.Put(settings);
         await _workerManager.UpdateAsync(worker);
         await _notifier.SuccessAsync(H["Your notification settings have been saved."]);
@@ -1019,6 +1034,9 @@ public sealed class MyWorkController : Controller
         yield return (WorkforceNotificationKind.TimeOff, S["My time off is decided"]);
         yield return (WorkforceNotificationKind.OpenShift, S["I get an open shift"]);
         yield return (WorkforceNotificationKind.ShiftTrade, S["A trade is offered to me, or mine is decided"]);
+        yield return (WorkforceNotificationKind.ShiftReminder, S["A shift of mine is about to start"]);
+        yield return (WorkforceNotificationKind.Timesheet, S["My timesheet needs me, or is decided"]);
+        yield return (WorkforceNotificationKind.Attendance, S["Something about my attendance"]);
     }
 
     private async Task NotifyAsync(IReadOnlyList<string> errors, LocalizedHtmlString success)

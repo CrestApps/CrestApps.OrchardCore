@@ -4,6 +4,7 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.Core;
+using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.AspNetCore.DataProtection;
@@ -209,10 +210,65 @@ public sealed class PortalTests
         Assert.Null(await harness.RunAsync(services => services.GetRequiredService<IWorkerFeedService>().WriteAsync("not-a-real-secret-at-all"), commit: false));
     }
 
-    private static Task<CalendarTestHarness> CreateAsync(RecordingChannel channel = null, PushHandler handler = null)
+    [Fact]
+    public async Task Reminders_AreSentOncePerShift_AsLongBeforeAsEachWorkerChose()
+    {
+        var channel = new RecordingChannel();
+        var clock = new MovableClock();
+        await using var harness = await CreateAsync(channel, clock: clock);
+        var team = await WorkforceTests.AddTeamAsync(harness, "Front desk", TeamKind.Team);
+        var ana = await PlanningKit.AddMemberAsync(harness, "Ana", team);
+        var ben = await PlanningKit.AddMemberAsync(harness, "Ben", team, worker => worker.Put(new WorkerPortalSettings { ReminderMinutes = 0 }));
+        var period = await PlanningKit.CreatePeriodAsync(harness, team);
+
+        await PlanningKit.AddDraftAsync(harness, period, ana.ItemId, _monday, new TimeOnly(9, 0), new TimeOnly(17, 0));
+        await PlanningKit.AddDraftAsync(harness, period, ben.ItemId, _monday, new TimeOnly(9, 0), new TimeOnly(17, 0));
+        await PlanningKit.PublishAsync(harness, period);
+        channel.Titles.Clear();
+
+        Task<int> SendAsync() => harness.RunAsync(services => services.GetRequiredService<ShiftReminderService>().SendDueAsync());
+
+        // 9:00 in New York; Ana is reminded an hour before, Ben never.
+        clock.UtcNow = PlanningKit.Utc(_monday, new TimeOnly(7, 30));
+        var early = await SendAsync();
+        clock.UtcNow = PlanningKit.Utc(_monday, new TimeOnly(8, 10));
+        var due = await SendAsync();
+        var again = await SendAsync();
+
+        Assert.Equal((0, 1, 0), (early, due, again));
+        Assert.Equal(["Your shift starts at 9:00 AM"], channel.Titles);
+    }
+
+    [Fact]
+    public async Task QuietHours_KeepTheOtherChannelsQuiet_ButTheInboxStillGetsIt()
+    {
+        var channel = new RecordingChannel();
+        var clock = new MovableClock();
+        await using var harness = await CreateAsync(channel, clock: clock);
+        var team = await WorkforceTests.AddTeamAsync(harness, "Front desk", TeamKind.Team);
+        var ana = await PlanningKit.AddMemberAsync(harness, "Ana", team, worker => worker.Put(new WorkerPortalSettings { QuietStart = new TimeOnly(22, 0), QuietEnd = new TimeOnly(7, 0) }));
+
+        clock.UtcNow = PlanningKit.Utc(_monday, new TimeOnly(23, 30));
+        await NotifyAsync(harness, ana, WorkforceNotificationKind.ShiftChanged, "Late change");
+        clock.UtcNow = PlanningKit.Utc(_monday.AddDays(1), new TimeOnly(7, 30));
+        await NotifyAsync(harness, ana, WorkforceNotificationKind.ShiftChanged, "Morning change");
+
+        Assert.Equal(["Morning change"], channel.Titles);
+        Assert.Equal(2, (await InboxAsync(harness, ana)).Items.Count);
+        Assert.True(new WorkerPortalSettings { QuietStart = new TimeOnly(22, 0), QuietEnd = new TimeOnly(7, 0) }.IsQuiet(new TimeOnly(2, 0)));
+        Assert.False(new WorkerPortalSettings { QuietStart = new TimeOnly(12, 0), QuietEnd = new TimeOnly(13, 0) }.IsQuiet(new TimeOnly(13, 0)));
+    }
+
+    private static Task<CalendarTestHarness> CreateAsync(RecordingChannel channel = null, PushHandler handler = null, MovableClock clock = null)
     {
         return WorkforceTests.CreateAsync(services =>
         {
+            if (clock is not null)
+            {
+                services.AddSingleton<global::OrchardCore.Modules.IClock>(clock);
+            }
+
+            services.AddDistributedMemoryCache();
             services.AddWorkforceTimeOffCore();
             services.AddWorkforcePortalCore();
             services.AddSingleton<IDataProtectionProvider>(new EphemeralDataProtectionProvider());
@@ -319,4 +375,17 @@ public sealed class PortalTests
             return new HttpResponseMessage(request.RequestUri.AbsolutePath.EndsWith("/gone", StringComparison.Ordinal) ? HttpStatusCode.Gone : HttpStatusCode.Created);
         }
     }
+}
+
+internal sealed class MovableClock : global::OrchardCore.Modules.IClock
+{
+    public DateTime UtcNow { get; set; } = CalendarTestHarness.Now;
+
+    public global::OrchardCore.Modules.ITimeZone[] GetTimeZones() => [];
+
+    public global::OrchardCore.Modules.ITimeZone GetTimeZone(string timeZoneId) => null;
+
+    public global::OrchardCore.Modules.ITimeZone GetSystemTimeZone() => null;
+
+    public DateTimeOffset ConvertToTimeZone(DateTimeOffset dateTimeOffset, global::OrchardCore.Modules.ITimeZone timeZone) => dateTimeOffset;
 }

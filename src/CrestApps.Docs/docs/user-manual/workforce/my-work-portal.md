@@ -40,9 +40,12 @@ Workers hear about:
 - a shift of theirs added, moved, removed or given to someone else, outside a publish;
 - an open shift they claimed being given to them;
 - their time off being approved, declined or canceled;
-- a trade offered to them, and their own trades being accepted, turned down or declined.
+- a trade offered to them, and their own trades being accepted, turned down or declined;
+- a shift of theirs about to start, an hour before by default.
 
 Every notification goes to the **My Work** inbox on the home page. Under **Settings > What I hear about**, a worker chooses which other ways to use (**Push notifications**, and **Email** when the site sends email) and which topics to hear about. Topics turned off still show in the inbox.
+
+Under **Reminders**, choose how long before a shift to be reminded of it, or **Never**. Under **Quiet hours**, enter the hours when nothing should be pushed to the phone or emailed, such as 22:00 to 07:00; everything still shows in the inbox, and the hours are in the worker's time zone.
 
 ### Push notifications
 

@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Workforce.Portal;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Modules;
@@ -25,6 +26,7 @@ public sealed class PortalStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddWorkforcePortalCore();
+        services.AddSingleton<IBackgroundTask, BackgroundTasks.ShiftReminderBackgroundTask>();
         services.AddDataMigration<PortalMigrations>()
             .AddIndexProvider<WorkforceInboxIndexProvider>()
             .AddIndexProvider<WebPushSubscriptionIndexProvider>()
