@@ -38,7 +38,10 @@
         }
         <div class="ocat-wrapper"><label asp-for="Note" class="ocat-label">@T["Note"]</label><div class="ocat-end"><textarea asp-for="Note" class="form-control" rows="2"></textarea></div></div>
     </div></div>
-    <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Offer"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a></div></div>
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Offer"]</button>
+        <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a>
+    </div>
 </form>
 
 <script at="Foot">

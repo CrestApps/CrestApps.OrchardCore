@@ -52,15 +52,13 @@
         </div>
         <div class="ocat-wrapper"><label asp-for="Notes" class="ocat-label">@T["Notes"]</label><div class="ocat-end"><textarea asp-for="Notes" class="form-control" rows="2"></textarea><span class="hint">@T["Shown to the worker on the calendar."]</span></div></div>
     </div></div>
-    <div class="ocat-wrapper">
-        <div class="ocat-end-offset">
-            <button class="btn btn-primary" type="submit">@T["Save"]</button>
-            <a class="btn btn-secondary cancel" asp-action="Plan" asp-route-id="@Model.PeriodId">@T["Cancel"]</a>
-            @if (!string.IsNullOrEmpty(Model.Id))
-            {
-                <a asp-action="DeleteShift" asp-route-periodId="@Model.PeriodId" asp-route-id="@Model.Id" class="btn btn-outline-danger ms-2" data-title="@T["Delete"]" data-message="@T["Delete this shift?"]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
-            }
-        </div>
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        <a class="btn btn-secondary cancel" asp-action="Plan" asp-route-id="@Model.PeriodId">@T["Cancel"]</a>
+        @if (!string.IsNullOrEmpty(Model.Id))
+        {
+            <a asp-action="DeleteShift" asp-route-periodId="@Model.PeriodId" asp-route-id="@Model.Id" class="btn action-bar-secondary btn-outline-danger ms-2" data-title="@T["Delete"]" data-message="@T["Delete this shift?"]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
+        }
     </div>
 </form>
 

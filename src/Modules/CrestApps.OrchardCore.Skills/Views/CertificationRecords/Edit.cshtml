@@ -29,5 +29,8 @@
         <div class="ocat-wrapper"><label asp-for="Status" class="ocat-label">@T["Status"]</label><div class="ocat-end"><select asp-for="Status" asp-items="Model.StatusOptions" class="form-select" style="max-width: 14rem"></select><span class="hint">@T["Only valid certificates count. A pending one is waiting to be checked."]</span></div></div>
         <div class="ocat-wrapper"><label asp-for="Notes" class="ocat-label">@T["Notes"]</label><div class="ocat-end"><textarea asp-for="Notes" class="form-control" rows="3"></textarea></div></div>
     </div></div>
-    <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Save"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a></div></div>
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a>
+    </div>
 </form>

@@ -211,5 +211,8 @@
         <div class="ocat-wrapper"><label asp-for="PointsThreshold" class="ocat-label">@T["Tell the manager at"]</label><div class="ocat-end"><div class="input-group" style="max-width: 12rem"><input asp-for="PointsThreshold" type="number" step="0.5" min="0" class="form-control" style="max-width: 12rem" /><span class="input-group-text">@T["points"]</span></div><span class="hint">@T["Optional. When a worker&#39;s points reach this, their line manager is told in My Work."]</span></div></div>
     </div></div>
 
-    <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Save"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a></div></div>
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a>
+    </div>
 </form>
