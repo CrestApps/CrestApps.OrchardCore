@@ -47,6 +47,52 @@ public sealed class WorkforceReportTests
         Assert.Empty(listed);
     }
 
+    [Fact]
+    public async Task WorkersAndScheduleChanges_AreListed_ForTheReadersTeams()
+    {
+        await using var kit = await TimeClockKit.CreateAsync(services =>
+        {
+            services.AddScoped<IWorkforceReportDataSet, WorkersReportDataSet>();
+            services.AddScoped<IWorkforceReportDataSet, ScheduleChangesReportDataSet>();
+        });
+        var east = await kit.AddTeamAsync("East");
+        var ana = await PlanningKit.AddMemberAsync(kit.Harness, "Ana", east);
+        var ben = await PlanningKit.AddMemberAsync(kit.Harness, "Ben", east);
+        var period = await PlanningKit.CreatePeriodAsync(kit.Harness, east);
+
+        await PlanningKit.AddDraftAsync(kit.Harness, period, ana.ItemId, _monday, new TimeOnly(9, 0), new TimeOnly(17, 0));
+        await PlanningKit.PublishAsync(kit.Harness, period);
+
+        var shift = Assert.Single(await PlanningKit.ListShiftsAsync(kit.Harness, east));
+
+        await kit.Harness.RunAsync(services => services.GetRequiredService<CrestApps.OrchardCore.Workforce.Services.IShiftService>().ReassignAsync(shift.ItemId, ben.ItemId, ScheduleChangeInitiator.Worker, "Swapped days", "manager"));
+
+        var reader = CalendarTestHarness.User("admin", WorkforcePermissions.ViewWorkers.Name, WorkforcePermissions.ManageSchedules.Name, WorkforcePermissions.ManageAllWorkforce.Name);
+        var workers = await ReadFieldsAsync(kit, reader, WorkersReportDataSet.DataSetName, "WorkerName", "TeamName");
+        var changes = await ReadFieldsAsync(kit, reader, ScheduleChangesReportDataSet.DataSetName, "Kind", "WorkerName", "WorkerAsked", "Reason");
+
+        Assert.Equal(["Ana|East", "Ben|East"], workers.Order(StringComparer.Ordinal));
+        Assert.Equal(["Reassigned|Ben|True|Swapped days"], changes);
+    }
+
+    private static Task<string[]> ReadFieldsAsync(TimeClockKit kit, System.Security.Claims.ClaimsPrincipal user, string dataSet, params string[] names)
+    {
+        return kit.Harness.RunAsync(async services =>
+        {
+            var source = ActivatorUtilities.CreateInstance<WorkforceReportDataSource>(services);
+            var table = await source.ReadRowsAsync(new DataSourceQuery
+            {
+                DataSet = dataSet,
+                Fields = new HashSet<string>(StringComparer.Ordinal),
+                MaxRows = 100,
+                Context = new DataSourceContext { User = user },
+            }, 100, TestContext.Current.CancellationToken);
+            var fields = table.Fields.Select(field => field.Name).ToList();
+
+            return table.Rows.Select(row => string.Join('|', names.Select(name => Convert.ToString(row[fields.IndexOf(name)], System.Globalization.CultureInfo.InvariantCulture)))).ToArray();
+        }, commit: false);
+    }
+
     private static Task<string[]> ReadAsync(TimeClockKit kit, System.Security.Claims.ClaimsPrincipal user)
     {
         return kit.Harness.RunAsync(async services =>
