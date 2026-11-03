@@ -18,6 +18,8 @@ The **Inventory** feature counts the units of each product and variant on hand. 
 
 ## Model
 
+This video shows the inventory screens in the admin:
+
 All of these live in the `Inventory` YesSql collection.
 
 - **`StockItem`** (concurrency-checked): `ContentItemId`, `VariantId` (null for a product without variants), `LocationId`, `Sku`, `Title`, `OnHand`, `Reserved`, `Available`, `LowStockThreshold`, `AllowBackorder`, `ReleaseDateUtc`, `Archived`, plus created and modified dates.

@@ -44,6 +44,78 @@ public sealed class SchedulingTests
     }
 
     [Fact]
+    public async Task Slots_KeepABookedAppointmentsFreeTimeAfterClear()
+    {
+        // Arrange
+        await using var harness = await CreateAsync();
+        var (resource, _) = await AddResourceAsync(harness, "Dr. Smith");
+        var type = await AddTypeAsync(harness, [resource.ItemId], t =>
+        {
+            t.DurationMinutes = 30;
+            t.SlotIntervalMinutes = 30;
+            t.BufferAfterMinutes = 15;
+        });
+
+        var first = await BookAsync(harness, type, Utc(_day.AddHours(10)));
+
+        // Act
+        var slots = await FindAsync(harness, type);
+        var second = await BookAsync(harness, type, Utc(_day.AddHours(10).AddMinutes(30)), "Jane Doe", "jane@contoso.com");
+
+        // Assert (the 10:00 appointment needs 10:30-10:45 free, so 10:30 can't be offered or booked)
+        Assert.True(first.Succeeded, string.Join(" ", first.Errors));
+        Assert.False(second.Succeeded);
+        Assert.Equal(["9:00", "11:00", "11:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30"], Local(slots));
+    }
+
+    [Fact]
+    public async Task Slots_KeepABookedAppointmentsFreeTimeBeforeClear()
+    {
+        // Arrange
+        await using var harness = await CreateAsync();
+        var (resource, _) = await AddResourceAsync(harness, "Dr. Smith");
+        var type = await AddTypeAsync(harness, [resource.ItemId], t =>
+        {
+            t.DurationMinutes = 30;
+            t.SlotIntervalMinutes = 30;
+            t.BufferBeforeMinutes = 15;
+        });
+
+        var first = await BookAsync(harness, type, Utc(_day.AddHours(10).AddMinutes(30)));
+
+        // Act
+        var slots = await FindAsync(harness, type);
+
+        // Assert (the 10:30 appointment needs 10:15-10:30 free, so 10:00 is gone; 11:00 needs 10:45-11:00 free, so it is gone too)
+        Assert.True(first.Succeeded, string.Join(" ", first.Errors));
+        Assert.Equal(["9:00", "9:30", "11:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30"], Local(slots));
+    }
+
+    [Fact]
+    public async Task GroupSession_KeepsItsFreeTimeAfter_AndStillTakesItsOwnPlaces()
+    {
+        // Arrange
+        await using var harness = await CreateAsync();
+        var (resource, _) = await AddResourceAsync(harness, "Studio");
+        var type = await AddTypeAsync(harness, [resource.ItemId], t =>
+        {
+            t.DurationMinutes = 30;
+            t.SlotIntervalMinutes = 30;
+            t.BufferAfterMinutes = 15;
+            t.Capacity = 2;
+        });
+
+        var first = await BookAsync(harness, type, Utc(_day.AddHours(10)), "Ann", "ann@contoso.com");
+
+        // Act
+        var slots = await FindAsync(harness, type);
+
+        // Assert (10:00 keeps its second place; 10:30 falls in the session's free time after)
+        Assert.True(first.Succeeded, string.Join(" ", first.Errors));
+        Assert.Equal(["9:00", "10:00", "11:00", "11:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30"], Local(slots));
+    }
+
+    [Fact]
     public async Task Slots_RespectNoticeHorizonDateOverridesAndDailyLimit()
     {
         // Arrange

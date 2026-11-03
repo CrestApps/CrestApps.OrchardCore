@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Text;
 using CrestApps.OrchardCore.Reports.Designer.Models;
@@ -222,12 +223,32 @@ public sealed class ReportWorkflowService
                     html.Append("<h3 style=\"font-size:15px;margin:16px 0 8px 0\">").Append(Encode(section.Title)).Append("</h3>");
                 }
 
-                html.Append("<table cellpadding=\"6\" style=\"border-collapse:collapse;font-size:13px;margin:0 0 16px 0\"><thead><tr>");
+                html.Append("<table cellpadding=\"6\" style=\"border-collapse:collapse;font-size:13px;margin:0 0 16px 0\"><thead>");
+
+                foreach (var headerRow in section.HeaderRows ?? [])
+                {
+                    html.Append("<tr>");
+
+                    foreach (var headerCell in headerRow?.Cells ?? [])
+                    {
+                        html.Append("<th colspan=\"")
+                            .Append(Math.Max(1, headerCell.Span).ToString(CultureInfo.InvariantCulture))
+                            .Append("\" style=\"border:1px solid #d0d7de;background:#f6f8fa;text-align:center\">")
+                            .Append(Encode(headerCell.Label))
+                            .Append("</th>");
+                    }
+
+                    html.Append("</tr>");
+                }
+
+                html.Append("<tr>");
 
                 foreach (var column in section.Columns)
                 {
                     html.Append("<th style=\"border:1px solid #d0d7de;background:#f6f8fa;text-align:")
                         .Append(column.Align == ReportColumnAlign.End ? "right" : "left")
+                        .Append(';')
+                        .Append(column.HeaderStyle?.ToInlineCss())
                         .Append("\">")
                         .Append(Encode(column.Label))
                         .Append("</th>");
@@ -245,6 +266,8 @@ public sealed class ReportWorkflowService
                     {
                         html.Append("<td style=\"border:1px solid #d0d7de;text-align:")
                             .Append(section.Columns[index].Align == ReportColumnAlign.End ? "right" : "left")
+                            .Append(';')
+                            .Append(row.GetCellStyle(index)?.ToInlineCss())
                             .Append("\">")
                             .Append(Encode(index < row.Cells.Count ? row.Cells[index] : null))
                             .Append("</td>");

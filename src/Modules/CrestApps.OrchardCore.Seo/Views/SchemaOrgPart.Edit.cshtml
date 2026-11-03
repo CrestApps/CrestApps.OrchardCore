@@ -1,0 +1,112 @@
+@using CrestApps.OrchardCore.Seo.SchemaOrg
+@model SchemaOrgPartViewModel
+
+@functions {
+    private string NameOf(string property) => Html.NameFor(m => m.Values) + "[" + property + "]";
+
+    private string IdOf(string property) => Html.IdFor(m => m.Values) + "_" + property.Replace('.', '_');
+
+    private string ValueOf(string property) => Model.Values != null && Model.Values.TryGetValue(property, out var value) ? value : null;
+}
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="Disabled" />
+            <label class="form-check-label" asp-for="Disabled">@T["Publish no structured data about this item"]</label>
+            <span class="hint dashed">@T["When checked, this item's page describes only the site, and search engines get no schema.org data about the item."]</span>
+        </div>
+    </div>
+</div>
+
+@if (Model.Fields.Count == 0)
+{
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <span class="hint">@T["Everything this item publishes as {0} comes from its content. To have editors fill in values here, choose \"Editors enter it on each item\" for a property in the Schema.org part's settings of this content type.", string.IsNullOrEmpty(Model.SchemaType) ? "WebPage" : Model.SchemaType]</span>
+        </div>
+    </div>
+}
+
+@foreach (var field in Model.Fields)
+{
+    var id = IdOf(field.Name);
+    var name = NameOf(field.Name);
+    var value = ValueOf(field.Name);
+
+    <div class="ocat-wrapper">
+        <label for="@id" class="ocat-label">
+            @field.Label
+            @if (field.Level == SchemaOrgPropertyLevel.Required)
+            {
+                <span class="badge text-bg-danger ms-1">@T["Required"]</span>
+            }
+            else if (field.Level == SchemaOrgPropertyLevel.Recommended)
+            {
+                <span class="badge text-bg-info ms-1">@T["Recommended"]</span>
+            }
+        </label>
+        <div class="ocat-end">
+            @switch (field.Kind)
+            {
+                case SchemaOrgValueKind.Enumeration:
+                    <select class="form-select" id="@id" name="@name">
+                        <option value=""></option>
+                        @foreach (var option in field.Options)
+                        {
+                            <option value="@option.Value" selected="@(option.Value == value)">@option.Text</option>
+                        }
+                    </select>
+                    break;
+                case SchemaOrgValueKind.Boolean:
+                    <select class="form-select" id="@id" name="@name">
+                        <option value=""></option>
+                        <option value="true" selected="@(value == "true")">@T["Yes"]</option>
+                        <option value="false" selected="@(value == "false")">@T["No"]</option>
+                    </select>
+                    break;
+                case SchemaOrgValueKind.LongText:
+                case SchemaOrgValueKind.Json:
+                    <textarea class="form-control" id="@id" name="@name" rows="3">@value</textarea>
+                    break;
+                case SchemaOrgValueKind.TextList:
+                    <textarea class="form-control" id="@id" name="@name" rows="3">@value</textarea>
+                    <span class="hint">@T["One per line."]</span>
+                    break;
+                case SchemaOrgValueKind.Date:
+                    <input type="date" class="form-control" id="@id" name="@name" value="@value" />
+                    break;
+                case SchemaOrgValueKind.DateTime:
+                    <input type="datetime-local" class="form-control" id="@id" name="@name" value="@value" />
+                    break;
+                case SchemaOrgValueKind.Number:
+                    <input type="number" step="any" class="form-control" id="@id" name="@name" value="@value" />
+                    break;
+                case SchemaOrgValueKind.Url:
+                case SchemaOrgValueKind.Image:
+                    <input type="url" class="form-control" id="@id" name="@name" value="@value" />
+                    break;
+                default:
+                    <input type="text" class="form-control" id="@id" name="@name" value="@value" />
+                    break;
+            }
+            @if (!string.IsNullOrEmpty(field.Hint))
+            {
+                <span class="hint">@field.Hint</span>
+            }
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(Model.Preview))
+{
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <details>
+                <summary>@T["Preview of the JSON-LD"]</summary>
+                <span class="hint">@T["What this item's page publishes, as it was last saved."]</span>
+                <pre class="bg-body-tertiary border rounded p-2 small mb-0" style="max-height: 24rem; overflow: auto">@Model.Preview</pre>
+            </details>
+        </div>
+    </div>
+}

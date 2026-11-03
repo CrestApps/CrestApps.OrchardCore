@@ -14,13 +14,17 @@ user_manual:
 | **Feature Name** | AI File Sources |
 | **Feature ID** | `CrestApps.OrchardCore.AI.FileSources` |
 
-A **file source** reads a folder on a schedule and ingests every file it finds into a **File** AI data
+A **file source** reads a folder on a schedule and ingests every file it finds into a **Files** AI data
 source. Each file's text, figures, charts, and tables are stored as separately retrievable knowledge, so an
 AI profile attached to that data source can answer from the folder's contents and cite the figure it used.
 
 Where [AI Documents](./documents/) covers files a user uploads through a chat surface, a file source covers
 files that already live somewhere — a folder on the server, an FTP drop, an SFTP export — and keeps the
 knowledge base in step with them without anyone uploading anything.
+
+<YouTube video="ai-file-sources" title="Video overview of file sources in the admin" />
+
+The video shows an administrator creating the index, a data source and a file source, reading the folder, and asking a question that the files answer.
 
 ## Enable the features
 

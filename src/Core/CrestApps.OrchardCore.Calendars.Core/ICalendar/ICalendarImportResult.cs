@@ -26,6 +26,11 @@ public sealed class ICalendarImportResult
     public int Unchanged { get; set; }
 
     /// <summary>
+    /// Gets or sets how many events changed both here and in the source since they were last synchronized.
+    /// </summary>
+    public int Conflicts { get; set; }
+
+    /// <summary>
     /// Gets the events that were refused, with why.
     /// </summary>
     public IList<string> Errors { get; } = [];

@@ -2,14 +2,14 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-    <OrchardCoreVersion>4.0.0-preview-19210</OrchardCoreVersion>
-    <CrestAppsCoreVersion>2.0.0-preview.351</CrestAppsCoreVersion>
-    <ModelContextProtocolVersion>2.2.0</ModelContextProtocolVersion>
+    <OrchardCoreVersion>4.0.0-preview-19214</OrchardCoreVersion>
+    <CrestAppsCoreVersion>2.0.0-preview.355</CrestAppsCoreVersion>
+    <ModelContextProtocolVersion>2.3.1</ModelContextProtocolVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- Miscellaneous Packages -->
     <PackageVersion Include="BouncyCastle.Cryptography" Version="2.7.0" />
-    <PackageVersion Include="CrestApps.AgentSkills.Mcp.OrchardCore" Version="1.2.0" />
+    <PackageVersion Include="CrestApps.AgentSkills.Mcp.OrchardCore" Version="1.3.1" />
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.5.1" />
     <PackageVersion Include="Elastic.Clients.Elasticsearch" Version="[8.19.27,9.0.0)" />
     <PackageVersion Include="Fluid.Core" Version="2.40.0" />
@@ -17,17 +17,17 @@
     <PackageVersion Include="libphonenumber-csharp" Version="9.0.42" />
     <PackageVersion Include="JsonSchema.Net" Version="8.0.5" />
     <PackageVersion Include="Lucene.Net.Analysis.Common" Version="4.8.0-beta00018" />
-    <PackageVersion Include="Markdig" Version="1.4.0" />
-    <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.0.1" />
-    <PackageVersion Include="NodaTime" Version="3.3.6" />
+    <PackageVersion Include="Markdig" Version="1.5.1" />
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.1.1" />
+    <PackageVersion Include="NodaTime" Version="3.3.7" />
     <PackageVersion Include="NLayer" Version="3.0.0" />
-    <PackageVersion Include="NLog" Version="6.2.1" />
-    <PackageVersion Include="NLog.Web.AspNetCore" Version="6.2.1" />
+    <PackageVersion Include="NLog" Version="6.2.2" />
+    <PackageVersion Include="NLog.Web.AspNetCore" Version="6.2.2" />
     <PackageVersion Include="Npgsql" Version="10.0.3" />
     <PackageVersion Include="NuGet.Versioning" Version="7.9.0" />
     <PackageVersion Include="OllamaSharp" Version="5.5.0" />
     <PackageVersion Include="PdfPig" Version="0.1.16" />
-    <PackageVersion Include="Stripe.net" Version="52.4.2" />
+    <PackageVersion Include="Stripe.net" Version="53.1.0" />
     <PackageVersion Include="ZString" Version="2.6.0" />
     <PackageVersion Include="YesSql.Abstractions" Version="6.0.0" />
     <PackageVersion Include="YesSql.Core" Version="6.0.0" />
@@ -49,6 +49,7 @@
     <PackageVersion Include="OrchardCore.ContentManagement" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ContentManagement.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ContentManagement.Display" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.ContentLocalization.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ContentTypes" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ContentTypes.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Contents" Version="$(OrchardCoreVersion)" />
@@ -103,6 +104,8 @@
     <PackageVersion Include="OrchardCore.Indexing.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Lucene.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Seo" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Search.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Shortcodes.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Setup.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Setup.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.SignalR" Version="$(OrchardCoreVersion)" />
@@ -142,6 +145,7 @@
     <PackageVersion Include="CrestApps.Core.AI.AzureAIInference" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Chat" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.WebRTC" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.WebMcp" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Claude" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Copilot" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.FileSources" Version="$(CrestAppsCoreVersion)" />
@@ -187,7 +191,7 @@
     <PackageVersion Include="Moq" Version="4.21.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
-    <PackageVersion Include="Microsoft.Playwright" Version="1.63.0" />
+    <PackageVersion Include="Microsoft.Playwright" Version="1.64.1" />
     <PackageVersion Include="PublicApiGenerator" Version="11.5.4" />
     <PackageVersion Include="xunit.v3" Version="4.0.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
@@ -198,11 +202,11 @@
   </ItemGroup>
   <ItemGroup>
     <!-- Aspire Packages -->
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.6.1" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.6.4" />
     <PackageVersion Include="Aspire.Hosting.Elasticsearch" Version="13.3.0" />
-    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.1" />
-    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.6.1" />
-    <PackageVersion Include="CommunityToolkit.Aspire.Hosting.Ollama" Version="13.6.0" />
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.4" />
+    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.6.4" />
+    <PackageVersion Include="CommunityToolkit.Aspire.Hosting.Ollama" Version="13.6.1" />
   </ItemGroup>
   <ItemGroup>
     <!-- Transitive Packages -->

@@ -26,6 +26,8 @@ Installment plans need a payment provider that can keep a card for later payment
 
 <YouTube video="commerce" title="Narrated video of setting up an installment plan and taking the down payment" start={304} end={363} />
 
+This video shows how a plan works, the settings, creating and managing a plan, and what happens with a card, declines and checkout installments:
+
 ## How a plan works
 
 A plan is made of:

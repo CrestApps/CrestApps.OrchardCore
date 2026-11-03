@@ -20,6 +20,10 @@ When it is done:
 
 <YouTube video="ai-walkthroughs" title="Video of creating an AI data source from a site content index, restricting a profile to the indexed data and asking it a question" start={260} end={351} />
 
+<YouTube video="ai-knowledge-assistant" title="Video of building an AI knowledge assistant: upload a document, connect a data source, restrict answers and test" />
+
+The video above builds this assistant from start to finish, in the order of the steps below.
+
 ## Before you start
 
 The AI does not read your files whole. It splits them into passages and stores them in a **search index**, so it can find the right passage for each question. That index runs on a search service such as Elasticsearch or Azure AI Search, which IT provides.
@@ -47,6 +51,8 @@ The AI does not read your files whole. It splits them into passages and stores t
 
 ## Check that it works
 
+<YouTube video="ai-knowledge-assistant" title="Video of testing the assistant with three questions" start={112} end={155} />
+
 1. Ask a question whose answer is only in one of your documents. The answer should match the document and list it as a reference.
 2. Ask a question your knowledge does not cover. With **Restrict answers to retrieved data only** on, the assistant should say it cannot find the answer instead of guessing.
 3. Change a page or record in a data source, wait for it to sync, and ask again.
@@ -56,5 +62,6 @@ The AI does not read your files whole. It splits them into passages and stores t
 - Start with a few good, current documents rather than everything you have. Out-of-date files lead to out-of-date answers.
 - Remove a document from the profile when it is replaced, and upload the new one.
 - Spreadsheets cannot be uploaded as profile knowledge; they are for data analysis in chat, not for answering questions.
+- If the assistant ignores a document you uploaded to the profile, check that the **AI Documents** index has an **Embedding deployment**. The field is on the index form when **AI Documents for Chat Interactions** is enabled; a document index without one is not searched, so the assistant answers as if the document were not there. Also remove any tools or connections the profile does not need: with them, the assistant may call tools instead of looking in your knowledge first.
 - If the profile shows a warning that the index is not configured, ask your administrator to pick the document index under **Settings > Artificial Intelligence**.
 - To let people upload their own files during a chat, see [Chat interactions](../ai/chat-interactions.md).

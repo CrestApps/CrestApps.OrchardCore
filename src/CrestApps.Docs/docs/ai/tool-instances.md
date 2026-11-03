@@ -64,7 +64,7 @@ All four sources carry the **Knowledgebase** category. Each source captures its 
 
 The sitemap and search index sources materialize a corpus (the crawled pages or the downloaded index) on the first search and cache it; later searches reuse the cache until the instance settings change. The website search source keeps no corpus — it issues a live query per request — so there is no cold-start indexing delay and results reflect the site's own relevance ranking.
 
-These instances are usable anywhere tool instances are — on a profile, a chat interaction, or exposed to external clients through the [MCP server](mcp/server#tool-exposure).
+These instances are usable anywhere tool instances are — on a profile, a chat interaction, or exposed to external clients through the [MCP server](mcp/server#tool-exposure), or to AI agents in the browser through [WebMCP](mcp/webmcp), site-wide or on one content item's page.
 
 ## The data source search source
 
@@ -127,7 +127,7 @@ Tool instances can be moved between tenants with the standard Orchard Core deplo
 
 ### Deployment plan
 
-Enable **OrchardCore.Deployment** together with **AI Tool Instances**. The **AI Tool Instances** deployment step then becomes available when you build a deployment plan under **Configuration → Deployment Plans**. The step exports either every tool instance or only the instances you select. Each exported instance keeps its source, name, description, owner, and source-specific settings.
+Enable **OrchardCore.Deployment** together with **AI Tool Instances**. The **AI Tool Instances** deployment step then becomes available when you build a deployment plan under **Tools > Deployments > Plans**. The step exports either every tool instance or only the instances you select. Each exported instance keeps its source, name, description, owner, and source-specific settings.
 
 Secrets are never written to the export. During export, each source can remove its own sensitive data through an `IAIToolInstanceHandler`. The built-in sources use this to strip their credentials: the **HTTP API request** source clears the API key, bearer token, password, client secret, and any cached OAuth tokens, and the **Algolia** source clears the search-only API key. After importing on the target tenant, edit the instance and re-enter the required credentials.
 

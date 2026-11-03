@@ -39,6 +39,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Calendars.Abstractions/CrestApps.OrchardCore.Calendars.Abstractions.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.DncRegistry.Abstractions/CrestApps.OrchardCore.DncRegistry.Abstractions.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Reports.Abstractions/CrestApps.OrchardCore.Reports.Abstractions.csproj" />

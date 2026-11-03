@@ -219,6 +219,10 @@ public sealed partial class RealtimeVoiceConversationRunner
         // Errors in a row with nothing else between them. One is a refusal; a run of them is a session that is gone.
         var consecutiveErrors = 0;
 
+        // Whether the session has sent anything but errors. Until it has, an unexpected error is its answer to the
+        // set-up (see RideOutErrorAsync).
+        var heardFromSession = false;
+
         // Set once the assistant is finished talking for good, and cleared the moment the customer speaks again.
         var goodbyeSaid = false;
 
@@ -311,6 +315,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                 }
 
                 consecutiveErrors = conversationEvent.Type == RealtimeConversationEventType.Error ? consecutiveErrors + 1 : 0;
+                heardFromSession |= conversationEvent.Type != RealtimeConversationEventType.Error;
 
                 if (conversationEvent.Type is not RealtimeConversationEventType.AssistantAudioDelta
                                             and not RealtimeConversationEventType.AssistantTranscriptDelta &&
@@ -637,7 +642,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                     case RealtimeConversationEventType.Error:
                         // Most provider errors are a refusal of one request and leave the session as it was. Live,
                         // treating every one as the end of the call turned a refused truncation into dead air.
-                        if (!await RideOutErrorAsync(conversation, bargeIn, conversationEvent.ErrorMessage, consecutiveErrors, activityId, cancellationToken))
+                        if (!await RideOutErrorAsync(conversation, bargeIn, conversationEvent.ErrorMessage, consecutiveErrors, heardFromSession, activityId, cancellationToken))
                         {
                             return true;
                         }

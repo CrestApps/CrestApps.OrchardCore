@@ -397,9 +397,12 @@ public sealed partial class ReportQueryPlanner
                 planned.DataType = transformedType;
             }
 
-            planned.Label = string.IsNullOrWhiteSpace(column.Label)
+            planned.ValueLabel = string.IsNullOrWhiteSpace(column.Label)
                 ? DefaultLabel(column, field)
                 : column.Label.Trim();
+            planned.Label = string.IsNullOrWhiteSpace(column.Label)
+                ? ShowAsLabel(column, planned.ValueLabel, planned.DataType)
+                : planned.ValueLabel;
 
             plan.Columns.Add(planned);
         }
@@ -484,6 +487,26 @@ public sealed partial class ReportQueryPlanner
 
             plan.Sorts.Add((index, sort.Descending));
         }
+    }
+
+    // The default header of a number shown as a quick table calculation names the calculation, so people reading the
+    // report know a rank is not a count.
+    private string ShowAsLabel(ReportColumnDefinition column, string label, DataFieldType dataType)
+    {
+        if (!DataValues.IsNumeric(dataType))
+        {
+            return label;
+        }
+
+        return column.ShowAs switch
+        {
+            ReportShowAs.PercentOfTotal => S["% of total {0}", label],
+            ReportShowAs.RunningTotal => S["Running total of {0}", label],
+            ReportShowAs.DifferenceFromPrevious => S["Change in {0}", label],
+            ReportShowAs.PercentDifference => S["% change in {0}", label],
+            ReportShowAs.Rank => S["Rank of {0}", label],
+            _ => label,
+        };
     }
 
     private string DefaultLabel(ReportColumnDefinition column, PlannedField field)

@@ -19,6 +19,10 @@ Uploading documents to profiles, letting users attach files in chats, and the re
 
 ## Overview
 
+<YouTube video="ai-documents" title="Video overview of AI Documents in the admin" />
+
+The video shows the **Documents** settings, allowing uploads on a profile, attaching a file to a chat, and asking about a chart in a PDF report.
+
 This module is the foundation for all document-related functionality in the CrestApps AI suite. It provides document upload, text extraction, embedding, and RAG (Retrieval-Augmented Generation) capabilities shared by **AI Chat Interactions**, **AI Profiles**, and **AI Chat Sessions / Widgets**.
 
 The base feature is **enabled by dependency only** — it activates automatically when either `AI Documents for Chat Interactions` or `AI Documents for Profiles` is enabled.
@@ -164,6 +168,8 @@ Documents are managed directly through the AI Profile editor form. When you save
 There are no separate API endpoints for profile document management — everything is handled through the standard profile editor workflow.
 
 ### Getting Started
+
+<YouTube video="ai-knowledge" title="Video of creating the documents index and uploading a document to a profile" start={95} end={203} />
 
 Enable the `AI Documents for Profiles` feature. Documents are then uploaded on the **Knowledge** tab of the AI Profile editor (**Artificial Intelligence > Profiles**), together with **Document Top N** and **Document retrieval mode**. See [Upload documents to a profile](../../user-manual/ai/knowledge.md#upload-documents-to-a-profile).
 

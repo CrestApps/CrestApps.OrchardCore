@@ -209,6 +209,16 @@ Build admin UI the way Orchard Core builds it, and add a new concept only when O
 * Each recipe step has an `IRecipeStep` schema, and each deployment step a deployment step schema, registered in a startup with `[RequireFeatures("CrestApps.OrchardCore.Recipes")]`, so CrestApps Recipes exports their definitions.
 * Every options class bound from configuration (appsettings) is described in the module's `ConfigurationSchema.json`.
 
+#### Admin Edit (Form) Page Buttons
+
+Every admin create, edit, settings, import or other form page keeps its buttons in Orchard Core's sticky action bar at the bottom of the screen (OrchardCore PR #19302), so **Save** and **Cancel** stay visible however long the form is. Follow `.agents/skills/crestapps-admin-edit-views/SKILL.md` for every new form page and whenever you touch an existing one.
+
+* Put the form's buttons straight in `<div class="action-bar-bottom">` inside the `<form>`, main action first and **Cancel**/**Back** last. Never end a form with an `ocat-wrapper`/`ocat-end-offset`, `d-flex gap-2` or `mb-3` row of buttons, and do not wrap the buttons inside the bar or give them spacing classes.
+* Mark destructive and rarely used buttons (**Delete**, **Preview**, a second "receive everything" action) with `action-bar-secondary`, so they move into the bar's ellipsis menu in the **Menu** actions layout (**Configuration → Settings → Admin → Actions layout**) and on small screens.
+* One bar per page. Hints or warnings that sat under the buttons go above the bar in their own `ocat-end-offset` row.
+* Modals, sub-forms inside a card or an accordion, list filters and row actions, and storefront/customer pages keep their buttons inline. A partial shared by a page and a modal renders the bar only on the page.
+* `tests/js/lint/admin-forms-use-action-bar.test.js` guards the rule. Check the page in both actions layouts and at phone width before you hand it off.
+
 #### Quality Enforcement
 
 * Treat all warnings as errors and resolve every warning.
@@ -386,10 +396,20 @@ runtime MCP skills shipped by the `CrestApps.OrchardCore.AI.Mcp` module (which c
   Orchard Core's `AdminList` shape and `<admin-list>` tag helpers, in the List or Grid layout the site and the user
   pick: the row display driver, the row template, the controller's `AdminListContext`, the view and its columns.
   Never hand-write a `<ul class="list-group">` listing.
+- **Example**: `.agents/skills/crestapps-admin-edit-views` — how every admin form page puts its buttons in Orchard
+  Core's sticky bottom action bar (`action-bar-bottom`, `action-bar-secondary`), and which forms (modals, card
+  sub-forms, filters, storefront pages) keep their buttons inline.
 - **Example**: `.agents/skills/crestapps-calendar-types` — how another module builds on the Calendars module:
   registering a calendar type and its event types with `AddCalendarType` (owner kind, capacity, `ManagedByCode`),
   creating and keeping events in step with the module's own records, busy-time and event sources, handlers and
   after-commit observers, and the naming and wall-clock time traps.
+- **Example**: `.agents/skills/crestapps-calendar-provider` — how to add an external calendar provider (Google Calendar,
+  Microsoft 365, CalDAV, …) to External Calendars: full and incremental reads, two-way writes with versions, conflict
+  policies, refused access, account connections, event mapping, registration, tests and docs.
+- **Example**: `.agents/skills/crestapps-webmcp-tools` — how to extend the WebMCP module, a thin layer over CrestApps.Core's
+  WebMCP: tools registered with the standard `document.modelContext.registerTool`, scripts and settings added through
+  `IWebMcpClientConfigurationHandler`, the server-side checks every WebMCP list and call must keep, the chat bridge's
+  limits and options, and the tests to add.
 
 ### Frontend Development
 - CSS/SCSS files are in individual module `Assets/` directories

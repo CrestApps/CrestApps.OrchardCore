@@ -968,6 +968,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public int? MaxAttempts { get; set; }
         public string Notes { get; set; }
         public string PreferredDestination { get; set; }
+        public string PreviousDispositionId { get; set; }
         public int ProcessingAttempts { get; set; }
         public System.DateTime? PurgedAtUtc { get; set; }
         public string PurgedById { get; set; }

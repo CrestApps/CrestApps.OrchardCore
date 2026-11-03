@@ -1,0 +1,54 @@
+@model NLWebAISettingsViewModel
+
+<h5 class="mt-4">@T["Artificial intelligence"]</h5>
+<p class="text-muted">@T["An AI model can improve the answers. Each question then costs one or more calls to the model."]</p>
+
+<div class="ocat-wrapper" asp-validation-class-for="DeploymentName">
+    <label asp-for="DeploymentName" class="ocat-label">@T["AI deployment"]</label>
+    <div class="ocat-end">
+        <select asp-for="DeploymentName" asp-items="Model.Deployments" class="form-select">
+            <option value="">@T["Default utility deployment"]</option>
+        </select>
+        <span class="hint">@T["The model that rewrites questions, ranks results and writes summaries and answers. A small, fast model works well."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="RewriteQueries" />
+            <label class="form-check-label" asp-for="RewriteQueries">@T["Understand follow-up questions"]</label>
+            <span class="hint dashed">@T["When enabled, a question sent with earlier questions of the conversation is rewritten to stand on its own before the site searches for it."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="RankResults" />
+            <label class="form-check-label" asp-for="RankResults">@T["Rank the results"]</label>
+            <span class="hint dashed">@T["When enabled, the model orders the results by how well they answer the question and drops the ones that do not."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="AllowSummarize" />
+            <label class="form-check-label" asp-for="AllowSummarize">@T["Allow summaries"]</label>
+            <span class="hint dashed">@T["When enabled, a caller can ask for a summary of the results (summarize mode)."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="AllowGenerate" />
+            <label class="form-check-label" asp-for="AllowGenerate">@T["Allow answers"]</label>
+            <span class="hint dashed">@T["When enabled, a caller can ask for an answer written only from the results, with links to them (generate mode)."]</span>
+        </div>
+    </div>
+</div>

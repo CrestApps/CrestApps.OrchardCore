@@ -16,6 +16,8 @@ technical_manual:
 
 <AskYourAdmin />
 
+Watch the video for a tour of the settings, what a buyer does, and how to handle a return.
+
 ## Set up returns
 
 Under **Settings > Commerce > Returns**:
@@ -65,11 +67,11 @@ You can mark a return received without approving it first, such as when a parcel
 
 ### Refund
 
-For a buyer who wants their money back, **Refund** shows the **Amount**, which starts at what the items were paid, before tax and shipping, and can be up to what can still be refunded on the order. Click **Refund and close**. The money goes back the way the buyer paid, the order shows the refund, and the buyer is emailed. You can refund before the items arrive, such as for a damaged item you don't want back.
+For a buyer who wants their money back, **Refund** shows the **Amount**, which starts at what the items were paid, before tax and shipping, and can be up to what can still be refunded on the order. Click **Refund and close**. The money goes back the way the buyer paid, the order shows the refund, and the buyer is emailed. You can refund before the items arrive, such as for a damaged item you don't want back, but only once you have approved the return: **Refund** and **Exchange** appear after you approve it, or once it is received.
 
 ### Exchange
 
-For a buyer who wants something else, send them what they asked for, then under **Exchange** add a message if you like, such as the tracking number, and click **The replacement is on its way**. The return is completed and the buyer is emailed. The replacement isn't made into an order for you: send it as you would any parcel, or [create an order](carts-and-orders.md#create-an-order-for-a-buyer) for it.
+For a buyer who wants something else, approve the return, which shows the **Exchange** box. Send them what they asked for, then under **Exchange** add a message if you like, such as the tracking number, and click **The replacement is on its way**. The return is completed and the buyer is emailed. The replacement isn't made into an order for you: send it as you would any parcel, or [create an order](carts-and-orders.md#create-an-order-for-a-buyer) for it.
 
 ## Things to know
 

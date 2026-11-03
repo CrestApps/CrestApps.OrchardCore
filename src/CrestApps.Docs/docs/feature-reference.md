@@ -82,6 +82,7 @@ turns them on, and they disappear again when nothing needs them.
 | `CrestApps.OrchardCore.AI.Mcp.Server` | Model Context Protocol (MCP) Server | [MCP Server](./ai/mcp/server) |
 | `CrestApps.OrchardCore.AI.Mcp.Resources.Ftp` | Model Context Protocol (MCP) FTP Resource | [MCP FTP Resource](./ai/mcp/ftp) |
 | `CrestApps.OrchardCore.AI.Mcp.Resources.Sftp` | Model Context Protocol (MCP) SFTP Resource | [MCP SFTP Resource](./ai/mcp/sftp) |
+| `CrestApps.OrchardCore.AI.WebMcp` | WebMCP | [WebMCP](./ai/mcp/webmcp) |
 
 ## Artificial Intelligence - A2A
 
@@ -171,6 +172,8 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.ContentTransfer` | Content Transfer | [Content Transfer](./modules/content-transfer) |
 | `CrestApps.OrchardCore.ContentTransfer.OpenXml` | Content Transfer (OpenXml) | [Content Transfer](./modules/content-transfer) |
 | `CrestApps.OrchardCore.ContentTransfer.Azure` | Content Transfer - Azure Blob Storage | [Content Transfer](./modules/content-transfer#store-import-and-export-files-in-azure-blob-storage) |
+| `CrestApps.OrchardCore.Seo` | Advanced SEO | [Advanced SEO](./modules/advanced-seo) |
+| `CrestApps.OrchardCore.NLWeb` | NLWeb | [NLWeb](./modules/nlweb) |
 | `CrestApps.OrchardCore.Addresses` | Addresses | [Addresses](./modules/addresses) |
 | `CrestApps.OrchardCore.Addresses.Countries` | Address Countries | [Addresses](./modules/addresses#country-lists) |
 | `CrestApps.OrchardCore.Addresses.GooglePlaces` | Address Suggestions (Google Places) | [Addresses](./modules/addresses#address-suggestions) |

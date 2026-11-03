@@ -498,6 +498,7 @@
 						isNavigatingAway: false,
 						autoScroll: true,
 						stream: null,
+						pageTools: null,
 						messages: [],
 						notifications: [],
 						prompt: "",
@@ -1073,6 +1074,20 @@
 						} catch (err) {
 							console.error("SignalR Connection Error: ", err);
 						}
+						this.ensurePageTools();
+					},
+					ensurePageTools() {
+						if (!this.pageTools && this.connection && window.crestAppsWebMcp && typeof window.crestAppsWebMcp.connectChat === "function") this.pageTools = window.crestAppsWebMcp.connectChat(this.connection);
+						return this.pageTools;
+					},
+					async syncPageTools() {
+						var pageTools = this.ensurePageTools();
+						if (!pageTools) return;
+						try {
+							await pageTools.sync();
+						} catch (err) {
+							console.warn("The page tools could not be sent to the chat.", err);
+						}
 					},
 					async ensureConnectionStarted() {
 						if (!this.connection) return false;
@@ -1328,62 +1343,65 @@
 						var lastResponseId = null;
 						var messageIndex = this.messages.length;
 						var currentSessionId = this.getSessionId();
-						this.stream = this.connection.stream("SendMessage", profileId, trimmedPrompt, currentSessionId, sessionProfileId).subscribe({
-							next: (chunk) => {
-								let message = this.messages[messageIndex];
-								if (!message) {
-									if (chunk.sessionId && !currentSessionId) this.initializeSession(chunk.sessionId);
+						var openStream = () => {
+							this.stream = this.connection.stream("SendMessage", profileId, trimmedPrompt, currentSessionId, sessionProfileId).subscribe({
+								next: (chunk) => {
+									let message = this.messages[messageIndex];
+									if (!message) {
+										if (chunk.sessionId && !currentSessionId) this.initializeSession(chunk.sessionId);
+										this.hideTypingIndicator();
+										messageIndex = this.messages.length;
+										let newMessage = {
+											id: chunk.messageId,
+											role: "assistant",
+											title: chunk.title,
+											content: "",
+											htmlContent: "",
+											isStreaming: true,
+											userRating: null
+										};
+										this.messages.push(newMessage);
+										message = newMessage;
+									}
+									if (chunk.title && (!message.title || message.title !== chunk.title)) message.title = chunk.title;
+									if (chunk.references && typeof chunk.references === "object" && Object.keys(chunk.references).length) for (const [key, value] of Object.entries(chunk.references)) references[key] = normalizeReference(value) ?? {};
+									if (chunk.content) {
+										if (chunk.responseId && lastResponseId && chunk.responseId !== lastResponseId) content += "\n\n";
+										if (chunk.responseId) lastResponseId = chunk.responseId;
+										content += chunk.content;
+									}
+									message.rawContent = content;
+									updateMessagePresentation(message, references);
+									this.messages[messageIndex] = message;
+									this.$nextTick(() => {
+										renderMessageMedia(message);
+										this.scrollToBottom();
+									});
+								},
+								complete: () => {
+									this.processReferences(references, messageIndex);
+									this.streamingFinished();
+									let msg = this.messages[messageIndex];
+									if (msg) msg.isStreaming = false;
+									if (!msg || !msg.content) this.hideTypingIndicator();
+									if (this.isConversationMode && this.textToSpeechEnabled && msg && msg.content) this.synthesizeSpeech(msg.content);
+									this.stream?.dispose();
+									this.stream = null;
+								},
+								error: (err) => {
+									this.processReferences(references, messageIndex);
+									this.streamingFinished();
+									let msg = this.messages[messageIndex];
+									if (msg) msg.isStreaming = false;
 									this.hideTypingIndicator();
-									messageIndex = this.messages.length;
-									let newMessage = {
-										id: chunk.messageId,
-										role: "assistant",
-										title: chunk.title,
-										content: "",
-										htmlContent: "",
-										isStreaming: true,
-										userRating: null
-									};
-									this.messages.push(newMessage);
-									message = newMessage;
+									if (!this.isNavigatingAway) this.addMessage(this.getServiceDownMessage());
+									this.stream?.dispose();
+									this.stream = null;
+									console.error("Stream error:", err);
 								}
-								if (chunk.title && (!message.title || message.title !== chunk.title)) message.title = chunk.title;
-								if (chunk.references && typeof chunk.references === "object" && Object.keys(chunk.references).length) for (const [key, value] of Object.entries(chunk.references)) references[key] = normalizeReference(value) ?? {};
-								if (chunk.content) {
-									if (chunk.responseId && lastResponseId && chunk.responseId !== lastResponseId) content += "\n\n";
-									if (chunk.responseId) lastResponseId = chunk.responseId;
-									content += chunk.content;
-								}
-								message.rawContent = content;
-								updateMessagePresentation(message, references);
-								this.messages[messageIndex] = message;
-								this.$nextTick(() => {
-									renderMessageMedia(message);
-									this.scrollToBottom();
-								});
-							},
-							complete: () => {
-								this.processReferences(references, messageIndex);
-								this.streamingFinished();
-								let msg = this.messages[messageIndex];
-								if (msg) msg.isStreaming = false;
-								if (!msg || !msg.content) this.hideTypingIndicator();
-								if (this.isConversationMode && this.textToSpeechEnabled && msg && msg.content) this.synthesizeSpeech(msg.content);
-								this.stream?.dispose();
-								this.stream = null;
-							},
-							error: (err) => {
-								this.processReferences(references, messageIndex);
-								this.streamingFinished();
-								let msg = this.messages[messageIndex];
-								if (msg) msg.isStreaming = false;
-								this.hideTypingIndicator();
-								if (!this.isNavigatingAway) this.addMessage(this.getServiceDownMessage());
-								this.stream?.dispose();
-								this.stream = null;
-								console.error("Stream error:", err);
-							}
-						});
+							});
+						};
+						this.syncPageTools().then(openStream, openStream);
 					},
 					getServiceDownMessage() {
 						return {

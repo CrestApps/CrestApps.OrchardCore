@@ -17,6 +17,8 @@ Everyone who buys from your store is a **customer**: a person or a business, wit
 
 <AskYourAdmin />
 
+This video shows guest customers and merged accounts, how long guest data is kept, your own checkout fields, and staff's My Account page:
+
 ## Customers and accounts
 
 A customer's sign-in, password and email stay on their **account**, which is managed under **Security > Users** like any other user. The customer record keeps what your store needs on top of that: how to address them, their company and tax id, and whether they want news and offers.
@@ -158,9 +160,9 @@ Enter **0** to keep the data. Customers with an account are kept while the accou
 
 ## My Account
 
-A signed-in customer manages their own details under **My Account**, with the **Manage own customer profile and addresses** permission. Every signed-in user has it by default.
+A signed-in customer manages their own details under **My Account**, with the **Manage own customer profile and addresses** permission. Every signed-in user has it by default. Staff open it under **Commerce > My Account**.
 
-- The top of the page edits how the store addresses them: whether they buy for **Myself** or **A business**, their name, company, tax id, phone and marketing consent. Their email is shown but is changed on their account.
+- The top of the page edits how the store addresses them: **I buy for** (**Myself** or **A business**), their name, **Name we call you by**, company, tax id, phone and **Send me news and offers**. Their email is shown but is changed on their account.
 - **Addresses** lists their address book, where they add, edit and delete addresses the same way as above.
 
 The first time a user opens **My Account**, their customer record is made from their account, just as it is on their first order.
@@ -170,6 +172,10 @@ On the storefront the same details are on **Account details** and **Addresses** 
 ## Try it with the sample store
 
 The **Product listing: online store sample** recipe (**Configuration > Recipes**) enables Customers and adds two sample customers: *Sam Carter*, a person with a home and a work address, and *Contoso Supplies*, a business in Canada with a tax id. Open them under **Commerce > Customers** to see the details, address book and privacy actions.
+
+:::note[A site set up with the Online store recipe]
+That setup recipe already made a **Shop** page at `/shop`, and so does the sample, so the sample stops with *Your permalink is already in use.* Delete the **Shop** listing under **Commerce > Product Listings** first.
+:::
 
 ## Related pages
 

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Security.Claims;
+using System.Text.Json;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Core;
 using CrestApps.OrchardCore.Calendars.Core.Indexes;
@@ -56,7 +57,14 @@ internal sealed class CalendarTestHarness : IAsyncDisposable
     public static async Task<CalendarTestHarness> CreateAsync(Action<IServiceCollection> configure = null, Func<ISchemaBuilder, Task> createSchema = null, IIndexProvider[] indexProviders = null, string[] collections = null)
     {
         var databasePath = Path.Combine(Path.GetTempPath(), $"calendars-{Guid.NewGuid():N}.db");
-        var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
+        var store = StoreFactory.Create(configuration =>
+        {
+            configuration.UseSqLite($"Data Source={databasePath};Pooling=False");
+
+            // Orchard's serializer, as the app uses: YesSql's default reads a DateTime with no kind as local time and moves a date's
+            // midnight to the previous day east of UTC.
+            configuration.ContentSerializer = new global::YesSql.Serialization.DefaultContentJsonSerializer(JOptions.Default);
+        });
 
         store.RegisterIndexes(new IIndexProvider[] { new CalendarIndexProvider(), new CalendarEventIndexProvider(), new CalendarCategoryIndexProvider() }.Concat(indexProviders ?? []).ToArray());
         await store.InitializeAsync(TestContext.Current.CancellationToken);

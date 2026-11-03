@@ -193,11 +193,33 @@ When `createOrUpdateContentItem` is available alongside recipe-backed content sc
 | Save User Memory | Creates or updates a named memory entry for the current user. |
 | Remove User Memory | Removes a saved memory entry when it should be forgotten. |
 
+### NLWeb tools
+
+**Available when:** `CrestApps.OrchardCore.NLWeb` with `CrestApps.OrchardCore.AI` on
+
+The tool answers as the caller, with the **Ask the site questions with NLWeb** (`QueryNLWeb`) permission, and only returns published content items the caller may view. See [NLWeb](../modules/nlweb.md#the-ask-tool).
+
+| Function | Description |
+| --- | --- |
+| `ask` | Asks the site a question in natural language (NLWeb) and returns the matching content items as schema.org objects, with a summary or an answer written from them when asked. Selectable on the MCP Server, WebMCP and AI profiles. |
+
+### Search Engine Optimization tools
+
+**Available when:** `CrestApps.OrchardCore.Seo` with `CrestApps.OrchardCore.AI` on
+
+The tools set up schema.org structured data. Changing a content type needs **Edit content types**, and changing the site settings needs **Manage the advanced SEO settings**. See [Advanced SEO](../modules/advanced-seo.md#ai-tools).
+
+| Function | Description |
+| --- | --- |
+| `getSchemaOrgOptions` | Lists the content types with their schema.org type and the types the editor knows; for a content type, its settings, the values its items can give, a type's properties and the suggested mappings. |
+| `configureContentTypeSchemaOrg` | Adds the Schema.org part to a content type if needed, sets its schema.org type and maps its properties, adding the suggested mappings unless told not to. Returns the required properties still missing. |
+| `configureSiteStructuredData` | Reads or changes the site's publisher, logo and profiles, and whether pages describe the web site and its search. |
+
 ### Calendar tools
 
 **Available when:** `CrestApps.OrchardCore.Calendars` with `CrestApps.OrchardCore.AI` on
 
-These tools act for the signed-in person using the AI, with that person's access to each calendar, and refuse anonymous callers. See [Calendars](../modules/calendars.md#ai-tools).
+These tools act for the signed-in person using the AI, with that person's access to each calendar, and refuse anonymous callers and callers without **Use calendars** (`AccessCalendars`). See [Calendars](../modules/calendars.md#ai-tools).
 
 | Function | Description |
 | --- | --- |
@@ -212,13 +234,13 @@ These tools act for the signed-in person using the AI, with that person's access
 
 **Available when:** `CrestApps.OrchardCore.Scheduling` with `CrestApps.OrchardCore.AI` on
 
-These tools are meant for customer-facing assistants and also work for anonymous visitors. They offer only appointment types that are enabled and allow self-service, unless the caller has **Manage appointments**. See [Scheduling](../modules/scheduling.md#ai-tools).
+These tools are meant for customer-facing assistants and also work for anonymous visitors. They offer only appointment types that are enabled and allow self-service, unless the caller has **Manage appointments**, and hold customers to the appointment type's booking policies. See [Scheduling](../modules/scheduling.md#ai-tools).
 
 | Function | Description |
 | --- | --- |
 | `listAppointmentTypes` | Lists the kinds of appointments that can be booked. |
 | `findAppointmentSlots` | Finds open times for an appointment. |
-| `bookAppointment` | Books an appointment for the customer at a time `findAppointmentSlots` returned. |
+| `bookAppointment` | Books an appointment for the customer at a time `findAppointmentSlots` returned, and says which staff, rooms and equipment it is with. |
 | `changeAppointment` | Cancels or moves a customer's appointment. The customer proves it is theirs with the manage code, or the email or phone number on the appointment. |
 
 ## Tool permissions

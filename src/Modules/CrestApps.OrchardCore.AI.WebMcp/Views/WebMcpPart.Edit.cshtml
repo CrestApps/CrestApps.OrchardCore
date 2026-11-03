@@ -1,0 +1,13 @@
+@model WebMcpPartEditViewModel
+
+<div class="mb-3">
+    <h5>@T["WebMCP tools"]</h5>
+    @if (Model.HasTools)
+    {
+        <span class="hint">@T["The tools this content item's page exposes through WebMCP, in addition to the tools the WebMCP settings give to every page. Browser agents and the AI chat of signed-in users who may use WebMCP and can view this item can call them, and each tool also needs that user's permission for the tool. Only the tools you may use are listed; tools selected by someone else stay selected."]</span>
+    }
+    else
+    {
+        <span class="hint">@T["There are no tools you may assign. Only selectable AI tools and tool instances you have permission to use can be exposed."]</span>
+    }
+</div>

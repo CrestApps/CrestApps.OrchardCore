@@ -57,6 +57,7 @@ public static class OmnichannelActivityFollowUps
             CampaignId = activity.CampaignId,
             Instructions = activity.Instructions,
             Attempts = activity.Attempts + 1,
+            PreviousDispositionId = activity.DispositionId,
             CreatedById = activity.CompletedById,
             CreatedByUsername = activity.CompletedByUsername,
             CreatedUtc = nowUtc,

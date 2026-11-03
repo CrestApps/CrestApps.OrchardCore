@@ -242,6 +242,12 @@ public sealed class PlannedColumn
     public string Label { get; set; }
 
     /// <summary>
+    /// Gets or sets the header of the column's plain values, which its totals show: the same as <see cref="Label"/>
+    /// unless the column is named after the quick table calculation it shows.
+    /// </summary>
+    public string ValueLabel { get; set; }
+
+    /// <summary>
     /// Gets or sets the type of the column values.
     /// </summary>
     public DataFieldType DataType { get; set; }

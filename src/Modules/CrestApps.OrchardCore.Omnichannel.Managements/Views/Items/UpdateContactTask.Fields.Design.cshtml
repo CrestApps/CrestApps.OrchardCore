@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<UpdateContactTask>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-user-pen" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Update Contact"])
+    </h4>
+</header>

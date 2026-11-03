@@ -34,6 +34,8 @@ The management experience layers a lightweight Customer Relationship Management 
 | Leads, accounts and opportunities (**Omnichannel CRM**) | [CRM](crm.md) |
 | SMS automation (AI) | [SMS](sms.md) |
 | Automated Voice (AI voice conversations over any telephony provider) | [Telnyx AI Voice Agent](../telephony/telnyx.md#telnyx-ai-voice-agent) |
+| Omnichannel Channel Endpoints (the **Omnichannel Addresses** screen, turned on by the features that need it) | [Management](management.md#omnichannel-address) |
+| Omnichannel Messaging - Azure Blob Storage | [Messaging - Azure Blob Storage](messaging-azure-blob-storage.md) |
 | Messaging workspace (human two-way, every non-voice channel) and its **SMS Messaging Channel** | [Messaging Workspace](messaging-workspace.md) |
 | DNC Registry (national and local do-not-call screening) | [DNC Registry](../modules/dnc-registry.md) |
 | Contact Center Business Hours (calendars that gate automated sends) | [Business hours](../user-manual/business-hours.md) |
@@ -71,7 +73,7 @@ authentication before pointing a subscription at it.
 
 When **Omnichannel Management** and the shared **Reports** feature (`CrestApps.OrchardCore.Reports`) are enabled, CRM
 reports are contributed to the reusable [Reports](../modules/reports.md) framework and appear under the
-top-level admin **Reports** menu. Omnichannel Management contributes 25 reports, grouped across the
+top-level admin **Reports** menu. Omnichannel contributes 29 reports: 5 activity reports (Activity summary, Campaign performance, Disposition breakdown, Dialer call detail, and AI handoff & containment), 21 workload and performance reports, and the 3 CRM reports of the **Omnichannel CRM** feature. They are grouped across the
 **Operations**, **Queue & Routing**, **Agent Performance**, **CRM & Campaigns**, **Compliance & Audit**, and
 **Technical & IT** categories. Each report shares the standard from/to date-range filter and adds
 **Campaign group**, **Campaign**, **Channel**, **Source**, and **Status** filters. Reports export to CSV, and

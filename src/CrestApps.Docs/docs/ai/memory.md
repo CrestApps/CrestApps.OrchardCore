@@ -26,6 +26,10 @@ Provider-specific indexing support is split into separate modules:
 
 ## Overview
 
+<YouTube video="ai-memory" title="Video overview of AI memory in the admin" />
+
+The video shows an administrator creating the memory index, choosing it in the settings, turning memory on for a profile, and a chat that remembers.
+
 The AI Memory module adds a private memory layer for the currently signed-in user. Memories are stored as first-class records in the tenant and indexed into a dedicated **master memory index** so the AI can search or list them later.
 
 When preemptive RAG is enabled, Orchard Core also performs an upfront semantic search across the authenticated user's memory before the model answers. Matching memories are injected into the system prompt as private background context, similar to the existing document and data-source preemptive retrieval flow. The `search_user_memories` tool remains available for follow-up lookups when the initial memory context is not enough.

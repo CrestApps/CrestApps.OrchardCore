@@ -164,12 +164,15 @@ public sealed class AISubjectFlowStartup : StartupBase
         // the completion share one instance and two concurrent conversations cannot see each other's decision.
         services.TryAddScoped<IOmnichannelHandoffTurn, OmnichannelHandoffTurn>();
 
-        // The transfer-to-agent tool is enabled per-turn by the automated conversation handlers (not admin-
-        // selectable), so it is registered but intentionally not marked Selectable.
+        // The transfer-to-agent tool is given per turn by the automated conversation handlers, and only while a
+        // live agent can take the conversation (not admin-selectable), so it is registered hidden: a conversation
+        // is given a hidden tool only when it names it. A tool registered without being selectable is a system
+        // tool instead, which every chat is given, whether or not anybody could take it.
         services.AddCoreAITool<TransferToAgentTool>(OmnichannelHandoffHelper.TransferToAgentToolName)
             .WithTitle(S["Transfer to live agent"])
             .WithDescription(S["Hands the automated conversation off to a human agent."])
-            .WithCategory(S["Omnichannel"]);
+            .WithCategory(S["Omnichannel"])
+            .Hidden();
     }
 }
 

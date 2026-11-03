@@ -29,7 +29,8 @@ own).
 
 `AddCalendarType`, `ICalendarHandler`, `ICalendarEventHandler`, `ICalendarEventObserver` (after commit),
 `ICalendarBusyTimeSource`, `ICalendarEventSource`, `ICalendarReminderOffsetProvider`, `ICalendarReminderObserver` and
-`ICalendarProvider`. See the `crestapps-calendar-types` skill in `.agents/skills`.
+`ICalendarProvider` (with `IIncrementalCalendarProvider` and `IWritableCalendarProvider` for incremental and two-way
+synchronization). See the `crestapps-calendar-types` and `crestapps-calendar-provider` skills in `.agents/skills`.
 
 ## Dependencies
 

@@ -190,7 +190,11 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             model.BatchId = batch.ItemId;
             model.LoadError = batch.LoadError;
             model.RequiresUserAssignment = GetSourceEntry(model.Source)?.RequiresUserAssignment ?? true;
-            model.ScheduleAt = context.IsNew ? (await _localClock.GetLocalNowAsync()).DateTime : batch.ScheduleAt;
+
+            // Shown in local time, because a save reads it back as local time, as the single activity form does.
+            model.ScheduleAt = context.IsNew || batch.ScheduleAt == DateTime.MinValue
+                ? (await _localClock.GetLocalNowAsync()).DateTime
+                : (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(batch.ScheduleAt, DateTimeKind.Utc))).DateTime;
             model.SubjectContentType = batch.SubjectContentType;
             model.ContactContentType = batch.ContactContentType;
             model.CampaignId = batch.CampaignId;
@@ -660,9 +664,11 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.LastActivityAttempts), S["Enter the attempts as a number (4), a number or more (4+), a number or fewer (4-), or a range (2..5)."]);
         }
 
+        // Stored in UTC, like every other time. Stored as typed, the loader read it in the site's time zone and a
+        // report read it as UTC, so the load's schedule showed off by the site's offset from UTC.
         if (model.ScheduleAt.HasValue)
         {
-            batch.ScheduleAt = model.ScheduleAt.Value;
+            batch.ScheduleAt = await _localClock.ConvertToUtcAsync(model.ScheduleAt.Value);
         }
 
         return Edit(batch, context);

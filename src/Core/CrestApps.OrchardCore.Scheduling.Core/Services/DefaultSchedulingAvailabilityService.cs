@@ -15,6 +15,7 @@ public sealed class DefaultSchedulingAvailabilityService : ISchedulingAvailabili
 {
     private readonly SchedulingResourceStore _resourceStore;
     private readonly AppointmentStore _appointmentStore;
+    private readonly AppointmentTypeStore _typeStore;
     private readonly ICalendarAvailabilityService _availabilityService;
     private readonly ICalendarQueryService _queryService;
     private readonly IClock _clock;
@@ -25,6 +26,7 @@ public sealed class DefaultSchedulingAvailabilityService : ISchedulingAvailabili
     /// </summary>
     /// <param name="resourceStore">The resource store.</param>
     /// <param name="appointmentStore">The appointment store.</param>
+    /// <param name="typeStore">The appointment type store, for the free time booked appointments keep.</param>
     /// <param name="availabilityService">The calendar free/busy service.</param>
     /// <param name="queryService">The calendar occurrence query service, for shifts.</param>
     /// <param name="clock">The clock.</param>
@@ -32,6 +34,7 @@ public sealed class DefaultSchedulingAvailabilityService : ISchedulingAvailabili
     public DefaultSchedulingAvailabilityService(
         SchedulingResourceStore resourceStore,
         AppointmentStore appointmentStore,
+        AppointmentTypeStore typeStore,
         ICalendarAvailabilityService availabilityService,
         ICalendarQueryService queryService,
         IClock clock,
@@ -39,6 +42,7 @@ public sealed class DefaultSchedulingAvailabilityService : ISchedulingAvailabili
     {
         _resourceStore = resourceStore;
         _appointmentStore = appointmentStore;
+        _typeStore = typeStore;
         _availabilityService = availabilityService;
         _queryService = queryService;
         _clock = clock;
@@ -63,21 +67,38 @@ public sealed class DefaultSchedulingAvailabilityService : ISchedulingAvailabili
             return [];
         }
 
-        var resourceIds = appointmentType.ResourceIds.Where(id => resourceId is null || id == resourceId).ToList();
-        var resources = (await _resourceStore.GetAsync(resourceIds, cancellationToken)).Where(resource => resource.Enabled).ToList();
+        var requirements = SchedulingRequirements.ForRequest(appointmentType, resourceId);
 
-        if (resources.Count == 0 || (appointmentType.Assignment == AppointmentAssignment.AllTogether && resourceId is null && resources.Count < appointmentType.ResourceIds.Count))
+        if (requirements is null)
         {
             return [];
         }
 
-        var appointments = await _appointmentStore.ListForResourcesAsync(resources.Select(resource => resource.ItemId), earliest.AddDays(-1), latest.AddDays(1));
+        var resourceIds = requirements.SelectMany(requirement => requirement.ResourceIds).Distinct(StringComparer.Ordinal).ToList();
+        var resources = (await _resourceStore.GetAsync(resourceIds, cancellationToken)).Where(resource => resource.Enabled).ToList();
+        var enabledIds = resources.Select(resource => resource.ItemId).ToHashSet(StringComparer.Ordinal);
+
+        // Every requirement needs a resource that takes appointments, and one that takes all its resources needs every one of them.
+        foreach (var requirement in requirements)
+        {
+            var usable = requirement.ResourceIds.Count(enabledIds.Contains);
+
+            if (usable == 0 || (requirement.Assignment == AppointmentAssignment.AllTogether && usable < requirement.ResourceIds.Count))
+            {
+                return [];
+            }
+        }
+
+        // A weekly limit counts the whole week around each time, so the appointments of the weeks on both sides are read too.
+        var reach = appointmentType.MaxPerWeek > 0 ? 7 : 1;
+        var appointments = await _appointmentStore.ListForResourcesAsync(resources.Select(resource => resource.ItemId), earliest.AddDays(-reach), latest.AddDays(reach));
         var excludeEvents = appointments.Where(appointment => appointment.ItemId == excludeAppointmentId || (appointmentType.Capacity > 1 && appointment.AppointmentTypeId == appointmentType.ItemId))
             .Select(appointment => appointment.CalendarEventId)
             .Where(id => id is not null)
             .Distinct()
             .ToList();
 
+        var keptTime = await GetKeptTimeAsync(appointmentType, appointments, cancellationToken);
         var free = new Dictionary<string, HashSet<DateTime>>(StringComparer.Ordinal);
 
         foreach (var resource in resources)
@@ -106,7 +127,7 @@ public sealed class DefaultSchedulingAvailabilityService : ISchedulingAvailabili
 
                     var end = start + duration;
 
-                    if (Overlaps(busy, start - before, end + after))
+                    if (Overlaps(busy, start - before, end + after) || TakesKeptTime(mine, keptTime, appointmentType, start, end) || OverlapsAppointment(mine, appointmentType, start - before, end + after))
                     {
                         continue;
                     }
@@ -136,6 +157,20 @@ public sealed class DefaultSchedulingAvailabilityService : ISchedulingAvailabili
                         }
                     }
 
+                    if (appointmentType.MaxPerWeek > 0)
+                    {
+                        var week = WeekStart(CalendarTime.ToLocal(start, resource.TimeZoneId).Date);
+                        var count = mine.Where(appointment => appointment.AppointmentTypeId == appointmentType.ItemId && WeekStart(CalendarTime.ToLocal(appointment.StartUtc, resource.TimeZoneId).Date) == week)
+                            .Select(appointment => appointment.StartUtc)
+                            .Distinct()
+                            .Count();
+
+                        if (count >= appointmentType.MaxPerWeek && !mine.Any(appointment => appointment.AppointmentTypeId == appointmentType.ItemId && appointment.StartUtc == start))
+                        {
+                            continue;
+                        }
+                    }
+
                     starts.Add(start);
                 }
             }
@@ -148,9 +183,28 @@ public sealed class DefaultSchedulingAvailabilityService : ISchedulingAvailabili
 
         foreach (var start in allStarts)
         {
-            var available = resources.Where(resource => free[resource.ItemId].Contains(start)).Select(resource => resource.ItemId).ToList();
+            // A time is open only when every requirement can be met at once; the slot lists the free resources of each.
+            var available = new List<string>();
+            var met = true;
 
-            if (appointmentType.Assignment == AppointmentAssignment.AllTogether && resourceId is null && available.Count < resources.Count)
+            foreach (var requirement in requirements)
+            {
+                var freeInRequirement = resources.Where(resource => requirement.ResourceIds.Contains(resource.ItemId) && free[resource.ItemId].Contains(start))
+                    .Select(resource => resource.ItemId)
+                    .Where(id => !available.Contains(id))
+                    .ToList();
+
+                if (freeInRequirement.Count == 0 || (requirement.Assignment == AppointmentAssignment.AllTogether && freeInRequirement.Count < requirement.ResourceIds.Count))
+                {
+                    met = false;
+
+                    break;
+                }
+
+                available.AddRange(freeInRequirement);
+            }
+
+            if (!met)
             {
                 continue;
             }
@@ -260,6 +314,61 @@ public sealed class DefaultSchedulingAvailabilityService : ISchedulingAvailabili
         return busy.Any(block => block.StartUtc < endUtc && block.EndUtc > startUtc);
     }
 
+    // A booked appointment keeps the free time its own type asks for before and after it. Busy time holds only the appointment
+    // itself, so without this a later booking could start the moment it ends.
+    private async Task<Dictionary<string, CalendarTimeWindow>> GetKeptTimeAsync(AppointmentType appointmentType, IReadOnlyList<Appointment> appointments, CancellationToken cancellationToken)
+    {
+        var typeIds = appointments.Select(appointment => appointment.AppointmentTypeId)
+            .Where(id => !string.IsNullOrEmpty(id) && id != appointmentType.ItemId)
+            .Distinct()
+            .ToList();
+
+        var types = typeIds.Count == 0
+            ? new Dictionary<string, AppointmentType>(StringComparer.Ordinal)
+            : (await _typeStore.GetAsync(typeIds, cancellationToken)).ToDictionary(type => type.ItemId, StringComparer.Ordinal);
+
+        if (!string.IsNullOrEmpty(appointmentType.ItemId))
+        {
+            types[appointmentType.ItemId] = appointmentType;
+        }
+
+        var keptTime = new Dictionary<string, CalendarTimeWindow>(StringComparer.Ordinal);
+
+        foreach (var appointment in appointments)
+        {
+            if (!types.TryGetValue(appointment.AppointmentTypeId ?? string.Empty, out var type) || (type.BufferBeforeMinutes <= 0 && type.BufferAfterMinutes <= 0))
+            {
+                continue;
+            }
+
+            keptTime[appointment.ItemId] = new CalendarTimeWindow(
+                appointment.StartUtc.AddMinutes(-Math.Max(0, type.BufferBeforeMinutes)),
+                appointment.EndUtc.AddMinutes(Math.Max(0, type.BufferAfterMinutes)));
+        }
+
+        return keptTime;
+    }
+
+    // An appointment's calendar event sits on its first resource's calendar, so the other resources it takes (a room booked
+    // with a staff member, say) aren't busy on their own calendars. The appointment itself makes each of its resources busy.
+    // Group sessions of this type are left to the capacity check.
+    private static bool OverlapsAppointment(List<Appointment> appointments, AppointmentType appointmentType, DateTime startUtc, DateTime endUtc)
+    {
+        return appointments.Any(appointment =>
+            appointment.StartUtc < endUtc &&
+            appointment.EndUtc > startUtc &&
+            !(appointmentType.Capacity > 1 && appointment.AppointmentTypeId == appointmentType.ItemId));
+    }
+
+    private static bool TakesKeptTime(List<Appointment> appointments, Dictionary<string, CalendarTimeWindow> keptTime, AppointmentType appointmentType, DateTime startUtc, DateTime endUtc)
+    {
+        return appointments.Any(appointment =>
+            keptTime.TryGetValue(appointment.ItemId, out var window) &&
+            window.StartUtc < endUtc &&
+            window.EndUtc > startUtc &&
+            !(appointmentType.Capacity > 1 && appointment.AppointmentTypeId == appointmentType.ItemId && appointment.StartUtc == startUtc));
+    }
+
     /// <summary>
     /// Reads a time of day written as HH:mm.
     /// </summary>
@@ -269,6 +378,12 @@ public sealed class DefaultSchedulingAvailabilityService : ISchedulingAvailabili
     public static bool TryParse(string value, out TimeSpan time)
     {
         return TimeSpan.TryParseExact(value, @"hh\:mm", CultureInfo.InvariantCulture, out time);
+    }
+
+    // Weeks run Monday to Sunday.
+    private static DateTime WeekStart(DateTime day)
+    {
+        return day.AddDays(-(((int)day.DayOfWeek + 6) % 7));
     }
 
     private static DateTime Max(DateTime first, DateTime second)

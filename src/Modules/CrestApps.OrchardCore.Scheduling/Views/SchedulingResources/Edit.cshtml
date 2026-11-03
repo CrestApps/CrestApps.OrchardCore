@@ -28,5 +28,7 @@
         <div class="ocat-wrapper"><label asp-for="DateOverrides" class="ocat-label">@T["Days off and changed days"]</label><div class="ocat-end"><textarea asp-for="DateOverrides" class="form-control font-monospace" rows="3"></textarea><span class="hint">@T["One per line, such as: 2026-12-24 closed, or 2026-12-31 09:00-12:00."]</span></div></div>
         <div class="ocat-wrapper"><label asp-for="ShiftCalendarIds" class="ocat-label">@T["Shift calendars"]</label><div class="ocat-end"><select asp-for="ShiftCalendarIds" asp-items="Model.ShiftCalendarOptions" class="form-select" multiple size="5"></select><span class="hint">@T["For hours from shifts: the calendars whose Shift events name this staff member, such as one for each team a workforce management module provides. Hold Ctrl to choose more than one."]</span></div></div>
     </div></div>
-    <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Save"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a></div></div>
+    <div class="action-bar-bottom">
+<button class="btn btn-primary" type="submit">@T["Save"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a>
+    </div>
 </form>

@@ -4,6 +4,7 @@ sidebar_position: 2
 title: MCP Client Integration
 description: Connect to remote and local MCP servers using SSE or Stdio transports.
 user_manual:
+  - user-manual/ai/mcp
   - user-manual/ai/tools-and-agents
 ---
 

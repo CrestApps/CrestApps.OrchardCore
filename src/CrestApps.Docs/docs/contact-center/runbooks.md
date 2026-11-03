@@ -170,7 +170,7 @@ Calls abandoned with reason `agent_leg_timeout` were claimed for an agent whose 
 
 1. *Time budget exceeded* again and again: cycles do not finish within `CycleTimeout`, or the minute task runs out of its budget before it reaches the queue (it logs a warning naming how many queues it deferred). Look for a slow database or a provider call that does not answer.
 2. *Failed*: the **Why** column carries the error. *No Contact Center voice provider can route outbound calls* means the profile's provider is not configured or reachable.
-3. *Lock not acquired* for longer than `LockExpiration`: a node holds the pacing lock without pacing; check the distributed lock (`contactcenter-distributed-lock`).
+3. *Lock not acquired* for longer than the larger of the cycle timeout and twice `LockExpiration` (2 minutes by default; the banner then reads **Dialer not pacing**): a node holds the pacing lock without pacing; check the distributed lock (`contactcenter-distributed-lock`).
 4. No new records at all: pacing is not running. Check that **Contact Center Paced Dialing** is enabled, that the *Contact Center Dialer Pacing* background task runs on some node, and that the feature is not quiescing.
 
 See [Pacing cycle records and dialer health](agents-queues-dialer.md#pacing-cycle-records-and-dialer-health).

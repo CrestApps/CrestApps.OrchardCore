@@ -46,4 +46,10 @@ public sealed class ReportChart
     /// <see langword="null"/> when clicking a series picks nothing.
     /// </summary>
     public IList<string> SeriesKeys { get; set; }
+
+    /// <summary>
+    /// Gets or sets the lines drawn across the chart at values of its value axis, such as averages or targets. Pies and
+    /// doughnuts draw none.
+    /// </summary>
+    public IList<ReportChartReferenceLine> ReferenceLines { get; set; } = [];
 }

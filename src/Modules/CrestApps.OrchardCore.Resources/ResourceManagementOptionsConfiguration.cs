@@ -59,26 +59,60 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 )
             .SetVersion("2.21.0");
 
+        // FullCalendar 7 ships one global build (no .min.js in the package); jsDelivr minifies it on request. The CSS is no
+        // longer part of the script, so the skeleton, the classic theme and its palette are separate styles.
         _manifest
             .DefineScript("fullcalendar")
             .SetUrl(
-                "~/CrestApps.OrchardCore.Resources/vendors/fullcalendar/index.global.min.js",
-                "~/CrestApps.OrchardCore.Resources/vendors/fullcalendar/index.global.js")
+                "~/CrestApps.OrchardCore.Resources/vendors/fullcalendar/global.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/fullcalendar/global.js")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/fullcalendar@6.1.22/index.global.min.js",
-                "https://cdn.jsdelivr.net/npm/fullcalendar@6.1.22/index.global.js")
-            .SetVersion("6.1.22");
+                "https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/all/global.min.js",
+                "https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/all/global.js")
+            .SetVersion("7.1.3");
 
         _manifest
             .DefineScript("fullcalendar-locales")
             .SetUrl(
-                "~/CrestApps.OrchardCore.Resources/vendors/fullcalendar/locales-all.global.min.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/fullcalendar/locales-all.global.js",
                 "~/CrestApps.OrchardCore.Resources/vendors/fullcalendar/locales-all.global.js")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.22/locales-all.global.min.js",
-                "https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.22/locales-all.global.js")
+                "https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/locales-all/global.min.js",
+                "https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/locales-all/global.js")
             .SetDependencies("fullcalendar")
-            .SetVersion("6.1.22");
+            .SetVersion("7.1.3");
+
+        // FullCalendar 7 draws nothing without a theme plugin; this registers the classic theme (pair it with the theme and palette styles).
+        _manifest
+            .DefineScript("fullcalendar-theme")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/fullcalendar/classic-theme.global.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/fullcalendar/classic-theme.global.js")
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/themes/classic/global.min.js",
+                "https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/themes/classic/global.js")
+            .SetDependencies("fullcalendar")
+            .SetVersion("7.1.3");
+
+        _manifest
+            .DefineStyle("fullcalendar")
+            .SetUrl("~/CrestApps.OrchardCore.Resources/vendors/fullcalendar/skeleton.css")
+            .SetCdn("https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/skeleton.css")
+            .SetVersion("7.1.3");
+
+        _manifest
+            .DefineStyle("fullcalendar-theme")
+            .SetUrl("~/CrestApps.OrchardCore.Resources/vendors/fullcalendar/classic-theme.css")
+            .SetCdn("https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/themes/classic/theme.css")
+            .SetDependencies("fullcalendar")
+            .SetVersion("7.1.3");
+
+        _manifest
+            .DefineStyle("fullcalendar-palette")
+            .SetUrl("~/CrestApps.OrchardCore.Resources/vendors/fullcalendar/classic-palette.css")
+            .SetCdn("https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/themes/classic/palette.css")
+            .SetDependencies("fullcalendar-theme")
+            .SetVersion("7.1.3");
 
         // Leaflet maps, with marker clusters and Geoman drawing, all MIT. The crestapps-map wrapper reads the site's
         // tile settings from the map element.
@@ -292,8 +326,8 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/technical-name-generator.min.js",
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/technical-name-generator.js")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.226/dist/technical-name-generator.min.js",
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.226/dist/technical-name-generator.js")
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.246/dist/technical-name-generator.min.js",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.246/dist/technical-name-generator.js")
             .SetCdnIntegrity(
                 "sha384-eU77/YrH3nUdXISkfRgAu6DYYUqh90P2OAKFelbSMaqzXMaqKiywg7Rw+svTujSx",
                 "sha384-pF8a3IT+JHHVdR8k+2XmckVx5e77PWUkgglvqLeyBBuJtRFS6KgUnNoZRpHVyg2H")
@@ -305,8 +339,8 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/document-drop-zone.min.js",
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/document-drop-zone.js")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.226/dist/document-drop-zone.min.js",
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.226/dist/document-drop-zone.js")
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.246/dist/document-drop-zone.min.js",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.246/dist/document-drop-zone.js")
             .SetCdnIntegrity(
                 "sha384-PGbT6NVxGpZakG7YLoKE9J7Rxn1+XeVQ3i2I8cZbYVjBBkv5kKBTmF7Nhmoefm1b",
                 "sha384-ZUFxZx5ISN4z2zzis3Da+O2tjdxTW/aJoi2jn/WzRQA0YeHiYT+HexPY0ueUGYYk")
@@ -318,8 +352,8 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/document-drop-zone.min.css",
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/document-drop-zone.css")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.226/dist/document-drop-zone.min.css",
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.226/dist/document-drop-zone.css")
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.246/dist/document-drop-zone.min.css",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.246/dist/document-drop-zone.css")
             .SetCdnIntegrity(
                 "sha384-uhWXOg2ne5vxdN8I8NlkJHp4hYJRl0zo/MNL4WIqqKmQ99kyj2X+oa8qgyN1hJz4",
                 "sha384-7EkQyDspjDERXdaZJSx2NXgCWPazJJvWSpTjFP87VLIBTNuSbX7mB2Dl1T4mgFo3")
@@ -337,8 +371,8 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/chat-markers.min.js",
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/chat-markers.js")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.226/dist/chat-markers.min.js",
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.226/dist/chat-markers.js")
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.246/dist/chat-markers.min.js",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.246/dist/chat-markers.js")
             .SetCdnIntegrity(
                 "sha384-JXI0CEgnKfLvNX6IBmQP5fSEeABpZuzK6xNWqEOvqMI2tzoAZXbv4Ctlcw53z0A4",
                 "sha384-qkbjJ222M8XtPCHtcuKeK5N06UlmuJ0JXRTRtlN+KtvhaaxGIMc+cX0WTUF5LzK6")
@@ -356,8 +390,8 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/chat-image-carousel.min.js",
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/chat-image-carousel.js")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.226/dist/chat-image-carousel.min.js",
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.226/dist/chat-image-carousel.js")
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.246/dist/chat-image-carousel.min.js",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.246/dist/chat-image-carousel.js")
             .SetCdnIntegrity(
                 "sha384-T+6z9iUR5+ubssqsvSb0Ll5GqY7PcshMWDI3pBnfnmTRtvlaEtgQI9fEuHn+7+hC",
                 "sha384-qTNJaUP2KLGJG5Xs9ek6Go6Px8gZj+UeV1Q8Mrv4qyoiu+Mm/Yv1x7pCYwUxp+oK")
@@ -369,8 +403,8 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/chat-image-carousel.min.css",
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/chat-image-carousel.css")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.226/dist/chat-image-carousel.min.css",
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.226/dist/chat-image-carousel.css")
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.246/dist/chat-image-carousel.min.css",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.246/dist/chat-image-carousel.css")
             .SetCdnIntegrity(
                 "sha384-XPf/H/4AElPqA5SilokHY367LEiUxxGmbiNqDvTYQ8hES11gMK2jc0mmz/PvIwM0",
                 "sha384-DS8vKz5LDVJ+6SYgNE7cqC8nhYxo3Mj28PaoK0mLVo5Z0ayBSlkskgkRGQgNsn3a")
@@ -384,8 +418,8 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/realtime-audio.min.js",
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/realtime-audio.js")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.226/dist/realtime-audio.min.js",
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.226/dist/realtime-audio.js")
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.246/dist/realtime-audio.min.js",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.246/dist/realtime-audio.js")
             .SetCdnIntegrity(
                 "sha384-5+ApzBhBQq+bdkHPDBhxX68XJRKN5wyPKejkPGm+MeS+zIAqWSNw5AR1/rzdb4lT",
                 "sha384-1qVmWq3Uq8QlMrHIkDzkjcP2Cw0w4jv52gXikK6Gulhb9WnDgAD27v/3yw9/+vQX")

@@ -16,4 +16,22 @@ public interface ICallbackRequestStore : ICatalog<CallbackRequest>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The due callbacks ordered by their scheduled time and bounded by <paramref name="maxCount"/>.</returns>
     Task<IReadOnlyCollection<CallbackRequest>> GetDueAsync(DateTime utcNow, int maxCount, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists the open callbacks (pending, promoted or being dialed) reserved for agents that are scheduled in a range,
+    /// in order of their scheduled time.
+    /// </summary>
+    /// <param name="agentIds">The agent profiles whose callbacks to list, or <see langword="null"/> for the callbacks
+    /// reserved for any agent.</param>
+    /// <param name="fromUtc">The start of the range, in UTC.</param>
+    /// <param name="toUtc">The end of the range (exclusive), in UTC.</param>
+    /// <param name="maxCount">The maximum number of callbacks to return.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The callbacks, bounded by <paramref name="maxCount"/>.</returns>
+    Task<IReadOnlyCollection<CallbackRequest>> ListOpenForAgentsAsync(
+        IEnumerable<string> agentIds,
+        DateTime fromUtc,
+        DateTime toUtc,
+        int maxCount,
+        CancellationToken cancellationToken = default);
 }

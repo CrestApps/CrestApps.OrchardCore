@@ -73,12 +73,15 @@
 
     <div class="ocat-wrapper">
         <div class="ocat-end-offset">
-            <button class="btn btn-primary" type="submit">
-                <i class="fa-solid fa-wand-magic-sparkles me-1" aria-hidden="true"></i>@T["Create profile"]
-            </button>
-            <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Back"]</a>
-            <div class="hint mt-2">@T["The profile is created right away and opens in the full editor, where every other setting is optional."]</div>
+            <div class="hint">@T["The profile is created right away and opens in the full editor, where every other setting is optional."]</div>
         </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">
+            <i class="fa-solid fa-wand-magic-sparkles me-1" aria-hidden="true"></i>@T["Create profile"]
+        </button>
+        <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Back"]</a>
     </div>
 </form>
 

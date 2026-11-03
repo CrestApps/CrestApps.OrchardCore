@@ -1,5 +1,7 @@
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 <div class="btn-group filter">
-    <select name="type" form="calendars-filter" class="form-select form-select-sm" aria-label="@T["Type"]" onchange="this.form.submit()">
+    <select name="type" form="calendars-filter" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Type"]" data-dropdown-align-right="auto" aria-label="@T["Type"]" onchange="this.form.submit()">
         <option value="">@T["All types"]</option>
         @foreach (var option in (IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)Model.Types)
         {
