@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Skills;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Users.Core;
 using OrchardCore.Modules.Manifest;
@@ -43,6 +44,7 @@ using OrchardCore.Modules.Manifest;
         ContactCenterConstants.Feature.Area,
         ContactCenterConstants.Feature.AgentServices,
         UsersConstants.Feature.Area,
+        SkillsConstants.Features.Skills,
     ]
 )]
 

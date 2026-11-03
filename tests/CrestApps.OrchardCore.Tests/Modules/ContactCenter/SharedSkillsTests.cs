@@ -1,25 +1,66 @@
+using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.SharedSkills;
+using CrestApps.OrchardCore.Skills;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
 using CrestApps.OrchardCore.Tests.Skills;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
+using OrchardCore.Security;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
 /// <summary>
-/// Contact Center on the shared skill catalog: its skills live in the Skills catalog with the same ids, a copy stays in
-/// its own store, and an agent's routing proficiencies and the user's shared skills stay in step both ways. Contact
+/// Contact Center on the shared skill catalog: its skills live only in the Skills catalog, with the ids they had, and an
+/// agent's routing proficiencies and the user's shared skills stay in step both ways. Contact
 /// Center names skills by their name, the catalog by id.
 /// </summary>
 public sealed class SharedSkillsTests
 {
+    [Theory]
+    [InlineData("ManageSkills", true, true)]
+    [InlineData("AssignSkills", true, true)]
+    [InlineData("ManageSkills", false, false)]
+    [InlineData("ManageCertifications", true, false)]
+    public async Task ManagingContactCenterSkills_LetsAUserManageAndAssignTheSharedSkills(string permission, bool managesContactCenterSkills, bool expected)
+    {
+        // Arrange
+        var user = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.Name, "manager")], "test"));
+        var authorization = new Mock<IAuthorizationService>();
+
+        authorization
+            .Setup(service => service.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
+            .ReturnsAsync(AuthorizationResult.Failed());
+        authorization
+            .Setup(service => service.AuthorizeAsync(user, null, It.Is<IEnumerable<IAuthorizationRequirement>>(requirements => requirements.OfType<PermissionRequirement>().Any(requirement => requirement.Permission.Name == ContactCenterPermissions.ManageSkills.Name))))
+            .ReturnsAsync(managesContactCenterSkills ? AuthorizationResult.Success() : AuthorizationResult.Failed());
+
+        var shared = permission switch
+        {
+            "ManageSkills" => SkillsPermissions.ManageSkills,
+            "AssignSkills" => SkillsPermissions.AssignSkills,
+            _ => new global::OrchardCore.Security.Permissions.Permission(permission),
+        };
+        var requirement = new PermissionRequirement(shared);
+        var context = new AuthorizationHandlerContext([requirement], user, null);
+        var handler = new ContactCenterSkillsAuthorizationHandler(new Lazy<IAuthorizationService>(() => authorization.Object));
+
+        // Act
+        await handler.HandleAsync(context);
+
+        // Assert
+        Assert.Equal(expected, context.HasSucceeded);
+    }
+
     private const string AgentUserId = "agent-user";
 
     [Fact]
@@ -47,7 +88,7 @@ public sealed class SharedSkillsTests
     }
 
     [Fact]
-    public async Task ASkillCreatedInContactCenter_IsInTheSharedCatalog_AndInTheContactCenterStore()
+    public async Task ASkillCreatedInContactCenter_IsInTheSharedCatalog_AndNotCopiedToTheOldStore()
     {
         // Arrange
         await using var harness = await CreateAsync();
@@ -68,11 +109,11 @@ public sealed class SharedSkillsTests
 
         // Assert
         Assert.Equal(created.ItemId, shared?.ItemId);
-        Assert.Equal("French", copy?.Name);
+        Assert.Null(copy);
     }
 
     [Fact]
-    public async Task ASkillAddedToTheSkillsCatalog_IsSeenByContactCenter_AndCopiedToItsStore()
+    public async Task ASkillAddedToTheSkillsCatalog_IsSeenByContactCenter_WithoutACopy()
     {
         // Arrange
         await using var harness = await CreateAsync();
@@ -84,7 +125,7 @@ public sealed class SharedSkillsTests
 
         // Assert
         Assert.Equal(skill.ItemId, seen?.ItemId);
-        Assert.Equal("Billing", copy?.Name);
+        Assert.Null(copy);
     }
 
     [Fact]
