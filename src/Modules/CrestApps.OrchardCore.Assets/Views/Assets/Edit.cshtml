@@ -82,7 +82,7 @@
                         {
                             id = $"asset-owner-{kind.ToString().ToLowerInvariant()}",
                             inputName = $"{Html.NameFor(m => m.OwnerIds)}[{kind}]",
-                            endpoint = Url.Content($"~/Admin/api/crestapps/assets/owners/search?kind={kind}"),
+                            endpoint = kind == AssetOwnerKind.Account ? Url.RouteUrl(CrestApps.OrchardCore.Accounts.AccountsConstants.RouteNames.Search) : Url.Content($"~/Admin/api/crestapps/assets/owners/search?kind={kind}"),
                             initialItemsJson = initial,
                             multiple = false,
                             enableSearch = true,

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Accounts;
 using CrestApps.OrchardCore.Geo.Services;
 using CrestApps.OrchardCore.WorkOrders.BackgroundTasks;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
@@ -173,6 +174,19 @@ public sealed class OmnichannelStartup : StartupBase
                 entry.Description = S["Makes a work order of the chosen type for the activity's contact, with the activity's notes, once per activity."];
             });
         });
+    }
+}
+
+/// <summary>
+/// Shows an account's work orders on its page, and lets a work order take the account of its contact or customer.
+/// </summary>
+[RequireFeatures(AccountsConstants.Feature)]
+public sealed class AccountsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<global::OrchardCore.ContentManagement.Display.ContentDisplay.IContentDisplayDriver, Integrations.AccountWorkOrdersDisplayDriver>();
     }
 }
 

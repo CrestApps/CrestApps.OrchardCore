@@ -29,17 +29,17 @@ All live in the `Assets` YesSql collection.
 
 ## Owners
 
-An asset is owned by the business, or by a customer, a CRM account (a company or household) or a CRM contact, picked in the editor by name. Each kind of owner comes from an `IAssetOwnerSource` (`Kind`, `SearchAsync`, `GetNamesAsync`), and only the kinds with a source can be chosen:
+An asset is owned by the business, or by a customer, an account (of the Accounts module) or a CRM contact, picked in the editor by name. Each kind of owner comes from an `IAssetOwnerSource` (`Kind`, `SearchAsync`, `GetNamesAsync`), and only the kinds with a source can be chosen:
 
 | Kind | Source | Comes with |
 | --- | --- | --- |
 | Customer | Users, by user name or email | `OrchardCore.Users` |
-| Account | Content items with the Account part, by display text | Omnichannel CRM (`CrestApps.OrchardCore.Omnichannel.Crm`) |
+| Account | The account types of `IAccountContentTypeProvider`, by display text; the editor's picker uses the Accounts search | Accounts (`CrestApps.OrchardCore.Accounts`) |
 | Contact | Content items with the Omnichannel Contact part, by display text | Omnichannel Management |
 
 `AssetOwnerDirectory` names owners for the list, the asset's page and the editor; an owner it can't find shows its id. The editor's pickers search `Admin/api/crestapps/assets/owners/search?kind=&query=` (View assets), which returns up to 50 `{ value, text }` items. The asset list filters by owner with `ownerKind` and `ownerId`, and its **Add asset** keeps that owner.
 
-With Omnichannel Management on, a CRM contact's page, and an account's page with the CRM on, show an **Assets** card: the first ten assets it owns by name, **All** when there are more, and **Add an asset** for it.
+With Omnichannel Management on, a CRM contact's page, and with Accounts on, an account's page, show an **Assets** card: the first ten assets it owns by name, **All** when there are more, and **Add an asset** for it.
 
 ## Fleet
 

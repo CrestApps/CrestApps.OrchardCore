@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Accounts.Models;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -49,7 +49,7 @@ internal sealed class AccountAgreementsDisplayDriver : ContentDisplayDriver
             model.AccountId = accountId;
             model.Count = await query.CountAsync();
             model.Agreements = [.. await query.OrderByDescending(index => index.Number).Take(MaxRows).ListAsync()];
-        }).Location(OrchardCoreConstants.DisplayType.DetailAdmin, "Content:22");
+        }).Location(OrchardCoreConstants.DisplayType.DetailAdmin, "Content:23");
     }
 }
 

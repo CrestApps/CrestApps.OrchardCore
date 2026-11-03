@@ -201,7 +201,10 @@ public sealed class WorkOrdersController : Controller
 
         workOrder.ContactId = string.IsNullOrWhiteSpace(contactId) ? null : contactId.Trim();
         workOrder.Contact.Name ??= string.IsNullOrWhiteSpace(contactName) ? null : contactName.Trim();
-        workOrder.AccountId = string.IsNullOrWhiteSpace(accountId) ? await HttpContext.RequestServices.GetRequiredService<Integrations.WorkOrderCustomers>().AccountOfContactAsync(workOrder.ContactId, HttpContext.RequestAborted) : accountId.Trim();
+        var customers = HttpContext.RequestServices.GetRequiredService<Integrations.WorkOrderCustomers>();
+
+        workOrder.AccountId = string.IsNullOrWhiteSpace(accountId) ? await customers.AccountOfAsync(workOrder.ContactId, workOrder.CustomerId, HttpContext.RequestAborted) : accountId.Trim();
+        workOrder.ServiceAddress ??= await customers.AccountAddressAsync(workOrder.AccountId, HttpContext.RequestAborted);
 
         var model = await ToEditModelAsync(workOrder);
 
@@ -608,7 +611,7 @@ public sealed class WorkOrdersController : Controller
             form.ContactName = await customers.NameAsync(AssetOwnerKind.Contact, workOrder.ContactId, HttpContext.RequestAborted);
         }
 
-        workOrder.AccountId ??= await customers.AccountOfContactAsync(workOrder.ContactId, HttpContext.RequestAborted);
+        workOrder.AccountId ??= await customers.AccountOfAsync(workOrder.ContactId, workOrder.CustomerId, HttpContext.RequestAborted);
 
         workOrder.Contact = new WorkOrderContact { Name = Clean(form.ContactName), Phone = Clean(form.ContactPhone), Email = Clean(form.ContactEmail) };
         workOrder.AccessNotes = Clean(form.AccessNotes);
@@ -673,6 +676,9 @@ public sealed class WorkOrdersController : Controller
             // A new address has no point until it is geocoded.
             workOrder.ServiceAddress = address;
         }
+
+        // With no address typed, the job is at the account's location.
+        workOrder.ServiceAddress ??= await customers.AccountAddressAsync(workOrder.AccountId, HttpContext.RequestAborted);
     }
 
     private async Task PopulateAsync(WorkOrderEditViewModel model)

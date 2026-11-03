@@ -1,3 +1,6 @@
+using CrestApps.OrchardCore.Accounts.Models;
+using CrestApps.OrchardCore.Accounts.Services;
+using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Assets.Core.Services;
 using CrestApps.OrchardCore.Assets.Models;
 using CrestApps.OrchardCore.Assets.Services;
@@ -20,16 +23,74 @@ public sealed class WorkOrderCustomers
 {
     private readonly AssetOwnerDirectory _owners;
     private readonly ISession _session;
+    private readonly IEnumerable<IAccountMemberService> _members;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WorkOrderCustomers"/> class.
     /// </summary>
     /// <param name="sources">The owner sources.</param>
     /// <param name="session">The session, for a contact's account.</param>
-    public WorkOrderCustomers(IEnumerable<IAssetOwnerSource> sources, ISession session)
+    /// <param name="members">The account members, when the Account Members feature is on.</param>
+    public WorkOrderCustomers(IEnumerable<IAssetOwnerSource> sources, ISession session, IEnumerable<IAccountMemberService> members)
     {
         _owners = new AssetOwnerDirectory(sources);
         _session = session;
+        _members = members;
+    }
+
+    /// <summary>
+    /// Gets the account a work order is for when none is chosen: the account its contact belongs to, or else the
+    /// account its customer is a member of.
+    /// </summary>
+    /// <param name="contactId">The CRM contact.</param>
+    /// <param name="customerId">The customer, a user.</param>
+    /// <param name="cancellationToken">A token to cancel the lookup.</param>
+    /// <returns>The account's content item id, or <see langword="null"/>.</returns>
+    public async Task<string> AccountOfAsync(string contactId, string customerId, CancellationToken cancellationToken = default)
+    {
+        if (await AccountOfContactAsync(contactId, cancellationToken) is { } accountId)
+        {
+            return accountId;
+        }
+
+        if (string.IsNullOrEmpty(customerId))
+        {
+            return null;
+        }
+
+        foreach (var members in _members)
+        {
+            if (await members.FindAccountAsync(customerId, cancellationToken) is { } account)
+            {
+                return account.ContentItemId;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Gets the address of an account's first location, kept by the Account Locations feature, or
+    /// <see langword="null"/>.
+    /// </summary>
+    /// <param name="accountId">The account.</param>
+    /// <param name="cancellationToken">A token to cancel the lookup.</param>
+    /// <returns>The address.</returns>
+    public async Task<Address> AccountAddressAsync(string accountId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(accountId))
+        {
+            return null;
+        }
+
+        var account = await _session.Query<ContentItem, ContentItemIndex>(index => index.ContentItemId == accountId && index.Latest).FirstOrDefaultAsync(cancellationToken);
+
+        if (account is null || !account.TryGet<AccountLocationsPart>(out var locations))
+        {
+            return null;
+        }
+
+        return locations.Locations?.FirstOrDefault(location => location.Address is not null)?.Address;
     }
 
     /// <summary>
@@ -62,6 +123,7 @@ public sealed class WorkOrderCustomers
             return null;
         }
 
+        // A contact is in its account's list, the way the Accounts module keeps an account's records.
         string accountId = contact.Content.ContainedPart?.ListContentItemId;
 
         return string.IsNullOrEmpty(accountId) ? null : accountId;

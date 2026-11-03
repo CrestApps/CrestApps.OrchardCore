@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Accounts;
 using CrestApps.OrchardCore.Assets.Core.Indexes;
 using CrestApps.OrchardCore.Assets.Drivers;
 using CrestApps.OrchardCore.Assets.Fleet;
@@ -6,13 +7,13 @@ using CrestApps.OrchardCore.Assets.Migrations;
 using CrestApps.OrchardCore.Assets.Navigation;
 using CrestApps.OrchardCore.Assets.Owners;
 using CrestApps.OrchardCore.Assets.Services;
+using CrestApps.OrchardCore.Assets.ViewModels;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
-using OrchardCore.ContentManagement.Display.ContentDisplay;
-using CrestApps.OrchardCore.Assets.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
@@ -109,14 +110,15 @@ public sealed class FleetInventoryStartup : StartupBase
 }
 
 /// <summary>
-/// Lets CRM accounts, the companies and households of the CRM, own assets.
+/// Lets accounts, the organizations of the Accounts module, own assets, and shows an account's assets on its page.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Omnichannel.Crm")]
+[RequireFeatures(AccountsConstants.Feature)]
 public sealed class AccountOwnersStartup : StartupBase
 {
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAssetOwnerSource, AccountAssetOwnerSource>());
+        services.AddScoped<IContentDisplayDriver, AccountAssetsDisplayDriver>();
     }
 }

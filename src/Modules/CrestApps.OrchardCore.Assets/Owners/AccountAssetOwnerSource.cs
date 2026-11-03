@@ -1,8 +1,7 @@
+using CrestApps.OrchardCore.Accounts.Services;
 using CrestApps.OrchardCore.Assets.Models;
 using CrestApps.OrchardCore.Assets.Services;
-using CrestApps.OrchardCore.Omnichannel.Core;
 using OrchardCore.ContentManagement;
-using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Records;
 using YesSql;
 using YesSql.Services;
@@ -11,17 +10,17 @@ using ISession = YesSql.ISession;
 namespace CrestApps.OrchardCore.Assets.Owners;
 
 /// <summary>
-/// Finds CRM accounts, the companies and households of the CRM: content items of the types that carry the Account part.
+/// Finds accounts, the organizations of the Accounts module: content items of its account types.
 /// </summary>
 internal sealed class AccountAssetOwnerSource : IAssetOwnerSource
 {
     private readonly ISession _session;
-    private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly IAccountContentTypeProvider _accountTypes;
 
-    public AccountAssetOwnerSource(ISession session, IContentDefinitionManager contentDefinitionManager)
+    public AccountAssetOwnerSource(ISession session, IAccountContentTypeProvider accountTypes)
     {
         _session = session;
-        _contentDefinitionManager = contentDefinitionManager;
+        _accountTypes = accountTypes;
     }
 
     public AssetOwnerKind Kind
@@ -29,10 +28,7 @@ internal sealed class AccountAssetOwnerSource : IAssetOwnerSource
 
     public async Task<IReadOnlyList<AssetOwnerOption>> SearchAsync(string query, int count, CancellationToken cancellationToken = default)
     {
-        var types = (await _contentDefinitionManager.ListTypeDefinitionsAsync())
-            .Where(type => type.Parts.Any(part => part.PartDefinition.Name == OmnichannelConstants.ContentParts.Account))
-            .Select(type => type.Name)
-            .ToArray();
+        var types = (await _accountTypes.GetAccountTypesAsync()).Select(type => type.Name).ToArray();
 
         if (types.Length == 0)
         {

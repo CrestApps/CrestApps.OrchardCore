@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Accounts.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
@@ -15,9 +16,37 @@ using ISession = YesSql.ISession;
 namespace CrestApps.OrchardCore.WorkOrders.Integrations;
 
 /// <summary>
-/// Shows a CRM contact's or account's latest work orders on its page, with a button to start one for it.
+/// Shows a CRM contact's latest work orders on its page, with a button to start one for it.
 /// </summary>
-internal sealed class ContactWorkOrdersDisplayDriver : ContentDisplayDriver
+internal sealed class ContactWorkOrdersDisplayDriver : OwnerWorkOrdersDisplayDriver
+{
+    public ContactWorkOrdersDisplayDriver(ISession session, WorkOrderSettingManager<WorkOrderType> types, IAuthorizationService authorizationService, IHttpContextAccessor httpContextAccessor)
+        : base(session, types, authorizationService, httpContextAccessor, false)
+    {
+    }
+
+    public override bool CanHandleModel(ContentItem contentItem)
+        => contentItem.Has<OmnichannelContactPart>();
+}
+
+/// <summary>
+/// Shows an account's latest work orders on its page, with a button to start one for it.
+/// </summary>
+internal sealed class AccountWorkOrdersDisplayDriver : OwnerWorkOrdersDisplayDriver
+{
+    public AccountWorkOrdersDisplayDriver(ISession session, WorkOrderSettingManager<WorkOrderType> types, IAuthorizationService authorizationService, IHttpContextAccessor httpContextAccessor)
+        : base(session, types, authorizationService, httpContextAccessor, true)
+    {
+    }
+
+    public override bool CanHandleModel(ContentItem contentItem)
+        => contentItem.Has<AccountPart>();
+}
+
+/// <summary>
+/// Shows a contact's or an account's latest work orders on its page.
+/// </summary>
+internal abstract class OwnerWorkOrdersDisplayDriver : ContentDisplayDriver
 {
     private const int MaxRows = 10;
 
@@ -25,17 +54,16 @@ internal sealed class ContactWorkOrdersDisplayDriver : ContentDisplayDriver
     private readonly WorkOrderSettingManager<WorkOrderType> _types;
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly bool _isAccount;
 
-    public ContactWorkOrdersDisplayDriver(ISession session, WorkOrderSettingManager<WorkOrderType> types, IAuthorizationService authorizationService, IHttpContextAccessor httpContextAccessor)
+    protected OwnerWorkOrdersDisplayDriver(ISession session, WorkOrderSettingManager<WorkOrderType> types, IAuthorizationService authorizationService, IHttpContextAccessor httpContextAccessor, bool isAccount)
     {
         _session = session;
         _types = types;
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
+        _isAccount = isAccount;
     }
-
-    public override bool CanHandleModel(ContentItem contentItem)
-        => contentItem.Has<OmnichannelContactPart>() || contentItem.Has<AccountPart>();
 
     public override async Task<IDisplayResult> DisplayAsync(ContentItem contentItem, BuildDisplayContext context)
     {
@@ -51,7 +79,7 @@ internal sealed class ContactWorkOrdersDisplayDriver : ContentDisplayDriver
         return Initialize<ContactWorkOrdersViewModel>("ContactWorkOrders", async model =>
         {
             var id = contentItem.ContentItemId;
-            var isAccount = contentItem.Has<AccountPart>();
+            var isAccount = _isAccount;
             var query = isAccount
                 ? _session.Query<WorkOrder, WorkOrderIndex>(index => index.AccountId == id, collection: WorkOrdersConstants.CollectionName)
                 : _session.Query<WorkOrder, WorkOrderIndex>(index => index.ContactId == id, collection: WorkOrdersConstants.CollectionName);
@@ -63,7 +91,7 @@ internal sealed class ContactWorkOrdersDisplayDriver : ContentDisplayDriver
             model.Count = await query.CountAsync();
             model.WorkOrders = [.. await query.OrderByDescending(index => index.CreatedUtc).Take(MaxRows).ListAsync()];
             model.Types = canManage ? [.. (await _types.GetAllAsync()).OrderBy(type => type.Name, StringComparer.CurrentCultureIgnoreCase)] : [];
-        }).Location(OrchardCoreConstants.DisplayType.DetailAdmin, "Content:20");
+        }).Location(OrchardCoreConstants.DisplayType.DetailAdmin, "Content:21");
     }
 }
 

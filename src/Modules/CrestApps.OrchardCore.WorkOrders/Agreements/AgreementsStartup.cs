@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Accounts;
 using CrestApps.OrchardCore.WorkOrders.Agreements.Drivers;
 using CrestApps.OrchardCore.WorkOrders.Agreements.ViewModels;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
@@ -126,7 +127,7 @@ public sealed class AgreementsAdminMenu : AdminNavigationProvider
 /// Lists a CRM account's service agreements on its page.
 /// </summary>
 [Feature(WorkOrdersConstants.Features.Agreements)]
-[RequireFeatures("CrestApps.OrchardCore.Omnichannel.Managements")]
+[RequireFeatures(AccountsConstants.Feature)]
 public sealed class AccountAgreementsStartup : StartupBase
 {
     /// <inheritdoc/>

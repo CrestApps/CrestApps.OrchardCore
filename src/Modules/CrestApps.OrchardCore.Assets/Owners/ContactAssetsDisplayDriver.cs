@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Accounts.Models;
 using CrestApps.OrchardCore.Assets.Core.Indexes;
 using CrestApps.OrchardCore.Assets.Core.Services;
 using CrestApps.OrchardCore.Assets.Models;
@@ -15,9 +16,37 @@ using ISession = YesSql.ISession;
 namespace CrestApps.OrchardCore.Assets.Owners;
 
 /// <summary>
-/// Shows the assets a CRM contact or account owns on its page, with a button to add one for it.
+/// Shows the assets a CRM contact owns on its page, with a button to add one for it.
 /// </summary>
-internal sealed class ContactAssetsDisplayDriver : ContentDisplayDriver
+internal sealed class ContactAssetsDisplayDriver : OwnerAssetsDisplayDriver
+{
+    public ContactAssetsDisplayDriver(ISession session, AssetTypeManager types, IAuthorizationService authorizationService, IHttpContextAccessor httpContextAccessor)
+        : base(session, types, authorizationService, httpContextAccessor, AssetOwnerKind.Contact, "Content:22")
+    {
+    }
+
+    public override bool CanHandleModel(ContentItem contentItem)
+        => contentItem.Has<OmnichannelContactPart>();
+}
+
+/// <summary>
+/// Shows the assets an account owns on its page, with a button to add one for it.
+/// </summary>
+internal sealed class AccountAssetsDisplayDriver : OwnerAssetsDisplayDriver
+{
+    public AccountAssetsDisplayDriver(ISession session, AssetTypeManager types, IAuthorizationService authorizationService, IHttpContextAccessor httpContextAccessor)
+        : base(session, types, authorizationService, httpContextAccessor, AssetOwnerKind.Account, "Content:22")
+    {
+    }
+
+    public override bool CanHandleModel(ContentItem contentItem)
+        => contentItem.Has<AccountPart>();
+}
+
+/// <summary>
+/// Shows the assets a contact or an account owns on its page.
+/// </summary>
+internal abstract class OwnerAssetsDisplayDriver : ContentDisplayDriver
 {
     private const int MaxRows = 10;
 
@@ -25,17 +54,18 @@ internal sealed class ContactAssetsDisplayDriver : ContentDisplayDriver
     private readonly AssetTypeManager _types;
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly AssetOwnerKind _ownerKind;
+    private readonly string _location;
 
-    public ContactAssetsDisplayDriver(ISession session, AssetTypeManager types, IAuthorizationService authorizationService, IHttpContextAccessor httpContextAccessor)
+    protected OwnerAssetsDisplayDriver(ISession session, AssetTypeManager types, IAuthorizationService authorizationService, IHttpContextAccessor httpContextAccessor, AssetOwnerKind ownerKind, string location)
     {
         _session = session;
         _types = types;
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
+        _ownerKind = ownerKind;
+        _location = location;
     }
-
-    public override bool CanHandleModel(ContentItem contentItem)
-        => contentItem.Has<OmnichannelContactPart>() || contentItem.Has<AccountPart>();
 
     public override async Task<IDisplayResult> DisplayAsync(ContentItem contentItem, BuildDisplayContext context)
     {
@@ -50,7 +80,7 @@ internal sealed class ContactAssetsDisplayDriver : ContentDisplayDriver
 
         return Initialize<ContactAssetsViewModel>("ContactAssets", async model =>
         {
-            var ownerKind = contentItem.Has<AccountPart>() ? AssetOwnerKind.Account : AssetOwnerKind.Contact;
+            var ownerKind = _ownerKind;
             var kind = ownerKind.ToString();
             var contactId = contentItem.ContentItemId;
             var query = _session.Query<Asset, AssetIndex>(index => index.OwnerKind == kind && index.OwnerId == contactId, collection: AssetsConstants.CollectionName);
@@ -62,7 +92,7 @@ internal sealed class ContactAssetsDisplayDriver : ContentDisplayDriver
             model.Assets = [.. await query.OrderBy(index => index.Name).Take(MaxRows).ListAsync()];
             model.TypeNames = types.ToDictionary(type => type.ItemId, type => type.Name, StringComparer.Ordinal);
             model.CanManage = canManage;
-        }).Location(OrchardCoreConstants.DisplayType.DetailAdmin, "Content:21");
+        }).Location(OrchardCoreConstants.DisplayType.DetailAdmin, _location);
     }
 }
 

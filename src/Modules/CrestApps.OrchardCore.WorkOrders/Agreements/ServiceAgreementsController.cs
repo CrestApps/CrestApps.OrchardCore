@@ -235,6 +235,7 @@ public sealed class ServiceAgreementsController : Controller
         {
             agreement.TimeZoneId = (await _siteService.GetSiteSettingsAsync()).TimeZoneId;
             agreement.AccountId = string.IsNullOrWhiteSpace(accountId) ? null : accountId.Trim();
+            agreement.ServiceAddress ??= await HttpContext.RequestServices.GetRequiredService<Integrations.WorkOrderCustomers>().AccountAddressAsync(agreement.AccountId, HttpContext.RequestAborted);
         }
 
         var address = agreement.ServiceAddress;
@@ -317,6 +318,10 @@ public sealed class ServiceAgreementsController : Controller
         agreement.Status = form.Status;
         agreement.CustomerId = Clean(form.CustomerId);
         agreement.AccountId = Clean(form.AccountId);
+
+        var customers = HttpContext.RequestServices.GetRequiredService<Integrations.WorkOrderCustomers>();
+
+        agreement.AccountId ??= await customers.AccountOfAsync(null, agreement.CustomerId, HttpContext.RequestAborted);
         agreement.Contact = new WorkOrderContact { Name = Clean(form.ContactName), Phone = Clean(form.ContactPhone), Email = Clean(form.ContactEmail) };
         agreement.AccessNotes = Clean(form.AccessNotes);
         agreement.AssetIds = [.. (form.AssetIds ?? []).Where(assetId => !string.IsNullOrEmpty(assetId)).Distinct(StringComparer.Ordinal)];
@@ -339,6 +344,9 @@ public sealed class ServiceAgreementsController : Controller
                 ? null
                 : new Address { AddressLine1 = Clean(form.AddressLine1), City = Clean(form.City), Region = Clean(form.Region), PostalCode = Clean(form.PostalCode), Country = Clean(form.Country) };
         }
+
+        // With no address typed, the visits are at the account's location.
+        agreement.ServiceAddress ??= await customers.AccountAddressAsync(agreement.AccountId, HttpContext.RequestAborted);
 
         agreement.Schedules = [.. (form.Schedules ?? []).Where(row => !string.IsNullOrEmpty(row.TypeId) || !string.IsNullOrWhiteSpace(row.Name)).Select(row => new AgreementSchedule
         {

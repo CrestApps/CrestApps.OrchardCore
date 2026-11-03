@@ -142,7 +142,7 @@
                         {
                             id = $"agreement-{kind.ToLowerInvariant()}",
                             inputName = field,
-                            endpoint = Url.Content($"~/Admin/api/crestapps/work-orders/customers/search?kind={kind}"),
+                            endpoint = kind == "Account" ? Url.RouteUrl(CrestApps.OrchardCore.Accounts.AccountsConstants.RouteNames.Search) : Url.Content($"~/Admin/api/crestapps/work-orders/customers/search?kind={kind}"),
                             initialItemsJson = initial,
                             multiple = false,
                             enableSearch = true,
