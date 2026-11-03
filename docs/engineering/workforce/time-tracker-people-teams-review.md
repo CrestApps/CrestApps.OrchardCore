@@ -106,7 +106,7 @@ Every module in the plan exports and imports its configuration and master data, 
 
 Transactional records stay where they happened: work orders, visits, meter readings, punches, timesheets, attendance exceptions, time-off requests and ledgers, and Contact Center states. They carry running numbers, service-level clocks and payroll history that a copy on another site would break or duplicate; moving them is a data migration, not a deployment.
 
-None of these modules reads options from appsettings yet, so none has a `ConfigurationSchema.json`; one is added with the first such option.
+None of these modules read options from appsettings until C8; Dispatch's technician app (`CrestApps:Dispatch:Mobile`) is the first, and the module describes it in its `ConfigurationSchema.json`.
 
 ## 6. Consistency rules from review
 

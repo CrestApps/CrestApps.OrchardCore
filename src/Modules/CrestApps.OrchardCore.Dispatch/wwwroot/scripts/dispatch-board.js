@@ -26,6 +26,7 @@
 		let data = null;
 		let map = null;
 		let markerLayer = null;
+		let positionLayer = null;
 		let reloadTimer = null;
 		const format = (text, ...values) => values.reduce((result, value, index) => result.replace(`{${index}}`, value), text || "");
 		const element = (tag, className, text) => {
@@ -385,6 +386,18 @@
 				label: `<a href="${visit.url}">${visit.number}</a> ${(visit.summary || "").replace(/[<>&]/g, "")}<br>${visit.start ? `${visit.start}–${visit.end}` : texts.unscheduled}`
 			}));
 			markerLayer = crestappsMap.addMarkers(map, markers, { fit: first });
+			if (positionLayer) map.removeLayer(positionLayer);
+			positionLayer = L.layerGroup((data.positions || []).map((position) => L.circleMarker([position.latitude, position.longitude], {
+				radius: 8,
+				color: "#fff",
+				weight: 2,
+				fillColor: "#0c8599",
+				fillOpacity: .95
+			}).bindTooltip(format(texts.position || "{0} at {1}", position.name || "", position.time)))).addTo(map);
+			if (first && markers.length === 0 && positionLayer.getLayers().length > 0) map.fitBounds(L.featureGroup(positionLayer.getLayers()).getBounds(), {
+				maxZoom: 13,
+				padding: [30, 30]
+			});
 		};
 		const render = () => {
 			if (title) title.textContent = `${data.title} · ${data.zone}`;

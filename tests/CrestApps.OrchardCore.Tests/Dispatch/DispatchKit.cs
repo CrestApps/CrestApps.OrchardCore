@@ -53,6 +53,8 @@ internal sealed class DispatchKit : IAsyncDisposable
 
     public List<DispatchEquipment> Equipment { get; } = [];
 
+    public MemoryFieldFileStore Files { get; } = new();
+
     public WorkforceTeam Team { get; private set; }
 
     public WorkOrderType Type { get; private set; }
@@ -117,6 +119,8 @@ internal sealed class DispatchKit : IAsyncDisposable
             {
                 services.AddWorkOrdersCore();
                 services.AddDispatchCore();
+                services.AddDispatchMobileCore();
+                services.AddSingleton<IFieldFileStore>(kit.Files);
                 services.TryAddScoped<ServiceTerritoryStore>();
                 services.AddSingleton(settings.Object);
                 services.AddSingleton(geo.Object);
@@ -140,12 +144,13 @@ internal sealed class DispatchKit : IAsyncDisposable
             {
                 await WorkOrdersIndexSchema.CreateAsync(schema);
                 await DispatchIndexSchema.CreateAsync(schema);
+                await FieldIndexSchema.CreateAsync(schema);
                 await GeoIndexSchema.CreateAsync(schema);
             },
             new IIndexProvider[]
             {
                 new WorkOrderIndexProvider(), new WorkOrderTypeIndexProvider(), new ChecklistTemplateIndexProvider(), new ServiceLevelPolicyIndexProvider(), new WorkOrderSubStatusIndexProvider(),
-                new ServiceVisitIndexProvider(),
+                new ServiceVisitIndexProvider(), new FieldCommandReceiptIndexProvider(), new WorkerLocationConsentIndexProvider(), new WorkerLocationPingIndexProvider(),
                 new ServiceTerritoryIndexProvider(), new GeocodeRequestIndexProvider(),
             },
             [WorkOrdersConstants.CollectionName, DispatchConstants.CollectionName, GeoConstants.CollectionName]);
@@ -263,4 +268,22 @@ internal sealed class DispatchKit : IAsyncDisposable
         => calendarEvent.TryGet<VisitEventData>(out var data) ? data.WorkerId : null;
 
     public ValueTask DisposeAsync() => Harness.DisposeAsync();
+}
+
+/// <summary>
+/// Keeps the technician app's photos and signatures in memory.
+/// </summary>
+internal sealed class MemoryFieldFileStore : IFieldFileStore
+{
+    public Dictionary<string, byte[]> Files { get; } = new(StringComparer.Ordinal);
+
+    public async Task<string> SaveAsync(string path, Stream content, CancellationToken cancellationToken = default)
+    {
+        using var copy = new MemoryStream();
+
+        await content.CopyToAsync(copy, cancellationToken);
+        Files[path] = copy.ToArray();
+
+        return path;
+    }
 }

@@ -434,3 +434,29 @@ public sealed class BoardMoveModel
     /// </summary>
     public DateTime StartUtc { get; set; }
 }
+
+/// <summary>
+/// The Field page of My Work.
+/// </summary>
+public class FieldViewModel
+{
+    /// <summary>
+    /// Gets or sets the portal's navigation.
+    /// </summary>
+    public Workforce.ViewModels.MyWorkNavViewModel Nav { get; set; }
+
+    /// <summary>
+    /// Gets or sets the worker, so the device keeps each worker's visits apart.
+    /// </summary>
+    public string WorkerId { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many days after today are kept offline.
+    /// </summary>
+    public int OfflineDays { get; set; }
+
+    /// <summary>
+    /// Gets or sets how long positions are kept, in days.
+    /// </summary>
+    public int RetentionDays { get; set; }
+}

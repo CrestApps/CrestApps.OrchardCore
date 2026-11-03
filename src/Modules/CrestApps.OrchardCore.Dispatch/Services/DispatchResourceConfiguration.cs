@@ -9,6 +9,10 @@ internal sealed class DispatchResourceConfiguration : IConfigureOptions<Resource
 
     public const string BoardStyle = "CrestApps.OrchardCore.Dispatch.Board";
 
+    public const string FieldScript = "CrestApps.OrchardCore.Dispatch.Field";
+
+    public const string FieldStyle = "CrestApps.OrchardCore.Dispatch.Field";
+
     private static readonly ResourceManifest _manifest;
 
     static DispatchResourceConfiguration()
@@ -28,6 +32,20 @@ internal sealed class DispatchResourceConfiguration : IConfigureOptions<Resource
             .SetUrl(
                 "~/CrestApps.OrchardCore.Dispatch/styles/dispatch-board.min.css",
                 "~/CrestApps.OrchardCore.Dispatch/styles/dispatch-board.css")
+            .SetVersion("1.0.0");
+
+        _manifest
+            .DefineScript(FieldScript)
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Dispatch/scripts/field-app.min.js",
+                "~/CrestApps.OrchardCore.Dispatch/scripts/field-app.js")
+            .SetVersion("1.0.0");
+
+        _manifest
+            .DefineStyle(FieldStyle)
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Dispatch/styles/field-app.min.css",
+                "~/CrestApps.OrchardCore.Dispatch/styles/field-app.css")
             .SetVersion("1.0.0");
     }
 

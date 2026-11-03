@@ -24,3 +24,16 @@ using OrchardCore.Modules.Manifest;
         GeoConstants.Features.Geo,
     ]
 )]
+
+[assembly: Feature(
+    Id = DispatchConstants.Features.Mobile,
+    Name = "Technician Mobile",
+    Description = "A Field page in My Work for technicians: today's visits offline, status, checklists, parts, notes, photos and the customer's signature, sent once back online; and the technician's position while working, with their consent.",
+    Category = "Field Service",
+    Dependencies =
+    [
+        DispatchConstants.Features.Dispatch,
+        WorkforceConstants.Features.Portal,
+        "OrchardCore.Media",
+    ]
+)]

@@ -31,6 +31,7 @@
     let data = null;
     let map = null;
     let markerLayer = null;
+    let positionLayer = null;
     let reloadTimer = null;
 
     const format = (text, ...values) => values.reduce((result, value, index) => result.replace(`{${index}}`, value), text || '');
@@ -535,6 +536,24 @@
             }));
 
         markerLayer = crestappsMap.addMarkers(map, markers, { fit: first });
+
+        // Technicians who share their location, as dots apart from the visits.
+        if (positionLayer) {
+            map.removeLayer(positionLayer);
+        }
+
+        positionLayer = L.layerGroup((data.positions || []).map((position) => L.circleMarker([position.latitude, position.longitude], {
+            radius: 8,
+            color: '#fff',
+            weight: 2,
+            fillColor: '#0c8599',
+            fillOpacity: 0.95,
+        }).bindTooltip(format(texts.position || '{0} at {1}', position.name || '', position.time)))).addTo(map);
+
+        // With no visit on the map, the first view shows the technicians instead.
+        if (first && markers.length === 0 && positionLayer.getLayers().length > 0) {
+            map.fitBounds(L.featureGroup(positionLayer.getLayers()).getBounds(), { maxZoom: 13, padding: [30, 30] });
+        }
     };
 
     const render = () => {

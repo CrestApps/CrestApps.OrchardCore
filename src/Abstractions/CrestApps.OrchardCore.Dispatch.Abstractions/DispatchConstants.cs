@@ -44,7 +44,17 @@ public static class DispatchConstants
         /// Dispatch: visits, candidates, assignment and the board.
         /// </summary>
         public const string Dispatch = "CrestApps.OrchardCore.Dispatch";
+
+        /// <summary>
+        /// Technician Mobile: the field app in My Work, offline, with location sharing.
+        /// </summary>
+        public const string Mobile = "CrestApps.OrchardCore.Dispatch.Mobile";
     }
+
+    /// <summary>
+    /// The configuration section of the technician app's settings.
+    /// </summary>
+    public const string MobileConfigurationSection = "CrestApps:Dispatch:Mobile";
 
     /// <summary>
     /// The kinds of resources a visit is assigned to.

@@ -1,4 +1,5 @@
 @model WorkOrderDetailsViewModel
+@inject IServiceProvider Services
 
 @{
     var workOrder = Model.WorkOrder;
@@ -7,6 +8,11 @@
     var open = workOrder.Status is not (WorkOrderStatus.Completed or WorkOrderStatus.Closed or WorkOrderStatus.Canceled);
     var currency = Model.Type?.Currency ?? "USD";
     var address = workOrder.ServiceAddress;
+
+    // Photos and signatures are kept in the media library when Media is on.
+    var media = Services.GetService(typeof(OrchardCore.Media.IMediaFileStore)) as OrchardCore.Media.IMediaFileStore;
+    string FileUrl(string path) => media?.MapPathToPublicUrl(path) ?? path;
+    bool IsImage(string path) => path is not null && new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" }.Contains(System.IO.Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
 }
 
 <zone Name="Title"><breadcrumb name="WorkOrdersView" title="@T["{0} {1}", workOrder.Number, workOrder.Summary]" /></zone>
@@ -380,6 +386,35 @@
     </div></div>
 }
 
+@if (workOrder.Attachments.Count > 0 || Model.Type?.RequiredPhotos > 0)
+{
+    <div class="card mb-3"><div class="card-body">
+        <h2 class="h6">@T["Photos and documents"]@(Model.Type?.RequiredPhotos > 0 ? T[" ({0} photos needed)", Model.Type.RequiredPhotos] : null)</h2>
+        @if (workOrder.Attachments.Count == 0)
+        {
+            <p class="small text-muted mb-0">@T["None yet. Technicians add photos from the Field page of My Work."]</p>
+        }
+        else
+        {
+            <div class="d-flex flex-wrap gap-2">
+                @foreach (var path in workOrder.Attachments)
+                {
+                    <a href="@FileUrl(path)" target="_blank" rel="noopener" class="d-inline-block small text-break" style="max-width: 10rem">
+                        @if (IsImage(path))
+                        {
+                            <img src="@FileUrl(path)" alt="@System.IO.Path.GetFileName(path)" class="img-thumbnail" style="width: 10rem; height: 7.5rem; object-fit: cover" />
+                        }
+                        else
+                        {
+                            @System.IO.Path.GetFileName(path)
+                        }
+                    </a>
+                }
+            </div>
+        }
+    </div></div>
+}
+
 <div class="row g-3 mb-3">
     <div class="col-12 col-lg-6">
         <div class="card h-100"><div class="card-body">
@@ -393,7 +428,13 @@
                 <ul class="small">
                     @foreach (var signature in workOrder.Signatures)
                     {
-                        <li>@signature.Name, @await DisplayAsync(await New.DateTime(Utc: signature.Utc, Format: "g"))</li>
+                        <li>
+                            @signature.Name, @await DisplayAsync(await New.DateTime(Utc: signature.Utc, Format: "g"))
+                            @if (!string.IsNullOrEmpty(signature.ImagePath))
+                            {
+                                <div><img src="@FileUrl(signature.ImagePath)" alt="@T["Signature of {0}", signature.Name]" class="border rounded bg-white mt-1" style="max-width: 16rem; max-height: 6rem" /></div>
+                            }
+                        </li>
                     }
                 </ul>
             }

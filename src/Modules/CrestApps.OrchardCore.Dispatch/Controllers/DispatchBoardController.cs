@@ -12,6 +12,7 @@ using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Admin;
 using IClock = OrchardCore.Modules.IClock;
@@ -157,6 +158,26 @@ public sealed class DispatchBoardController : Controller
             queue.Add(await ToJsonAsync(visit, zone));
         }
 
+        // Where technicians are now, from the app, when they share it; only today's board shows them.
+        var positions = new List<object>();
+
+        if (HttpContext.RequestServices.GetService<IWorkerLocationService>() is { } locations && _clock.UtcNow >= fromUtc && _clock.UtcNow < toUtc)
+        {
+            var names = workers.ToDictionary(worker => worker.ItemId, worker => worker.DisplayName, StringComparer.Ordinal);
+
+            foreach (var ping in await locations.LatestAsync(names.Keys, _clock.UtcNow.AddMinutes(-30), HttpContext.RequestAborted))
+            {
+                positions.Add(new
+                {
+                    workerId = ping.WorkerId,
+                    name = names.GetValueOrDefault(ping.WorkerId),
+                    latitude = ping.Latitude,
+                    longitude = ping.Longitude,
+                    time = DispatchTimeZone.Format(ping.Utc, zone, "HH:mm"),
+                });
+            }
+        }
+
         return Json(new
         {
             day = date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
@@ -169,6 +190,7 @@ public sealed class DispatchBoardController : Controller
             rows,
             visits,
             unscheduled = queue,
+            positions,
         });
     }
 

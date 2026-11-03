@@ -15,6 +15,7 @@ The admin screens are described in the User Manual: [Dispatch](../user-manual/fi
 | Feature | Id | Depends on |
 | --- | --- | --- |
 | Dispatch | `CrestApps.OrchardCore.Dispatch` | Work Orders, Workforce, Geo |
+| Technician Mobile | `CrestApps.OrchardCore.Dispatch.Mobile` | Dispatch, Workforce My Work Portal, Media |
 
 It works with other features when they are on:
 
@@ -25,6 +26,7 @@ It works with other features when they are on:
 | Skills | Work order types can need skills (with a lowest level) and certifications; the candidate finder checks them on the day. |
 | Fleet (`CrestApps.OrchardCore.Assets.Fleet`) | Work order types can need equipment (asset types); assigning books a free one on its Equipment calendar. |
 | SMS (`OrchardCore.Sms`), Email (`OrchardCore.Email`) | Customer notices, by text when the contact has a phone, else by email. |
+| Inventory, with Technician Mobile | The technician app lists stock locations for parts used, the van the technician drives first (`IFieldStockSource`). |
 
 ## Records
 
@@ -83,6 +85,57 @@ Geo's territory page lists who serves a territory through `ITerritoryMemberSourc
 
 Each has `VisitId`, `Number`, `WorkOrderId`, `WorkOrderNumber`, `Status`, `LeadWorkerId`, `WorkerIds`, `StartUtc`, `EndUtc`, `ArrivalStartUtc` and `ArrivalEndUtc`.
 
+## Technician Mobile
+
+The **Technician Mobile** feature adds a **Field** page to My Work (`~/my-work/field`) that works offline.
+
+- **The pack.** The page keeps the technician's visits from today through `OfflineDays` on the device (IndexedDB), with each work order's address, contact, access notes, checklists and answers, lines, notes, signatures and photo count, the statuses a technician can move to, and the stock locations. Visits under way from the day before come too.
+- **The outbox.** Every change is applied to the pack at once and kept as a command with a key the device makes: a status, an answer, a note, parts used, a signature (a drawn image as a data URL, or a typed name) or a photo (made at most 1600 pixels on its long side, as JPEG, on the device). Commands are sent in order whenever the device is online: at once, then every 30 seconds, and when it reconnects. After each sync, the server's pack gets the commands still waiting applied on top, so the page never goes back.
+- **Once and in order.** `IFieldSyncService.ApplyAsync` applies each command once: a key it has seen comes back as `Duplicate` with the first result (from a `FieldCommandReceipt`), so sending the outbox again changes nothing.
+- **The server wins.** A command for a visit the technician is no longer on comes back `Rejected` with the code `moved`, and one for a canceled visit with `canceled`; the page shows the reason and the visit leaves the device with the next pack. Answers merge per question: an answer keeps the time it was given on the device, and one given later, on the site or the device, is kept (`stale`). Notes are added, and parts are added movements.
+- **Finishing.** Finish completes the work order first, so it is refused with the reason until its required answers, signature and photos are in.
+- **Files.** Photos and signatures go to the media library under `work-orders/{number}/`, named by the command's key, so sending one again writes the same file. The work order's page shows them.
+- **The page offline.** The My Work service worker keeps the last copy of each page listed in `MyWorkOfflineOptions.Pages` (Technician Mobile adds the Field page) with the scripts, styles, fonts and images it loaded, and shows it when there is no connection.
+
+### Location
+
+A technician shares their position only after agreeing to the notice the page shows (`WorkerLocationConsent`, with the notice's version and a history). The page sends it every `PingIntervalSeconds` while a visit is under way, or one is still to come today; the server keeps it only then, and never off shift. A position on the way to a visit refreshes its ETA. Today's dispatch board shows each technician's position from the last 30 minutes on its map. Withdrawing removes the technician's positions, and an hourly task removes positions after `LocationRetentionDays` and command records after `ReceiptRetentionDays`. Changing `ConsentNoticeVersion` asks everyone again.
+
+### Endpoints
+
+The page calls `my-work/field/api` with its sign-in and an antiforgery header (from `my-work/field/api/token`); other apps call the same endpoints under `api/dispatch/v1/mobile` with the API authentication scheme. The caller must have **Use the My Work portal** and be a worker; requests and answers are JSON with enum names as strings.
+
+| Endpoint | Does |
+| --- | --- |
+| `GET pack` | The caller's pack. |
+| `POST sync` | `{ "commands": [...] }`, oldest first; answers `{ "results": [...] }` with `key`, `visitId`, `outcome` (`Applied`, `Duplicate`, `Rejected`), `code` and `reason` for each. |
+| `POST consent` | `{ "given": true }` or `false`. |
+| `POST pings` | `{ "pings": [{ "utc", "latitude", "longitude", "accuracyMeters", "speed", "heading" }] }`; answers how many were kept and why the rest weren't. |
+
+### Configuration
+
+The settings are read from the `CrestApps:Dispatch:Mobile` section of the tenant's configuration and described in the module's `ConfigurationSchema.json`.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "Dispatch": {
+        "Mobile": {
+          "OfflineDays": 2,
+          "PingIntervalSeconds": 60,
+          "LocationRetentionDays": 30,
+          "ReceiptRetentionDays": 30,
+          "ConsentNoticeVersion": "1",
+          "MaxFileKilobytes": 4096,
+          "MaxCommandsPerSync": 200
+        }
+      }
+    }
+  }
+}
+```
+
 ## Extending
 
 - `IVisitObserver`: hear about visit events after they happen.
@@ -90,11 +143,13 @@ Each has `VisitId`, `Number`, `WorkOrderId`, `WorkOrderNumber`, `Status`, `LeadW
 - `IDispatchEquipmentService`: equipment from somewhere other than Fleet.
 - `IVisitNoticeSender`: another channel for customer notices.
 - `IDispatchSettingsProvider`: give the settings from somewhere else.
+- `IFieldFileStore`: keep the technician app's photos and signatures somewhere other than the media library.
+- `IFieldStockSource`: stock locations for parts used from somewhere other than Inventory.
 - `WorkOrderPanels` (Work Orders): a display driver for it adds a panel to the work order's page; Dispatch adds the visits.
 
 ## Recipes and deployment
 
-The **Dispatch settings** deployment step exports `DispatchSettings` through Orchard Core's Settings step. Visits aren't exported: they belong to the work orders of the site they were made on.
+The **Dispatch settings** deployment step exports `DispatchSettings` through Orchard Core's Settings step. Visits aren't exported: they belong to the work orders of the site they were made on. Neither are the technician app's command records, consent and positions, which are about one site's people and work.
 
 ## Permissions
 

@@ -10,5 +10,17 @@
     "name": "dispatch-board.css",
     "source": "Assets/css/dispatch-board.css",
     "dest": "wwwroot/styles/dispatch-board.css"
+  },
+  {
+    "action": "vite",
+    "name": "field-app.js",
+    "source": "Assets/js/field-app.js",
+    "dest": "wwwroot/scripts/field-app.js"
+  },
+  {
+    "action": "vite",
+    "name": "field-app.css",
+    "source": "Assets/css/field-app.css",
+    "dest": "wwwroot/styles/field-app.css"
   }
 ]

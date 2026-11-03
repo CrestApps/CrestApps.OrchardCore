@@ -65,6 +65,23 @@ On the visit's page, under **Move it along**, choose what happened: dispatched, 
 
 **Unschedule** takes a visit off its technicians; **Pin** keeps it where it is, so it isn't moved by mistake.
 
+## The technician's Field page
+
+With **Technician Mobile** on, technicians have a **Field** page in My Work, made for a phone. It shows their visits today and in the next two days, and keeps working without a connection, such as in a basement: everything they do is kept on the phone and sent once it is back online. The badge at the top says whether everything was sent, or how many changes are waiting.
+
+On a visit, technicians:
+
+- tap **On my way**, **Arrived**, **Pause** and **Finish the visit**, or **Can't finish** with the reason;
+- open **Directions** in the phone's maps app, or **Call** or **Text** the contact;
+- answer the checklists, record the parts they used and where from (their van first), and add notes;
+- take photos, and have the customer sign with a finger.
+
+**Finish the visit** completes the work order too, so it is refused with the reason until the required answers, the signature and the photos are in.
+
+If you give a visit to someone else while its technician is offline, their changes to it aren't kept: when their phone reconnects, they see that the visit was given to someone else, and it leaves their page.
+
+The first time, the page asks whether to share their location while they work. If they agree, their position is sent only while they have a visit under way or still to come that day, and shows as a dot on today's board, with the time. They can stop at any time, which removes the positions kept so far; positions are removed after 30 days anyway.
+
 ## Settings
 
 **Settings > Dispatch** has three cards. **Visits** sets whether new work orders get a visit, the arrival window, the minutes kept free between visits, how far ahead to look, the time zone, and how late a visit is before it is at risk. **Choosing technicians** sets whether only a territory's technicians are offered, how much each thing counts when they are ranked (a short trip, the soonest start, skill level, the preferred technician and an even workload), and how long the optimizer looks. **Customer notices** turns the notices and the tracking link on, sets the reminder hour, and holds the five texts.

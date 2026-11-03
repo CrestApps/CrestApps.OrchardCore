@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
@@ -795,18 +796,45 @@ public sealed class MyWorkController : Controller
         var home = Url.Content("~/my-work");
         var icon = Url.Content("~/CrestApps.OrchardCore.Workforce/portal/icon-192.png");
         var offline = System.Text.Json.JsonSerializer.Serialize(S["You're offline. My Work needs a connection; it will load again once you're back online."].Value);
+        var offlinePages = System.Text.Json.JsonSerializer.Serialize(HttpContext.RequestServices.GetService<IOptions<MyWorkOfflineOptions>>()?.Value.Pages.Select(page => Url.Content(page)).ToArray() ?? []);
+
+        // Pages that work offline are fetched from the network first and their last copy kept, with what they
+        // loaded; other pages show a message when offline.
         var script = $$"""
             const home = '{{home}}';
             const icon = '{{icon}}';
-            self.addEventListener('install', () => self.skipWaiting());
+            const offlinePages = {{offlinePages}};
+            const pageCache = 'my-work-pages-v1';
+            const assetCache = 'my-work-assets-v1';
+            const isOfflinePage = url => offlinePages.some(page => url.pathname === page || url.pathname.startsWith(page + '/'));
+            const offlineMessage = () => new Response(
+                '<!doctype html><meta name="viewport" content="width=device-width, initial-scale=1"><title>My Work</title><p style="font-family:system-ui;padding:2rem">' + {{offline}} + '</p>',
+                { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+            const networkFirst = (request, cacheName, fallback) => fetch(request).then(response => {
+                if (response.ok || response.type === 'opaque') {
+                    const copy = response.clone();
+                    caches.open(cacheName).then(cache => cache.put(request, copy));
+                }
+                return response;
+            }).catch(() => caches.match(request, { ignoreSearch: cacheName === pageCache }).then(hit => hit || fallback()));
+            self.addEventListener('install', event => {
+                self.skipWaiting();
+                event.waitUntil(caches.open(pageCache).then(cache => Promise.all(offlinePages.map(page => cache.add(page).catch(() => { })))));
+            });
             self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
             self.addEventListener('fetch', event => {
-                if (event.request.mode !== 'navigate') {
+                const request = event.request;
+                if (request.method !== 'GET') {
                     return;
                 }
-                event.respondWith(fetch(event.request).catch(() => new Response(
-                    '<!doctype html><meta name="viewport" content="width=device-width, initial-scale=1"><title>My Work</title><p style="font-family:system-ui;padding:2rem">' + {{offline}} + '</p>',
-                    { headers: { 'Content-Type': 'text/html; charset=utf-8' } })));
+                const url = new URL(request.url);
+                if (request.mode === 'navigate') {
+                    event.respondWith(isOfflinePage(url) ? networkFirst(request, pageCache, offlineMessage) : fetch(request).catch(offlineMessage));
+                    return;
+                }
+                if (offlinePages.length > 0 && ['script', 'style', 'font', 'image', 'manifest'].includes(request.destination)) {
+                    event.respondWith(networkFirst(request, assetCache, () => Response.error()));
+                }
             });
             self.addEventListener('push', event => {
                 let data = {};

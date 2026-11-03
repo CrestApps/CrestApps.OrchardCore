@@ -351,7 +351,21 @@ public sealed class WorkOrderService
     /// <param name="actor">Who.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The result.</returns>
-    public async Task<WorkOrderResult> AnswerAsync(string id, int checklistIndex, string questionId, string value, string actor, CancellationToken cancellationToken = default)
+    public Task<WorkOrderResult> AnswerAsync(string id, int checklistIndex, string questionId, string value, string actor, CancellationToken cancellationToken = default)
+        => AnswerAsync(id, checklistIndex, questionId, value, actor, null, cancellationToken);
+
+    /// <summary>
+    /// Answers a checklist question at the time it was given, such as on a device offline, checking the answer fits it.
+    /// </summary>
+    /// <param name="id">The work order.</param>
+    /// <param name="checklistIndex">The checklist, by position.</param>
+    /// <param name="questionId">The question.</param>
+    /// <param name="value">The answer.</param>
+    /// <param name="actor">Who.</param>
+    /// <param name="answeredUtc">When it was answered, never later than now; <see langword="null"/> for now.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The result.</returns>
+    public async Task<WorkOrderResult> AnswerAsync(string id, int checklistIndex, string questionId, string value, string actor, DateTime? answeredUtc, CancellationToken cancellationToken = default)
     {
         var workOrder = await _store.FindByIdAsync(id, cancellationToken);
         var checklist = workOrder is not null && checklistIndex >= 0 && checklistIndex < workOrder.Checklists.Count ? workOrder.Checklists[checklistIndex] : null;
@@ -373,7 +387,9 @@ public sealed class WorkOrderService
 
         if (value is not null)
         {
-            checklist.Answers.Add(new ChecklistAnswer { QuestionId = questionId, Value = value, Utc = _clock.UtcNow, By = actor });
+            var now = _clock.UtcNow;
+
+            checklist.Answers.Add(new ChecklistAnswer { QuestionId = questionId, Value = value, Utc = answeredUtc is { } at && at < now ? at : now, By = actor });
         }
 
         await _store.UpdateAsync(workOrder, cancellationToken);
@@ -407,6 +423,38 @@ public sealed class WorkOrderService
         workOrder.Signatures.Add(new WorkOrderSignature { Name = name.Trim(), ImagePath = string.IsNullOrWhiteSpace(imagePath) ? null : imagePath.Trim(), Utc = _clock.UtcNow });
         Note(workOrder, actor, S["Signed by {0}.", name.Trim()]);
         await _store.UpdateAsync(workOrder, cancellationToken);
+
+        return new WorkOrderResult { WorkOrder = workOrder };
+    }
+
+    /// <summary>
+    /// Adds a photo or document, such as one taken on the job.
+    /// </summary>
+    /// <param name="id">The work order.</param>
+    /// <param name="path">The file in the media library.</param>
+    /// <param name="actor">Who.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The result.</returns>
+    public async Task<WorkOrderResult> AttachAsync(string id, string path, string actor, CancellationToken cancellationToken = default)
+    {
+        var workOrder = await _store.FindByIdAsync(id, cancellationToken);
+
+        if (workOrder is null)
+        {
+            return WorkOrderResult.Fail(S["The work order doesn't exist."]);
+        }
+
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return WorkOrderResult.Fail(S["Choose the file."]);
+        }
+
+        if (!workOrder.Attachments.Contains(path.Trim(), StringComparer.OrdinalIgnoreCase))
+        {
+            workOrder.Attachments.Add(path.Trim());
+            Note(workOrder, actor, S["Added {0}.", Path.GetFileName(path.Trim())]);
+            await _store.UpdateAsync(workOrder, cancellationToken);
+        }
 
         return new WorkOrderResult { WorkOrder = workOrder };
     }

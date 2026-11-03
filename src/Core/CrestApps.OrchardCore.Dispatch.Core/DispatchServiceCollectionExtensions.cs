@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Dispatch;
 using CrestApps.OrchardCore.Dispatch.Core.Services;
+using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Services;
@@ -45,6 +46,24 @@ public static class DispatchServiceCollectionExtensions
         // A visit shows on each worker's team calendar as a job, which keeps them busy then.
         services.AddCalendarType(WorkforceConstants.CalendarType, type => type
             .AddEventType(DispatchConstants.JobEventType, LocalizationSource.Create("Job", _source), e => e.Color("#0c8599").Busy().IgnoresCapacity()));
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds the technician app's services: the field sync, location consent and positions, and their stores.
+    /// The dispatch services must be registered too.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection.</returns>
+    public static IServiceCollection AddDispatchMobileCore(this IServiceCollection services)
+    {
+        services.AddOptions<DispatchMobileOptions>();
+        services.TryAddScoped<FieldCommandReceiptStore>();
+        services.TryAddScoped<WorkerLocationConsentStore>();
+        services.TryAddScoped<WorkerLocationPingStore>();
+        services.TryAddScoped<IWorkerLocationService, WorkerLocationService>();
+        services.TryAddScoped<IFieldSyncService, FieldSyncService>();
 
         return services;
     }
