@@ -2,13 +2,18 @@ using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.Calendars.Core;
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
+using CrestApps.OrchardCore.WorkOrders;
 using CrestApps.OrchardCore.WorkOrders.Core;
+using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using YesSql;
+using YesSql.Services;
 using IClock = OrchardCore.Modules.IClock;
+using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Dispatch.Core.Services;
 
@@ -36,9 +41,14 @@ public sealed partial class FieldSyncService : IFieldSyncService
     private readonly IWorkerLocationService _locationService;
     private readonly FieldCommandReceiptStore _receipts;
     private readonly IEnumerable<IFieldStockSource> _stockSources;
+    private readonly IEnumerable<IFieldAssetSource> _assetSources;
     private readonly IEnumerable<IFieldFileStore> _fileStores;
+    private readonly ISession _session;
     private readonly DispatchMobileOptions _options;
     private readonly IClock _clock;
+
+    // The most earlier work orders shown for a work order's assets.
+    private const int MaxHistory = 5;
 
     internal readonly IStringLocalizer S;
 
@@ -66,7 +76,9 @@ public sealed partial class FieldSyncService : IFieldSyncService
         IWorkerLocationService locationService,
         FieldCommandReceiptStore receipts,
         IEnumerable<IFieldStockSource> stockSources,
+        IEnumerable<IFieldAssetSource> assetSources,
         IEnumerable<IFieldFileStore> fileStores,
+        ISession session,
         IOptions<DispatchMobileOptions> options,
         IClock clock,
         IStringLocalizer<FieldSyncService> stringLocalizer)
@@ -79,7 +91,9 @@ public sealed partial class FieldSyncService : IFieldSyncService
         _locationService = locationService;
         _receipts = receipts;
         _stockSources = stockSources;
+        _assetSources = assetSources;
         _fileStores = fileStores;
+        _session = session;
         _options = options.Value;
         _clock = clock;
         S = stringLocalizer;
@@ -168,14 +182,84 @@ public sealed partial class FieldSyncService : IFieldSyncService
             });
         }
 
+        var stockItemIds = pack.Visits.SelectMany(visit => visit.WorkOrder.Lines).Select(line => line.StockItemId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
+
         foreach (var source in _stockSources)
         {
-            pack.StockLocations.AddRange(await source.ListAsync(workerId, cancellationToken));
+            var locations = await source.ListAsync(workerId, cancellationToken);
+
+            // How many of the parts on the pack's lines each location has free, so the technician picks one that has them.
+            if (stockItemIds.Length > 0 && locations.Count > 0)
+            {
+                var available = await source.AvailableAsync([.. locations.Select(location => location.Id)], stockItemIds, cancellationToken);
+
+                foreach (var location in locations)
+                {
+                    if (available.TryGetValue(location.Id, out var units))
+                    {
+                        location.Available = units;
+                    }
+                }
+            }
+
+            pack.StockLocations.AddRange(locations);
         }
 
         pack.StockLocations = [.. pack.StockLocations.OrderByDescending(location => location.IsOwn)];
 
+        await AddAssetsAsync(pack, cancellationToken);
+
         return pack;
+    }
+
+    // The assets each work order is on, and the latest other work orders on them, so the technician sees what was
+    // done to the equipment before.
+    private async Task AddAssetsAsync(FieldPack pack, CancellationToken cancellationToken)
+    {
+        var workOrderIds = pack.Visits.Select(visit => visit.WorkOrder.Id).ToHashSet(StringComparer.Ordinal);
+        var assetIds = pack.Visits.SelectMany(visit => visit.WorkOrder.AssetIds).Distinct(StringComparer.Ordinal).ToArray();
+
+        if (assetIds.Length == 0)
+        {
+            return;
+        }
+
+        var assets = new Dictionary<string, FieldAsset>(StringComparer.Ordinal);
+
+        foreach (var source in _assetSources)
+        {
+            foreach (var asset in await source.GetAsync(assetIds, cancellationToken))
+            {
+                assets.TryAdd(asset.Id, asset);
+            }
+        }
+
+        var rows = await _session.QueryIndex<WorkOrderAssetIndex>(index => index.AssetId.IsIn(assetIds), collection: WorkOrdersConstants.CollectionName).ListAsync(cancellationToken);
+        var otherIds = rows.Select(row => row.WorkOrderId).Where(id => !workOrderIds.Contains(id)).Distinct(StringComparer.Ordinal).ToArray();
+        var others = otherIds.Length == 0
+            ? []
+            : (await _session.Query<WorkOrder, WorkOrderIndex>(index => index.ItemId.IsIn(otherIds), collection: WorkOrdersConstants.CollectionName)
+                .OrderByDescending(index => index.CreatedUtc)
+                .Take(MaxHistory * 20)
+                .ListAsync(cancellationToken)).ToList();
+
+        foreach (var visit in pack.Visits)
+        {
+            var mine = visit.WorkOrder.AssetIds;
+
+            visit.WorkOrder.Assets = [.. mine.Select(id => assets.GetValueOrDefault(id)).Where(asset => asset is not null)];
+            visit.WorkOrder.History = [.. others
+                .Where(other => other.AssetIds.Any(mine.Contains))
+                .Take(MaxHistory)
+                .Select(other => new FieldHistoryItem
+                {
+                    Number = other.Number,
+                    Summary = other.Summary,
+                    Status = other.Status,
+                    CreatedUtc = other.CreatedUtc,
+                    CompletedUtc = other.CompletedUtc,
+                })];
+        }
     }
 
     /// <inheritdoc/>
@@ -261,12 +345,31 @@ public sealed partial class FieldSyncService : IFieldSyncService
             FieldCommandKind.Note => (await _workOrderService.AddNoteAsync(visit.WorkOrderId, command.Text, actor, cancellationToken)).Errors,
             FieldCommandKind.Part => (await _workOrderService.UsePartAsync(visit.WorkOrderId, command.LineId, command.Quantity, command.LocationId, actor, cancellationToken)).Errors,
             FieldCommandKind.Signature or FieldCommandKind.Photo => await FileAsync(visit, command, actor, cancellationToken),
+            FieldCommandKind.FollowUp => await FollowUpAsync(visit, command, actor, cancellationToken),
             _ => [S["The change isn't known."]],
         };
 
         return errors.Count > 0
             ? Rejected(command, FieldRejections.Invalid, string.Join(" ", errors))
             : new FieldCommandResult { Key = command.Key, VisitId = command.VisitId, Outcome = FieldCommandOutcome.Applied };
+    }
+
+    // A follow-up is a new work order for the same customer, place and assets; the note on this one says so.
+    private async Task<IReadOnlyList<string>> FollowUpAsync(ServiceVisit visit, FieldCommand command, string actor, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(command.Text))
+        {
+            return [S["Say what the follow-up is for."]];
+        }
+
+        var result = await _workOrderService.FollowUpAsync(visit.WorkOrderId, command.Text, actor, cancellationToken);
+
+        if (result.Errors.Count > 0)
+        {
+            return result.Errors;
+        }
+
+        return (await _workOrderService.AddNoteAsync(visit.WorkOrderId, S["Follow-up {0}: {1}", result.WorkOrder.Number, result.WorkOrder.Summary], actor, cancellationToken)).Errors;
     }
 
     private async Task<IReadOnlyList<string>> StatusAsync(ServiceVisit visit, FieldCommand command, string actor, CancellationToken cancellationToken)
@@ -408,6 +511,7 @@ public sealed partial class FieldSyncService : IFieldSyncService
                 QuantityEstimated = line.QuantityEstimated,
                 QuantityUsed = line.QuantityUsed,
                 IsStocked = line.Kind == WorkOrderLineKind.Product && !string.IsNullOrEmpty(line.StockItemId),
+                StockItemId = line.Kind == WorkOrderLineKind.Product ? line.StockItemId : null,
             })],
             Checklists = workOrder.Checklists,
             Notes = workOrder.Notes,
@@ -415,6 +519,7 @@ public sealed partial class FieldSyncService : IFieldSyncService
             Photos = workOrder.Attachments.Count,
             RequiresSignature = type?.RequiresSignature == true,
             RequiredPhotos = type?.RequiredPhotos ?? 0,
+            AssetIds = [.. workOrder.AssetIds],
         };
     }
 

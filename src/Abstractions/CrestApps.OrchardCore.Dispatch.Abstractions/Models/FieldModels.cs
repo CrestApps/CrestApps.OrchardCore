@@ -37,6 +37,11 @@ public enum FieldCommandKind
     /// Adds a photo to the work order.
     /// </summary>
     Photo,
+
+    /// <summary>
+    /// Asks for a follow-up work order, with <see cref="FieldCommand.Text"/> as what it is for.
+    /// </summary>
+    FollowUp,
 }
 
 /// <summary>
@@ -445,6 +450,83 @@ public sealed class FieldWorkOrder
     /// Gets or sets how many photos it needs before it is completed.
     /// </summary>
     public int RequiredPhotos { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ids of the assets the work is on.
+    /// </summary>
+    public List<string> AssetIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the assets the work is on.
+    /// </summary>
+    public List<FieldAsset> Assets { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the latest other work orders on the same assets, newest first.
+    /// </summary>
+    public List<FieldHistoryItem> History { get; set; } = [];
+}
+
+/// <summary>
+/// An asset a work order is on, as the technician app shows it.
+/// </summary>
+public sealed class FieldAsset
+{
+    /// <summary>
+    /// Gets or sets the asset.
+    /// </summary>
+    public string Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets its number.
+    /// </summary>
+    public string Number { get; set; }
+
+    /// <summary>
+    /// Gets or sets its name.
+    /// </summary>
+    public string Name { get; set; }
+
+    /// <summary>
+    /// Gets or sets its serial number.
+    /// </summary>
+    public string SerialNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets its make and model.
+    /// </summary>
+    public string Model { get; set; }
+}
+
+/// <summary>
+/// An earlier work order on the same equipment, as the technician app shows it.
+/// </summary>
+public sealed class FieldHistoryItem
+{
+    /// <summary>
+    /// Gets or sets the work order's number.
+    /// </summary>
+    public string Number { get; set; }
+
+    /// <summary>
+    /// Gets or sets its summary.
+    /// </summary>
+    public string Summary { get; set; }
+
+    /// <summary>
+    /// Gets or sets its status.
+    /// </summary>
+    public WorkOrderStatus Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets when it was made.
+    /// </summary>
+    public DateTime CreatedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets when it was completed, if it was.
+    /// </summary>
+    public DateTime? CompletedUtc { get; set; }
 }
 
 /// <summary>
@@ -481,6 +563,11 @@ public sealed class FieldLine
     /// Gets or sets whether the parts are counted in stock, so a location is needed.
     /// </summary>
     public bool IsStocked { get; set; }
+
+    /// <summary>
+    /// Gets or sets the stock item the parts are counted as, when they are.
+    /// </summary>
+    public string StockItemId { get; set; }
 }
 
 /// <summary>
@@ -502,6 +589,11 @@ public sealed class FieldStockLocation
     /// Gets or sets whether it is the technician's own, such as the van they drive.
     /// </summary>
     public bool IsOwn { get; set; }
+
+    /// <summary>
+    /// Gets or sets the units it has free of the stock items the pack's lines use, by stock item.
+    /// </summary>
+    public Dictionary<string, int> Available { get; set; } = new(StringComparer.Ordinal);
 }
 
 /// <summary>

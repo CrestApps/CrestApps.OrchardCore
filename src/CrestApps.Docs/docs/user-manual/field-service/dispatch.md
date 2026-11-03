@@ -76,8 +76,10 @@ On a visit, technicians:
 
 - tap **On my way**, **Arrived**, **Pause** and **Finish the visit**, or **Can't finish** with the reason;
 - open **Directions** in the phone's maps app, or **Call** or **Text** the contact;
-- answer the checklists, record the parts they used and where from (their van first), and add notes;
-- take photos, and have the customer sign with a finger.
+- see the equipment the job is on, with the earlier work orders on it;
+- answer the checklists, record the parts they used and where from (their van first, with how many of each part it has free), and add notes;
+- take photos, and have the customer sign with a finger;
+- ask for a **Follow-up** when the job needs another visit, such as for a part to order: a new work order for the same customer, place and equipment, named in a note on this one.
 
 **Finish the visit** completes the work order too, so it is refused with the reason until the required answers, the signature and the photos are in.
 

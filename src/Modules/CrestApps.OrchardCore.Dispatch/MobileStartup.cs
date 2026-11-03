@@ -61,3 +61,17 @@ public sealed class MobileInventoryStartup : StartupBase
         services.AddScoped<IFieldStockSource, InventoryFieldStockSource>();
     }
 }
+
+/// <summary>
+/// Shows the assets of the technician's work orders, with their history, in the technician app.
+/// </summary>
+[Feature(DispatchConstants.Features.Mobile)]
+[RequireFeatures("CrestApps.OrchardCore.Assets")]
+public sealed class MobileAssetsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IFieldAssetSource, AssetsFieldAssetSource>();
+    }
+}

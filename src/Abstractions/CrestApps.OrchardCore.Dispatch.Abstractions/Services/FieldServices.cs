@@ -103,4 +103,29 @@ public interface IFieldStockSource
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The locations.</returns>
     Task<IReadOnlyList<FieldStockLocation>> ListAsync(string workerId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gives the units free of some stock items at some locations, as stock item id by location id. A source that
+    /// doesn't count stock gives none.
+    /// </summary>
+    /// <param name="locationIds">The locations.</param>
+    /// <param name="stockItemIds">The stock items.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The units free, by location and then stock item.</returns>
+    Task<IReadOnlyDictionary<string, Dictionary<string, int>>> AvailableAsync(IReadOnlyCollection<string> locationIds, IReadOnlyCollection<string> stockItemIds, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyDictionary<string, Dictionary<string, int>>>(new Dictionary<string, Dictionary<string, int>>());
+}
+
+/// <summary>
+/// Describes the assets of the work orders in a technician's pack, when assets are kept.
+/// </summary>
+public interface IFieldAssetSource
+{
+    /// <summary>
+    /// Gets the assets with the given ids. Ids that aren't found are left out.
+    /// </summary>
+    /// <param name="assetIds">The assets.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The assets.</returns>
+    Task<IReadOnlyList<FieldAsset>> GetAsync(IReadOnlyCollection<string> assetIds, CancellationToken cancellationToken = default);
 }

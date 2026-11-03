@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using Microsoft.Extensions.DependencyInjection;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Dispatch;
 
@@ -280,6 +281,41 @@ public sealed class FieldSyncTests
         // A week before, the visit is too far ahead to keep on the device.
         kit.Now = DispatchKit.Monday(7).AddDays(-7);
         Assert.Empty((await kit.Harness.RunAsync(services => services.GetRequiredService<IFieldSyncService>().GetPackAsync(ana.ItemId), commit: false)).Visits);
+    }
+
+    [Fact]
+    public async Task ThePack_ShowsEarlierWorkOnTheSameEquipment_AndAFollowUpIsMadeOnce()
+    {
+        await using var kit = await DispatchKit.CreateAsync();
+        var ana = await kit.AddTechnicianAsync("Ana Field");
+
+        await kit.PublishShiftsAsync(ana);
+        kit.Now = DispatchKit.Monday(7);
+
+        // The boiler was serviced last time; today it leaks.
+        var (earlier, _) = await kit.AddJobAsync("Annual service", DispatchKit.Depot, order => order.AssetIds = ["boiler"]);
+        var (today, visit) = await kit.AddJobAsync("Boiler leaking", DispatchKit.Depot, order => order.AssetIds = ["boiler"]);
+        await kit.AddJobAsync("Fit a thermostat", DispatchKit.Depot, order => order.AssetIds = ["thermostat"]);
+
+        Assert.True((await kit.AssignAsync(visit, DispatchKit.Monday(10), ana)).Succeeded);
+
+        var pack = await kit.Harness.RunAsync(services => services.GetRequiredService<IFieldSyncService>().GetPackAsync(ana.ItemId), commit: false);
+        var history = Assert.Single(pack.Visits).WorkOrder.History;
+
+        Assert.Equal([earlier.Number], history.Select(item => item.Number));
+        Assert.Equal(["boiler"], Assert.Single(pack.Visits).WorkOrder.AssetIds);
+
+        var followUp = new FieldCommand { Key = "f1", Kind = FieldCommandKind.FollowUp, VisitId = visit.ItemId, Utc = DispatchKit.Monday(10, 30), Text = "Fit the new pump" };
+        var results = await ApplyAsync(kit, ana, followUp, followUp, new FieldCommand { Key = "f2", Kind = FieldCommandKind.FollowUp, VisitId = visit.ItemId, Utc = DispatchKit.Monday(10, 31), Text = " " });
+        var made = await kit.Harness.RunAsync(async services => (await services.GetRequiredService<global::YesSql.ISession>()
+            .Query<WorkOrder, CrestApps.OrchardCore.WorkOrders.Core.Indexes.WorkOrderIndex>(index => index.Summary == "Fit the new pump", collection: CrestApps.OrchardCore.WorkOrders.WorkOrdersConstants.CollectionName)
+            .ListAsync()).ToList(), commit: false);
+        var created = Assert.Single(made);
+
+        Assert.Equal([FieldCommandOutcome.Applied, FieldCommandOutcome.Duplicate, FieldCommandOutcome.Rejected], results.Select(result => result.Outcome));
+        Assert.Equal(today.ItemId, created.ParentWorkOrderId);
+        Assert.Equal(["boiler"], created.AssetIds);
+        Assert.Contains((await kit.WorkOrderAsync(today.ItemId)).Notes, note => note.Text == $"Follow-up {created.Number}: Fit the new pump");
     }
 
     private static FieldCommand Status(string key, ServiceVisit visit, VisitStatus status)

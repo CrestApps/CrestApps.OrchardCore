@@ -109,6 +109,12 @@
 				month: "long"
 			}).format(new Date(utc));
 		};
+		const dateText = (utc) => new Intl.DateTimeFormat(document.documentElement.lang || void 0, {
+			timeZone: pack.timeZoneId,
+			day: "numeric",
+			month: "short",
+			year: "numeric"
+		}).format(new Date(utc));
 		const statusBadge = (status) => {
 			return element("span", "badge " + ({
 				EnRoute: "text-bg-info",
@@ -162,7 +168,14 @@
 				case "Signature":
 					workOrder.signedBy = (workOrder.signedBy || []).concat([command.name]);
 					break;
-				case "Photo": workOrder.photos++;
+				case "Photo":
+					workOrder.photos++;
+					break;
+				case "FollowUp": workOrder.notes = (workOrder.notes || []).concat([{
+					utc: command.utc,
+					by: target.workerName,
+					text: format(texts.followUpAsked, command.text)
+				}]);
 			}
 		};
 		const queue = async (command) => {
@@ -186,10 +199,10 @@
 				text = texts.syncing;
 				className += "text-bg-info";
 			} else if (!navigator.onLine) {
-				text = pending > 0 ? format(texts.offlinePending, pending) : texts.offline;
+				text = pending === 1 ? texts.offlinePendingOne : pending > 0 ? format(texts.offlinePending, pending) : texts.offline;
 				className += "text-bg-warning";
 			} else if (pending > 0) {
-				text = format(texts.pending, pending);
+				text = pending === 1 ? texts.pendingOne : format(texts.pending, pending);
 				className += "text-bg-warning";
 			} else {
 				text = pack ? format(texts.updated, timeText(pack.generatedUtc)) + " · " + texts.synced : texts.synced;
@@ -513,7 +526,8 @@
 					location.id = "part-location-" + line.id;
 					locationLabel.htmlFor = location.id;
 					pack.stockLocations.forEach((stock) => {
-						const option = element("option", null, stock.name);
+						const free = line.stockItemId && stock.available ? stock.available[line.stockItemId] : void 0;
+						const option = element("option", null, free === void 0 ? stock.name : format(texts.freeAt, stock.name, free));
 						option.value = stock.id;
 						location.append(option);
 					});
@@ -537,6 +551,54 @@
 				row.append(controls);
 				body.append(row);
 			});
+			parent.append(card);
+		};
+		const renderEquipment = (visit, parent) => {
+			const workOrder = visit.workOrder;
+			const assets = workOrder.assets || [];
+			const history = workOrder.history || [];
+			if (assets.length === 0 && history.length === 0) return;
+			const { card, body } = section(texts.equipment);
+			assets.forEach((asset) => {
+				const details = [
+					asset.number,
+					asset.model,
+					asset.serialNumber ? format(texts.serial, asset.serialNumber) : null
+				].filter(Boolean).join(" · ");
+				body.append(element("div", "fw-semibold", asset.name), element("div", "small text-muted mb-2", details));
+			});
+			body.append(element("div", "small fw-semibold mt-2 mb-1", texts.history));
+			if (history.length === 0) body.append(element("p", "small text-muted mb-0", texts.noHistory));
+			else {
+				const list = element("ul", "list-unstyled small mb-0");
+				history.forEach((item) => {
+					const when = item.completedUtc ? format(texts.completedOn, dateText(item.completedUtc)) : format(texts.openSince, dateText(item.createdUtc));
+					const entry = element("li", "mb-1");
+					entry.append(element("span", "fw-semibold me-1", item.number), document.createTextNode((item.summary || "") + " · " + when));
+					list.append(entry);
+				});
+				body.append(list);
+			}
+			parent.append(card);
+		};
+		const renderFollowUp = (visit, parent) => {
+			const { card, body } = section(texts.followUp);
+			const text = element("input", "form-control mb-2");
+			text.type = "text";
+			text.placeholder = texts.followUpPlaceholder;
+			text.setAttribute("aria-label", texts.followUpPlaceholder);
+			body.append(element("p", "small text-muted mb-2", texts.followUpHint), text, button("btn btn-outline-primary", texts.askFollowUp, () => {
+				const value = text.value.trim();
+				if (!value) {
+					text.classList.add("is-invalid");
+					return;
+				}
+				queue({
+					kind: "FollowUp",
+					visitId: visit.id,
+					text: value
+				});
+			}));
 			parent.append(card);
 		};
 		const renderNotes = (visit, parent) => {
@@ -704,11 +766,13 @@
 			if (visit.isLead && visit.workOrder) place.body.append(element("p", "mb-2 small text-muted", texts.lead));
 			place.body.append(links);
 			fragment.append(place.card);
+			renderEquipment(visit, fragment);
 			renderChecklists(visit, fragment);
 			renderParts(visit, fragment);
 			renderNotes(visit, fragment);
 			renderPhotos(visit, fragment);
 			renderSignature(visit, fragment);
+			renderFollowUp(visit, fragment);
 			view.replaceChildren(fragment);
 		};
 		const renderLocation = () => {

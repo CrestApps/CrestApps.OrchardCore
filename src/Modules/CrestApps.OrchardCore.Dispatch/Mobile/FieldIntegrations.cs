@@ -124,6 +124,69 @@ internal sealed class InventoryFieldStockSource : IFieldStockSource
 
         return result;
     }
+
+    public async Task<IReadOnlyDictionary<string, Dictionary<string, int>>> AvailableAsync(IReadOnlyCollection<string> locationIds, IReadOnlyCollection<string> stockItemIds, CancellationToken cancellationToken = default)
+    {
+        var result = locationIds.Distinct(StringComparer.Ordinal).ToDictionary(id => id, _ => new Dictionary<string, int>(StringComparer.Ordinal), StringComparer.Ordinal);
+
+        if (_serviceProvider.GetService<IStockItemStore>() is not { } items)
+        {
+            return result;
+        }
+
+        foreach (var stockItemId in stockItemIds.Distinct(StringComparer.Ordinal))
+        {
+            var item = await items.FindByIdAsync(stockItemId, cancellationToken);
+
+            if (item is null)
+            {
+                continue;
+            }
+
+            // A location with no level of the item has none of it.
+            foreach (var (locationId, units) in result)
+            {
+                units[stockItemId] = Math.Max(0, item.Levels.FirstOrDefault(level => level.LocationId == locationId)?.Available ?? 0);
+            }
+        }
+
+        return result;
+    }
+}
+
+/// <summary>
+/// Describes the assets of the technician's work orders, with Assets on.
+/// </summary>
+internal sealed class AssetsFieldAssetSource : IFieldAssetSource
+{
+    private readonly AssetManager _assets;
+
+    public AssetsFieldAssetSource(AssetManager assets)
+    {
+        _assets = assets;
+    }
+
+    public async Task<IReadOnlyList<FieldAsset>> GetAsync(IReadOnlyCollection<string> assetIds, CancellationToken cancellationToken = default)
+    {
+        var result = new List<FieldAsset>();
+
+        foreach (var id in assetIds.Distinct(StringComparer.Ordinal))
+        {
+            if (await _assets.FindByIdAsync(id, cancellationToken) is { } asset)
+            {
+                result.Add(new FieldAsset
+                {
+                    Id = asset.ItemId,
+                    Number = asset.Number,
+                    Name = asset.Name,
+                    SerialNumber = asset.SerialNumber,
+                    Model = string.Join(' ', new[] { asset.Manufacturer, asset.Model }.Where(part => !string.IsNullOrWhiteSpace(part))),
+                });
+            }
+        }
+
+        return result;
+    }
 }
 
 /// <summary>
