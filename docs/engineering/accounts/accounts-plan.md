@@ -2,13 +2,14 @@
 sidebar_label: "Accounts Plan"
 sidebar_position: 1
 title: Accounts — Project Plan
-description: Make the Account content item the one organization record, in its own Accounts module that CRM, Commerce and Field Service extend, and fold the Commerce B2B company into it.
+description: Make the Account content item the one organization record, in its own Accounts module that CRM, Commerce and Field Service extend, and rebuild Commerce B2B selling on it in place of the Companies module.
 ---
 
 # Accounts — Project Plan
 
-> **Status: proposed.** Written against `cbaf74596` (main). Nothing is built yet. Each step below is one commit on
-> `claude/accounts-module`, all in one PR.
+> **Status: approved, in progress.** Written against `cbaf74596` (main). Each step below is one commit on
+> `claude/accounts-module`, all in one PR. Revised on 2026-11-03: the Companies module is deleted rather than migrated
+> (see [Commerce: Accounts B2B](#commerce-accounts-b2b)).
 
 ## Goal
 
@@ -20,7 +21,7 @@ are two of them:
 - **Commerce company.** A `Company` catalog document in the `Companies` YesSql collection.
 
 After this plan there is one: the `Account` content item. It lives in a new **Accounts** module that any module
-extends with parts, settings and display-driver cards. Commerce's B2B data becomes a part on the account.
+extends with parts, settings and display-driver cards. Commerce's B2B selling becomes a part on the account, and the Companies module is deleted.
 
 ## What exists today
 
@@ -130,13 +131,18 @@ The Accounts module owns:
   is safe because Accounts runs first as a dependency.
 - **Moved:** CRM's activities and opportunities cards on the new account page, as `DetailAdmin` drivers.
 
-### Commerce: the B2B part
+### Commerce: Accounts B2B
 
-The Companies module stays. Its project name and its feature id `CrestApps.OrchardCore.Companies` are unchanged, so
-tenants that have it on keep it on. It becomes **B2B Accounts**: the Commerce extension of an account.
+**Revised 2026-11-03.** The Companies module was added to main only recently and has no users, so it is deleted
+outright. There is no company-to-account data migration, no compatibility layer, no obsolete aliases and no
+redirects. B2B selling is rebuilt as an extension of the account.
 
-- **Feature.** It gains a dependency on Accounts.
-- **Part.** `B2BAccountPart` (attachable, added to the `Account` type by migration) holds:
+- **Module.** A new module, `CrestApps.OrchardCore.Accounts.B2B`, with feature `CrestApps.OrchardCore.Accounts.B2B`
+  (category Commerce).
+  - It depends on Accounts, the Commerce area, Orders, Addresses and Transactions: the same dependencies Companies had,
+    plus Accounts.
+  - The Accounts module itself never references Commerce.
+- **Part.** `B2BAccountPart` (attachable, added to the `Account` type by the module's migration) holds:
   - `Enabled`, which means the account can order on account;
   - `TaxId` and `BillingEmail`;
   - `Buyers`: `UserId`, `UserName`, `Email`, `Role`, `OrderLimit`, and `ContactContentItemId`, which links the buyer to
@@ -146,76 +152,36 @@ tenants that have it on keep it on. It becomes **B2B Accounts**: the Commerce ex
 - **Account page cards.** Buyers, terms and recent orders, as `DetailAdmin` cards.
 - **Index.** `AccountBuyerIndex` (`AccountContentItemId`, `UserId`, `Published`, `Latest`), a map index on content
   items. `IAccountBuyerService.GetForUserAsync(userId)` answers "which account is this signed-in user ordering for". It
-  returns only a published account whose part is enabled, cached per request as today.
-- **Contact link.** When a buyer is saved, or a contact is added to the account, a buyer whose email matches a contact
-  in the account's list gets that contact's id. Matching is by email, case-insensitive, and only one contact may match.
-- **Price lists** stay catalog records. They move from `Companies` into a `PriceLists` collection, and they gain:
-  - an `IRecipeStep` `PriceLists`;
+  returns only a published account whose part is enabled, cached per request.
+- **Contact link.** When a buyer is saved, a buyer whose email matches one contact in the account's list gets that
+  contact's id. Matching is by email, case-insensitive, and only one contact may match.
+- **Price lists** stay catalog records, in a `PriceLists` collection. They gain:
+  - an `IRecipeStep` and recipe step `PriceLists`;
   - a deployment step;
   - recipe-schema entries.
-- **Services.** All of them switch from `ICompanyStore` to the account. This covers terms, checkout step, approvals,
-  payment gate, price provider, punchout, order handler, the storefront `account/company` page and the reports.
+- **Services.** All of them are ported from Companies to the account:
+  - terms tender, checkout step, approvals and budget, payment gate;
+  - price provider, punchout, order handler;
+  - the storefront page and the API;
+  - the Report Builder data source (`B2BAccounts`, `B2BBuyers`, `PriceLists`, `PriceListEntries`).
 - **Admin pages.**
-  - Commerce › Companies is retired. Its menu item becomes "B2B accounts", the account list filtered to accounts with
-    the part enabled.
-  - `Admin/companies` redirects there, and `Admin/companies/edit/{id}` redirects to the account editor.
-  - Price lists keep their admin pages.
-- **Permission.** `ManageCompanies` keeps its name, so role assignments survive, and is relabelled "Manage B2B
-  accounts".
-
-### Ids and references
-
-A migrated account keeps the company's id as its `ContentItemId`. Both are 26-character `IdGenerator` ids, so every
-stored reference is already correct:
-
-- `Order.CompanyId` and the `OrderIndex` rows;
-- the `"{companyId}:{sessionId}"` tender references;
-- punchout cookies and links (`punchout/oci/{companyId}`);
-- saved reports filtered by company.
-
-Nothing has to be rewritten. The renames are then about names, not data:
-
-| Today | After |
-|---|---|
-| `Order.CompanyId` | `Order.AccountId`. `CompanyId` stays an `[Obsolete]` alias that reads and writes `AccountId`, so stored orders deserialize unchanged and no order document is rewritten. |
-| `OrderIndex.CompanyId` | `OrderIndex.AccountId`. The migration adds the column, copies it with one `UPDATE`, adds `IDX_OrderIndex_AccountId`, and leaves the old column in place until a later release. |
-| `OrderQuery.CompanyId` | `OrderQuery.AccountId`. |
-| `ApiOrder.companyId`, `ApiCompany.id` | Add `accountId`. `companyId` stays in the JSON, with the same value, for one release. The routes `account/company` and `checkout/{id}/company` stay; they are headless client contracts. |
-| Report data sets `Companies`, `CompanyBuyers` | Same data-set names, so saved reports keep working, read from accounts. Display names become "B2B accounts" and "B2B buyers". The orders data set's field becomes `AccountId`, linked to the Accounts source, with `CompanyId` kept as a hidden alias. |
-| Transactions | No change: no company column exists. |
-
-### Data migration
-
-This is `CompanyMigrations.UpdateFrom1Async` in the B2B feature, which now depends on Accounts.
-
-1. **Make sure Accounts is on.** The new dependency loads the Accounts feature for a tenant that had CRM or Companies
-   on, but the shell descriptor doesn't list it. The CRM and Companies migrations therefore enable it through
-   `IShellFeaturesManager` when it is missing. The upgrade test checks that the type, the menu and the account page are
-   there afterwards.
-2. **Add the part.** Add `B2BAccountPart` to the `Account` type if it is missing.
-3. **Convert each company.** Read every `Company` document from the `Companies` collection. The `Company` class stays,
-   internal and marked legacy, only to read them. For each one:
-   - If no content item has `ContentItemId == company.ItemId`, create an `Account` with that id:
-     - Title = `Name`;
-     - `B2BAccountPart` from the company, with `Enabled = IsEnabled`;
-     - `Published`;
-     - owner = the admin who runs the upgrade, or empty.
-   - If that item exists and is an account, set its `B2BAccountPart` from the company only when the part is still
-     empty. A second run therefore changes nothing.
-   - If that id is taken by something that isn't an account, log it, skip it, and report it on the Accounts admin page
-     as "N companies could not be moved". This should never happen with generated ids, but it must not throw.
-   - Link buyers to contacts by email, as above.
-   - Work in batches of 50 with `SaveChangesAsync` between batches. The work is queued with `ShellScope.AddDeferredTask`
-     so it runs after the migration's own transaction, with the content handlers available.
-4. **Move price lists.** Copy each `PriceList` document from `Companies` to `PriceLists` under the same `ItemId`,
-   skipping ids that are already there.
-5. **Rename the order column.** Add `OrderIndex.AccountId` and backfill it, in the Orders migration.
-6. **Keep the old documents.** Companies and price lists in the `Companies` collection are left as they are, and so are
-   the `CompanyIndex` and `CompanyBuyerIndex` tables. A later release drops them. Nothing is deleted in this one, so a
-   bad upgrade can be retried or rolled back.
-
-Accounts that already exist in CRM are not merged with companies by name. Two records with the same name stay two
-accounts, and the admin merges them by hand. An automatic merge would change ids and need every reference rewritten.
+  - Commerce › B2B accounts is the content list of account types, filtered to accounts with the part enabled.
+  - Price lists keep their own admin pages, on AdminList.
+- **Permissions.** `ManageB2BAccounts` and `ManagePriceLists`, given to the Administrator stereotype.
+- **Names.** Every `Company` name goes:
+  - `Order.CompanyId` becomes `Order.AccountId`, and the same for `OrderIndex` and `OrderQuery`;
+  - `ApiOrder.companyId` becomes `accountId`;
+  - the API routes become `account/b2b` and `checkout/{id}/b2b`;
+  - the terms tender key becomes `account-terms`;
+  - the reports source becomes `B2BAccountSource`.
+- **Order index column.** An Orders migration step adds `AccountId` and its index, and drops `CompanyId` and its
+  index. Existing dev databases lose nothing that matters, since no company data is kept.
+- **Removed.**
+  - The `CrestApps.OrchardCore.Companies` project.
+  - Its Targets and test references.
+  - Its tests, which are rewritten against accounts.
+  - Its docs pages, which are replaced by `modules/accounts-b2b.md` and `user-manual/commerce/b2b-accounts.md`.
+  - The `Companies` YesSql collection.
 
 ### Public API baselines
 
@@ -229,8 +195,7 @@ accounts, and the admin merges them by hand. An automatic merge would change ids
 - **No type forwarding.** A forwarded type would have to keep the old namespace. The part's data is stored by part name
   and its settings by type name only, so the namespace change is safe for content. Code that compiles against
   `CrestApps.OrchardCore.Omnichannel.Core.Models.AccountPart` changes one `using`. That includes PR #1252.
-- **Companies.** Not in a governed family, so no baseline exists. Its public types change freely, and the docs record
-  the API changes.
+- **Accounts B2B.** Not compiled against by another project, so it is not governed and gets no baseline.
 
 ### Tests and checks (every step)
 
@@ -238,16 +203,10 @@ accounts, and the admin merges them by hand. An automatic merge would change ids
   - Accounts: child-type rules, list synchronizer, search endpoint (`{ value, text }`, permission check), part handler,
     picker.
   - B2B: buyer lookup (enabled, published, disabled, several accounts), contact matching, price provider, payment gate
-    and approvals, terms tender reference, punchout with an account id, `Order.CompanyId` alias deserialization.
-- **Migration tests.** These run against a real SQLite YesSql store, using the existing integration-test host:
-  - The database before the upgrade has CRM accounts with contacts, two companies with buyers, terms, a price list and
-    orders.
-  - After the upgrade:
-    - the accounts exist under the company ids;
-    - the old CRM accounts are untouched;
-    - the buyers are indexed;
-    - orders resolve through `AccountId`;
-    - price lists are in `PriceLists`.
+    and approvals, terms tender reference, punchout with an account id, price list recipe and deployment round trip.
+- **Upgrade tests.** These run against a real SQLite YesSql store:
+  - A database where CRM created the `Account` type, with accounts and contacts, upgrades with the type, the contents
+    and the list settings unchanged.
   - A second run makes no change.
   - A fresh install creates the type exactly once.
 - **Build and suites.**
@@ -258,13 +217,13 @@ accounts, and the admin merges them by hand. An automatic merge would change ids
 - **Browser pass.**
   - Two sites, both `admin` / `Password1!`:
     - a fresh local test site;
-    - a copy built on main with companies, then upgraded on this branch.
+    - a copy built on main with CRM accounts and contacts, then upgraded on this branch.
   - What it covers:
     - accounts;
     - contacts on an account;
     - the account page cards;
     - a B2B order as a buyer, with terms, approval and the price list;
-    - the upgraded data.
+    - the upgraded CRM accounts.
 
 ## Steps and commits
 
@@ -274,23 +233,18 @@ accounts, and the admin merges them by hand. An automatic merge would change ids
    what is missing, so both can be on together.
 3. **Omnichannel on Accounts.** References, feature dependency, removals, CRM `DetailAdmin` cards, baselines, the
    enable-on-upgrade step, docs and tests.
-4. **B2B accounts.**
-   - `B2BAccountPart`, `AccountBuyerIndex` and the services switched over.
-   - `Order.AccountId`, the API fields and the reports.
-   - The `PriceLists` collection, with its recipe and deployment steps.
-   - The data migration, the retired company pages and their redirects.
+4. **Accounts B2B.**
+   - The new module: `B2BAccountPart`, `AccountBuyerIndex` and the services ported from Companies.
+   - `Order.AccountId`, the API and the reports.
+   - Price lists with their recipe and deployment steps.
+   - The Companies module deleted.
    - Docs and tests.
 5. **Checks.** The suite, the baselines, the docs checks and the browser pass, with fixes for anything they find.
 
-## Decisions for review
+## Decisions
 
-These are the calls this plan makes. Each has an alternative.
-
-1. **Keep the Companies project and feature id as B2B Accounts** rather than retire it. A new module would leave every
-   tenant with a dead enabled feature and need a feature-swap migration.
-2. **Keep the company id as the account's `ContentItemId`** rather than mint new ids and rewrite orders, tender
-   references and punchout links.
-3. **No automatic merge** of a company into a CRM account with the same name.
-4. **Leave the old `Companies` documents and tables** for one release rather than delete them after the move.
-5. **Rename to `AccountId` with obsolete `CompanyId` aliases** in `Order`, the order index and the API, rather than keep
-   the `CompanyId` name forever.
+1. **Delete Companies** (revised 2026-11-03, by Mike): no data migration or compatibility layer, since the module was
+   new on main and has no users. B2B is a new `Accounts.B2B` module on the account.
+2. **Keep the Omnichannel account data in place**: the type and part keep their names. The Accounts migration only
+   creates what is missing, so existing CRM accounts upgrade with no step.
+3. **No type forwarding** for `AccountPart`; code that uses it changes one `using`.
