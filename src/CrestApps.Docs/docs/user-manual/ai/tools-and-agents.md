@@ -32,7 +32,7 @@ With the **Orchard Core AI Agent** feature on, the **Tools** section of the **Ca
 
 | Category | Examples |
 | --- | --- |
-| **Content Management** | Search, create, update, publish, unpublish, clone and delete content items |
+| **Content Management** | Search, create, update, publish, unpublish, clone and delete content items, and attach the conversation's documents to them |
 | **Content Definitions** | List and change content types and parts |
 | **Features Management** | List, search, enable and disable site features |
 | **Users Management** / **Roles Management** | Search users, get user and role information |

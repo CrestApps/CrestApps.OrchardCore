@@ -13,10 +13,12 @@ using CrestApps.OrchardCore.AI.Agent.System;
 using CrestApps.OrchardCore.AI.Agent.Tenants;
 using CrestApps.OrchardCore.AI.Agent.Users;
 using CrestApps.OrchardCore.AI.Agent.Workflows;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
+using OrchardCore.FileStorage;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Agent;
@@ -231,6 +233,7 @@ public sealed class ContentsStartup : StartupBase
     {
         services.TryAddScoped<IContentItemPayloadAssistanceService, DefaultContentItemPayloadAssistanceService>();
         services.TryAddScoped<ContentItemPreparationService>();
+        services.Replace(ServiceDescriptor.Scoped<IStoreCommitter, ContentManagerStoreCommitter>());
 
         services.AddCoreAITool<SearchForContentsTool>(SearchForContentsTool.TheName)
             .WithTitle(S["Search Content Items"])
@@ -284,6 +287,36 @@ public sealed class ContentsStartup : StartupBase
         services.AddCoreAITool<GetContentItemLinkTool>(GetContentItemLinkTool.TheName)
             .WithTitle(S["Retrieve a Link for a Content Item"])
             .WithDescription(S["Retrieves a link for a content item."])
+            .WithCategory(S["Content Management"])
+            .Selectable();
+    }
+}
+
+/// <summary>
+/// Registers the tool that attaches conversation documents to content items when Media and AI Documents are enabled.
+/// </summary>
+[RequireFeatures("OrchardCore.Contents", "OrchardCore.Media", "CrestApps.OrchardCore.AI.Documents")]
+public sealed class ContentDocumentsStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContentDocumentsStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public ContentDocumentsStartup(IStringLocalizer<ContentDocumentsStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        // Runs the registered IFileEventHandler implementations, such as an antivirus scanner, on files before they reach the media library.
+        services.TryAddTransient<FileCreationService>();
+
+        services.AddCoreAITool<AttachDocumentToContentItemTool>(AttachDocumentToContentItemTool.TheName)
+            .WithTitle(S["Attach Document to Content Item"])
+            .WithDescription(S["Attaches a document of the conversation, uploaded or generated, to a media field of a content item, such as an article or a knowledge base article."])
             .WithCategory(S["Content Management"])
             .Selectable();
     }

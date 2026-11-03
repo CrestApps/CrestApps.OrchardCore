@@ -103,6 +103,26 @@ With the **AI Quality** feature on, the admin AI agent can also look at QA resul
 | `createOrUpdateContentItem` | Creates a new content item or updates an existing one. Before calling it, call `getContentItemSchema` first whenever available, then call it once for the top-level item and include nested or contained items in the same payload. |
 | `getLinkForContentItem` | Retrieves a link for a content item. |
 
+### Content document tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Contents` + `OrchardCore.Media` + `CrestApps.OrchardCore.AI.Documents`
+
+| Function | Description |
+| --- | --- |
+| `attachDocumentToContentItem` | Attaches a document of the conversation, uploaded or generated, to a media field of an existing content item, such as an article or a knowledge base article. |
+
+`attachDocumentToContentItem` saves the document's file to the media library, in the `mediafields/{ContentType}/{ContentItemId}` folder that Orchard Core's **Attached** media field editor uses, and adds it to a `MediaField` of the item:
+
+- It attaches only documents of the current chat interaction, or of the current AI profile and chat session. A document id from anywhere else is refused.
+- When the conversation has several documents, or the content type has several media fields, and the model did not name one, it lists them so the model can ask which to use.
+- It refuses files the media library or the field does not accept (`MediaOptions.AllowedFileExtensions`, `MediaOptions.MaxFileSize` and the field's allowed extensions), and never overwrites a file already in the folder.
+- The file passes through Orchard Core's `FileCreationService` first, so a registered `IFileEventHandler`, such as an antivirus scanner, can refuse it. This matters for generated documents, which were never scanned as uploads are.
+- For a field that uses the **Attached** editor, it also records the document's original file name, which that editor shows.
+- A field that holds a single file and already has one is replaced only when the model passes `replaceExisting`. In a field that holds several files, the document is added after the existing ones unless `replaceExisting` is passed.
+- When `isDraft` is not passed, a published item is published again and an item with an unpublished draft stays a draft, so attaching a file never publishes someone's unfinished changes.
+
+Unlike the other content tools, this tool checks the person chatting itself: they need permission to edit the content item and to manage media (`ManageMediaContent`, plus `ManageAttachedMediaFieldsFolder` for the `mediafields` folder). When there is no caller, such as in a workflow or a background task, the checks are skipped. See [Tool permissions](#tool-permissions).
+
 `getOrchardCoreRecipeJsonSchema` should be called immediately before `importOrchardCoreRecipe` whenever recipe-backed JSON needs to be generated. Its response always describes the root recipe object with a `steps` array; when you request a specific step, the schema still lists every valid step name in `steps[].name` but only expands the selected step's payload contract. If you ask for an unknown step, the tool returns an error that includes the available step names so the request can be retried with a valid identifier.
 
 When `createOrUpdateContentItem` is available alongside recipe-backed content schema support, call `getContentItemSchema` immediately before it and request the parent content type plus any nested content types that will appear in the payload so the model can inspect the current content-item contract.

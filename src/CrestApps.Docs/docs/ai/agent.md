@@ -79,6 +79,7 @@ The agent module becomes more useful as you add Orchard features:
 - **Recipes** adds recipe-related tools
 - **Tenants** adds tenant-management tools
 - **Contents** and **Content Types** add content-management tools
+- **Media** and **AI Documents**, together with **Contents**, add a tool that attaches the conversation's documents to content items
 - **Workflows** adds workflow-related tools
 
 ## Shared framework documentation
