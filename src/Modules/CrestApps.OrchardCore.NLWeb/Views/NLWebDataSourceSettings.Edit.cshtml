@@ -1,0 +1,11 @@
+@model NLWebDataSourceSettingsViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="DataSourceId">
+    <label asp-for="DataSourceId" class="ocat-label">@T["AI data source"]</label>
+    <div class="ocat-end">
+        <select asp-for="DataSourceId" asp-items="Model.DataSources" class="form-select">
+            <option value="">@T["None"]</option>
+        </select>
+        <span class="hint">@T["An AI data source of content items whose vector index is also searched, so questions find content by meaning, not only by their words. When search indexes are also selected, the two lists of results are merged."]</span>
+    </div>
+</div>
