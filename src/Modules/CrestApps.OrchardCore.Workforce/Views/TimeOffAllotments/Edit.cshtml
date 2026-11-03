@@ -1,5 +1,7 @@
 @model TimeOffAllotmentEditViewModel
 
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 <zone Name="Title">
     <breadcrumb name="WorkforceTimeOffAllotmentsEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Allotment"] : T["Edit '{0}' Allotment", Model.Name])">
         <breadcrumb-item id="WorkforceTimeOffAllotments" action="Index" controller="TimeOffAllotments" area="CrestApps.OrchardCore.Workforce">@T["Time-Off Allotments"]</breadcrumb-item>
@@ -40,7 +42,7 @@
         <div class="ocat-wrapper">
             <label asp-for="TypeIds" class="ocat-label">@T["Time-off types"]</label>
             <div class="ocat-end">
-                <select asp-for="TypeIds" asp-items="Model.TypeOptions" class="form-select" multiple size="4"></select>
+                <select asp-for="TypeIds" asp-items="Model.TypeOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3"></select>
                 <span class="hint">@T["Leave empty for every type that takes a place in allotments."]</span>
             </div>
         </div>

@@ -9,6 +9,8 @@
     var startValue = visit.StartUtc is { } start ? CrestApps.OrchardCore.Calendars.Core.CalendarTime.ToLocal(start, zone).ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture) : Model.Day + "T09:00";
     var statusClass = visit.Status switch { VisitStatus.Unscheduled => "text-bg-warning", VisitStatus.Canceled or VisitStatus.Incomplete => "text-bg-secondary", VisitStatus.Completed => "text-bg-success", _ => "text-bg-primary" };
 }
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 
 <zone Name="Title"><breadcrumb name="DispatchVisit" title="@T["{0} {1}", visit.Number, visit.Summary]" /></zone>
 
@@ -265,13 +267,13 @@ else if (Model.CanManage && Model.NextStatuses.Count > 0)
             <input type="hidden" name="day" value="@Model.Day" />
             <div class="col-12 col-md">
                 <label for="assign-workers" class="form-label small">@T["Or choose who"]</label>
-                <select id="assign-workers" name="workerIds" class="form-select" multiple size="3">
+                <select id="assign-workers" name="workerIds" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3">
                     @foreach (var option in Model.WorkerOptions)
                     {
                         <option value="@option.Value" selected="@option.Selected">@option.Text</option>
                     }
                 </select>
-                <span class="hint">@T["The first one chosen leads. Hold Ctrl to choose more than one."]</span>
+                <span class="hint">@T["The first one chosen leads."]</span>
             </div>
             <div class="col-auto">
                 <label for="assign-start" class="form-label small">@T["Starting at ({0})", zone]</label>

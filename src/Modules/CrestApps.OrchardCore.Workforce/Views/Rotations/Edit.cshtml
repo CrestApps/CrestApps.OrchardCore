@@ -2,6 +2,8 @@
 @{
     var days = new[] { T["Mon"], T["Tue"], T["Wed"], T["Thu"], T["Fri"], T["Sat"], T["Sun"] };
 }
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 
 <zone Name="Title">
     <breadcrumb name="RotationsEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Rotation"] : T["Edit '{0}' Rotation", Model.Name])">
@@ -80,7 +82,7 @@
         <div class="ocat-wrapper">
             <label asp-for="WorkerIds" class="ocat-label">@T["Workers"]</label>
             <div class="ocat-end">
-                <select asp-for="WorkerIds" asp-items="Model.WorkerOptions" class="form-select" multiple size="8"></select>
+                <select asp-for="WorkerIds" asp-items="Model.WorkerOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3"></select>
                 @if (Model.Workers.Count > 0)
                 {
                     <ul class="list-unstyled small text-muted mt-2 mb-0">

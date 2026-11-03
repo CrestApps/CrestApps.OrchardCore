@@ -1,6 +1,8 @@
 @using CrestApps.OrchardCore.WorkOrders.Agreements.ViewModels
 @model ServiceAgreementEditViewModel
 
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 <zone Name="Title"><breadcrumb name="ServiceAgreementsEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["Add a Service Agreement"] : T["Edit {0}", Model.Number])" /></zone>
 
 <form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="no-multisubmit">
@@ -88,7 +90,7 @@
                                 @if (Model.AssetOptions.Count > 0)
                                 {
                                     <td>
-                                        <select asp-for="Schedules[i].AssetIds" class="form-select form-select-sm" multiple size="3" aria-label="@T["Assets"]">
+                                        <select asp-for="Schedules[i].AssetIds" class="selectpicker show-tick btn-group-sm" multiple aria-label="@T["Assets"]" data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3">
                                             @foreach (var asset in Model.AssetOptions)
                                             {
                                                 <option value="@asset.Value" selected="@schedule.AssetIds.Contains(asset.Value)">@asset.Text</option>
@@ -224,7 +226,7 @@
             <div class="ocat-wrapper">
                 <label asp-for="AssetIds" class="ocat-label">@T["Assets covered"]</label>
                 <div class="ocat-end">
-                    <select asp-for="AssetIds" asp-items="Model.AssetOptions" class="form-select" multiple size="5"></select>
+                    <select asp-for="AssetIds" asp-items="Model.AssetOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3"></select>
                 </div>
             </div>
             }

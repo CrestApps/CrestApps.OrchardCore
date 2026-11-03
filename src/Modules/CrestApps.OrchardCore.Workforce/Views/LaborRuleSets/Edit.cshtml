@@ -19,21 +19,21 @@
         <div class="ocat-wrapper">
             <label asp-for="TeamIds" class="ocat-label">@T["Teams"]</label>
             <div class="ocat-end">
-                <select asp-for="TeamIds" asp-items="Model.TeamOptions" class="form-select" multiple size="6"></select>
+                <select asp-for="TeamIds" asp-items="Model.TeamOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3"></select>
                 <span class="hint">@T["The set applies to these teams and the teams under them. A team's own set comes before its parent's."]</span>
             </div>
         </div>
         <div class="ocat-wrapper">
             <label asp-for="EmploymentTypes" class="ocat-label">@T["Employment types"]</label>
             <div class="ocat-end">
-                <select asp-for="EmploymentTypes" asp-items="Model.EmploymentOptions" class="form-select" multiple size="6"></select>
+                <select asp-for="EmploymentTypes" asp-items="Model.EmploymentOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3"></select>
                 <span class="hint">@T["Leave empty for everyone. Workers of other types get the next set up the team tree."]</span>
             </div>
         </div>
         <div class="ocat-wrapper">
             <label asp-for="WorkerIds" class="ocat-label">@T["Workers"]</label>
             <div class="ocat-end">
-                <select asp-for="WorkerIds" asp-items="Model.WorkerOptions" class="selectpicker form-select" multiple data-live-search="true" data-width="100%" data-style="btn-theme" data-selected-text-format="count > 3" data-none-selected-text="@T["Nobody on their own"]" data-live-search-placeholder="@T["Search workers"]"></select>
+                <select asp-for="WorkerIds" asp-items="Model.WorkerOptions" class="selectpicker show-tick" multiple data-live-search="true" data-width="100%" data-style="btn-theme" data-selected-text-format="count > 3" data-none-selected-text="@T["Nobody on their own"]" data-live-search-placeholder="@T["Search workers"]"></select>
                 <span class="hint">@T["Optional. Workers who follow this set on their own, before any set of their teams, such as a minor or someone under a special agreement."]</span>
             </div>
         </div>

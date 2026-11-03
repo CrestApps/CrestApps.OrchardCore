@@ -118,15 +118,23 @@
 			const minutes = Math.round(hours * 60 / snapMinutes) * snapMinutes;
 			return new Date(new Date(data.fromUtc).getTime() + minutes * 6e4).toISOString();
 		};
+		let draggedVisitId = null;
 		const makeDraggable = (node, visit) => {
 			if (!canManage || !visit.canMove) return;
 			node.draggable = true;
+			node.querySelectorAll("a").forEach((link) => {
+				link.draggable = false;
+			});
 			node.addEventListener("dragstart", (event) => {
+				draggedVisitId = visit.id;
 				event.dataTransfer.setData("text/plain", visit.id);
 				event.dataTransfer.effectAllowed = "move";
 				node.classList.add("db-dragging");
 			});
-			node.addEventListener("dragend", () => node.classList.remove("db-dragging"));
+			node.addEventListener("dragend", () => {
+				draggedVisitId = null;
+				node.classList.remove("db-dragging");
+			});
 		};
 		const renderHeader = () => {
 			const header = element("div", "db-row db-header");
@@ -193,7 +201,8 @@
 				track.addEventListener("drop", (event) => {
 					event.preventDefault();
 					track.classList.remove("db-drop");
-					const visitId = event.dataTransfer.getData("text/plain");
+					const visitId = draggedVisitId;
+					draggedVisitId = null;
 					if (visitId) move(visitId, row.id, startAt(track, event.clientX));
 				});
 			}

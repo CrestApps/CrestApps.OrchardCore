@@ -1,5 +1,7 @@
 @model TimeOffPolicyEditViewModel
 
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 <zone Name="Title">
     <breadcrumb name="WorkforceTimeOffPoliciesEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Time-Off Policy"] : T["Edit '{0}' Time-Off Policy", Model.Name])">
         <breadcrumb-item id="WorkforceTimeOffPolicies" action="Index" controller="TimeOffPolicies" area="CrestApps.OrchardCore.Workforce">@T["Time-Off Policies"]</breadcrumb-item>
@@ -93,7 +95,7 @@
         <div class="ocat-wrapper">
             <label asp-for="TeamIds" class="ocat-label">@T["Teams"]</label>
             <div class="ocat-end">
-                <select asp-for="TeamIds" asp-items="Model.TeamOptions" class="form-select" multiple size="6"></select>
+                <select asp-for="TeamIds" asp-items="Model.TeamOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3"></select>
                 <span class="hint">@T["The policy applies to these teams and the teams under them. A worker on several teams gets the nearest team's policy of each type."]</span>
             </div>
         </div>

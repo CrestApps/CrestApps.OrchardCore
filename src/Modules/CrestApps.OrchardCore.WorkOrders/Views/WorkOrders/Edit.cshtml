@@ -3,6 +3,8 @@
 @{
     var isNew = string.IsNullOrEmpty(Model.Id);
 }
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 
 <zone Name="Title"><breadcrumb name="@(isNew ? "WorkOrdersNew" : "WorkOrdersEdit")" title="@(isNew ? T["New Work Order: {0}", Model.TypeName] : T["Edit {0}", Model.Number])" /></zone>
 
@@ -194,7 +196,7 @@
                 <h2 class="h5 mt-4">@T["Assets"]</h2>
                 <div class="mb-3">
                     <label asp-for="AssetIds" class="form-label visually-hidden">@T["Assets"]</label>
-                    <select asp-for="AssetIds" asp-items="Model.AssetOptions" class="form-select" multiple size="5"></select>
+                    <select asp-for="AssetIds" asp-items="Model.AssetOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3"></select>
                     <span class="hint">@T["The equipment the job is on. The work order shows in each asset's history."]</span>
                 </div>
             }

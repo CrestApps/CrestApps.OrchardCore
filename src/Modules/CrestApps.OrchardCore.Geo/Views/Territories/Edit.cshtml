@@ -1,6 +1,8 @@
 @model TerritoryEditViewModel
 @using System.Text.Json
 
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 <zone Name="Title"><breadcrumb name="GeoTerritoriesEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["Add a Territory"] : T["Edit {0}", Model.Name])" /></zone>
 
 <style asp-name="leaflet-geoman"></style>
@@ -75,13 +77,12 @@
                 <div class="ocat-wrapper">
                     <label for="@id" class="ocat-label">@group.DisplayName</label>
                     <div class="ocat-end">
-                        <select id="@id" name="Members[@group.Kind]" class="form-select" multiple size="6">
+                        <select id="@id" name="Members[@group.Kind]" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3">
                             @foreach (var option in group.Options)
                             {
                                 <option value="@option.Value" selected="@option.Selected">@option.Text</option>
                             }
                         </select>
-                        <span class="hint">@T["Hold Ctrl to choose more than one."]</span>
                     </div>
                 </div>
                 }

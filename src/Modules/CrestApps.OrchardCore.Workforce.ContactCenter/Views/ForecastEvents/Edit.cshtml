@@ -1,5 +1,7 @@
 @model ForecastEventEditViewModel
 
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 <zone Name="Title"><breadcrumb name="WorkforceForecastEventsEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["Add a Forecast Event"] : T["Edit {0}", Model.Name])" /></zone>
 
 <form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="no-multisubmit">
@@ -52,7 +54,7 @@
             <div class="ocat-wrapper">
                 <label asp-for="PlanningGroupIds" class="ocat-label">@T["Planning groups"]</label>
                 <div class="ocat-end">
-                    <select asp-for="PlanningGroupIds" asp-items="Model.PlanningGroupOptions" class="form-select" multiple size="5"></select>
+                    <select asp-for="PlanningGroupIds" asp-items="Model.PlanningGroupOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3"></select>
                     <span class="hint">@T["Choose none for every planning group."]</span>
                 </div>
             </div>

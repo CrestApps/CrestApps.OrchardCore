@@ -1,5 +1,7 @@
 @model ShiftTemplateEditViewModel
 
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 <zone Name="Title">
     <breadcrumb name="ShiftTemplatesEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Shift Template"] : T["Edit '{0}' Shift Template", Model.Name])">
         <breadcrumb-item id="ShiftTemplates" action="Index" controller="ShiftTemplates" area="CrestApps.OrchardCore.Workforce">@T["Shift Templates"]</breadcrumb-item>
@@ -33,14 +35,14 @@
         <div class="ocat-wrapper">
             <label asp-for="TeamIds" class="ocat-label">@T["Teams"]</label>
             <div class="ocat-end">
-                <select asp-for="TeamIds" asp-items="Model.TeamOptions" class="form-select" multiple size="5"></select>
+                <select asp-for="TeamIds" asp-items="Model.TeamOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3"></select>
                 <span class="hint">@T["Leave empty for every team."]</span>
             </div>
         </div>
         <div class="ocat-wrapper">
             <label asp-for="RequiredSkillIds" class="ocat-label">@T["Skills needed"]</label>
             <div class="ocat-end">
-                <select asp-for="RequiredSkillIds" asp-items="Model.SkillOptions" class="form-select" multiple size="5"></select>
+                <select asp-for="RequiredSkillIds" asp-items="Model.SkillOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3"></select>
                 <span class="hint">@T["The skills a worker needs to work this shift."]</span>
             </div>
         </div>

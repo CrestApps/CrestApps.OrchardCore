@@ -18,7 +18,7 @@
             }
             else
             {
-                @await Component.InvokeAsync("UserPicker", new { name = Html.NameFor(m => m.UserId).ToString(), selectedValues = new[] { Model.UserId }, valueType = "userId", multiple = false, buttonText = T["Choose a user"].Value, searchPlaceholder = T["Search users"].Value, smallButton = false })
+                @await Component.InvokeAsync("UserPicker", new { name = Html.NameFor(m => m.UserId).ToString(), selectedValues = new[] { Model.UserId }, valueType = "userId", multiple = false, buttonText = T["Choose a user"].Value, searchPlaceholder = T["Search users"].Value, smallButton = false, required = true })
             }
         </div></div>
         <div class="ocat-wrapper"><label asp-for="CertificationId" class="ocat-label ocat-label-required">@T["Certification"]</label><div class="ocat-end"><select asp-for="CertificationId" asp-items="Model.CertificationOptions" class="form-select" style="max-width: 22rem"><option value="">@T["Choose a certification"]</option></select></div></div>

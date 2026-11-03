@@ -155,18 +155,29 @@
         return new Date(new Date(data.fromUtc).getTime() + minutes * 60000).toISOString();
     };
 
+    // The visit being dragged. A drop only moves a visit dragged from this board: the browser's own drag data can be
+    // replaced, such as by a link's address when the visit's number is grabbed, or come from another page.
+    let draggedVisitId = null;
+
     const makeDraggable = (node, visit) => {
         if (!canManage || !visit.canMove) {
             return;
         }
 
         node.draggable = true;
+        node.querySelectorAll('a').forEach((link) => {
+            link.draggable = false;
+        });
         node.addEventListener('dragstart', (event) => {
+            draggedVisitId = visit.id;
             event.dataTransfer.setData('text/plain', visit.id);
             event.dataTransfer.effectAllowed = 'move';
             node.classList.add('db-dragging');
         });
-        node.addEventListener('dragend', () => node.classList.remove('db-dragging'));
+        node.addEventListener('dragend', () => {
+            draggedVisitId = null;
+            node.classList.remove('db-dragging');
+        });
     };
 
     const renderHeader = () => {
@@ -260,7 +271,9 @@
                 event.preventDefault();
                 track.classList.remove('db-drop');
 
-                const visitId = event.dataTransfer.getData('text/plain');
+                const visitId = draggedVisitId;
+
+                draggedVisitId = null;
 
                 if (visitId) {
                     move(visitId, row.id, startAt(track, event.clientX));
