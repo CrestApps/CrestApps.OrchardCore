@@ -78,7 +78,9 @@ In **Workforce > Workers**, open a worker's **Actions** menu and choose **Time o
 
 The **Ledger** lists every change, newest first: opening balances, what was earned, taken, given back, carried over, expired or paid out, and corrections, with who made each change.
 
-With **Adjust time-off balances**, **Change a balance** adds an opening balance (such as one brought from another system), a correction, a carryover or a payout. A negative correction takes away; a payout always takes away. With **Manage time-off policies**, **Policies of their own** gives the worker a policy from and to a date, which replaces their teams' policy of that type.
+With **Adjust time-off balances**, **Change a balance** adds an opening balance (such as one brought from another system), a correction, a carryover, a grant or a payout. A negative correction takes away; a payout always takes away.
+
+A **grant with a last day** gives hours or days to use by a date, such as 40 hours of year-end bonus time to use by 30 December. Time off taken comes out of grants first, the one that ends soonest first, and only then out of the rest of the balance, oldest first. Canceled time off goes back to the grant. The balance shows what is left of each grant and its last day, and so does the worker's **Time off** page in My Work. The day after the last day, what is left of the grant expires, and a request for a later day can't count on it. With **Manage time-off policies**, **Policies of their own** gives the worker a policy from and to a date, which replaces their teams' policy of that type.
 
 ## Requesting time off
 

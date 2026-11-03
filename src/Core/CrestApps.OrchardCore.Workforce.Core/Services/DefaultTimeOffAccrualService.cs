@@ -1,3 +1,4 @@
+using CrestApps.Core;
 using CrestApps.OrchardCore.Workforce.Core.Indexes;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -85,6 +86,8 @@ internal sealed class DefaultTimeOffAccrualService : ITimeOffAccrualService
             entries += await RunForWorkerAsync(workerId, date, cancellationToken);
         }
 
+        entries += await ExpireGrantsAsync(date, cancellationToken);
+
         return new TimeOffAccrualRun(workerIds.Count, entries);
     }
 
@@ -138,5 +141,75 @@ internal sealed class DefaultTimeOffAccrualService : ITimeOffAccrualService
         {
             await TimeOffLocks.ReleaseAsync(lockers);
         }
+    }
+
+    /// <summary>
+    /// Expires what is left of each grant whose last day has passed, once. Grants that ended over a year ago were
+    /// handled by earlier runs.
+    /// </summary>
+    private async Task<int> ExpireGrantsAsync(DateOnly date, CancellationToken cancellationToken)
+    {
+        var since = date.AddDays(-400);
+        var due = (await _ledgerStore.ListGrantsAsync(cancellationToken))
+            .Where(grant => grant.ExpiresOn is { } last && last < date && last >= since)
+            .GroupBy(grant => (grant.WorkerId, grant.PolicyId));
+        var written = 0;
+
+        foreach (var group in due)
+        {
+            var lockers = await _locks.LockAsync([TimeOffLocks.Worker(group.Key.WorkerId)]);
+
+            if (lockers is null)
+            {
+                continue;
+            }
+
+            try
+            {
+                var ledger = await _ledgerStore.ListAsync(group.Key.WorkerId, group.Key.PolicyId, cancellationToken);
+                var lots = TimeOffGrants.Allocate(ledger);
+                var now = _clock.UtcNow;
+                var count = 0;
+
+                foreach (var grant in group)
+                {
+                    var key = "grant-expiry:" + grant.ItemId;
+                    var left = lots.FirstOrDefault(lot => lot.Entry.ItemId == grant.ItemId)?.Left ?? 0;
+
+                    if (left <= 0 || ledger.Any(entry => entry.IdempotencyKey == key))
+                    {
+                        continue;
+                    }
+
+                    await _ledgerStore.CreateAsync(new TimeOffLedgerEntry
+                    {
+                        ItemId = UniqueId.GenerateId(),
+                        WorkerId = grant.WorkerId,
+                        PolicyId = grant.PolicyId,
+                        Kind = TimeOffLedgerKind.Expiry,
+                        Amount = -left,
+                        EffectiveDate = grant.ExpiresOn.Value.AddDays(1),
+                        SourceRef = grant.ItemId,
+                        IdempotencyKey = key,
+                        Actor = "Grant expiry",
+                        Note = grant.Note,
+                        CreatedUtc = now,
+                    }, cancellationToken);
+                    count++;
+                }
+
+                if (count > 0)
+                {
+                    await _session.SaveChangesAsync(cancellationToken);
+                    written += count;
+                }
+            }
+            finally
+            {
+                await TimeOffLocks.ReleaseAsync(lockers);
+            }
+        }
+
+        return written;
     }
 }

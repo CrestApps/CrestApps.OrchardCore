@@ -34,6 +34,12 @@ public sealed class TimeOffLedgerEntry : CatalogItem
     public DateOnly EffectiveDate { get; set; }
 
     /// <summary>
+    /// Gets or sets the last day a <see cref="TimeOffLedgerKind.Grant"/> can be used; what is left of it expires the
+    /// day after.
+    /// </summary>
+    public DateOnly? ExpiresOn { get; set; }
+
+    /// <summary>
     /// Gets or sets what caused the change, such as a request id or an accrual period.
     /// </summary>
     public string SourceRef { get; set; }

@@ -12,7 +12,7 @@ namespace CrestApps.OrchardCore.Workforce.Core.Services;
 /// </summary>
 internal sealed class DefaultTimeOffBalanceService : ITimeOffBalanceService
 {
-    private static readonly TimeOffLedgerKind[] _manualKinds = [TimeOffLedgerKind.Opening, TimeOffLedgerKind.Adjustment, TimeOffLedgerKind.Payout, TimeOffLedgerKind.Carryover];
+    private static readonly TimeOffLedgerKind[] _manualKinds = [TimeOffLedgerKind.Opening, TimeOffLedgerKind.Adjustment, TimeOffLedgerKind.Payout, TimeOffLedgerKind.Carryover, TimeOffLedgerKind.Grant];
 
     private readonly WorkerStore _workerStore;
     private readonly TimeOffPolicyStore _policyStore;
@@ -111,10 +111,22 @@ internal sealed class DefaultTimeOffBalanceService : ITimeOffBalanceService
 
         if (!_manualKinds.Contains(adjustment.Kind))
         {
-            result.Fail(S["A balance can be changed by hand only with an opening balance, an adjustment, a carryover or a payout."]);
+            result.Fail(S["A balance can be changed by hand only with an opening balance, an adjustment, a carryover, a grant or a payout."]);
         }
 
-        if (adjustment.Amount == 0)
+        if (adjustment.Kind == TimeOffLedgerKind.Grant)
+        {
+            if (adjustment.Amount <= 0)
+            {
+                result.Fail(S["A grant adds hours or days; enter an amount above 0."]);
+            }
+
+            if (adjustment.ExpiresOn is not { } last || last < adjustment.EffectiveDate)
+            {
+                result.Fail(S["Give the grant the last day it can be used, on or after the day it starts."]);
+            }
+        }
+        else if (adjustment.Amount == 0)
         {
             result.Fail(S["Enter an amount other than 0."]);
         }
@@ -151,6 +163,7 @@ internal sealed class DefaultTimeOffBalanceService : ITimeOffBalanceService
                 Kind = adjustment.Kind,
                 Amount = adjustment.Kind == TimeOffLedgerKind.Payout ? -Math.Abs(adjustment.Amount) : adjustment.Amount,
                 EffectiveDate = adjustment.EffectiveDate,
+                ExpiresOn = adjustment.Kind == TimeOffLedgerKind.Grant ? adjustment.ExpiresOn : null,
                 IdempotencyKey = key ?? "adjust:" + UniqueId.GenerateId(),
                 Note = adjustment.Note?.Trim(),
                 Actor = actor,
@@ -174,6 +187,7 @@ internal sealed class DefaultTimeOffBalanceService : ITimeOffBalanceService
         var entries = await _ledgerStore.ListAsync(worker.ItemId, policy.ItemId, cancellationToken);
         var input = await _planner.BuildAsync(worker, policy, resolver, entries, date, cancellationToken);
         var open = await _requestStore.ListOpenForWorkerAsync(worker.ItemId, policy.ItemId, cancellationToken);
+        var grants = TimeOffGrants.Allocate(entries).Where(lot => lot.IsGrant).ToList();
 
         return new TimeOffBalance
         {
@@ -184,6 +198,19 @@ internal sealed class DefaultTimeOffBalanceService : ITimeOffBalanceService
             ProjectedAccrual = TimeOffAccrualEngine.Compute(input).Sum(entry => entry.Amount),
             Upcoming = -entries.Where(entry => entry.EffectiveDate > date && entry.Kind is TimeOffLedgerKind.Taken or TimeOffLedgerKind.Reversal).Sum(entry => entry.Amount),
             Pending = open.Sum(request => request.Amount),
+            Expiring = grants.Where(lot => lot.ExpiresOn < date).Sum(lot => lot.Left),
+            Grants = [.. grants
+                .Where(lot => lot.ExpiresOn >= date && lot.Left > 0)
+                .OrderBy(lot => lot.ExpiresOn)
+                .Select(lot => new TimeOffGrantBalance
+                {
+                    EntryId = lot.Entry.ItemId,
+                    Amount = lot.Entry.Amount,
+                    Remaining = lot.Left,
+                    EffectiveDate = lot.Entry.EffectiveDate,
+                    ExpiresOn = lot.ExpiresOn.Value,
+                    Note = lot.Entry.Note,
+                })],
         };
     }
 }

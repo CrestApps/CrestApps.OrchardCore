@@ -44,4 +44,10 @@ public enum TimeOffLedgerKind
     /// Paid out instead of taken.
     /// </summary>
     Payout,
+
+    /// <summary>
+    /// Given with a last day to use it, such as year-end bonus hours. It is used before the rest of the balance, and
+    /// what is left of it expires the day after.
+    /// </summary>
+    Grant,
 }

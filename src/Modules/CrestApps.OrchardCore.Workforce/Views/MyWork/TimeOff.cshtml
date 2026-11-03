@@ -19,6 +19,10 @@
                     <h2 class="h6 text-muted">@(balance.Type?.Name ?? balance.Policy.Name)</h2>
                     <p class="fs-4 mb-0"><partial name="_TimeOffAmount" model="(balance.Available, unit)" /></p>
                     <p class="small text-muted mb-0">@T["available"]@if (balance.Upcoming + balance.Pending > 0) {<text> · </text><partial name="_TimeOffAmount" model="(balance.Upcoming + balance.Pending, unit)" /><text> </text>@T["booked or waiting"]}</p>
+                    @foreach (var grant in balance.Grants)
+                    {
+                        <p class="small text-warning mb-0"><i class="fa-regular fa-hourglass-half" aria-hidden="true"></i> <partial name="_TimeOffAmount" model="(grant.Remaining, unit)" /> @T["to use by {0}", grant.ExpiresOn.ToString("d MMM yyyy")]</p>
+                    }
                 </div>
             </div>
         </div>
