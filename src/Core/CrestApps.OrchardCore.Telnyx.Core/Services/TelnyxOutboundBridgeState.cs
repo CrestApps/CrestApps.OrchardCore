@@ -50,6 +50,14 @@ public sealed class TelnyxOutboundBridgeState
     public const string AiVoiceLegIntent = "ai-voice";
 
     /// <summary>
+    /// The intent marking the side call an automated AI call rings for a warm or screened transfer. Its events go to
+    /// the AI conversation of <see cref="ActivityId"/> like the caller's, marked as the side call, with the caller's
+    /// leg in <see cref="PeerCallControlId"/>. The conversation briefs or asks whoever answers, then bridges the two
+    /// legs or gives the caller back to the AI.
+    /// </summary>
+    public const string AiTransferLegIntent = "ai-xfer";
+
+    /// <summary>
     /// The intent marking the leg a warm transfer rings to the destination the agent is consulting: another agent's
     /// browser or an external number. When it answers it joins the conference named <see cref="ConferenceName"/>,
     /// where the customer in <see cref="PeerCallControlId"/> is held; its answer and hangup are reported to the
@@ -465,6 +473,7 @@ public sealed class TelnyxOutboundBridgeState
                  parsed.Intent != ContactCenterPreDialedAgentLegIntent &&
                  parsed.Intent != ConferenceExtensionLegIntent &&
                  parsed.Intent != AiVoiceLegIntent &&
+                 parsed.Intent != AiTransferLegIntent &&
                  parsed.Intent != ContactCenterConsultLegIntent &&
                  parsed.Intent != TransferLegIntent &&
                  parsed.Intent != ContactCenterSupervisorLegIntent))

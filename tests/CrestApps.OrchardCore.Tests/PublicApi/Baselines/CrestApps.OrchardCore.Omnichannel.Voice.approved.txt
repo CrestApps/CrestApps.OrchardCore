@@ -24,6 +24,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice
         public RealtimeVoiceStartup() { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "OrchardCore.Redis"})]
+    public sealed class RedisVoiceCallRelayStartup : OrchardCore.Modules.StartupBase
+    {
+        public RedisVoiceCallRelayStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
     public sealed class Startup : OrchardCore.Modules.StartupBase
     {
         public Startup(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Voice.Startup> stringLocalizer) { }

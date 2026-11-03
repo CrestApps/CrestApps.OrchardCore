@@ -1,0 +1,5 @@
+@model ShapeViewModel<WaitlistEntry>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-circle-info text-secondary me-1" aria-hidden="true"></i>@Model.Value.Status</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Contact"]"><i class="fa-solid fa-envelope text-secondary me-1" aria-hidden="true"></i>@(Model.Value.CustomerEmail ?? Model.Value.CustomerPhone)</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Can come"]"><i class="fa-solid fa-calendar text-secondary me-1" aria-hidden="true"></i>@Model.Value.FromUtc.ToString("d") - @Model.Value.ToUtc.AddDays(-1).ToString("d")</span>

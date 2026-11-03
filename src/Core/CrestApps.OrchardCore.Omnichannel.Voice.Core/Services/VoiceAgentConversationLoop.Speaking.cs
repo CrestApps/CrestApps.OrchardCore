@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using CrestApps.OrchardCore.Telephony.Services;
 using Fluid;
 using Fluid.Values;
@@ -146,7 +147,12 @@ public sealed partial class VoiceAgentConversationLoop
             ? null
             : await services.ResolvePersonaAsync(profile, cancellationToken);
         var language = FirstNonEmpty(persona?.Language);
-        var explicitVoice = FirstNonEmpty(activity?.TextToSpeechVoiceId, flowSettings?.TextToSpeechVoiceId);
+        // The voice chosen for the call is the voice of the profile it started with; a profile it was handed to speaks in
+        // its own.
+        var handedTo = activity is not null &&
+            activity.TryGet<AIProfileSwitch>(out var profileSwitch) &&
+            AIProfileSwitch.HandedTo(profileSwitch, activity.AIProfileId);
+        var explicitVoice = handedTo ? null : FirstNonEmpty(activity?.TextToSpeechVoiceId, flowSettings?.TextToSpeechVoiceId);
 
         if (explicitVoice is not null)
         {

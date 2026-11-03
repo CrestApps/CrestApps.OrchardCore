@@ -1,0 +1,33 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AICostSettingsViewModel
+
+<p class="text-body-secondary">@T["The estimated cost of each AI call, in the AI voice usage report, uses these prices: the carrier's minutes, and the AI deployment's minutes or tokens."]</p>
+
+<div class="row">
+    <div class="col-12 col-md-4">
+        <div class="mb-3">
+            <label asp-for="Currency" class="form-label">@T["Currency"]</label>
+            <input asp-for="Currency" class="form-control" maxlength="3" placeholder="USD" />
+        </div>
+    </div>
+    <div class="col-12 col-md-4">
+        <div class="mb-3">
+            <label asp-for="TelephonyPerMinute" class="form-label">@T["Phone call, per minute"]</label>
+            <input asp-for="TelephonyPerMinute" type="number" step="any" min="0" class="form-control" />
+        </div>
+    </div>
+    <div class="col-12 col-md-4">
+        <div class="mb-3">
+            <label asp-for="SmsPerMessage" class="form-label">@T["Text message, each"]</label>
+            <input asp-for="SmsPerMessage" type="number" step="any" min="0" class="form-control" />
+        </div>
+    </div>
+</div>
+
+<div class="mb-3" asp-validation-class-for="DeploymentPrices">
+    <label asp-for="DeploymentPrices" class="form-label">@T["AI deployments"]</label>
+    <textarea asp-for="DeploymentPrices" rows="4" class="form-control font-monospace" placeholder="gpt-realtime | 4 | 16 | 32 | 64 | 0"></textarea>
+    <span asp-validation-for="DeploymentPrices" class="text-danger"></span>
+    <span class="hint">@T["One deployment per line: <code>name | input | output | audio input | audio output | per minute</code>, with token prices per million tokens and decimals written with a dot. Leave a value empty or 0 when it does not apply."]</span>
+</div>

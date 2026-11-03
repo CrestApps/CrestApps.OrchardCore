@@ -1,0 +1,22 @@
+@inject IDataConnectorManager ConnectorManager
+@model ShapeViewModel<DataConnection>
+
+@{
+    var descriptor = ConnectorManager.GetDescriptor(Model.Value.Connector);
+}
+
+@if (descriptor is null)
+{
+    <span class="badge ta-badge bg-warning-subtle fw-normal" data-bs-toggle="tooltip" title="@T["The connector isn't enabled, so this connection can't be read."]">
+        <i class="fa-solid fa-plug-circle-exclamation text-secondary me-1" aria-hidden="true"></i>@Model.Value.Connector
+    </span>
+}
+else
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Connector"]">
+        <i class="fa-solid fa-plug text-secondary me-1" aria-hidden="true"></i>@descriptor.DisplayName.Value
+    </span>
+}
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Technical name"]">
+    <i class="fa-solid fa-hashtag text-secondary me-1" aria-hidden="true"></i>@Model.Value.Name
+</span>

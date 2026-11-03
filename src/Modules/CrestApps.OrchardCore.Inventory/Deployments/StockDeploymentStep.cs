@@ -16,8 +16,10 @@ public sealed class StockDeploymentStep : DeploymentStep
     public override string Name => InventoryConstants.StockRecipeStep;
 
     /// <inheritdoc />
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Category => _category;
 
     /// <inheritdoc />
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Title => _title;
 }

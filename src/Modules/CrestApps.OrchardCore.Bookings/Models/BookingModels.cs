@@ -236,3 +236,24 @@ public enum BookingBalanceStatus
     /// </summary>
     Canceled = 3,
 }
+
+/// <summary>
+/// What a payment toward bookings paid for.
+/// </summary>
+public enum BookingPaymentKind
+{
+    /// <summary>
+    /// The whole price, when the order was paid.
+    /// </summary>
+    FullPayment = 0,
+
+    /// <summary>
+    /// A deposit, when the order was paid and the rest is owed later.
+    /// </summary>
+    Deposit = 1,
+
+    /// <summary>
+    /// What was left to pay after a deposit.
+    /// </summary>
+    Balance = 2,
+}

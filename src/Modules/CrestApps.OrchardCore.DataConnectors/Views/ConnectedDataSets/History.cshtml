@@ -1,0 +1,40 @@
+@model DataSetRunsViewModel
+
+<zone Name="Title">
+    <breadcrumb name="ConnectedDataSetsHistory" title="@T["Refresh history: {0}", Model.DataSet.DisplayText]">
+        <breadcrumb-item id="ConnectedDataSets" action="Index" controller="ConnectedDataSets" area="CrestApps.OrchardCore.DataConnectors" permission="@DataConnectorPermissions.ManageConnectedDataSets.Name">@T["Data Sets"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form asp-action="Refresh" asp-route-id="@Model.DataSet.ItemId" method="post" class="no-multisubmit">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2 align-items-center">
+                <div class="col">
+                    @if (Model.DataSet.Import?.LastSuccessUtc is { } refreshed)
+                    {
+                        <span>@T["{0} rows published by the refresh of {1}.", Model.DataSet.Import.RowCount, await DisplayAsync(await New.DateTime(Utc: refreshed, Format: "g"))]</span>
+                    }
+                    else
+                    {
+                        <span>@T["No refresh has succeeded yet."]</span>
+                    }
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">@T["Refresh now"]</button>
+                    <a class="btn btn-secondary" asp-action="Preview" asp-route-id="@Model.DataSet.ItemId">@T["Preview"]</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<admin-list name="ConnectedDataSetRefreshes" context="Model.List" show-select-all="false"
+            empty-message="@T["<strong>Nothing here!</strong> The data set hasn't been refreshed yet."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Started" position="20" title="@T["Started"]" width="auto" />
+        <admin-list-column name="Status" position="30" title="@T["Result"]" width="auto" />
+        <admin-list-column name="Details" position="40" title="@T["Details"]" />
+    </admin-list-grid>
+</admin-list>

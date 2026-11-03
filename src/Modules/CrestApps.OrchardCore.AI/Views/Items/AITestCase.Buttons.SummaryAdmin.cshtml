@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.AI.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AITestCase>
+
+<button type="submit" class="btn btn-sm btn-primary" formaction="@Url.Action("Run", "AITestCases", new { area = "CrestApps.OrchardCore.AI", id = Model.Value.ItemId })">@T["Run"]</button>
+<a asp-action="Edit" asp-controller="AITestCases" asp-route-id="@Model.Value.ItemId" class="btn btn-sm btn-secondary">@T["Edit"]</a>

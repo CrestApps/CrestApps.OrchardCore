@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Scheduling.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CancelAppointmentTask>
+
+<header><h4><i class="fa-solid fa-calendar-xmark" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Cancel Appointment"])</h4></header>

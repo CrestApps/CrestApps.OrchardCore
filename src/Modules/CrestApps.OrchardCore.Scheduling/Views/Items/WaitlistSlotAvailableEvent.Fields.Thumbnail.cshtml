@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Scheduling.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<WaitlistSlotAvailableEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-list-check" aria-hidden="true"></i> @T["Waitlist Slot Available"]</h4>
+<p>@T["Starts when a cancellation frees a time a waitlisted customer wanted."]</p>

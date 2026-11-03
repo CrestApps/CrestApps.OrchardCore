@@ -20,9 +20,11 @@ public sealed class ShippingZonesDeploymentStep : DeploymentStep
     public override string Name => ShippingConstants.ZonesRecipeStep;
 
     /// <inheritdoc />
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Category => _category;
 
     /// <inheritdoc />
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Title => _title;
 }
 

@@ -47,3 +47,8 @@ Two `IAIConversationPrivacyHandler`s carry the data Core does not own:
 
 - `AIConversationEvaluationPrivacyHandler` (AI module) gives the evaluations' summaries and issue quotes to the personal data search, redacts or clears each summary, criterion reason, issue detail and quote, and deletes the evaluations with the conversation.
 - `AIChatSessionExtractedDataPrivacyHandler` (Chat Analytics) does the same for the conversation's extracted data record.
+
+The names a redaction keeps start with the profile's `AIProfileDataPrivacySettings.NamesToKeep` (the editor's **Names to keep**), and two handlers add to `AIConversationPrivacyContext.NamesToKeep` while collecting:
+
+- `AISiteNamePrivacyHandler` (AI module) adds the site name.
+- `AIPersonaNamePrivacyHandler` (AI Personas) adds the `AssistantName` of the persona the conversation started with (`AIChatSession.PersonaId`) and of the persona its profile links now, so a call handed to another profile keeps both assistants' names.

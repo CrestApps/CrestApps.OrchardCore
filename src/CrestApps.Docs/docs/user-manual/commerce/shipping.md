@@ -18,6 +18,8 @@ technical_manual:
 
 ## Zones: where you ship
 
+This video walks through zones, methods, pickup, Try rates and shipping an order:
+
 A zone is a set of countries, such as *Domestic* or *Europe*. Buyers see the methods of the zone their address is in.
 
 1. Go to **Commerce > Shipping** and click **Add Shipping Zone**.

@@ -1,0 +1,6 @@
+@using CrestApps.OrchardCore.AI.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIQACohort>
+
+<a asp-action="Delete" asp-controller="AIQACohorts" asp-route-id="@Model.Value.ItemId" class="dropdown-item text-danger" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Delete"]" data-message="@T["Are you sure you want to delete this QA cohort? Its evaluations are kept."]" data-ok-text="@T["Yes"]" data-cancel-text="@T["Cancel"]">@T["Delete"]</a>

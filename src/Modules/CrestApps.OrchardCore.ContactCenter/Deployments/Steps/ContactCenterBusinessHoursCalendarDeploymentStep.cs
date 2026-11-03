@@ -15,8 +15,10 @@ public sealed class ContactCenterBusinessHoursCalendarDeploymentStep : Deploymen
     public override string Name => ContactCenterDeploymentSteps.BusinessHoursCalendar;
 
     /// <inheritdoc />
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Category => _category;
 
     /// <inheritdoc />
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Title => _title;
 }

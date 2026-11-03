@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using OrchardCore.Environment.Shell;
 using OrchardCore.Localization;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
@@ -70,7 +69,6 @@ public sealed class ReportsAdminMenuTests
         return new NavigationManager(
             providers,
             NullLogger<NavigationManager>.Instance,
-            new ShellSettings(),
             urlHelperFactory.Object,
             authorizationService.Object);
     }

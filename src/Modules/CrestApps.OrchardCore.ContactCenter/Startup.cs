@@ -350,6 +350,7 @@ public sealed class ContactCenterWorkflowsStartup : StartupBase
         // Dialer keeps an SMS-only tenant from having to enable outbound voice to send a message from a workflow.
         services.AddActivity<StartOmnichannelActivityTask, StartOmnichannelActivityTaskDisplayDriver>();
         services.AddActivity<AICallActionTask, AICallActionTaskDisplayDriver>();
+        services.AddActivity<TransferAICallTask, TransferAICallTaskDisplayDriver>();
     }
 }
 

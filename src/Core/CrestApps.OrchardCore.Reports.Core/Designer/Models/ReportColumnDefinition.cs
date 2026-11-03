@@ -46,4 +46,28 @@ public sealed class ReportColumnDefinition
     /// result and can feed charts and filters.
     /// </summary>
     public bool Hidden { get; set; }
+
+    /// <summary>
+    /// Gets or sets the shelf the column is placed on. Once a dimension is on the <see cref="ReportColumnShelf.Rows"/>
+    /// shelf, the report's table is a cross-tab: the Rows dimensions down the side, the Columns dimensions across the
+    /// top, and the measures in the cells.
+    /// </summary>
+    public ReportColumnShelf Shelf { get; set; }
+
+    /// <summary>
+    /// Gets or sets how the column is colored in tables, or <see langword="null"/> to use the default colors.
+    /// </summary>
+    public ReportColumnColors Colors { get; set; }
+
+    /// <summary>
+    /// Gets or sets how a measure column shows its values: as they are, or as a quick table calculation over the values
+    /// each table, cross-tab or chart shows, such as a percent of total or a running total. Totals rows show the plain
+    /// total.
+    /// </summary>
+    public ReportShowAs ShowAs { get; set; }
+
+    /// <summary>
+    /// Gets or sets which values the calculation of <see cref="ShowAs"/> is computed along.
+    /// </summary>
+    public ReportShowAsDirection ShowAsDirection { get; set; }
 }

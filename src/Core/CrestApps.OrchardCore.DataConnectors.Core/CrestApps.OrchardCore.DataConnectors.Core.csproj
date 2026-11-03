@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.DataConnectors</RootNamespace>
+    <Title>CrestApps OrchardCore Data Connectors Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      The shared infrastructure of data connectors: the connector registry, the live and imported data sources, the
+      versioned row store, the refresh engine, the HTTP authentication and outbound network guard, and the HTTP API,
+      Elasticsearch, media files and relational connectors.
+    </Description>
+    <PackageTags>$(PackageTags) DataSources DataPipelines Connectors Elasticsearch REST OpenID</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.DataConnectors" />
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.DataConnectors.SqlServer" />
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.Data.Abstractions" />
+    <PackageReference Include="OrchardCore.DataSources.Core" />
+    <PackageReference Include="OrchardCore.Media.Abstractions" />
+    <PackageReference Include="YesSql.Abstractions" />
+    <PackageReference Include="YesSql.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.DataConnectors.Abstractions\CrestApps.OrchardCore.DataConnectors.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
+  </ItemGroup>
+
+</Project>

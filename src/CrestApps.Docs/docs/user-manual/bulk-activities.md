@@ -61,7 +61,7 @@ Click **Filters** to open or close the filter panel; the page remembers your cho
 | **Manual** | Manual loads and activities created by hand. | Always. |
 | **Automatic** | Automatic loads worked by an AI profile. | Always. |
 | **Inbound** | Inbound calls and inbound activities logged by an agent. | Always. |
-| **Dialer** | Dialer loads, whatever the profile's mode: preview, and power or progressive when **Contact Center Paced Dialing** is on. | **Contact Center Outbound Dialer** is on. |
+| **Dialer** | Dialer loads, whatever the profile's mode: preview, and power, progressive or predictive when **Contact Center Paced Dialing** is on. | **Contact Center Outbound Dialer** is on. |
 | **Callback** | Callbacks scheduled for a contact. | **Contact Center Outbound Dialer** is on. |
 
 A link or saved filter that names a source the list no longer offers still shows that value, so you can see what the page is filtering on.
@@ -85,7 +85,7 @@ In the screencast, the manager filters by subject and assignment status, ticks t
 | **Set Urgency Level** | Changes their urgency. |
 | **Change Subject** | Moves them to another subject and applies that subject's campaign, channel and address. Subject field values are cleared. |
 | **Clear Assignment** | Removes the owner and any reservation so the work can be routed or dialed again. |
-| **Change Source** | Sets the source to **Manual** or **Automatic**, and by default clears assignment and reservation. The dialer sources are not offered here. |
+| **Change Source** | Sets the source to **Manual** or **Automatic**, picks an **Interaction type** (keep the current one, **Manual** or **Automated**), and by default clears assignment and reservation. The dialer sources are not offered here. |
 | **Change Campaign** | Moves them to another campaign, or to no campaign. Activities waiting for the dialer move to the new campaign's dialer queue with them. Shown when campaigns exist. |
 | **Change Dialer Profile** | Hands them to another dialer profile's mode, makes them agent-handled calls, and queues them for the dialer on their campaign. Pick a **Campaign** to move them all to it at the same time, or keep each one's current campaign. Shown when dialer profiles exist. |
 

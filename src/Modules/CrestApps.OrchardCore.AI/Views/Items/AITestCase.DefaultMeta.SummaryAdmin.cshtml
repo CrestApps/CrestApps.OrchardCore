@@ -1,0 +1,13 @@
+@using System.Globalization
+@using CrestApps.OrchardCore.AI.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AITestCase>
+
+@if (Model.Value.LastRunUtc is { } lastRun)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Last run"]">
+        <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
+        <time datetime="@lastRun.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture)">@await DisplayAsync(await New.Timespan(Utc: lastRun))</time>
+    </span>
+}

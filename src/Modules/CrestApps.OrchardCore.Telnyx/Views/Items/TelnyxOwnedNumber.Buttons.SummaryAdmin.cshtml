@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Telnyx.Services
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<TelnyxOwnedNumber>
+
+<div class="input-group input-group-sm" style="max-width: 18rem;">
+    <input type="text" name="callerName" class="form-control" maxlength="15" placeholder="@T["Caller name"]" aria-label="@T["Caller name"]" form="caller-name-@Model.Value.Id" />
+    <button type="submit" class="btn btn-sm btn-primary" form="caller-name-@Model.Value.Id">@T["Set"]</button>
+</div>
+<form id="caller-name-@Model.Value.Id" method="post" asp-action="CallerName" asp-controller="TelnyxNumbers" asp-route-id="@Model.Value.Id" class="d-none"></form>

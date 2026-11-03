@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Scheduling</RootNamespace>
+    <Title>CrestApps OrchardCore Scheduling Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Public contracts for scheduling on the shared calendar: schedulable resources with working hours, appointment
+      types with durations, buffers and booking rules, appointments, waitlists, availability and booking services.
+    </Description>
+    <PackageTags>$(PackageTags) Scheduling Appointments Calendar Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CrestApps.Core.Abstractions" />
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Calendars.Abstractions\CrestApps.OrchardCore.Calendars.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

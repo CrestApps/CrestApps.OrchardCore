@@ -1,0 +1,9 @@
+@using CrestApps.OrchardCore.Telnyx.Services
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<TelnyxAvailableNumber>
+
+<form method="post" asp-action="Buy" asp-controller="TelnyxNumbers" class="d-inline no-multisubmit">
+    <input type="hidden" name="phoneNumber" value="@Model.Value.PhoneNumber" />
+    <button type="submit" class="btn btn-sm btn-primary" data-url-af="UnsafeUrl">@T["Buy"]</button>
+</form>

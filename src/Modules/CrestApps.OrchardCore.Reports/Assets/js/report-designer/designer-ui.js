@@ -206,6 +206,162 @@
         });
     };
 
+    var openMenu = null;
+
+    ui.closeMenu = function () {
+        if (openMenu) {
+            openMenu();
+            openMenu = null;
+        }
+    };
+
+    // Moves a flyout that is showing so it stays in the window: up when it would pass the bottom, and to the left of its
+    // item when it would pass the right edge.
+    ui.keepSubmenuOnScreen = function (submenu) {
+        submenu.style.top = '';
+        submenu.classList.remove('opens-left');
+
+        var box = submenu.getBoundingClientRect();
+
+        if (!box.height) {
+            return;
+        }
+
+        if (box.bottom > root.innerHeight - 4) {
+            submenu.style.top = (submenu.offsetTop - (box.bottom - root.innerHeight + 4)) + 'px';
+        }
+
+        if (box.right > root.innerWidth - 4) {
+            submenu.classList.add('opens-left');
+        }
+    };
+
+    // Opens a context menu at a point of the page, such as where a field was right-clicked. Each item has a label and an
+    // action, or items of its own that open beside it; { divider: true } draws a line and { header: text } a heading.
+    // A checked item shows a check. The menu closes on a click elsewhere, on Escape, and when an action runs.
+    ui.menu = function (items, x, y) {
+        var build = function (entries, submenu) {
+            var list = ui.h('div', { className: 'dropdown-menu rd-menu shadow-sm' + (submenu ? ' rd-submenu' : ' show'), role: 'menu' });
+
+            entries.forEach(function (entry) {
+                if (!entry) {
+                    return;
+                }
+
+                if (entry.divider) {
+                    list.appendChild(ui.h('div', { className: 'dropdown-divider', role: 'separator' }));
+
+                    return;
+                }
+
+                if (entry.header) {
+                    list.appendChild(ui.h('div', { className: 'dropdown-header text-truncate' }, entry.header));
+
+                    return;
+                }
+
+                var hasItems = entry.items && entry.items.length;
+                var button = ui.h('button', {
+                    type: 'button',
+                    className: 'dropdown-item d-flex align-items-center gap-2' + (hasItems ? ' rd-menu-parent' : ''),
+                    role: 'menuitem',
+                    disabled: !!entry.disabled,
+                    'aria-haspopup': hasItems ? 'true' : null,
+                    'aria-expanded': hasItems ? 'false' : null,
+                    onclick: function (event) {
+                        event.stopPropagation();
+
+                        if (hasItems) {
+                            var open = item.classList.toggle('is-open');
+
+                            button.setAttribute('aria-expanded', open ? 'true' : 'false');
+                            ui.keepSubmenuOnScreen(submenu);
+
+                            return;
+                        }
+
+                        ui.closeMenu();
+                        entry.action();
+                    }
+                },
+                ui.h('span', { className: 'rd-menu-check' }, entry.checked ? ui.icon('fa-check') : (entry.icon ? ui.icon(entry.icon) : null)),
+                ui.h('span', { className: 'flex-grow-1' }, entry.label),
+                hasItems ? ui.icon('fa-caret-right small') : null);
+                var submenu = hasItems ? build(entry.items, true) : null;
+                var item = ui.h('div', {
+                    className: 'rd-menu-item',
+                    // A flyout that would leave the window opens upward or to the left instead.
+                    onmouseenter: submenu ? function () {
+                        ui.keepSubmenuOnScreen(submenu);
+                    } : null,
+                    onfocusin: submenu ? function () {
+                        ui.keepSubmenuOnScreen(submenu);
+                    } : null
+                }, button, submenu);
+
+                list.appendChild(item);
+            });
+
+            return list;
+        };
+
+        return ui.popup(build(items, false), x, y);
+    };
+
+    // Shows an element, such as a menu or a color palette, floating at a point of the page, kept on screen. It closes on
+    // a click elsewhere, on Escape, when the window is resized, and when another popup opens (ui.closeMenu).
+    ui.popup = function (element, x, y) {
+        ui.closeMenu();
+
+        element.style.position = 'fixed';
+        element.style.left = x + 'px';
+        element.style.top = y + 'px';
+        element.style.zIndex = '1080';
+        root.document.body.appendChild(element);
+
+        var box = element.getBoundingClientRect();
+
+        if (box.right > root.innerWidth) {
+            element.style.left = Math.max(4, root.innerWidth - box.width - 4) + 'px';
+        }
+
+        if (box.bottom > root.innerHeight) {
+            element.style.top = Math.max(4, root.innerHeight - box.height - 4) + 'px';
+        }
+
+        var onPointer = function (event) {
+            if (!element.contains(event.target)) {
+                ui.closeMenu();
+            }
+        };
+        var onKey = function (event) {
+            if (event.key === 'Escape') {
+                ui.closeMenu();
+            }
+        };
+
+        root.setTimeout(function () {
+            root.document.addEventListener('pointerdown', onPointer, true);
+        }, 0);
+        root.document.addEventListener('keydown', onKey);
+        root.addEventListener('resize', ui.closeMenu);
+
+        openMenu = function () {
+            root.document.removeEventListener('pointerdown', onPointer, true);
+            root.document.removeEventListener('keydown', onKey);
+            root.removeEventListener('resize', ui.closeMenu);
+            element.remove();
+        };
+
+        var first = element.querySelector('button:not([disabled]), input');
+
+        if (first) {
+            first.focus();
+        }
+
+        return element;
+    };
+
     ui.modal = function (title, body, footer, size) {
         var dialog = ui.h('div', { className: 'modal fade', tabindex: '-1', role: 'dialog', 'aria-modal': 'true' },
             ui.h('div', { className: 'modal-dialog modal-dialog-scrollable ' + (size || 'modal-lg') },

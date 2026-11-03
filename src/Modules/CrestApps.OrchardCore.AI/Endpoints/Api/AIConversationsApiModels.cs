@@ -65,6 +65,7 @@ public sealed record ApiAIConversationTurn(string Role, string Text, DateTime Cr
 /// <param name="ExtractedFields">The fields extracted from it.</param>
 /// <param name="Results">The post-session analysis results, by task name.</param>
 /// <param name="Evaluations">Its evaluations, oldest first.</param>
+/// <param name="Flow">Where it stands in its conversation flow and the stages it went through, when it has one.</param>
 public sealed record ApiAIConversation(
     ApiAIConversationSummary Conversation,
     string ContactId,
@@ -72,7 +73,8 @@ public sealed record ApiAIConversation(
     IReadOnlyDictionary<string, string> Variables,
     IReadOnlyDictionary<string, IReadOnlyList<string>> ExtractedFields,
     IReadOnlyDictionary<string, string> Results,
-    IReadOnlyList<AIConversationEvaluation> Evaluations);
+    IReadOnlyList<AIConversationEvaluation> Evaluations,
+    AIConversationFlowState Flow = null);
 
 /// <summary>
 /// Asks for a conversation to be evaluated.
@@ -176,3 +178,14 @@ public sealed class ApiAIContactMemoryRequest
     /// </summary>
     public string Text { get; set; }
 }
+
+/// <summary>
+/// An AI profile, as listed.
+/// </summary>
+/// <param name="Id">The profile.</param>
+/// <param name="Name">Its unique name.</param>
+/// <param name="DisplayText">Its title.</param>
+/// <param name="Type">Chat, Utility, TemplatePrompt or Agent.</param>
+/// <param name="Version">The current version, when versions are kept.</param>
+/// <param name="CreatedUtc">When it was made.</param>
+public sealed record ApiAIProfileSummary(string Id, string Name, string DisplayText, string Type, int? Version, DateTime CreatedUtc);

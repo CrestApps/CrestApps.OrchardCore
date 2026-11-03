@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Bookings.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<BookingCreatedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-ticket" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Booking Created"])
+    </h4>
+</header>

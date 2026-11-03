@@ -39,6 +39,12 @@ public sealed class AIConversationSimulationRequest
     /// Gets or sets the deployment that plays the customer, or <see langword="null"/> for the utility deployment.
     /// </summary>
     public string CustomerDeploymentName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the result each named tool returns instead of running, so a test does not book, charge or send
+    /// anything for real.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> MockedTools { get; set; }
 }
 
 /// <summary>
@@ -146,6 +152,7 @@ public sealed class AIConversationSimulator
         // The completion service is called directly rather than through the orchestrator, so the profile's tools
         // are attached here or the AI under test sees none.
         await AIConversationTools.AttachAsync(_toolRegistry, context, [], cancellationToken);
+        AIConversationTools.Mock(context, request.MockedTools);
         var assistantDeployment = await _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.Chat, context.ChatDeploymentName, cancellationToken: cancellationToken)
             ?? throw new InvalidOperationException($"No chat deployment can answer for AI profile '{request.Profile.ItemId}'.");
 

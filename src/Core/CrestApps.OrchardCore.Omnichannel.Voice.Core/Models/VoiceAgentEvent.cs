@@ -68,4 +68,15 @@ public sealed class VoiceAgentEvent
     /// event, such as <c>unallocated_number (SIP 404)</c>.
     /// </summary>
     public string HangupDetail { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the event is about the side call a warm or screened transfer rang,
+    /// rather than the caller's leg. <see cref="ProviderCallId"/> is then the side call's.
+    /// </summary>
+    public bool IsSideCall { get; set; }
+
+    /// <summary>
+    /// Gets or sets, on a side call's event, the provider's identifier for the caller's leg.
+    /// </summary>
+    public string PeerProviderCallId { get; set; }
 }

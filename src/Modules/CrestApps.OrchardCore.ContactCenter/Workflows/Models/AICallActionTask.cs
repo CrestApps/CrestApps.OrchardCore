@@ -20,7 +20,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Workflows.Models;
 public sealed class AICallActionTask : TaskActivity<AICallActionTask>
 {
     private readonly IEnumerable<IAIVoiceCallSupervision> _supervisions;
-    private readonly IAgentProfileManager _agentProfileManager;
+    private readonly IEnumerable<IAgentProfileManager> _agentProfileManagers;
     private readonly UserManager<IUser> _userManager;
     private readonly IWorkflowExpressionEvaluator _expressionEvaluator;
     private readonly ILogger _logger;
@@ -31,21 +31,24 @@ public sealed class AICallActionTask : TaskActivity<AICallActionTask>
     /// Initializes a new instance of the <see cref="AICallActionTask"/> class.
     /// </summary>
     /// <param name="supervisions">The AI call supervision, when AI voice is on.</param>
-    /// <param name="agentProfileManager">The agent profiles, to find the agent a call is handed to.</param>
+    /// <param name="agentProfileManagers">
+    /// The agent profiles, to find the agent a call is handed to. Empty without the Contact Center Agents feature: the
+    /// task is registered whenever Orchard Core Workflows is on, and only handing the call to an agent needs them.
+    /// </param>
     /// <param name="userManager">The user manager, to find the agent by user name.</param>
     /// <param name="expressionEvaluator">The workflow expression evaluator.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AICallActionTask(
         IEnumerable<IAIVoiceCallSupervision> supervisions,
-        IAgentProfileManager agentProfileManager,
+        IEnumerable<IAgentProfileManager> agentProfileManagers,
         UserManager<IUser> userManager,
         IWorkflowExpressionEvaluator expressionEvaluator,
         ILogger<AICallActionTask> logger,
         IStringLocalizer<AICallActionTask> stringLocalizer)
     {
         _supervisions = supervisions;
-        _agentProfileManager = agentProfileManager;
+        _agentProfileManagers = agentProfileManagers;
         _userManager = userManager;
         _expressionEvaluator = expressionEvaluator;
         _logger = logger;
@@ -139,7 +142,9 @@ public sealed class AICallActionTask : TaskActivity<AICallActionTask>
 
     private async Task<string> ResolveAgentIdAsync(string name)
     {
-        if (string.IsNullOrEmpty(name))
+        var agentProfileManager = _agentProfileManagers.FirstOrDefault();
+
+        if (string.IsNullOrEmpty(name) || agentProfileManager is null)
         {
             return null;
         }
@@ -151,7 +156,7 @@ public sealed class AICallActionTask : TaskActivity<AICallActionTask>
             return null;
         }
 
-        var profile = await _agentProfileManager.FindByUserIdAsync(await _userManager.GetUserIdAsync(user));
+        var profile = await agentProfileManager.FindByUserIdAsync(await _userManager.GetUserIdAsync(user));
 
         return profile?.ItemId;
     }

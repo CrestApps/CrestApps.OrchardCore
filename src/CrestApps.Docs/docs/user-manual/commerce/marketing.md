@@ -16,6 +16,8 @@ Email the customers who said yes to your news and offers. Group them into **segm
 
 <AskYourAdmin />
 
+This video shows why to market from your orders, the segments and campaigns, consent and unsubscribing, and the ready-made automations:
+
 Campaigns only go to customers who ticked **Send me news and offers** in their account, or whom you marked as accepting marketing on **Commerce > Customers**. Emails about their orders aren't affected. Every campaign carries a link to unsubscribe in one click.
 
 When you turn Marketing on, it reads the orders already paid to learn what each customer has bought. On a big store that takes a few minutes.
@@ -23,7 +25,7 @@ When you turn Marketing on, it reads the orders already paid to learn what each 
 ## Segments
 
 1. On **Commerce > Segments**, click **Add segment**.
-2. Name it, such as *Lapsed buyers*.
+2. Give it a **Name**, such as *Lapsed buyers*, and a **Description** that only your staff see.
 3. Fill in the rules the customers have to meet. Leave a rule blank to ignore it.
 
 | Rule | Such as |
@@ -45,7 +47,7 @@ Click **Save**. The segment shows how many customers are in it, and how many of 
 
 | Write | To show |
 | --- | --- |
-| `{{ Customer.FirstName }}` | Their first name. |
+| `{{ Customer.FirstName }}` and `{{ Customer.Name }}` | Their first name, and their full name. |
 | `{{ Customer.OrderCount }}` and `{{ Customer.TotalSpent }}` | How many orders they've placed, and what they've spent. |
 | `{{ StoreName }}` | Your store's name. |
 | `{{ UnsubscribeUrl }}` | Their unsubscribe link. If you leave it out, one is added at the end. |
@@ -63,7 +65,7 @@ The unsubscribe link opens a page that asks them to confirm. Once they do, they 
 
 ## Ready-made automations
 
-Under **Configuration > Recipes**, three recipes add workflows you can change under **Workflows**:
+Under **Tools > Recipes**, three recipes add workflows you can change under **Workflows**:
 
 | Recipe | What it does |
 | --- | --- |

@@ -102,10 +102,16 @@ On the **Data Processing & Metrics** tab, **Privacy** chooses what is kept of ea
 
 The choice applies about 15 minutes after a conversation ends, once its workflows, its post-session analysis and contact memory have read it, so they still work on the full conversation. It applies to conversations that end after you choose it; conversations kept before are left as they were. Personal details are found by patterns and by the utility model; a detail it misses stays, so check a sample of redacted conversations before relying on it.
 
+**Names to keep** lists the names that are not the customer's personal details, so they stay in the transcript: the name the assistant introduces itself by and the business's name, one per line or separated by commas. You don't need to list the site name (from **Configuration → Settings → General**) or, with the **AI Personas** feature, the assistant name of the persona the profile uses; those are kept anyway. A detail spoken over two turns, such as an email address dictated in two parts, is found and replaced in both. The customer's own name is still replaced wherever either side says it.
+
 **Delete conversations after** deletes a conversation, with its transcript, extracted data and evaluations, after that many days without activity. Leave it empty to keep conversations. Usage records are kept, because they are what usage is billed and reported on.
 
 :::note[Contact memory]
 Contact memory is kept apart from conversations, so the storage mode does not change it. Turn off **Save to contact memory** if it should not hold personal details either. See [Contact memory and integrations](contact-memory-and-integrations.md).
 :::
+
+### Bleeped call recordings
+
+With **Everything except personal details**, the recordings of AI phone calls are bleeped too, once the conversation's transcript has been redacted: every customer line that held a personal detail (a placeholder such as `[CARD]`, or a long run of digits the redaction missed) is covered with a tone, from just before the line starts to when the next line starts, and the recording is stored again as WAV in place of the original. The **Call Recording Bleeping** background task does this every 10 minutes for recordings of the last 14 days, and the recordings API marks a bleeped recording. Lines are placed by when they were said, not word by word, so a whole line is covered, including any words around the detail. MP3 and 16-bit WAV recordings are read; others are left as they are.
 
 A single conversation can also be deleted through the API, for example when a customer asks to be forgotten. See the [AI conversations API](../../ai/conversations-api.md).

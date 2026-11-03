@@ -1,0 +1,3 @@
+@model AppointmentRowViewModel
+
+<a asp-controller="Appointments" asp-action="Detail" asp-route-id="@Model.Appointment.ItemId">@Model.LocalStart.ToString("g") - @Model.Appointment.CustomerName</a>

@@ -42,7 +42,7 @@ internal sealed class AIProfileTemplateA2AConnectionsDisplayDriver : DisplayDriv
         {
             var a2aMetadata = template.GetOrCreate<AIProfileA2AMetadata>();
 
-            model.Connections = connections
+            model.A2AConnections = connections
             .Select(entry => new ToolEntry
             {
                 ItemId = entry.ItemId,
@@ -72,7 +72,7 @@ internal sealed class AIProfileTemplateA2AConnectionsDisplayDriver : DisplayDriv
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var ids = model.Connections?.Where(x => x.IsSelected).Select(x => x.ItemId).ToArray();
+        var ids = model.A2AConnections?.Where(x => x.IsSelected).Select(x => x.ItemId).ToArray();
 
         var metadata = new AIProfileA2AMetadata();
 

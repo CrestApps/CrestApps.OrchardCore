@@ -1,6 +1,5 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Completions;
-using CrestApps.Core.AI.Handlers;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
 using CrestApps.Core.AI.Profiles;
@@ -10,8 +9,8 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
-using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -34,9 +33,9 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// </summary>
     /// <remarks>
     /// A realtime session is configured once, at the start, from this context — there is no per-turn completion
-    /// to hang a tool on the way the turn-based path does. The end-call tool is registered as a scoped system
-    /// entry and named in <c>MustIncludeTools</c> so the profile's own tool selection cannot leave it out: every
-    /// call has to be endable, whatever else the profile is configured to do.
+    /// to hang a tool on the way the turn-based path does. The call's tools are named on this context, which is how
+    /// a session is given a hidden tool, and in <c>MustIncludeTools</c> so the profile's own tool selection cannot
+    /// leave them out: every call has to be endable, whatever else the profile is configured to do.
     /// </remarks>
     /// <param name="orchestration">The orchestration context the session is built from.</param>
     /// <param name="call">The call being held.</param>
@@ -47,23 +46,33 @@ public sealed partial class RealtimeVoiceConversationRunner
             return;
         }
 
-        AttachTool(orchestration, EndCallTool.ToolName, "Ends the phone call once the conversation is over.");
+        AttachTool(orchestration, EndCallTool.ToolName);
 
         // A call the AI placed may be answered by a phone menu, which only keys get through.
-        AttachTool(orchestration, PressKeysTool.ToolName, "Presses keys on the phone keypad to get through a phone menu.");
+        AttachTool(orchestration, PressKeysTool.ToolName);
+
+        // A card or account number the caller types goes to secure data capture, where it is on, not to the model.
+        if (VoiceAgentConversationLoop.OffersSecureKeypad(ShellScope.Services))
+        {
+            AttachTool(orchestration, CollectSecureDigitsTool.ToolName);
+        }
 
         // Escalation, when this call has somewhere to escalate to. The tool and the guidance travel together:
         // a tool the model is never told about is not used, and guidance without a tool has the model promising
         // a transfer that nothing performs.
         if (!string.IsNullOrWhiteSpace(call?.HandoffInstructions))
         {
-            AttachTool(
-                orchestration,
-                OmnichannelHandoffHelper.TransferToAgentToolName,
-                "Transfers the current conversation to a live human agent.");
+            AttachTool(orchestration, OmnichannelHandoffHelper.TransferToAgentToolName);
 
             orchestration.SystemMessageBuilder.AppendLine();
             orchestration.SystemMessageBuilder.AppendLine(call.HandoffInstructions);
+        }
+        else if (!string.IsNullOrWhiteSpace(call?.NoHandoffInstructions))
+        {
+            // Nobody can take the caller now, so there is no tool, and the model is told why rather than left to
+            // improvise an answer to "can I speak to someone?".
+            orchestration.SystemMessageBuilder.AppendLine();
+            orchestration.SystemMessageBuilder.AppendLine(call.NoHandoffInstructions);
         }
 
         // Somebody trying to end contact must never be handed to a person instead. This is written for the way it
@@ -119,38 +128,24 @@ public sealed partial class RealtimeVoiceConversationRunner
     }
 
     /// <summary>
-    /// Puts one system tool in front of a realtime session.
+    /// Puts one of the call's tools in front of a realtime session.
     /// </summary>
     /// <remarks>
-    /// Registered as a scoped entry (the profile's own tool list skips system tools) and named in
-    /// <c>MustIncludeTools</c> so the profile's selection cannot leave it out. Both are idempotent, because this
-    /// runs once per call and a duplicate would be offered to the model twice.
+    /// The call's tools are registered hidden, so a session is given one only when its context names it: the session
+    /// takes its tools from the tool registry, which gives a context the hidden tools it names. Also named in
+    /// <c>MustIncludeTools</c>, so the profile's selection cannot leave it out. Both are idempotent, because this runs
+    /// once per call and a duplicate would be offered to the model twice.
     /// </remarks>
     /// <param name="orchestration">The orchestration context the session is built from.</param>
     /// <param name="toolName">The tool's registered name.</param>
-    /// <param name="description">What the tool does, for the registry entry.</param>
-    private static void AttachTool(OrchestrationContext orchestration, string toolName, string description)
+    private static void AttachTool(OrchestrationContext orchestration, string toolName)
     {
-        var scoped = orchestration.CompletionContext.AdditionalProperties
-            .TryGetValue(FunctionInvocationAICompletionServiceHandler.ScopedEntriesKey, out var existing) &&
-            existing is List<ToolRegistryEntry> entries
-                ? entries
-                : [];
+        var named = orchestration.CompletionContext.ToolNames ?? [];
 
-        if (!scoped.Exists(entry => entry.Id == toolName))
+        if (Array.IndexOf(named, toolName) < 0)
         {
-            scoped.Add(new ToolRegistryEntry
-            {
-                Id = toolName,
-                Name = toolName,
-                Description = description,
-                Source = ToolRegistryEntrySource.System,
-                CreateAsync = serviceProvider => ValueTask.FromResult(
-                    serviceProvider.GetKeyedService<AITool>(toolName)),
-            });
+            orchestration.CompletionContext.ToolNames = [.. named, toolName];
         }
-
-        orchestration.CompletionContext.AdditionalProperties[FunctionInvocationAICompletionServiceHandler.ScopedEntriesKey] = scoped;
 
         if (!orchestration.MustIncludeTools.Contains(toolName))
         {
@@ -445,7 +440,12 @@ public sealed partial class RealtimeVoiceConversationRunner
             : await services.ResolvePersonaAsync(context.Profile, cancellationToken);
         var speechLanguage = LanguagePart(persona?.Language);
 
-        var activityVoice = context.Activity?.TextToSpeechVoiceId;
+        // The campaign's voice is the voice of the profile the call started with; one it was handed to has its own.
+        var activityVoice = context.Activity is not null &&
+            context.Activity.TryGet<AIProfileSwitch>(out var profileSwitch) &&
+            AIProfileSwitch.HandedTo(profileSwitch, context.Profile?.ItemId)
+                ? null
+                : context.Activity?.TextToSpeechVoiceId;
 
         if (!string.IsNullOrWhiteSpace(activityVoice))
         {

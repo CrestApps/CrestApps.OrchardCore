@@ -216,6 +216,36 @@ public sealed partial class VoiceAgentConversationLoopTests
     }
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ARealtimeHandoff_SaysItIsConnecting_OnlyWhenTheModelDidNot(bool announced)
+    {
+        // Arrange
+        // Live, the model called the transfer tool without a word, and the handoff, taking every realtime transfer
+        // as announced, said nothing either: the caller heard silence and hung up.
+        var harness = new LoopHarness();
+        harness.EnableHandoff();
+        harness.UseRealtime();
+        harness.HandoffResult = OmnichannelHandoffResult.Success(offeredToUserId: "agent-1");
+        harness.HandoffTurn.Setup(x => x.HandoffRequested).Returns(true);
+        harness.Realtime.DuringSession = context => context.HandoffAnnounced = announced;
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.FinishAsync();
+
+        // Assert
+        if (announced)
+        {
+            Assert.DoesNotContain(VoiceAgentConversationLoop.ConnectingLine, harness.Media.Spoken);
+        }
+        else
+        {
+            Assert.Equal(VoiceAgentConversationLoop.ConnectingLine, harness.Media.Spoken[^1]);
+        }
+    }
+
+    [Theory]
     [InlineData(HandoffDisposition.Routed, true, null)]
     [InlineData(HandoffDisposition.Routed, false, VoiceAgentConversationLoop.ConnectingLine)]
     [InlineData(HandoffDisposition.WaitingInQueue, true, VoiceAgentConversationLoop.WaitingInQueueLine)]

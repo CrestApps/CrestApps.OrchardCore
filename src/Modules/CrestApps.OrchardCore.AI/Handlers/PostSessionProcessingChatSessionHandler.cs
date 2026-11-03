@@ -3,8 +3,10 @@ using CrestApps.Core.AI.Chat.Handlers;
 using CrestApps.Core.AI.Chat.Services;
 using CrestApps.Core.AI.Handlers;
 using CrestApps.OrchardCore.AI.Core.Conversations;
+using CrestApps.OrchardCore.AI.Core.Webhooks;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
 using OrchardCore.Workflows.Services;
 
@@ -60,6 +62,8 @@ public sealed class PostSessionProcessingChatSessionHandler : AIChatSessionHandl
 
     private async Task TriggerPostProcessedEventAsync(ChatMessageCompletedContext context)
     {
+        await AIWebhookPublisher.TryPublishAsync(ShellScope.Services, AIWebhookEvents.ConversationAnalyzed, AIWebhookPayloads.Analyzed(context.ChatSession, context.Profile));
+
         try
         {
             var input = new Dictionary<string, object>

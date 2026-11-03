@@ -15,8 +15,10 @@ public sealed class AsteriskSettingsDeploymentStep : DeploymentStep
     public override string Name => AsteriskDeploymentSteps.Settings;
 
     /// <inheritdoc />
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Category => _category;
 
     /// <inheritdoc />
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Title => _title;
 }

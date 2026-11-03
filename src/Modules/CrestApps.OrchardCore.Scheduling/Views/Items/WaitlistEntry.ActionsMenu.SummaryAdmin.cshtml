@@ -1,0 +1,3 @@
+@model ShapeViewModel<WaitlistEntry>
+
+<a asp-controller="Waitlist" asp-action="Remove" asp-route-id="@Model.Value.ItemId" class="dropdown-item text-danger" data-title="@T["Remove"]" data-message="@T["Remove this customer from the waitlist?"]" data-url-af="RemoveUrl UnsafeUrl">@T["Remove"]</a>

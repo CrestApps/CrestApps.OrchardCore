@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Bookings.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<BookingRescheduledEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
+    @T["Booking Rescheduled"]
+</h4>
+<p>@T["Starts when a booking moves to other dates."]</p>

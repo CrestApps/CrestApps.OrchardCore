@@ -2,10 +2,16 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using OrchardCore.Environment.Shell;
+using OrchardCore.Environment.Shell.Builders;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
 using YesSql;
+using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -638,10 +644,91 @@ public sealed class ContactCenterOutboxTests
         Assert.Contains("explicit ReplaySafety contract", exception.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task DispatchAsync_WithoutAnHttpContext_RunsHandlersWithABackgroundHttpContextAndClearsItAfter()
+    {
+        // Arrange: a handler run after its request ended, as an answer command its timeout gave up on keeps running. A
+        // workflow triggered there failed with a NullReferenceException reading HttpContext.Items.
+        var httpContextAccessor = new HttpContextAccessor();
+        HttpContext seen = null;
+        var handler = new ConfigurableTestHandler("Test/handler/v1", () =>
+        {
+            seen = httpContextAccessor.HttpContext;
+
+            return Task.CompletedTask;
+        });
+        ContactCenterOutboxMessage created = null;
+        var outboxStore = new Mock<IContactCenterOutboxStore>();
+        outboxStore
+            .Setup(store => store.CreateAsync(It.IsAny<ContactCenterOutboxMessage>(), It.IsAny<CancellationToken>()))
+            .Callback<ContactCenterOutboxMessage, CancellationToken>((message, _) => created = message)
+            .Returns(ValueTask.CompletedTask);
+        outboxStore
+            .Setup(store => store.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => created);
+        var outbox = CreateOutbox(outboxStore, new Mock<IInteractionEventStore>(), [handler], httpContextAccessor);
+        var interactionEvent = new InteractionEvent { ItemId = "e1", EventType = ContactCenterConstants.Events.AgentLegAnswered };
+        var services = new ServiceCollection().BuildServiceProvider();
+        var shellScope = new ShellScope(new ShellContext
+        {
+            Settings = new ShellSettings(),
+            ServiceProvider = services,
+        });
+
+        // Act
+        await shellScope.UsingServiceScopeAsync(_ => outbox.DispatchAsync(interactionEvent, TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.NotNull(seen);
+        Assert.Equal(true, seen.Items["IsBackground"]);
+        Assert.Null(httpContextAccessor.HttpContext);
+        outboxStore.Verify(s => s.DeleteAsync(It.Is<ContactCenterOutboxMessage>(message => message.EventId == "e1"), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DispatchAsync_WithARequestHttpContext_KeepsTheRequestsContext()
+    {
+        // Arrange
+        var requestContext = new DefaultHttpContext();
+        var httpContextAccessor = new HttpContextAccessor { HttpContext = requestContext };
+        HttpContext seen = null;
+        var handler = new ConfigurableTestHandler("Test/handler/v1", () =>
+        {
+            seen = httpContextAccessor.HttpContext;
+
+            return Task.CompletedTask;
+        });
+        ContactCenterOutboxMessage created = null;
+        var outboxStore = new Mock<IContactCenterOutboxStore>();
+        outboxStore
+            .Setup(store => store.CreateAsync(It.IsAny<ContactCenterOutboxMessage>(), It.IsAny<CancellationToken>()))
+            .Callback<ContactCenterOutboxMessage, CancellationToken>((message, _) => created = message)
+            .Returns(ValueTask.CompletedTask);
+        outboxStore
+            .Setup(store => store.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => created);
+        var outbox = CreateOutbox(outboxStore, new Mock<IInteractionEventStore>(), [handler], httpContextAccessor);
+        var interactionEvent = new InteractionEvent { ItemId = "e1", EventType = ContactCenterConstants.Events.AgentLegAnswered };
+        var services = new ServiceCollection().BuildServiceProvider();
+        var shellScope = new ShellScope(new ShellContext
+        {
+            Settings = new ShellSettings(),
+            ServiceProvider = services,
+        });
+
+        // Act
+        await shellScope.UsingServiceScopeAsync(_ => outbox.DispatchAsync(interactionEvent, TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Same(requestContext, seen);
+        Assert.Same(requestContext, httpContextAccessor.HttpContext);
+    }
+
     private static ContactCenterOutbox CreateOutbox(
         Mock<IContactCenterOutboxStore> outboxStore,
         Mock<IInteractionEventStore> eventStore,
-        IEnumerable<IContactCenterEventHandler> handlers)
+        IEnumerable<IContactCenterEventHandler> handlers,
+        IHttpContextAccessor httpContextAccessor = null)
     {
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
@@ -663,7 +750,8 @@ public sealed class ContactCenterOutboxTests
             new TestContactCenterFeatureWorkManager(),
             session.Object,
             clock.Object,
-            NullLogger<ContactCenterOutbox>.Instance);
+            NullLogger<ContactCenterOutbox>.Instance,
+            httpContextAccessor ?? new HttpContextAccessor());
 
         return outbox;
     }

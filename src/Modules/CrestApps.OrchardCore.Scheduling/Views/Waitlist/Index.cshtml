@@ -1,0 +1,23 @@
+@model SchedulingListViewModel
+
+<zone Name="Title"><breadcrumb name="SchedulingWaitlist" title="@T["Waitlist"]" /></zone>
+
+<form method="post" asp-action="Add" class="card text-bg-theme mb-3">
+    <div class="card-body row gx-2 gy-2 align-items-end">
+        <div class="col-md-3"><label class="form-label" for="appointmentTypeId">@T["Appointment type"]</label><select id="appointmentTypeId" name="appointmentTypeId" asp-items="@((IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)ViewData["Types"])" class="form-select"></select></div>
+        <div class="col-md-2"><label class="form-label" for="from">@T["From"]</label><input id="from" name="from" type="date" class="form-control" /></div>
+        <div class="col-md-2"><label class="form-label" for="to">@T["To"]</label><input id="to" name="to" type="date" class="form-control" /></div>
+        <div class="col-md-2"><label class="form-label" for="customerName">@T["Name"]</label><input id="customerName" name="customerName" class="form-control" /></div>
+        <div class="col-md-2"><label class="form-label" for="customerEmail">@T["Email"]</label><input id="customerEmail" name="customerEmail" type="email" class="form-control" /></div>
+        <div class="col-md-1"><button type="submit" class="btn btn-secondary w-100">@T["Add"]</button></div>
+    </div>
+</form>
+
+<admin-list name="SchedulingWaitlist" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> Nobody is waiting."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Customer"]" />
+        <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

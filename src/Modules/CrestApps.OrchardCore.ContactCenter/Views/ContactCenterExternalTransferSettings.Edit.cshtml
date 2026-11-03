@@ -22,7 +22,7 @@
     </div>
 </div>
 
-<div class="ocat-wrapper" data-cc-ext-transfer data-config="@JsonSerializer.Serialize(config, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })">
+<div class="ocat-wrapper" data-cc-ext-transfer data-prefix="@ViewData.TemplateInfo.HtmlFieldPrefix" data-config="@JsonSerializer.Serialize(config, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })">
     <label class="ocat-label">@T["Approved destinations"]</label>
     <div class="ocat-end">
         <table class="table table-sm align-middle" id="cc-ext-dest-table">

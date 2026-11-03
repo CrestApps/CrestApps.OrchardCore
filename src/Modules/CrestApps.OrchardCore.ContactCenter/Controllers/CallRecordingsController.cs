@@ -3,6 +3,7 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Endpoints;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
@@ -324,6 +325,37 @@ public sealed class CallRecordingsController : Controller
         Response.Headers.CacheControl = "private, no-store";
 
         return File(source, ContentTypeOf(recording.Format), enableRangeProcessing: true);
+    }
+
+    /// <summary>
+    /// Makes a signed link that plays the recording without signing in for 24 hours, to share it outside the admin.
+    /// </summary>
+    /// <param name="id">The recording identifier.</param>
+    /// <param name="links">Makes the link.</param>
+    /// <returns>A redirect back to the recording, with the link in a message.</returns>
+    [HttpPost]
+    [Admin("contact-center/call-recordings/{id}/share", "ContactCenterCallRecordingsShare")]
+    public async Task<IActionResult> Share(string id, [FromServices] CallRecordingLinks links)
+    {
+        var access = await GetAccessAsync();
+
+        if (!access.CanListOwn || !await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.ListenToAllCallRecordings))
+        {
+            return Forbid();
+        }
+
+        var recording = await FindPlayableAsync(id, access);
+
+        if (recording is null)
+        {
+            return NotFound();
+        }
+
+        var (token, expires) = links.Create(recording.ItemId);
+        await AuditAccessAsync(recording, access, "call-recordings-share");
+        await _notifier.SuccessAsync(H["Anyone with this link can play the recording until {0} UTC: {1}", expires.ToString("g", CultureInfo.CurrentCulture), CallRecordingLinkEndpoints.BuildUrl(Request, token)]);
+
+        return RedirectToRoute(DisplayRouteName, new { id });
     }
 
     /// <summary>

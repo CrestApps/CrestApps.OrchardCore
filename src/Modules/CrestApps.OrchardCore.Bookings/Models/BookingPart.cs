@@ -86,6 +86,12 @@ public sealed class BookingPart : ContentPart
     /// content type's fields.
     /// </summary>
     public bool AskForTravelers { get; set; }
+
+    /// <summary>
+    /// Gets or sets the calendar whose busy times close the product's dates and times, such as a room's calendar. Used by the
+    /// Bookings Calendar feature.
+    /// </summary>
+    public string BlockingCalendarId { get; set; }
 }
 
 /// <summary>

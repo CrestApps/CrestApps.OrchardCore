@@ -2,17 +2,17 @@
 
 @model EditProfileA2AConnectionsViewModel
 
-@if (Model.Connections is not null && Model.Connections.Length > 0)
+@if (Model.A2AConnections is not null && Model.A2AConnections.Length > 0)
 {
     <div class="ocat-wrapper">
         <div class="ocat-label">@T["A2A Connections"]</div>
         <div class="ocat-end">
-            @for (var i = 0; i < Model.Connections.Length; i++)
+            @for (var i = 0; i < Model.A2AConnections.Length; i++)
             {
                 <div class="form-check">
-                    <input type="hidden" asp-for="Connections[i].ItemId" />
-                    <input asp-for="Connections[i].IsSelected" type="checkbox" class="form-check-input">
-                    <label class="form-check-label" asp-for="Connections[i].IsSelected">@Model.Connections[i].DisplayText</label>
+                    <input type="hidden" asp-for="A2AConnections[i].ItemId" />
+                    <input asp-for="A2AConnections[i].IsSelected" type="checkbox" class="form-check-input">
+                    <label class="form-check-label" asp-for="A2AConnections[i].IsSelected">@Model.A2AConnections[i].DisplayText</label>
                 </div>
             }
         </div>

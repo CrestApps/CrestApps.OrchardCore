@@ -1,3 +1,4 @@
+using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core.Conversations;
@@ -37,7 +38,9 @@ public sealed class UseAIProfileTaskDisplayDriver : ActivityDisplayDriver<UseAIP
     protected override async ValueTask EditActivityAsync(UseAIProfileTask activity, UseAIProfileTaskViewModel model)
     {
         model.ProfileId = activity.ProfileId;
+        model.ProfileVersion = activity.ProfileVersion;
         model.Profiles = (await _profileStore.GetByTypeAsync(AIProfileType.Chat))
+            .Where(profile => !profile.Has<AIProfileVersionCopy>())
             .Select(profile => new SelectListItem(profile.DisplayText, profile.ItemId));
     }
 
@@ -52,7 +55,13 @@ public sealed class UseAIProfileTaskDisplayDriver : ActivityDisplayDriver<UseAIP
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProfileId), S["Choose the AI profile to answer with."]);
         }
 
+        if (model.ProfileVersion is <= 0)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProfileVersion), S["The version must be a positive number, or empty for the current one."]);
+        }
+
         activity.ProfileId = model.ProfileId;
+        activity.ProfileVersion = model.ProfileVersion;
 
         return Edit(activity, context);
     }

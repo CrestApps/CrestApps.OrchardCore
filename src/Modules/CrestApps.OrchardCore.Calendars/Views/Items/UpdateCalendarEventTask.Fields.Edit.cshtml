@@ -1,0 +1,46 @@
+@using CrestApps.OrchardCore.Calendars.Workflows
+
+@model CalendarTaskViewModel
+
+<div class="mb-3">
+    <label asp-for="EventId" class="form-label">@T["Event id"]</label>
+    <input asp-for="EventId" class="form-control code" />
+</div>
+
+<div class="mb-3">
+    <label asp-for="OccurrenceStart" class="form-label">@T["Occurrence"]</label>
+    <input asp-for="OccurrenceStart" class="form-control code" />
+        <span class="hint">@T["Optional. For a repeating event, when the occurrence to change was due to start (ISO 8601 UTC). Empty changes the whole series."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Title" class="form-label">@T["Title"]</label>
+    <input asp-for="Title" class="form-control code" />
+</div>
+
+<div class="mb-3">
+    <label asp-for="Start" class="form-label">@T["Starts"]</label>
+    <input asp-for="Start" class="form-control code" />
+        <span class="hint">@T["An ISO 8601 time, with or without an offset."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="End" class="form-label">@T["Ends"]</label>
+    <input asp-for="End" class="form-control code" />
+</div>
+
+<div class="mb-3">
+    <label asp-for="Location" class="form-label">@T["Location"]</label>
+    <input asp-for="Location" class="form-control code" />
+</div>
+
+<div class="mb-3">
+    <label asp-for="Description" class="form-label">@T["Description"]</label>
+    <input asp-for="Description" class="form-control code" />
+</div>
+
+<div class="mb-3">
+    <label asp-for="OutputName" class="form-label">@T["Output name"]</label>
+    <input asp-for="OutputName" class="form-control" />
+    <span class="hint">@T["The name the result is saved under in the workflow output. Leave empty for the default."]</span>
+</div>

@@ -33,6 +33,8 @@ Your developers build the app. This page covers what you set up in the admin so 
 
 <AskYourAdmin />
 
+This video shows what you set up in the admin: the features, the documentation pages, the sign-in server, apps and servers, and a CORS policy:
+
 ## Turn it on
 
 Each commerce module has its own **API** feature, under **Tools > Features**, in the **Commerce** category. Turn on the ones your app needs. Each needs its module turned on first.
@@ -127,6 +129,7 @@ Through the API, an app can do what a buyer does on your storefront, and much of
 - **Shop**: search and list products, priced for whoever is asking, see what's in stock at each store, and fill a cart. A guest's cart can move into their own when they sign in.
 - **Check out**: give the buyer's details, choose shipping or pickup, put on discount codes, gift cards, store credit or points, and pay with the same payment methods as your checkout page. The buyer gets the same confirmation email.
 - **Follow orders**: buyers see their orders, ask for returns and track shipments.
+- **Sell to companies**: with the **Companies** feature on, a company buyer reads their company, enters the purchase order number on the checkout's Company step, and puts the order on the company's account, and a company admin lists and decides the orders waiting for approval. See [Companies](companies.md).
 - **Run the store**: staff, or a server signed in with their permissions, list and find orders, refund and cancel them, ship orders, look up customers, manage coupons, and receive, adjust, count and move stock.
 - **Sell at the counter**, with the [point of sale](point-of-sale.md).
 

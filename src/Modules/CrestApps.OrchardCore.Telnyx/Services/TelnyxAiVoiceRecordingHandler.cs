@@ -51,6 +51,7 @@ public sealed class TelnyxAiVoiceRecordingHandler : ITelnyxAiVoiceEventHandler
     {
         if (callEvent is null ||
             state is null ||
+            state.Intent == TelnyxOutboundBridgeState.AiTransferLegIntent ||
             !string.Equals(callEvent.EventType?.Trim(), "call.answered", StringComparison.OrdinalIgnoreCase))
         {
             return;

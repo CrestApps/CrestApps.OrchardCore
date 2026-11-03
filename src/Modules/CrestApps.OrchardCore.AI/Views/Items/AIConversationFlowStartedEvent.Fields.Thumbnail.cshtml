@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.AI.Workflows.Models
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AIConversationFlowStartedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-diagram-project" aria-hidden="true"></i>
+    @T["AI Conversation Flow Started"]
+</h4>
+<p>@T["Runs when a conversation of a profile that uses this workflow as its conversation flow takes its first turn."]</p>

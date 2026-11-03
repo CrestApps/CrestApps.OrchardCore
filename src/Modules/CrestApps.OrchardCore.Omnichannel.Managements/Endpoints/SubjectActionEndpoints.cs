@@ -36,6 +36,7 @@ internal static class SubjectActionEndpoints
         IContentDefinitionManager contentDefinitionManager,
         IStringLocalizer<SubjectActionEndpointsMarker> S,
         IClock clock,
+        ILocalClock localClock,
         HttpContext httpContext)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, OmnichannelConstants.Permissions.CompleteActivity))
@@ -95,9 +96,13 @@ internal static class SubjectActionEndpoints
 
             if (requiresScheduleDate)
             {
-                defaultScheduleDate = defaultScheduleHours.HasValue
+                var defaultUtc = defaultScheduleHours.HasValue
                     ? now.AddHours(defaultScheduleHours.Value)
                     : now.AddDays(1);
+
+                // The schedule field holds the user's wall-clock time, the way it's read back when the activity is
+                // completed, so the default goes out that way too, without an offset the browser would apply.
+                defaultScheduleDate = (await localClock.ConvertToLocalAsync(defaultUtc)).DateTime;
             }
 
             var previewTitle = await ResolvePreviewTitleAsync(action, request, contentDefinitionManager, S);
@@ -242,7 +247,7 @@ internal sealed class SubjectDispositionActionResponse
     public bool RequiresScheduleDate { get; set; }
 
     /// <summary>
-    /// Gets or sets the default schedule date.
+    /// Gets or sets the default schedule date, as a wall-clock time in the user's time zone.
     /// </summary>
     public DateTime? DefaultScheduleDate { get; set; }
 }

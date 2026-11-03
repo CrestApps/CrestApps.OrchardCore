@@ -174,10 +174,22 @@ internal static class AIProfileTemplateApplicator
             profile.Description = templateMetadata.Description;
         }
 
-        if (templateMetadata.AgentAvailability.HasValue)
+        if (templateMetadata.AgentAvailability.HasValue || templateMetadata.AllowToolInvocation.HasValue)
         {
             var agentMetadata = profile.GetOrCreate<AgentMetadata>();
-            agentMetadata.Availability = templateMetadata.AgentAvailability.Value;
+
+            if (templateMetadata.AgentAvailability.HasValue)
+            {
+                agentMetadata.Availability = templateMetadata.AgentAvailability.Value;
+            }
+
+            // Without this an agent created from a template that ticks tools would run without them whenever
+            // another assistant calls it.
+            if (templateMetadata.AllowToolInvocation.HasValue)
+            {
+                agentMetadata.AllowToolInvocation = templateMetadata.AllowToolInvocation.Value;
+            }
+
             profile.Put(agentMetadata);
         }
     }

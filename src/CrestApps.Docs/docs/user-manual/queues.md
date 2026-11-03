@@ -18,9 +18,13 @@ A **queue** is where waiting work lines up until an agent takes it: an inbound c
 
 <AskYourAdmin />
 
+<YouTube video="contact-center-routing-explained" title="Video overview of how a waiting call finds an agent: the routing chain, strategies, skills, priority, offers and overflow" />
+
 <YouTube video="contact-center-setup-walkthroughs" title="Video of creating a queue group and a queue with routing, service level, hours and caller treatment settings" start={257} end={340} />
 
 ## Create a queue group (optional)
+
+<YouTube video="contact-center-queues" title="Video of creating a queue group and a queue" start={79} end={122} />
 
 Queue groups only organize queues for administration and reports, for example *Sales* and *Service*. They never change routing.
 
@@ -32,6 +36,8 @@ A queue holds callers and texts for people; it has no AI setting. To have an AI 
 :::
 
 ## Clone a queue
+
+<YouTube video="contact-center-queues" title="Video of cloning a queue from its Actions menu" start={295} end={315} />
 
 To start a queue from an existing one, open its **Actions** menu in the queue list and choose **Clone**. The form opens with every setting of the original and the name **Copy of** the original's name. Change what you need and click **Save**. The agents who work the original queue are not added to the copy.
 
@@ -54,20 +60,24 @@ To send phone calls to the queue, point an [inbound entry point](entry-points-an
 
 ### Routing
 
+<YouTube video="contact-center-routing-explained" title="Video of the routing strategies, sticky agent, reservation timeout and unanswered offer action" start={75} end={137} />
+
 | Field | What it does |
 | --- | --- |
-| **Default priority** | Lowest, Low, **Normal**, High or Highest. Higher-priority items are offered first. |
-| **Routing strategy** | How the next agent is chosen: **Longest idle** (the agent who has been available the longest, the default), **Round robin** (the agent who least recently got work), or **Least busy** (the agent with the fewest active interactions). With longest idle, an agent who finishes a call goes to the back of the line. An agent whose offer or dialed call never reached them (the caller hung up, or nobody answered the dial) keeps their place. An agent who declines an offer or lets it ring out goes to the back. Campaigns always pick agents by longest idle. |
-| **Prefer the last assigned agent (sticky)** | When a returning customer's previous agent is available and eligible, offer them the work first. |
+| **Default priority** | Lowest, Low, **Normal**, High or Highest. Higher-priority items are offered first. It applies to callbacks, workflow enqueues that name no priority, dialer work and lines that have no entry point. A call that comes through an [inbound entry point](entry-points-and-ivr.md) starts at that entry point's own **Priority** instead. |
+| **Routing strategy** | How the next agent is chosen: **Longest idle** (the agent who has been available the longest, the default), **Round robin** (the agent who finished work longest ago), or **Least busy** (the agent with the fewest active interactions). With longest idle, an agent who finishes a call goes to the back of the line. An agent whose offer or dialed call never reached them (the caller hung up, or nobody answered the dial) keeps their place. An agent who declines an offer or lets it ring out goes to the back. Campaigns always pick agents by longest idle. |
+| **Prefer the last assigned agent (sticky)** | When the work returns to the queue while its last owner is still recorded, and that agent is available and eligible, offer it to them first. A new inbound call has no previous owner, so it does not go to the agent a returning customer spoke to last time. It never overrides skills, capacity or the order of declines. |
 | **Reservation timeout (seconds)** | How long an offer rings for one agent before the unanswered-offer action applies. Default 30. |
 | **Unanswered offer action** | **Requeue** (offer it to the next agent, the default), **Send to voicemail**, or **Reject call** (end the call). It also applies when an agent accepts the offer but their phone cannot be reached: the caller is treated as unanswered, and that agent is set to **Away** with the reason *Phone unreachable* until they set their own state again. |
 
 ### Service levels
 
+<YouTube video="contact-center-routing-explained" title="Video of priority, automatic priority and aging" start={210} end={280} />
+
 | Field | What it does |
 | --- | --- |
 | **Service Level Agreement (SLA) threshold (seconds)** | A waiting item that waits longer than this breaches the service level. The live dashboard counts breaches. Default 120. |
-| **Age waiting items past the SLA threshold** | Raise the priority of an item by one level for every full threshold it waits past the SLA, so old items are not stuck behind new high-priority ones. |
+| **Age waiting items past the SLA threshold** | Raise the priority of an item by one level once it has waited twice the threshold, and by one more level for each further threshold, so old items are not stuck behind new high-priority ones. The wait counts from the first time the caller joined a queue, so it survives overflow, and the raise has no ceiling. |
 | **First-response target (seconds)** | Messaging only: how quickly the first reply to a new conversation should go out. 0 means no target. |
 
 ### Skills
@@ -75,11 +85,13 @@ To send phone calls to the queue, point an [inbound entry point](entry-points-an
 | Field | What it does |
 | --- | --- |
 | **Required skills** | Agents must hold every skill picked here at proficiency 3 or higher. |
-| **Skill requirements** | Finer rules, one row per skill: **Minimum proficiency** (1-5); **Required** (unticked means *preferred*, which only ranks agents rather than excluding them); and **Relax after (s)**, which drops the requirement once an item has waited that long (0 means never). |
+| **Skill requirements** | Finer rules, one row per skill (click **Add skill requirement** for each): **Minimum proficiency** (1-5); **Required** (unticked means *preferred*, which only ranks agents rather than excluding them); and **Relax after (s)**, which drops the requirement once an item has waited that long (0 means never). |
 
 Agents get their skills on the [agent entitlements](skills-and-entitlements.md) screen.
 
 ### Hours and overflow
+
+<YouTube video="contact-center-routing-explained" title="Video of overflow, the overflow chain and the maximum wait" start={309} end={345} />
 
 | Field | What it does |
 | --- | --- |
@@ -87,9 +99,11 @@ Agents get their skills on the [agent entitlements](skills-and-entitlements.md) 
 | **Business hours calendar** | The [calendar](business-hours.md) that says when the queue is open. Empty means *Always open*. Routing pauses while the queue is closed. |
 | **After-hours action** | **Hold in queue** (the default) or **Overflow** to another queue while closed. |
 | **Overflow queue** / **Overflow after (seconds)** | A single overflow hop: after this many seconds of waiting, move the caller to the overflow queue. 0 means no time-based overflow. |
-| **Overflow chain** | Several hops, each with a queue and a wait in seconds. It replaces the single hop. A caller never returns to a queue they have already been in. |
+| **Overflow chain** | Several hops (click **Add overflow hop** for each), each with a queue and a wait in seconds. It replaces the single hop. A caller never returns to a queue they have already been in. |
 
 ### Limits
+
+<YouTube video="contact-center-call-flows" title="Video of the queue limits, overflow and voicemail" start={161} end={191} />
 
 | Field | What it does |
 | --- | --- |
@@ -100,13 +114,15 @@ Agents get their skills on the [agent entitlements](skills-and-entitlements.md) 
 
 ### While callers wait
 
+<YouTube video="contact-center-call-flows" title="Video of the queue treatment: welcome message, hold music, place in line, estimated wait and callback" start={110} end={161} />
+
 | Field | What it does |
 | --- | --- |
 | **Welcome message** | Spoken once when the caller enters the queue. |
-| **Hold music** | A recording from [Voice media](voice-media.md). Empty uses the phone provider's default. |
+| **Hold music** | A recording from [Voice media](voice-media.md). Empty plays a ringing tone. |
 | **Announcement interval (seconds)** | How often to interrupt the music with an update. 0 means no announcements. |
 | **Announce the caller's place in line** / **Announce the estimated wait** | What the update says. The estimate is place in line × average handle time ÷ available agents. |
-| **Average handle time (seconds)** | Used for the estimate. With 0, no estimate is spoken. |
+| **Average handle time (seconds)** | Used for the estimate. With 0, no estimate is spoken. The estimate is only spoken while at least one agent is available. |
 | **Minimum / Maximum announced estimate (seconds)** | Keeps the spoken estimate between these bounds (30 and 1800 by default). |
 
 ### Callback
@@ -116,4 +132,4 @@ Agents get their skills on the [agent entitlements](skills-and-entitlements.md) 
 | **Callback key** | The key (0-9, * or #) a waiting caller presses to hang up and get a call back instead. Empty means callbacks are not offered. |
 | **Offer callback after (seconds)** | How long a caller waits before the callback is offered. |
 
-A caller who presses the callback key hangs up and keeps their place in line: the callback is scheduled with the time they first entered the queue, and it is offered to an agent as outbound work. Callbacks need the **Contact Center Outbound Dialer** feature; without it no callback is stored.
+A caller who presses the callback key leaves the queue and is called back: a background task creates the callback within about a minute, queues it again on the same queue at the queue's default priority, and offers it to an agent like a preview call. The agent accepts, and the platform dials the customer. Callbacks need the **Contact Center Outbound Dialer** feature; without it no callback is stored.

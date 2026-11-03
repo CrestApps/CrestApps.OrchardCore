@@ -43,6 +43,11 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
         TelnyxOutboundBridgeState state,
         CancellationToken cancellationToken)
     {
+        if (state.Intent == TelnyxOutboundBridgeState.AiTransferLegIntent)
+        {
+            return await AdvanceAiTransferLegAsync(callEvent, state, cancellationToken);
+        }
+
         var handedToContactCenter = await IsHandedToContactCenterAsync(callEvent, cancellationToken);
 
         // In registration order, one after another. A realtime conversation's handler returns only when the AI is done
@@ -71,5 +76,20 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
             TelnyxConstants.ProviderTechnicalName,
             callEvent.CallControlId,
             cancellationToken);
+    }
+
+    // The side call of an AI warm or screened transfer belongs to the AI conversation, never to the Contact Center:
+    // its events go to the same handlers as the AI call's own, which tell it apart by its intent.
+    private async Task<TelnyxOutboundBridgeLeg> AdvanceAiTransferLegAsync(
+        TelnyxCallEvent callEvent,
+        TelnyxOutboundBridgeState state,
+        CancellationToken cancellationToken)
+    {
+        foreach (var handler in _aiVoiceEventHandlers)
+        {
+            await handler.HandleAsync(callEvent, state, cancellationToken);
+        }
+
+        return TelnyxOutboundBridgeLeg.DestinationLeg;
     }
 }

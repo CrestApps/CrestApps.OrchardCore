@@ -15,9 +15,11 @@ public sealed class TimeZoneMapDeploymentStep : DeploymentStep
     public override string Name => TimeZonesConstants.Recipes.TimeZoneMaps;
 
     /// <inheritdoc />
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Category => _category;
 
     /// <inheritdoc />
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Title => _title;
 
     /// <summary>

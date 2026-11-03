@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Bookings.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<BookingExpiredEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-hourglass-end" aria-hidden="true"></i>
+    @T["Booking Expired"]
+</h4>
+<p>@T["Starts when a booking's hold runs out because its order wasn't paid in time."]</p>

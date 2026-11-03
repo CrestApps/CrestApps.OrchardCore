@@ -1,0 +1,25 @@
+@using System.Globalization
+@using CrestApps.OrchardCore.AI.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIAlertRule>
+
+@if (!Model.Value.Enabled)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-circle-pause text-secondary me-1" aria-hidden="true"></i>@T["Paused"]</span>
+}
+else if (Model.Value.IsOpen)
+{
+    <span class="badge ta-badge fw-normal text-bg-danger" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-bell me-1" aria-hidden="true"></i>@T["Alerting"]</span>
+}
+else
+{
+    <span class="badge ta-badge fw-normal text-bg-success" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-circle-check me-1" aria-hidden="true"></i>@T["OK"]</span>
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Metric"]"><i class="fa-solid fa-chart-line text-secondary me-1" aria-hidden="true"></i>@Model.Value.Metric</span>
+
+@if (Model.Value.LastValue is { } value)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Latest value, from {0} samples", Model.Value.LastSampleSize]"><i class="fa-solid fa-gauge text-secondary me-1" aria-hidden="true"></i>@value.ToString("0.##", CultureInfo.CurrentCulture)</span>
+}

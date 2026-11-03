@@ -1,0 +1,279 @@
+@using OrchardCore.DataSources
+@model ConnectedDataSetFieldsViewModel
+
+@{
+    var accessModeName = Html.NameFor(model => model.AccessMode);
+    var refreshModeId = Html.IdFor(model => model.RefreshMode);
+    var sectionId = Html.IdFor(model => model.AccessMode) + "_Section";
+    var resourcesId = Html.IdFor(model => model.Resource) + "_Resources";
+    var temporalFields = Model.Fields.Where(field => field.IsIncluded && (field.Type == DataFieldType.Date || field.Type == DataFieldType.DateTime)).ToArray();
+    var incrementalFields = Model.Fields.Where(field => field.Type is DataFieldType.Date or DataFieldType.DateTime or DataFieldType.Integer or DataFieldType.Decimal).ToArray();
+}
+
+<div id="@sectionId">
+    <div class="ocat-wrapper">
+        <label class="ocat-label">@T["Connection"]</label>
+        <div class="ocat-end">
+            <p class="form-control-plaintext mb-0"><strong>@Model.ConnectionDisplayText</strong> <span class="text-muted">(@Model.ConnectorDisplayName)</span></p>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="DisplayText" class="ocat-label ocat-label-required">@T["Name"]</label>
+        <div class="ocat-end">
+            <input asp-for="DisplayText" class="form-control" />
+            <span asp-validation-for="DisplayText" class="text-danger"></span>
+            <span class="hint">@T["The name reports and data pipelines show when they list data sets."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="Name" class="ocat-label">@T["Technical name"]</label>
+        <div class="ocat-end">
+            @if (Model.IsNew)
+            {
+                <input asp-for="Name" class="form-control" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+                <span class="hint">@T["What reports and data pipelines store to read this data set. Letters, digits and underscores, starting with a letter; leave empty to make one from the name. It can't change once the data set is saved."]</span>
+            }
+            else
+            {
+                <p class="form-control-plaintext mb-0"><code>@Model.Name</code></p>
+                <span class="hint">@T["Users read this data set with the permission <code>{0}</code> or <strong>Read every connected data set</strong>.", Model.PermissionName]</span>
+            }
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+        <div class="ocat-end">
+            <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="Resource" class="ocat-label">@T["Resource"]</label>
+        <div class="ocat-end">
+            <input asp-for="Resource" class="form-control" list="@resourcesId" autocomplete="off" />
+            <datalist id="@resourcesId">
+                @foreach (var resource in Model.Resources)
+                {
+                    <option value="@resource.Name">@resource.DisplayName@(string.IsNullOrEmpty(resource.Kind) ? string.Empty : $" ({resource.Kind})")</option>
+                }
+            </datalist>
+            @if (!string.IsNullOrEmpty(Model.DiscoveryError))
+            {
+                <div class="text-warning mt-1"><i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@T["The connection's resources couldn't be listed: {0}", Model.DiscoveryError]</div>
+            }
+            else if (Model.Resources.Count > 0)
+            {
+                <span class="hint">@T["Pick one of the {0} resources the connection lists, or type a name.", Model.Resources.Count]</span>
+            }
+            <span class="hint">@T["What the data set reads: a table or view (schema.name), an index or alias, a path on the API's base URL, or a file of the media library, depending on the connection."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label class="ocat-label">@T["Access"]</label>
+        <div class="ocat-end">
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="@accessModeName" id="@(sectionId)_Live" value="@nameof(DataSetAccessMode.Live)" checked="@(Model.AccessMode == DataSetAccessMode.Live)" disabled="@(!Model.SupportsLive)" />
+                <label class="form-check-label" for="@(sectionId)_Live">@T["Live"]</label>
+                <span class="hint dashed">@T["Every read goes to the external system, so readers always see its current rows. Use it for sources that answer fast."]</span>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="@accessModeName" id="@(sectionId)_Imported" value="@nameof(DataSetAccessMode.Imported)" checked="@(Model.AccessMode == DataSetAccessMode.Imported)" disabled="@(!Model.SupportsImport)" />
+                <label class="form-check-label" for="@(sectionId)_Imported">@T["Imported"]</label>
+                <span class="hint dashed">@T["The rows are copied into the site's database on a schedule and read from there, so reports stay fast and keep working when the source is down."]</span>
+            </div>
+            <span asp-validation-for="AccessMode" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input asp-for="IsEnabled" class="form-check-input" type="checkbox" />
+                <label asp-for="IsEnabled" class="form-check-label">@T["Enabled"]</label>
+                <span class="hint dashed">@T["A disabled data set isn't listed to reports and data pipelines, and isn't refreshed."]</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label class="ocat-label">@T["Fields"]</label>
+        <div class="ocat-end">
+            @if (Model.Fields.Count == 0)
+            {
+                <div class="alert alert-info" role="alert">@T["No fields yet. Pick the resource, then discover its fields; they are also read when you save."]</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-2">
+                        <thead>
+                            <tr>
+                                <th scope="col">@T["Show"]</th>
+                                <th scope="col">@T["Source field"]</th>
+                                <th scope="col">@T["Name"]</th>
+                                <th scope="col">@T["Display name"]</th>
+                                <th scope="col">@T["Type"]</th>
+                                <th scope="col">@T["Identifier"]</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (var index = 0; index < Model.Fields.Count; index++)
+                            {
+                                <tr>
+                                    <td>
+                                        <input asp-for="Fields[index].IsIncluded" class="form-check-input" type="checkbox" title="@T["Readers see this field"]" />
+                                        <input asp-for="Fields[index].SourceName" type="hidden" />
+                                        <input asp-for="Fields[index].SourceType" type="hidden" />
+                                    </td>
+                                    <td><code>@Model.Fields[index].SourceName</code></td>
+                                    <td><input asp-for="Fields[index].Name" class="form-control form-control-sm" /></td>
+                                    <td><input asp-for="Fields[index].DisplayName" class="form-control form-control-sm" /></td>
+                                    <td>
+                                        <select asp-for="Fields[index].Type" asp-items="Model.FieldTypes" class="form-select form-select-sm"></select>
+                                        @if (Model.Fields[index].Type != Model.Fields[index].SourceType)
+                                        {
+                                            <span class="hint">@T["Source: {0}", Model.Fields[index].SourceType]</span>
+                                        }
+                                    </td>
+                                    <td><input asp-for="Fields[index].IsIdentifier" class="form-check-input" type="checkbox" title="@T["Part of what identifies a row"]" /></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            <span asp-validation-for="Fields" class="text-danger"></span>
+            <button type="submit" name="submit.DiscoverFields" class="btn btn-sm btn-secondary"><i class="fa-solid fa-magnifying-glass me-1" aria-hidden="true"></i>@T["Discover fields"]</button>
+            <span class="hint">@T["Reads the resource's fields from the source. Fields you already have keep their names, types and settings; new ones are added."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="DefaultDateField" class="ocat-label">@T["Default date field"]</label>
+        <div class="ocat-end">
+            <select asp-for="DefaultDateField" class="form-select">
+                <option value="">@T["None"]</option>
+                @foreach (var field in temporalFields)
+                {
+                    <option value="@field.Name" selected="@(field.Name == Model.DefaultDateField)">@(string.IsNullOrEmpty(field.DisplayName) ? field.Name : field.DisplayName)</option>
+                }
+            </select>
+            <span class="hint">@T["The date reports filter this data set by when nothing else is chosen."]</span>
+        </div>
+    </div>
+
+    <fieldset data-access="Imported">
+        <legend class="h5 mt-3">@T["Refresh"]</legend>
+
+        @if (Model.Import?.LastRefreshUtc is not null)
+        {
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["Last refresh"]</label>
+                <div class="ocat-end">
+                    <p class="form-control-plaintext mb-0">
+                        @await DisplayAsync(await New.DateTime(Utc: Model.Import.LastRefreshUtc, Format: "g")) – @Model.Import.LastStatus
+                        @if (Model.Import.LastSuccessUtc is not null)
+                        {
+                            <span class="text-muted">· @T["{0} rows published", Model.Import.RowCount]</span>
+                        }
+                    </p>
+                    @if (!string.IsNullOrEmpty(Model.Import.LastError))
+                    {
+                        <div class="text-danger">@Model.Import.LastError</div>
+                    }
+                </div>
+            </div>
+        }
+
+        <div class="ocat-wrapper">
+            <label asp-for="RefreshIntervalMinutes" class="ocat-label">@T["Refresh every (minutes)"]</label>
+            <div class="ocat-end">
+                <input asp-for="RefreshIntervalMinutes" type="number" min="1" class="form-control" />
+                <span asp-validation-for="RefreshIntervalMinutes" class="text-danger"></span>
+                <span class="hint">@T["Leave empty to refresh only when someone clicks Refresh now. A refresh that fails keeps the rows of the last one that succeeded."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="RefreshMode" class="ocat-label">@T["Refresh reads"]</label>
+            <div class="ocat-end">
+                <select asp-for="RefreshMode" class="form-select">
+                    <option value="@nameof(DataSetRefreshMode.Full)">@T["Every row"]</option>
+                    @if (Model.SupportsIncremental)
+                    {
+                        <option value="@nameof(DataSetRefreshMode.Incremental)">@T["Only the rows changed since the last refresh"]</option>
+                    }
+                </select>
+                <span asp-validation-for="RefreshMode" class="text-danger"></span>
+                @if (!Model.SupportsIncremental)
+                {
+                    <span class="hint">@T["This connector can't tell which rows changed, so every refresh reads every row."]</span>
+                }
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" data-refresh="Incremental">
+            <label asp-for="IncrementalField" class="ocat-label">@T["Changed rows have a larger"]</label>
+            <div class="ocat-end">
+                <select asp-for="IncrementalField" class="form-select">
+                    <option value="">@T["Pick a field"]</option>
+                    @foreach (var field in incrementalFields)
+                    {
+                        <option value="@field.Name" selected="@(field.Name == Model.IncrementalField)">@(string.IsNullOrEmpty(field.DisplayName) ? field.Name : field.DisplayName)</option>
+                    }
+                </select>
+                <span asp-validation-for="IncrementalField" class="text-danger"></span>
+                <span class="hint">@T["A modification date or a version number that grows whenever a row changes. Rows are replaced by their identifier fields; a row deleted at the source stays until the next full refresh."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="SchemaChangePolicy" class="ocat-label">@T["When the source's fields change"]</label>
+            <div class="ocat-end">
+                <select asp-for="SchemaChangePolicy" class="form-select">
+                    <option value="@nameof(DataSetSchemaChangePolicy.Accept)">@T["Add new fields and follow type changes; keep removed fields, empty"]</option>
+                    <option value="@nameof(DataSetSchemaChangePolicy.Fail)">@T["Fail the refresh and keep the published rows"]</option>
+                </select>
+            </div>
+        </div>
+    </fieldset>
+</div>
+
+<script at="Foot">
+    (function () {
+        const section = document.getElementById('@sectionId');
+        const refreshMode = document.getElementById('@refreshModeId');
+
+        if (!section) {
+            return;
+        }
+
+        const refresh = function () {
+            const checked = section.querySelector('input[name="@accessModeName"]:checked');
+            const access = checked ? checked.value : '';
+
+            section.querySelectorAll('[data-access]').forEach(function (element) {
+                element.classList.toggle('d-none', element.getAttribute('data-access') !== access);
+            });
+
+            section.querySelectorAll('[data-refresh]').forEach(function (element) {
+                element.classList.toggle('d-none', !refreshMode || element.getAttribute('data-refresh') !== refreshMode.value);
+            });
+        };
+
+        section.querySelectorAll('input[name="@accessModeName"]').forEach(function (input) {
+            input.addEventListener('change', refresh);
+        });
+
+        if (refreshMode) {
+            refreshMode.addEventListener('change', refresh);
+        }
+
+        refresh();
+    })();
+</script>

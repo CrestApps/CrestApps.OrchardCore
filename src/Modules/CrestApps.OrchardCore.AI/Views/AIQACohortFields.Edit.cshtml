@@ -1,0 +1,77 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AIQACohortViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="Enabled" />
+            <label class="form-check-label" asp-for="Enabled">@T["Score conversations"]</label>
+            <span class="hint dashed">@T["Clear to pause the cohort without losing its settings."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ProfileIds">
+    <label asp-for="ProfileIds" class="ocat-label ocat-label-required">@T["AI profiles"]</label>
+    <div class="ocat-end">
+        <select asp-for="ProfileIds" asp-items="Model.Profiles" class="form-select" multiple size="6"></select>
+        <span asp-validation-for="ProfileIds" class="text-danger"></span>
+        <span class="hint">@T["The conversations of these profiles are sampled once they close."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="SamplePercent">
+    <label asp-for="SamplePercent" class="ocat-label">@T["Sample"]</label>
+    <div class="ocat-end">
+        <div class="input-group">
+            <input asp-for="SamplePercent" type="number" min="1" max="100" class="form-control" />
+            <span class="input-group-text">%</span>
+        </div>
+        <span asp-validation-for="SamplePercent" class="text-danger"></span>
+        <span class="hint">@T["The share of conversations scored. Each conversation is in or out of the sample for good, so the same one is never scored twice."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Criteria">
+    <label asp-for="Criteria" class="ocat-label">@T["Success criteria"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Criteria" rows="4" class="form-control"></textarea>
+        <span class="hint">@T["One per line, such as <em>Confirms the order number before giving its status</em>. The judge also scores resolution, sentiment, tool failures, transfers and tone on every conversation."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="PassingScore">
+    <label asp-for="PassingScore" class="ocat-label">@T["Passing score"]</label>
+    <div class="ocat-end">
+        <input asp-for="PassingScore" type="number" min="0" max="100" class="form-control" />
+        <span asp-validation-for="PassingScore" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="CheckKnowledge" />
+            <label class="form-check-label" asp-for="CheckKnowledge">@T["Check answers against the knowledge base"]</label>
+            <span class="hint dashed">@T["The profile's own knowledge base and data sources are searched for what the customer asked, and any fact the AI stated that they don't support is flagged as a hallucination, with the line."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="JudgeDeploymentName" class="ocat-label">@T["Judge model"]</label>
+    <div class="ocat-end">
+        <select asp-for="JudgeDeploymentName" asp-items="Model.Deployments" class="form-select">
+            <option value="">@T["Default utility model"]</option>
+        </select>
+    </div>
+</div>

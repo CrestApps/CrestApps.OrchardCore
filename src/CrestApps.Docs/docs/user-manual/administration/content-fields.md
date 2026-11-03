@@ -13,7 +13,7 @@ A **content field** is one box on a content item's form, such as a title, a date
 
 | | |
 | --- | --- |
-| **Menu** | Content > Content Definition > Content Types |
+| **Menu** | Design > Content Definition > Content Types |
 | **Permission** | Edit content types |
 | **Feature** | CrestApps Content Fields (Phone Field), Address Field |
 
@@ -22,6 +22,8 @@ A **content field** is one box on a content item's form, such as a title, a date
 <YouTube video="site-administration-walkthroughs" title="Video of enabling Content Fields, adding the Phone Field, and using the country-aware phone input" start={7} end={42} />
 
 ## Add a phone field to a content type
+
+1. Open **Design > Content Definition > Content Types** and edit the content type.
 
 1. Open **Content > Content Definition > Content Types** and edit the content type.
 2. Click **Add Field**.
@@ -60,9 +62,10 @@ If the number is not a valid phone number, the item is not saved and the form sh
 
 ## Add an address field to a content type
 
+
 Turn on the **Address Field** feature first. It also turns on **Addresses**.
 
-1. Open **Content > Content Definition > Content Types** and edit the content type.
+1. Open **Design > Content Definition > Content Types** and edit the content type.
 2. Click **Add Field**, enter the display name editors will see, for example *Location* or *Home address*, choose **AddressField** and save.
 3. On the field's settings page, set the options below and save.
 
@@ -70,11 +73,12 @@ Turn on the **Address Field** feature first. It also turns on **Addresses**.
 | --- | --- |
 | **Required** | Editors must enter an address before they can save the item. Otherwise the address can be left blank. |
 | **Hint** | Help text shown above the address. |
-| **Ask for a recipient name**, **Ask for a company**, **Ask for a phone number** | Which of these the address asks for. A venue might need only the company; a mailing address needs the recipient. |
+| **Ask for a recipient name**, **Ask for a company**, **Ask for a phone number** | Which of these the address asks for. The recipient name and the company are ticked for a new field and the phone number is not. A venue might need only the company; a mailing address needs the recipient. |
 | **Countries offered** | The countries editors can choose. Select none to offer every country your site serves. |
 | **Default country** | The country a new address starts in. |
 
 ## Enter an address
+
 
 1. Choose the **Country** first. The rest of the form follows it: the fields that country uses, in its order, with its names, such as **State** and **ZIP code** for the United States, **Province** and **Postal code** for Canada, or **Post town** and **Postcode** for the United Kingdom. Where a country has a list of states or provinces, you pick one from it.
 2. Fill in the address and save the item.
@@ -82,3 +86,22 @@ Turn on the **Address Field** feature first. It also turns on **Addresses**.
 The address is checked against its country: the fields marked * are required, a postal code has to look like that country's, and it has to belong to the state or province chosen. If something is wrong, the item is not saved and the field shows what to fix, for example *Postal code V6B 1A1 isn't in Ontario.*
 
 On the saved item, the address is shown the way its country's post writes it.
+
+## Manage the countries
+
+When the **Address Countries** feature is on, each country the address field can offer is a content item of the type **Country**. They are added the first time the feature is turned on, from the standard list of countries.
+
+1. Open **Content > Content Items**, open the **Content Type** menu and choose **Country**.
+2. Type a name in the search box to find a country. The list shows only the items of that type.
+3. Click **Edit** to rename a country, **New** and **Country** to add one, or use **Actions** to delete one.
+
+Address fields offer only the countries that are published here, so deleting the countries your site does not serve keeps them out of every list. A field's **Countries offered** setting narrows the list further for that one field.
+
+## Turn on address suggestions
+
+When the **Address Suggestions (Google Places)** feature is on, people typing a street in an address get suggestions, and the rest of the address fills in from the one they pick. Suggestions come from Google Places, which bills your site for each session, so they are off until you give the site a key.
+
+1. Open **Settings > Address suggestions**. You need the **Manage address suggestions** permission.
+2. Paste the **Google Places API key** and save. Create the key for the *Places API (New)* in the Google Cloud console, and restrict it to that API.
+
+The site keeps the key on the server and never shows it again: leave the box blank to keep the saved key, tick **Remove the key** to stop suggesting addresses. Without a key, people type their address themselves.

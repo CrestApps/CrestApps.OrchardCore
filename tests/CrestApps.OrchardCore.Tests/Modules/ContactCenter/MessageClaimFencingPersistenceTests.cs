@@ -67,7 +67,8 @@ public sealed class MessageClaimFencingPersistenceTests
                 new TestContactCenterFeatureWorkManager(),
                 settlementSession,
                 CreateClock(),
-                NullLogger<ContactCenterOutbox>.Instance);
+                NullLogger<ContactCenterOutbox>.Instance,
+                new Microsoft.AspNetCore.Http.HttpContextAccessor());
             var exception = await Record.ExceptionAsync(() => settlement.SettleClaimAsync(
                 "message-1",
                 "worker-a",
@@ -131,7 +132,8 @@ public sealed class MessageClaimFencingPersistenceTests
                 new TestContactCenterFeatureWorkManager(),
                 settlementSession,
                 CreateClock(),
-                NullLogger<ContactCenterOutbox>.Instance);
+                NullLogger<ContactCenterOutbox>.Instance,
+                new Microsoft.AspNetCore.Http.HttpContextAccessor());
 
             var completed = await settlement.SettleClaimAsync(
                 "message-1",

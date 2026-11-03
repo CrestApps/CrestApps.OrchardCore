@@ -55,6 +55,11 @@ internal sealed class WorkflowToolFunction : AIFunction
         {
             ["Strict"] = AIToolParameterSchemaBuilder.IsStrictEligible(exposeRequest, _parameters),
         };
+
+        if (settings.TimeoutSeconds is { } timeoutSeconds)
+        {
+            _additionalProperties[TimeLimitedAIFunction.TimeoutSecondsProperty] = timeoutSeconds;
+        }
     }
 
     /// <inheritdoc/>

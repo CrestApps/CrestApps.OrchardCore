@@ -258,6 +258,14 @@
 			acceptButton.__restingHtml = void 0;
 		}
 	}
+	function readOfferRefusal(response) {
+		if (!response || response.ok !== false || typeof response.json !== "function") return Promise.resolve(null);
+		return response.json().then(function(body) {
+			return body && typeof body.reason === "string" && body.reason ? body.reason : null;
+		}, function() {
+			return null;
+		});
+	}
 	function withOfferAcceptTimeout(promise) {
 		return new Promise(function(resolve, reject) {
 			var timer = setTimeout(function() {
@@ -546,9 +554,11 @@
 				};
 				showOfferAccepting(refs.offer, { pending: true }, answeringLabels);
 				withOfferAcceptTimeout(post(config.acceptOfferUrl, config.antiForgeryToken, { reservationId })).then(function(response) {
-					if (!response.ok) showError(label("acceptFailed", "The offer could not be accepted. It may have been re-offered."));
-					else clearError();
-					return refresh();
+					return readOfferRefusal(response).then(function(reason) {
+						if (!response.ok) showError(reason || label("acceptFailed", "The offer could not be accepted. It may have been re-offered."));
+						else clearError();
+						return refresh();
+					});
 				}).catch(function(error) {
 					showError(error && error.offerAcceptTimedOut ? label("acceptTimedOut", "The call is taking too long to connect. Check your soft phone, then try again.") : label("acceptFailed", "The offer could not be accepted. It may have been re-offered."));
 				}).finally(function() {

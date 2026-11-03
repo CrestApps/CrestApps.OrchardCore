@@ -15,8 +15,10 @@ public sealed class TelnyxSmsSettingsDeploymentStep : DeploymentStep
     public override string Name => TelnyxDeploymentSteps.SmsSettings;
 
     /// <inheritdoc />
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Category => _category;
 
     /// <inheritdoc />
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Title => _title;
 }

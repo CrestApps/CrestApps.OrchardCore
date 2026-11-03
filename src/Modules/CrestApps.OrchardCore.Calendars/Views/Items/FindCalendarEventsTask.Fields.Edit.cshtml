@@ -1,0 +1,27 @@
+@using CrestApps.OrchardCore.Calendars.Workflows
+
+@model CalendarTaskViewModel
+
+<div class="mb-3">
+    <label asp-for="CalendarIds" class="form-label">@T["Calendar ids"]</label>
+    <input asp-for="CalendarIds" class="form-control code" />
+        <span class="hint">@T["Separated by commas."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="From" class="form-label">@T["From"]</label>
+    <input asp-for="From" class="form-control code" />
+        <span class="hint">@T["An ISO 8601 time."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="To" class="form-label">@T["To"]</label>
+    <input asp-for="To" class="form-control code" />
+        <span class="hint">@T["An ISO 8601 time."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="OutputName" class="form-label">@T["Output name"]</label>
+    <input asp-for="OutputName" class="form-control" />
+    <span class="hint">@T["The name the result is saved under in the workflow output. Leave empty for the default."]</span>
+</div>

@@ -1,3 +1,6 @@
+using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Core.Conversations;
+
 namespace CrestApps.OrchardCore.AI.Chat.ViewModels;
 
 /// <summary>
@@ -45,4 +48,24 @@ public class DataExtractionEntryViewModel
     /// Gets or sets a value indicating whether is updatable.
     /// </summary>
     public bool IsUpdatable { get; set; }
+
+    /// <summary>
+    /// Gets or sets the type of value extracted.
+    /// </summary>
+    public DataExtractionFieldType FieldType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the values a choice field allows, one per line.
+    /// </summary>
+    public string AllowedValues { get; set; }
+
+    /// <summary>
+    /// Gets or sets the contact field the value is written to, as <c>PartName.FieldName</c>.
+    /// </summary>
+    public string ContactField { get; set; }
+
+    /// <summary>
+    /// Gets or sets how the value is written to the contact field.
+    /// </summary>
+    public AIContactFieldMappingMode ContactFieldMode { get; set; }
 }

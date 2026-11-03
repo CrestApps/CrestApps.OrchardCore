@@ -1,0 +1,23 @@
+@model ElasticsearchDataSetViewModel
+
+<fieldset>
+    <legend class="h5 mt-3">@T["Search"]</legend>
+
+    <div class="ocat-wrapper">
+        <label asp-for="Query" class="ocat-label">@T["Query"]</label>
+        <div class="ocat-end">
+            <textarea asp-for="Query" class="form-control font-monospace" rows="5" placeholder='{ "term": { "status": "active" } }'></textarea>
+            <span asp-validation-for="Query" class="text-danger"></span>
+            <span class="hint">@T["A query clause in the Elasticsearch query DSL that picks the documents read. Leave empty to read every document of the index. The resource above is the index, alias or pattern, such as logs-*."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="ScrollMinutes" class="ocat-label">@T["Scroll keep-alive (minutes)"]</label>
+        <div class="ocat-end">
+            <input asp-for="ScrollMinutes" type="number" min="1" max="60" class="form-control" />
+            <span asp-validation-for="ScrollMinutes" class="text-danger"></span>
+            <span class="hint">@T["How long the cluster keeps the read open between two pages of documents."]</span>
+        </div>
+    </div>
+</fieldset>

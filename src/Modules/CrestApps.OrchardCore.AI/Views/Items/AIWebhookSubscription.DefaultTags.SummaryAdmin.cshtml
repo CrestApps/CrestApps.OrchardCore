@@ -1,0 +1,11 @@
+@using CrestApps.OrchardCore.AI.Core.Webhooks
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIWebhookSubscription>
+
+@if (!Model.Value.Enabled)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-circle-pause text-secondary me-1" aria-hidden="true"></i>@T["Paused"]</span>
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@string.Join(", ", Model.Value.Events)"><i class="fa-solid fa-bolt text-secondary me-1" aria-hidden="true"></i>@T["Events: {0}", Model.Value.Events.Count]</span>

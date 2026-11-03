@@ -41,6 +41,10 @@ public sealed class TelnyxAiVoiceConversationHandler : ITelnyxAiVoiceEventHandle
             ProviderCallId = callEvent.CallControlId,
             ProviderName = TelnyxConstants.ProviderTechnicalName,
             ActivityId = state.ActivityId,
+
+            // The side call of a warm or screened transfer: its events drive the transfer, not the conversation.
+            IsSideCall = state.Intent == TelnyxOutboundBridgeState.AiTransferLegIntent,
+            PeerProviderCallId = state.Intent == TelnyxOutboundBridgeState.AiTransferLegIntent ? state.PeerCallControlId : null,
             TranscriptionText = callEvent.TranscriptionText,
             TranscriptionIsFinal = callEvent.TranscriptionIsFinal,
             Digits = callEvent.Digits,

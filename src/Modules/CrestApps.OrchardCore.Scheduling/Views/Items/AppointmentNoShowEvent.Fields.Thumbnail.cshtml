@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Scheduling.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AppointmentNoShowEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-user-slash" aria-hidden="true"></i> @T["Appointment Marked No-Show"]</h4>
+<p>@T["Starts when a customer is marked as not coming."]</p>

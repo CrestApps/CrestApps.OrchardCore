@@ -76,7 +76,10 @@ internal static class AIProfileRecipeSchemaBuilder
                 ("Availability", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)
                     .Enum("OnDemand", "AlwaysAvailable")
-                    .Description("Controls whether the agent is only available when selected or always injected into orchestration.")))
+                    .Description("Controls whether the agent is only available when selected or always injected into orchestration.")),
+                ("AllowToolInvocation", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Boolean)
+                    .Description("When true, the agent runs its own selected tools when another assistant calls it. When false or missing, it runs without tools.")))
             .AdditionalProperties(true);
 
     private static JsonSchemaBuilder BuildAIProfileMetadataSchema()
@@ -278,7 +281,10 @@ internal static class AIProfileRecipeSchemaBuilder
                 ("AgentAvailability", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)
                     .Enum("OnDemand", "AlwaysAvailable")
-                    .Description("Agent availability applied when the generated profile type is Agent.")))
+                    .Description("Agent availability applied when the generated profile type is Agent.")),
+                ("AllowToolInvocation", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Boolean)
+                    .Description("When true and the generated profile type is Agent, the agent runs its own selected tools when another assistant calls it.")))
             .AdditionalProperties(true);
 
     private static JsonSchemaBuilder BuildSystemPromptTemplateMetadataSchema()

@@ -59,6 +59,18 @@ body .ta-content {
     padding-bottom: 3rem;
 }
 
+// On admin edit pages, Orchard Core fixes the page's buttons to the bottom of the screen in a bar whose height it
+// publishes as --oc-action-bar-bottom-height. Dock the tab on top of that bar instead of over its buttons, and
+// reserve both heights. Stay one layer under the bar, so its "more actions" menu opens over the tab.
+html:has(.action-bar-bottom) .cc-agent-bar {
+    bottom: var(--oc-action-bar-bottom-height, 3.5rem);
+    z-index: calc(var(--oc-action-bar-bottom-zindex, 980) - 1);
+}
+
+body .ta-content:has(.action-bar-bottom) {
+    padding-bottom: calc(var(--oc-action-bar-bottom-height, 3.5rem) + 3rem);
+}
+
 .cc-agent-bar__inner {
     display: flex;
     flex-direction: column;
@@ -314,6 +326,34 @@ body .ta-content {
     line-height: 1.35;
 }
 
+// A call the agent asked for was refused (a number on a do-not-call registry, say) after its offer was already gone,
+// so the reason is shown on the bar until the agent dismisses it.
+.cc-bar__notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin: 0.35rem 0 0;
+    padding: 0.3rem 0.6rem;
+    border-radius: 0.35rem;
+    background: rgba(255, 138, 128, 0.16);
+    border: 1px solid rgba(255, 138, 128, 0.55);
+    color: #ffd6d1;
+    font-size: 0.85em;
+    line-height: 1.35;
+
+    > span {
+        flex: 1 1 auto;
+    }
+
+    .btn-close {
+        flex: 0 0 auto;
+        width: 0.6rem;
+        height: 0.6rem;
+        padding: 0.2rem;
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+}
+
 .cc-bar__open-phone {
     font-weight: 600;
     white-space: nowrap;
@@ -350,4 +390,21 @@ body .ta-content {
 @media (max-width: 768px) {
     .cc-agent-bar { max-width: calc(100vw - 1rem); }
     .cc-bar__presence-label { max-width: 6rem; }
+}
+
+// On a small screen Orchard Core pins a page's action buttons in a full-width bar along the bottom
+// (`.action-bar-bottom`, marked `.action-bar-ready` once its script has laid it out), and the agent bar sat on top of
+// those buttons so they could not be clicked. The agent bar stays pinned to the bottom, but rides just above the
+// action bar: Orchard Core keeps the action bar's measured height in `--oc-action-bar-bottom-height`. The content
+// column reserves room for both, so the last fields are not hidden behind either.
+@media (max-width: 767.98px) {
+    html:has(.action-bar-bottom.action-bar-ready) {
+        .cc-agent-bar {
+            bottom: var(--oc-action-bar-bottom-height, 0px);
+        }
+
+        body .ta-content {
+            padding-bottom: calc(var(--oc-action-bar-bottom-height, 3.5rem) + 3rem);
+        }
+    }
 }

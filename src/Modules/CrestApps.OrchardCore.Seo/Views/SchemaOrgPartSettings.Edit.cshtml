@@ -1,0 +1,65 @@
+@using System.Text.Json
+@model SchemaOrgPartSettingsViewModel
+
+@{
+    var editorId = Html.IdFor(m => m.Properties) + "-editor";
+    var labels = new Dictionary<string, string>
+    {
+        ["type"] = T["Schema.org type"].Value,
+        ["chooseType"] = T["Choose a type…"].Value,
+        ["otherType"] = T["Another schema.org type…"].Value,
+        ["typeHint"] = T["What the content items are, such as a blog post, an event or a product. Search engines use it to show rich results."].Value,
+        ["otherTypeHint"] = T["Type the name of any schema.org type, such as MusicEvent. Its common properties are offered, and you can add any other."].Value,
+        ["schemaOrgPage"] = T["The type on schema.org"].Value,
+        ["googleGuide"] = T["Google's guide"].Value,
+        ["properties"] = T["Properties"].Value,
+        ["addSuggested"] = T["Add suggested properties"].Value,
+        ["addProperty"] = T["Add property"].Value,
+        ["newProperty"] = T["New property"].Value,
+        ["collapse"] = T["Collapse"].Value,
+        ["expand"] = T["Expand"].Value,
+        ["moveUp"] = T["Move up"].Value,
+        ["moveDown"] = T["Move down"].Value,
+        ["automatic"] = T["The name, URL, description, dates and language are filled in for every item. Add them only to take them from somewhere else."].Value,
+        ["missingRequired"] = T["Search engines require these properties for rich results:"].Value,
+        ["property"] = T["Property"].Value,
+        ["valueFrom"] = T["Value from"].Value,
+        ["value"] = T["Value"].Value,
+        ["remove"] = T["Remove"].Value,
+        ["noProperties"] = T["No properties yet. Add the suggested ones, or add them one by one."].Value,
+        ["required"] = T["Required"].Value,
+        ["recommended"] = T["Recommended"].Value,
+        ["optional"] = T["Other properties"].Value,
+        ["otherProperty"] = T["Another property…"].Value,
+        ["other"] = T["Other"].Value,
+        ["fixed"] = T["A fixed value"].Value,
+        ["editor"] = T["Editors enter it on each item"].Value,
+        ["liquid"] = T["Liquid template"].Value,
+        ["fromContent"] = T["Taken from each item."].Value,
+        ["editorEnters"] = T["Entered on each item's Schema.org tab."].Value,
+        ["entered"] = T["entered on each item"].Value,
+        ["useExample"] = T["Use an example"].Value,
+        ["missing"] = T["no longer on this content type"].Value,
+        ["preview"] = T["Preview"].Value,
+        ["previewHint"] = T["The shape of the JSON-LD each item's page publishes, besides the values filled in for every item. The values in ‹ › come from each item."].Value,
+    };
+}
+
+<div class="mb-3" id="@editorId" data-schema-org-editor>
+    <input type="hidden" asp-for="SchemaType" data-schema-type />
+    <input type="hidden" asp-for="Properties" data-schema-properties />
+    <script type="application/json" data-schema-data>@Html.Raw(Model.EditorData)</script>
+    <script type="application/json" data-schema-labels>@Html.Raw(JsonSerializer.Serialize(labels))</script>
+
+    <h5>@T["Schema.org structured data"]</h5>
+    <p class="hint">@T["Describe this content type's items with the schema.org vocabulary. Their pages publish it as JSON-LD, which search engines use for rich results and AI agents use to understand the content."]</p>
+
+    <div data-schema-root></div>
+    <span asp-validation-for="SchemaType"></span>
+    <span asp-validation-for="Properties"></span>
+    <noscript>
+        <div class="alert alert-warning">@T["The schema.org editor needs JavaScript."]</div>
+    </noscript>
+</div>
+
+<script asp-src="~/CrestApps.OrchardCore.Seo/scripts/schema-org-editor.min.js" debug-src="~/CrestApps.OrchardCore.Seo/scripts/schema-org-editor.js" at="Foot"></script>

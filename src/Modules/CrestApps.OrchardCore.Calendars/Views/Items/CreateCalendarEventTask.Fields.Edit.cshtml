@@ -1,0 +1,54 @@
+@using CrestApps.OrchardCore.Calendars.Workflows
+
+@model CalendarTaskViewModel
+
+<div class="mb-3">
+    <label asp-for="CalendarId" class="form-label">@T["Calendar id"]</label>
+    <input asp-for="CalendarId" class="form-control code" />
+        <span class="hint">@T["The id of the calendar to add the event to."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="EventType" class="form-label">@T["Kind of event"]</label>
+    <input asp-for="EventType" class="form-control code" />
+        <span class="hint">@T["The event type's technical name, such as Meeting. Empty for the calendar type's first kind."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Title" class="form-label">@T["Title"]</label>
+    <input asp-for="Title" class="form-control code" />
+</div>
+
+<div class="mb-3">
+    <label asp-for="Start" class="form-label">@T["Starts"]</label>
+    <input asp-for="Start" class="form-control code" />
+        <span class="hint">@T["An ISO 8601 time. With an offset (2026-11-02T14:00:00Z) it is a moment; without one it is a time in the calendar's time zone. A date alone starts an all-day event."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="End" class="form-label">@T["Ends"]</label>
+    <input asp-for="End" class="form-control code" />
+        <span class="hint">@T["Optional. Empty for the kind of event's usual length."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Location" class="form-label">@T["Location"]</label>
+    <input asp-for="Location" class="form-control code" />
+</div>
+
+<div class="mb-3">
+    <label asp-for="Description" class="form-label">@T["Description"]</label>
+    <input asp-for="Description" class="form-control code" />
+</div>
+
+<div class="mb-3">
+    <label asp-for="Attendees" class="form-label">@T["Attendees"]</label>
+    <input asp-for="Attendees" class="form-control code" />
+        <span class="hint">@T["Optional. Emails, Name <email> or user:&#123;userId&#125;, separated by commas or lines."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="OutputName" class="form-label">@T["Output name"]</label>
+    <input asp-for="OutputName" class="form-control" />
+    <span class="hint">@T["The name the result is saved under in the workflow output. Leave empty for the default."]</span>
+</div>

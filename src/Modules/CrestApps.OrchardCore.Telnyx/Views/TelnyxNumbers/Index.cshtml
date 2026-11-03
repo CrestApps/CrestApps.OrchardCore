@@ -1,0 +1,31 @@
+@using CrestApps.OrchardCore.Telnyx.ViewModels
+
+@model TelnyxNumbersViewModel
+
+<zone Name="Title">
+    <breadcrumb name="TelnyxNumbers" title="@T["Telnyx numbers"]" />
+</zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2">
+            <div class="col">
+                <span class="text-muted">@T["The phone numbers on the Telnyx account. Buying and releasing a number is billed by Telnyx."]</span>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-secondary create" asp-action="Search">@T["Buy a number"]</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<admin-list name="TelnyxNumbers" context="Model.List"
+            show-select-all="false"
+            empty-message="@T["<strong>Nothing here!</strong> The Telnyx account has no numbers yet, or the API key in the Telnyx settings is missing."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Number" position="20" title="@T["Number"]" />
+        <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

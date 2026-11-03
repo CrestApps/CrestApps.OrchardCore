@@ -46,4 +46,9 @@ public sealed class SubjectActionExecutionContext
     /// so the disposition's outcome does not mark it again. Not set when a person chose the disposition.
     /// </summary>
     public string NotInServiceSource { get; set; }
+
+    /// <summary>
+    /// Gets the follow-up activities the actions created, by the action's id, so features can act on the ones the agent chose.
+    /// </summary>
+    public IDictionary<string, OmnichannelActivity> CreatedActivities { get; } = new Dictionary<string, OmnichannelActivity>(StringComparer.Ordinal);
 }

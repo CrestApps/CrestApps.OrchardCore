@@ -1,0 +1,3 @@
+@model ShapeViewModel<DataConnection>
+
+<a asp-action="Edit" asp-controller="DataConnections" asp-area="CrestApps.OrchardCore.DataConnectors" asp-route-id="@Model.Value.ItemId">@Model.Value.DisplayText</a>

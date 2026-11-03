@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.DataConnectors</RootNamespace>
+    <Title>CrestApps OrchardCore Data Connectors Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      The contracts of data connectors: a connector reads an external system (a database, a search index, an API,
+      a file) and exposes it as live or imported data sets through Orchard Core's data sources.
+    </Description>
+    <PackageTags>$(PackageTags) DataSources DataPipelines Connectors Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CrestApps.Core.Abstractions" />
+    <PackageReference Include="OrchardCore.DataSources.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+</Project>

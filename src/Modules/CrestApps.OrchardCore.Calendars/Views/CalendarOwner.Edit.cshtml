@@ -1,0 +1,36 @@
+@model CalendarOwnerViewModel
+
+@if (Model.OwnerKind == CalendarOwnerKind.User)
+{
+    <div class="ocat-wrapper" asp-validation-class-for="OwnerId">
+        <label asp-for="OwnerId" class="ocat-label ocat-label-required">@T["Owner"]</label>
+        <div class="ocat-end">
+            @await Component.InvokeAsync("ItemSelector", new
+            {
+                id = Html.IdFor(m => m.OwnerId),
+                inputName = Html.NameFor(m => m.OwnerId).ToString(),
+                endpoint = Url.RouteUrl("CalendarsUserSearch"),
+                initialItemsJson = Model.InitialUserJson,
+                multiple = false,
+                buttonText = T["Choose a user"].Value,
+                searchPlaceholder = T["Search users"].Value,
+                smallButton = false,
+            })
+            <span asp-validation-for="OwnerId" class="text-danger"></span>
+            <span class="hint">@T["The user the calendar belongs to."]</span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="ocat-wrapper" asp-validation-class-for="OwnerId">
+        <label asp-for="OwnerId" class="ocat-label ocat-label-required">@T["Team"]</label>
+        <div class="ocat-end">
+            <select asp-for="OwnerId" asp-items="Model.RoleOptions" class="form-select">
+                <option value="">@T["Choose a role"]</option>
+            </select>
+            <span asp-validation-for="OwnerId" class="text-danger"></span>
+            <span class="hint">@T["Everyone in this role can see the calendar and add events to it."]</span>
+        </div>
+    </div>
+}

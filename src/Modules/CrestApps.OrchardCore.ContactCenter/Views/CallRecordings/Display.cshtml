@@ -146,6 +146,11 @@
         }
     </div>
 
+    <form asp-action="Share" asp-route-id="@recording.ItemId" method="post" class="no-multisubmit mb-3">
+        <button type="submit" class="btn btn-secondary btn-sm"><i class="fa-solid fa-link me-1" aria-hidden="true"></i>@T["Share link"]</button>
+        <span class="hint ms-2">@T["A link that plays this recording without signing in, for 24 hours. Making one needs the permission to listen to anyone's recordings."]</span>
+    </form>
+
     @if (Model.CanErase)
     {
         <div class="card mb-3 border-danger-subtle">

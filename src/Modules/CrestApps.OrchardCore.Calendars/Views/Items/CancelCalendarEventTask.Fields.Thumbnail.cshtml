@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Calendars.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CancelCalendarEventTask>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-calendar-xmark" aria-hidden="true"></i>
+    @T["Cancel Calendar Event"]
+</h4>
+<p>@T["Cancels an event, or one occurrence of a repeating event."]</p>

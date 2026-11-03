@@ -3,6 +3,7 @@ sidebar_label: Recipes
 sidebar_position: 6
 title: CrestApps Recipes
 description: JSON-Schema support for Orchard Core recipes with per-step validation and AI guidance.
+user_manual: user-manual/administration/recipes
 ---
 
 | | |
@@ -10,7 +11,12 @@ description: JSON-Schema support for Orchard Core recipes with per-step validati
 | **Feature Name** | CrestApps Recipes |
 | **Feature ID** | `CrestApps.OrchardCore.Recipes` |
 
+
 Provides recipe steps for all modules.
+
+## In the admin
+
+Under **Tools > Recipes**, the feature adds a description and tags to every recipe, and a search box, so an administrator can read what a recipe does before running it. Under **Tools > Deployments > JSON Import**, the **Recipe JSON** editor uses the step schemas to suggest step names and settings as you type and to underline mistakes before anything is imported. To export the setup of a site as a recipe, build a deployment plan under **Tools > Deployments > Plans** and execute it to a file.
 
 ## Overview
 
@@ -71,6 +77,8 @@ When you import `AIProfileTemplate` items, each template entry should include:
 If `ItemId` is omitted, the import step resolves an existing template by the combined `Name` and `Source` values before deciding whether to create a new record. That matches the runtime requirement that new template imports provide both the template name and source.
 
 The Recipes feature now also exports dedicated step schemas for `AIDataSource`, `McpConnection`, `McpPrompt`, `McpResource`, and `A2AConnection`. Their `Properties` objects document the known built-in metadata envelopes such as `SseMcpConnectionMetadata`, `StdioMcpConnectionMetadata`, `FtpConnectionMetadata`, `SftpConnectionMetadata`, and `A2AConnectionMetadata`, while still allowing extra keys for future extensions.
+
+With **Data Connectors** enabled, the feature also exports the `DataConnection` and `ConnectedDataSet` step schemas: connections with their connector settings and clear-text `Secrets`, and data sets with their fields, access mode and refresh settings. See [Data Connectors](data-connectors#recipes-and-deployment-plans).
 
 With **AI Personas** enabled, the feature also exports the `AIPersonas` step schema and the schema of the **AI Personas** deployment step (`AIPersonaDeploymentStep`), and the `AIProfile` step schema describes the top-level `PersonaId` and the `AIPersonaMetadata` property. See [AI Personas](../ai/personas#importing-and-exporting).
 

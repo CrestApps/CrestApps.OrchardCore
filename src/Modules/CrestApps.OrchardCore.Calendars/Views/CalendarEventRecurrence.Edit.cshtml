@@ -1,0 +1,112 @@
+@model CalendarEventRecurrenceViewModel
+
+@{
+    var days = new[] { ("MO", T["Mon"]), ("TU", T["Tue"]), ("WE", T["Wed"]), ("TH", T["Thu"]), ("FR", T["Fri"]), ("SA", T["Sat"]), ("SU", T["Sun"]) };
+}
+
+@if (Model.IsOccurrence)
+{
+    <p class="text-muted">@T["You are changing occurrences of a repeating event. To change how it repeats, edit the whole series from its first occurrence."]</p>
+}
+else
+{
+    <div data-calendar-recurrence>
+        <div class="ocat-wrapper">
+            <label asp-for="Frequency" class="ocat-label">@T["Repeats"]</label>
+            <div class="ocat-end">
+                <div class="input-group" style="max-width: 28rem">
+                    <select asp-for="Frequency" class="form-select" data-recurrence-frequency>
+                        <option value="">@T["Does not repeat"]</option>
+                        <option value="DAILY">@T["Daily"]</option>
+                        <option value="WEEKLY">@T["Weekly"]</option>
+                        <option value="MONTHLY">@T["Monthly"]</option>
+                        <option value="YEARLY">@T["Yearly"]</option>
+                    </select>
+                    <span class="input-group-text" data-recurrence-repeating>@T["every"]</span>
+                    <input asp-for="Interval" type="number" min="1" max="99" class="form-control" style="max-width: 6rem" data-recurrence-repeating />
+                </div>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" data-recurrence-weekly>
+            <span class="ocat-label">@T["On"]</span>
+            <div class="ocat-end">
+                @foreach (var (code, label) in days)
+                {
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" name="@Html.NameFor(m => m.WeekDays)" value="@code" id="@(Html.IdFor(m => m.WeekDays))-@code" checked="@Model.WeekDays.Contains(code)" />
+                        <label class="form-check-label" for="@(Html.IdFor(m => m.WeekDays))-@code">@label</label>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" data-recurrence-monthly>
+            <span class="ocat-label">@T["On"]</span>
+            <div class="ocat-end">
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" asp-for="MonthlyMode" value="day" id="@(Html.IdFor(m => m.MonthlyMode))-day" />
+                    <label class="form-check-label" for="@(Html.IdFor(m => m.MonthlyMode))-day">@T["The same day of the month"]</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" asp-for="MonthlyMode" value="weekday" id="@(Html.IdFor(m => m.MonthlyMode))-weekday" />
+                    <label class="form-check-label" for="@(Html.IdFor(m => m.MonthlyMode))-weekday">@T["The same weekday of the same week, such as the second Tuesday"]</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" data-recurrence-repeating>
+            <span class="ocat-label">@T["Ends"]</span>
+            <div class="ocat-end">
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" asp-for="Ends" value="never" id="@(Html.IdFor(m => m.Ends))-never" />
+                    <label class="form-check-label" for="@(Html.IdFor(m => m.Ends))-never">@T["Never"]</label>
+                </div>
+                <div class="form-check d-flex align-items-center gap-2">
+                    <input class="form-check-input" type="radio" asp-for="Ends" value="on" id="@(Html.IdFor(m => m.Ends))-on" />
+                    <label class="form-check-label" for="@(Html.IdFor(m => m.Ends))-on">@T["On"]</label>
+                    <input asp-for="Until" type="date" class="form-control form-control-sm" style="max-width: 12rem" />
+                </div>
+                <div class="form-check d-flex align-items-center gap-2">
+                    <input class="form-check-input" type="radio" asp-for="Ends" value="after" id="@(Html.IdFor(m => m.Ends))-after" />
+                    <label class="form-check-label" for="@(Html.IdFor(m => m.Ends))-after">@T["After"]</label>
+                    <input asp-for="Count" type="number" min="1" max="1000" class="form-control form-control-sm" style="max-width: 7rem" />
+                    <span>@T["occurrences"]</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="CustomRule">
+            <label asp-for="CustomRule" class="ocat-label">@T["Custom rule"]</label>
+            <div class="ocat-end">
+                <input asp-for="CustomRule" class="form-control font-monospace" placeholder="FREQ=MONTHLY;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=-1" />
+                <span asp-validation-for="CustomRule" class="text-danger"></span>
+                <span class="hint">@T["Optional. An iCalendar repeat rule (RRULE) for patterns the choices above don't cover. When filled in, it is used instead."]</span>
+            </div>
+        </div>
+    </div>
+
+    <script at="Foot">
+        (function () {
+            const root = document.querySelector('[data-calendar-recurrence]');
+
+            if (!root) {
+                return;
+            }
+
+            const frequency = root.querySelector('[data-recurrence-frequency]');
+            const sync = function () {
+                const value = frequency.value;
+
+                root.querySelectorAll('[data-recurrence-repeating]').forEach(function (element) {
+                    element.classList.toggle('d-none', !value);
+                });
+                root.querySelector('[data-recurrence-weekly]').classList.toggle('d-none', value !== 'WEEKLY');
+                root.querySelector('[data-recurrence-monthly]').classList.toggle('d-none', value !== 'MONTHLY');
+            };
+
+            frequency.addEventListener('change', sync);
+            sync();
+        })();
+    </script>
+}

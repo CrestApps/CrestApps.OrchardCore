@@ -1,0 +1,90 @@
+@model TeamAvailabilityViewModel
+
+<zone Name="Title">
+    <breadcrumb name="CalendarTeamAvailability" title="@T["Team availability"]">
+        <breadcrumb-item id="CalendarView" action="Index" controller="Calendar" area="CrestApps.OrchardCore.Calendars">@T["Calendar"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<style asp-name="CrestApps.OrchardCore.Calendars.View"></style>
+
+<form method="get" asp-action="Index" class="card text-bg-theme mb-3 action-bar">
+    <div class="card-body">
+        <div class="row gx-2 gy-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label" for="calendarId">@T["Team"]</label>
+                <select id="calendarId" name="calendarId" asp-items="Model.CalendarOptions" class="form-select"></select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="date">@T["Day"]</label>
+                <input id="date" name="date" type="date" value="@Model.Date" class="form-control" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="minutes">@T["Meeting length (minutes)"]</label>
+                <input id="minutes" name="minutes" type="number" min="15" max="480" step="15" value="@Model.Minutes" class="form-control" />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">@T["Show"]</button>
+            </div>
+        </div>
+    </div>
+</form>
+
+@if (Model.CalendarOptions.Count == 0)
+{
+    <div class="alert alert-info">@T["There are no team calendars you can see."]</div>
+}
+else if (Model.Rows.Count == 0)
+{
+    <div class="alert alert-info">@T["Nobody is in this team's role yet."]</div>
+}
+else
+{
+    <div class="card text-bg-theme mb-3">
+        <div class="card-body">
+            <p class="text-muted small">@T["Times in {0}.", Model.TimeZoneId]</p>
+            <div class="table-responsive">
+                <table class="table table-sm calendar-availability">
+                    <thead>
+                        <tr>
+                            <th scope="col">@T["Member"]</th>
+                            @for (var hour = Model.FirstHour; hour < Model.LastHour; hour++)
+                            {
+                                <th scope="col" colspan="2" class="text-center small">@hour.ToString("00"):00</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.Rows)
+                        {
+                            <tr>
+                                <th scope="row" class="text-nowrap">@row.Name</th>
+                                @foreach (var slot in row.Slots)
+                                {
+                                    <td class="@(slot == 2 ? "busy" : slot == 1 ? "tentative" : "free")"></td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <span class="badge calendar-availability-key busy">@T["Busy"]</span>
+            <span class="badge calendar-availability-key tentative">@T["Tentative"]</span>
+            <span class="badge calendar-availability-key free">@T["Free"]</span>
+        </div>
+    </div>
+
+    <div class="card text-bg-theme">
+        <div class="card-header">@T["When everyone is free"]</div>
+        <ul class="list-group list-group-flush">
+            @if (Model.FreeTimes.Count == 0)
+            {
+                <li class="list-group-item text-muted">@T["Nobody's day has a gap that long that everyone shares."]</li>
+            }
+            @foreach (var free in Model.FreeTimes)
+            {
+                <li class="list-group-item">@free.Key.ToString("t") - @free.Value.ToString("t")</li>
+            }
+        </ul>
+    </div>
+}

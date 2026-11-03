@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.AI.Agent.Contents;
 using CrestApps.OrchardCore.AI.Agent.ContentTypes;
 using CrestApps.OrchardCore.AI.Agent.Features;
 using CrestApps.OrchardCore.AI.Agent.Profiles;
+using CrestApps.OrchardCore.AI.Agent.Quality;
 using CrestApps.OrchardCore.AI.Agent.Recipes;
 using CrestApps.OrchardCore.AI.Agent.Roles;
 using CrestApps.OrchardCore.AI.Agent.Services;
@@ -54,6 +55,24 @@ public sealed class Startup : StartupBase
             .WithTitle(S["View AI Profile"])
             .WithDescription(S["Retrieves detailed configuration for a specific AI profile by ID or name."])
             .WithCategory(S["AI Profiles"])
+            .Selectable();
+
+        services.AddCoreAITool<ListAIConversationsTool>(ListAIConversationsTool.TheName)
+            .WithTitle(S["List AI Conversations"])
+            .WithDescription(S["Lists AI conversations on every channel, newest first, with optional filters."])
+            .WithCategory(S["AI Conversations"])
+            .Selectable();
+
+        services.AddCoreAITool<ViewAIConversationTool>(ViewAIConversationTool.TheName)
+            .WithTitle(S["View AI Conversation"])
+            .WithDescription(S["Reads an AI conversation's transcript, variables, extracted fields, analysis, evaluations and flow."])
+            .WithCategory(S["AI Conversations"])
+            .Selectable();
+
+        services.AddCoreAITool<GetAIContactMemoryTool>(GetAIContactMemoryTool.TheName)
+            .WithTitle(S["Get AI Contact Memory"])
+            .WithDescription(S["Reads what the AI remembers about a contact."])
+            .WithCategory(S["AI Conversations"])
             .Selectable();
     }
 }

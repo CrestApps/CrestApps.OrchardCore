@@ -16,6 +16,7 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
 {
     private readonly TelnyxMediaStreamTracker _mediaStreamTracker;
+    private readonly TelnyxCallerNumberReputation _callerNumberReputation;
     private readonly INormalizedVoiceEventIngestor _normalizedVoiceEventIngestor;
     private readonly ITelnyxInboundCallRouter _inboundCallRouter;
     private readonly IInboundVoiceDigitsSink _digitsSink;
@@ -43,6 +44,8 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
     /// <param name="hangUpAfterSpeech">The legs to hang up once their last message ends.</param>
     /// <param name="clock">The clock used to stamp event times.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="mediaStreamTracker">The media streams of live AI calls.</param>
+    /// <param name="callerNumberReputation">Where carriers' spam rejections of the account's numbers are counted.</param>
     public TelnyxWebhookService(
         INormalizedVoiceEventIngestor normalizedVoiceEventIngestor,
         ITelnyxInboundCallRouter inboundCallRouter,
@@ -55,9 +58,11 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
         TelnyxHangUpAfterSpeechRegistry hangUpAfterSpeech,
         IClock clock,
         ILogger<TelnyxWebhookService> logger,
-        TelnyxMediaStreamTracker mediaStreamTracker = null)
+        TelnyxMediaStreamTracker mediaStreamTracker = null,
+        TelnyxCallerNumberReputation callerNumberReputation = null)
     {
         _mediaStreamTracker = mediaStreamTracker;
+        _callerNumberReputation = callerNumberReputation;
         _hangUpAfterSpeech = hangUpAfterSpeech;
         _normalizedVoiceEventIngestor = normalizedVoiceEventIngestor;
         _inboundCallRouter = inboundCallRouter;
@@ -102,6 +107,7 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
         // Every leg's quality is kept, before the hidden bridge leg returns below: that leg is the customer's side of
         // an outbound call, which is the side the agent's soft phone cannot measure.
         await ObserveCallQualityAsync(callEvent, cancellationToken);
+        await ObserveSpamRejectionAsync(callEvent);
 
         // A media stream that broke is not a call-state transition either. The session carrying it is told, so it can
         // start the stream again rather than keep talking to a socket nobody is on.

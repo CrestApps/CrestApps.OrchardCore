@@ -64,6 +64,12 @@ public sealed class AIVoiceCallSupervision : IAIVoiceCallSupervision
             return true;
         }
 
+        // A live session on another node holds the call: relay the note to it.
+        if (await IsHeldByLiveSessionAsync(activityId, cancellationToken))
+        {
+            return await _commands.RelayAsync(activityId, new AIVoiceCallCommand(AIVoiceCallCommandKind.Instruct, note));
+        }
+
         // No live session holds the call here: a turn-based call reads the note on its next turn.
         return await _loop.LeaveSupervisorNoteAsync(activityId, note, cancellationToken);
     }
@@ -117,7 +123,14 @@ public sealed class AIVoiceCallSupervision : IAIVoiceCallSupervision
 
         if (activity.TryGet<AILiveCall>(out var liveCall) && liveCall.IsRealtime)
         {
-            return new(false, "A live call keeps the AI profile it started with, so it cannot be handed to another one. Tell the caller you cannot put them through for this and carry on helping them yourself; do not transfer them to a person or a number instead unless they ask for one.");
+            var command = new AIVoiceCallCommand(AIVoiceCallCommandKind.SwitchProfile, profileId);
+
+            if (!await _commands.SendAsync(activityId, command) && !await _commands.RelayAsync(activityId, command))
+            {
+                // The model is told what to do instead: a refusal it read as done had it tell the caller they were being
+                // put through, and then transfer them to a person nobody had asked for.
+                return new(false, "The live session could not be reached to switch its profile, so the call keeps the AI profile it started with. Tell the caller you cannot put them through for this and carry on helping them yourself; do not transfer them to a person or a number instead unless they ask for one.");
+            }
         }
 
         activity.AIProfileId = profileId;
@@ -173,7 +186,10 @@ public sealed class AIVoiceCallSupervision : IAIVoiceCallSupervision
 
         if (liveCall.IsRealtime)
         {
-            return new(false, "The call is held by another server; try again in a moment.");
+            // Held by a live session on another node: relay the request to it.
+            return await _commands.RelayAsync(activityId, new AIVoiceCallCommand(AIVoiceCallCommandKind.TakeOver))
+                ? new(true, liveMessage)
+                : new(false, "The call is held by another server that did not answer; try again in a moment.");
         }
 
         return await _loop.TakeOverTurnBasedCallAsync(activity, liveCall, cancellationToken)
@@ -202,5 +218,14 @@ public sealed class AIVoiceCallSupervision : IAIVoiceCallSupervision
         return await media.HangupAsync(liveCall.ProviderCallId, cancellationToken)
             ? new(true, "The call was ended.")
             : new(false, "The provider did not end the call.");
+    }
+
+    private async Task<bool> IsHeldByLiveSessionAsync(string activityId, CancellationToken cancellationToken)
+    {
+        var activity = await _activityStore.FindByIdAsync(activityId, cancellationToken);
+
+        return VoiceAgentConversationLoop.IsLiveAICall(activity) &&
+            activity.TryGet<AILiveCall>(out var liveCall) &&
+            liveCall.IsRealtime;
     }
 }

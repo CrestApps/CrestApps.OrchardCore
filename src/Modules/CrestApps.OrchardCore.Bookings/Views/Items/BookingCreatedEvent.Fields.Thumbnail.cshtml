@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Bookings.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<BookingCreatedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-ticket" aria-hidden="true"></i>
+    @T["Booking Created"]
+</h4>
+<p>@T["Starts when a booking is made, held or requested, with its dates, status and customer."]</p>

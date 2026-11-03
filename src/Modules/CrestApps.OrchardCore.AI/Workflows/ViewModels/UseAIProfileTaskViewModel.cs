@@ -14,6 +14,11 @@ public class UseAIProfileTaskViewModel
     public string ProfileId { get; set; }
 
     /// <summary>
+    /// Gets or sets the version to answer with; empty for the current one.
+    /// </summary>
+    public int? ProfileVersion { get; set; }
+
+    /// <summary>
     /// Gets or sets the AI profiles to choose from.
     /// </summary>
     [BindNever]

@@ -1,0 +1,127 @@
+@model DataConnectorPickerViewModel
+
+@{
+    var hasCategories = Model.Categories.Count > 1;
+}
+
+@* A modal of cards to pick from, laid out like the steps of a deployment plan: a search box, the categories, then the cards. *@
+<div class="modal fade" id="@Model.Id" tabindex="-1" role="dialog" aria-labelledby="@(Model.Id)-title" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="@(Model.Id)-title">@Model.Title</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
+            </div>
+            <div class="modal-body">
+                @if (Model.Items.Count == 0)
+                {
+                    <div class="alert alert-warning mb-0" role="alert">@Model.EmptyMessage</div>
+                }
+                else
+                {
+                    <div class="row">
+                        <div class="@(hasCategories ? "col-sm-3 col-md-3 col-lg-2" : "col-12")">
+                            <div class="mb-3">
+                                <input class="form-control" type="search" placeholder="@T["Filter"]" aria-label="@T["Filter"]" data-picker-search autocomplete="off" />
+                            </div>
+                            @if (hasCategories)
+                            {
+                                <ul class="nav nav-pills flex-column mb-3">
+                                    <li class="nav-item">
+                                        <a class="nav-link active d-flex justify-content-between align-items-center" href="#" data-picker-category=""><span>@T["All"]</span> <span class="badge text-bg-light ms-2">@Model.Items.Count</span></a>
+                                    </li>
+                                    @foreach (var category in Model.Categories)
+                                    {
+                                        <li class="nav-item">
+                                            <a class="nav-link d-flex justify-content-between align-items-center" href="#" data-picker-category="@category.Id"><span>@category.Name</span> <span class="badge text-bg-light ms-2">@category.Count</span></a>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </div>
+                        <div class="@(hasCategories ? "col-sm-9 col-md-9 col-lg-10" : "col-12")">
+                            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-2">
+                                @foreach (var item in Model.Items)
+                                {
+                                    <div class="col" data-picker-item data-picker-item-category="@item.CategoryId" data-picker-text="@($"{item.Title} {item.Badge} {item.Description}".ToLowerInvariant())">
+                                        <div class="card h-100">
+                                            <div class="card-body">
+                                                <h4 class="card-title">@item.Title</h4>
+                                                @if (!string.IsNullOrEmpty(item.Badge))
+                                                {
+                                                    <span class="badge ta-badge fw-normal mb-2"><i class="fa-solid fa-plug text-secondary me-1" aria-hidden="true"></i>@item.Badge</span>
+                                                }
+                                                @if (!string.IsNullOrEmpty(item.Description))
+                                                {
+                                                    <p class="card-text">@item.Description</p>
+                                                }
+                                            </div>
+                                            <div class="card-footer text-sm-end">
+                                                <a class="btn btn-primary btn-sm" href="@item.Url">@T["Add"]</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                            <div class="alert alert-info mt-2 mb-0 d-none" role="alert" data-picker-empty>@T["Nothing matches your filter."]</div>
+                        </div>
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        const modal = document.getElementById('@Model.Id');
+
+        if (!modal) {
+            return;
+        }
+
+        const search = modal.querySelector('[data-picker-search]');
+        const items = [...modal.querySelectorAll('[data-picker-item]')];
+        const categories = [...modal.querySelectorAll('[data-picker-category]')];
+        const empty = modal.querySelector('[data-picker-empty]');
+        let category = '';
+
+        const refresh = function () {
+            const text = (search ? search.value : '').trim().toLowerCase();
+            let visible = 0;
+
+            items.forEach(function (item) {
+                const show = (category === '' || item.getAttribute('data-picker-item-category') === category) &&
+                    (text === '' || item.getAttribute('data-picker-text').includes(text));
+
+                item.classList.toggle('d-none', !show);
+                visible += show ? 1 : 0;
+            });
+
+            if (empty) {
+                empty.classList.toggle('d-none', visible > 0);
+            }
+        };
+
+        categories.forEach(function (link) {
+            link.addEventListener('click', function (event) {
+                event.preventDefault();
+                category = link.getAttribute('data-picker-category');
+                categories.forEach(function (other) {
+                    other.classList.toggle('active', other === link);
+                });
+                refresh();
+            });
+        });
+
+        if (search) {
+            search.addEventListener('input', refresh);
+            modal.addEventListener('shown.bs.modal', function () {
+                search.focus();
+            });
+        }
+    })();
+</script>

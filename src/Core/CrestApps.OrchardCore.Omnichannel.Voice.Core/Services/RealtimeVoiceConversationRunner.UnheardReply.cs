@@ -216,7 +216,14 @@ public sealed partial class RealtimeVoiceConversationRunner
     }
 
     private void ResponseInFlight(bool inFlight)
-        => Interlocked.Exchange(ref _responseInFlight, inFlight ? 1 : 0);
+    {
+        Interlocked.Exchange(ref _responseInFlight, inFlight ? 1 : 0);
+
+        if (!inFlight)
+        {
+            Interlocked.Exchange(ref _lastResponseEndedTicks, DateTime.UtcNow.Ticks);
+        }
+    }
 
     /// <summary>
     /// When the provider last heard the caller, counting a turn it still has open as hearing them now.
@@ -247,7 +254,7 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// <param name="turnCommittedTicks">When the provider took the caller's turn as finished, in UTC ticks.</param>
     private void LogAnswerLatency(string activityId, long turnCommittedTicks)
     {
-        if (turnCommittedTicks == 0 || !_logger.IsEnabled(LogLevel.Information))
+        if (turnCommittedTicks == 0)
         {
             return;
         }
@@ -260,12 +267,21 @@ public sealed partial class RealtimeVoiceConversationRunner
         var detectorWait = lastVoice > 0 && lastVoice <= turnCommittedTicks && turnCommittedTicks - lastVoice < TimeSpan.TicksPerSecond * 10
             ? (int)((turnCommittedTicks - lastVoice) / TimeSpan.TicksPerMillisecond)
             : -1;
+        var modelMilliseconds = (int)((now - turnCommittedTicks) / TimeSpan.TicksPerMillisecond);
+
+        // For the call's summary: the caller heard the detector's wait and the model's together.
+        _meter?.TurnAnswered(modelMilliseconds + Math.Max(0, detectorWait), modelMilliseconds, detectorWait >= 0 ? detectorWait : null);
+
+        if (!_logger.IsEnabled(LogLevel.Information))
+        {
+            return;
+        }
 
         _logger.LogInformation(
             "Answered the caller on activity '{ActivityId}': the turn was taken as finished {DetectorWaitMilliseconds} ms after their voice stopped on the line (-1 when it began over the assistant), and the model's first audio came {ModelMilliseconds} ms after that.",
             activityId,
             detectorWait,
-            (int)((now - turnCommittedTicks) / TimeSpan.TicksPerMillisecond));
+            modelMilliseconds);
     }
 
     /// <summary>

@@ -3,7 +3,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Workflows.ViewModels;
 /// <summary>
 /// View model for editing the Transfer to Agent workflow activity.
 /// </summary>
-public sealed class TransferToAgentTaskViewModel
+public class TransferToAgentTaskViewModel
 {
     /// <summary>
     /// Gets or sets the Liquid expression resolving the CRM activity identifier to transfer.

@@ -1,0 +1,23 @@
+@model RelationalDataSetViewModel
+
+<fieldset>
+    <legend class="h5 mt-3">@T["Query"]</legend>
+
+    <div class="ocat-wrapper">
+        <label asp-for="Query" class="ocat-label">@T["Custom query"]</label>
+        <div class="ocat-end">
+            <textarea asp-for="Query" class="form-control font-monospace" rows="5" placeholder="SELECT Id, Name, ModifiedUtc FROM dbo.Customers WHERE IsActive = 1"></textarea>
+            <span asp-validation-for="Query" class="text-danger"></span>
+            <span class="hint">@T["Leave empty to read the table or view picked above. A query must be one SELECT, without ORDER BY, WITH or a second statement: it runs as a subquery, in a transaction that is always rolled back. Values a data pipeline passes are bound as @Name parameters."]</span>
+            <span class="hint">@T["Give the connection a database login that can only read: the data set reads with the connection's rights."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="CommandTimeoutSeconds" class="ocat-label">@T["Query timeout (seconds)"]</label>
+        <div class="ocat-end">
+            <input asp-for="CommandTimeoutSeconds" type="number" min="5" max="3600" class="form-control" />
+            <span asp-validation-for="CommandTimeoutSeconds" class="text-danger"></span>
+        </div>
+    </div>
+</fieldset>

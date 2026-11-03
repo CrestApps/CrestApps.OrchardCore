@@ -1,0 +1,30 @@
+@using System.Globalization
+@using CrestApps.OrchardCore.AI.Core.Webhooks
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIWebhookDelivery>
+
+@switch (Model.Value.Status)
+{
+    case AIWebhookDeliveryStatus.Delivered:
+        <span class="badge ta-badge fw-normal text-bg-success" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-circle-check me-1" aria-hidden="true"></i>@T["Delivered"]</span>
+        break;
+    case AIWebhookDeliveryStatus.Failed:
+        <span class="badge ta-badge fw-normal text-bg-danger" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-circle-xmark me-1" aria-hidden="true"></i>@T["Failed"]</span>
+        break;
+    default:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Next attempt"]"><i class="fa-regular fa-clock text-secondary me-1" aria-hidden="true"></i>@T["Pending"]</span>
+        break;
+}
+
+@if (Model.Value.StatusCode is { } code)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["The endpoint's answer"]"><i class="fa-solid fa-reply text-secondary me-1" aria-hidden="true"></i>@code</span>
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Attempts"]"><i class="fa-solid fa-rotate text-secondary me-1" aria-hidden="true"></i>@Model.Value.Attempts</span>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["When the event happened"]">
+    <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
+    <time datetime="@Model.Value.CreatedUtc.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture)">@await DisplayAsync(await New.Timespan(Utc: Model.Value.CreatedUtc))</time>
+</span>

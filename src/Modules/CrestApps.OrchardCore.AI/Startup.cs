@@ -40,6 +40,7 @@ using CrestApps.OrchardCore.AI.Tools.Handlers;
 using CrestApps.OrchardCore.AI.Tools.Services;
 using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.AI.Workflows.Drivers;
+using CrestApps.OrchardCore.AI.Workflows.Flows;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using CrestApps.OrchardCore.AI.Workflows.Services;
 using CrestApps.OrchardCore.AI.Workflows.Tools;
@@ -126,7 +127,9 @@ public sealed class Startup : StartupBase
             .AddNavigationProvider<AIDeploymentAdminMenu>()
             .AddDataMigration<AIDeploymentTypeMigrations>()
             .AddDataMigration<AIDeploymentV1DocumentMigrations>()
-            .AddSiteDisplayDriver<DefaultAIDeploymentSettingsDisplayDriver>();
+            .AddSiteDisplayDriver<DefaultAIDeploymentSettingsDisplayDriver>()
+            .AddSiteDisplayDriver<AICostSettingsDisplayDriver>()
+            .AddSiteDisplayDriver<AIContactMemorySettingsDisplayDriver>();
 
         // Add tools core functionality.
         services
@@ -297,6 +300,17 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddActivity<AIConversationStartingEvent, AIConversationStartingEventDisplayDriver>();
         services.AddActivity<SetConversationVariablesTask, SetConversationVariablesTaskDisplayDriver>();
         services.AddActivity<UseAIProfileTask, UseAIProfileTaskDisplayDriver>();
+        services.AddActivity<AIAlertTriggeredEvent, AIAlertTriggeredEventDisplayDriver>();
+
+        // Conversation flows: stage-by-stage guidance built from workflow activities.
+        services.AddActivity<AIConversationFlowStartedEvent, AIConversationFlowStartedEventDisplayDriver>();
+        services.AddActivity<AIConversationStageTask, AIConversationStageTaskDisplayDriver>();
+        services.AddScoped<AIConversationFlows>();
+        services.AddScoped<IAICompletionContextBuilderHandler, AIConversationFlowCompletionHandler>();
+        services.AddScoped<IToolRegistryProvider, AIConversationFlowToolProvider>();
+        services.AddDisplayDriver<AIProfile, AIProfileFlowDisplayDriver>();
+        services.AddActivity<AIAlertResolvedEvent, AIAlertResolvedEventDisplayDriver>();
+        services.AddScoped<AIProfileVersionCopies>();
         services.AddActivity<DeclineConversationTask, DeclineConversationTaskDisplayDriver>();
         services.AddActivity<AIToolCalledEvent, AIToolCalledEventDisplayDriver>();
         services.AddScoped<IAIConversationStartingHandler, WorkflowAIConversationStartingHandler>();
@@ -443,6 +457,7 @@ public sealed class ChatCoreStartup : StartupBase
         // Privacy: redacting or stripping ended conversations, and deleting those past the profile's retention.
         services.AddCoreAIConversationPrivacy();
         services.AddScoped<IAIConversationPrivacyHandler, AIConversationEvaluationPrivacyHandler>();
+        services.AddScoped<IAIConversationPrivacyHandler, AISiteNamePrivacyHandler>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AIConversationPrivacyBackgroundTask>());
 
         services.AddDisplayDriver<AIProfile, AIProfileResponseHandlerDisplayDriver>();
@@ -663,6 +678,7 @@ public sealed class PersonasStartup : StartupBase
             .AddScoped<ICatalogEntryHandler<AIPersona>, AIPersonaDeletionHandler>()
             .AddDisplayDriver<AIPersona, AIPersonaDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfilePersonaDisplayDriver>()
+            .AddScoped<IAIConversationPrivacyHandler, AIPersonaNamePrivacyHandler>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplatePersonaDisplayDriver>()
             .AddNavigationProvider<AIPersonaAdminMenu>()
             .AddPermissionProvider<AIPersonaPermissionsProvider>();

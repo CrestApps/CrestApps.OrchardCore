@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Scheduling.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AddToWaitlistTask>
+
+<header><h4><i class="fa-solid fa-list" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Add to Waitlist"])</h4></header>

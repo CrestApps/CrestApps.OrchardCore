@@ -1,0 +1,11 @@
+@model CrestApps.OrchardCore.Bookings.Calendar.BookingPartCalendarViewModel
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="BlockingCalendarId" class="ocat-label">@T["Block with calendar"]</label>
+    <div class="ocat-limited">
+        <select asp-for="BlockingCalendarId" asp-items="Model.Calendars" class="form-select">
+            <option value="">@T["None"]</option>
+        </select>
+        <span class="hint">@T["Dates and times that are busy on this calendar can't be booked, such as when the room or the guide is already taken."]</span>
+    </div>
+</div>

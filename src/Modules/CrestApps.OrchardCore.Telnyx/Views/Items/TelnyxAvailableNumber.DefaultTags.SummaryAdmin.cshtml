@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Telnyx.Services
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<TelnyxAvailableNumber>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Monthly / upfront"]"><i class="fa-solid fa-tag text-secondary me-1" aria-hidden="true"></i>@Model.Value.MonthlyCost / @Model.Value.UpfrontCost @Model.Value.Currency</span>
+<span class="badge ta-badge fw-normal"><i class="fa-solid fa-list-check text-secondary me-1" aria-hidden="true"></i>@string.Join(", ", Model.Value.Features)</span>

@@ -34,6 +34,7 @@ Add a map for it. A time zone that has no map on the list cannot be picked anywh
 
 ## Add a time zone
 
+
 1. Open **Tools > Time Zones** and click **Add Time Zone Map**.
 2. Enter the **Name** people will see, for example *Mexico City Time*.
 3. Pick the **Time zone** it stands for, for example *America/Mexico_City*.
@@ -45,6 +46,7 @@ The list shows each map's name, its time zone, when it was last changed and who 
 
 ## Set the site's time zone
 
+
 The site's time zone is used to show dates and times to everyone who has not picked their own.
 
 1. Open **Settings > General**.
@@ -53,4 +55,5 @@ The site's time zone is used to show dates and times to everyone who has not pic
 
 ## Let each person use their own time zone
 
-When your administrator turns on the Orchard Core **User Time Zone** feature, each person can pick their own time zone on their profile, and dates and times are shown to them in that zone. People who do not pick one see the site's time zone. See the [Orchard Core Users documentation](https://docs.orchardcore.net/en/latest/reference/modules/Users/) for the details.
+
+When your administrator turns on the Orchard Core **User Time Zone** feature, the edit page of each user (**Access Control > Users**, then **Edit**) gets a **Default Time Zone** menu. It lists the same friendly names, plus **Use site's time zone**. Choose one and save, and dates and times are shown to that person in that zone. People who keep **Use site's time zone** see the site's time zone. See the [Orchard Core Users documentation](https://docs.orchardcore.net/en/latest/reference/modules/Users/) for the details.

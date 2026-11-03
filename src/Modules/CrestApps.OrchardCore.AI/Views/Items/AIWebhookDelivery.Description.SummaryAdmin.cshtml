@@ -1,0 +1,15 @@
+@using CrestApps.OrchardCore.AI.Core.Webhooks
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIWebhookDelivery>
+
+<div class="admin-list-secondary">
+    @if (!string.IsNullOrEmpty(Model.Value.Error))
+    {
+        <div class="text-warning">@Model.Value.Error</div>
+    }
+    <details>
+        <summary class="small">@T["Body"]</summary>
+        <pre class="small text-break mb-0" style="white-space: pre-wrap;">@Model.Value.Payload</pre>
+    </details>
+</div>

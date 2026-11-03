@@ -1,0 +1,24 @@
+@model ResourceCalendarSettingsViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Location" class="ocat-label">@T["Location"]</label>
+    <div class="ocat-end">
+        <input asp-for="Location" class="form-control" />
+        <span class="hint">@T["Where the room or equipment is, such as Building A, second floor."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Seats" class="ocat-label">@T["Seats"]</label>
+    <div class="ocat-end">
+        <input asp-for="Seats" type="number" min="0" class="form-control" style="max-width: 10rem" />
+        <span class="hint">@T["How many people the room seats. Leave 0 for equipment."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Amenities" class="ocat-label">@T["Equipped with"]</label>
+    <div class="ocat-end">
+        <input asp-for="Amenities" class="form-control" />
+    </div>
+</div>

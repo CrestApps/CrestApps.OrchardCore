@@ -1,0 +1,14 @@
+@using System.Globalization
+@using CrestApps.OrchardCore.AI.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AITestRun>
+
+@{
+    var when = Model.Value.CompletedUtc ?? Model.Value.QueuedUtc;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@(Model.Value.CompletedUtc is null ? T["Queued"] : T["Finished"])">
+    <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
+    <time datetime="@when.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture)">@await DisplayAsync(await New.Timespan(Utc: when))</time>
+</span>

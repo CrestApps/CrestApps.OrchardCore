@@ -1,0 +1,11 @@
+@using CrestApps.OrchardCore.Calendars.Deployments
+@model ShapeViewModel<CalendarsDeploymentStep>
+
+<h5>@T["Calendars"]</h5>
+<span class="hint">
+    @(Model.Value.IncludeEvents ? T["Exports every calendar with its events."] : T["Exports every calendar, without events."])
+    @if (Model.Value.IncludeCategories)
+    {
+        @T["With the categories."]
+    }
+</span>

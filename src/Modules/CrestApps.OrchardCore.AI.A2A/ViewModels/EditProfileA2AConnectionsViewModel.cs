@@ -10,5 +10,5 @@ public class EditProfileA2AConnectionsViewModel
     /// <summary>
     /// Gets or sets the connections.
     /// </summary>
-    public ToolEntry[] Connections { get; set; }
+    public ToolEntry[] A2AConnections { get; set; }
 }

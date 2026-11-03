@@ -20,6 +20,14 @@
 </div>
 
 <div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="NamesToKeep">@T["Names to keep"]</label>
+    <div class="ocat-end">
+        <textarea class="form-control" asp-for="NamesToKeep" rows="3"></textarea>
+        <span class="hint">@T["Names that are not the customer's personal details and stay in the transcript when personal details are removed: the assistant's name and the business's, one per line or separated by commas. The site name and the name of the AI persona the profile uses are kept without being listed here. The customer's own name is still removed."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
     <label class="ocat-label" asp-for="RetentionDays">@T["Delete conversations after"]</label>
     <div class="ocat-end">
         <div class="input-group">

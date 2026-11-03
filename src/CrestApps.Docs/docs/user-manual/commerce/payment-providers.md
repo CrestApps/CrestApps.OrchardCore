@@ -21,6 +21,8 @@ Every provider that is turned on appears as a choice on the **Payment** step of 
 
 ## Connect Stripe
 
+This video walks through connecting Stripe, the offline methods, transactions, refunds and webhooks:
+
 | | |
 | --- | --- |
 | **Menu** | Settings > Payments > Stripe |

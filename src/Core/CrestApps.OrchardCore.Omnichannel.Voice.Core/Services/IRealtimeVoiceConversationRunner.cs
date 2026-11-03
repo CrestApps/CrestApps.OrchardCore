@@ -167,6 +167,12 @@ public sealed class RealtimeVoiceConversationContext
     public string HandoffInstructions { get; set; }
 
     /// <summary>
+    /// Gets or sets the guidance for a call that would hand the caller to a person but cannot now, the queue being
+    /// closed, or <see langword="null"/> otherwise. It is given without the transfer tool.
+    /// </summary>
+    public string NoHandoffInstructions { get; set; }
+
+    /// <summary>
     /// Gets or sets the deployment this call is held on.
     /// </summary>
     /// <remarks>
@@ -204,6 +210,12 @@ public sealed class RealtimeVoiceConversationContext
     /// one provider error ended the session and the caller sat in fifty seconds of silence before hanging up.
     /// </remarks>
     public bool SessionLost { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the assistant spoke to the caller after their last words and before it
+    /// asked to hand them to a person, so the handoff need not tell them it is connecting them.
+    /// </summary>
+    public bool HandoffAnnounced { get; set; }
 
     /// <summary>
     /// Gets or sets the token that fires when this node begins to shut down.

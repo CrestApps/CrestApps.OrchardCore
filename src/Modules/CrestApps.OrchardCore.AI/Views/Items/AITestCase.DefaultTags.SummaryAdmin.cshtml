@@ -1,0 +1,30 @@
+@using CrestApps.OrchardCore.AI.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AITestCase>
+
+@switch (Model.Value.LastStatus)
+{
+    case AITestRunStatus.Passed:
+        <span class="badge ta-badge fw-normal text-bg-success" data-bs-toggle="tooltip" title="@T["Latest run"]"><i class="fa-solid fa-circle-check me-1" aria-hidden="true"></i>@T["Passed"]</span>
+        break;
+    case AITestRunStatus.Failed:
+        <span class="badge ta-badge fw-normal text-bg-danger" data-bs-toggle="tooltip" title="@T["Latest run"]"><i class="fa-solid fa-circle-xmark me-1" aria-hidden="true"></i>@T["Failed"]</span>
+        break;
+    case AITestRunStatus.Error:
+        <span class="badge ta-badge fw-normal text-bg-warning" data-bs-toggle="tooltip" title="@T["Latest run"]"><i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@T["Error"]</span>
+        break;
+    case null:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Latest run"]"><i class="fa-regular fa-circle text-secondary me-1" aria-hidden="true"></i>@T["Not run yet"]</span>
+        break;
+}
+
+@if (Model.Value.ProfileVersion is > 0)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Profile version under test"]"><i class="fa-solid fa-code-branch text-secondary me-1" aria-hidden="true"></i>@T["Version {0}", Model.Value.ProfileVersion]</span>
+}
+
+@if (Model.Value.MockedTools.Count > 0)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Tools that return a fixed result instead of running"]"><i class="fa-solid fa-masks-theater text-secondary me-1" aria-hidden="true"></i>@T["Mocked tools: {0}", Model.Value.MockedTools.Count]</span>
+}

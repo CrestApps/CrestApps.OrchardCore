@@ -1,0 +1,83 @@
+@using CrestApps.OrchardCore.ContactCenter.Workflows.ViewModels
+@using CrestApps.OrchardCore.Omnichannel.Voice.Models
+
+@model TransferAICallTaskViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="PhoneNumber">
+    <label class="ocat-label ocat-label-required" asp-for="PhoneNumber">@T["Phone number"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="PhoneNumber" />
+        <span asp-validation-for="PhoneNumber"></span>
+        <span class="hint">@T["The number to ring, with its country code. Liquid is supported, for example <code>{{ Workflow.Input.Arguments.number }}</code>."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Mode">
+    <label class="ocat-label" asp-for="Mode">@T["How"]</label>
+    <div class="ocat-end">
+        <select class="form-select" asp-for="Mode">
+            <option value="@AICallTransferMode.Cold">@T["Cold: connect the caller and drop off"]</option>
+            <option value="@AICallTransferMode.Warm">@T["Warm: brief whoever answers, then connect"]</option>
+            <option value="@AICallTransferMode.Screened">@T["Screened: ask whoever answers whether they can take it"]</option>
+        </select>
+        <span asp-validation-for="Mode"></span>
+        <span class="hint">@T["On a warm or screened transfer the caller holds while the number rings. A voicemail, no answer, a busy line or a no gives the caller back to the AI with the reason, so it can offer a callback."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Briefing">
+    <label class="ocat-label" asp-for="Briefing">@T["Briefing"]</label>
+    <div class="ocat-end">
+        <textarea class="form-control" asp-for="Briefing" rows="3"></textarea>
+        <span asp-validation-for="Briefing"></span>
+        <span class="hint">@T["What whoever answers hears before the caller is connected; the caller does not hear it. Leave it empty to have the AI write it from the conversation. Liquid is supported."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Introduction">
+    <label class="ocat-label" asp-for="Introduction">@T["Introduction"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="Introduction" />
+        <span asp-validation-for="Introduction"></span>
+        <span class="hint">@T["A line spoken once the two are connected, such as <em>You're through to our billing team now.</em> Leave it empty to say nothing."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="RingTimeoutSeconds">
+    <label class="ocat-label" asp-for="RingTimeoutSeconds">@T["Ring for"]</label>
+    <div class="ocat-end">
+        <div class="input-group">
+            <input class="form-control" asp-for="RingTimeoutSeconds" type="number" min="5" max="120" />
+            <span class="input-group-text">@T["seconds"]</span>
+        </div>
+        <span asp-validation-for="RingTimeoutSeconds"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="HoldAudio">
+    <label class="ocat-label" asp-for="HoldAudio">@T["Hold audio"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="HoldAudio" />
+        <span asp-validation-for="HoldAudio"></span>
+        <span class="hint">@T["What the caller hears while the number rings: the URL of an MP3 or WAV file, or the name of audio stored with the phone provider. Leave it empty and the caller is asked to hold."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="ShowCallerNumber" />
+            <label class="form-check-label" asp-for="ShowCallerNumber">@T["Show the caller's number"]</label>
+            <span class="hint dashed">@T["The person rung sees the caller's number instead of ours. Many carriers allow only numbers you own, and refuse the call otherwise."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ActivityId">
+    <label class="ocat-label ocat-label-required" asp-for="ActivityId">@T["Call"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="ActivityId" />
+        <span asp-validation-for="ActivityId"></span>
+        <span class="hint">@T["A Liquid expression resolving the call's activity. The default, <code>{{ Workflow.Input.ActivityId }}</code>, is the call an AI conversation event or an AI tool was raised for."]</span>
+    </div>
+</div>

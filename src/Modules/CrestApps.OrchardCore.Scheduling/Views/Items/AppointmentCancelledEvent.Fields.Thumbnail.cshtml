@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Scheduling.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AppointmentCancelledEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-calendar-xmark" aria-hidden="true"></i> @T["Appointment Cancelled"]</h4>
+<p>@T["Starts when an appointment is cancelled."]</p>

@@ -16,9 +16,11 @@ public sealed class McpPromptDeploymentStep : DeploymentStep
     public override string Name => McpPromptStep.StepKey;
 
     /// <inheritdoc />
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Category => _category;
 
     /// <inheritdoc />
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Title => _title;
 
     /// <summary>

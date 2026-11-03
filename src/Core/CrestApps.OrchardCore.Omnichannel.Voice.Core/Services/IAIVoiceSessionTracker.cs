@@ -37,6 +37,17 @@ public interface IAIVoiceSessionTracker
     AIVoiceSessionMeasurements EndTurnBased(string activityId, DateTime endedUtc);
 
     /// <summary>
+    /// Records that the model answered a caller's line on a turn-based call, so the answer's latency is counted when
+    /// its speech starts.
+    /// </summary>
+    /// <param name="activityId">The call's activity.</param>
+    /// <param name="lineUtc">When the caller's line was taken.</param>
+    /// <param name="modelMs">How long the model took.</param>
+    void TurnBasedAnswer(string activityId, DateTime lineUtc, int modelMs)
+    {
+    }
+
+    /// <summary>
     /// Writes the call's summary in a scope of its own, so it survives the request the call ran in. Never throws.
     /// </summary>
     /// <param name="draft">What the loop knows about the call.</param>

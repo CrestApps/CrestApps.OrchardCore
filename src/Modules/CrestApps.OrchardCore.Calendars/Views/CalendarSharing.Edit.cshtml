@@ -1,0 +1,49 @@
+@model CalendarSharingViewModel
+
+@{
+    var levels = new[]
+    {
+        (Key: "FreeBusy", Users: nameof(Model.FreeBusyUsers), Roles: nameof(Model.FreeBusyRoles), Selected: Model.FreeBusyRoles, Label: T["See free/busy time"], Hint: T["See when the calendar is busy, without the details."]),
+        (Key: "Read", Users: nameof(Model.ReadUsers), Roles: nameof(Model.ReadRoles), Selected: Model.ReadRoles, Label: T["See events"], Hint: T["See the events and their details."]),
+        (Key: "Write", Users: nameof(Model.WriteUsers), Roles: nameof(Model.WriteRoles), Selected: Model.WriteRoles, Label: T["Add and change events"], Hint: T["Add, change and cancel events."]),
+        (Key: "Manage", Users: nameof(Model.ManageUsers), Roles: nameof(Model.ManageRoles), Selected: Model.ManageRoles, Label: T["Manage"], Hint: T["Change the calendar and who it is shared with."]),
+    };
+}
+
+<p class="hint">@T["Each level includes the ones above it. The calendar's owner and calendar administrators always manage it."]</p>
+
+@foreach (var level in levels)
+{
+    var usersName = Html.NameFor(m => m).ToString();
+    var prefix = string.IsNullOrEmpty(usersName) ? string.Empty : usersName + ".";
+
+    <div class="ocat-wrapper">
+        <span class="ocat-label">@level.Label</span>
+        <div class="ocat-end">
+            <div class="row g-2">
+                <div class="col-md-6">
+                    @await Component.InvokeAsync("ItemSelector", new
+                    {
+                        id = "share-users-" + level.Key,
+                        inputName = prefix + level.Users,
+                        endpoint = Url.RouteUrl("CalendarsUserSearch"),
+                        initialItemsJson = Model.InitialUsersJson.TryGetValue(level.Key, out var json) ? json : "[]",
+                        multiple = true,
+                        buttonText = T["Users"].Value,
+                        searchPlaceholder = T["Search users"].Value,
+                        smallButton = false,
+                    })
+                </div>
+                <div class="col-md-6">
+                    <select name="@(prefix + level.Roles)" class="form-select" multiple size="3" aria-label="@T["Roles"]">
+                        @foreach (var role in Model.RoleOptions)
+                        {
+                            <option value="@role.Value" selected="@level.Selected.Contains(role.Value, StringComparer.OrdinalIgnoreCase)">@role.Text</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <span class="hint">@level.Hint</span>
+        </div>
+    </div>
+}

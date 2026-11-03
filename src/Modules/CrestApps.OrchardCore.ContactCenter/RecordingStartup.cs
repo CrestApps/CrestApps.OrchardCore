@@ -80,6 +80,12 @@ public sealed class RecordingStartup : StartupBase
             .AddScoped<CallRecordingAgentNameResolver>()
             .AddDisplayDriver<CallRecordingEntry, CallRecordingEntryDisplayDriver>();
 
+        // Signed links that play a recording without signing in, and bleeping the personal details in AI calls.
+        services
+            .AddScoped<CallRecordingLinks>()
+            .AddScoped<CallRecordingBleeper>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, CallRecordingBleepBackgroundTask>());
+
         // An activity's page lists the recordings of its calls, for whoever may hear them.
         services
             .AddScoped<ActivityCallRecordingLookup>()
@@ -90,6 +96,7 @@ public sealed class RecordingStartup : StartupBase
     {
         var adminOptions = serviceProvider.GetRequiredService<IOptions<AdminOptions>>().Value;
         routes.AddRecordingErasureEndpoint(adminOptions.AdminUrlPrefix);
+        routes.MapCallRecordingLinks();
     }
 }
 

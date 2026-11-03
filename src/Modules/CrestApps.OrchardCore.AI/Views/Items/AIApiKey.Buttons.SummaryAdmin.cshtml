@@ -1,0 +1,6 @@
+@using CrestApps.OrchardCore.AI.Core.ApiKeys
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIApiKey>
+
+<a asp-action="Edit" asp-controller="AIApiKeys" asp-route-id="@Model.Value.ItemId" class="btn btn-sm btn-primary">@T["Edit"]</a>

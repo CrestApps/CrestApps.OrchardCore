@@ -83,6 +83,7 @@ public sealed class Startup : StartupBase
 
         services
             .AddScoped<ITelnyxWebhookService, TelnyxWebhookService>()
+            .AddScoped<TelnyxCallerNumberReputation>()
             // The legs to hang up once their last message ends, kept on the server so the message's command does not
             // replace the state the leg already carries.
             .AddSingleton<TelnyxHangUpAfterSpeechRegistry>()

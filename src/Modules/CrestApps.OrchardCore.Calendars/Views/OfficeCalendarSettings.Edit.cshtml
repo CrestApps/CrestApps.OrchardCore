@@ -1,0 +1,16 @@
+@model OfficeCalendarSettingsViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Address" class="ocat-label">@T["Address"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Address" class="form-control" rows="2"></textarea>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Contact" class="ocat-label">@T["Contact"]</label>
+    <div class="ocat-end">
+        <input asp-for="Contact" class="form-control" />
+        <span class="hint">@T["Who to ask about the office, such as the office manager."]</span>
+    </div>
+</div>

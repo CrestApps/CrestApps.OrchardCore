@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Scheduling.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<ConfirmAppointmentTask>
+
+<header><h4><i class="fa-solid fa-check" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Confirm Appointment"])</h4></header>

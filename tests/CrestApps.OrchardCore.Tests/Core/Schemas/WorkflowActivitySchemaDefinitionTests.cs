@@ -14,6 +14,8 @@ public sealed class WorkflowActivitySchemaDefinitionTests
 {
     private static readonly string[] _expectedActivityNames =
     [
+        "AIAlertResolvedEvent",
+        "AIAlertTriggeredEvent",
         "AICallActionTask",
         "AIChatSessionAllFieldsExtractedEvent",
         "AIChatSessionClosedEvent",
@@ -22,6 +24,8 @@ public sealed class WorkflowActivitySchemaDefinitionTests
         "AICompletionFromProfileTask",
         "AICompletionWithConfigTask",
         "AIConversationEvaluatedEvent",
+        "AIConversationFlowStartedEvent",
+        "AIConversationStageTask",
         "AIConversationStartingEvent",
         "AIConversationTurnEvent",
         "AIGuardrailTriggeredEvent",
@@ -87,10 +91,12 @@ public sealed class WorkflowActivitySchemaDefinitionTests
         "StartOmnichannelActivityTask",
         "StopCallRecordingTask",
         "TimerEvent",
+        "TransferAICallTask",
         "TransferToAgentTask",
         "UnassignUserRoleTask",
         "UnpublishContentTask",
         "UpdateContactMemoryTask",
+        "UpdateContactTask",
         "UpdateContentTask",
         "UpdateTwitterStatusTask",
         "UseAIProfileTask",

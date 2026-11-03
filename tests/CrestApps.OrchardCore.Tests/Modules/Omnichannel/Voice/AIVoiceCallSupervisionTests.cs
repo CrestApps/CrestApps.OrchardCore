@@ -34,11 +34,11 @@ public sealed class AIVoiceCallSupervisionTests
     }
 
     [Fact]
-    public async Task ALiveCall_KeepsItsProfile_AndTheModelIsToldNotToTransferInstead()
+    public async Task ARealtimeCallWhoseSessionCannotBeReached_KeepsItsProfile_AndTheModelIsToldNotToTransferInstead()
     {
         // Arrange
         // Live, a refused switch reached the model as done: it told the caller they were being put through, and then
-        // transferred them to a person nobody had asked for.
+        // transferred them to a person nobody had asked for. No session is registered here, so the switch cannot reach it.
         var call = new SupervisedCall(isRealtime: true);
 
         // Act
@@ -50,6 +50,30 @@ public sealed class AIVoiceCallSupervisionTests
         Assert.Contains("do not transfer them to a person or a number instead unless they ask for one", result.Message, StringComparison.Ordinal);
         Assert.Equal("profile-1", call.Activity.AIProfileId);
         Assert.Equal("profile-1", call.Session.ProfileId);
+    }
+
+    [Fact]
+    public async Task ARealtimeCall_IsSwitchedThroughItsLiveSession()
+    {
+        // Arrange
+        var call = new SupervisedCall(isRealtime: true);
+        AIVoiceCallCommand received = null;
+        using var registration = call.Commands.Register("activity-1", command =>
+        {
+            received = command;
+
+            return Task.FromResult(true);
+        });
+
+        // Act
+        var result = await call.Supervision.SwitchProfileAsync("activity-1", "profile-2", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal(AIVoiceCallCommandKind.SwitchProfile, received.Kind);
+        Assert.Equal("profile-2", received.Text);
+        Assert.Equal("profile-2", call.Activity.AIProfileId);
+        Assert.Equal("profile-2", call.Session.ProfileId);
     }
 
     private sealed class SupervisedCall
@@ -78,12 +102,14 @@ public sealed class AIVoiceCallSupervisionTests
             Supervision = new AIVoiceCallSupervision(
                 store.Object,
                 sessions.Object,
-                new AIVoiceCallCommands(),
+                Commands,
                 loop: null,
                 mediaResolver: null,
                 new AdvanceableClock(new DateTime(2026, 3, 1, 9, 0, 0, DateTimeKind.Utc)),
                 NullLogger<AIVoiceCallSupervision>.Instance);
         }
+
+        public AIVoiceCallCommands Commands { get; } = new();
 
         public OmnichannelActivity Activity { get; }
 

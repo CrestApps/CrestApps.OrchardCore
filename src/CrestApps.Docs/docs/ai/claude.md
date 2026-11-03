@@ -10,12 +10,16 @@ user_manual:
 
 # Claude Integration
 
+<YouTube video="ai-chat" title="Video of the chat engines: the default orchestrator, Claude and GitHub Copilot" start={326} end={383} />
+
 | | |
 | --- | --- |
 | **Feature Name** | AI Claude Orchestrator |
 | **Feature ID** | `CrestApps.OrchardCore.AI.Chat.Claude` |
 
 This module wires the shared Claude support from CrestApps.Core into Orchard Core and exposes the related Orchard settings and editors.
+
+<YouTube video="ai-orchestrators" title="Video of setting up the Claude card and choosing an orchestrator on a profile" start={101} end={181} />
 
 ## Capabilities
 

@@ -41,6 +41,6 @@
             <option value="@QueueMaxWaitAction.Voicemail">@T["Send to voicemail"]</option>
         </select>
         <span asp-validation-for="MaxWaitAction" class="text-danger"></span>
-        <span class="hint">@T["Applied by the queue sweep within about ten seconds of the limit. Overflow takes the first hop the caller has not been through regardless of that hop's own wait; voicemail needs the Voice feature, which moves the live call."]</span>
+        <span class="hint">@T["Applied when the limit is reached, with a once-a-minute check as a backstop. Overflow takes the first hop the caller has not been through regardless of that hop's own wait; voicemail needs the Voice feature, which moves the live call."]</span>
     </div>
 </div>

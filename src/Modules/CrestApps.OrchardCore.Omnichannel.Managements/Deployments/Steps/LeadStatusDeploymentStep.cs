@@ -15,8 +15,10 @@ public sealed class LeadStatusDeploymentStep : DeploymentStep
     public override string Name => OmnichannelDeploymentSteps.LeadStatus;
 
     /// <inheritdoc />
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Category => _category;
 
     /// <inheritdoc />
+    [System.Text.Json.Serialization.JsonIgnore]
     public override LocalizationSource Title => _title;
 }

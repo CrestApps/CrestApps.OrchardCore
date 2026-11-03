@@ -1,0 +1,69 @@
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.Core.Conversations
+@using CrestApps.OrchardCore.AI.Core.Models
+
+@model AITestRun
+
+<zone Name="Title">
+    <breadcrumb name="AITestCasesRunDetails" title="@T["Run of '{0}'", Model.TestCaseName]">
+        <breadcrumb-item id="AITestCases" action="Index" controller="AITestCases" area="CrestApps.OrchardCore.AI" permission="@AIPermissions.ManageAIQuality.Name">@T["AI Tests"]</breadcrumb-item>
+        <breadcrumb-item id="AITestCasesRuns" action="Runs" controller="AITestCases" area="CrestApps.OrchardCore.AI" route-testCaseId="@Model.TestCaseId">@T["Runs"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h2 class="h5">@T["Verdict"]</h2>
+        <p class="mb-1">
+            <strong>@Model.Status</strong>
+            @if (Model.Score is { } score)
+            {
+                <span class="text-body-secondary">@T["{0} out of 100", score]</span>
+            }
+        </p>
+        @if (!string.IsNullOrWhiteSpace(Model.Error))
+        {
+            <p class="text-warning mb-0">@Model.Error</p>
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.Summary))
+        {
+            <p class="mb-0">@Model.Summary</p>
+        }
+        @if (Model.Criteria.Count > 0)
+        {
+            <ul class="list-unstyled mt-3 mb-0">
+                @foreach (var criterion in Model.Criteria)
+                {
+                    <li class="mb-1">
+                        <i class="fa-solid @(criterion.Met ? "fa-circle-check text-success" : "fa-circle-xmark text-danger") me-1" aria-hidden="true"></i>
+                        <strong>@criterion.Name</strong>
+                        @if (!string.IsNullOrWhiteSpace(criterion.Reason))
+                        {
+                            <span class="text-body-secondary">: @criterion.Reason</span>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <h2 class="h5">@T["Conversation"]</h2>
+        @if (Model.Turns.Count == 0)
+        {
+            <p class="text-body-secondary mb-0">@T["The conversation has not run yet."]</p>
+        }
+        @foreach (var turn in Model.Turns)
+        {
+            var isCustomer = turn.Role == AIConversationTurn.CustomerRole;
+            <div class="d-flex mb-2 @(isCustomer ? "" : "justify-content-end")">
+                <div class="p-2 rounded @(isCustomer ? "bg-body-secondary" : "bg-primary-subtle")" style="max-width: 85%;">
+                    <div class="small text-body-secondary">@(isCustomer ? T["Simulated customer"] : T["AI"])</div>
+                    <div class="text-break" style="white-space: pre-wrap;">@turn.Text</div>
+                </div>
+            </div>
+        }
+    </div>
+</div>

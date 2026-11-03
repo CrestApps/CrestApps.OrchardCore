@@ -1,4 +1,6 @@
+@using CrestApps.Core
 @using CrestApps.Core.AI.Models
+@using CrestApps.OrchardCore.AI.Core.Conversations
 @using OrchardCore.DisplayManagement.Views
 
 @model ShapeViewModel<AIProfile>
@@ -21,5 +23,12 @@
 {
     <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["The '{0}' profile cannot be deleted.", Model.Value.DisplayText])">
         <i class="fa-solid fa-shield text-secondary me-1" aria-hidden="true"></i>@T["System"]
+    </span>
+}
+
+@if (Model.Value.TryGet<AIProfileVersionCopy>(out var versionCopy))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Runs version {0} of another profile beside its current version, for a live comparison. Made by the Use AI Profile task.", versionCopy.Version]">
+        <i class="fa-solid fa-code-branch text-secondary me-1" aria-hidden="true"></i>@T["Version {0} copy", versionCopy.Version]
     </span>
 }

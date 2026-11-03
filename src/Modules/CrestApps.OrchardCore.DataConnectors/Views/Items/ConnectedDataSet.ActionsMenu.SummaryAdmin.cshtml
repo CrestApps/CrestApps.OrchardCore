@@ -1,0 +1,31 @@
+@model ShapeViewModel<ConnectedDataSet>
+
+<a asp-action="Preview"
+   asp-controller="ConnectedDataSets"
+   asp-area="CrestApps.OrchardCore.DataConnectors"
+   asp-route-id="@Model.Value.ItemId"
+   class="dropdown-item">@T["Preview"]</a>
+@if (Model.Value.AccessMode == DataSetAccessMode.Imported)
+{
+    <a asp-action="Refresh"
+       asp-controller="ConnectedDataSets"
+       asp-area="CrestApps.OrchardCore.DataConnectors"
+       asp-route-id="@Model.Value.ItemId"
+       class="dropdown-item"
+       data-url-af="UnsafeUrl">@T["Refresh now"]</a>
+    <a asp-action="History"
+       asp-controller="ConnectedDataSets"
+       asp-area="CrestApps.OrchardCore.DataConnectors"
+       asp-route-id="@Model.Value.ItemId"
+       class="dropdown-item">@T["History"]</a>
+}
+<a asp-action="Delete"
+   asp-controller="ConnectedDataSets"
+   asp-area="CrestApps.OrchardCore.DataConnectors"
+   asp-route-id="@Model.Value.ItemId"
+   class="dropdown-item text-danger"
+   data-url-af="RemoveUrl UnsafeUrl"
+   data-title="@T["Delete"]"
+   data-message="@T["Are you sure you want to delete this data set and its imported rows? Reports and data pipelines that read it will find it missing."]"
+   data-ok-text="@T["Yes"]"
+   data-cancel-text="@T["Cancel"]">@T["Delete"]</a>

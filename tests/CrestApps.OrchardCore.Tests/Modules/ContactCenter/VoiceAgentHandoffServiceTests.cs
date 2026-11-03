@@ -322,6 +322,40 @@ public class VoiceAgentHandoffServiceTests
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Theory]
+    [InlineData(true, "queue-1", HandoffAvailability.CallbackOnly)]
+    [InlineData(false, "queue-1", HandoffAvailability.Open)]
+    [InlineData(true, "", HandoffAvailability.Open)]
+    [InlineData(true, null, HandoffAvailability.Open)]
+    public async Task GetAvailabilityAsync_IsClosedOnlyForAQueueClosedNow(bool afterHours, string queueId, HandoffAvailability expected)
+    {
+        // Arrange
+        // Asked before an automated call is offered a transfer. A queue that keeps no hours, or no queue named, is left
+        // to the handoff as before; a closed one with a callback service books a callback.
+        var harness = new Harness(new OmnichannelActivity { ItemId = "act1" }, offeredUserId: "u1", afterHours: afterHours);
+
+        // Act
+        var availability = await harness.Service.GetAvailabilityAsync(queueId, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(expected, availability);
+    }
+
+    [Fact]
+    public async Task GetAvailabilityAsync_WhenTheQueueIsClosedAndNoCallbackCanBeBooked_IsUnavailable()
+    {
+        // Arrange
+        // Without the Dialer the callback service books nothing: the after-hours handoff would end the call with no
+        // callback, so nobody can take the caller.
+        var harness = new Harness(new OmnichannelActivity { ItemId = "act1" }, offeredUserId: "u1", afterHours: true, callbackService: new NoCallbackService());
+
+        // Act
+        var availability = await harness.Service.GetAvailabilityAsync("queue-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HandoffAvailability.Unavailable, availability);
+    }
+
     [Fact]
     public async Task RequestHandoff_WhenActivityAlreadyConcluded_IsIdempotent_NoDuplicateCallback()
     {
@@ -667,7 +701,7 @@ public class VoiceAgentHandoffServiceTests
 
         public RecordingContactCenterAuditRecorder AuditRecorder { get; } = new();
 
-        public Harness(OmnichannelActivity activity = null, string offeredUserId = null, bool afterHours = false, IQueueTreatmentProvider treatmentProvider = null)
+        public Harness(OmnichannelActivity activity = null, string offeredUserId = null, bool afterHours = false, IQueueTreatmentProvider treatmentProvider = null, ICallbackService callbackService = null)
         {
             var activityManager = new Mock<IOmnichannelActivityManager>();
             activityManager.Setup(m => m.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -734,7 +768,7 @@ public class VoiceAgentHandoffServiceTests
                 queueManager.Object,
                 clock.Object,
                 businessHoursGate.Object,
-                CallbackService.Object,
+                callbackService ?? CallbackService.Object,
                 DistributedLock,
                 new OptionsWrapper<ContactCenterCoordinationOptions>(new ContactCenterCoordinationOptions()),
                 treatmentService,

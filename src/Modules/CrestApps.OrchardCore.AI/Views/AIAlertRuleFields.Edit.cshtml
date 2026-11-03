@@ -1,0 +1,107 @@
+@using CrestApps.OrchardCore.AI.Core.Conversations
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AIAlertRuleViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Metric" class="ocat-label">@T["Metric"]</label>
+    <div class="ocat-end">
+        <select asp-for="Metric" asp-items="Html.GetEnumSelectList<AIConversationMetric>()" class="form-select"></select>
+        <span class="hint">@T["Rates are percentages, such as 5 for 5%. Response time and time to first audio are in milliseconds, conversation length in seconds."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ProfileId" class="ocat-label">@T["AI profile"]</label>
+    <div class="ocat-end">
+        <select asp-for="ProfileId" asp-items="Model.Profiles" class="form-select">
+            <option value="">@T["Every profile"]</option>
+        </select>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12 col-md-6">
+        <div class="ocat-wrapper">
+            <label asp-for="Condition" class="ocat-label">@T["Alert when the value"]</label>
+            <div class="ocat-end">
+                <select asp-for="Condition" class="form-select">
+                    <option value="@AIConversationAlertCondition.Above">@T["is above the threshold"]</option>
+                    <option value="@AIConversationAlertCondition.Below">@T["is below the threshold"]</option>
+                    <option value="@AIConversationAlertCondition.RisesByPercent">@T["rose by more than the threshold, in percent, from the window before"]</option>
+                    <option value="@AIConversationAlertCondition.FallsByPercent">@T["fell by more than the threshold, in percent, from the window before"]</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6">
+        <div class="ocat-wrapper">
+            <label asp-for="Threshold" class="ocat-label">@T["Threshold"]</label>
+            <div class="ocat-end">
+                <input asp-for="Threshold" type="number" step="any" class="form-control" />
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12 col-md-4">
+        <div class="ocat-wrapper" asp-validation-class-for="WindowMinutes">
+            <label asp-for="WindowMinutes" class="ocat-label">@T["Window"]</label>
+            <div class="ocat-end">
+                <div class="input-group">
+                    <input asp-for="WindowMinutes" type="number" min="1" class="form-control" />
+                    <span class="input-group-text">@T["minutes"]</span>
+                </div>
+                <span asp-validation-for="WindowMinutes" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-4">
+        <div class="ocat-wrapper" asp-validation-class-for="MinimumSampleSize">
+            <label asp-for="MinimumSampleSize" class="ocat-label">@T["Minimum samples"]</label>
+            <div class="ocat-end">
+                <input asp-for="MinimumSampleSize" type="number" min="0" class="form-control" />
+                <span asp-validation-for="MinimumSampleSize" class="text-danger"></span>
+                <span class="hint">@T["A window with fewer never alerts or resolves."]</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-4">
+        <div class="ocat-wrapper" asp-validation-class-for="CheckEveryMinutes">
+            <label asp-for="CheckEveryMinutes" class="ocat-label">@T["Check every"]</label>
+            <div class="ocat-end">
+                <div class="input-group">
+                    <input asp-for="CheckEveryMinutes" type="number" min="1" class="form-control" />
+                    <span class="input-group-text">@T["minutes"]</span>
+                </div>
+                <span asp-validation-for="CheckEveryMinutes" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="NotifyEmails" class="ocat-label">@T["Email"]</label>
+    <div class="ocat-end">
+        <input asp-for="NotifyEmails" class="form-control" placeholder="ops@example.com, lead@example.com" />
+        <span class="hint">@T["Addresses emailed when the rule triggers and resolves, with the Email feature set up. The alert webhook events and the AI Alert Triggered and AI Alert Resolved workflow events are raised either way."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="Enabled" />
+            <label class="form-check-label" asp-for="Enabled">@T["Check this rule"]</label>
+        </div>
+    </div>
+</div>

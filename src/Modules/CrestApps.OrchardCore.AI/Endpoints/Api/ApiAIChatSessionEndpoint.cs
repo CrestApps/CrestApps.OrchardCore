@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.ApiKeys;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -24,7 +25,7 @@ internal static class ApiAIChatSessionEndpoint
     {
         _ = builder.MapGet("api/ai/chat/session", HandleAsync)
             .DisableAntiforgery()
-            .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = OrchardCoreConstants.AuthenticationSchemes.Api })
+            .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = AIApiKeys.ApiSchemes })
             .WithTags(AIConversationsApiEndpoints.ChatTag)
             .WithName("GetAIChatSession")
             .WithSummary("Gets a chat session of an AI profile with its messages.");
@@ -55,7 +56,8 @@ internal static class ApiAIChatSessionEndpoint
 
         var profile = await profileManager.FindByIdAsync(chatSession.ProfileId);
 
-        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.QueryAnyAIProfile, profile))
+        if (!AIApiKeys.AllowsScope(httpContextAccessor.HttpContext.User, AIApiKeys.Scopes.Chat) ||
+            !await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.QueryAnyAIProfile, profile))
         {
             return TypedResults.Forbid();
         }

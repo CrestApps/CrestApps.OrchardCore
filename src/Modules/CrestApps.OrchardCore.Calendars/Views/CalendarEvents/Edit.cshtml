@@ -1,0 +1,9 @@
+@model EditCalendarEventViewModel
+
+<zone Name="Title">
+    <breadcrumb name="CalendarEventsEdit" title="@T["Edit '{0}' Event", Model.Title]">
+        <breadcrumb-item id="CalendarView" action="Index" controller="Calendar" area="CrestApps.OrchardCore.Calendars">@T["Calendar"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<partial name="_EditEventForm" model="Model" />

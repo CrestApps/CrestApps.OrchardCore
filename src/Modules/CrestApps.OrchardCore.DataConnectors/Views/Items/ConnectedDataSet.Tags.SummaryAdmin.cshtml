@@ -1,0 +1,29 @@
+@model ConnectedDataSetRowViewModel
+
+@if (Model.DataSet.AccessMode == DataSetAccessMode.Live)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Every read goes to the source."]">
+        <i class="fa-solid fa-bolt text-secondary me-1" aria-hidden="true"></i>@T["Live"]
+    </span>
+}
+else
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Read from the last import."]">
+        <i class="fa-solid fa-database text-secondary me-1" aria-hidden="true"></i>@T["Imported"]
+    </span>
+}
+
+<span class="badge ta-badge fw-normal @(Model.Connection is null ? "bg-warning-subtle" : string.Empty)" data-bs-toggle="tooltip" title="@T["Connection"]">
+    <i class="fa-solid fa-plug text-secondary me-1" aria-hidden="true"></i>@(Model.Connection?.DisplayText ?? T["Missing connection"].Value)
+</span>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Technical name"]">
+    <i class="fa-solid fa-hashtag text-secondary me-1" aria-hidden="true"></i>@Model.DataSet.Name
+</span>
+
+@if (!Model.DataSet.IsEnabled)
+{
+    <span class="badge ta-badge bg-secondary-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+        <i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Disabled"]
+    </span>
+}

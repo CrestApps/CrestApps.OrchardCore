@@ -1,0 +1,31 @@
+@model MediaFileDataSetViewModel
+
+<fieldset>
+    <legend class="h5 mt-3">@T["File"]</legend>
+
+    <div class="ocat-wrapper">
+        <label asp-for="Delimiter" class="ocat-label">@T["CSV delimiter"]</label>
+        <div class="ocat-end">
+            <input asp-for="Delimiter" class="form-control" maxlength="3" />
+            <span asp-validation-for="Delimiter" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input asp-for="HasHeaderRow" class="form-check-input" type="checkbox" />
+                <label asp-for="HasHeaderRow" class="form-check-label">@T["The first row names the columns"]</label>
+                <span class="hint dashed">@T["For CSV files. Without it, the columns are named by position."]</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="SheetName" class="ocat-label">@T["Excel sheet"]</label>
+        <div class="ocat-end">
+            <input asp-for="SheetName" class="form-control" />
+            <span class="hint">@T["The sheet of a workbook read. Leave empty for the first sheet."]</span>
+        </div>
+    </div>
+</fieldset>

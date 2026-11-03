@@ -18,6 +18,10 @@ technical_manual:
 
 <AskYourAdmin />
 
+<YouTube video="ai-memory" title="Video overview of AI memory" />
+
+The video covers why memory helps, how to set it up (the index, the site settings and the profile), a chat that remembers, and how to clear what was saved.
+
 ## What the AI remembers
 
 Memory is private to each user. The AI only ever reads and changes the memory of the person it is talking to, and nobody else's chats can see it.
@@ -47,6 +51,8 @@ You can talk to the AI about what it remembers, in plain words:
 
 ## Clear your saved memory
 
+<YouTube video="ai-memory" title="Video of seeing and clearing the saved memory" start={248} end={286} />
+
 When you want the AI to forget everything it saved about you:
 
 1. Open your user profile (the **Profile** item in the user menu at the top right of the admin).
@@ -59,11 +65,23 @@ An administrator with the **Clear AI memory for other users** permission can do 
 
 ## Turn on memory (administrators)
 
-Memory needs a search index to store memories in, which your technical team sets up once (see the [Technical Manual](../../ai/memory.md)). After that:
+Memory needs a search index to store the memories in. Your technical team sets up the search service once (see the [Technical Manual](../../ai/memory.md)). After that, three steps turn memory on.
+
+### Create the memory index
+
+<YouTube video="ai-memory" title="Video of creating the memory index" start={88} end={128} />
+
+1. Open **Search > Indexes** and click **Add index**.
+2. Click **Add** on **AI Memory (Elasticsearch)**. The **AI Memory (Azure AI Search)** type works the same way, when that feature is on.
+3. Enter an **Index Name** and a **Name**, the name the index has in the list.
+4. Pick the **Embedding deployment**. It turns each memory into numbers that the search compares. It cannot be changed after the index is created, and the index then shows it as read-only.
+5. Leave the other fields as they are, and click **Save**.
 
 ### Choose the memory index
 
-Open **Settings > Artificial Intelligence** and find the **Memory** section.
+<YouTube video="ai-memory" title="Video of choosing the memory index in the site settings" start={128} end={171} />
+
+Open **Settings > Artificial Intelligence** and find the **Memory** section. Until an index exists, it shows a **No index profiles configured** warning.
 
 | Field | What it does |
 | --- | --- |
@@ -71,7 +89,11 @@ Open **Settings > Artificial Intelligence** and find the **Memory** section.
 | **Default top N** | How many saved memories the AI gets back when it searches a user's memory. |
 | **Enable user memory** | Turns memory on for [chat interactions](chat-interactions.md). It is on by default. |
 
+In the **General** section, **Enable preemptive memory retrieval** (on by default) looks up a person's memories before the model answers, and gives the matching ones to the model as background. Turn it off to keep the memory tools but skip that step.
+
 ### Turn it on for a profile
+
+<YouTube video="ai-memory" title="Video of turning memory on for a profile" start={171} end={209} />
 
 1. Open **Artificial Intelligence > Profiles** and edit the profile.
 2. On the **Knowledge** tab, tick **Enable user memory**.
@@ -80,3 +102,9 @@ Open **Settings > Artificial Intelligence** and find the **Memory** section.
 Memory is off by default on every profile, so you choose where it makes sense. Turn it on for an internal assistant your staff use every day; leave it off for a public website assistant. If no memory index is chosen yet, the profile shows an **Index not configured** warning when you tick the box.
 
 Profile templates have the same checkbox, so profiles created from a template can start with memory on. See [Templates](prompt-templates.md).
+
+### Try it
+
+<YouTube video="ai-memory" title="Video of a chat that remembers" start={209} end={248} />
+
+Open **Artificial Intelligence > Profiles**, open the **Actions** menu of the profile and click **New chat**. Tell the assistant something worth keeping, such as "Call me Sam, and keep your answers short." Then click **New Chat** and ask "What do you remember about me?" The new chat has no history, but the assistant looks up its memories first, and answers with the name it saved.

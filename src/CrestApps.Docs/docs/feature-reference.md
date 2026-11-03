@@ -82,6 +82,7 @@ turns them on, and they disappear again when nothing needs them.
 | `CrestApps.OrchardCore.AI.Mcp.Server` | Model Context Protocol (MCP) Server | [MCP Server](./ai/mcp/server) |
 | `CrestApps.OrchardCore.AI.Mcp.Resources.Ftp` | Model Context Protocol (MCP) FTP Resource | [MCP FTP Resource](./ai/mcp/ftp) |
 | `CrestApps.OrchardCore.AI.Mcp.Resources.Sftp` | Model Context Protocol (MCP) SFTP Resource | [MCP SFTP Resource](./ai/mcp/sftp) |
+| `CrestApps.OrchardCore.AI.WebMcp` | WebMCP | [WebMCP](./ai/mcp/webmcp) |
 
 ## Artificial Intelligence - A2A
 
@@ -172,6 +173,8 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.ContentTransfer` | Content Transfer | [Content Transfer](./modules/content-transfer) |
 | `CrestApps.OrchardCore.ContentTransfer.OpenXml` | Content Transfer (OpenXml) | [Content Transfer](./modules/content-transfer) |
 | `CrestApps.OrchardCore.ContentTransfer.Azure` | Content Transfer - Azure Blob Storage | [Content Transfer](./modules/content-transfer#store-import-and-export-files-in-azure-blob-storage) |
+| `CrestApps.OrchardCore.Seo` | Advanced SEO | [Advanced SEO](./modules/advanced-seo) |
+| `CrestApps.OrchardCore.NLWeb` | NLWeb | [NLWeb](./modules/nlweb) |
 | `CrestApps.OrchardCore.Addresses` | Addresses | [Addresses](./modules/addresses) |
 | `CrestApps.OrchardCore.Addresses.Countries` | Address Countries | [Addresses](./modules/addresses#country-lists) |
 | `CrestApps.OrchardCore.Addresses.GooglePlaces` | Address Suggestions (Google Places) | [Addresses](./modules/addresses#address-suggestions) |
@@ -189,6 +192,33 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Reports.OpenXml` | Reports (OpenXml) | [Reports](./modules/reports) |
 | `CrestApps.OrchardCore.Reports.Pdf` | Reports (PDF) | [Reports](./modules/reports) |
 | `CrestApps.OrchardCore.Reports.Builder` | Report Builder | [Report Builder](./modules/report-builder/) |
+
+## Calendar
+
+| Feature ID | Name | Docs |
+| --- | --- | --- |
+| `CrestApps.OrchardCore.Calendars` | Calendars | [Calendars](./modules/calendars) |
+| `CrestApps.OrchardCore.Calendars.Teams` | Team Calendars | [Calendars](./modules/calendars#calendar-types) |
+| `CrestApps.OrchardCore.Calendars.Resources` | Resource Calendars | [Calendars](./modules/calendars#conflicts-and-concurrency) |
+| `CrestApps.OrchardCore.Calendars.Office` | Office Calendars | [Calendars](./modules/calendars#calendar-types) |
+| `CrestApps.OrchardCore.Calendars.Reminders` | Calendar Reminders | [Calendars](./modules/calendars#reminders) |
+| `CrestApps.OrchardCore.Calendars.Invitations` | Calendar Invitations | [Calendars](./modules/calendars#invitations) |
+| `CrestApps.OrchardCore.Calendars.Feeds` | Calendar Feeds | [Calendars](./modules/calendars#icalendar-feeds-import-and-export) |
+| `CrestApps.OrchardCore.Calendars.External` | External Calendars | [Calendars](./modules/calendars#external-calendars) |
+| `CrestApps.OrchardCore.Calendars.Api` | Calendars API | [Calendars](./modules/calendars#http-api) |
+| `CrestApps.OrchardCore.Scheduling` | Scheduling | [Scheduling](./modules/scheduling) |
+| `CrestApps.OrchardCore.Scheduling.SelfService` | Scheduling Self-Service | [Scheduling](./modules/scheduling#self-service) |
+| `CrestApps.OrchardCore.Scheduling.Api` | Scheduling API | [Scheduling](./modules/scheduling#http-api) |
+
+## Data connectors
+
+| Feature ID | Name | Docs |
+| --- | --- | --- |
+| `CrestApps.OrchardCore.DataConnectors` | Data Connectors | [Data Connectors](./modules/data-connectors) |
+| `CrestApps.OrchardCore.DataConnectors.Http` | HTTP API Data Connector | [Data Connectors](./modules/data-connectors#http-api) |
+| `CrestApps.OrchardCore.DataConnectors.Elasticsearch` | Elasticsearch Data Connector | [Data Connectors](./modules/data-connectors#elasticsearch) |
+| `CrestApps.OrchardCore.DataConnectors.Files` | Media Files Data Connector | [Data Connectors](./modules/data-connectors#media-files) |
+| `CrestApps.OrchardCore.DataConnectors.SqlServer` | SQL Server Data Connector | [Data Connectors](./modules/data-connectors#sql-server) |
 
 ## Commerce
 

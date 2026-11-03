@@ -21,7 +21,7 @@ An **activity** is one piece of work for one contact: a call to make, a text to 
 
 <YouTube video="contact-center-agent-walkthroughs" title="Video of an agent opening their activity list, completing an activity and picking a disposition" start={532} end={555} />
 
-**Interaction Center > Activities** lists the manual activities assigned to you that are not started yet, newest first. Each row shows the contact, the number or address, the channel, the attempt number, when it is scheduled, and the contact's **current local time**, so you know whether it is a good time to call. Hover over the local time to see the contact's full local date and time zone.
+**Interaction Center > Activities** lists the manual activities assigned to you that are not started yet, with the activity scheduled furthest ahead first. Each row shows the contact, the number or address, the channel, the attempt number, when it is scheduled, and the contact's **current local time**, so you know whether it is a good time to call. From the second attempt on, it also shows the disposition the previous attempt ended with, such as **No Answer**. Hover over the local time to see the contact's full local date and time zone.
 
 Each row also says who will handle the activity: whether it is **Manual** or **Automated (AI)** work and where it came from (for example *Automatic*, *Preview dialer*, *Callback* or *Inbound*), the **AI profile** that will hold an automated conversation, the **dialer profile** that will dial it, its **campaign**, and the user it is **assigned to**. Badges only appear when the activity has that information. Hover over a badge to see what it stands for.
 
@@ -36,6 +36,16 @@ Narrow the list with the filters: **Urgency**, **Subject**, **Channel**, **Time 
 5. Check the preview of what happens next, for example **Try Again** with its date, or a **New Activity** for another subject. Change a follow-up's **Schedule at** or add **Preparation notes** for whoever works it. The notes become the instructions of the follow-up activity.
 6. Click **Complete**. The subject flow runs straight away.
 
+### Put a follow-up on your calendar
+
+With **Calendars** on, each follow-up with a **Schedule at** time also has **Add to my calendar**. Tick it when you've agreed a time with the person, such as "call back tomorrow at 10", so you don't miss it:
+
+1. Tick **Add to my calendar**.
+2. Optionally click **Choose on my calendar**. Your calendar opens with your events on it, so you can see when you're free. Click (or drag across) the time you want; it goes into **Schedule at**.
+3. Click **Complete**. The follow-up goes on the calendar of the person it's assigned to (you, unless the subject flow assigns it to someone else) as a 15-minute event, with the contact's name, number and your preparation notes.
+
+The activity and its event then stay at the same time: rescheduling the activity moves the event, and dragging the event on the calendar reschedules the activity while it hasn't been worked yet. Cancelling the activity cancels the event. Cancelling or deleting the event takes the activity off the calendar but leaves the activity as it is. The event reminds you before it starts, like any calendar event.
+
 In the screencast, the agent completes an activity with *No Answer*, and the subject flow's **Try Again** action schedules the next try.
 
 If the activity is already finished, you are sent back to where you came from with the warning *This activity was already completed, so your disposition was not recorded.* The outcome already on record is kept. This is normal, not an error: someone else may have completed it, or an automated call that handed the customer to you, or a caller who reached voicemail, may have closed it while you were still wrapping up.
@@ -49,7 +59,7 @@ Open the contact (**Interaction Center > Contacts**, then **List Activities**) a
 ### Schedule an outbound activity
 
 1. Click **Add Activity > Outbound**.
-2. Pick the **Subject content type**, the **Schedule at** time, the **User to assign activity to**, the **Urgency level** and any **Instructions**, and fill in the subject's fields. Only outbound subjects are listed; when there is only one, it is picked for you.
+2. Pick the **Subject content type**, the **Schedule at** time, the **User to assign activity to**, the **Urgency level** and any **Instructions**. The subject's own fields are filled in later, by whoever completes the activity. Only outbound subjects are listed; when there is only one, it is picked for you.
 3. Click **Save**. The activity appears under **Scheduled Activities** on the contact, and in that user's activity list.
 
 If no outbound subject exists yet, the page says so and you cannot schedule an activity. Ask your administrator to [create one](subjects.md).
@@ -74,6 +84,7 @@ If the caller is not in the system yet, create the contact first, then log the c
 
 ## Other actions on a contact's activities
 
+When the AI handed a customer to you, the **Complete** page starts with the **AI assistant's summary**: a blue banner with what the AI learned, and the time it was written. It is not part of your notes. **Review AI conversation** appears on a completed activity that an AI conversation worked, and opens that conversation in the AI chat screen, which follows the usual AI chat permissions.
 On a contact's **Activities** page, scheduled activities have **Complete**, **Edit** and **Purge**; completed ones have **Edit** and, for AI conversations, **Review AI conversation**.
 
 A completed activity shows who dispositioned it, and how, in its **Dispositioned by** badge and on its **Edit** page: the user's name when a person completed it, **AI voice agent (profile: …)** or **AI agent (profile: …)** when the AI conversation concluded it, **Dialer (automatic)** when the dialer completed the attempt on its own (for example no answer, a busy line, an answering machine, an abandoned call or a number not in service), or **Automatically (system)** for anything else the platform closed by itself, such as a call transferred out by the IVR. Activities completed before this was recorded show the best match from what they do record. Editing a completed activity lets you correct its disposition and notes; it does not re-run the flow, so no new tries or follow-ups are created.

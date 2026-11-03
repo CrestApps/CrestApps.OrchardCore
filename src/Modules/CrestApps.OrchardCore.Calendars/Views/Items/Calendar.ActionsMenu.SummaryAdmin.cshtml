@@ -1,0 +1,11 @@
+@model CalendarRowViewModel
+
+@if (Model.Level >= CalendarAccessLevel.Manage && string.IsNullOrEmpty(Model.Calendar.Source))
+{
+    <a asp-action="Delete"
+       asp-route-id="@Model.Calendar.ItemId"
+       class="dropdown-item text-danger"
+       data-title="@T["Delete calendar"]"
+       data-message="@T["Are you sure you want to delete this calendar and all of its events?"]"
+       data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
+}

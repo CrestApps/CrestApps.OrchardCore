@@ -1,0 +1,82 @@
+@using OrchardCore.DataSources
+@model DataSetPreviewViewModel
+
+<zone Name="Title">
+    <breadcrumb name="ConnectedDataSetsPreview" title="@T["Preview: {0}", Model.DataSet.DisplayText]">
+        <breadcrumb-item id="ConnectedDataSets" action="Index" controller="ConnectedDataSets" area="CrestApps.OrchardCore.DataConnectors" permission="@DataConnectorPermissions.ManageConnectedDataSets.Name">@T["Data Sets"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 align-items-center">
+            <div class="col">
+                @if (Model.DataSet.AccessMode == DataSetAccessMode.Live)
+                {
+                    <span>@T["Read live from the source, as reports and data pipelines read it."]</span>
+                }
+                else if (Model.DataSet.Import?.LastSuccessUtc is { } refreshed)
+                {
+                    <span>@T["Read from the import of {0}, as reports and data pipelines read it.", await DisplayAsync(await New.DateTime(Utc: refreshed, Format: "g"))]</span>
+                }
+                else
+                {
+                    <span>@T["Not imported yet."]</span>
+                }
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-primary" asp-action="Edit" asp-route-id="@Model.DataSet.ItemId">@T["Edit"]</a>
+                @if (Model.DataSet.AccessMode == DataSetAccessMode.Imported)
+                {
+                    <a class="btn btn-secondary" asp-action="History" asp-route-id="@Model.DataSet.ItemId">@T["History"]</a>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.Error))
+{
+    <div class="alert alert-danger" role="alert">@Model.Error</div>
+}
+else if (Model.Fields.Count == 0)
+{
+    <div class="alert alert-info" role="alert">@T["The data set has no fields."]</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-sm table-striped">
+            <thead>
+                <tr>
+                    @foreach (var field in Model.Fields)
+                    {
+                        <th scope="col" title="@field.Name (@field.Type)">@field.DisplayName</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Rows.Count == 0)
+                {
+                    <tr>
+                        <td colspan="@Model.Fields.Count" class="text-center text-muted">@T["No rows."]</td>
+                    </tr>
+                }
+                @foreach (var row in Model.Rows)
+                {
+                    <tr>
+                        @foreach (var value in row)
+                        {
+                            <td>@DataValues.ToText(value)</td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (Model.Truncated)
+    {
+        <p class="hint">@T["Only the first {0} rows are shown.", Model.Rows.Count]</p>
+    }
+}

@@ -10,5 +10,11 @@
     "name": "subject-action-assignment-toggle.js",
     "source": "Assets/js/subject-action-assignment-toggle.js",
     "dest": "wwwroot/scripts/subject-action-assignment-toggle.js"
+  },
+  {
+    "action": "vite",
+    "name": "activity-calendar.js",
+    "source": "Assets/js/activity-calendar.js",
+    "dest": "wwwroot/scripts/activity-calendar.js"
   }
 ]

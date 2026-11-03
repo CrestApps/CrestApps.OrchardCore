@@ -1,6 +1,7 @@
 using CrestApps.Core.AI.Capabilities;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Speech;
 using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
@@ -9,6 +10,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
@@ -22,6 +24,7 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
     private readonly IAIDeploymentCapabilityService _capabilityService;
     private readonly DefaultSpeechVoicePresenter _speechVoiceMenuService;
     private readonly ISiteService _siteService;
+    private readonly IRealtimeVoiceResolver _realtimeVoiceResolver;
 
     internal readonly IStringLocalizer S;
 
@@ -32,18 +35,21 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
     /// <param name="capabilityService">The deployment capability service.</param>
     /// <param name="speechVoiceMenuService">The speech voice menu service.</param>
     /// <param name="siteService">The site service.</param>
+    /// <param name="realtimeVoiceResolver">The realtime voice resolver.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileChatModeDisplayDriver(
         IAIDeploymentManager deploymentManager,
         IAIDeploymentCapabilityService capabilityService,
         DefaultSpeechVoicePresenter speechVoiceMenuService,
         ISiteService siteService,
+        IRealtimeVoiceResolver realtimeVoiceResolver,
         IStringLocalizer<AIProfileChatModeDisplayDriver> stringLocalizer)
     {
         _deploymentManager = deploymentManager;
         _capabilityService = capabilityService;
         _speechVoiceMenuService = speechVoiceMenuService;
         _siteService = siteService;
+        _realtimeVoiceResolver = realtimeVoiceResolver;
         S = stringLocalizer;
     }
 
@@ -120,27 +126,46 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
+        // Never written with the resolved value. Empty means "use the site default", and storing what that
+        // resolved to today would pin the profile to a model the operator has since replaced.
+        var conversationDeploymentName = string.IsNullOrWhiteSpace(model.ConversationDeploymentName)
+            ? null
+            : model.ConversationDeploymentName.Trim();
+
+        // One voice question, whichever path answers it: a realtime deployment's own voices, or the text-to-speech
+        // voices when the conversation runs as the speech-to-text plus text-to-speech cascade. Kept whatever the chat
+        // mode, because phone calls answered or placed with this profile speak with it whatever the mode is; clearing
+        // it on a text-only profile discarded the voice its editor shows.
+        var voiceName = string.IsNullOrWhiteSpace(model.VoiceName)
+            ? null
+            : model.VoiceName.Trim();
+
+        await RefuseAVoiceTheDeploymentDoesNotOfferAsync(context, conversationDeploymentName, voiceName);
+
         profile.AlterSettings<ChatModeProfileSettings>(settings =>
         {
             settings.ChatMode = model.ChatMode;
-
-            // Never written with the resolved value. Empty means "use the site default", and storing what
-            // that resolved to today would pin the profile to a model the operator has since replaced.
-            settings.ConversationDeploymentName = string.IsNullOrWhiteSpace(model.ConversationDeploymentName)
-                ? null
-                : model.ConversationDeploymentName.Trim();
-
-            // One voice question, whichever path answers it: a realtime deployment's own voices, or the
-            // text-to-speech voices when the conversation runs as the speech-to-text plus text-to-speech
-            // cascade. Kept whatever the chat mode, because phone calls answered or placed with this profile speak
-            // with it whatever the mode is; clearing it on a text-only profile discarded the voice its editor shows.
-            settings.VoiceName = string.IsNullOrWhiteSpace(model.VoiceName)
-                ? null
-                : model.VoiceName.Trim();
+            settings.ConversationDeploymentName = conversationDeploymentName;
+            settings.VoiceName = voiceName;
             settings.EnableTextToSpeechPlayback = model.EnableTextToSpeechPlayback;
         });
 
         return Edit(profile, context);
+    }
+
+    // The voice goes to a speech-to-speech provider with the instructions and tools, and one it does not have makes
+    // it refuse all three (see RealtimeVoiceOffer).
+    private async Task RefuseAVoiceTheDeploymentDoesNotOfferAsync(UpdateEditorContext context, string conversationDeploymentName, string voiceName)
+    {
+        var deployment = await RealtimeVoiceOffer.FindDeploymentWithoutVoiceAsync(_deploymentManager, _realtimeVoiceResolver, conversationDeploymentName, voiceName);
+
+        if (deployment is not null)
+        {
+            context.Updater.ModelState.AddModelError(
+                Prefix,
+                nameof(AIProfileChatModeViewModel.VoiceName),
+                S["The conversation deployment '{0}' has no voice '{1}'. Choose one of its voices, or leave the voice empty.", deployment.Name, voiceName]);
+        }
     }
 
     private async Task<List<SelectListItem>> GetAvailableModesAsync(bool hasSpeech)

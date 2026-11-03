@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Calendars.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CalendarEventStartingSoonEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-bell" aria-hidden="true"></i>
+    @T["Calendar Event Starting Soon"]
+</h4>
+<p>@T["Starts a set number of minutes before each occurrence starts."]</p>

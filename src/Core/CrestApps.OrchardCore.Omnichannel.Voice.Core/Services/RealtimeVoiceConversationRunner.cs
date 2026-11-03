@@ -34,6 +34,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     private readonly IOmnichannelConversationContextFactory _conversationContextFactory;
     private readonly IAIVoiceCallCommands _voiceCallCommands;
     private readonly IAIConversationTurnNotifier _turnNotifier;
+    private readonly CrestApps.Core.AI.Profiles.IAIProfileManager _profileManager;
     private readonly IClock _clock;
     private readonly ILogger _logger;
     private readonly IShellHost _shellHost;
@@ -245,6 +246,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     /// <param name="logger">The logger.</param>
     /// <param name="shellHost">The shell host, which gives the guardrail check a scope of its own.</param>
     /// <param name="shellSettings">The tenant the call belongs to.</param>
+    /// <param name="profileManager">Finds the profile a supervisor switches the call to.</param>
     public RealtimeVoiceConversationRunner(
         IRealtimeOrchestrator orchestrator,
         IContactCenterVoiceMediaProviderResolver mediaResolver,
@@ -257,7 +259,8 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         IClock clock,
         ILogger<RealtimeVoiceConversationRunner> logger,
         IShellHost shellHost = null,
-        ShellSettings shellSettings = null)
+        ShellSettings shellSettings = null,
+        CrestApps.Core.AI.Profiles.IAIProfileManager profileManager = null)
     {
         _shellHost = shellHost;
         _shellSettings = shellSettings;
@@ -269,6 +272,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         _conversationContextFactory = conversationContextFactory;
         _voiceCallCommands = voiceCallCommands;
         _turnNotifier = turnNotifier;
+        _profileManager = profileManager;
         _clock = clock;
         _logger = logger;
     }
@@ -297,6 +301,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
 
         // Which call this is, from the call itself, for the tools the profile gives the session.
         PutCallIdentity(AIInvocationScope.Current?.Items, context.Activity);
+        CaptureCallScopes(context);
 
         // The call was answered moments ago; the caller's wait for the assistant's first word starts here.
         var answeredTicks = DateTime.UtcNow.Ticks;
@@ -548,7 +553,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
                     attempts = 0;
                 }
 
-                var step = NextIdleStep(attempts, TimeSpan.FromTicks(quietFor), Volatile.Read(ref _responseInFlight) == 1);
+                var step = NextIdleStep(attempts, TimeSpan.FromTicks(quietFor), IsBusy);
 
                 if (step == IdleStep.Wait || conversation is null)
                 {

@@ -1,0 +1,14 @@
+@using System.Globalization
+@using CrestApps.OrchardCore.AI.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIAlertRule>
+
+<div class="admin-list-secondary">
+    @T["{0} {1} {2} over the last {3} minutes", Model.Value.Metric, Model.Value.Condition, Model.Value.Threshold.ToString("0.##", CultureInfo.CurrentCulture), Model.Value.WindowMinutes]
+    @if (Model.Value.Incidents.Count > 0)
+    {
+        var latest = Model.Value.Incidents[0];
+        <span class="ms-2">&middot; @T["Last triggered"] @await DisplayAsync(await New.Timespan(Utc: latest.OpenedUtc))</span>
+    }
+</div>

@@ -87,6 +87,26 @@ public sealed partial class RealtimeVoiceConversationRunner
 
             var lost = await toCaller || live.Faulted;
 
+            // The session was ended to hand the call to another profile, whose own session takes it from here. One that
+            // cannot open leaves the call lost, and the recovery below reopens the profile it was on.
+            if (TakeHandover() is { } handover)
+            {
+                if (!callScope.IsCancellationRequested &&
+                    !toModel.IsCompleted &&
+                    !context.EndCallRequested.IsCancellationRequested &&
+                    !context.HandoffRequested.IsCancellationRequested)
+                {
+                    if (await HandOverAsync(media, live, context, handover, callScope.Token))
+                    {
+                        continue;
+                    }
+
+                    lost = true;
+                }
+
+                Volatile.Write(ref _handoverInProgress, 0);
+            }
+
             // The call is ending on purpose -- a goodbye, a transfer, the caller hanging up -- or the session ended
             // because it was asked to. None of those is a session being lost.
             if (!lost ||
@@ -187,7 +207,7 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// A new session starts with no history at all. Without this it would do what the first did — open the call —
     /// and the caller who has been talking for two minutes would be greeted as though they had just picked up.
     /// </remarks>
-    private async Task<string> DescribeConversationSoFarAsync(RealtimeVoiceConversationContext context, CancellationToken cancellationToken)
+    private async Task<string> DescribeConversationSoFarAsync(RealtimeVoiceConversationContext context, CancellationToken cancellationToken, bool handedOver = false)
     {
         IReadOnlyList<AIChatSessionPrompt> prompts;
 
@@ -222,10 +242,14 @@ public sealed partial class RealtimeVoiceConversationRunner
         var builder = new StringBuilder()
             .AppendLine("## The call so far")
             .AppendLine()
-            .AppendLine(
-                "You are already partway through this call. The line dropped for a moment and has just been " +
-                "restored. Carry on from where the conversation below left off; do not greet the customer or " +
-                "introduce yourself again.");
+            .AppendLine(handedOver
+                ? "This call has just been transferred to you from another assistant, partway through. \"You\" below " +
+                    "is that assistant. The customer has already been told the call is recorded; do not say it again. " +
+                    "Greet them, say who you are, and carry on with what they need from the conversation below; do not " +
+                    "ask them to start again."
+                : "You are already partway through this call. The line dropped for a moment and has just been " +
+                    "restored. Carry on from where the conversation below left off; do not greet the customer or " +
+                    "introduce yourself again.");
 
         if (lines.Count > 0)
         {
@@ -285,6 +309,21 @@ public sealed partial class RealtimeVoiceConversationRunner
 
             _faulted = true;
 
+            try
+            {
+                _session.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // The call is already over.
+            }
+        }
+
+        /// <summary>
+        /// Ends the current session on purpose, so the pump reading it stops without the session counting as lost.
+        /// </summary>
+        public void EndSession()
+        {
             try
             {
                 _session.Cancel();

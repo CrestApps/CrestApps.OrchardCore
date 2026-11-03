@@ -107,6 +107,7 @@
                         stacked = block.Chart.Stacked,
                         showLegend = block.Chart.ShowLegend,
                         percentageScale = block.Chart.PercentageScale,
+                        referenceLines = (block.Chart.ReferenceLines ?? []).Select(line => new { label = line.Label, value = line.Value, datasetIndex = line.DatasetIndex }),
                     });
 
                     <div style="position: relative; min-height: 14rem;">

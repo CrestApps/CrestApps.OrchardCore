@@ -96,6 +96,12 @@ public sealed class ProductBundleDisplayDriver : ContentPartDisplayDriver<Produc
         var self = part.ContentItem.ContentItemId;
         var rows = (model.Items ?? []).Where(item => !string.IsNullOrWhiteSpace(item.ContentItemId)).ToList();
 
+        // The "How many" box shows 1 as a placeholder, so a product chosen without a number holds one.
+        foreach (var row in rows)
+        {
+            row.Quantity ??= 1;
+        }
+
         if (rows.Any(item => item.Quantity is not (> 0 and <= 100)))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Items), S["Each product in a bundle needs a quantity from 1 to 100."]);

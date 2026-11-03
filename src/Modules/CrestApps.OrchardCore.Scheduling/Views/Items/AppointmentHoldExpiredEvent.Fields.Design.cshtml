@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Scheduling.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AppointmentHoldExpiredEvent>
+
+<header><h4><i class="fa-solid fa-hourglass-end" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Reservation Hold Expired"])</h4></header>

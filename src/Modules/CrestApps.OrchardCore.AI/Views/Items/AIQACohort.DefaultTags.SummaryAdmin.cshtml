@@ -1,0 +1,21 @@
+@using CrestApps.OrchardCore.AI.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIQACohort>
+
+@if (Model.Value.Enabled)
+{
+    <span class="badge ta-badge fw-normal text-bg-success" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-circle-play me-1" aria-hidden="true"></i>@T["Scoring"]</span>
+}
+else
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-circle-pause text-secondary me-1" aria-hidden="true"></i>@T["Paused"]</span>
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Share of conversations scored"]"><i class="fa-solid fa-percent text-secondary me-1" aria-hidden="true"></i>@Model.Value.SamplePercent</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["AI profiles sampled"]"><i class="fa-solid fa-robot text-secondary me-1" aria-hidden="true"></i>@Model.Value.ProfileIds.Count</span>
+
+@if (Model.Value.CheckKnowledge)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Answers are checked against the knowledge base"]"><i class="fa-solid fa-book text-secondary me-1" aria-hidden="true"></i>@T["Knowledge check"]</span>
+}

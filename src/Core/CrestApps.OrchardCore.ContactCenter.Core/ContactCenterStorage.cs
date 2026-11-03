@@ -48,4 +48,10 @@ internal static class ContactCenterStorage
     /// membership row written when an agent signs into a campaign, so the sign-in failed.
     /// </summary>
     public const int QueueIdLength = 64;
+
+    /// <summary>
+    /// The maximum stored length, in characters, of an agent profile identifier in an index column. Agent profile
+    /// identifiers are generated, 26 characters long.
+    /// </summary>
+    public const int AgentIdLength = 26;
 }

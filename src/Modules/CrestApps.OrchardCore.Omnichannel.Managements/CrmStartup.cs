@@ -257,6 +257,22 @@ public sealed class AIActivityWorkflowsStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        // The task's starter is registered with it: this startup runs without the feature that registers it too.
+        services.TryAddScoped<AIActivityStarter>();
         services.AddActivity<Workflows.Models.CreateAIActivityTask, Workflows.Drivers.CreateAIActivityTaskDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Registers the Update Contact workflow task, which sets fields on a contact or lead without validating the record.
+/// </summary>
+[Feature(OmnichannelConstants.Features.Activities)]
+[RequireFeatures("OrchardCore.Workflows")]
+public sealed class ContactWorkflowsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddActivity<Workflows.Models.UpdateContactTask, Workflows.Drivers.UpdateContactTaskDisplayDriver>();
     }
 }

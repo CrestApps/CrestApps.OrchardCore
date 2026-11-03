@@ -1,0 +1,151 @@
+@using CrestApps.OrchardCore.DataConnectors.Connectors.Http
+@model HttpApiDataSetViewModel
+
+@{
+    var paginationId = Html.IdFor(model => model.PaginationType);
+    var methodId = Html.IdFor(model => model.Method);
+    var sectionId = paginationId + "_Section";
+}
+
+<fieldset id="@sectionId">
+    <legend class="h5 mt-3">@T["Request"]</legend>
+
+    <div class="ocat-wrapper">
+        <label asp-for="Method" class="ocat-label">@T["Method"]</label>
+        <div class="ocat-end">
+            <select asp-for="Method" class="form-select">
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+            </select>
+            <span class="hint">@T["The resource above is the path, such as /customers?status=active, appended to the connection's base URL. {0} in the path or the body is replaced by a value a data pipeline passes.", "{param:Name}"]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" data-method="POST">
+        <label asp-for="Body" class="ocat-label">@T["JSON body"]</label>
+        <div class="ocat-end">
+            <textarea asp-for="Body" class="form-control font-monospace" rows="4"></textarea>
+            <span class="hint">@T["{0}, {1}, {2} and {3} are replaced by the paging values of each request.", "{page}", "{offset}", "{limit}", "{cursor}"]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="Format" class="ocat-label">@T["Response format"]</label>
+        <div class="ocat-end">
+            <select asp-for="Format" asp-items="Model.Formats" class="form-select"></select>
+            <span asp-validation-for="Format" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="RecordsPath" class="ocat-label">@T["Records path"]</label>
+        <div class="ocat-end">
+            <input asp-for="RecordsPath" class="form-control" placeholder="data.items" />
+            <span class="hint">@T["Where the records are in a JSON response, as a dotted path. Leave empty when the response is the array of records. Nested objects become fields named by their path, such as address.city."]</span>
+        </div>
+    </div>
+
+    <legend class="h5 mt-3">@T["Paging"]</legend>
+
+    <div class="ocat-wrapper">
+        <label asp-for="PaginationType" class="ocat-label">@T["Pages"]</label>
+        <div class="ocat-end">
+            <select asp-for="PaginationType" class="form-select">
+                <option value="@nameof(HttpPaginationType.None)">@T["One response holds every record"]</option>
+                <option value="@nameof(HttpPaginationType.PageNumber)">@T["Page number in the query string"]</option>
+                <option value="@nameof(HttpPaginationType.Offset)">@T["Offset in the query string"]</option>
+                <option value="@nameof(HttpPaginationType.Cursor)">@T["Cursor returned in the response"]</option>
+                <option value="@nameof(HttpPaginationType.NextLink)">@T["Next page link in the response"]</option>
+                <option value="@nameof(HttpPaginationType.LinkHeader)">@T["Next page in the Link header"]</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" data-paging="PageNumber">
+        <label asp-for="PageParameter" class="ocat-label">@T["Page parameter"]</label>
+        <div class="ocat-end">
+            <input asp-for="PageParameter" class="form-control" placeholder="page" />
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" data-paging="PageNumber">
+        <label asp-for="FirstPage" class="ocat-label">@T["First page"]</label>
+        <div class="ocat-end">
+            <input asp-for="FirstPage" type="number" class="form-control" />
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" data-paging="Offset">
+        <label asp-for="OffsetParameter" class="ocat-label">@T["Offset parameter"]</label>
+        <div class="ocat-end">
+            <input asp-for="OffsetParameter" class="form-control" placeholder="offset" />
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" data-paging="Cursor">
+        <label asp-for="CursorParameter" class="ocat-label">@T["Cursor parameter"]</label>
+        <div class="ocat-end">
+            <input asp-for="CursorParameter" class="form-control" placeholder="cursor" />
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" data-paging="Cursor NextLink">
+        <label asp-for="NextPath" class="ocat-label ocat-label-required">@T["Path of the next cursor or link"]</label>
+        <div class="ocat-end">
+            <input asp-for="NextPath" class="form-control" placeholder="meta.next" />
+            <span asp-validation-for="NextPath" class="text-danger"></span>
+            <span class="hint">@T["A dotted path in the response. The last page has none there. A next link must stay on the connection's server."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" data-paging="PageNumber Offset Cursor">
+        <label asp-for="SizeParameter" class="ocat-label">@T["Page size parameter"]</label>
+        <div class="ocat-end">
+            <input asp-for="SizeParameter" class="form-control" placeholder="limit" />
+            <span class="hint">@T["Leave empty when the API decides the page size; reading then stops at an empty page."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" data-paging="PageNumber Offset Cursor">
+        <label asp-for="PageSize" class="ocat-label">@T["Page size"]</label>
+        <div class="ocat-end">
+            <input asp-for="PageSize" type="number" min="1" max="10000" class="form-control" />
+            <span asp-validation-for="PageSize" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" data-paging="PageNumber Offset Cursor NextLink LinkHeader">
+        <label asp-for="MaxPages" class="ocat-label">@T["Most pages"]</label>
+        <div class="ocat-end">
+            <input asp-for="MaxPages" type="number" min="1" class="form-control" />
+            <span asp-validation-for="MaxPages" class="text-danger"></span>
+            <span class="hint">@T["A read stops after this many pages, so an API that never says it is done can't read forever."]</span>
+        </div>
+    </div>
+</fieldset>
+
+<script at="Foot">
+    (function () {
+        const section = document.getElementById('@sectionId');
+        const pagination = document.getElementById('@paginationId');
+        const method = document.getElementById('@methodId');
+
+        if (!section || !pagination || !method) {
+            return;
+        }
+
+        const refresh = function () {
+            section.querySelectorAll('[data-paging]').forEach(function (element) {
+                element.classList.toggle('d-none', !element.getAttribute('data-paging').split(' ').includes(pagination.value));
+            });
+
+            section.querySelectorAll('[data-method]').forEach(function (element) {
+                element.classList.toggle('d-none', element.getAttribute('data-method') !== method.value);
+            });
+        };
+
+        pagination.addEventListener('change', refresh);
+        method.addEventListener('change', refresh);
+        refresh();
+    })();
+</script>

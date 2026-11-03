@@ -2,6 +2,7 @@
 @using System.Globalization
 @using CrestApps.OrchardCore.Omnichannel.Core
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using CrestApps.Core.Services
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Mvc.Localization
 @using OrchardCore.Contents
@@ -12,6 +13,7 @@
 
 @inject IAuthorizationService AuthorizationService
 @inject IClock Clock
+@inject ICatalog<OmnichannelDisposition> DispositionCatalog
 
 @{
     var scheduledAt = Model.Value.Activity.ScheduledUtc.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture);
@@ -31,6 +33,20 @@
     <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Attempt number"]">
         <i class="fa-solid fa-rotate-right text-secondary me-1" aria-hidden="true"></i>@T.ToOrdinal(Model.Value.Activity.Attempts)
     </span>
+}
+
+@* How the attempt before this one ended. It is copied onto the retry when it is created, so the list reads it from the
+   row it already has; disposition names come from the cached catalog. *@
+@if (Model.Value.Activity.Attempts > 1 && !string.IsNullOrEmpty(Model.Value.Activity.PreviousDispositionId))
+{
+    var previousDisposition = await DispositionCatalog.FindByIdAsync(Model.Value.Activity.PreviousDispositionId);
+
+    if (previousDisposition is not null)
+    {
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Last attempt's disposition"]" data-previous-disposition>
+            <i class="fa-solid fa-gavel text-secondary me-1" aria-hidden="true"></i>@previousDisposition.Name
+        </span>
+    }
 }
 
 <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Scheduled at"]">

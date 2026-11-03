@@ -1,0 +1,37 @@
+@model DataConnectionFieldsViewModel
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Connector"]</label>
+    <div class="ocat-end">
+        <p class="form-control-plaintext mb-0"><strong>@Model.ConnectorDisplayName</strong></p>
+        @if (!string.IsNullOrEmpty(Model.ConnectorDescription))
+        {
+            <span class="hint">@Model.ConnectorDescription</span>
+        }
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="DisplayText" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="DisplayText" class="form-control" />
+        <span asp-validation-for="DisplayText" class="text-danger"></span>
+        <span class="hint">@T["The name shown in lists and on the data sets that read this connection."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Name" class="ocat-label">@T["Technical name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+        <span class="hint">@T["Letters, digits and underscores, starting with a letter. Leave empty to make one from the name."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+    </div>
+</div>

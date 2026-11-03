@@ -95,6 +95,15 @@ internal sealed class AIVoiceSessionTracker : IAIVoiceSessionTracker
     }
 
     /// <inheritdoc/>
+    public void TurnBasedAnswer(string activityId, DateTime lineUtc, int modelMs)
+    {
+        if (!string.IsNullOrEmpty(activityId) && _turnBased.TryGetValue(activityId, out var call))
+        {
+            call.Meter.CallerLineAnswered(lineUtc.Ticks, modelMs);
+        }
+    }
+
+    /// <inheritdoc/>
     public AIVoiceSessionMeasurements EndTurnBased(string activityId, DateTime endedUtc)
     {
         if (string.IsNullOrEmpty(activityId) || !_turnBased.TryRemove(activityId, out var call))

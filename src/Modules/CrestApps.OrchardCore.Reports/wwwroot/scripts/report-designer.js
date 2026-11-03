@@ -186,7 +186,7 @@
 				return item.id;
 			});
 		}
-		designer.addColumn = function(query, field, index) {
+		designer.addColumn = function(query, field, index, shelf) {
 			query.columns = query.columns || [];
 			var column = {
 				id: designer.newId("c", ids(query.columns)),
@@ -195,11 +195,254 @@
 				aggregate: designer.defaultAggregate(field),
 				transform: "None",
 				format: null,
-				hidden: false
+				hidden: false,
+				shelf: "Columns"
 			};
-			var position = typeof index === "number" && index >= 0 && index <= query.columns.length ? index : query.columns.length;
-			query.columns.splice(position, 0, column);
+			query.columns.push(column);
+			designer.placeColumn(query, column.id, shelf || "Columns", index);
 			return column;
+		};
+		designer.shelfOf = function(column) {
+			return column && column.shelf === "Rows" ? "Rows" : "Columns";
+		};
+		designer.shelfColumns = function(query, shelf) {
+			return (query.columns || []).filter(function(column) {
+				return designer.shelfOf(column) === shelf;
+			});
+		};
+		designer.placeColumn = function(query, columnId, shelf, index) {
+			var columns = query.columns || [];
+			var column = columns.filter(function(candidate) {
+				return candidate.id === columnId;
+			})[0];
+			if (!column) return null;
+			var rest = columns.filter(function(candidate) {
+				return candidate !== column;
+			});
+			var onShelf = rest.filter(function(candidate) {
+				return designer.shelfOf(candidate) === shelf;
+			});
+			var position;
+			if (typeof index === "number" && index >= 0 && index < onShelf.length) position = rest.indexOf(onShelf[index]);
+			else position = onShelf.length ? rest.indexOf(onShelf[onShelf.length - 1]) + 1 : rest.length;
+			column.shelf = shelf === "Rows" ? "Rows" : "Columns";
+			rest.splice(position, 0, column);
+			columns.length = 0;
+			Array.prototype.push.apply(columns, rest);
+			query.columns = columns;
+			return column;
+		};
+		designer.sortBy = function(query, columnId, descending) {
+			query.sorts = (query.sorts || []).filter(function(sort) {
+				return sort.columnId !== columnId;
+			});
+			query.sorts.unshift({
+				columnId,
+				descending: !!descending
+			});
+		};
+		designer.SHOW_AS = [
+			"Value",
+			"PercentOfTotal",
+			"RunningTotal",
+			"DifferenceFromPrevious",
+			"PercentDifference",
+			"Rank"
+		];
+		designer.SHOW_AS_DIRECTIONS = [
+			"Down",
+			"Across",
+			"Table"
+		];
+		designer.canShowAs = function(described, columns) {
+			if (!described || !isNumeric(described.dataType)) return false;
+			return described.isMeasure || !(columns || []).some(function(column) {
+				return column.isMeasure;
+			});
+		};
+		designer.setShowAs = function(column, showAs, direction) {
+			var value = designer.SHOW_AS.indexOf(showAs) > 0 ? showAs : "Value";
+			if (value === "Value") {
+				delete column.showAs;
+				delete column.showAsDirection;
+				return column;
+			}
+			column.showAs = value;
+			if (direction !== void 0) column.showAsDirection = designer.SHOW_AS_DIRECTIONS.indexOf(direction) > 0 ? direction : "Down";
+			else column.showAsDirection = column.showAsDirection || "Down";
+			return column;
+		};
+		designer.showAsBadge = function(column) {
+			switch (column && column.showAs) {
+				case "PercentOfTotal": return "%";
+				case "RunningTotal": return "Σ";
+				case "DifferenceFromPrevious": return "Δ";
+				case "PercentDifference": return "%Δ";
+				case "Rank": return "#";
+				default: return null;
+			}
+		};
+		designer.REFERENCE_LINE_KINDS = [
+			"Average",
+			"Median",
+			"Constant"
+		];
+		designer.addReferenceLine = function(visual) {
+			var line = {
+				columnId: (visual.valueColumnIds || [])[0] || null,
+				kind: "Average",
+				value: null,
+				label: ""
+			};
+			visual.referenceLines = visual.referenceLines || [];
+			visual.referenceLines.push(line);
+			return line;
+		};
+		designer.pruneReferenceLines = function(visual) {
+			var plotted = visual.valueColumnIds || [];
+			visual.referenceLines = (visual.referenceLines || []).filter(function(line) {
+				if (line.kind === "Constant") {
+					if (line.columnId && plotted.indexOf(line.columnId) < 0) line.columnId = null;
+					return true;
+				}
+				return plotted.indexOf(line.columnId) >= 0;
+			});
+			return visual.referenceLines;
+		};
+		designer.colorOperatorsFor = function(dataType) {
+			return designer.operatorsFor(dataType).filter(function(operator) {
+				return [
+					"In",
+					"NotIn",
+					"InLastDays",
+					"InNextDays"
+				].indexOf(operator) < 0;
+			});
+		};
+		designer.COLOR_SWATCHES = [
+			"#DC3545",
+			"#FD7E14",
+			"#FFC107",
+			"#198754",
+			"#0D6EFD",
+			"#6F42C1",
+			"#6C757D",
+			"#F8D7DA",
+			"#FFE5D0",
+			"#FFF3CD",
+			"#D1E7DD",
+			"#CFE2FF",
+			"#E2D9F3",
+			"#E9ECEF"
+		];
+		designer.ensureColors = function(column) {
+			column.colors = column.colors || {
+				headerColor: null,
+				headerBackgroundColor: null,
+				color: null,
+				backgroundColor: null,
+				scale: null,
+				rules: []
+			};
+			column.colors.rules = column.colors.rules || [];
+			return column.colors;
+		};
+		designer.pruneColors = function(column) {
+			var colors = column.colors;
+			if (colors && !colors.headerColor && !colors.headerBackgroundColor && !colors.color && !colors.backgroundColor && !colors.scale && !(colors.rules || []).length) column.colors = null;
+		};
+		designer.addTrafficLightRules = function(column, low, high, target) {
+			var colors = designer.ensureColors(column);
+			var paint = target === "Text" ? "Text" : "Background";
+			var strong = paint === "Text";
+			var lowValue = low == null ? "" : String(low);
+			var highValue = high == null ? "" : String(high);
+			colors.rules.push({
+				operator: "LessThan",
+				values: [lowValue],
+				color: strong ? "#DC3545" : "#F8D7DA",
+				target: paint
+			}, {
+				operator: "Between",
+				values: [lowValue, highValue],
+				color: strong ? "#FD7E14" : "#FFE5D0",
+				target: paint
+			}, {
+				operator: "GreaterThanOrEqual",
+				values: [highValue],
+				color: strong ? "#198754" : "#D1E7DD",
+				target: paint
+			});
+			return colors.rules;
+		};
+		designer.COLOR_SCALES = {
+			RedToGreen: [
+				"#F8D7DA",
+				"#FFF3CD",
+				"#D1E7DD"
+			],
+			GreenToRed: [
+				"#D1E7DD",
+				"#FFF3CD",
+				"#F8D7DA"
+			],
+			WhiteToBlue: [
+				"#FFFFFF",
+				null,
+				"#6EA8FE"
+			],
+			WhiteToRed: [
+				"#FFFFFF",
+				null,
+				"#EA868F"
+			]
+		};
+		designer.quickFormulas = function(field, functions) {
+			if (!field || field.key === designer.ROW_COUNT_FIELD) return [];
+			var key = "[" + field.key + "]";
+			var available = {};
+			var formulas = [];
+			(functions || []).forEach(function(fn) {
+				available[String(fn.name).toUpperCase()] = true;
+			});
+			var add = function(fn, label, expression, aggregate) {
+				if ((!functions || available[fn]) && !(aggregate && field.isAggregate)) formulas.push({
+					fn,
+					label,
+					expression,
+					isAggregate: !!aggregate
+				});
+			};
+			if (isNumeric(field.dataType)) {
+				add("SUM", "Sum", "SUM(" + key + ")", true);
+				add("AVG", "Average", "AVG(" + key + ")", true);
+				add("MIN", "Minimum", "MIN(" + key + ")", true);
+				add("MAX", "Maximum", "MAX(" + key + ")", true);
+				add("MEDIAN", "Median", "MEDIAN(" + key + ")", true);
+			} else if (isTemporal(field.dataType) || field.dataType === "Text") {
+				add("MIN", isTemporal(field.dataType) ? "Earliest" : "Minimum", "MIN(" + key + ")", true);
+				add("MAX", isTemporal(field.dataType) ? "Latest" : "Maximum", "MAX(" + key + ")", true);
+			}
+			add("COUNT", "Count", "COUNT(" + key + ")", true);
+			add("COUNTD", "Count (distinct)", "COUNTD(" + key + ")", true);
+			if (field.dataType === "Boolean") add("SUM", "Count of yes", "SUM(IF(" + key + ", 1, 0))", true);
+			if (isNumeric(field.dataType)) {
+				add("ROUND", "Round to 2 decimals", "ROUND(" + key + ", 2)");
+				add("ABS", "Absolute value", "ABS(" + key + ")");
+			} else if (isTemporal(field.dataType)) {
+				add("YEAR", "Year", "YEAR(" + key + ")");
+				add("MONTH", "Month number", "MONTH(" + key + ")");
+				add("DATETRUNC", "Start of the month", "DATETRUNC('month', " + key + ")");
+				add("DATEDIFF", "Days until today", "DATEDIFF('day', " + key + ", TODAY())");
+			} else if (field.dataType === "Text") {
+				add("UPPER", "Upper case", "UPPER(" + key + ")");
+				add("LOWER", "Lower case", "LOWER(" + key + ")");
+				add("PROPER", "Capitalize words", "PROPER(" + key + ")");
+				add("TRIM", "Trim spaces", "TRIM(" + key + ")");
+				add("LEN", "Number of characters", "LEN(" + key + ")");
+			}
+			add("ISBLANK", "Is empty", "ISBLANK(" + key + ")");
+			return formulas;
 		};
 		designer.ensureColumn = function(query, field, role) {
 			query.columns = query.columns || [];
@@ -285,14 +528,33 @@
 		};
 		designer.addFilter = function(query, field) {
 			query.filters = query.filters || [];
+			var column = field.isAggregate ? (query.columns || []).filter(function(candidate) {
+				return candidate.field === field.key;
+			})[0] : null;
 			var filter = {
 				id: designer.newId("f", ids(query.filters)),
-				field: field.key,
+				field: field.isAggregate ? column ? column.id : null : field.key,
 				stage: field.isAggregate ? "Result" : "Rows",
-				operator: field.dataType === "Text" ? "Contains" : "Equals",
+				operator: field.dataType === "Text" ? "Contains" : field.isAggregate ? "GreaterThanOrEqual" : "Equals",
 				values: [],
 				exposed: false,
 				label: field.label || null,
+				control: "Auto"
+			};
+			query.filters.push(filter);
+			return filter;
+		};
+		designer.addColumnFilter = function(query, column, field) {
+			if (!designer.isMeasure(column, field)) return field ? designer.addFilter(query, field) : null;
+			query.filters = query.filters || [];
+			var filter = {
+				id: designer.newId("f", ids(query.filters)),
+				field: column.id,
+				stage: "Result",
+				operator: "GreaterThanOrEqual",
+				values: [],
+				exposed: false,
+				label: column.label || field && field.label || null,
 				control: "Auto"
 			};
 			query.filters.push(filter);
@@ -417,6 +679,7 @@
 				visual.valueColumnIds = (visual.valueColumnIds || []).filter(function(id) {
 					return id !== columnId;
 				});
+				if (visual.referenceLines) designer.pruneReferenceLines(visual);
 				if (visual.categoryColumnId === columnId) visual.categoryColumnId = null;
 				if (visual.seriesColumnId === columnId) visual.seriesColumnId = null;
 				if (visual.action && visual.action.columnId === columnId) visual.action = null;
@@ -753,6 +1016,107 @@
 				return settings.html ? response.text() : response.json();
 			});
 		};
+		var openMenu = null;
+		ui.closeMenu = function() {
+			if (openMenu) {
+				openMenu();
+				openMenu = null;
+			}
+		};
+		ui.keepSubmenuOnScreen = function(submenu) {
+			submenu.style.top = "";
+			submenu.classList.remove("opens-left");
+			var box = submenu.getBoundingClientRect();
+			if (!box.height) return;
+			if (box.bottom > root.innerHeight - 4) submenu.style.top = submenu.offsetTop - (box.bottom - root.innerHeight + 4) + "px";
+			if (box.right > root.innerWidth - 4) submenu.classList.add("opens-left");
+		};
+		ui.menu = function(items, x, y) {
+			var build = function(entries, submenu) {
+				var list = ui.h("div", {
+					className: "dropdown-menu rd-menu shadow-sm" + (submenu ? " rd-submenu" : " show"),
+					role: "menu"
+				});
+				entries.forEach(function(entry) {
+					if (!entry) return;
+					if (entry.divider) {
+						list.appendChild(ui.h("div", {
+							className: "dropdown-divider",
+							role: "separator"
+						}));
+						return;
+					}
+					if (entry.header) {
+						list.appendChild(ui.h("div", { className: "dropdown-header text-truncate" }, entry.header));
+						return;
+					}
+					var hasItems = entry.items && entry.items.length;
+					var button = ui.h("button", {
+						type: "button",
+						className: "dropdown-item d-flex align-items-center gap-2" + (hasItems ? " rd-menu-parent" : ""),
+						role: "menuitem",
+						disabled: !!entry.disabled,
+						"aria-haspopup": hasItems ? "true" : null,
+						"aria-expanded": hasItems ? "false" : null,
+						onclick: function(event) {
+							event.stopPropagation();
+							if (hasItems) {
+								var open = item.classList.toggle("is-open");
+								button.setAttribute("aria-expanded", open ? "true" : "false");
+								ui.keepSubmenuOnScreen(submenu);
+								return;
+							}
+							ui.closeMenu();
+							entry.action();
+						}
+					}, ui.h("span", { className: "rd-menu-check" }, entry.checked ? ui.icon("fa-check") : entry.icon ? ui.icon(entry.icon) : null), ui.h("span", { className: "flex-grow-1" }, entry.label), hasItems ? ui.icon("fa-caret-right small") : null);
+					var submenu = hasItems ? build(entry.items, true) : null;
+					var item = ui.h("div", {
+						className: "rd-menu-item",
+						onmouseenter: submenu ? function() {
+							ui.keepSubmenuOnScreen(submenu);
+						} : null,
+						onfocusin: submenu ? function() {
+							ui.keepSubmenuOnScreen(submenu);
+						} : null
+					}, button, submenu);
+					list.appendChild(item);
+				});
+				return list;
+			};
+			return ui.popup(build(items, false), x, y);
+		};
+		ui.popup = function(element, x, y) {
+			ui.closeMenu();
+			element.style.position = "fixed";
+			element.style.left = x + "px";
+			element.style.top = y + "px";
+			element.style.zIndex = "1080";
+			root.document.body.appendChild(element);
+			var box = element.getBoundingClientRect();
+			if (box.right > root.innerWidth) element.style.left = Math.max(4, root.innerWidth - box.width - 4) + "px";
+			if (box.bottom > root.innerHeight) element.style.top = Math.max(4, root.innerHeight - box.height - 4) + "px";
+			var onPointer = function(event) {
+				if (!element.contains(event.target)) ui.closeMenu();
+			};
+			var onKey = function(event) {
+				if (event.key === "Escape") ui.closeMenu();
+			};
+			root.setTimeout(function() {
+				root.document.addEventListener("pointerdown", onPointer, true);
+			}, 0);
+			root.document.addEventListener("keydown", onKey);
+			root.addEventListener("resize", ui.closeMenu);
+			openMenu = function() {
+				root.document.removeEventListener("pointerdown", onPointer, true);
+				root.document.removeEventListener("keydown", onKey);
+				root.removeEventListener("resize", ui.closeMenu);
+				element.remove();
+			};
+			var first = element.querySelector("button:not([disabled]), input");
+			if (first) first.focus();
+			return element;
+		};
 		ui.modal = function(title, body, footer, size) {
 			var dialog = ui.h("div", {
 				className: "modal fade",
@@ -875,6 +1239,7 @@
 				return {
 					id: column.id,
 					hidden: !!column.hidden,
+					shelf: designer.shelfOf(column),
 					label: known ? known.label : designer.columnLabel(column, field, app.config.aggregateLabels),
 					dataType: known ? known.dataType : field ? field.dataType : "Text",
 					isMeasure: known ? known.isMeasure : designer.isMeasure(column, field)
@@ -991,13 +1356,20 @@
 				return app.refreshPlan();
 			});
 		};
+		function pillLabels() {
+			return app.columns().map(function(column) {
+				return column.label + (column.isMeasure ? "#" : "");
+			}).join("");
+		}
 		app.refreshPlan = function() {
 			return ui.request(app.url("plan"), { body: app.design.query }).then(function(plan) {
+				var pills = pillLabels();
 				app.plan = plan || {
 					fields: [],
 					columns: [],
 					errors: []
 				};
+				if (pillLabels() !== pills && app.renderShelves) app.renderShelves();
 				app.renderIssues();
 				app.renderDataPane();
 				app.renderProperties();
@@ -1532,6 +1904,69 @@
 			}, ui.icon(isCollapsed ? "fa-chevron-right" : "fa-chevron-down")), header), isCollapsed ? null : body);
 		}
 		designer.FIELD_MIME = FIELD_MIME;
+		function quickLabel(formula, field) {
+			return app.t("{0} of {1}").replace("{0}", app.t(formula.label)).replace("{1}", field.label);
+		}
+		app.fieldMenu = function(field, x, y) {
+			var add = function(shelf) {
+				return function() {
+					app.selection = {
+						kind: "column",
+						id: designer.addColumn(app.design.query, field, null, shelf).id
+					};
+					app.changed();
+				};
+			};
+			var formulas = designer.quickFormulas(field, app.functions);
+			ui.menu([
+				{ header: field.label },
+				{
+					label: app.t("Add to Columns"),
+					icon: "fa-table-columns",
+					action: add("Columns")
+				},
+				{
+					label: app.t("Add to Rows"),
+					icon: "fa-table-list",
+					action: add("Rows")
+				},
+				{
+					label: app.t("Add to filters"),
+					icon: "fa-filter",
+					action: function() {
+						app.selection = {
+							kind: "filter",
+							id: designer.addFilter(app.design.query, field).id
+						};
+						app.changed();
+					}
+				},
+				formulas.length || field.key !== designer.ROW_COUNT_FIELD ? { divider: true } : null,
+				formulas.length ? {
+					label: app.t("New calculated field"),
+					icon: "fa-square-root-variable",
+					items: formulas.map(function(formula) {
+						return {
+							label: app.t(formula.label),
+							action: function() {
+								app.openFormula(null, {
+									label: quickLabel(formula, field),
+									expression: formula.expression
+								});
+							}
+						};
+					}).concat([{ divider: true }, {
+						label: app.t("Custom formula…"),
+						action: function() {
+							app.openFormula(null, {
+								label: "",
+								expression: "[" + field.key + "]"
+							});
+						}
+					}])
+				} : null
+			], x, y);
+		};
 		function fieldItem(field) {
 			return h("li", {
 				className: "report-designer-field list-group-item list-group-item-action d-flex align-items-center gap-2 py-1",
@@ -1542,6 +1977,10 @@
 					event.dataTransfer.setData(FIELD_MIME, field.key);
 					event.dataTransfer.setData("text/plain", "[" + field.key + "]");
 					event.dataTransfer.effectAllowed = "copy";
+				},
+				oncontextmenu: function(event) {
+					event.preventDefault();
+					app.fieldMenu(field, event.clientX, event.clientY);
 				}
 			}, h("span", { className: "report-designer-type badge text-bg-light" + (field.isAggregate ? " is-measure" : "") }, designer.typeGlyph(field.dataType)), h("span", { className: "flex-grow-1 text-truncate" }, field.label), h("button", {
 				type: "button",
@@ -1567,7 +2006,17 @@
 					};
 					app.changed();
 				}
-			}, ui.icon("fa-filter")));
+			}, ui.icon("fa-filter")), h("button", {
+				type: "button",
+				className: "btn btn-link btn-sm p-0 report-designer-field-action",
+				title: app.t("More options"),
+				"aria-label": app.t("More options") + ": " + field.label,
+				"aria-haspopup": "true",
+				onclick: function(event) {
+					var box = event.currentTarget.getBoundingClientRect();
+					app.fieldMenu(field, box.left, box.bottom + 2);
+				}
+			}, ui.icon("fa-ellipsis-vertical")));
 		}
 		function matches(field) {
 			if (!fieldSearch) return true;
@@ -1993,13 +2442,13 @@
 				app.changed();
 			});
 		}
-		app.openFormula = function(existing) {
+		app.openFormula = function(existing, seed) {
 			var query = app.design.query;
 			var fields = app.fields();
 			var editing = existing || {
 				name: "",
-				label: "",
-				expression: ""
+				label: seed && seed.label || "",
+				expression: seed && seed.expression || ""
 			};
 			var label = h("input", {
 				type: "text",
@@ -2033,30 +2482,79 @@
 			var fieldList = h("div", { className: "list-group list-group-flush report-designer-formula-list" }, Object.keys(fields).map(function(key) {
 				return fields[key];
 			}).filter(function(field) {
-				return field.key !== editing.name;
+				return field.key !== editing.name && field.key !== designer.ROW_COUNT_FIELD;
 			}).map(function(field) {
-				return h("button", {
+				var formulas = designer.quickFormulas(field, app.functions);
+				return h("div", { className: "list-group-item d-flex align-items-center gap-1 py-0 px-1 small" }, h("button", {
 					type: "button",
-					className: "list-group-item list-group-item-action py-1 small",
+					className: "btn btn-sm btn-link text-reset text-decoration-none text-start flex-grow-1 py-1 px-1 text-truncate",
 					title: field.key,
 					onclick: function() {
 						insert("[" + field.key + "]");
 					}
-				}, h("span", { className: "badge text-bg-light me-1" }, designer.typeGlyph(field.dataType)), field.label);
-			}));
-			var functionList = h("div", { className: "list-group list-group-flush report-designer-formula-list" }, app.functions.map(function(fn) {
-				return h("button", {
+				}, h("span", { className: "badge text-bg-light me-1" }, designer.typeGlyph(field.dataType)), field.label), formulas.length ? h("button", {
 					type: "button",
-					className: "list-group-item list-group-item-action py-1 small",
-					title: fn.description,
-					onclick: function() {
-						insert(fn.name + "(");
+					className: "btn btn-sm btn-outline-secondary py-0 px-1 rd-quick-formula",
+					title: app.t("Insert a common formula"),
+					"aria-label": app.t("Insert a common formula") + ": " + field.label,
+					"aria-haspopup": "true",
+					onclick: function(event) {
+						var box = event.currentTarget.getBoundingClientRect();
+						ui.menu([{ header: field.label }].concat(formulas.map(function(formula) {
+							return {
+								label: app.t(formula.label),
+								action: function() {
+									insert(formula.expression);
+									if (!label.value.trim()) {
+										label.value = quickLabel(formula, field);
+										label.dispatchEvent(new root.Event("input"));
+									}
+								}
+							};
+						})), box.left, box.bottom + 2);
 					}
-				}, h("code", null, fn.signature), h("div", { className: "text-muted" }, fn.description));
+				}, "ƒ", ui.icon("fa-caret-down small ms-1")) : null);
 			}));
-			label.addEventListener("input", function() {
-				if (!existing && !name.dataset.edited) name.value = designer.aliasFor(label.value || "Field", []);
+			var functionSearch = h("input", {
+				type: "search",
+				className: "form-control form-control-sm mb-1",
+				placeholder: app.t("Search functions"),
+				"aria-label": app.t("Search functions")
 			});
+			var functionList = h("div", { className: "list-group list-group-flush report-designer-formula-list" });
+			var renderFunctions = function() {
+				var text = functionSearch.value.trim().toLowerCase();
+				var category = null;
+				ui.clear(functionList);
+				app.functions.filter(function(fn) {
+					return !text || (fn.name + " " + fn.description + " " + (fn.category || "")).toLowerCase().indexOf(text) >= 0;
+				}).slice().sort(function(left, right) {
+					return String(left.category || "").localeCompare(String(right.category || "")) || String(left.name).localeCompare(String(right.name));
+				}).forEach(function(fn) {
+					if (fn.category !== category) {
+						category = fn.category;
+						functionList.appendChild(h("div", { className: "list-group-item py-1 small fw-semibold text-muted bg-body-tertiary" }, category || app.t("Other")));
+					}
+					functionList.appendChild(h("button", {
+						type: "button",
+						className: "list-group-item list-group-item-action py-1 small",
+						title: fn.description,
+						onclick: function() {
+							insert(fn.name + "(");
+						}
+					}, h("code", null, fn.signature), h("div", { className: "text-muted" }, fn.description)));
+				});
+			};
+			functionSearch.addEventListener("input", renderFunctions);
+			renderFunctions();
+			var takenNames = (query.calculatedFields || []).map(function(other) {
+				return { alias: other.name };
+			});
+			var suggestName = function() {
+				if (!existing && !name.dataset.edited) name.value = designer.aliasFor(label.value || "Field", takenNames);
+			};
+			label.addEventListener("input", suggestName);
+			if (editing.label) suggestName();
 			name.addEventListener("input", function() {
 				name.dataset.edited = "true";
 			});
@@ -2093,7 +2591,7 @@
 					return true;
 				});
 			};
-			var modal = ui.modal(existing ? app.t("Edit calculated field") : app.t("New calculated field"), h("div", { className: "row g-3" }, h("div", { className: "col-12 col-md-7" }, h("label", { className: "form-label" }, app.t("Label")), label, h("label", { className: "form-label" }, app.t("Name")), name, h("label", { className: "form-label" }, app.t("Formula")), formula, feedback, h("p", { className: "small text-muted mb-0" }, app.t("Write fields in square brackets. Use an aggregate function such as SUM or COUNTD to calculate one value per group."))), h("div", { className: "col-12 col-md-5" }, h("div", { className: "small fw-semibold" }, app.t("Fields")), fieldList, h("div", { className: "small fw-semibold mt-2" }, app.t("Functions")), functionList)), [
+			var modal = ui.modal(existing ? app.t("Edit calculated field") : app.t("New calculated field"), h("div", { className: "row g-3" }, h("div", { className: "col-12 col-md-7" }, h("label", { className: "form-label" }, app.t("Label")), label, h("label", { className: "form-label" }, app.t("Name")), name, h("label", { className: "form-label" }, app.t("Formula")), formula, feedback, h("p", { className: "small text-muted mb-0" }, app.t("Write fields in square brackets. Use an aggregate function such as SUM or COUNTD to calculate one value per group."))), h("div", { className: "col-12 col-md-5" }, h("div", { className: "small fw-semibold" }, app.t("Fields")), fieldList, h("div", { className: "small fw-semibold mt-2" }, app.t("Functions")), functionSearch, functionList)), [
 				existing ? h("button", {
 					type: "button",
 					className: "btn btn-outline-danger me-auto",
@@ -2146,7 +2644,11 @@
 			}
 			return pills.length;
 		}
+		function shelfName(kind) {
+			return kind === "rows" ? "Rows" : "Columns";
+		}
 		function shelf(kind, title, hint, items, renderPill) {
+			var query = app.design.query;
 			var zone = h("div", {
 				className: "report-designer-shelf-zone d-flex flex-wrap gap-1 align-items-center",
 				dataset: { shelf: kind },
@@ -2168,35 +2670,35 @@
 					var index = dropIndex(zone, event);
 					var fields = app.fields();
 					if (fieldKey && fields[fieldKey]) {
-						if (kind === "columns") app.selection = {
-							kind: "column",
-							id: designer.addColumn(app.design.query, fields[fieldKey], index).id
+						if (kind === "filters") app.selection = {
+							kind: "filter",
+							id: designer.addFilter(query, fields[fieldKey]).id
 						};
 						else app.selection = {
-							kind: "filter",
-							id: designer.addFilter(app.design.query, fields[fieldKey]).id
+							kind: "column",
+							id: designer.addColumn(query, fields[fieldKey], index, shelfName(kind)).id
 						};
 						app.changed();
 						return;
 					}
-					if (pill) {
-						var moved = JSON.parse(pill);
-						var list = kind === "columns" ? app.design.query.columns : app.design.query.filters;
-						if (moved.shelf === kind) {
-							designer.move(list, moved.index, moved.index < index ? index - 1 : index);
+					if (!pill) return;
+					var moved = JSON.parse(pill);
+					if (kind === "filters") {
+						if (moved.shelf === "filters") {
+							designer.move(query.filters, moved.index, moved.index < index ? index - 1 : index);
 							app.changed();
-						} else if (kind === "filters" && moved.shelf === "columns") {
-							var column = app.design.query.columns[moved.index];
-							var field = column && fields[column.field];
-							if (field) {
-								app.selection = {
-									kind: "filter",
-									id: designer.addFilter(app.design.query, field).id
-								};
-								app.changed();
-							}
+							return;
 						}
+						var column = query.columns.filter(function(candidate) {
+							return candidate.id === moved.id;
+						})[0];
+						if (column) app.filterOnColumn(column);
+						return;
 					}
+					if (moved.shelf === "filters") return;
+					var from = moved.shelf === kind ? moved.index : -1;
+					designer.placeColumn(query, moved.id, shelfName(kind), from >= 0 && from < index ? index - 1 : index);
+					app.changed();
 				}
 			});
 			items.forEach(function(item, index) {
@@ -2206,7 +2708,8 @@
 				pill.addEventListener("dragstart", function(event) {
 					event.dataTransfer.setData(PILL_MIME, JSON.stringify({
 						shelf: kind,
-						index
+						index,
+						id: item.id
 					}));
 					event.dataTransfer.effectAllowed = "move";
 				});
@@ -2215,18 +2718,197 @@
 			if (!items.length) zone.appendChild(h("span", { className: "text-muted small" }, hint));
 			return h("div", { className: "report-designer-shelf mb-2" }, h("div", { className: "report-designer-shelf-label small fw-semibold text-muted text-uppercase" }, title), zone);
 		}
-		function pill(label, badge, selected, isMeasure, onSelect, onRemove) {
-			return h("span", { className: "report-designer-pill btn-group btn-group-sm" + (selected ? " is-selected" : "") + (isMeasure ? " is-measure" : "") }, h("button", {
+		function pill(label, badge, selected, isMeasure, onSelect, onRemove, onMenu) {
+			var tone = isMeasure ? "btn-success" : "btn-primary";
+			return h("span", {
+				className: "report-designer-pill btn-group btn-group-sm" + (selected ? " is-selected" : "") + (isMeasure ? " is-measure" : ""),
+				oncontextmenu: onMenu ? function(event) {
+					event.preventDefault();
+					onMenu(event.clientX, event.clientY);
+				} : null
+			}, h("button", {
 				type: "button",
-				className: "btn " + (isMeasure ? "btn-success" : "btn-primary"),
+				className: "btn " + tone,
 				onclick: onSelect
-			}, badge ? h("span", { className: "badge text-bg-light me-1" }, badge) : null, label), h("button", {
+			}, badge ? h("span", { className: "badge text-bg-light me-1" }, badge) : null, label), onMenu ? h("button", {
 				type: "button",
-				className: "btn " + (isMeasure ? "btn-success" : "btn-primary"),
+				className: "btn " + tone + " rd-pill-menu",
+				title: app.t("Column options"),
+				"aria-label": app.t("Column options") + ": " + label,
+				"aria-haspopup": "true",
+				onclick: function(event) {
+					var box = event.currentTarget.getBoundingClientRect();
+					onMenu(box.left, box.bottom + 2);
+				}
+			}, ui.icon("fa-caret-down")) : null, h("button", {
+				type: "button",
+				className: "btn " + tone,
 				"aria-label": app.t("Remove") + ": " + label,
 				onclick: onRemove
 			}, ui.icon("fa-xmark")));
 		}
+		app.filterOnColumn = function(column) {
+			var described = app.columns().filter(function(candidate) {
+				return candidate.id === column.id;
+			})[0];
+			var filter = designer.addColumnFilter(app.design.query, described ? Object.assign({}, column, { label: column.label || described.label }) : column, app.fields()[column.field]);
+			if (filter) {
+				app.selection = {
+					kind: "filter",
+					id: filter.id
+				};
+				app.changed();
+			}
+		};
+		function showAsLabel(value) {
+			switch (value) {
+				case "PercentOfTotal": return app.t("Percent of total");
+				case "RunningTotal": return app.t("Running total");
+				case "DifferenceFromPrevious": return app.t("Difference from previous");
+				case "PercentDifference": return app.t("Percent difference from previous");
+				case "Rank": return app.t("Rank");
+				default: return app.t("Value");
+			}
+		}
+		function directionLabel(value) {
+			switch (value) {
+				case "Across": return app.t("Across the columns");
+				case "Table": return app.t("Over the whole table");
+				default: return app.t("Down the rows");
+			}
+		}
+		app.columnMenu = function(column, x, y) {
+			var query = app.design.query;
+			var fields = app.fields();
+			var field = fields[column.field] || {
+				dataType: "Text",
+				label: column.field
+			};
+			var labels = app.config.aggregateLabels;
+			var transforms = app.config.transformLabels;
+			var aggregate = column.aggregate || "None";
+			var set = function(name, value) {
+				return function() {
+					column[name] = value;
+					app.changed();
+				};
+			};
+			var sort = (query.sorts || []).filter(function(candidate) {
+				return candidate.columnId === column.id;
+			})[0];
+			var other = designer.shelfOf(column) === "Rows" ? "Columns" : "Rows";
+			var items = [{ header: designer.columnLabel(column, field, labels) }];
+			if (!field.isAggregate) items.push({
+				label: app.t("Dimension"),
+				checked: aggregate === "None",
+				action: set("aggregate", "None")
+			}, {
+				label: app.t("Measure"),
+				checked: aggregate !== "None",
+				items: designer.aggregatesFor(field.dataType).filter(function(value) {
+					return value !== "None";
+				}).map(function(value) {
+					return {
+						label: labels[value] || value,
+						checked: aggregate === value,
+						action: set("aggregate", value)
+					};
+				})
+			});
+			var transformChoices = designer.transformsFor(field.dataType);
+			if (transformChoices.length > 1) items.push({
+				label: app.t("Transform"),
+				items: transformChoices.map(function(value) {
+					return {
+						label: transforms[value] || value,
+						checked: (column.transform || "None") === value,
+						action: set("transform", value)
+					};
+				})
+			});
+			var described = app.columns().filter(function(candidate) {
+				return candidate.id === column.id;
+			})[0];
+			if (designer.canShowAs(described, app.columns())) {
+				var showAs = column.showAs || "Value";
+				items.push({
+					label: app.t("Show as"),
+					icon: "fa-percent",
+					items: designer.SHOW_AS.map(function(value) {
+						return {
+							label: showAsLabel(value),
+							checked: showAs === value,
+							action: function() {
+								designer.setShowAs(column, value);
+								app.changed();
+							}
+						};
+					})
+				});
+				if (showAs !== "Value") items.push({
+					label: app.t("Compute along"),
+					items: designer.SHOW_AS_DIRECTIONS.map(function(value) {
+						return {
+							label: directionLabel(value),
+							checked: (column.showAsDirection || "Down") === value,
+							action: function() {
+								designer.setShowAs(column, showAs, value);
+								app.changed();
+							}
+						};
+					})
+				});
+			}
+			items.push({ divider: true }, {
+				label: app.t("Sort ascending"),
+				icon: "fa-arrow-up-short-wide",
+				checked: !!sort && !sort.descending,
+				action: function() {
+					designer.sortBy(query, column.id, false);
+					app.changed();
+				}
+			}, {
+				label: app.t("Sort descending"),
+				icon: "fa-arrow-down-wide-short",
+				checked: !!sort && sort.descending,
+				action: function() {
+					designer.sortBy(query, column.id, true);
+					app.changed();
+				}
+			}, fields[column.field] ? {
+				label: app.t("Filter on this field"),
+				icon: "fa-filter",
+				action: function() {
+					app.filterOnColumn(column);
+				}
+			} : null, { divider: true }, {
+				label: other === "Rows" ? app.t("Move to Rows") : app.t("Move to Columns"),
+				icon: other === "Rows" ? "fa-grip-lines" : "fa-grip-lines-vertical",
+				action: function() {
+					designer.placeColumn(query, column.id, other);
+					app.changed();
+				}
+			}, {
+				label: app.t("Format and colors…"),
+				icon: "fa-palette",
+				action: function() {
+					app.select("column", column.id);
+				}
+			}, {
+				label: app.t("Hide from tables"),
+				checked: !!column.hidden,
+				action: set("hidden", !column.hidden)
+			}, { divider: true }, {
+				label: app.t("Remove"),
+				icon: "fa-xmark",
+				action: function() {
+					designer.removeColumn(app.design, column.id);
+					app.selection = null;
+					app.changed();
+				}
+			});
+			ui.menu(items, x, y);
+		};
 		app.renderShelves = function() {
 			var target = app.elements.shelves;
 			var query = app.design.query;
@@ -2247,17 +2929,23 @@
 					}
 				}, ui.icon(summary.complete ? "fa-link" : "fa-link-slash"), " ", h("span", { className: "fw-semibold" }, app.dataSetLabel(dataSet.alias)), " ", h("span", { className: "badge text-bg-light" }, app.config.joinLabels[join.type] || join.type), summary.complete ? h("span", { className: "small ms-1 rd-join-summary" }, summary.text) : h("span", { className: "small ms-1" }, app.t("Not joined yet")));
 			}))));
-			target.appendChild(shelf("columns", app.t("Columns"), app.t("Drag fields here. Numbers are summed; add a dimension to group them."), query.columns, function(column, index) {
-				var field = fields[column.field];
+			var columnPill = function(column) {
+				var index = query.columns.indexOf(column);
 				var aggregate = column.aggregate && column.aggregate !== "None" ? app.config.aggregateLabels[column.aggregate] || column.aggregate : null;
+				var calculation = column.label ? designer.showAsBadge(column) : null;
+				if (calculation) aggregate = aggregate ? aggregate + " " + calculation : calculation;
 				return pill(columns[index].label, aggregate, selection.kind === "column" && selection.id === column.id, columns[index].isMeasure, function() {
 					app.select("column", column.id);
 				}, function() {
 					designer.removeColumn(app.design, column.id);
 					app.selection = null;
 					app.changed();
-				}, field);
-			}));
+				}, function(x, y) {
+					app.columnMenu(column, x, y);
+				});
+			};
+			target.appendChild(shelf("columns", app.t("Columns"), app.t("Drag fields here. Numbers are summed; add a dimension to group them."), designer.shelfColumns(query, "Columns"), columnPill));
+			target.appendChild(shelf("rows", app.t("Rows"), app.t("Drag dimensions here to head the rows. The dimensions on Columns then spread across the top."), designer.shelfColumns(query, "Rows"), columnPill));
 			target.appendChild(shelf("filters", app.t("Filters"), app.t("Drag fields here to filter the data."), query.filters, function(filter) {
 				return pill(filter.label || (filter.stage === "Result" ? (columns.filter(function(column) {
 					return column.id === filter.field;
@@ -2442,6 +3130,249 @@
 			});
 			return h("div", null, h("div", { className: "input-group input-group-sm" }, input, button), panel);
 		}
+		function colorPicker(value, onChange, label) {
+			var choose = function(color) {
+				ui.closeMenu();
+				onChange(color ? String(color).toUpperCase() : null);
+			};
+			return h("button", {
+				type: "button",
+				className: "btn btn-sm btn-outline-secondary rd-color-button d-inline-flex align-items-center gap-1",
+				title: label,
+				"aria-label": label + ": " + (value || app.t("None")),
+				onclick: function(event) {
+					var box = event.currentTarget.getBoundingClientRect();
+					var custom = h("input", {
+						type: "color",
+						className: "form-control form-control-color form-control-sm",
+						value: /^#[0-9A-Fa-f]{6}$/.test(value || "") ? value : "#0D6EFD",
+						"aria-label": app.t("Custom color"),
+						onchange: function(changeEvent) {
+							choose(changeEvent.target.value);
+						}
+					});
+					ui.popup(h("div", { className: "dropdown-menu show rd-palette p-2 shadow-sm" }, h("div", { className: "rd-swatches" }, designer.COLOR_SWATCHES.map(function(color) {
+						return h("button", {
+							type: "button",
+							className: "rd-swatch" + (value && value.toUpperCase() === color ? " is-selected" : ""),
+							style: { backgroundColor: color },
+							title: color,
+							"aria-label": color,
+							onclick: function() {
+								choose(color);
+							}
+						});
+					})), h("div", { className: "d-flex align-items-center gap-2 mt-2" }, h("label", { className: "small mb-0" }, app.t("Custom color")), custom, h("button", {
+						type: "button",
+						className: "btn btn-sm btn-link ms-auto p-0",
+						onclick: function() {
+							choose(null);
+						}
+					}, app.t("None")))), box.left, box.bottom + 2);
+				}
+			}, h("span", {
+				className: "rd-color-chip" + (value ? "" : " is-empty"),
+				style: value ? { backgroundColor: value } : null
+			}), h("span", { className: "small" }, value || app.t("None")));
+		}
+		function targetSelect(value, onChange) {
+			return ui.select([{
+				value: "Background",
+				text: app.t("Fill the cell")
+			}, {
+				value: "Text",
+				text: app.t("Color the text")
+			}], value || "Background", {
+				className: "form-select form-select-sm w-auto",
+				"aria-label": app.t("Paint"),
+				onchange: function(event) {
+					onChange(event.target.value);
+				}
+			});
+		}
+		function ruleValues(rule, dataType) {
+			var arity = designer.valueArity(rule.operator);
+			var type = designer.isTemporal(dataType) ? dataType === "DateTime" ? "datetime-local" : "date" : designer.isNumeric(dataType) ? "number" : "text";
+			var input = function(index, placeholder) {
+				return h("input", {
+					type,
+					step: type === "number" ? "any" : null,
+					className: "form-control form-control-sm",
+					value: (rule.values || [])[index] || "",
+					placeholder,
+					"aria-label": placeholder || app.t("Value"),
+					onchange: function(event) {
+						var values = (rule.values || []).slice();
+						while (values.length <= index) values.push("");
+						values[index] = event.target.value;
+						rule.values = values;
+						app.changed({ render: false });
+					}
+				});
+			};
+			if (arity === 0) return null;
+			if (arity === 2) return h("div", { className: "d-flex gap-1" }, input(0, app.t("From")), input(1, app.t("To")));
+			return input(0, app.t("Value"));
+		}
+		function colorProperties(column, dataType) {
+			var colors = column.colors || {};
+			var numeric = designer.isNumeric(dataType);
+			var update = function(apply, render) {
+				apply(designer.ensureColors(column));
+				designer.pruneColors(column);
+				app.changed({ render: render !== false });
+			};
+			var colorRow = function(text, name) {
+				return h("div", { className: "d-flex align-items-center justify-content-between gap-2 mb-1" }, h("span", { className: "small" }, text), colorPicker(colors[name], function(value) {
+					update(function(target) {
+						target[name] = value;
+					});
+				}, text));
+			};
+			var parts = [
+				h("div", { className: "small fw-semibold text-muted text-uppercase mt-3 mb-1 border-top pt-2" }, app.t("Colors")),
+				colorRow(app.t("Header text"), "headerColor"),
+				colorRow(app.t("Header fill"), "headerBackgroundColor"),
+				colorRow(app.t("Cell text"), "color"),
+				colorRow(app.t("Cell fill"), "backgroundColor")
+			];
+			if (numeric) {
+				var scale = colors.scale;
+				var presetOf = function() {
+					var match = "";
+					Object.keys(designer.COLOR_SCALES).forEach(function(name) {
+						var preset = designer.COLOR_SCALES[name];
+						if (scale && scale.lowColor === preset[0] && (scale.midColor || null) === preset[1] && scale.highColor === preset[2]) match = name;
+					});
+					return scale ? match || "Custom" : "";
+				};
+				parts.push(labelled(app.t("Color scale"), ui.select([
+					{
+						value: "",
+						text: app.t("None")
+					},
+					{
+						value: "RedToGreen",
+						text: app.t("Red, yellow, green (low to high)")
+					},
+					{
+						value: "GreenToRed",
+						text: app.t("Green, yellow, red (low to high)")
+					},
+					{
+						value: "WhiteToBlue",
+						text: app.t("White to blue")
+					},
+					{
+						value: "WhiteToRed",
+						text: app.t("White to red")
+					},
+					{
+						value: "Custom",
+						text: app.t("Custom")
+					}
+				], presetOf(), { onchange: function(event) {
+					var name = event.target.value;
+					update(function(target) {
+						if (!name) {
+							target.scale = null;
+							return;
+						}
+						var preset = designer.COLOR_SCALES[name] || [
+							scale && scale.lowColor || "#FFFFFF",
+							null,
+							scale && scale.highColor || "#6EA8FE"
+						];
+						target.scale = {
+							lowColor: preset[0],
+							midColor: preset[1],
+							highColor: preset[2],
+							target: scale && scale.target || "Background"
+						};
+					});
+				} }), app.t("Shades each number from the low color at the smallest value to the high color at the largest.")));
+				if (scale) parts.push(h("div", { className: "d-flex flex-wrap align-items-center gap-1 mb-2" }, colorPicker(scale.lowColor, function(value) {
+					update(function(target) {
+						target.scale.lowColor = value || "#FFFFFF";
+					});
+				}, app.t("Low")), colorPicker(scale.midColor, function(value) {
+					update(function(target) {
+						target.scale.midColor = value;
+					});
+				}, app.t("Middle")), colorPicker(scale.highColor, function(value) {
+					update(function(target) {
+						target.scale.highColor = value || "#6EA8FE";
+					});
+				}, app.t("High")), targetSelect(scale.target, function(value) {
+					update(function(target) {
+						target.scale.target = value;
+					});
+				})));
+			}
+			var rules = colors.rules || [];
+			var list = h("div", { className: "rd-color-rules" });
+			rules.forEach(function(rule, index) {
+				list.appendChild(h("div", { className: "rd-color-rule border rounded p-1 mb-1" }, h("div", { className: "d-flex gap-1 mb-1" }, ui.select(designer.colorOperatorsFor(dataType).map(function(value) {
+					return {
+						value,
+						text: app.config.operatorLabels[value] || value
+					};
+				}), rule.operator, {
+					"aria-label": app.t("Condition"),
+					onchange: function(event) {
+						rule.operator = event.target.value;
+						app.changed();
+					}
+				}), h("button", {
+					type: "button",
+					className: "btn btn-sm btn-link text-reset p-0 px-1",
+					"aria-label": app.t("Move up"),
+					disabled: index === 0,
+					onclick: function() {
+						designer.move(rules, index, index - 1);
+						app.changed();
+					}
+				}, ui.icon("fa-arrow-up")), h("button", {
+					type: "button",
+					className: "btn btn-sm btn-link text-reset p-0 px-1",
+					"aria-label": app.t("Remove"),
+					onclick: function() {
+						update(function(target) {
+							target.rules.splice(index, 1);
+						});
+					}
+				}, ui.icon("fa-xmark"))), ruleValues(rule, dataType), h("div", { className: "d-flex align-items-center gap-1 mt-1" }, colorPicker(rule.color, function(value) {
+					rule.color = value || rule.color;
+					app.changed();
+				}, app.t("Color")), targetSelect(rule.target, function(value) {
+					rule.target = value;
+					app.changed({ render: false });
+				}))));
+			});
+			parts.push(labelled(app.t("Color rules"), h("div", null, rules.length ? list : h("div", { className: "form-text mt-0 mb-1" }, app.t("Color the cells whose value meets a condition. The first rule a value meets wins.")), h("div", { className: "d-flex flex-wrap gap-1" }, h("button", {
+				type: "button",
+				className: "btn btn-sm btn-outline-primary",
+				onclick: function() {
+					update(function(target) {
+						target.rules.push({
+							operator: numeric ? "LessThan" : "Equals",
+							values: [""],
+							color: "#F8D7DA",
+							target: "Background"
+						});
+					});
+				}
+			}, ui.icon("fa-plus"), " ", app.t("Add rule")), numeric ? h("button", {
+				type: "button",
+				className: "btn btn-sm btn-outline-primary",
+				title: app.t("Red below a value, orange between two values, green from the second value."),
+				onclick: function() {
+					designer.addTrafficLightRules(column);
+					app.changed();
+				}
+			}, ui.icon("fa-traffic-light"), " ", app.t("Add red, orange, green")) : null))));
+			return parts;
+		}
 		function columnProperties(column) {
 			var field = app.fields()[column.field] || {
 				dataType: "Text",
@@ -2449,8 +3380,21 @@
 			};
 			var labels = app.config.aggregateLabels;
 			var transforms = app.config.transformLabels;
+			var described = app.columns().filter(function(candidate) {
+				return candidate.id === column.id;
+			})[0];
 			return [
 				h("div", { className: "small text-muted mb-2" }, app.t("Field") + ": ", h("code", null, column.field)),
+				labelled(app.t("Shelf"), ui.select([{
+					value: "Columns",
+					text: app.t("Columns")
+				}, {
+					value: "Rows",
+					text: app.t("Rows")
+				}], designer.shelfOf(column), { onchange: function(event) {
+					designer.placeColumn(app.design.query, column.id, event.target.value);
+					app.changed();
+				} }), app.t("Dimensions on Rows head the rows; dimensions on Columns then spread across the top.")),
 				labelled(app.t("Header"), textInput(column.label, function(value) {
 					column.label = value;
 					app.changed();
@@ -2477,10 +3421,29 @@
 					app.changed();
 				} })),
 				labelled(app.t("Format"), formatEditor(column, field), app.t("How values are shown. Click the question mark for common formats.")),
+				designer.canShowAs(described, app.columns()) ? labelled(app.t("Show as"), ui.select(designer.SHOW_AS.map(function(value) {
+					return {
+						value,
+						text: showAsLabel(value)
+					};
+				}), column.showAs || "Value", { onchange: function(event) {
+					designer.setShowAs(column, event.target.value);
+					app.changed();
+				} }), app.t("A quick table calculation over the values each table and chart shows. Totals rows keep the plain totals.")) : null,
+				designer.canShowAs(described, app.columns()) && column.showAs ? labelled(app.t("Compute along"), ui.select(designer.SHOW_AS_DIRECTIONS.map(function(value) {
+					return {
+						value,
+						text: directionLabel(value)
+					};
+				}), column.showAsDirection || "Down", { onchange: function(event) {
+					designer.setShowAs(column, column.showAs, event.target.value);
+					app.changed();
+				} }), app.t("The values it runs over: down each column, across each row, or every cell. In a chart, the series are its columns.")) : null,
 				check(app.t("Hide from tables"), column.hidden, function(value) {
 					column.hidden = value;
 					app.changed({ render: false });
-				}, app.t("A hidden column still groups the data and can feed charts."))
+				}, app.t("A hidden column still groups the data and can feed charts.")),
+				colorProperties(column, described ? described.dataType : field.dataType)
 			];
 		}
 		app.periodLabel = function(days) {
@@ -2568,13 +3531,18 @@
 					designer.setFilterStage(filter, event.target.value, columns);
 					app.changed();
 				} })),
-				labelled(filter.stage === "Result" ? app.t("Column") : app.t("Field"), filter.stage === "Result" ? ui.select(columns.map(function(column) {
+				labelled(filter.stage === "Result" ? app.t("Column") : app.t("Field"), filter.stage === "Result" ? ui.select((columns.some(function(column) {
+					return column.id === filter.field;
+				}) ? [] : [{
+					value: "",
+					text: app.t("Pick a column…")
+				}]).concat(columns.map(function(column) {
 					return {
 						value: column.id,
 						text: column.label
 					};
-				}), filter.field, { onchange: function(event) {
-					filter.field = event.target.value;
+				})), filter.field || "", { onchange: function(event) {
+					filter.field = event.target.value || null;
 					app.changed();
 				} }) : h("code", { className: "d-block small" }, filter.field)),
 				labelled(app.t("Condition"), ui.select(designer.operatorsFor(dataType).map(function(value) {
@@ -2807,6 +3775,79 @@
 			parts.push(labelled(app.t("Filter these visuals"), list, app.t("They show only the rows with the picked values. Hold Ctrl to pick several; click again to clear.")));
 			return parts;
 		}
+		function referenceLineProperties(visual, numbers) {
+			var lines = visual.referenceLines || [];
+			var plotted = numbers.filter(function(option) {
+				return (visual.valueColumnIds || []).indexOf(option.value) >= 0;
+			});
+			var list = h("div", { className: "rd-reference-lines" });
+			lines.forEach(function(line, index) {
+				var constant = line.kind === "Constant";
+				var named = function(text, control) {
+					return h("div", { className: "input-group input-group-sm mb-1" }, h("span", { className: "input-group-text rd-reference-name" }, text), control);
+				};
+				list.appendChild(h("div", { className: "rd-reference-line border rounded p-1 mb-1" }, h("div", { className: "d-flex gap-1 mb-1" }, named(app.t("Line at"), ui.select(designer.REFERENCE_LINE_KINDS.map(function(value) {
+					return {
+						value,
+						text: value === "Average" ? app.t("Average") : value === "Median" ? app.t("Median") : app.t("Constant")
+					};
+				}), line.kind || "Average", {
+					"aria-label": app.t("Line at"),
+					onchange: function(event) {
+						line.kind = event.target.value;
+						if (line.kind !== "Constant" && !line.columnId) line.columnId = (visual.valueColumnIds || [])[0] || null;
+						app.changed();
+					}
+				})), h("button", {
+					type: "button",
+					className: "btn btn-sm btn-link text-reset p-0 px-1 mb-1",
+					"aria-label": app.t("Remove"),
+					title: app.t("Remove"),
+					onclick: function() {
+						lines.splice(index, 1);
+						app.changed();
+					}
+				}, ui.icon("fa-xmark"))), constant ? named(app.t("Value"), h("input", {
+					type: "number",
+					step: "any",
+					className: "form-control form-control-sm",
+					value: line.value == null ? "" : String(line.value),
+					placeholder: app.t("Such as a target"),
+					"aria-label": app.t("Value"),
+					onchange: function(event) {
+						var value = parseFloat(event.target.value);
+						line.value = isFinite(value) ? value : null;
+						app.changed();
+					}
+				})) : null, named(constant ? app.t("Format like") : app.t("Of"), ui.select((constant ? [{
+					value: "",
+					text: app.t("None")
+				}] : []).concat(plotted), line.columnId || "", {
+					"aria-label": constant ? app.t("Format like") : app.t("Of"),
+					title: constant ? app.t("The value is shown in the format of this column.") : null,
+					onchange: function(event) {
+						line.columnId = event.target.value || null;
+						app.changed();
+					}
+				})), named(app.t("Label"), textInput(line.label, function(value) {
+					line.label = value;
+					app.changed();
+				}, {
+					placeholder: constant ? app.t("Such as Target") : line.kind === "Median" ? app.t("Median") : app.t("Average"),
+					maxlength: "200",
+					"aria-label": app.t("Label")
+				}))));
+			});
+			return labelled(app.t("Reference lines"), h("div", null, lines.length ? list : h("div", { className: "form-text mt-0 mb-1" }, app.t("Draw a line across the chart at the average or median of a value, or at a target.")), h("button", {
+				type: "button",
+				className: "btn btn-sm btn-outline-primary",
+				disabled: !plotted.length,
+				onclick: function() {
+					designer.addReferenceLine(visual);
+					app.changed();
+				}
+			}, ui.icon("fa-plus"), " ", app.t("Add reference line"))));
+		}
 		function visualProperties(visual) {
 			var columns = app.columns();
 			var dimensions = columns.filter(function(column) {
@@ -2897,7 +3938,11 @@
 						app.changed({ render: false });
 					} }), function(column) {
 						visual.categoryColumnId = column.id;
-					}), well(app.t("Values"), "measure", checkboxList(numbers, visual.valueColumnIds || [], set("valueColumnIds")), function(column) {
+					}), well(app.t("Values"), "measure", checkboxList(numbers, visual.valueColumnIds || [], function(value) {
+						visual.valueColumnIds = value;
+						designer.pruneReferenceLines(visual);
+						app.changed();
+					}), function(column) {
 						visual.valueColumnIds = (visual.valueColumnIds || []).filter(function(id) {
 							return id !== column.id;
 						}).concat([column.id]);
@@ -2906,7 +3951,7 @@
 						app.changed({ render: false });
 					} }), function(column) {
 						visual.seriesColumnId = column.id;
-					}), h("div", { className: "form-text mb-2" }, app.t("Draws one series per value of this column, using the first value column.")), check(app.t("Stack series"), visual.stacked, set("stacked", false)), check(app.t("Show legend"), visual.showLegend !== false, set("showLegend", false)));
+					}), h("div", { className: "form-text mb-2" }, app.t("Draws one series per value of this column, using the first value column.")), check(app.t("Stack series"), visual.stacked, set("stacked", false)), check(app.t("Show legend"), visual.showLegend !== false, set("showLegend", false)), visual.chartType === "Pie" || visual.chartType === "Doughnut" ? null : referenceLineProperties(visual, numbers));
 					parts.push.apply(parts, actionProperties(visual, columns));
 					break;
 				case "Metrics":
@@ -2926,11 +3971,10 @@
 						app.changed({ render: false });
 					} }), function(column) {
 						visual.seriesColumnId = column.id;
-					}), well(app.t("Value"), "measure", ui.select(none.concat(numbers), (visual.valueColumnIds || [])[0] || "", { onchange: function(event) {
-						visual.valueColumnIds = event.target.value ? [event.target.value] : [];
-						app.changed({ render: false });
-					} }), function(column) {
-						visual.valueColumnIds = [column.id];
+					}), well(app.t("Values"), "measure", checkboxList(numbers, visual.valueColumnIds || [], set("valueColumnIds")), function(column) {
+						visual.valueColumnIds = (visual.valueColumnIds || []).filter(function(id) {
+							return id !== column.id;
+						}).concat([column.id]);
 					}), check(app.t("Show totals"), visual.showTotals, set("showTotals", false)));
 					break;
 				default:

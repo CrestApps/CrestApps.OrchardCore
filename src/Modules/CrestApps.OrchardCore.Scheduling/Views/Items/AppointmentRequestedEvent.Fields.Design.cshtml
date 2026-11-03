@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Scheduling.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AppointmentRequestedEvent>
+
+<header><h4><i class="fa-solid fa-hand" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Appointment Requested"])</h4></header>

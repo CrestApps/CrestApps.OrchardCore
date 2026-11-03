@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
+using CrestApps.OrchardCore.ContactCenter.Workflows.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using Microsoft.AspNetCore.Builder;
@@ -20,6 +21,7 @@ using OrchardCore.Environment.Extensions.Features;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Models;
 using OrchardCore.Setup.Services;
+using OrchardCore.Workflows.Services;
 using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.ContactCenter.FeatureActivationTests;
@@ -297,6 +299,17 @@ public sealed class ContactCenterFeatureActivationHost : IAsyncDisposable
             Assert.Single(
                 services.GetServices<IDataMigration>(),
                 migration => migration.GetType().Name == "ContactCenterProcessedEventIndexMigrations");
+
+            // Every workflow trigger, the one Orchard Core raises at sign-in included, builds the activity library,
+            // which creates every registered activity. One activity needing a service from a feature that is off
+            // fails them all, so each one must be constructible from what this feature set registers.
+            var activityNames = services.GetRequiredService<IActivityLibrary>()
+                .ListActivities()
+                .Select(activity => activity.Name)
+                .ToArray();
+            Assert.Contains(nameof(ContactCenterEvent), activityNames);
+            Assert.Contains(nameof(AICallActionTask), activityNames);
+            Assert.Contains(nameof(TransferAICallTask), activityNames);
 
             return Task.CompletedTask;
         });

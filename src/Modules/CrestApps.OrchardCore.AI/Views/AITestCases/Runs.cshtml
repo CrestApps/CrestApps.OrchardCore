@@ -1,0 +1,53 @@
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AITestRunsViewModel
+
+@{
+    var title = Model.TestCase is not null
+        ? T["Runs of '{0}'", Model.TestCase.Name]
+        : !string.IsNullOrEmpty(Model.BatchId) ? T["Test batch"] : T["All test runs"];
+}
+
+<zone Name="Title">
+    <breadcrumb name="AITestCasesRuns" title="@title">
+        <breadcrumb-item id="AITestCases" action="Index" controller="AITestCases" area="CrestApps.OrchardCore.AI" permission="@AIPermissions.ManageAIQuality.Name">@T["AI Tests"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="row g-2 mb-3">
+    <div class="col-12 col-md-auto">
+        <div class="card h-100">
+            <div class="card-body py-2">
+                <div class="text-body-secondary small">@T["Pass rate"]</div>
+                <div class="fs-4">@(Model.PassRate is { } rate ? rate.ToString("P0", System.Globalization.CultureInfo.CurrentCulture) : "-")</div>
+            </div>
+        </div>
+    </div>
+    @if (Model.Pending > 0)
+    {
+        <div class="col-12 col-md-auto">
+            <div class="card h-100">
+                <div class="card-body py-2">
+                    <div class="text-body-secondary small">@T["Still running"]</div>
+                    <div class="fs-4">@Model.Pending</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md align-self-center text-body-secondary">
+            @T["Runs start within a minute of being queued. Reload the page to see them finish."]
+        </div>
+    }
+</div>
+
+<admin-list name="AITestRuns" context="Model.List"
+            show-select-all="false"
+            empty-message="@T["<strong>Nothing here!</strong> No test has run yet."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Test"]" />
+        <admin-list-column name="Result" position="30" title="@T["Result"]" width="auto" />
+        <admin-list-column name="Queued" position="40" title="@T["When"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

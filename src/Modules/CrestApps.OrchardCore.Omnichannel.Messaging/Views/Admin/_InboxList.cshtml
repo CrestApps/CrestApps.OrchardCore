@@ -4,6 +4,7 @@
 
 @{
     var show = Model.ShowRouteValue;
+    var unreadRoute = Model.UnreadRouteValue;
 }
 
 @if (Model.ShowFavorites)
@@ -116,7 +117,14 @@
     </div>
 }
 
-@if (Model.Rows.Count == 0)
+@if (Model.Rows.Count == 0 && Model.UnreadOnly)
+{
+    <div class="text-muted small p-3" data-inbox-no-unread>
+        <p class="mb-2"><i class="fa-regular fa-envelope-open me-1" aria-hidden="true"></i>@T["You're all caught up: no unread conversations here."]</p>
+        <a asp-route-action="Index" asp-route-show="@show" asp-route-channel="@Model.ChannelFilter">@T["Show all conversations"]</a>
+    </div>
+}
+else if (Model.Rows.Count == 0)
 {
     <div class="text-muted small p-3">@T["Nothing here yet. Start a new conversation, or messages that reach the endpoints you serve will appear here."]</div>
 }
@@ -129,7 +137,7 @@ else
             var unread = row.UnreadCount > 0;
 
             <a class="list-group-item list-group-item-action messaging-inbox-row px-2 py-2 @(isSelected ? "active" : string.Empty) @(unread ? "messaging-unread" : string.Empty)"
-               asp-route-action="Conversation" asp-route-id="@row.Conversation.ItemId" asp-route-show="@show" asp-route-channel="@Model.ChannelFilter"
+               asp-route-action="Conversation" asp-route-id="@row.Conversation.ItemId" asp-route-show="@show" asp-route-channel="@Model.ChannelFilter" asp-route-unread="@unreadRoute"
                data-customer-key="@row.CustomerKey"
                data-conversation-id="@row.Conversation.ItemId"
                data-filter-value="@($"{row.Conversation.ContactAddress} {row.Conversation.LastMessagePreview}")">
@@ -166,14 +174,14 @@ else
             <div>
                 @if (Model.HasPreviousPage)
                 {
-                    <a class="btn btn-sm btn-outline-secondary" asp-route-action="Index" asp-route-show="@show" asp-route-channel="@Model.ChannelFilter" asp-route-page="@(Model.Page - 1)">@T["Newer"]</a>
+                    <a class="btn btn-sm btn-outline-secondary" asp-route-action="Index" asp-route-show="@show" asp-route-channel="@Model.ChannelFilter" asp-route-unread="@unreadRoute" asp-route-page="@(Model.Page - 1)">@T["Newer"]</a>
                 }
             </div>
             <span class="text-muted">@T["Page {0} of {1}", Model.Page, Math.Max(1, (int)Math.Ceiling(Model.TotalCount / (double)Model.PageSize))]</span>
             <div>
                 @if (Model.HasNextPage)
                 {
-                    <a class="btn btn-sm btn-outline-secondary" asp-route-action="Index" asp-route-show="@show" asp-route-channel="@Model.ChannelFilter" asp-route-page="@(Model.Page + 1)">@T["Older"]</a>
+                    <a class="btn btn-sm btn-outline-secondary" asp-route-action="Index" asp-route-show="@show" asp-route-channel="@Model.ChannelFilter" asp-route-unread="@unreadRoute" asp-route-page="@(Model.Page + 1)">@T["Older"]</a>
                 }
             </div>
         </nav>

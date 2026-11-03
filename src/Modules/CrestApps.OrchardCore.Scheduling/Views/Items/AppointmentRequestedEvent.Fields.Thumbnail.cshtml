@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Scheduling.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AppointmentRequestedEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-hand" aria-hidden="true"></i> @T["Appointment Requested"]</h4>
+<p>@T["Starts when an appointment is requested and waits for confirmation."]</p>

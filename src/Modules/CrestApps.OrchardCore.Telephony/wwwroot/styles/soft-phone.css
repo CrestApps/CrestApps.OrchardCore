@@ -1342,6 +1342,14 @@
   border-radius: 999px;
 }
 
+html:has(.action-bar-bottom) .telephony-soft-phone {
+  bottom: calc(var(--oc-action-bar-bottom-height, 3.5rem) + 1rem);
+}
+
+html:has(.action-bar-bottom .dropdown-menu.show) .telephony-soft-phone {
+  z-index: calc(var(--oc-action-bar-bottom-zindex, 980) - 1);
+}
+
 [data-bs-theme=dark] .telephony-soft-phone {
   --bs-body-bg: #1e2126;
   --bs-body-color: #e9ecef;

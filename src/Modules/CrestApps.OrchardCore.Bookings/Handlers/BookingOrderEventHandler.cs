@@ -6,8 +6,8 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CrestApps.OrchardCore.Bookings.Handlers;
 
 /// <summary>
-/// Books an order's booking lines when it's placed, holding their dates, confirms them when it's paid, and gives their
-/// dates back when it's canceled.
+/// Books an order's booking lines when it's placed, holding their dates, confirms them when it's paid, gives their dates
+/// back when it's canceled, and reports the refunds recorded on it.
 /// </summary>
 internal sealed class BookingOrderEventHandler : OrderEventHandlerBase
 {
@@ -35,6 +35,9 @@ internal sealed class BookingOrderEventHandler : OrderEventHandlerBase
 
     public override Task CanceledAsync(OrderCanceledContext context, CancellationToken cancellationToken = default)
         => Bookings.ReleaseOrderAsync(context.Order, BookingStatus.Canceled, cancellationToken);
+
+    public override Task RefundedAsync(OrderRefundedContext context, CancellationToken cancellationToken = default)
+        => Bookings.ReportRefundAsync(context.Order, context.Refund, cancellationToken);
 
     public override Task LinesChangedAsync(OrderLinesChangedContext context, CancellationToken cancellationToken = default)
         => Bookings.RebookAsync(context.Order, context.Refuse, cancellationToken);

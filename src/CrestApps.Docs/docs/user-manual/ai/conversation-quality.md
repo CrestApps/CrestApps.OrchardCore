@@ -60,6 +60,25 @@ To have the AI rewrite a profile's instructions until simulated customers pass, 
 Put the test cases in a **For Each** loop: a list of customers, each with their own criteria, and use the loop's current item, `{{ Workflow.Output.Current }}` unless you renamed it, in **Customer** and **Criteria**. Every result is kept, so the **Conversation evaluations** report shows the pass rate of the whole run.
 :::
 
+## Keep a catalog of tests
+
+With the **AI Quality** feature on, **Artificial Intelligence > Tests** keeps your simulation tests, so you can run them again after every change instead of building a workflow for each.
+
+A **test case** has:
+
+- the **AI profile** to test, and optionally a **Version** of it;
+- the **Simulated customer**: who they are, what they want and how they behave;
+- **Success criteria**, one per line, and the **Passing score**;
+- **Conversation variables**, one `name: value` per line, which the AI sees as it would see real ones;
+- **Mocked tools**, one `tool name: result` per line: the named tool returns that result instead of running, so a test books, charges and texts nothing for real;
+- the **Most customer turns**, and the models that play the customer and judge.
+
+To run tests, click **Run** on a test, or select several and choose **Run** or **Run 5 times** under the list's actions. Runs are queued and start within a minute; the **Runs** page shows each one as it finishes, with the pass rate of the batch. Open a run to read the conversation and each criterion, met or not, with the reason.
+
+To run the tests from a build pipeline, turn on **AI Chat WebAPI** too and call the API with a token from the site's OpenID server: `GET /api/ai/v1/tests` lists the tests, `POST /api/ai/v1/tests/batches` with `{ "profileId": "...", "repeats": 3 }` (or `testCaseIds`) queues a batch, and `GET /api/ai/v1/tests/batches/{batchId}` returns each run and the pass rate, with `completed` set once every run has finished. The client's role needs the **Manage AI tests, QA cohorts and alert rules** permission.
+
+To make a test from a real conversation, open **Artificial Intelligence > AI Chat sessions**, and choose **Create test** in a conversation's menu. The test plays that conversation's customer again, with its variables, so you can change the profile until the conversation goes the way it should, and keep the test to check it stays that way.
+
 ## Compare two profiles on live traffic
 
 The **Split Traffic** task sends each run of a workflow down one of several outcomes, in proportion to their weights. Combined with **Use AI Profile** in an **AI Conversation Starting** workflow, it answers part of your conversations with a different profile.
@@ -70,6 +89,15 @@ The **Split Traffic** task sends each run of a workflow down one of several outc
 4. Connect **New** to **Use AI Profile** with the copy. Connect both outcomes to **Set Conversation Variables** with `variant: {{ Workflow.Properties.Variant }}`, so the variant is kept on the conversation.
 
 Compare the two in the reports by profile, or by the `variant` variable.
+
+### Compare two versions of one profile
+
+Every save of an AI profile is a version. To compare the version you just saved with an earlier one, without copying the profile yourself, set **Version** on **Use AI Profile**:
+
+1. Open the profile's **Versions** page and note the number of the version to compare against, for example 3.
+2. In the starting workflow, connect one **Split Traffic** outcome to **Use AI Profile** with the same profile and **Version** `3`, and leave the other outcome alone, so it answers with the profile as it is now.
+
+The first time version 3 is used, it is copied to a profile named after it, such as *Support (version 3)*, with a **Version 3 copy** badge in the AI Profiles list. Later conversations reuse the copy. Conversations on the copy report as version 3 of the original profile, so the **Profile version** column of the **AI chat sessions** and **Conversation evaluations** reports compares the two directly. Don't edit the copy: delete it, and the next conversation that needs version 3 makes it again.
 
 ## Score conversations for quality
 
@@ -91,6 +119,27 @@ To score a sample of your conversations:
 
 Every evaluation, real or simulated, also starts the workflows that begin with **AI Conversation Evaluated**. Tick **Only conversations that failed** to react to the failures only. The evaluation is in `Workflow.Input.Evaluation`.
 
+## Score a sample of real conversations
+
+With the **AI Quality** feature on, a **QA cohort** scores a share of the real conversations of some AI profiles after they close, without a workflow. Open **Artificial Intelligence > QA**, click **QA cohorts**, then **Add cohort**:
+
+- **AI profiles**: whose conversations are sampled.
+- **Sample**: the share scored, such as 20%. A conversation is in or out of the sample for good, so it is never scored twice.
+- **Success criteria** and **Passing score**, as for the **Evaluate AI Conversation** task.
+- **Check answers against the knowledge base**: the profile's own knowledge base and data sources are searched for what the customer asked, and any fact the AI stated that they don't support is reported as a **Hallucination**, with the line that shows it.
+
+A cohort starts with the conversations that close after it is saved, and scores them every ten minutes. Each score is an evaluation labeled `QA: <cohort name>`, so it shows in the **Conversation evaluations** report and raises the **AI Conversation Evaluated** event like any other.
+
+### The QA dashboard
+
+**Artificial Intelligence > QA** shows, for one cohort or for every scored conversation, over the last 1, 7, 30 or 90 days:
+
+- how many conversations were scored, their average score, and the share that passed and that were resolved;
+- the scores day by day;
+- the issues found, by kind, and the customers' sentiment at the end;
+- the most frequent opening questions, with the share of them resolved;
+- the lowest-scored conversations, each with a link to open it.
+
 ## Reports
 
 In **Reports**, the **AI Chat** data source has a **Conversation evaluations** data set: one row per evaluation, with its profile, profile version, label, score, whether it passed, and a count of each kind of issue. The **Chat sessions** data set has the **Profile version** of each conversation.
@@ -98,6 +147,20 @@ In **Reports**, the **AI Chat** data source has a **Conversation evaluations** d
 For example, a table grouped by **Profile version** with the average **Score** and the count of **Passed** compares version 3 with version 4.
 
 ## Get alerted when something slips
+
+### Alert rules
+
+With the **AI Quality** feature on, **Artificial Intelligence > Alert rules** watches a metric without a workflow. Click **Add alert rule** and choose the **Metric**, the **AI profile** (or every profile), when to alert and the **Threshold**, the **Window** measured, the **Minimum samples** a window needs, and how often to **Check** it. The metrics are the ones the task below measures.
+
+When the threshold is crossed, the rule opens an incident; when a measured window is back within it, the incident resolves. Each change is told once:
+
+- by email to the addresses in **Email**, when the Email feature is set up;
+- by the `alert.triggered` and `alert.resolved` events of **Webhooks**, when the AI Webhooks feature is on;
+- by the **AI Alert Triggered** and **AI Alert Resolved** workflow events, whose input holds the rule, the metric, its value, the threshold and the window.
+
+The list shows each rule as **OK** or **Alerting**, with its latest value and when it last triggered; a rule keeps its last 20 incidents.
+
+### Alerts in a workflow
 
 The **Check AI Conversation Metric** task measures one number over the last window, compares it with a threshold, and remembers whether an alert is already open. Start it with a **Timer** that runs every few minutes.
 

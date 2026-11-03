@@ -16,6 +16,8 @@ Sell a membership: buying it makes the buyer a member, and what's for members op
 
 <AskYourAdmin />
 
+This video shows how to sell a membership, keep content for members, what a member sees, and how memberships end:
+
 To try it, run the **Memberships sample** recipe under **Configuration > Recipes**. It adds a Member role, a members' article, and an Annual Membership at $49.
 
 ## Sell a membership
@@ -25,6 +27,8 @@ To try it, run the **Memberships sample** recipe under **Configuration > Recipes
 3. Enter how many **Days a membership lasts**, such as 365, or 0 for one that doesn't end.
 
 Buying it makes the buyer a member at once. Buying it again while still a member adds the days to when it ends. Buyers sign in to buy a membership, since it's for their account. They see theirs under **Memberships** in their account.
+
+The list on **Commerce > Memberships** filters by status: **Active**, **Expired** or **Ended early**, and shows every membership by default.
 
 ## Keep content for members
 
@@ -37,6 +41,8 @@ A membership ends:
 - On its end date.
 - When its order is canceled.
 - When its order is refunded in full.
-- When you choose **End now** under **Commerce > Memberships**, which refunds nothing.
+- When you choose **End now** under **Commerce > Memberships**, which refunds nothing and ends it at once, as **Ended early**. Under **Commerce > Memberships** you can search by member and filter by **Active**, **Expired** or **Ended early**.
+
+A member's session keeps the roles it had when they signed in, so a member who has just bought (or lost) a membership may need to sign in again before the roles apply.
 
 When it ends, the member is taken out of the roles it gave them, unless another membership still gives them those roles. Anyone who was in a role before buying stays in it.

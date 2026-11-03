@@ -88,6 +88,7 @@ public static class TelnyxCallEventParser
                 ClientState = ReadClientState(payload),
                 ConferenceId = ReadString(payload, "conference_id"),
                 FailureReason = ReadString(payload, "failure_reason"),
+                CustomHeaders = ReadCustomHeaders(payload),
             };
 
             return !string.IsNullOrWhiteSpace(callEvent.CallControlId);
@@ -96,6 +97,31 @@ public static class TelnyxCallEventParser
         {
             return false;
         }
+    }
+
+    private static List<KeyValuePair<string, string>> ReadCustomHeaders(JsonElement payload)
+    {
+        // An inbound call lists the SIP headers its INVITE carried beyond the standard ones as name and value pairs.
+        var headers = new List<KeyValuePair<string, string>>();
+
+        if (payload.ValueKind != JsonValueKind.Object ||
+            !payload.TryGetProperty("custom_headers", out var list) ||
+            list.ValueKind != JsonValueKind.Array)
+        {
+            return headers;
+        }
+
+        foreach (var header in list.EnumerateArray())
+        {
+            var name = ReadString(header, "name");
+
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                headers.Add(new KeyValuePair<string, string>(name.Trim(), ReadString(header, "value")));
+            }
+        }
+
+        return headers;
     }
 
     private static ProviderCallQualityStats ReadCallQualityStats(JsonElement payload)

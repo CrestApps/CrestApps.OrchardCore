@@ -57,6 +57,87 @@ public static class AIConversationTools
     }
 
     /// <summary>
+    /// The time limit a tool on a phone call gets when it does not set its own: long enough for an ordinary lookup,
+    /// short enough that a caller does not hang up on the silence.
+    /// </summary>
+    public static readonly TimeSpan DefaultCallToolTimeout = TimeSpan.FromSeconds(8);
+
+    /// <summary>
+    /// Puts a time limit on every tool the completion offers but the channel's system tools, which only record a
+    /// decision and return at once.
+    /// </summary>
+    /// <param name="context">The completion context whose tools <see cref="AttachAsync"/> set.</param>
+    /// <param name="timeout">The limit for tools that do not set their own.</param>
+    /// <param name="started">Called with a tool's name when it starts running.</param>
+    /// <param name="finished">Called with a tool's name when it stops running.</param>
+    /// <returns>The entries now offered to the model.</returns>
+    public static IReadOnlyList<ToolRegistryEntry> LimitRunTime(
+        AICompletionContext context,
+        TimeSpan timeout,
+        Action<string> started = null,
+        Action<string> finished = null)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        if (!context.AdditionalProperties.TryGetValue(FunctionInvocationAICompletionServiceHandler.ScopedEntriesKey, out var value) ||
+            value is not IEnumerable<ToolRegistryEntry> current)
+        {
+            return [];
+        }
+
+        // Copies, never the registry's own entries: a registry may hand the same instances to every request.
+        var limited = current
+            .Where(entry => entry is not null)
+            .Select(entry => entry.Source == ToolRegistryEntrySource.System || entry.CreateAsync is null
+                ? entry
+                : Limit(entry, timeout, started, finished))
+            .ToList();
+
+        context.AdditionalProperties[FunctionInvocationAICompletionServiceHandler.ScopedEntriesKey] = limited;
+
+        return limited;
+    }
+
+    /// <summary>
+    /// Replaces the named tools the completion offers with ones that return a fixed result, for simulation tests.
+    /// </summary>
+    /// <param name="context">The completion context whose tools <see cref="AttachAsync"/> set.</param>
+    /// <param name="mockedTools">The result each tool returns, by tool name.</param>
+    public static void Mock(AICompletionContext context, IReadOnlyDictionary<string, string> mockedTools)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        if (mockedTools is not { Count: > 0 } ||
+            !context.AdditionalProperties.TryGetValue(FunctionInvocationAICompletionServiceHandler.ScopedEntriesKey, out var value) ||
+            value is not IEnumerable<ToolRegistryEntry> current)
+        {
+            return;
+        }
+
+        var mocks = new Dictionary<string, string>(mockedTools, StringComparer.OrdinalIgnoreCase);
+
+        context.AdditionalProperties[FunctionInvocationAICompletionServiceHandler.ScopedEntriesKey] = current
+            .Where(entry => entry is not null)
+            .Select(entry => entry.CreateAsync is null || !mocks.TryGetValue(entry.Name ?? string.Empty, out var result)
+                ? entry
+                : new ToolRegistryEntry
+                {
+                    Id = entry.Id,
+                    Name = entry.Name,
+                    Description = entry.Description,
+                    Source = entry.Source,
+                    SourceId = entry.SourceId,
+                    CreateAsync = async serviceProvider =>
+                    {
+                        var tool = await entry.CreateAsync(serviceProvider);
+
+                        return tool is AIFunction function ? new MockedAIFunction(function, result) : tool;
+                    },
+                })
+            .ToList();
+    }
+
+    /// <summary>
     /// Creates a registry entry for a system tool registered as a keyed <see cref="AITool"/>.
     /// </summary>
     /// <param name="toolName">The tool's registered name.</param>
@@ -73,6 +154,28 @@ public static class AIConversationTools
             Description = description,
             Source = ToolRegistryEntrySource.System,
             CreateAsync = serviceProvider => ValueTask.FromResult(serviceProvider.GetKeyedService<AITool>(toolName)),
+        };
+    }
+
+    private static ToolRegistryEntry Limit(ToolRegistryEntry entry, TimeSpan timeout, Action<string> started, Action<string> finished)
+    {
+        var create = entry.CreateAsync;
+
+        return new ToolRegistryEntry
+        {
+            Id = entry.Id,
+            Name = entry.Name,
+            Description = entry.Description,
+            Source = entry.Source,
+            SourceId = entry.SourceId,
+            CreateAsync = async serviceProvider =>
+            {
+                var tool = await create(serviceProvider);
+
+                return tool is AIFunction function and not TimeLimitedAIFunction
+                    ? new TimeLimitedAIFunction(function, timeout, started, finished)
+                    : tool;
+            },
         };
     }
 }

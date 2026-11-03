@@ -1,0 +1,10 @@
+@using CrestApps.Core.AI.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<SpeechVoice>
+
+@if (!string.IsNullOrEmpty(Model.Value.Language))
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-language text-secondary me-1" aria-hidden="true"></i>@Model.Value.Language</span>
+}
+<span class="badge ta-badge fw-normal">@Model.Value.Gender</span>

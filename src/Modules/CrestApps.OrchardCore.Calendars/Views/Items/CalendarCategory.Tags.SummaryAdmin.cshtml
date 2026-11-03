@@ -1,0 +1,10 @@
+@model ShapeViewModel<CalendarCategory>
+
+@if (Model.Value.IsShared)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Who can use it"]"><i class="fa-solid fa-users text-secondary me-1" aria-hidden="true"></i>@T["Everyone"]</span>
+}
+else
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Who can use it"]"><i class="fa-solid fa-user text-secondary me-1" aria-hidden="true"></i>@T["Only you"]</span>
+}

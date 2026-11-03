@@ -1,0 +1,42 @@
+@using Microsoft.AspNetCore.Html
+@model DataConnectorDeploymentStepViewModel
+
+@{
+    var label = (IHtmlContent)ViewData["Label"];
+    var includeAllLabel = (IHtmlContent)ViewData["IncludeAllLabel"];
+    var hint = (IHtmlContent)ViewData["Hint"];
+    var listId = Html.IdFor(m => m.Entries) + "-list";
+}
+
+<div class="ocat-wrapper">
+    <div class="ocat-label">@label</div>
+    <div class="ocat-end">
+        <div class="form-check mb-3">
+            <input class="form-check-input" asp-for="IncludeAll" data-bs-toggle="collapse" data-bs-target="#@listId" aria-expanded="@(Model.IncludeAll ? "false" : "true")" aria-controls="@listId" />
+            <label class="form-check-label" asp-for="IncludeAll">@includeAllLabel</label>
+        </div>
+
+        <div id="@listId" class="collapse@(Model.IncludeAll ? string.Empty : " show")">
+            <div class="hint mb-1">@hint</div>
+            <span asp-validation-for="Entries" class="text-danger"></span>
+
+            @if (Model.Entries.Length == 0)
+            {
+                <div class="alert alert-info mb-3" role="alert">@T["There is nothing to export yet."]</div>
+            }
+            else
+            {
+                <div class="mb-3">
+                    @for (var i = 0; i < Model.Entries.Length; i++)
+                    {
+                        <div class="form-check">
+                            <input type="hidden" asp-for="Entries[i].ItemId" />
+                            <input asp-for="Entries[i].IsSelected" type="checkbox" class="form-check-input" />
+                            <label class="form-check-label" asp-for="Entries[i].IsSelected">@Model.Entries[i].DisplayText</label>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>

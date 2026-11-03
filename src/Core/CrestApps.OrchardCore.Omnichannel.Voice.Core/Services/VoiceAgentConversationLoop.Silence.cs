@@ -61,7 +61,8 @@ public sealed partial class VoiceAgentConversationLoop
         if (activity is null ||
             activity.Status.IsTerminal() ||
             activity.AiEscalated ||
-            activity.TryGet<PendingVoiceHandoff>(out _))
+            activity.TryGet<PendingVoiceHandoff>(out _) ||
+            activity.TryGet<AIAttendedTransfer>(out _))
         {
             return;
         }

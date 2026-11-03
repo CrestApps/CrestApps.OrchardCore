@@ -1,0 +1,152 @@
+@model CalendarEventGeneralViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="ocat-wrapper" asp-validation-class-for="Title">
+    <label asp-for="Title" class="ocat-label ocat-label-required">@T["Title"]</label>
+    <div class="ocat-end">
+        <input asp-for="Title" class="form-control" autofocus />
+        <span asp-validation-for="Title" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="EventType">
+    <label asp-for="EventType" class="ocat-label">@T["Kind of event"]</label>
+    <div class="ocat-end">
+        <select asp-for="EventType" asp-items="Model.EventTypeOptions" class="form-select"></select>
+        <span asp-validation-for="EventType" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="CategoryId" class="ocat-label">@T["Category"]</label>
+    <div class="ocat-end">
+        <select asp-for="CategoryId" asp-items="Model.CategoryOptions" class="form-select" style="max-width: 20rem">
+            <option value="">@T["None"]</option>
+        </select>
+        <span class="hint">@T["Colors the event on the calendar and lets you filter by it."] <a asp-controller="CalendarCategories" asp-action="Index" target="_blank">@T["Manage categories"]</a></span>
+    </div>
+</div>
+
+@if (Model.SupportsAllDay)
+{
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input asp-for="AllDay" class="form-check-input" data-calendar-all-day />
+                <label asp-for="AllDay" class="form-check-label">@T["All day"]</label>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="ocat-wrapper" asp-validation-class-for="StartDate">
+    <label asp-for="StartDate" class="ocat-label ocat-label-required">@T["Starts"]</label>
+    <div class="ocat-end">
+        <div class="input-group" style="max-width: 24rem">
+            <input asp-for="StartDate" type="date" class="form-control" />
+            <input asp-for="StartTime" type="time" class="form-control" data-calendar-time />
+        </div>
+        <span asp-validation-for="StartDate" class="text-danger"></span>
+        <span asp-validation-for="StartTime" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="EndDate">
+    <label asp-for="EndDate" class="ocat-label ocat-label-required">@T["Ends"]</label>
+    <div class="ocat-end">
+        <div class="input-group" style="max-width: 24rem">
+            <input asp-for="EndDate" type="date" class="form-control" />
+            <input asp-for="EndTime" type="time" class="form-control" data-calendar-time />
+        </div>
+        <span asp-validation-for="EndDate" class="text-danger"></span>
+        <span asp-validation-for="EndTime" class="text-danger"></span>
+        <span class="hint">@T["For an all-day event, the last day it lasts."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="TimeZoneId">
+    <label asp-for="TimeZoneId" class="ocat-label">@T["Time zone"]</label>
+    <div class="ocat-end">
+        <select asp-for="TimeZoneId" asp-items="Model.TimeZoneOptions" class="selectpicker show-tick" data-live-search="true"></select>
+        <span class="hint">@T["A repeating event keeps its time of day in this time zone, across daylight saving changes."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Location" class="ocat-label">@T["Location"]</label>
+    <div class="ocat-end">
+        <input asp-for="Location" class="form-control" />
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Status" class="ocat-label">@T["Status"]</label>
+    <div class="ocat-end">
+        <select asp-for="Status" asp-items="Model.StatusOptions" class="form-select" style="max-width: 16rem"></select>
+    </div>
+</div>
+
+@if (Model.RemindersEnabled)
+{
+    <div class="ocat-wrapper">
+        <label asp-for="ReminderMinutes" class="ocat-label">@T["Remind"]</label>
+        <div class="ocat-end">
+            <select asp-for="ReminderMinutes" asp-items="Model.ReminderOptions" class="form-select" style="max-width: 16rem"></select>
+            <span class="hint">@T["Shows a reminder on the screen of the calendar's owner and the users invited, until they dismiss it."]</span>
+        </div>
+    </div>
+}
+
+<div class="ocat-wrapper">
+    <label asp-for="Transparency" class="ocat-label">@T["Show as"]</label>
+    <div class="ocat-end">
+        <select asp-for="Transparency" asp-items="Model.TransparencyOptions" class="form-select" style="max-width: 16rem"></select>
+        <span class="hint">@T["A free event is shown but leaves the time free for other plans."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Visibility" class="ocat-label">@T["Visibility"]</label>
+    <div class="ocat-end">
+        <select asp-for="Visibility" asp-items="Model.VisibilityOptions" class="form-select"></select>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Color" class="ocat-label">@T["Color"]</label>
+    <div class="ocat-end d-flex align-items-center gap-2">
+        <div class="form-check mb-0">
+            <input asp-for="UseColor" class="form-check-input" />
+            <label asp-for="UseColor" class="form-check-label">@T["Use its own color"]</label>
+        </div>
+        <input asp-for="Color" type="color" class="form-control form-control-color" />
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        const allDay = document.querySelector('[data-calendar-all-day]');
+
+        if (!allDay) {
+            return;
+        }
+
+        const sync = function () {
+            document.querySelectorAll('[data-calendar-time]').forEach(function (input) {
+                input.classList.toggle('d-none', allDay.checked);
+            });
+        };
+
+        allDay.addEventListener('change', sync);
+        sync();
+    })();
+</script>

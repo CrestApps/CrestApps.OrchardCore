@@ -256,6 +256,22 @@ public sealed class ExcelReportExportFormat : IReportExportFormat
     {
         if (section.Columns.Count > 0)
         {
+            // The rows that group the columns: each label in the first cell of the columns it spans.
+            foreach (var groupRow in section.HeaderRows ?? [])
+            {
+                var cells = new Row();
+
+                foreach (var groupCell in groupRow?.Cells ?? [])
+                {
+                    for (var position = 0; position < Math.Max(1, groupCell.Span); position++)
+                    {
+                        cells.Append(CreateCell(position == 0 ? groupCell.Label : null, styleRegistry.GetCellFormatIndex(EnsureBold(null))));
+                    }
+                }
+
+                sheetData.Append(cells);
+            }
+
             var headerRow = new Row();
 
             foreach (var column in section.Columns)

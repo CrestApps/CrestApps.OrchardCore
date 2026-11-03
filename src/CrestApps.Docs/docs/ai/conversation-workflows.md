@@ -55,6 +55,8 @@ Automated text threads and turn-based calls call the completion service directly
 | `activity.id`, `contact.id`, `contact.name` | The records the conversation is about |
 | `variables.<name>` | Any conversation variable |
 
+On turn-based calls, `AIConversationTools.LimitRunTime` wraps every tool but the system tools in a `TimeLimitedAIFunction`. A tool gets 8 seconds (`AIConversationTools.DefaultCallToolTimeout`) unless its function sets the `CrestApps.TimeoutSeconds` additional property (`TimeLimitedAIFunction.TimeoutSecondsProperty`; zero means no limit). When the limit passes, the tool's token is cancelled and the model receives a result telling it the tool did not answer, so it can tell the caller. When a tool runs longer than 1.5 seconds, the caller hears one short filler line per turn ("One moment, please.", in the call's language), and the end of that line does not restart listening.
+
 ## Before the conversation starts
 
 `IAIConversationStartingService` runs every `IAIConversationStartingHandler` before a conversation's first message, within a budget of 3 seconds for inbound conversations and 30 seconds for outbound ones. Each handler adds to an `AIConversationStartingResult`: `Variables`, a `ProfileId`, or `Declined` with a `DeclineReason`. Failures and timeouts are logged and the conversation starts anyway.
@@ -69,7 +71,8 @@ The **Workflow** tool-instance source (`WorkflowToolConstants.SourceName`) runs 
 
 1. resolves the instance's declared parameters with `AIToolParameterBinder` (an instance without parameters exposes one `request` string);
 2. starts the workflow in the current request with `IWorkflowManager.StartWorkflowAsync`, correlated to the session;
-3. returns the workflow's `Output` as JSON, `{"status":"accepted"}` when the workflow halted on a blocking activity, or `{"status":"error","message":...}` when it faulted.
+3. sets `CrestApps.TimeoutSeconds` from the instance's **Time limit on calls** (`WorkflowToolSettings.TimeoutSeconds`), when set;
+4. returns the workflow's `Output` as JSON, `{"status":"accepted"}` when the workflow halted on a blocking activity, or `{"status":"error","message":...}` when it faulted.
 
 ## Workflow input
 

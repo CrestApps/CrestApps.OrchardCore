@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Scheduling.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<RescheduleAppointmentTask>
+
+<header><h4><i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Reschedule Appointment"])</h4></header>

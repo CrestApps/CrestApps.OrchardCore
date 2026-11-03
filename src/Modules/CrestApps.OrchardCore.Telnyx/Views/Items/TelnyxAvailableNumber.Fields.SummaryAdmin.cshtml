@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Telnyx.Services
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<TelnyxAvailableNumber>
+
+<span class="fw-semibold font-monospace">@Model.Value.PhoneNumber</span>
+<span class="text-muted ms-2">@Model.Value.Region</span>

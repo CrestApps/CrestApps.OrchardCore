@@ -69,7 +69,7 @@
         <button type="button" id="cadence-step-add" class="btn btn-secondary btn-sm mt-1">@T["Add step"]</button>
         <span asp-validation-for="Steps" class="text-danger d-block"></span>
         <span class="hint">
-            @T["Each step sends one follow-up after its own quiet period, measured from our previous message — the opening message for step 1, or the previous step after that. The clock restarts every time we send, so the delays add up. For example, two steps of 60 send the first follow-up 60 minutes after the opening and the second 60 minutes after that (about two hours in) — two follow-ups in total, not one. Follow-ups stop after the last step, and every one respects the campaign's business hours."]
+            @T["Each step sends one follow-up after its own quiet period, measured from our previous message — the opening message for step 1, or the previous step after that. The clock restarts every time we send, so the delays add up. For example, two steps of 60 send the first follow-up 60 minutes after the opening and the second 60 minutes after that (about two hours in) — two follow-ups in total, not one. Follow-ups stop after the last step, and every one respects the business hours chosen on the activity load."]
         </span>
     </div>
 </div>

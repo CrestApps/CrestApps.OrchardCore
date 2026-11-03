@@ -1,0 +1,52 @@
+@model ShapeViewModel<ConnectedDataSet>
+
+@{
+    var dataSet = Model.Value;
+    var import = dataSet.Import;
+}
+
+<div class="admin-list-secondary">
+    @if (!string.IsNullOrWhiteSpace(dataSet.Description))
+    {
+        <div>@dataSet.Description</div>
+    }
+
+    @if (dataSet.AccessMode == DataSetAccessMode.Live)
+    {
+        <span>@T["{0} fields, read live.", dataSet.Fields.Count(field => field.IsIncluded)]</span>
+    }
+    else if (import?.LastRefreshUtc is null)
+    {
+        <span>@(import?.RefreshRequestedUtc is null ? T["Not imported yet."] : T["The first import is waiting to run."])</span>
+    }
+    else
+    {
+        var statusCssClass = import.LastStatus switch
+        {
+            DataSetRefreshStatus.Succeeded => "bg-success-subtle",
+            DataSetRefreshStatus.Failed => "bg-danger-subtle",
+            DataSetRefreshStatus.Canceled => "bg-warning-subtle",
+            DataSetRefreshStatus.Running => "bg-info-subtle",
+            _ => string.Empty,
+        };
+
+        <span class="badge ta-badge fw-normal @statusCssClass" data-bs-toggle="tooltip" title="@T["Last refresh"]">
+            <i class="fa-solid fa-clock-rotate-left text-secondary me-1" aria-hidden="true"></i>@import.LastStatus
+        </span>
+
+        @if (import.LastSuccessUtc is { } succeeded)
+        {
+            <span>@T["{0} rows from the refresh of {1}.", import.RowCount, await DisplayAsync(await New.Timespan(Utc: succeeded))]</span>
+        }
+
+        @if (import.RefreshRequestedUtc is not null)
+        {
+            <span class="badge ta-badge fw-normal bg-info-subtle"><i class="fa-solid fa-hourglass-half text-secondary me-1" aria-hidden="true"></i>@T["Refresh waiting"]</span>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(import.LastError))
+        {
+            <div class="text-danger mt-1"><i class="fa-solid fa-circle-exclamation me-1" aria-hidden="true"></i>@import.LastError</div>
+        }
+    }
+</div>

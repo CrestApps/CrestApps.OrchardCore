@@ -18,9 +18,13 @@ Every AI assistant on the site is an [AI profile](profiles.md). The chat page le
 
 <AskYourAdmin />
 
-<YouTube video="ai-walkthroughs" title="Video of creating a chat AI profile and chatting with the model" start={46} end={75} />
+<YouTube video="ai-chat" title="Video overview of AI chat" />
+
+The video covers why every assistant needs a chat, how to chat and find past chats, the admin and website chat widgets, the chat engines and how to protect a public assistant.
 
 ## Open an assistant
+
+<YouTube video="ai-chat" title="Video of opening a chat and asking questions" start={108} end={163} />
 
 An assistant appears under **Artificial Intelligence** in the admin menu, by its name, when its profile has **Show on admin menu** turned on. Click its name to open a new chat.
 
@@ -60,6 +64,8 @@ If the assistant creates a picture or a chart, it has a **Download** button.
 Your site may have ready-made prompts, such as "Summarize this conversation". They are AI profiles of type **Template generated prompt** (see [AI profiles](profiles.md#profile-types)). When there are any, a wrench button sits beside the message box. After the chat has started, click the wrench and pick a prompt: the assistant runs it against the current chat and adds the answer to it.
 
 ## Find a past chat
+
+<YouTube video="ai-chat" title="Video of finding and managing past chats" start={163} end={204} />
 
 - The page shows your recent chats in a list on the right (on a wide screen). Click a title to reopen that chat and continue it.
 - Click **Chat History** at the top of the page to see all your chats with the assistant. Type part of a title in **History search** and click **Search** to find one, then click **View** to open it.

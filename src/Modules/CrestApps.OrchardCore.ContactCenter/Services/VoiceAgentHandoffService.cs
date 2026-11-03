@@ -22,7 +22,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Services;
 /// reservation, and voicemail handling all apply. The live call is represented by a Contact Center interaction
 /// carrying the provider call identifier so the offer/connect pipeline can bridge an agent onto it.
 /// </summary>
-public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
+public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService, IOmnichannelHandoffAvailability
 {
     private readonly IInteractionManager _interactionManager;
     private readonly IOmnichannelActivityManager _activityManager;
@@ -80,6 +80,30 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
     /// <inheritdoc/>
     public bool CanHandle(string channel)
         => string.Equals(channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase);
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// A closed queue books a callback only when the callback service is a real one: without the Dialer it is
+    /// <see cref="NoCallbackService"/>, which books nothing, and the handoff would end the call with no callback.
+    /// </remarks>
+    public async Task<HandoffAvailability> GetAvailabilityAsync(string queueId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(queueId) ||
+            await IsOpenAsync(await _queueManager.FindByIdAsync(queueId.Trim(), cancellationToken), cancellationToken))
+        {
+            return HandoffAvailability.Open;
+        }
+
+        return _callbackService is NoCallbackService
+            ? HandoffAvailability.Unavailable
+            : HandoffAvailability.CallbackOnly;
+    }
+
+    // Closed only when the queue keeps hours and they are not now: a queue that is missing, or keeps no hours, takes calls.
+    private async Task<bool> IsOpenAsync(ActivityQueue queue, CancellationToken cancellationToken)
+        => queue is null ||
+            string.IsNullOrWhiteSpace(queue.BusinessHoursCalendarId) ||
+            await _businessHoursGate.IsOpenAsync(queue.BusinessHoursCalendarId, _clock.UtcNow, timeZoneId: null, cancellationToken);
 
     /// <inheritdoc/>
     public async Task<OmnichannelHandoffResult> RequestHandoffAsync(OmnichannelHandoffRequest request, CancellationToken cancellationToken = default)
@@ -159,16 +183,11 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
         // waiting or hanging up bluntly.
         var queue = targetAgentId is null ? await _queueManager.FindByIdAsync(queueId, cancellationToken) : null;
 
-        if (queue is not null && !string.IsNullOrWhiteSpace(queue.BusinessHoursCalendarId))
+        if (!await IsOpenAsync(queue, cancellationToken))
         {
-            var open = await _businessHoursGate.IsOpenAsync(queue.BusinessHoursCalendarId, _clock.UtcNow, timeZoneId: null, cancellationToken);
+            await ScheduleAfterHoursCallbackAsync(activity, queueId, cancellationToken);
 
-            if (!open)
-            {
-                await ScheduleAfterHoursCallbackAsync(activity, queueId, cancellationToken);
-
-                return OmnichannelHandoffResult.CallbackScheduled("The destination queue is closed; a callback was scheduled.");
-            }
+            return OmnichannelHandoffResult.CallbackScheduled("The destination queue is closed; a callback was scheduled.");
         }
 
         // The live call needs a Contact Center interaction so the offer/connect pipeline can bridge an agent onto

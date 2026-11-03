@@ -9,32 +9,6 @@ using OrchardCore.Workflows.Models;
 namespace CrestApps.OrchardCore.AI.Workflows.Models;
 
 /// <summary>
-/// How a metric is compared with the threshold.
-/// </summary>
-public enum AIConversationAlertCondition
-{
-    /// <summary>
-    /// The value is above the threshold.
-    /// </summary>
-    Above,
-
-    /// <summary>
-    /// The value is below the threshold.
-    /// </summary>
-    Below,
-
-    /// <summary>
-    /// The value rose by more than the threshold, in percent, from the window before.
-    /// </summary>
-    RisesByPercent,
-
-    /// <summary>
-    /// The value fell by more than the threshold, in percent, from the window before.
-    /// </summary>
-    FallsByPercent,
-}
-
-/// <summary>
 /// Measures an AI conversation metric over the last window and compares it with a threshold. Started by a timer,
 /// it opens an alert the first time the threshold is crossed and resolves it when the metric is back, so the
 /// workflow notifies once at each change.
@@ -211,30 +185,5 @@ public sealed class CheckConversationMetricTask : TaskActivity<CheckConversation
         AIConversationMetricValue current,
         AIConversationMetricValue previous,
         int minimumSampleSize)
-    {
-        if (current?.Value is not double value || current.SampleSize < Math.Max(0, minimumSampleSize))
-        {
-            return false;
-        }
-
-        switch (condition)
-        {
-            case AIConversationAlertCondition.Above:
-                return value > threshold;
-
-            case AIConversationAlertCondition.Below:
-                return value < threshold;
-        }
-
-        if (previous?.Value is not double before || before == 0)
-        {
-            return false;
-        }
-
-        var change = (value - before) / Math.Abs(before) * 100;
-
-        return condition == AIConversationAlertCondition.RisesByPercent
-            ? change > threshold
-            : -change > threshold;
-    }
+        => AIConversationAlerts.IsCrossed(condition, threshold, current, previous, minimumSampleSize);
 }
