@@ -267,6 +267,17 @@ public class WorkOrderTypeEditViewModel
     public IList<SelectListItem> CertificationOptions { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the appointment types whose bookings make a work order of this type.
+    /// </summary>
+    public List<string> AppointmentTypeIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the appointment types to choose from, when Scheduling is on.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> AppointmentTypeOptions { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the lines every work order of the type starts with.
     /// </summary>
     public List<LineEditModel> Lines { get; set; } = [];
@@ -527,6 +538,11 @@ public class WorkOrderEditViewModel
     /// Gets or sets the minutes the job should take.
     /// </summary>
     public int EstimatedMinutes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the CRM contact the work order is for, such as the contact it was started from.
+    /// </summary>
+    public string ContactId { get; set; }
 
     /// <summary>
     /// Gets or sets the contact's name.

@@ -99,6 +99,11 @@ public sealed class WorkOrderType : CatalogItem
     public bool RequiresSignature { get; set; }
 
     /// <summary>
+    /// Gets or sets the Scheduling appointment types whose bookings make a work order of this type.
+    /// </summary>
+    public List<string> AppointmentTypeIds { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets how many photos it can't be completed without.
     /// </summary>
     public int RequiredPhotos { get; set; }

@@ -71,6 +71,12 @@ When the work order is in progress, select **Complete**. If something is missing
 
 To come back for more work, enter what it is for under **Follow-up** and select **Create follow-up**. The new work order is for the same customer, place and assets, and links back to this one.
 
+## From bookings, calls and contacts
+
+- **Bookings.** On a work order type, under **Bookings**, tick the appointment types whose bookings should make a work order of that type. Each confirmed booking then makes one, at the booked time and for the customer who booked; moving the booking moves the work order, and canceling it cancels the work order.
+- **Calls and messages.** In an Interaction Center subject flow, add the **Create Work Order** action to a disposition and choose the type. When an agent chooses that disposition, a work order is made for the contact, with the agent's notes, once per activity.
+- **Contacts.** A contact's page lists their work orders. **New work order** starts one for them, with their name filled in.
+
 ## Recurring visits with a service agreement
 
 A service agreement makes the work orders of a customer's recurring visits, such as a furnace service every six months.

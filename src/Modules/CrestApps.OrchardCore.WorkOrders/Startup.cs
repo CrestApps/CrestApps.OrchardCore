@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.WorkOrders.ViewModels;
 using CrestApps.OrchardCore.WorkOrders.Workflows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Localization;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -131,5 +132,53 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddActivity<WorkOrderSlaWarningEvent, WorkOrderEventActivityDisplayDriver<WorkOrderSlaWarningEvent>>();
         services.AddActivity<WorkOrderSlaBreachedEvent, WorkOrderEventActivityDisplayDriver<WorkOrderSlaBreachedEvent>>();
         services.AddActivity<WorkOrderCompletedEvent, WorkOrderEventActivityDisplayDriver<WorkOrderCompletedEvent>>();
+    }
+}
+
+/// <summary>
+/// Adds the Create work order subject action to Omnichannel dispositions.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.Omnichannel.Managements")]
+public sealed class OmnichannelStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OmnichannelStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public OmnichannelStartup(IStringLocalizer<OmnichannelStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<global::CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectActionHandler, Integrations.CreateWorkOrderSubjectActionHandler>();
+        services.AddScoped<global::OrchardCore.ContentManagement.Display.ContentDisplay.IContentDisplayDriver, Integrations.ContactWorkOrdersDisplayDriver>();
+        services.AddDisplayDriver<global::CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction, Integrations.CreateWorkOrderSubjectActionDisplayDriver>();
+        services.Configure<global::CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectActionOptions>(options =>
+        {
+            options.AddActionType(Integrations.WorkOrderSubjectActions.CreateWorkOrder, entry =>
+            {
+                entry.DisplayName = S["Create Work Order"];
+                entry.Description = S["Makes a work order of the chosen type for the activity's contact, with the activity's notes, once per activity."];
+            });
+        });
+    }
+}
+
+/// <summary>
+/// Makes work orders from Scheduling bookings of the appointment types a work order type names.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.Scheduling")]
+public sealed class SchedulingStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IWorkOrderLookup, Integrations.SchedulingWorkOrderLookup>();
+        services.AddScoped<global::CrestApps.OrchardCore.Scheduling.Services.IAppointmentObserver, Integrations.AppointmentWorkOrderObserver>();
     }
 }

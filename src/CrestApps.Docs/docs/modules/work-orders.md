@@ -77,6 +77,19 @@ The **Service Agreements** feature keeps recurring visits, such as preventive ma
 
 Each can be limited to some work order types. Every event's input has `WorkOrderId`, `Number`, `TypeId`, `Status`, `Priority`, `Summary`, `CustomerId` and `TerritoryId`.
 
+## Bookings, dispositions and contacts
+
+Work Orders links up with three other features when they are on.
+
+- **Scheduling** (`CrestApps.OrchardCore.Scheduling`). A work order type lists, under **Bookings**, the appointment types whose bookings make work orders of it (`WorkOrderType.AppointmentTypeIds`). An `IAppointmentObserver` (`AppointmentWorkOrderObserver`) acts on each confirmed booking of one of those types, after it is saved:
+  - it makes a work order with the appointment type's name as its summary, the customer's name, phone and email as the contact, the booking's notes as the description, and the booked time as its earliest and latest time (source `Appointment`, the booking's id), once per booking;
+  - rescheduling moves the work order's window and adds a note;
+  - canceling cancels the work order, with the booking's reason.
+
+  The type editor lists the appointment types through `IWorkOrderLookup.AppointmentTypesAsync`.
+- **Omnichannel Management** (`CrestApps.OrchardCore.Omnichannel.Managements`). The **Create Work Order** subject action (`CreateWorkOrder`) makes a work order of the chosen type, and optionally priority, when its disposition is chosen. The work order has the activity's contact, the notes' first line as its summary, the whole notes as the description, and the number the activity reached as the contact phone. It is made once per activity (source `Activity`, the activity's id); Dispatch then gives it a visit.
+- **Contacts.** A CRM contact's page (any content item with `OmnichannelContactPart`) shows a **Work orders** card with the contact's latest ten work orders and a **New work order** menu of types. A work order started there keeps the contact (`ContactId`, a hidden field of the editor, and the contact's name).
+
 ## Extending
 
 - `IWorkOrderHandler`: change a work order before it is created or saved.

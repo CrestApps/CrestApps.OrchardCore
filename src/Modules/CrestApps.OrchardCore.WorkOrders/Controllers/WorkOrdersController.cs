@@ -179,9 +179,11 @@ public sealed class WorkOrdersController : Controller
     /// Shows the editor for a new work order of a type.
     /// </summary>
     /// <param name="typeId">The type.</param>
+    /// <param name="contactId">The CRM contact it is for, when started from the contact's page.</param>
+    /// <param name="contactName">The contact's name.</param>
     /// <returns>The page.</returns>
     [Admin("work-orders/new/{typeId}", "WorkOrdersNew")]
-    public async Task<IActionResult> New(string typeId)
+    public async Task<IActionResult> New(string typeId, string contactId = null, string contactName = null)
     {
         if (!await _authorizationService.AuthorizeAsync(User, WorkOrdersPermissions.ManageWorkOrders))
         {
@@ -194,6 +196,9 @@ public sealed class WorkOrdersController : Controller
         {
             return NotFound();
         }
+
+        workOrder.ContactId = string.IsNullOrWhiteSpace(contactId) ? null : contactId.Trim();
+        workOrder.Contact.Name ??= string.IsNullOrWhiteSpace(contactName) ? null : contactName.Trim();
 
         var model = await ToEditModelAsync(workOrder);
 
@@ -559,6 +564,7 @@ public sealed class WorkOrdersController : Controller
             Description = workOrder.Description,
             Priority = workOrder.Priority,
             EstimatedMinutes = workOrder.EstimatedMinutes,
+            ContactId = workOrder.ContactId,
             ContactName = workOrder.Contact?.Name,
             ContactPhone = workOrder.Contact?.Phone,
             ContactEmail = workOrder.Contact?.Email,
@@ -584,6 +590,7 @@ public sealed class WorkOrdersController : Controller
         workOrder.Description = string.IsNullOrWhiteSpace(form.Description) ? null : form.Description.Trim();
         workOrder.Priority = form.Priority;
         workOrder.EstimatedMinutes = Math.Max(0, form.EstimatedMinutes);
+        workOrder.ContactId = Clean(form.ContactId);
         workOrder.Contact = new WorkOrderContact { Name = Clean(form.ContactName), Phone = Clean(form.ContactPhone), Email = Clean(form.ContactEmail) };
         workOrder.AccessNotes = Clean(form.AccessNotes);
         workOrder.EarliestUtc = form.Earliest is { } earliest ? await _localClock.ConvertToUtcAsync(earliest) : null;

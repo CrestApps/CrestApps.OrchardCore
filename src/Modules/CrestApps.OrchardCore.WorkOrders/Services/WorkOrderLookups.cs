@@ -36,6 +36,13 @@ public interface IWorkOrderLookup
     Task<IReadOnlyList<SelectListItem>> LocationsAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<SelectListItem>>([]);
 
     /// <summary>
+    /// Lists the Scheduling appointment types whose bookings can make work orders.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The appointment types.</returns>
+    Task<IReadOnlyList<SelectListItem>> AppointmentTypesAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<SelectListItem>>([]);
+
+    /// <summary>
     /// Lists the skills a job can need.
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>
@@ -172,6 +179,13 @@ public sealed class WorkOrderLookups
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The options.</returns>
     public Task<List<SelectListItem>> LocationsAsync(CancellationToken cancellationToken = default) => AllAsync(lookup => lookup.LocationsAsync(cancellationToken));
+
+    /// <summary>
+    /// Lists the appointment types.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The appointment types.</returns>
+    public Task<List<SelectListItem>> AppointmentTypesAsync(CancellationToken cancellationToken = default) => AllAsync(lookup => lookup.AppointmentTypesAsync(cancellationToken));
 
     /// <summary>
     /// Lists the skills a job can need.
