@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.Accounts;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
 using CrestApps.OrchardCore.TimeZones;
@@ -69,6 +70,9 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         OmnichannelConstants.Features.Managements,
+
+        // Accounts are the Accounts feature's content type; the CRM puts contacts and opportunities in them.
+        AccountsConstants.Feature,
         "OrchardCore.ContentFields",
         "OrchardCore.Lists",
         "OrchardCore.Title",

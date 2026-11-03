@@ -49,6 +49,7 @@ Open **Messaging > Inbox**. The left side lists your customers, most recent firs
 
 Open a conversation to read the thread. At the top:
 
+- The header shows the customer's name and their own number. When the conversation is linked to a contact or a lead, the name opens that record and a **Contact** or **Lead** badge says which it is. **Our number** under the header is the number the conversation runs on.
 - **Claim** makes you the owner and removes it from the shared inbox. Replying to a conversation nobody holds claims it for you too. Replying never takes a conversation from an agent who already holds it.
 - **Transfer** hands it to a person or back to a queue. See [Transfer a conversation](#transfer-a-conversation).
 - **Close** or **Mark spam** finishes it; **Reopen** brings it back.
@@ -58,7 +59,7 @@ This screencast opens the **Unassigned** view, claims a conversation, closes it 
 
 <YouTube video="messaging-inbox" title="Video of closing, marking spam and reopening a conversation" start={180} end={211} />
 
-In the composer, type your reply and press **Enter** to send (**Shift+Enter** adds a line). **Insert a canned response...** fills in a [template](#templates). A counter shows the characters left when the channel has a limit. On a wide screen, the side panel on the right (hidden below about 1200 pixels of width) has the **Customer** card, which lists every contact record that matches the customer's address, with **View account** for the linked contact, or says that no contact record matches. An **AI summary** of the thread appears there only after an AI conversation was handed to a person.
+In the composer, type your reply and press **Enter** to send (**Shift+Enter** adds a line). **Insert a canned response...** fills in a [template](#templates). A counter shows the characters left when the channel has a limit. On a wide screen, the side panel on the right (hidden below about 1200 pixels of width) has the **Customer** card, which lists every contact and lead that matches the customer's address, with **View account** for a contact and **View lead** for a lead, or says that none matches. An **AI summary** of the thread appears there only after an AI conversation was handed to a person.
 
 When the AI was handling a customer's texts and hands the conversation to a person, the whole AI conversation is copied into the thread, so you see every message the customer and the AI exchanged, in order.
 

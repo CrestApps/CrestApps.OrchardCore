@@ -1,0 +1,104 @@
+namespace CrestApps.OrchardCore.Accounts
+{
+    public sealed class AccountsAdminMenuOptions
+    {
+        public AccountsAdminMenuOptions() { }
+        public bool ShowAccountsMenu { get; set; }
+    }
+    public static class AccountsConstants
+    {
+        public const string Feature = "CrestApps.OrchardCore.Accounts";
+        public const string LocationsFeature = "CrestApps.OrchardCore.Accounts.Locations";
+        public const string MembersFeature = "CrestApps.OrchardCore.Accounts.Members";
+        public static class ContentParts
+        {
+            public const string Account = "AccountPart";
+            public const string List = "ListPart";
+            public const string Locations = "AccountLocationsPart";
+            public const string Members = "AccountMembersPart";
+        }
+        public static class ContentTypes
+        {
+            public const string Account = "Account";
+        }
+        public static class RouteNames
+        {
+            public const string Search = "CrestApps.Accounts.Search";
+        }
+    }
+}
+namespace CrestApps.OrchardCore.Accounts.Models
+{
+    public sealed class AccountLocation
+    {
+        public AccountLocation() { }
+        public CrestApps.OrchardCore.Addresses.Models.Address Address { get; set; }
+        public string LocationId { get; set; }
+        public string Name { get; set; }
+    }
+    public sealed class AccountLocationsPart : OrchardCore.ContentManagement.ContentPart
+    {
+        public AccountLocationsPart() { }
+        public System.Collections.Generic.List<CrestApps.OrchardCore.Accounts.Models.AccountLocation> Locations { get; set; }
+        public CrestApps.OrchardCore.Accounts.Models.AccountLocation FindLocation(string locationId) { }
+    }
+    public sealed class AccountMember
+    {
+        public AccountMember() { }
+        public string ContactContentItemId { get; set; }
+        public string Email { get; set; }
+        public CrestApps.OrchardCore.Accounts.Models.AccountMemberRole Role { get; set; }
+        public string UserId { get; set; }
+        public string UserName { get; set; }
+    }
+    public enum AccountMemberRole
+    {
+        Member = 0,
+        Admin = 1,
+    }
+    public sealed class AccountMembersPart : OrchardCore.ContentManagement.ContentPart
+    {
+        public AccountMembersPart() { }
+        public System.Collections.Generic.List<CrestApps.OrchardCore.Accounts.Models.AccountMember> Members { get; set; }
+        public CrestApps.OrchardCore.Accounts.Models.AccountMember FindMember(string userId) { }
+    }
+    public sealed class AccountPart : OrchardCore.ContentManagement.ContentPart
+    {
+        public AccountPart() { }
+    }
+    public sealed class AccountPartSettings
+    {
+        public AccountPartSettings() { }
+        public string[] OfferedContentTypes { get; set; }
+    }
+}
+namespace CrestApps.OrchardCore.Accounts.Services
+{
+    public static class AccountRecordKinds
+    {
+        public static bool HasPart(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition, string partName) { }
+        public static bool IsAccount(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition) { }
+    }
+    public interface IAccountChildTypeRule
+    {
+        bool CanBelongToAccount(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition);
+        bool MustNotBelongToAccount(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition);
+    }
+    public interface IAccountContactFinder
+    {
+        System.Threading.Tasks.Task<string> FindContactByEmailAsync(string accountId, string email, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IAccountContentTypeProvider
+    {
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition>> GetAccountTypesAsync();
+        bool IsAccountChildType(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition);
+        System.Threading.Tasks.Task<bool> IsAccountChildTypeAsync(string contentType);
+        System.Threading.Tasks.Task<bool> IsAccountTypeAsync(string contentType);
+        bool IsExcludedFromAccounts(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition);
+    }
+    public interface IAccountMemberService
+    {
+        System.Threading.Tasks.Task<OrchardCore.ContentManagement.ContentItem> FindAccountAsync(string userId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<string> FindOtherAccountIdAsync(string userId, string exceptAccountId, System.Threading.CancellationToken cancellationToken = default);
+    }
+}

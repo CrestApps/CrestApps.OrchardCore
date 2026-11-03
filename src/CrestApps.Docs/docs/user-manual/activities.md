@@ -23,7 +23,7 @@ An **activity** is one piece of work for one contact: a call to make, a text to 
 
 <YouTube video="contact-center-agent-walkthroughs" title="Video of an agent opening their activity list, completing an activity and picking a disposition" start={532} end={555} />
 
-**Interaction Center > Activities** lists the manual activities assigned to you that are not started yet, with the activity scheduled furthest ahead first. Each row shows the contact, the number or address, the channel, the attempt number, when it is scheduled, and the contact's **current local time**, so you know whether it is a good time to call. Hover over the local time to see the contact's full local date and time zone.
+**Interaction Center > Activities** lists the manual activities assigned to you that are not started yet, with the activity scheduled furthest ahead first. Each row shows the contact, the number or address, the channel, the attempt number, when it is scheduled, and the contact's **current local time**, so you know whether it is a good time to call. From the second attempt on, it also shows the disposition the previous attempt ended with, such as **No Answer**. Hover over the local time to see the contact's full local date and time zone.
 
 Each row also says who will handle the activity: whether it is **Manual** or **Automated (AI)** work and where it came from (for example *Automatic*, *Preview dialer*, *Callback* or *Inbound*), the **AI profile** that will hold an automated conversation, the **dialer profile** that will dial it, its **campaign**, and the user it is **assigned to**. Badges only appear when the activity has that information. Hover over a badge to see what it stands for.
 

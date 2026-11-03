@@ -190,6 +190,14 @@
 			acceptButton.__restingHtml = void 0;
 		}
 	}
+	function readOfferRefusal(response) {
+		if (!response || response.ok !== false || typeof response.json !== "function") return Promise.resolve(null);
+		return response.json().then(function(body) {
+			return body && typeof body.reason === "string" && body.reason ? body.reason : null;
+		}, function() {
+			return null;
+		});
+	}
 	function withOfferAcceptTimeout(promise) {
 		return new Promise(function(resolve, reject) {
 			var timer = setTimeout(function() {
@@ -359,6 +367,7 @@
 			var state = null;
 			var serverOffsetMs = 0;
 			var activeSignature = null;
+			var barNotice = null;
 			var connectionStatus = null;
 			var lastOfferReservationId = null;
 			var poppedStorage = readSessionStorage();
@@ -415,7 +424,7 @@
 						autoOpenedWorkId = workKey;
 						collapsed = false;
 					}
-				} else if (!(state && (state.offer || state.activeInteraction || state.pendingDial))) {
+				} else if (!(state && (state.offer || state.activeInteraction || state.pendingDial)) && !barNotice) {
 					autoOpenedWorkId = null;
 					collapsed = true;
 				}
@@ -513,7 +522,9 @@
 				var offer = state.offer;
 				var active = state.activeInteraction;
 				var pendingDial = state.pendingDial;
+				if (barNotice && offer && offer.reservationId !== barNotice.reservationId) barNotice = null;
 				var signature = [
+					barNotice ? barNotice.message : "",
 					status,
 					reason || "",
 					offer ? offer.reservationId : "",
@@ -525,7 +536,7 @@
 				activeSignature = signature;
 				logActiveChange(active);
 				logPendingDialChange(pendingDial);
-				inner.innerHTML = "<div class=\"cc-agent-bar__top\">" + renderPresence(status) + renderTail() + "</div>" + renderPhoneMissing() + "<div class=\"cc-bar__context\" data-cc-context>" + renderContext(offer, active, pendingDial) + "</div>";
+				inner.innerHTML = "<div class=\"cc-agent-bar__top\">" + renderPresence(status) + renderTail() + "</div>" + renderPhoneMissing() + renderBarNotice() + "<div class=\"cc-bar__context\" data-cc-context>" + renderContext(offer, active, pendingDial) + "</div>";
 				bindEvents();
 			}
 			function isPhoneMissing() {
@@ -535,6 +546,26 @@
 				if (!isPhoneMissing()) return "";
 				var link = config.softPhoneUrl ? " <a class=\"cc-bar__open-phone\" href=\"" + escapeHtml(config.softPhoneUrl) + "\" target=\"_blank\" rel=\"noopener\"><i class=\"fa-solid fa-phone\" aria-hidden=\"true\"></i> " + escapeHtml(label("openPhone", "Open the phone")) + "</a>" : "";
 				return "<div class=\"cc-bar__no-phone\" role=\"alert\" data-cc-no-phone>" + escapeHtml(label("noPhoneOpen", "You are signed in to take calls, but no phone of yours is open, so calls cannot reach you.")) + link + "</div>";
+			}
+			function renderBarNotice() {
+				if (!barNotice) return "";
+				var dismissTitle = label("dismiss", "Dismiss");
+				return "<div class=\"cc-bar__notice small\" role=\"alert\" data-cc-notice><span>" + escapeHtml(barNotice.message) + "</span><button type=\"button\" class=\"btn-close\" data-cc-notice-dismiss title=\"" + escapeHtml(dismissTitle) + "\" aria-label=\"" + escapeHtml(dismissTitle) + "\"></button></div>";
+			}
+			function showBarNotice(message, reservationId) {
+				var next = message ? {
+					message,
+					reservationId: reservationId || null
+				} : null;
+				if ((barNotice ? barNotice.message : null) === (next ? next.message : null)) {
+					barNotice = next;
+					return;
+				}
+				barNotice = next;
+				activeSignature = null;
+				if (next) collapsed = false;
+				syncBarState();
+				renderBar();
 			}
 			function renderPresence(status) {
 				return "<div class=\"cc-bar__presence\" data-cc-presence><span class=\"cc-bar__presence-chip\" title=\"" + escapeHtml(label("presenceReadonly", "Change your status from the soft phone")) + "\"><span class=\"cc-bar__dot is-" + escapeHtml(status.toLowerCase()) + "\"></span><span class=\"cc-bar__presence-label\">" + escapeHtml(presenceText()) + "</span></span></div>";
@@ -602,6 +633,10 @@
 			}
 			function bindEvents() {
 				var collapseButton = inner.querySelector("[data-cc-collapse]");
+				var noticeDismiss = inner.querySelector("[data-cc-notice-dismiss]");
+				if (noticeDismiss) noticeDismiss.addEventListener("click", function() {
+					showBarNotice(null);
+				});
 				if (collapseButton) collapseButton.addEventListener("click", function() {
 					setCollapsed(true);
 				});
@@ -631,16 +666,19 @@
 					dialing: label("dialing", "Dialing…")
 				};
 				showOfferError(null);
+				showBarNotice(null);
 				showOfferAccepting(offer, {
 					pending: true,
 					preview: offerState.preview
 				}, offerLabels);
 				withOfferAcceptTimeout(post(config.acceptOfferUrl, config.antiForgeryToken, { reservationId })).then(function(response) {
-					return refresh().then(function() {
-						if (response && response.ok === false) showOfferError(label("acceptFailed", "The call could not be answered. It may have been taken or re-offered."));
+					return readOfferRefusal(response).then(function(reason) {
+						return refresh().then(function() {
+							if (response && response.ok === false) showOfferError(reason || label("acceptFailed", "The call could not be answered. It may have been taken or re-offered."), reservationId);
+						});
 					});
 				}).catch(function(error) {
-					showOfferError(error && error.offerAcceptTimedOut ? label("acceptTimedOut", "The call is taking too long to connect. Check your soft phone, then try again.") : label("acceptFailed", "The call could not be answered. It may have been taken or re-offered."));
+					showOfferError(error && error.offerAcceptTimedOut ? label("acceptTimedOut", "The call is taking too long to connect. Check your soft phone, then try again.") : label("acceptFailed", "The call could not be answered. It may have been taken or re-offered."), reservationId);
 				}).finally(function() {
 					showOfferAccepting(inner.querySelector("[data-cc-offer]"), {
 						pending: false,
@@ -648,10 +686,14 @@
 					}, offerLabels);
 				});
 			}
-			function showOfferError(message) {
+			function showOfferError(message, reservationId) {
 				var offer = inner.querySelector("[data-cc-offer]");
 				var existing = offer ? offer.querySelector("[data-cc-offer-error]") : null;
 				if (existing) existing.remove();
+				if (!offer && message) {
+					showBarNotice(message, reservationId);
+					return;
+				}
 				if (offer && message) {
 					var error = document.createElement("div");
 					error.className = "cc-bar__offer-error text-danger small";

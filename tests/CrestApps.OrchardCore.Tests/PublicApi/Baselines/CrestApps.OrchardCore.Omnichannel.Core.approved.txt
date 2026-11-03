@@ -48,7 +48,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
         }
         public static class ContentParts
         {
-            public const string Account = "AccountPart";
             public const string Contained = "ContainedPart";
             public const string EmailInfo = "EmailInfoPart";
             public const string Lead = "LeadPart";
@@ -60,7 +59,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
         }
         public static class ContentTypes
         {
-            public const string Account = "Account";
             public const string EmailAddress = "EmailAddress";
             public const string LeadSource = "LeadSource";
             public const string PhoneNumber = "PhoneNumber";
@@ -309,15 +307,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes
 }
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models
 {
-    public sealed class AccountPart : OrchardCore.ContentManagement.ContentPart
-    {
-        public AccountPart() { }
-    }
-    public sealed class AccountPartSettings
-    {
-        public AccountPartSettings() { }
-        public string[] OfferedContentTypes { get; set; }
-    }
     public enum ActivityAssignmentStatus
     {
         Unassigned = 0,
@@ -968,6 +957,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public int? MaxAttempts { get; set; }
         public string Notes { get; set; }
         public string PreferredDestination { get; set; }
+        public string PreviousDispositionId { get; set; }
         public int ProcessingAttempts { get; set; }
         public System.DateTime? PurgedAtUtc { get; set; }
         public string PurgedById { get; set; }

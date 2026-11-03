@@ -102,6 +102,33 @@ public sealed class ContactCenterSoftPhonePacedDialTests
         harness.Store.Verify(store => store.CreateAsync(It.IsAny<TelephonyInteraction>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Theory]
+    [InlineData(ContactCenterConstants.Events.AgentLegAnswered)]
+    [InlineData(ContactCenterConstants.Events.CallEnded)]
+    public async Task APowerDialWhoseJoinedMarkWasLost_StillReachesTheAgentsRecentCalls_WhenTheirLegAnswered(string eventType)
+    {
+        // Arrange
+        var interaction = CreateDialerInteraction(InteractionStatus.Connected);
+        var session = CreateSession(VoiceCallState.Connected, hangupCause: null);
+        session.Legs.Add(new CallLeg
+        {
+            ProviderLegId = "agent-leg-1",
+            Role = CallPartyRole.Agent,
+            AgentId = "agent-1",
+            AnsweredUtc = new DateTime(2026, 10, 7, 18, 0, 5, DateTimeKind.Utc),
+        });
+        var harness = new Harness(interaction, session, ActivitySources.PowerDial);
+
+        // Act
+        await harness.Handler.HandleAsync(CreateEvent(eventType), TestContext.Current.CancellationToken);
+
+        // Assert
+        harness.Client.Verify(client => client.CallStateChanged(It.Is<TelephonyCall>(call => call.CallId == "call-1")), Times.Once);
+        harness.Store.Verify(
+            store => store.CreateAsync(It.Is<TelephonyInteraction>(row => row.UserId == "user-1" && row.CallId == "call-1"), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     [Fact]
     public async Task AnInboundAgentLegAnswer_IsNotProjected_SinceTheCallsOwnEventsAlreadyCarryIt()
     {

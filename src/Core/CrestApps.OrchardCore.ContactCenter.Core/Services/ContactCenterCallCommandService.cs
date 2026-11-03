@@ -169,9 +169,19 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
 
                 if (profile is not null)
                 {
-                    return await _dialerAttemptService.TryDialAsync(profile, reservation, cancellationToken)
-                        ? CallCommandResult.Success("The outbound call was started.", requiresDeviceAnswer: false)
-                        : CallCommandResult.Failure("The outbound call could not be started.");
+                    var attempt = await _dialerAttemptService.DialAsync(profile, reservation, cancellationToken);
+
+                    if (attempt.Started)
+                    {
+                        return CallCommandResult.Success("The outbound call was started.", requiresDeviceAnswer: false);
+                    }
+
+                    // The agent clicked Call and nothing rang: without the compliance reason (a number on a
+                    // do-not-call registry, say) they could not tell a refused call from a broken phone.
+                    return CallCommandResult.Failure(
+                        string.IsNullOrEmpty(attempt.Suppression?.Description)
+                            ? "The outbound call could not be started."
+                            : attempt.Suppression.Description);
                 }
             }
 
