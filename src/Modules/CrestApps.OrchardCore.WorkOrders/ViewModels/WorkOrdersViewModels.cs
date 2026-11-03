@@ -560,12 +560,12 @@ public class WorkOrderEditViewModel
     public string CustomerId { get; set; }
 
     /// <summary>
-    /// Gets or sets the company the work order is for.
+    /// Gets or sets the CRM account the work order is for.
     /// </summary>
-    public string CompanyId { get; set; }
+    public string AccountId { get; set; }
 
     /// <summary>
-    /// Gets or sets the pickers shown, by kind (Customer, Company and Contact), with the current choice's name.
+    /// Gets or sets the pickers shown, by kind (Customer, Account and Contact), with the current choice's name.
     /// </summary>
     [BindNever]
     public Dictionary<string, string> CustomerPickers { get; set; } = new(StringComparer.Ordinal);
@@ -685,7 +685,7 @@ public class WorkOrderDetailsViewModel
     public WorkOrder WorkOrder { get; set; }
 
     /// <summary>
-    /// Gets or sets the names of the work order's customer, company and CRM contact, by kind, when known.
+    /// Gets or sets the names of the work order's customer, CRM account and CRM contact, by kind, when known.
     /// </summary>
     public Dictionary<string, string> CustomerNames { get; set; } = new(StringComparer.Ordinal);
 

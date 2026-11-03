@@ -194,7 +194,7 @@ internal static partial class FieldServiceApiEndpoints
         workOrder.Description = input.Description;
         workOrder.Priority = input.Priority ?? workOrder.Priority;
         workOrder.CustomerId = input.CustomerId;
-        workOrder.CompanyId = input.CompanyId;
+        workOrder.AccountId = input.AccountId;
         workOrder.ContactId = input.ContactId;
         workOrder.Contact = input.Contact ?? workOrder.Contact;
         workOrder.ServiceAddress = input.ServiceAddress ?? workOrder.ServiceAddress;
@@ -545,7 +545,7 @@ internal sealed class WorkOrderInput
 
     public string CustomerId { get; set; }
 
-    public string CompanyId { get; set; }
+    public string AccountId { get; set; }
 
     public string ContactId { get; set; }
 

@@ -281,9 +281,9 @@ public sealed class WorkOrder : CatalogItem
     public string CustomerId { get; set; }
 
     /// <summary>
-    /// Gets or sets the company customer.
+    /// Gets or sets the CRM account (the company) the work order is for.
     /// </summary>
-    public string CompanyId { get; set; }
+    public string AccountId { get; set; }
 
     /// <summary>
     /// Gets or sets the CRM contact.

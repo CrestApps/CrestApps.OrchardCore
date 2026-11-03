@@ -79,6 +79,6 @@ internal sealed class WorkflowServiceAgreementObserver : IServiceAgreementObserv
             ["Name"] = agreement.Name,
             ["EndDate"] = agreement.EndDate?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
             ["CustomerId"] = agreement.CustomerId,
-            ["CompanyId"] = agreement.CompanyId,
+            ["AccountId"] = agreement.AccountId,
         }, agreement.ItemId);
 }

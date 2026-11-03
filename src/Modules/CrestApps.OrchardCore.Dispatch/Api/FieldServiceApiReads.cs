@@ -144,7 +144,7 @@ internal static partial class FieldServiceApiEndpoints
                 name = agreement.Name,
                 status = agreement.Status,
                 customerId = agreement.CustomerId,
-                companyId = agreement.CompanyId,
+                accountId = agreement.AccountId,
                 startDate = agreement.StartDate,
                 endDate = agreement.EndDate,
                 schedules = agreement.Schedules.Count,

@@ -108,9 +108,9 @@ public sealed class ServiceAgreement : CatalogItem
     public string CustomerId { get; set; }
 
     /// <summary>
-    /// Gets or sets the company.
+    /// Gets or sets the CRM account (the company) the agreement is with.
     /// </summary>
-    public string CompanyId { get; set; }
+    public string AccountId { get; set; }
 
     /// <summary>
     /// Gets or sets the person to contact.

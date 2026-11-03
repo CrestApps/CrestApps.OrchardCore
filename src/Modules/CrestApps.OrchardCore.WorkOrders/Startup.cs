@@ -30,6 +30,7 @@ public sealed class Startup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<Integrations.WorkOrderCustomers>();
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(WorkOrdersConstants.CollectionName));
         services.AddWorkOrdersCore();
         services.AddPermissionProvider<WorkOrdersPermissionsProvider>();
@@ -46,6 +47,12 @@ public sealed class Startup : StartupBase
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, SlaMonitorBackgroundTask>());
         services.AddScoped<WorkOrderLookups>();
         services.AddNavigationProvider<WorkOrdersAdminMenu>();
+    }
+
+    /// <inheritdoc/>
+    public override void Configure(Microsoft.AspNetCore.Builder.IApplicationBuilder app, Microsoft.AspNetCore.Routing.IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        Integrations.WorkOrderCustomerEndpoints.AddWorkOrderCustomerEndpoints(routes);
     }
 }
 
@@ -86,13 +93,6 @@ public sealed class AssetsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IWorkOrderLookup, AssetsWorkOrderLookup>();
-        services.AddScoped<Integrations.WorkOrderCustomers>();
-    }
-
-    /// <inheritdoc/>
-    public override void Configure(Microsoft.AspNetCore.Builder.IApplicationBuilder app, Microsoft.AspNetCore.Routing.IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
-    {
-        Integrations.WorkOrderCustomerEndpoints.AddWorkOrderCustomerEndpoints(routes);
     }
 }
 

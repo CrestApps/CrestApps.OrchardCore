@@ -585,7 +585,7 @@ public sealed class WorkOrderService
         followUp.Summary = string.IsNullOrWhiteSpace(summary) ? S["Follow-up to {0}", parent.Number] : summary.Trim();
         followUp.Description = parent.Description;
         followUp.CustomerId = parent.CustomerId;
-        followUp.CompanyId = parent.CompanyId;
+        followUp.AccountId = parent.AccountId;
         followUp.ContactId = parent.ContactId;
         followUp.Contact = parent.Contact;
         followUp.ServiceAddress = parent.ServiceAddress;

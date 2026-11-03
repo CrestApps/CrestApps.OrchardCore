@@ -19,9 +19,9 @@ public enum AssetOwnerKind
     Customer,
 
     /// <summary>
-    /// A company customer.
+    /// A CRM account: a company or household customer.
     /// </summary>
-    Company,
+    Account,
 
     /// <summary>
     /// A CRM contact.
@@ -190,7 +190,7 @@ public sealed class Asset : CatalogItem
     public AssetOwnerKind OwnerKind { get; set; }
 
     /// <summary>
-    /// Gets or sets the customer, company or CRM contact that owns it.
+    /// Gets or sets the customer, CRM account or CRM contact that owns it.
     /// </summary>
     public string OwnerId { get; set; }
 

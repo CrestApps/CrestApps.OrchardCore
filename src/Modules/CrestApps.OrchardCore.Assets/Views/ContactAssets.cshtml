@@ -6,16 +6,16 @@
             <h2 class="h6 mb-0 me-auto">@T["Assets"] <span class="badge text-bg-secondary fw-normal">@Model.Count</span></h2>
             @if (Model.Count > Model.Assets.Count)
             {
-                <a class="btn btn-sm btn-secondary" asp-area="CrestApps.OrchardCore.Assets" asp-controller="Assets" asp-action="Index" asp-route-ownerKind="@AssetOwnerKind.Contact" asp-route-ownerId="@Model.ContactId">@T["All {0}", Model.Count]</a>
+                <a class="btn btn-sm btn-secondary" asp-area="CrestApps.OrchardCore.Assets" asp-controller="Assets" asp-action="Index" asp-route-ownerKind="@Model.OwnerKind" asp-route-ownerId="@Model.ContactId">@T["All {0}", Model.Count]</a>
             }
             @if (Model.CanManage)
             {
-                <a class="btn btn-sm btn-primary" asp-area="CrestApps.OrchardCore.Assets" asp-controller="Assets" asp-action="Edit" asp-route-ownerKind="@AssetOwnerKind.Contact" asp-route-ownerId="@Model.ContactId">@T["Add an asset"]</a>
+                <a class="btn btn-sm btn-primary" asp-area="CrestApps.OrchardCore.Assets" asp-controller="Assets" asp-action="Edit" asp-route-ownerKind="@Model.OwnerKind" asp-route-ownerId="@Model.ContactId">@T["Add an asset"]</a>
             }
         </div>
         @if (Model.Assets.Count == 0)
         {
-            <p class="small text-muted mb-0">@T["This contact owns no assets yet."]</p>
+            <p class="small text-muted mb-0">@(Model.OwnerKind == AssetOwnerKind.Account ? T["This account owns no assets yet."] : T["This contact owns no assets yet."])</p>
         }
         else
         {

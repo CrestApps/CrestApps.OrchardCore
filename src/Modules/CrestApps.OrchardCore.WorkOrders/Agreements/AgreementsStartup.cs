@@ -121,3 +121,17 @@ public sealed class AgreementsAdminMenu : AdminNavigationProvider
         return ValueTask.CompletedTask;
     }
 }
+
+/// <summary>
+/// Lists a CRM account's service agreements on its page.
+/// </summary>
+[Feature(WorkOrdersConstants.Features.Agreements)]
+[RequireFeatures("CrestApps.OrchardCore.Omnichannel.Managements")]
+public sealed class AccountAgreementsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<global::OrchardCore.ContentManagement.Display.ContentDisplay.IContentDisplayDriver, AccountAgreementsDisplayDriver>();
+    }
+}

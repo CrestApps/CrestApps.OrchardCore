@@ -31,9 +31,9 @@ public sealed class ServiceAgreementIndex : CatalogItemIndex
     public string CustomerId { get; set; }
 
     /// <summary>
-    /// Gets or sets the company.
+    /// Gets or sets the CRM account.
     /// </summary>
-    public string CompanyId { get; set; }
+    public string AccountId { get; set; }
 }
 
 /// <summary>
@@ -60,7 +60,7 @@ public sealed class ServiceAgreementIndexProvider : IndexProvider<ServiceAgreeme
                 Name = item.Name,
                 Status = item.Status.ToString(),
                 CustomerId = item.CustomerId,
-                CompanyId = item.CompanyId,
+                AccountId = item.AccountId,
             });
     }
 }
@@ -87,14 +87,14 @@ public static class ServiceAgreementsIndexSchema
             .Column<string>("Name", column => column.Nullable().WithLength(255))
             .Column<string>("Status", column => column.Nullable().WithLength(20))
             .Column<string>("CustomerId", column => column.Nullable().WithLength(64))
-            .Column<string>("CompanyId", column => column.Nullable().WithLength(64)),
+            .Column<string>("AccountId", column => column.Nullable().WithLength(64)),
             collection: collection);
 
         await schemaBuilder.AlterIndexTableAsync<ServiceAgreementIndex>(table =>
         {
             table.CreateIndex("IDX_ServiceAgreementIndex_ItemId", "ItemId");
             table.CreateIndex("IDX_ServiceAgreementIndex_Status", "Status", "Number");
-            table.CreateIndex("IDX_ServiceAgreementIndex_Customer", "CustomerId", "CompanyId");
+            table.CreateIndex("IDX_ServiceAgreementIndex_Customer", "CustomerId", "AccountId");
         }, collection: collection);
     }
 }

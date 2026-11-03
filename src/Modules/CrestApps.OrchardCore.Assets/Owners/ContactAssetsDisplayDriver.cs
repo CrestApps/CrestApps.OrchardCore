@@ -15,7 +15,7 @@ using ISession = YesSql.ISession;
 namespace CrestApps.OrchardCore.Assets.Owners;
 
 /// <summary>
-/// Shows the assets a CRM contact owns on their page, with a button to add one for them.
+/// Shows the assets a CRM contact or account owns on its page, with a button to add one for it.
 /// </summary>
 internal sealed class ContactAssetsDisplayDriver : ContentDisplayDriver
 {
@@ -35,7 +35,7 @@ internal sealed class ContactAssetsDisplayDriver : ContentDisplayDriver
     }
 
     public override bool CanHandleModel(ContentItem contentItem)
-        => contentItem.Has<OmnichannelContactPart>();
+        => contentItem.Has<OmnichannelContactPart>() || contentItem.Has<AccountPart>();
 
     public override async Task<IDisplayResult> DisplayAsync(ContentItem contentItem, BuildDisplayContext context)
     {
@@ -50,12 +50,14 @@ internal sealed class ContactAssetsDisplayDriver : ContentDisplayDriver
 
         return Initialize<ContactAssetsViewModel>("ContactAssets", async model =>
         {
-            var kind = AssetOwnerKind.Contact.ToString();
+            var ownerKind = contentItem.Has<AccountPart>() ? AssetOwnerKind.Account : AssetOwnerKind.Contact;
+            var kind = ownerKind.ToString();
             var contactId = contentItem.ContentItemId;
             var query = _session.Query<Asset, AssetIndex>(index => index.OwnerKind == kind && index.OwnerId == contactId, collection: AssetsConstants.CollectionName);
             var types = await _types.GetAllAsync();
 
             model.ContactId = contactId;
+            model.OwnerKind = ownerKind;
             model.Count = await query.CountAsync();
             model.Assets = [.. await query.OrderBy(index => index.Name).Take(MaxRows).ListAsync()];
             model.TypeNames = types.ToDictionary(type => type.ItemId, type => type.Name, StringComparer.Ordinal);
@@ -73,6 +75,11 @@ public class ContactAssetsViewModel
     /// Gets or sets the contact.
     /// </summary>
     public string ContactId { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the owner is a contact or an account.
+    /// </summary>
+    public AssetOwnerKind OwnerKind { get; set; } = AssetOwnerKind.Contact;
 
     /// <summary>
     /// Gets or sets how many assets the contact owns.

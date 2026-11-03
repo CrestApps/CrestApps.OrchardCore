@@ -46,7 +46,7 @@ internal sealed class TransactionsWorkOrderBilling : IWorkOrderBilling
 
         transaction.Title = S["Work order {0}: {1}", workOrder.Number, workOrder.Summary].Value;
         transaction.Source = Source;
-        transaction.OwnerId = workOrder.CustomerId ?? workOrder.CompanyId;
+        transaction.OwnerId = workOrder.CustomerId ?? workOrder.AccountId;
         transaction.GuestContactName = workOrder.Contact?.Name;
         transaction.GuestContactEmail = workOrder.Contact?.Email;
         transaction.ReferenceType = WorkOrdersConstants.ReferenceType;

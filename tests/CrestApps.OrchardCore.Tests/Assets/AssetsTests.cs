@@ -137,7 +137,7 @@ public sealed class AssetsTests
             var names = await owners.GetNamesAsync([boiler, van]);
             var found = await owners.GetSource(AssetOwnerKind.Contact).SearchAsync("dana", 10);
 
-            return (owners.Kinds, names, Name: await owners.GetNameAsync(AssetOwnerKind.Contact, "c1"), Missing: await owners.GetNameAsync(AssetOwnerKind.Company, "x"), found);
+            return (owners.Kinds, names, Name: await owners.GetNameAsync(AssetOwnerKind.Contact, "c1"), Missing: await owners.GetNameAsync(AssetOwnerKind.Account, "x"), found);
         });
 
         Assert.Equal([AssetOwnerKind.Internal, AssetOwnerKind.Contact], result.Kinds);

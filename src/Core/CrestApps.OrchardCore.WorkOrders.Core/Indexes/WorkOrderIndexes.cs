@@ -46,9 +46,9 @@ public sealed class WorkOrderIndex : CatalogItemIndex
     public string CustomerId { get; set; }
 
     /// <summary>
-    /// Gets or sets the company customer.
+    /// Gets or sets the CRM account.
     /// </summary>
-    public string CompanyId { get; set; }
+    public string AccountId { get; set; }
 
     /// <summary>
     /// Gets or sets the CRM contact.
@@ -174,7 +174,7 @@ public sealed class WorkOrderIndexProvider : IndexProvider<WorkOrder>
                 Priority = item.Priority.ToString(),
                 Summary = item.Summary,
                 CustomerId = item.CustomerId,
-                CompanyId = item.CompanyId,
+                AccountId = item.AccountId,
                 ContactId = item.ContactId,
                 TerritoryId = item.TerritoryId,
                 RespondByUtc = item.Sla?.RespondByUtc,
@@ -298,7 +298,7 @@ public static class WorkOrdersIndexSchema
             .Column<string>("Priority", column => column.Nullable().WithLength(20))
             .Column<string>("Summary", column => column.Nullable().WithLength(255))
             .Column<string>("CustomerId", column => column.Nullable().WithLength(64))
-            .Column<string>("CompanyId", column => column.Nullable().WithLength(64))
+            .Column<string>("AccountId", column => column.Nullable().WithLength(64))
             .Column<string>("ContactId", column => column.Nullable().WithLength(64))
             .Column<string>("TerritoryId", column => column.Nullable().WithLength(26))
             .Column<DateTime?>("RespondByUtc", column => column.Nullable())
@@ -313,7 +313,7 @@ public static class WorkOrdersIndexSchema
             table.CreateIndex("IDX_WorkOrderIndex_ItemId", "ItemId");
             table.CreateIndex("IDX_WorkOrderIndex_Number", "Number");
             table.CreateIndex("IDX_WorkOrderIndex_Open", "IsOpen", "Status", "Priority");
-            table.CreateIndex("IDX_WorkOrderIndex_Customer", "CustomerId", "CompanyId", "ContactId");
+            table.CreateIndex("IDX_WorkOrderIndex_Customer", "CustomerId", "AccountId", "ContactId");
             table.CreateIndex("IDX_WorkOrderIndex_Sla", "IsOpen", "RespondByUtc", "ResolveByUtc");
             table.CreateIndex("IDX_WorkOrderIndex_Source", "Source", "SourceId");
         }, collection: collection);

@@ -205,7 +205,7 @@ The **Field Service API** feature maps HTTP endpoints for other systems and apps
 | `GET checklists` | View work orders | The checklist templates with their questions. |
 | `GET work-orders?status=&open=&q=&skip=&take=` | View work orders | Work orders, newest first, with the count; `q` matches the number or summary. |
 | `GET work-orders/{id}` | View work orders | A work order with its lines, checklists, notes and signatures. |
-| `POST work-orders` | Manage work orders | Creates a work order from `typeId`, `summary`, `description`, `priority`, `customerId`, `companyId`, `contactId`, `contact`, `serviceAddress`, `accessNotes`, `assetIds`, `earliestUtc` and `latestUtc`. With an `Idempotency-Key` header, sending it again returns the work order made the first time. |
+| `POST work-orders` | Manage work orders | Creates a work order from `typeId`, `summary`, `description`, `priority`, `customerId`, `accountId` (a CRM account), `contactId`, `contact`, `serviceAddress`, `accessNotes`, `assetIds`, `earliestUtc` and `latestUtc`. With an `Idempotency-Key` header, sending it again returns the work order made the first time. |
 | `POST work-orders/{id}/status` | Manage work orders | `{ "status", "subStatusId", "note" }`. |
 | `POST work-orders/{id}/notes` | Manage work orders | `{ "text" }`. |
 | `POST work-orders/{id}/answers` | Manage work orders | `{ "checklistIndex", "questionId", "value", "answeredUtc" }`. |

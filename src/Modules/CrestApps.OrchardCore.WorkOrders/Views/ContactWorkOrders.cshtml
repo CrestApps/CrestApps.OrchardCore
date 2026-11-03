@@ -11,7 +11,7 @@
                     <ul class="dropdown-menu dropdown-menu-end">
                         @foreach (var type in Model.Types)
                         {
-                            <li><a class="dropdown-item" asp-area="CrestApps.OrchardCore.WorkOrders" asp-controller="WorkOrders" asp-action="New" asp-route-typeId="@type.ItemId" asp-route-contactId="@Model.ContactId" asp-route-contactName="@Model.ContactName">@type.Name</a></li>
+                            <li><a class="dropdown-item" asp-area="CrestApps.OrchardCore.WorkOrders" asp-controller="WorkOrders" asp-action="New" asp-route-typeId="@type.ItemId" asp-route-contactId="@Model.ContactId" asp-route-contactName="@Model.ContactName" asp-route-accountId="@Model.AccountId">@type.Name</a></li>
                         }
                     </ul>
                 </div>
@@ -19,7 +19,7 @@
         </div>
         @if (Model.WorkOrders.Count == 0)
         {
-            <p class="small text-muted mb-0">@T["No work orders for this contact yet."]</p>
+            <p class="small text-muted mb-0">@(Model.IsAccount ? T["No work orders for this account yet."] : T["No work orders for this contact yet."])</p>
         }
         else
         {

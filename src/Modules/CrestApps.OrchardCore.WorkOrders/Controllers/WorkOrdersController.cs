@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
@@ -184,7 +185,7 @@ public sealed class WorkOrdersController : Controller
     /// <param name="contactName">The contact's name.</param>
     /// <returns>The page.</returns>
     [Admin("work-orders/new/{typeId}", "WorkOrdersNew")]
-    public async Task<IActionResult> New(string typeId, string contactId = null, string contactName = null)
+    public async Task<IActionResult> New(string typeId, string contactId = null, string contactName = null, string accountId = null)
     {
         if (!await _authorizationService.AuthorizeAsync(User, WorkOrdersPermissions.ManageWorkOrders))
         {
@@ -200,6 +201,7 @@ public sealed class WorkOrdersController : Controller
 
         workOrder.ContactId = string.IsNullOrWhiteSpace(contactId) ? null : contactId.Trim();
         workOrder.Contact.Name ??= string.IsNullOrWhiteSpace(contactName) ? null : contactName.Trim();
+        workOrder.AccountId = string.IsNullOrWhiteSpace(accountId) ? await HttpContext.RequestServices.GetRequiredService<Integrations.WorkOrderCustomers>().AccountOfContactAsync(workOrder.ContactId, HttpContext.RequestAborted) : accountId.Trim();
 
         var model = await ToEditModelAsync(workOrder);
 
@@ -351,7 +353,7 @@ public sealed class WorkOrdersController : Controller
             Panels = await panels.BuildDisplayAsync(new WorkOrderPanels { WorkOrder = workOrder, CanManage = canManage }, updateModelAccessor.ModelUpdater, "Detail"),
             VisitDay = visitDay,
             WorkOrder = workOrder,
-            CustomerNames = await CustomerNamesAsync(workOrder.CustomerId, workOrder.CompanyId, workOrder.ContactId, pickers: false),
+            CustomerNames = await CustomerNamesAsync(workOrder.CustomerId, workOrder.AccountId, workOrder.ContactId, pickers: false),
             Type = type,
             Policy = string.IsNullOrEmpty(workOrder.Sla?.PolicyId) ? null : await _policies.FindByIdAsync(workOrder.Sla.PolicyId),
             SubStatus = subStatuses.FirstOrDefault(item => item.ItemId == workOrder.SubStatusId),
@@ -568,7 +570,7 @@ public sealed class WorkOrdersController : Controller
             EstimatedMinutes = workOrder.EstimatedMinutes,
             ContactId = workOrder.ContactId,
             CustomerId = workOrder.CustomerId,
-            CompanyId = workOrder.CompanyId,
+            AccountId = workOrder.AccountId,
             ContactName = workOrder.Contact?.Name,
             ContactPhone = workOrder.Contact?.Phone,
             ContactEmail = workOrder.Contact?.Email,
@@ -596,13 +598,17 @@ public sealed class WorkOrdersController : Controller
         workOrder.EstimatedMinutes = Math.Max(0, form.EstimatedMinutes);
         workOrder.ContactId = Clean(form.ContactId);
         workOrder.CustomerId = Clean(form.CustomerId);
-        workOrder.CompanyId = Clean(form.CompanyId);
+        workOrder.AccountId = Clean(form.AccountId);
 
-        // A contact picked with no name typed gives the work order its name.
-        if (string.IsNullOrWhiteSpace(form.ContactName) && !string.IsNullOrEmpty(workOrder.ContactId) && HttpContext.RequestServices.GetService(typeof(Integrations.WorkOrderCustomers)) is Integrations.WorkOrderCustomers customers)
+        var customers = HttpContext.RequestServices.GetRequiredService<Integrations.WorkOrderCustomers>();
+
+        // A contact picked with no name typed gives the work order its name, and its account when none is chosen.
+        if (string.IsNullOrWhiteSpace(form.ContactName) && !string.IsNullOrEmpty(workOrder.ContactId))
         {
             form.ContactName = await customers.NameAsync(AssetOwnerKind.Contact, workOrder.ContactId, HttpContext.RequestAborted);
         }
+
+        workOrder.AccountId ??= await customers.AccountOfContactAsync(workOrder.ContactId, HttpContext.RequestAborted);
 
         workOrder.Contact = new WorkOrderContact { Name = Clean(form.ContactName), Phone = Clean(form.ContactPhone), Email = Clean(form.ContactEmail) };
         workOrder.AccessNotes = Clean(form.AccessNotes);
@@ -673,7 +679,7 @@ public sealed class WorkOrdersController : Controller
     {
         model.AssetOptions = [.. (await _lookups.AssetsAsync(HttpContext.RequestAborted)).Select(option => new SelectListItem(option.Text, option.Value, model.AssetIds.Contains(option.Value)))];
         model.StockItemOptions = await _lookups.StockItemsAsync(HttpContext.RequestAborted);
-        model.CustomerPickers = await CustomerNamesAsync(model.CustomerId, model.CompanyId, model.ContactId, pickers: true);
+        model.CustomerPickers = await CustomerNamesAsync(model.CustomerId, model.AccountId, model.ContactId, pickers: true);
         model.Map = HttpContext.RequestServices.GetService(typeof(CrestApps.OrchardCore.Geo.Services.IGeoSettingsService)) is CrestApps.OrchardCore.Geo.Services.IGeoSettingsService geo ? await geo.GetAsync() : null;
 
         while (model.Lines.Count(line => string.IsNullOrWhiteSpace(line.Description)) < BlankLines)
@@ -682,34 +688,8 @@ public sealed class WorkOrdersController : Controller
         }
     }
 
-    // The names of the customer, company and contact by kind. With pickers, every kind that can be picked is there,
-    // with an empty name when none is chosen.
-    private async Task<Dictionary<string, string>> CustomerNamesAsync(string customerId, string companyId, string contactId, bool pickers)
-    {
-        var names = new Dictionary<string, string>(StringComparer.Ordinal);
-
-        if (HttpContext.RequestServices.GetService(typeof(Integrations.WorkOrderCustomers)) is not Integrations.WorkOrderCustomers customers)
-        {
-            return names;
-        }
-
-        foreach (var (kind, id) in new[] { (AssetOwnerKind.Customer, customerId), (AssetOwnerKind.Company, companyId), (AssetOwnerKind.Contact, contactId) })
-        {
-            if (!customers.CanPick(kind))
-            {
-                continue;
-            }
-
-            var name = string.IsNullOrEmpty(id) ? null : await customers.NameAsync(kind, id, HttpContext.RequestAborted) ?? id;
-
-            if (pickers || name is not null)
-            {
-                names[kind.ToString()] = name ?? string.Empty;
-            }
-        }
-
-        return names;
-    }
+    private Task<Dictionary<string, string>> CustomerNamesAsync(string customerId, string accountId, string contactId, bool pickers)
+        => HttpContext.RequestServices.GetRequiredService<Integrations.WorkOrderCustomers>().NamesAsync(customerId, accountId, contactId, pickers, HttpContext.RequestAborted);
 
     private static (double Latitude, double Longitude)? GeoPointOf(double? latitude, double? longitude)
         => latitude is >= -90 and <= 90 && longitude is >= -180 and <= 180 ? (Math.Round(latitude.Value, 6), Math.Round(longitude.Value, 6)) : null;

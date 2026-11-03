@@ -164,7 +164,7 @@ public sealed class ServiceAgreementScheduler
 
                 workOrder.Summary = S["{0} ({1})", string.IsNullOrWhiteSpace(schedule.Name) ? agreement.Name : schedule.Name, agreement.Number];
                 workOrder.CustomerId = agreement.CustomerId;
-                workOrder.CompanyId = agreement.CompanyId;
+                workOrder.AccountId = agreement.AccountId;
                 workOrder.Contact = new WorkOrderContact { Name = agreement.Contact?.Name, Phone = agreement.Contact?.Phone, Email = agreement.Contact?.Email };
                 workOrder.ServiceAddress = agreement.ServiceAddress;
                 workOrder.AccessNotes = agreement.AccessNotes;

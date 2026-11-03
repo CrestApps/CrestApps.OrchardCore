@@ -66,7 +66,7 @@ public sealed class CustomerOwnersStartup : StartupBase
 }
 
 /// <summary>
-/// Lets CRM contacts own assets, and lists them on the contact's page.
+/// Lets CRM contacts own assets, and lists them on contact and account pages.
 /// </summary>
 [RequireFeatures("CrestApps.OrchardCore.Omnichannel.Managements")]
 public sealed class ContactOwnersStartup : StartupBase
@@ -105,5 +105,18 @@ public sealed class FleetInventoryStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Asset>, FleetStockLocationHandler>());
+    }
+}
+
+/// <summary>
+/// Lets CRM accounts, the companies and households of the CRM, own assets.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.Omnichannel.Crm")]
+public sealed class AccountOwnersStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAssetOwnerSource, AccountAssetOwnerSource>());
     }
 }

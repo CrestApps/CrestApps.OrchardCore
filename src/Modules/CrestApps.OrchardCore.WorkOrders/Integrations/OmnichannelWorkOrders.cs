@@ -102,6 +102,7 @@ internal sealed class CreateWorkOrderSubjectActionHandler : ISubjectActionHandle
         workOrder.Description = notes;
         workOrder.Priority = metadata.Priority ?? workOrder.Priority;
         workOrder.ContactId = context.Contact?.ContentItemId ?? activity.ContactContentItemId;
+        workOrder.AccountId = WorkOrderCustomers.AccountOf(context.Contact);
         workOrder.Contact = new WorkOrderContact { Name = contactName, Phone = activity.PreferredDestination };
         workOrder.Source = WorkOrderSource.Activity;
         workOrder.SourceId = activity.ItemId;

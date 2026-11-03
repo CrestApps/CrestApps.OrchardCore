@@ -28,7 +28,7 @@ Assets are the things you service or use: your own vans, equipment and tools, an
 
 1. Go to **Assets > Assets**, select **Add asset** and choose its type.
 2. Enter its name, and its serial number, manufacturer and model. Leave the asset number empty for the next one.
-3. Under **Owner and place**, choose who owns it: the business, a customer, a company or a contact, then search for them by name. Choose the asset it is part of, if any, and enter its address.
+3. Under **Owner and place**, choose who owns it: the business, a customer, an account or a contact, then search for them by name. Choose the asset it is part of, if any, and enter its address.
 4. Enter when it was installed and its warranty, and fill in the values its type records.
 5. Select **Save**. The asset's page opens.
 

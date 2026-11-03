@@ -60,10 +60,10 @@
                     <dt class="col-4">@T["Customer"]</dt>
                     <dd class="col-8">@customerName</dd>
                 }
-                @if (Model.CustomerNames.GetValueOrDefault("Company") is { } companyName)
+                @if (Model.CustomerNames.GetValueOrDefault("Account") is { } accountName)
                 {
-                    <dt class="col-4">@T["Company"]</dt>
-                    <dd class="col-8">@companyName</dd>
+                    <dt class="col-4">@T["Account"]</dt>
+                    <dd class="col-8"><a href="@Url.Content($"~/Admin/Contents/ContentItems/{workOrder.AccountId}/Display")">@accountName</a></dd>
                 }
                 @if (Model.CustomerNames.GetValueOrDefault("Contact") is { } contactName)
                 {

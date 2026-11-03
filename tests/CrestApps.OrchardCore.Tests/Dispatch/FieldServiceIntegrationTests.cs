@@ -34,10 +34,15 @@ public sealed class FieldServiceIntegrationTests
             CompletedByUsername = "agent",
         };
 
+        // The caller is a contact of a CRM account, so the work order is the account's too.
+        var contact = new global::OrchardCore.ContentManagement.ContentItem { ContentItemId = "contact-1", ContentType = "Contact", DisplayText = "Pat Customer" };
+
+        contact.Content.ContainedPart = new System.Text.Json.Nodes.JsonObject { ["ListContentItemId"] = "account-1" };
+
         for (var run = 0; run < 2; run++)
         {
             await kit.Harness.RunAsync(services => ActivatorUtilities.CreateInstance<CreateWorkOrderSubjectActionHandler>(services)
-                .ExecuteAsync(action, new SubjectActionExecutionContext { Activity = activity }));
+                .ExecuteAsync(action, new SubjectActionExecutionContext { Activity = activity, Contact = contact }));
         }
 
         var made = await kit.Harness.RunAsync(async services => (await services.GetRequiredService<ISession>()
@@ -51,6 +56,7 @@ public sealed class FieldServiceIntegrationTests
         Assert.Equal(activity.Notes, workOrder.Description);
         Assert.Equal(WorkOrderPriority.High, workOrder.Priority);
         Assert.Equal("+15550100123", workOrder.Contact.Phone);
+        Assert.Equal(("contact-1", "account-1"), (workOrder.ContactId, workOrder.AccountId));
         Assert.Single(await kit.VisitsOfAsync(workOrder.ItemId));
     }
 

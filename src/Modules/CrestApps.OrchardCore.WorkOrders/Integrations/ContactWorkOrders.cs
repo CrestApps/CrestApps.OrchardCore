@@ -15,7 +15,7 @@ using ISession = YesSql.ISession;
 namespace CrestApps.OrchardCore.WorkOrders.Integrations;
 
 /// <summary>
-/// Shows a CRM contact's latest work orders on their page, with a button to start one for them.
+/// Shows a CRM contact's or account's latest work orders on its page, with a button to start one for it.
 /// </summary>
 internal sealed class ContactWorkOrdersDisplayDriver : ContentDisplayDriver
 {
@@ -35,7 +35,7 @@ internal sealed class ContactWorkOrdersDisplayDriver : ContentDisplayDriver
     }
 
     public override bool CanHandleModel(ContentItem contentItem)
-        => contentItem.Has<OmnichannelContactPart>();
+        => contentItem.Has<OmnichannelContactPart>() || contentItem.Has<AccountPart>();
 
     public override async Task<IDisplayResult> DisplayAsync(ContentItem contentItem, BuildDisplayContext context)
     {
@@ -50,10 +50,16 @@ internal sealed class ContactWorkOrdersDisplayDriver : ContentDisplayDriver
 
         return Initialize<ContactWorkOrdersViewModel>("ContactWorkOrders", async model =>
         {
-            var query = _session.Query<WorkOrder, WorkOrderIndex>(index => index.ContactId == contentItem.ContentItemId, collection: WorkOrdersConstants.CollectionName);
+            var id = contentItem.ContentItemId;
+            var isAccount = contentItem.Has<AccountPart>();
+            var query = isAccount
+                ? _session.Query<WorkOrder, WorkOrderIndex>(index => index.AccountId == id, collection: WorkOrdersConstants.CollectionName)
+                : _session.Query<WorkOrder, WorkOrderIndex>(index => index.ContactId == id, collection: WorkOrdersConstants.CollectionName);
 
-            model.ContactId = contentItem.ContentItemId;
-            model.ContactName = contentItem.DisplayText;
+            model.IsAccount = isAccount;
+            model.ContactId = isAccount ? null : id;
+            model.AccountId = isAccount ? id : null;
+            model.ContactName = isAccount ? null : contentItem.DisplayText;
             model.Count = await query.CountAsync();
             model.WorkOrders = [.. await query.OrderByDescending(index => index.CreatedUtc).Take(MaxRows).ListAsync()];
             model.Types = canManage ? [.. (await _types.GetAllAsync()).OrderBy(type => type.Name, StringComparer.CurrentCultureIgnoreCase)] : [];
@@ -75,6 +81,16 @@ public class ContactWorkOrdersViewModel
     /// Gets or sets the contact's name.
     /// </summary>
     public string ContactName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the account, when the page is an account's.
+    /// </summary>
+    public string AccountId { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the page is an account's.
+    /// </summary>
+    public bool IsAccount { get; set; }
 
     /// <summary>
     /// Gets or sets how many work orders the contact has.

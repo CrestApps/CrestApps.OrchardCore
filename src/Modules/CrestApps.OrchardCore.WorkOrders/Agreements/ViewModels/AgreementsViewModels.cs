@@ -111,9 +111,15 @@ public class ServiceAgreementEditViewModel
     public string CustomerId { get; set; }
 
     /// <summary>
-    /// Gets or sets the company number.
+    /// Gets or sets the CRM account.
     /// </summary>
-    public string CompanyId { get; set; }
+    public string AccountId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the pickers shown, by kind (Customer and Account), with the current choice's name.
+    /// </summary>
+    [BindNever]
+    public Dictionary<string, string> CustomerPickers { get; set; } = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Gets or sets the contact's name.
@@ -265,6 +271,11 @@ public class ServiceAgreementDetailsViewModel
     /// Gets or sets the agreement.
     /// </summary>
     public ServiceAgreement Agreement { get; set; }
+
+    /// <summary>
+    /// Gets or sets the names of the agreement's customer and CRM account, by kind, when known.
+    /// </summary>
+    public Dictionary<string, string> CustomerNames { get; set; } = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Gets or sets its schedules with their next visits.

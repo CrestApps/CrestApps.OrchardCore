@@ -63,7 +63,7 @@
                     <select asp-for="OwnerKind" class="form-select" data-asset-owner-kind>
                         @foreach (var kind in Model.OwnerKinds)
                         {
-                            <option value="@kind" selected="@(kind == Model.OwnerKind)">@(kind switch { AssetOwnerKind.Internal => T["The business"].Value, AssetOwnerKind.Customer => T["A customer"].Value, AssetOwnerKind.Company => T["A company"].Value, _ => T["A contact"].Value })</option>
+                            <option value="@kind" selected="@(kind == Model.OwnerKind)">@(kind switch { AssetOwnerKind.Internal => T["The business"].Value, AssetOwnerKind.Customer => T["A customer"].Value, AssetOwnerKind.Account => T["An account"].Value, _ => T["A contact"].Value })</option>
                         }
                     </select>
                 </div>
@@ -72,8 +72,8 @@
             {
                 var current = kind == Model.OwnerKind && !string.IsNullOrEmpty(Model.OwnerId);
                 var initial = current ? System.Text.Json.JsonSerializer.Serialize(new[] { new { value = Model.OwnerId, text = Model.OwnerName ?? Model.OwnerId, selected = true } }) : "[]";
-                var label = kind switch { AssetOwnerKind.Customer => T["Customer"].Value, AssetOwnerKind.Company => T["Company"].Value, _ => T["Contact"].Value };
-                var choose = kind switch { AssetOwnerKind.Customer => T["Choose a customer"].Value, AssetOwnerKind.Company => T["Choose a company"].Value, _ => T["Choose a contact"].Value };
+                var label = kind switch { AssetOwnerKind.Customer => T["Customer"].Value, AssetOwnerKind.Account => T["Account"].Value, _ => T["Contact"].Value };
+                var choose = kind switch { AssetOwnerKind.Customer => T["Choose a customer"].Value, AssetOwnerKind.Account => T["Choose an account"].Value, _ => T["Choose a contact"].Value };
 
                 <div class="ocat-wrapper" data-asset-owner="@kind" hidden="@(kind != Model.OwnerKind)">
                     <label class="ocat-label">@label</label>

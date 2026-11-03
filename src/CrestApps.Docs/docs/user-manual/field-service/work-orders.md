@@ -52,7 +52,7 @@ Sub-statuses, under **Field Service > Sub-statuses**, are finer statuses inside 
 
 1. Go to **Field Service > Work Orders**, select **Add work order** and choose its type.
 2. Enter a summary, such as *No heat upstairs*, and change the priority if you need to.
-3. Choose the customer, company or CRM contact it is for, when those can be picked, then enter the contact, the address and how to get in. A CRM contact chosen with no contact name typed fills in the name. With Geo on, click the map to place the job or drag the pin; without a pin, the address is placed on the map in the background. The place gives the work order its territory.
+3. Choose the customer, account or CRM contact it is for (a contact in an account brings the account with it), when those can be picked, then enter the contact, the address and how to get in. A CRM contact chosen with no contact name typed fills in the name. With Geo on, click the map to place the job or drag the pin; without a pin, the address is placed on the map in the background. The place gives the work order its territory.
 4. Choose when the visit can be, the assets it is for, and change the lines if this job needs others.
 5. Select **Create**. The work order's page opens, with its number and the times it must be responded to and resolved by.
 
@@ -76,6 +76,7 @@ To come back for more work, enter what it is for under **Follow-up** and select 
 
 - **Bookings.** On a work order type, under **Bookings**, tick the appointment types whose bookings should make a work order of that type. Each confirmed booking then makes one for the customer who booked, with the technician arriving at the booked time; moving the booking moves the work order, and canceling it cancels the work order. With Dispatch on, those appointment types offer only the times a technician who can do the job is on shift and free, and a time is gone once enough bookings fill it.
 - **Calls and messages.** In an Interaction Center subject flow, add the **Create Work Order** action to a disposition and choose the type. When an agent chooses that disposition, a work order is made for the contact, with the agent's notes, once per activity.
+- **Accounts.** An account's page lists its work orders, assets and service agreements, with **New work order**, **Add an asset** and **New agreement** to start one for it.
 - **Contacts.** A contact's page lists their work orders. **New work order** starts one for them, with their name filled in.
 
 ## Recurring visits with a service agreement

@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using NodaTime;
@@ -113,7 +114,7 @@ public sealed class ServiceAgreementsController : Controller
         {
             var q = form.Q.Trim();
 
-            query = query.Where(index => index.Number.Contains(q) || index.Name.Contains(q) || index.CustomerId == q || index.CompanyId == q);
+            query = query.Where(index => index.Number.Contains(q) || index.Name.Contains(q) || index.CustomerId == q || index.AccountId == q);
         }
 
         var pager = new Pager(pagerParameters, pagerOptions.Value);
@@ -172,6 +173,7 @@ public sealed class ServiceAgreementsController : Controller
                 Next = [.. ServiceAgreementScheduler.Occurrences(agreement, schedule, zone, from, from.PlusYears(5)).Take(NextVisits).Select(date => date.ToDateOnly())],
             })],
             WorkOrders = [.. workOrders],
+            CustomerNames = await HttpContext.RequestServices.GetRequiredService<Integrations.WorkOrderCustomers>().NamesAsync(agreement.CustomerId, agreement.AccountId, null, pickers: false, HttpContext.RequestAborted),
             Assets = [.. assets.Where(asset => agreement.AssetIds.Contains(asset.Value))],
         });
     }
@@ -215,7 +217,7 @@ public sealed class ServiceAgreementsController : Controller
     /// <param name="id">The agreement, or <see langword="null"/> for a new one.</param>
     /// <returns>The page.</returns>
     [Admin("work-orders/agreements/edit/{id?}", "ServiceAgreementsEdit")]
-    public async Task<IActionResult> Edit(string id)
+    public async Task<IActionResult> Edit(string id, string accountId = null)
     {
         if (!await _authorizationService.AuthorizeAsync(User, WorkOrdersPermissions.ManageServiceAgreements))
         {
@@ -232,6 +234,7 @@ public sealed class ServiceAgreementsController : Controller
         if (string.IsNullOrEmpty(id))
         {
             agreement.TimeZoneId = (await _siteService.GetSiteSettingsAsync()).TimeZoneId;
+            agreement.AccountId = string.IsNullOrWhiteSpace(accountId) ? null : accountId.Trim();
         }
 
         var address = agreement.ServiceAddress;
@@ -242,7 +245,7 @@ public sealed class ServiceAgreementsController : Controller
             Name = agreement.Name,
             Status = agreement.Status,
             CustomerId = agreement.CustomerId,
-            CompanyId = agreement.CompanyId,
+            AccountId = agreement.AccountId,
             ContactName = agreement.Contact?.Name,
             ContactPhone = agreement.Contact?.Phone,
             ContactEmail = agreement.Contact?.Email,
@@ -313,7 +316,7 @@ public sealed class ServiceAgreementsController : Controller
         agreement.Name = form.Name?.Trim();
         agreement.Status = form.Status;
         agreement.CustomerId = Clean(form.CustomerId);
-        agreement.CompanyId = Clean(form.CompanyId);
+        agreement.AccountId = Clean(form.AccountId);
         agreement.Contact = new WorkOrderContact { Name = Clean(form.ContactName), Phone = Clean(form.ContactPhone), Email = Clean(form.ContactEmail) };
         agreement.AccessNotes = Clean(form.AccessNotes);
         agreement.AssetIds = [.. (form.AssetIds ?? []).Where(assetId => !string.IsNullOrEmpty(assetId)).Distinct(StringComparer.Ordinal)];
@@ -425,6 +428,8 @@ public sealed class ServiceAgreementsController : Controller
 
     private async Task PopulateAsync(ServiceAgreementEditViewModel model)
     {
+        model.CustomerPickers = await HttpContext.RequestServices.GetRequiredService<Integrations.WorkOrderCustomers>().NamesAsync(model.CustomerId, model.AccountId, null, pickers: true, HttpContext.RequestAborted);
+        model.CustomerPickers.Remove(nameof(CrestApps.OrchardCore.Assets.Models.AssetOwnerKind.Contact));
         model.TypeOptions = [.. (await _types.GetAllAsync()).OrderBy(type => type.Name, StringComparer.CurrentCultureIgnoreCase).Select(type => new SelectListItem(type.Name, type.ItemId))];
         model.AssetOptions = [.. (await _lookups.AssetsAsync(HttpContext.RequestAborted)).Select(option => new SelectListItem(option.Text, option.Value, model.AssetIds.Contains(option.Value)))];
         model.TimeZoneOptions = [.. _clock.GetTimeZones().Select(zone => zone.TimeZoneId).Order(StringComparer.Ordinal).Select(zoneId => new SelectListItem(zoneId, zoneId, string.Equals(zoneId, model.TimeZoneId, StringComparison.OrdinalIgnoreCase)))];

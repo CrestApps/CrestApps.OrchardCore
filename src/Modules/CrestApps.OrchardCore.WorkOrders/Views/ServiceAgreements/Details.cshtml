@@ -34,9 +34,13 @@
         <div class="card h-100"><div class="card-body">
             <h2 class="h6">@T["About"]</h2>
             <dl class="row mb-0 small">
-                @if (!string.IsNullOrEmpty(agreement.CustomerId) || !string.IsNullOrEmpty(agreement.CompanyId))
+                @if (!string.IsNullOrEmpty(agreement.AccountId))
                 {
-                    <dt class="col-4">@T["Customer"]</dt><dd class="col-8">@agreement.CustomerId @agreement.CompanyId</dd>
+                    <dt class="col-4">@T["Account"]</dt><dd class="col-8"><a href="@Url.Content($"~/Admin/Contents/ContentItems/{agreement.AccountId}/Display")">@(Model.CustomerNames.GetValueOrDefault("Account") ?? agreement.AccountId)</a></dd>
+                }
+                @if (!string.IsNullOrEmpty(agreement.CustomerId))
+                {
+                    <dt class="col-4">@T["Customer"]</dt><dd class="col-8">@(Model.CustomerNames.GetValueOrDefault("Customer") ?? agreement.CustomerId)</dd>
                 }
                 @if (!string.IsNullOrEmpty(agreement.Contact?.Name))
                 {
