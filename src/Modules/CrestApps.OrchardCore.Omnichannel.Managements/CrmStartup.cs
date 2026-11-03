@@ -106,6 +106,7 @@ public sealed class CrmStartup : StartupBase
         // Center, so the Accounts feature's own menu item would only repeat it.
         services.AddScoped<IAccountChildTypeRule, CrmAccountChildTypeRule>();
         services.AddScoped<IAccountContactFinder, CrmAccountContactFinder>();
+        services.AddScoped<IContentDisplayDriver, AccountCrmTabsDisplayDriver>();
         services.Configure<AccountsAdminMenuOptions>(options => options.ShowAccountsMenu = false);
         services.AddScoped<IContentDefinitionEventHandler, CrmContentDefinitionEventHandler>();
 

@@ -33,6 +33,13 @@ namespace CrestApps.OrchardCore.Accounts
         public ContentTransferStartup() { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "OrchardCore.Deployment"})]
+    public sealed class DeploymentStartup : OrchardCore.Modules.StartupBase
+    {
+        public DeploymentStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Accounts.Locations")]
     public sealed class LocationsStartup : OrchardCore.Modules.StartupBase
     {
@@ -43,6 +50,13 @@ namespace CrestApps.OrchardCore.Accounts
     public sealed class MembersStartup : OrchardCore.Modules.StartupBase
     {
         public MembersStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.Recipes"})]
+    public sealed class RecipesSchemaStartup : OrchardCore.Modules.StartupBase
+    {
+        public RecipesSchemaStartup() { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
     [OrchardCore.Modules.RequireFeatures(new string[] {
@@ -57,6 +71,19 @@ namespace CrestApps.OrchardCore.Accounts
         public Startup() { }
         public override void Configure(Microsoft.AspNetCore.Builder.IApplicationBuilder app, Microsoft.AspNetCore.Routing.IEndpointRouteBuilder routes, System.IServiceProvider serviceProvider) { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+}
+namespace CrestApps.OrchardCore.Accounts.Deployments
+{
+    public sealed class AccountsDeploymentStep : OrchardCore.Deployment.DeploymentStep
+    {
+        public AccountsDeploymentStep() { }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public override OrchardCore.Localization.LocalizationSource Category { get; }
+        public bool IncludeRecords { get; set; }
+        public override string Name { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public override OrchardCore.Localization.LocalizationSource Title { get; }
     }
 }
 namespace CrestApps.OrchardCore.Accounts.ViewModels
@@ -95,5 +122,10 @@ namespace CrestApps.OrchardCore.Accounts.ViewModels
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public string AccountDisplayText { get; set; }
         public bool Rendered { get; set; }
+    }
+    public class AccountsDeploymentStepViewModel
+    {
+        public AccountsDeploymentStepViewModel() { }
+        public bool IncludeRecords { get; set; }
     }
 }

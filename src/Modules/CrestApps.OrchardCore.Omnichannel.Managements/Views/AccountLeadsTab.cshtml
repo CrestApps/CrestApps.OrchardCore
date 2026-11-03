@@ -1,0 +1,31 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+@using Microsoft.AspNetCore.Mvc.Localization
+
+@model AccountLeadsTabViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T.Plural(Model.Count, "1 converted lead", "{0} converted leads")</div>
+    @if (Model.Leads.Count == 0)
+    {
+        <div class="card-body text-body-secondary">@T["None of the account's contacts came from a lead. A lead joins an account when it is converted into one of its contacts."]</div>
+    }
+    else
+    {
+        <ul class="list-group list-group-flush">
+            @foreach (var row in Model.Leads)
+            {
+                <li class="list-group-item d-flex flex-wrap align-items-center gap-3">
+                    <a class="fw-semibold" asp-action="Display" asp-controller="Admin" asp-area="OrchardCore.Contents" asp-route-contentItemId="@row.Lead.ContentItemId">@row.Lead.DisplayText</a>
+                    @if (row.ConvertedUtc is { } convertedUtc)
+                    {
+                        <span class="text-body-secondary">@T["Converted"] @await DisplayAsync(await New.DateTime(Utc: convertedUtc, Format: "d"))</span>
+                    }
+                    @if (!string.IsNullOrEmpty(row.ContactContentItemId))
+                    {
+                        <a class="small" asp-action="Display" asp-controller="Admin" asp-area="OrchardCore.Contents" asp-route-contentItemId="@row.ContactContentItemId">@T["Contact"]</a>
+                    }
+                </li>
+            }
+        </ul>
+    }
+</div>

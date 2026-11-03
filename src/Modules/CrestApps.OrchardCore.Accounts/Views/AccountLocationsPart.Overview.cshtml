@@ -1,0 +1,29 @@
+@using CrestApps.OrchardCore.Accounts.Models
+
+@model ShapeViewModel<AccountLocationsPart>
+
+@{
+    var locations = (Model.Value.Locations ?? []).Where(location => location is not null).ToList();
+}
+
+<div class="card mb-3">
+    <div class="card-header">@T["Locations"]</div>
+    @if (locations.Count == 0)
+    {
+        <div class="card-body text-body-secondary">@T["No locations yet. Add them on the account's editor."]</div>
+    }
+    else
+    {
+        <ul class="list-group list-group-flush">
+            @foreach (var location in locations)
+            {
+                var address = location.Address;
+
+                <li class="list-group-item">
+                    <span class="fw-semibold">@location.Name</span>
+                    <span class="text-body-secondary ms-1">@string.Join(", ", new[] { address?.AddressLine1, address?.AddressLine2, address?.City, address?.Region, address?.PostalCode, address?.Country }.Where(value => !string.IsNullOrWhiteSpace(value)))</span>
+                </li>
+            }
+        </ul>
+    }
+</div>

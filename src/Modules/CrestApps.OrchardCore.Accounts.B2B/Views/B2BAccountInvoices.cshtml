@@ -1,0 +1,39 @@
+@using CrestApps.OrchardCore.Accounts.B2B.Drivers
+@using CrestApps.OrchardCore.Products.Core.Services
+@using CrestApps.OrchardCore.Transactions.Models
+@model B2BAccountInvoicesViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T.Plural(Model.Invoices.Count, "1 invoice", "{0} invoices")</div>
+    @if (Model.Invoices.Count == 0)
+    {
+        <div class="card-body text-body-secondary">@T["No invoices yet. An invoice is made when a buyer pays for an order on the account's terms."]</div>
+    }
+    else
+    {
+        <ul class="list-group list-group-flush">
+            @foreach (var invoice in Model.Invoices)
+            {
+                var outstanding = invoice.Status is TransactionStatus.Outstanding or TransactionStatus.PartiallyPaid;
+
+                <li class="list-group-item d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <span class="d-flex flex-wrap align-items-center gap-2">
+                        <a class="fw-semibold" href="@Url.RouteUrl("TransactionsDetail", new { area = "CrestApps.OrchardCore.Transactions", itemId = invoice.ItemId })">@(string.IsNullOrEmpty(invoice.InvoiceNumber) ? invoice.Title : invoice.InvoiceNumber)</a>
+                        <span class="badge @(outstanding ? "text-bg-warning" : "ta-badge") fw-normal">@T[invoice.Status.ToString()]</span>
+                        @if (invoice.DueUtc is { } dueUtc)
+                        {
+                            <span class="small text-body-secondary">@T["Due"] @await DisplayAsync(await New.DateTime(Utc: dueUtc, Format: "d"))</span>
+                        }
+                    </span>
+                    <span class="text-nowrap">
+                        <span class="fw-semibold">@ProductPriceFormatter.Format(invoice.TotalAmount, invoice.Currency)</span>
+                        @if (outstanding)
+                        {
+                            <span class="small text-body-secondary ms-1">@T["{0} owed", ProductPriceFormatter.Format(invoice.OutstandingAmount, invoice.Currency)]</span>
+                        }
+                    </span>
+                </li>
+            }
+        </ul>
+    }
+</div>

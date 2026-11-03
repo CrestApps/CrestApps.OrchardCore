@@ -76,6 +76,22 @@ Holds stage, open/closed/won flags, probability, amount, close date, owner, sour
 
 A marker from the [Accounts](../modules/accounts.md) feature. Its setting records which types were added to the account's list, so a type an administrator removed is not added again.
 
+## The account page
+
+The CRM adds four tabs to an [account's page](../modules/accounts.md#the-account-page), through
+`AccountCrmTabsDisplayDriver`:
+
+- **Contacts**: the contacts the account holds (`ContainedPartIndex`), by name, with their primary email and phone from
+  `OmnichannelContactIndex`, and a **New** button per contact type the user may create, which opens the editor inside
+  the account.
+- **Opportunities**: the opportunities with the account's `OpportunityIndex.AccountContentItemId`, open ones first by
+  close date, with their stage, amount and close date.
+- **Leads**: the converted leads whose `LeadIndex.ConvertedContactItemId` is one of the account's contacts.
+- **Activities**: how many activities of the account's contacts are scheduled and completed, the next and the last,
+  and **List Activities** for the account's activity page. It needs `ListContactActivities`.
+
+Each list shows 25 rows; the **Records** tab lists everything. A tab shows only the content types the user may view.
+
 ## Leads list count
 
 **Interaction Center > Leads** is the Content Admin list of the lead types with `converted:false`. Content Admin counts its items with the query that lists them, which joins the document table, `ContentItemIndex` and `LeadIndex` and counts the distinct documents. On a large tenant that count outlived the command timeout.

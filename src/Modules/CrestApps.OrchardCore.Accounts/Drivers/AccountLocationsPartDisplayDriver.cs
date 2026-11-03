@@ -26,6 +26,18 @@ internal sealed class AccountLocationsPartDisplayDriver : ContentPartDisplayDriv
         _shapeFactory = shapeFactory;
     }
 
+    public override IDisplayResult Display(AccountLocationsPart part, BuildPartDisplayContext context)
+    {
+        // The locations show on the account's page, in its Overview tab.
+        if (context.DisplayType != OrchardCoreConstants.DisplayType.DetailAdmin)
+        {
+            return null;
+        }
+
+        return View("AccountLocationsPart_Overview", part)
+            .Location(OrchardCoreConstants.DisplayType.DetailAdmin, AccountPageTabs.Location(AccountPageTabs.Overview, "6"));
+    }
+
     public override async Task<IDisplayResult> EditAsync(AccountLocationsPart part, BuildPartEditorContext context)
     {
         var rows = new List<AccountLocationRowViewModel>();
@@ -116,7 +128,8 @@ internal sealed class AccountLocationsPartDisplayDriver : ContentPartDisplayDriv
             row.AddressEditor = await _shapeFactory.CreateAddressEditorAsync(row.Address, AddressPrefix(i));
         }
 
-        return Initialize<AccountLocationsPartViewModel>(GetEditorShapeType(context), model => model.Locations = rows);
+        return Initialize<AccountLocationsPartViewModel>(GetEditorShapeType(context), model => model.Locations = rows)
+            .Location(AccountPageTabs.EditorLocation(AccountPageTabs.Locations));
     }
 
     private string AddressPrefix(int index)

@@ -60,23 +60,3 @@
         }
     </div>
 </div>
-
-<div class="card mb-3">
-    <div class="card-header">@T.Plural(Model.OrderCount, "1 order", "{0} orders")</div>
-    @if (Model.Orders.Count == 0)
-    {
-        <div class="card-body text-body-secondary">@T["No orders yet."]</div>
-    }
-    else
-    {
-        <ul class="list-group list-group-flush">
-            @foreach (var order in Model.Orders)
-            {
-                <li class="list-group-item d-flex justify-content-between">
-                    <a href="@Url.RouteUrl("OrdersDetail", new { area = "CrestApps.OrchardCore.Orders", orderId = order.ItemId })">@T["Order {0}", order.OrderNumber]</a>
-                    <span class="text-body-secondary">@(order.Total is { } total ? ProductPriceFormatter.Format(total, order.Currency) : null)</span>
-                </li>
-            }
-        </ul>
-    }
-</div>
