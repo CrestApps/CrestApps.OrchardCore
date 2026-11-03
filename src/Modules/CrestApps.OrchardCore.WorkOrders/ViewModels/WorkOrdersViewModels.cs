@@ -79,6 +79,11 @@ public class WorkOrderSettingsListViewModel
     public string EditAction { get; set; }
 
     /// <summary>
+    /// Gets or sets the text the names are searched for.
+    /// </summary>
+    public string Search { get; set; }
+
+    /// <summary>
     /// Gets or sets the rows.
     /// </summary>
     public AdminListContext List { get; set; }

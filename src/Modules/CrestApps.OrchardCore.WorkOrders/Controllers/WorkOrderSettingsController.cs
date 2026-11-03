@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.WorkOrders.Services;
 using CrestApps.OrchardCore.WorkOrders.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -109,12 +110,13 @@ public sealed class WorkOrderSettingsController : Controller
     /// Lists one kind of record.
     /// </summary>
     /// <param name="kind">The list: types, checklists, service-levels or sub-statuses.</param>
+    /// <param name="search">The text the names are searched for.</param>
     /// <param name="pagerParameters">The pager parameters.</param>
     /// <param name="pagerOptions">The pager options.</param>
     /// <param name="shapeFactory">The shape factory.</param>
     /// <returns>The page.</returns>
     [Admin("work-orders/settings/{kind}", "WorkOrderSettings")]
-    public async Task<IActionResult> Index(string kind, PagerParameters pagerParameters, [FromServices] IOptions<PagerOptions> pagerOptions, [FromServices] IShapeFactory shapeFactory)
+    public async Task<IActionResult> Index(string kind, string search, PagerParameters pagerParameters, [FromServices] IOptions<PagerOptions> pagerOptions, [FromServices] IShapeFactory shapeFactory)
     {
         if (!await _authorizationService.AuthorizeAsync(User, WorkOrdersPermissions.ManageWorkOrderSettings))
         {
@@ -135,16 +137,30 @@ public sealed class WorkOrderSettingsController : Controller
             return NotFound();
         }
 
+        search = search?.Trim();
+
+        if (!string.IsNullOrEmpty(search))
+        {
+            rows = rows.Where(row => row.Name?.Contains(search, StringComparison.OrdinalIgnoreCase) == true).ToList();
+        }
+
         var pager = new Pager(pagerParameters, pagerOptions.Value);
+        var routeData = new RouteData();
+
+        if (!string.IsNullOrEmpty(search))
+        {
+            routeData.Values.Add("search", search);
+        }
 
         return View(new WorkOrderSettingsListViewModel
         {
             Kind = kind,
             EditAction = EditActionOf(kind),
+            Search = search,
             List = new AdminListContext<WorkOrderSettingRow>
             {
                 Source = rows.Skip(pager.GetStartIndex()).Take(pager.PageSize).ToList(),
-                Pager = await shapeFactory.PagerAsync(pager, rows.Count),
+                Pager = await shapeFactory.PagerAsync(pager, rows.Count, routeData),
             },
         });
     }

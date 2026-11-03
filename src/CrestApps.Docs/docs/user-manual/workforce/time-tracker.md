@@ -24,7 +24,7 @@ Time Tracker records what people do through their working day, such as Work, Bre
 
 ## Track your time
 
-Go to **Time Tracker > My Time**. Select **Clock in** on a stage to start. Select another stage when you change what you are doing, such as *Lunch*, and *Work* again when you are back; your time moves from one to the next without a gap. Select **Clock out** at the end of the day.
+Go to **Time Tracker > My Time**. Choose a stage in the list and select **Clock in** to start. When you change what you are doing, such as going to *Lunch*, choose the stage and select **Switch**, and switch back to *Work* when you return; your time moves from one to the next without a gap. Select **Clock out** at the end of the day.
 
 **Today** shows the day's stages as a bar and a list, and **This week** your hours in each category by day. An entry a manager changed says so.
 

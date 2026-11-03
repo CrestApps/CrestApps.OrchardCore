@@ -60,19 +60,34 @@
         }
         else
         {
-            <div class="d-flex flex-wrap gap-2">
-                @foreach (var stage in Model.Stages)
+            var choices = Model.Stages.Where(stage => stage.ItemId != open?.StageId).ToList();
+
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                @if (choices.Count > 0)
                 {
-                    <form asp-action="Switch" method="post" class="d-inline">
-                        <input type="hidden" name="stageId" value="@stage.ItemId" />
-                        <button type="submit" class="btn @(open?.StageId == stage.ItemId ? "btn-primary" : "btn-outline-primary")" disabled="@(open?.StageId == stage.ItemId)">
-                            @(open is null ? T["Clock in: {0}", stage.Name] : T["{0}", stage.Name])
+                    <form asp-action="Switch" method="post" class="d-flex flex-wrap gap-2">
+                        <label for="my-time-stage" class="visually-hidden">@(open is null ? T["Stage to clock in to"] : T["Stage to switch to"])</label>
+                        <select id="my-time-stage" name="stageId" class="form-select w-auto" style="min-width: 14rem">
+                            @foreach (var stage in choices)
+                            {
+                                <option value="@stage.ItemId">@stage.Name</option>
+                            }
+                        </select>
+                        <button type="submit" class="btn btn-primary">
+                            @if (open is null)
+                            {
+                                <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i> @T["Clock in"]
+                            }
+                            else
+                            {
+                                <i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i> @T["Switch"]
+                            }
                         </button>
                     </form>
                 }
                 @if (open is not null)
                 {
-                    <form asp-action="ClockOut" method="post" class="d-inline">
+                    <form asp-action="ClockOut" method="post">
                         <button type="submit" class="btn btn-danger"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> @T["Clock out"]</button>
                     </form>
                 }
