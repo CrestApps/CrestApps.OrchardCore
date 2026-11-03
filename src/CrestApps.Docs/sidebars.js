@@ -81,6 +81,7 @@ const sidebars = {
             label: 'Building the CRM',
             className: icon('contact'),
             items: [
+                'user-manual/accounts',
                 'user-manual/contacts',
                 'user-manual/leads-accounts-opportunities',
                 'user-manual/subjects',
@@ -486,6 +487,7 @@ const sidebars = {
                 'modules/resources',
                 'modules/roles',
                 'modules/signalr',
+                'modules/accounts',
                 'modules/addresses',
                 'modules/tenant-hierarchy',
                 'modules/websockets',

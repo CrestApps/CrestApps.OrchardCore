@@ -17,6 +17,7 @@
   <Folder Name="/src/" />
   <Folder Name="/src/Abstractions/">
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
+    <Project Path="src/Abstractions/CrestApps.OrchardCore.Accounts.Abstractions/CrestApps.OrchardCore.Accounts.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Addresses.Abstractions/CrestApps.OrchardCore.Addresses.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Checkout.Abstractions/CrestApps.OrchardCore.Checkout.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions.csproj" />
@@ -45,6 +46,7 @@
     <Project Path="src/Core/CrestApps.OrchardCore.AI.Chat.Core/CrestApps.OrchardCore.AI.Chat.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.Accounts.Core/CrestApps.OrchardCore.Accounts.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Addresses.Core/CrestApps.OrchardCore.Addresses.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Carts.Core/CrestApps.OrchardCore.Carts.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Checkout.Core/CrestApps.OrchardCore.Checkout.Core.csproj" />
@@ -83,6 +85,7 @@
     <Project Path="src/Core/CrestApps.OrchardCore.YesSql.Core/CrestApps.OrchardCore.YesSql.Core.csproj" />
   </Folder>
   <Folder Name="/src/Modules/">
+    <Project Path="src/Modules/CrestApps.OrchardCore.Accounts/CrestApps.OrchardCore.Accounts.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Addresses/CrestApps.OrchardCore.Addresses.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.ContentAccessControl/CrestApps.OrchardCore.ContentAccessControl.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.ContentFields/CrestApps.OrchardCore.ContentFields.csproj" />

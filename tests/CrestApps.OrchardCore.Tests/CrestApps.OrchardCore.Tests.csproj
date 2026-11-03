@@ -146,6 +146,9 @@
     <ProjectReference Include="..\..\src\Core\CrestApps.OrchardCore.Taxation.Core\CrestApps.OrchardCore.Taxation.Core.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Taxation\CrestApps.OrchardCore.Taxation.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Addresses\CrestApps.OrchardCore.Addresses.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Accounts\CrestApps.OrchardCore.Accounts.csproj" />
+    <ProjectReference Include="..\..\src\Core\CrestApps.OrchardCore.Accounts.Core\CrestApps.OrchardCore.Accounts.Core.csproj" />
+    <ProjectReference Include="..\..\src\Abstractions\CrestApps.OrchardCore.Accounts.Abstractions\CrestApps.OrchardCore.Accounts.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Calendars\CrestApps.OrchardCore.Calendars.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Scheduling\CrestApps.OrchardCore.Scheduling.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Seo\CrestApps.OrchardCore.Seo.csproj" />
