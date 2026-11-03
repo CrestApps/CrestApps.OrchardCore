@@ -258,6 +258,15 @@
         font-size: 0.68rem !important;
         line-height: 1.25;
     }
+
+    /* On edit pages, keep the assistant above Orchard Core's bottom action bar, so it never covers Save or Cancel. */
+    html:has(.action-bar-bottom) .ai-chat-admin-widget-shell .ai-chat-widget-toggle {
+        bottom: calc(var(--oc-action-bar-bottom-height, 3.5rem) + 1.25rem);
+    }
+
+    html:has(.action-bar-bottom) .ai-chat-admin-widget-shell .ai-chat-widget-container {
+        bottom: calc(var(--oc-action-bar-bottom-height, 3.5rem) + 5rem);
+    }
 </style>
 
 @{
