@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Accounts.Services;
 using CrestApps.OrchardCore.Accounts.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
@@ -7,6 +8,7 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
+using OrchardCore.Contents;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Lists.Models;
@@ -25,6 +27,7 @@ internal sealed class AccountPickerDisplayDriver : ContentDisplayDriver
     private readonly IAccountContentTypeProvider _accountContentTypeProvider;
     private readonly IContentManager _contentManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IAuthorizationService _authorizationService;
 
     private readonly Dictionary<string, ContentTypeDefinition> _definitions = new(StringComparer.Ordinal);
 
@@ -37,18 +40,21 @@ internal sealed class AccountPickerDisplayDriver : ContentDisplayDriver
     /// <param name="accountContentTypeProvider">The provider that tells which types can belong to an account.</param>
     /// <param name="contentManager">The content manager.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
+    /// <param name="authorizationService">The authorization service.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AccountPickerDisplayDriver(
         IContentDefinitionManager contentDefinitionManager,
         IAccountContentTypeProvider accountContentTypeProvider,
         IContentManager contentManager,
         IHttpContextAccessor httpContextAccessor,
+        IAuthorizationService authorizationService,
         IStringLocalizer<AccountPickerDisplayDriver> stringLocalizer)
     {
         _contentDefinitionManager = contentDefinitionManager;
         _accountContentTypeProvider = accountContentTypeProvider;
         _contentManager = contentManager;
         _httpContextAccessor = httpContextAccessor;
+        _authorizationService = authorizationService;
         S = stringLocalizer;
     }
 
@@ -145,7 +151,10 @@ internal sealed class AccountPickerDisplayDriver : ContentDisplayDriver
 
         var account = await _contentManager.GetAsync(accountId, VersionOptions.Latest);
 
-        if (account is null || !await IsAccountTypeAsync(account.ContentType))
+        // The record can only be placed in an account its editor may see, the same accounts the picker's search offers.
+        if (account is null ||
+            !await IsAccountTypeAsync(account.ContentType) ||
+            !await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, CommonPermissions.ViewContent, account))
         {
             context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.AccountContentItemId), S["The selected account no longer exists."]);
 

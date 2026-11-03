@@ -8,18 +8,24 @@ user_manual: user-manual/accounts
 
 | | |
 | --- | --- |
-| **Feature** | Accounts (`CrestApps.OrchardCore.Accounts`) |
+| **Features** | Accounts (`CrestApps.OrchardCore.Accounts`), Account Members (`CrestApps.OrchardCore.Accounts.Members`), Account Locations (`CrestApps.OrchardCore.Accounts.Locations`) |
 | **Core** | `CrestApps.OrchardCore.Accounts.Core` |
 | **Abstractions** | `CrestApps.OrchardCore.Accounts.Abstractions` |
 | **Category** | Content Management |
-| **Depends on** | `CrestApps.OrchardCore.Resources`, `OrchardCore.Contents`, `OrchardCore.ContentTypes`, `OrchardCore.Lists`, `OrchardCore.Title` |
+| **Depends on** | `CrestApps.OrchardCore.Resources`, `OrchardCore.Contents`, `OrchardCore.ContentTypes`, `OrchardCore.Lists`, `OrchardCore.Title`; Account Members also needs `OrchardCore.Users`, and Account Locations [Addresses](addresses.md) |
 
 An account is the business or household that other records belong to. It is one content type, `Account`, that every
 module extends instead of keeping an organization record of its own:
 
 - the [CRM](../omnichannel/crm.md) puts contacts and opportunities in an account;
-- [Accounts B2B](accounts-b2b.md) lets an account buy as a business, with buyers, terms and price lists;
+- [Accounts B2B](accounts-b2b.md) lets an account buy as a business, with terms and price lists, its members as buyers
+  and its locations as shipping addresses;
 - Field Service links assets, work orders and service agreements to an account.
+
+The module has three features. **Accounts** is the account type and everything below. **Account Members** and
+**Account Locations** add the data more than one module needs: [the users who sign in for an
+account](#account-members) and [the places it has](#account-locations). A module that needs them depends on the
+feature; nothing about them is commerce-specific.
 
 ## The account type
 
@@ -91,7 +97,9 @@ GET /Admin/api/crestapps/accounts/search?query=acme
 ```
 
 The search returns up to 50 accounts whose title contains the query, ordered by title, as `{ value, text }` items:
-the content item id and the title. It needs `ListContent`. The route is named `CrestApps.Accounts.Search`
+the content item id and the title. It needs `ListContent`, and searches only the account types the user may view
+(`ViewContent` for the type), since an account type is securable. The picker places a record only in an account its
+editor may view. The route is named `CrestApps.Accounts.Search`
 (`AccountsConstants.RouteNames.Search`), so views link to it with `Url.RouteUrl` rather than a hard-coded path.
 
 ## The account page
@@ -120,10 +128,61 @@ internal sealed class AccountWorkOrdersDisplayDriver : ContentDisplayDriver
 
 The list part's records come first. Cards from other modules go at `Content:20` and after.
 
+## Account members
+
+The **Account Members** feature lets users sign in for an account. Its migration defines `AccountMembersPart` and adds
+it to the `Account` type at position 4; another account type can be given the part by hand.
+
+| `AccountMember` | |
+| --- | --- |
+| `UserId` | The user. A user is a member of one account at most. |
+| `UserName`, `Email` | As they were when the account was saved. |
+| `Role` | `AccountMemberRole.Member`, or `Admin`: a member who also manages the account for the others. What an admin may do is up to each module; Accounts B2B lets admins see every order and approve them. |
+| `ContactContentItemId` | The account's contact with the member's email, or none. |
+
+- **Editor.** A **Members** card on the account's editor takes each member's user name or email and role. It needs
+  `ManageAccountMembers` (**Manage the users who sign in for accounts**), given to the Administrator role: adding
+  someone to an account lets them act for it, such as buying on its terms. It refuses a user who is a member of another
+  account.
+- **Index.** `AccountMemberIndex` (`AccountContentItemId`, `UserId`, `Published`, `Latest`) holds one row per member
+  of each version.
+- **Lookup.** `IAccountMemberService.FindAccountAsync(userId)` returns the published account a user signs in for;
+  `FindOtherAccountIdAsync(userId, exceptAccountId)` tells an editor the user already belongs to another one.
+- **Contacts.** When an account is saved, each member is linked to the account's contact with their email, through the
+  registered `IAccountContactFinder`s. The CRM registers one that matches a contact's primary email among the contacts
+  in the account. A member with no match, or more than one, has no contact.
+
+A module keeps its own settings for a member by user id, in a part of its own. Accounts B2B keeps each buyer's order
+limit that way:
+
+```csharp
+var account = await accountMemberService.FindAccountAsync(userId);
+var member = account?.Get<AccountMembersPart>()?.FindMember(userId);
+```
+
+## Account locations
+
+The **Account Locations** feature keeps the places an account has. Its migration defines `AccountLocationsPart` and
+adds it to the `Account` type at position 5.
+
+| `AccountLocation` | |
+| --- | --- |
+| `LocationId` | Stays the same when the location is renamed or moved. |
+| `Name` | Such as *Head office*; the city when left blank. |
+| `Address` | An `Address`, entered and checked with the shared [address editor](addresses.md), addressed to the account. |
+
+`AccountLocationsPart.FindLocation(locationId)` finds one. Accounts B2B offers them as shipping addresses at checkout;
+a field service module offers them as service addresses.
+
 ## Removing an account
 
 When an account's last version is removed, its records are detached: their `ContainedPart` is removed after the
 request, in batches of 100, so they keep working as records of their own.
+
+Records that refer to an account by its id rather than by `ContainedPart`, such as orders (`Order.AccountId`) and work
+orders, keep the id of the removed account. Nothing stops an account that still owes money on its B2B terms from being
+removed, so check what it owes on its page first. A module that needs to act when an account goes adds a
+`ContentPartHandler<AccountPart>` of its own.
 
 ## Import and export
 
@@ -137,7 +196,8 @@ With Content Transfer on, every type that can belong to an account gets an `Acco
 ## Admin menu
 
 The feature adds a top-level **Accounts** item, Orchard Core's content list scoped to the account types. A module that
-lists accounts in its own menu turns it off:
+lists accounts in its own menu turns it off. `AccountsAdminMenuOptions` is in the abstractions package, so a module
+needs no reference to the Accounts module to do it:
 
 ```csharp
 services.Configure<AccountsAdminMenuOptions>(options => options.ShowAccountsMenu = false);
@@ -153,11 +213,17 @@ every part another module adds. A recipe enables the feature with the `feature` 
 ```json
 {
   "name": "feature",
-  "enable": [ "CrestApps.OrchardCore.Accounts" ]
+  "enable": [
+    "CrestApps.OrchardCore.Accounts",
+    "CrestApps.OrchardCore.Accounts.Members",
+    "CrestApps.OrchardCore.Accounts.Locations"
+  ]
 }
 ```
+
+An account's members and locations are parts of the account, so they travel with it.
 
 ## Permissions
 
 Accounts use Orchard Core's content permissions. The `Account` type is securable, so a role can be given rights to
-accounts alone.
+accounts alone. Choosing an account's members also needs `ManageAccountMembers`.

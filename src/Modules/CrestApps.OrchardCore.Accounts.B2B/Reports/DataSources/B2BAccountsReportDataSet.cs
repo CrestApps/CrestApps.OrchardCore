@@ -1,8 +1,9 @@
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
-using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Accounts.B2B.Indexes;
 using CrestApps.OrchardCore.Accounts.B2B.Models;
+using CrestApps.OrchardCore.Accounts.Models;
+using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer.DataSources;
 using Microsoft.AspNetCore.Authorization;
@@ -63,7 +64,7 @@ public sealed class B2BAccountsReportDataSet : IndexedReportDataSet<ContentItem,
         AddField(nameof(B2BAccount.BillingEmail), S["Billing email"], DataFieldType.Text, record => record.BillingEmail, account);
         AddField(nameof(B2BAccount.IsEnabled), S["On"], DataFieldType.Boolean, record => record.IsEnabled, account);
         AddField("BuyerCount", S["Buyers"], DataFieldType.Integer, record => Buyers(record).Count(), account);
-        AddField("AdminCount", S["Admins"], DataFieldType.Integer, record => Buyers(record).Count(buyer => buyer.Role == AccountBuyerRole.Admin), account);
+        AddField("AdminCount", S["Admins"], DataFieldType.Integer, record => Buyers(record).Count(buyer => buyer.Role == AccountMemberRole.Admin), account);
         AddField("LocationCount", S["Locations"], DataFieldType.Integer, record => record.Locations?.Count(location => location is not null) ?? 0, account);
         AddField(nameof(B2BAccount.PriceListId), S["Price list ID"], DataFieldType.Text, record => record.PriceListId, account)
             .Identifier(CommerceReportDataSets.Reference(CommerceReportDataSets.B2BAccountSource.Name, CommerceReportDataSets.B2BAccountSource.PriceLists));

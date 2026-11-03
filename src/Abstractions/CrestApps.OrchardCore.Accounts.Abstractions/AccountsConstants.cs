@@ -11,6 +11,16 @@ public static class AccountsConstants
     public const string Feature = "CrestApps.OrchardCore.Accounts";
 
     /// <summary>
+    /// The id of the Account Members feature: the users who sign in for an account.
+    /// </summary>
+    public const string MembersFeature = "CrestApps.OrchardCore.Accounts.Members";
+
+    /// <summary>
+    /// The id of the Account Locations feature: the addresses an account has.
+    /// </summary>
+    public const string LocationsFeature = "CrestApps.OrchardCore.Accounts.Locations";
+
+    /// <summary>
     /// The technical names of the content parts an account is made of.
     /// </summary>
     public static class ContentParts
@@ -19,6 +29,16 @@ public static class AccountsConstants
         /// The part that makes a content type an account type.
         /// </summary>
         public const string Account = "AccountPart";
+
+        /// <summary>
+        /// The part that holds the users who sign in for an account.
+        /// </summary>
+        public const string Members = "AccountMembersPart";
+
+        /// <summary>
+        /// The part that holds an account's addresses.
+        /// </summary>
+        public const string Locations = "AccountLocationsPart";
 
         /// <summary>
         /// Orchard Core's list part, which holds an account's contacts.

@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Accounts.B2B.Indexes;
 using CrestApps.OrchardCore.Accounts.B2B.Models;
 using CrestApps.OrchardCore.Accounts.Models;
+using CrestApps.OrchardCore.Accounts.Services;
 using OrchardCore.ContentManagement;
 using YesSql;
 
@@ -20,7 +21,7 @@ public interface IB2BAccountStore
     Task<B2BAccount> FindByIdAsync(string accountId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Returns the published account a user buys for, or <see langword="null"/>.
+    /// Returns the published account a user buys for, the account they are a member of, or <see langword="null"/>.
     /// </summary>
     /// <param name="userId">The buyer's user id.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
@@ -45,11 +46,13 @@ public sealed class B2BAccountStore : IB2BAccountStore
 {
     private readonly ISession _session;
     private readonly IContentManager _contentManager;
+    private readonly IAccountMemberService _accountMemberService;
 
-    public B2BAccountStore(ISession session, IContentManager contentManager)
+    public B2BAccountStore(ISession session, IContentManager contentManager, IAccountMemberService accountMemberService)
     {
         _session = session;
         _contentManager = contentManager;
+        _accountMemberService = accountMemberService;
     }
 
     /// <inheritdoc/>
@@ -73,11 +76,9 @@ public sealed class B2BAccountStore : IB2BAccountStore
             return null;
         }
 
-        var contentItem = await _session
-            .Query<ContentItem, B2BAccountBuyerIndex>(index => index.UserId == userId && index.Published)
-            .FirstOrDefaultAsync(cancellationToken);
+        var contentItem = await _accountMemberService.FindAccountAsync(userId, cancellationToken);
 
-        return contentItem is null ? null : new B2BAccount(contentItem);
+        return contentItem?.Has<AccountPart>() == true ? new B2BAccount(contentItem) : null;
     }
 
     /// <inheritdoc/>

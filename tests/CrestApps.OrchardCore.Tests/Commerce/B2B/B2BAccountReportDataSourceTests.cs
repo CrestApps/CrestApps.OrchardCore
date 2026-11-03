@@ -1,15 +1,16 @@
 using System.Security.Claims;
-using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Accounts.B2B;
 using CrestApps.OrchardCore.Accounts.B2B.Indexes;
 using CrestApps.OrchardCore.Accounts.B2B.Migrations;
 using CrestApps.OrchardCore.Accounts.B2B.Models;
 using CrestApps.OrchardCore.Accounts.B2B.Reports.DataSources;
+using CrestApps.OrchardCore.Accounts.Models;
+using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.DataSources;
+using CrestApps.OrchardCore.Tests.Modules.Accounts;
 using CrestApps.OrchardCore.Tests.Modules.Reports.Designer;
 using CrestApps.OrchardCore.Tests.Modules.Reports.Designer.Module;
-using CrestApps.OrchardCore.Tests.Modules.Accounts;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
@@ -88,23 +89,26 @@ public sealed class B2BAccountReportDataSourceTests : IAsyncLifetime
             {
                 part.TaxId = "DE123456789";
                 part.BillingEmail = "billing@contoso.example";
-                part.Buyers =
-                [
-                    new AccountBuyer { UserId = "user-1", UserName = "ada", Email = "ada@contoso.example", Role = AccountBuyerRole.Admin },
-                    new AccountBuyer { UserId = "user-2", UserName = "bob", Email = "bob@contoso.example", Role = AccountBuyerRole.Buyer, OrderLimit = 500m },
-                ];
-                part.Locations = [new AccountLocation { LocationId = "hq", Name = "Head office" }];
+                part.OrderLimits = [new BuyerOrderLimit { UserId = "user-2", Limit = 500m }];
                 part.Terms = new AccountTerms { NetDays = 30, DepositPercent = 20m, CreditLimit = 10000m, RequirePurchaseOrder = true };
                 part.PriceListId = "list-1";
                 part.MonthlyBudget = 5000m;
                 part.Punchout = new AccountPunchout { Enabled = true, UserId = "user-2", KeyHash = "SECRETHASH", KeyCreatedUtc = _start };
-            }, createdUtc: _start), cancellationToken);
+            },
+            createdUtc: _start,
+            members:
+            [
+                new AccountMember { UserId = "user-1", UserName = "ada", Email = "ada@contoso.example", Role = AccountMemberRole.Admin },
+                new AccountMember { UserId = "user-2", UserName = "bob", Email = "bob@contoso.example", Role = AccountMemberRole.Member },
+            ],
+            locations: [new AccountLocation { LocationId = "hq", Name = "Head office" }]), cancellationToken);
 
-            await SaveAsync(session, TestB2BAccounts.CreateItem("account-2", "Fabrikam", part =>
-            {
-                part.Enabled = false;
-                part.Buyers = [new AccountBuyer { UserName = "pending", Email = "pending@fabrikam.example", Role = AccountBuyerRole.Buyer }];
-            }, createdUtc: _start.AddDays(1)), cancellationToken);
+            await SaveAsync(session, TestB2BAccounts.CreateItem(
+                "account-2",
+                "Fabrikam",
+                part => part.Enabled = false,
+                createdUtc: _start.AddDays(1),
+                members: [new AccountMember { UserName = "pending", Email = "pending@fabrikam.example", Role = AccountMemberRole.Member }]), cancellationToken);
 
             await session.SaveChangesAsync(cancellationToken);
         }

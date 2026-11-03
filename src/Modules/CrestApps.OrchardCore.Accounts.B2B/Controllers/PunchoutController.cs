@@ -1,4 +1,3 @@
-using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Carts.Core.Services;
 using CrestApps.OrchardCore.Accounts.B2B.Services;
 using CrestApps.OrchardCore.Accounts.B2B.ViewModels;
@@ -65,7 +64,8 @@ public sealed class PunchoutController : Controller
         {
             if (_logger.IsEnabled(LogLevel.Warning))
             {
-                _logger.LogWarning("A punchout for account '{AccountId}' was refused: unknown account, wrong key, a missing HOOK_URL or no punchout buyer.", accountId?.SanitizeLogValue());
+                // The account's id stays out of the log, like every other record identifier.
+                _logger.LogWarning("A punchout was refused: unknown account, wrong key, a missing HOOK_URL or no punchout buyer.");
             }
 
             return Unauthorized();

@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Accounts.B2B.Indexes;
 using CrestApps.OrchardCore.Accounts.B2B.Models;
+using CrestApps.OrchardCore.Accounts.Models;
 using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer.DataSources;
 using Microsoft.AspNetCore.Authorization;
@@ -71,7 +72,7 @@ public sealed class B2BBuyersReportDataSet : IndexedReportDataSet<ContentItem, B
         AddField(nameof(AccountBuyer.UserId), S["User ID"], DataFieldType.Text, row => row.Child.UserId, buyer).Identifier(ReportDataReferences.User());
         AddField(nameof(AccountBuyer.UserName), S["User name"], DataFieldType.Text, row => row.Child.UserName, buyer);
         AddField(nameof(AccountBuyer.Email), S["Email"], DataFieldType.Text, row => row.Child.Email, buyer);
-        AddField(nameof(AccountBuyer.Role), S["Role"], DataFieldType.Text, row => row.Child.Role, buyer);
+        AddField(nameof(AccountBuyer.Role), S["Role"], DataFieldType.Text, row => row.Child.Role == AccountMemberRole.Admin ? "Admin" : "Buyer", buyer);
         AddField("Currency", S["Currency"], DataFieldType.Text, _ => _storeCurrency, buyer).Description = S["The store's currency, which the order limit is in."].Value;
         AddField(nameof(AccountBuyer.OrderLimit), S["Order limit"], DataFieldType.Decimal, row => row.Child.OrderLimit, buyer).Description = S["The most an order the buyer places may come to before an account admin approves it, in the store's currency. Empty when there is no limit."].Value;
 

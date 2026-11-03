@@ -1,10 +1,11 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Accounts.B2B.Deployments;
-using CrestApps.OrchardCore.Accounts.B2B.Handlers;
 using CrestApps.OrchardCore.Accounts.B2B.Models;
 using CrestApps.OrchardCore.Accounts.B2B.Recipes;
 using CrestApps.OrchardCore.Accounts.B2B.Services;
+using CrestApps.OrchardCore.Accounts.Handlers;
+using CrestApps.OrchardCore.Accounts.Models;
 using CrestApps.OrchardCore.Accounts.Services;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Indexes;
@@ -97,15 +98,15 @@ public sealed class B2BAccountPortabilityTests
     public async Task SavingAnAccount_LinksEachBuyerToTheContactWithTheirEmail()
     {
         // Arrange
-        var contentItem = TestB2BAccounts.CreateItem(configure: part => part.Buyers =
+        var contentItem = TestB2BAccounts.CreateItem(members:
         [
-            new AccountBuyer { UserId = "user-1", Email = "ada@contoso.example" },
-            new AccountBuyer { UserId = "user-2", Email = "bob@contoso.example", ContactContentItemId = "contact-gone" },
+            new AccountMember { UserId = "user-1", Email = "ada@contoso.example" },
+            new AccountMember { UserId = "user-2", Email = "bob@contoso.example", ContactContentItemId = "contact-gone" },
         ]);
         var finder = new Mock<IAccountContactFinder>();
         finder.Setup(value => value.FindContactByEmailAsync("account-1", "ada@contoso.example", It.IsAny<CancellationToken>())).ReturnsAsync("contact-1");
-        var handler = new B2BAccountPartHandler([finder.Object]);
-        contentItem.TryGet<B2BAccountPart>(out var part);
+        var handler = new AccountMembersPartHandler([finder.Object]);
+        contentItem.TryGet<AccountMembersPart>(out var part);
 
         // Act
         await handler.UpdatingAsync(new UpdateContentContext(contentItem), part);

@@ -46,11 +46,19 @@ internal static class AccountSearchEndpoints
             return Results.Forbid();
         }
 
-        var accountTypes = (await accountContentTypeProvider.GetAccountTypesAsync())
-            .Select(type => type.Name)
-            .ToArray();
+        // Only the account types the user may view are searched: an account type is securable, so listing content in
+        // general doesn't let a user see every account's name.
+        var accountTypes = new List<string>();
 
-        if (accountTypes.Length == 0)
+        foreach (var type in await accountContentTypeProvider.GetAccountTypesAsync())
+        {
+            if (await authorizationService.AuthorizeAsync(httpContext.User, CommonPermissions.ViewContent, new ContentItem { ContentType = type.Name }))
+            {
+                accountTypes.Add(type.Name);
+            }
+        }
+
+        if (accountTypes.Count == 0)
         {
             return Results.Ok(Array.Empty<object>());
         }

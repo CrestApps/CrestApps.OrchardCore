@@ -22,20 +22,6 @@ public sealed class B2BAccountIndex : MapIndex
     public bool Latest { get; set; }
 }
 
-/// <summary>
-/// One row for each of an account's buyers, so a signed-in user's account is found by their user id.
-/// </summary>
-public sealed class B2BAccountBuyerIndex : MapIndex
-{
-    public string AccountContentItemId { get; set; }
-
-    public string UserId { get; set; }
-
-    public bool Published { get; set; }
-
-    public bool Latest { get; set; }
-}
-
 public sealed class PriceListIndex : CatalogItemIndex
 {
     public string Name { get; set; }
@@ -58,7 +44,7 @@ public sealed class PriceListIndexProvider : IndexProvider<PriceList>
 }
 
 /// <summary>
-/// Indexes the accounts that have the B2B part, and their buyers.
+/// Indexes the accounts that have the B2B part.
 /// </summary>
 public sealed class B2BAccountIndexProvider : IndexProvider<ContentItem>
 {
@@ -79,18 +65,6 @@ public sealed class B2BAccountIndexProvider : IndexProvider<ContentItem>
                     Latest = contentItem.Latest,
                 };
             });
-
-        context.For<B2BAccountBuyerIndex>()
-            .When(contentItem => contentItem.Has<B2BAccountPart>())
-            .Map(contentItem => (Part(contentItem).Buyers ?? [])
-                .Where(buyer => !string.IsNullOrEmpty(buyer.UserId))
-                .Select(buyer => new B2BAccountBuyerIndex
-                {
-                    AccountContentItemId = contentItem.ContentItemId,
-                    UserId = buyer.UserId,
-                    Published = contentItem.Published,
-                    Latest = contentItem.Latest,
-                }));
     }
 
     private static B2BAccountPart Part(ContentItem contentItem)

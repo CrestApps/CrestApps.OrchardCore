@@ -24,7 +24,7 @@ public sealed class AccountMigrationsTests
         var version = await migrations.CreateAsync();
 
         // Assert
-        Assert.Equal(2, version);
+        Assert.Equal(1, version);
 
         var account = await definitions.GetTypeDefinitionAsync("Account");
 
@@ -69,7 +69,7 @@ public sealed class AccountMigrationsTests
     }
 
     [Fact]
-    public async Task UpdateFrom1Async_AccountTypeWhoseListWasLeftEmpty_GainsTheTypesThatBelongToAnAccount()
+    public async Task CreateAsync_AccountTypeWhoseListWasLeftEmpty_GainsTheTypesThatBelongToAnAccount()
     {
         // Arrange - a recipe enabled the CRM and defined its contact type in one run, so the list was never filled.
         var definitions = new InMemoryContentDefinitionManager();
@@ -82,12 +82,12 @@ public sealed class AccountMigrationsTests
         await definitions.StoreTypeDefinitionAsync(new ContentTypeDefinitionBuilder().WithName("Member").WithPart(AccountsTestRules.MemberPart).Build());
 
         // Act
-        var version = await CreateMigrations(definitions).UpdateFrom1Async();
+        var version = await CreateMigrations(definitions).CreateAsync();
 
         // Assert
         var account = await definitions.GetTypeDefinitionAsync("Account");
 
-        Assert.Equal(2, version);
+        Assert.Equal(1, version);
         Assert.Equal(["Member"], GetPart(account, "ListPart").GetSettings<ListPartSettings>().ContainedContentTypes);
         Assert.Equal(20, GetPart(account, "ListPart").GetSettings<ListPartSettings>().PageSize);
     }

@@ -39,8 +39,7 @@ public sealed class Startup : StartupBase
         // The business settings are a part on the account; price lists live in their own YesSql collection, which has
         // to be declared to be stored.
         services.AddContentPart<B2BAccountPart>()
-            .UseDisplayDriver<B2BAccountPartDisplayDriver>()
-            .AddHandler<B2BAccountPartHandler>();
+            .UseDisplayDriver<B2BAccountPartDisplayDriver>();
         services.AddScoped<IContentDisplayDriver, B2BAccountCardsDisplayDriver>();
         services.AddTransient<IContentsAdminListFilterProvider, B2BAccountsContentsAdminListFilterProvider>();
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(B2BAccountsConstants.PriceListsCollectionName));

@@ -1,7 +1,7 @@
 using CrestApps.OrchardCore.Accounts.B2B.Models;
 using CrestApps.OrchardCore.Accounts.B2B.Services;
 using CrestApps.OrchardCore.Accounts.B2B.ViewModels;
-using CrestApps.OrchardCore.Addresses.Core.Editing;
+using CrestApps.OrchardCore.Accounts.Models;
 using CrestApps.OrchardCore.Checkout.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -11,9 +11,9 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
+using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
-using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Modules;
@@ -23,20 +23,15 @@ using OrchardCore.Users;
 namespace CrestApps.OrchardCore.Accounts.B2B.Drivers;
 
 /// <summary>
-/// The B2B settings on an account's editor: whether it buys as a business, its buyers, locations, terms, budget, price
-/// list and punchout. Only users who manage B2B accounts see them or change them.
+/// The B2B settings on an account's editor: whether it buys as a business, its terms, budget, price list, each
+/// buyer's order limit and punchout. The buyers themselves are the account's members, and the places it ships to its
+/// locations, each edited with its own part. Only users who manage B2B accounts see these settings or change them.
 /// </summary>
 internal sealed class B2BAccountPartDisplayDriver : ContentPartDisplayDriver<B2BAccountPart>
 {
-    // Empty rows the editor offers to add buyers and locations.
-    private const int SpareRows = 2;
-
-    private readonly IB2BAccountStore _accounts;
     private readonly IPriceListStore _priceLists;
     private readonly UserManager<IUser> _userManager;
     private readonly ISiteService _siteService;
-    private readonly IAddressEditorService _addressEditor;
-    private readonly IShapeFactory _shapeFactory;
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly INotifier _notifier;
@@ -46,12 +41,9 @@ internal sealed class B2BAccountPartDisplayDriver : ContentPartDisplayDriver<B2B
     internal readonly IStringLocalizer S;
 
     public B2BAccountPartDisplayDriver(
-        IB2BAccountStore accounts,
         IPriceListStore priceLists,
         UserManager<IUser> userManager,
         ISiteService siteService,
-        IAddressEditorService addressEditor,
-        IShapeFactory shapeFactory,
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
         INotifier notifier,
@@ -59,12 +51,9 @@ internal sealed class B2BAccountPartDisplayDriver : ContentPartDisplayDriver<B2B
         IHtmlLocalizer<B2BAccountPartDisplayDriver> htmlLocalizer,
         IStringLocalizer<B2BAccountPartDisplayDriver> stringLocalizer)
     {
-        _accounts = accounts;
         _priceLists = priceLists;
         _userManager = userManager;
         _siteService = siteService;
-        _addressEditor = addressEditor;
-        _shapeFactory = shapeFactory;
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
         _notifier = notifier;
@@ -92,20 +81,9 @@ internal sealed class B2BAccountPartDisplayDriver : ContentPartDisplayDriver<B2B
             MonthlyBudget = part.MonthlyBudget,
             PriceListId = part.PriceListId,
             PunchoutEnabled = part.Punchout?.Enabled == true,
-            PunchoutUser = FindBuyer(part, part.Punchout?.UserId) is { } punchoutBuyer ? punchoutBuyer.Email ?? punchoutBuyer.UserName : null,
+            PunchoutUserId = part.Punchout?.UserId,
             PunchoutKeyCreatedUtc = part.Punchout?.KeyCreatedUtc,
-            Buyers = [.. (part.Buyers ?? []).Select(buyer => new AccountBuyerRowViewModel { User = buyer.Email ?? buyer.UserName, Role = buyer.Role, OrderLimit = buyer.OrderLimit })],
         };
-
-        foreach (var location in part.Locations ?? [])
-        {
-            model.Locations.Add(new AccountLocationRowViewModel
-            {
-                LocationId = location.LocationId,
-                Name = location.Name,
-                Address = await _addressEditor.BuildAsync(location.Address, LocationEditorOptions(model)),
-            });
-        }
 
         return await BuildEditorAsync(model, part, context);
     }
@@ -140,7 +118,7 @@ internal sealed class B2BAccountPartDisplayDriver : ContentPartDisplayDriver<B2B
 
     private async Task<IDisplayResult> BuildEditorAsync(B2BAccountPartViewModel source, B2BAccountPart part, BuildPartEditorContext context)
     {
-        await PopulateAsync(source, part.ContentItem.ContentItemId);
+        await PopulateAsync(source, part);
 
         return Initialize<B2BAccountPartViewModel>(GetEditorShapeType(context), model =>
         {
@@ -154,20 +132,20 @@ internal sealed class B2BAccountPartDisplayDriver : ContentPartDisplayDriver<B2B
             model.RequirePurchaseOrder = source.RequirePurchaseOrder;
             model.MonthlyBudget = source.MonthlyBudget;
             model.PriceListId = source.PriceListId;
-            model.Buyers = source.Buyers;
-            model.Locations = source.Locations;
+            model.OrderLimits = source.OrderLimits;
             model.StoreCurrency = source.StoreCurrency;
             model.PriceLists = source.PriceLists;
+            model.Members = source.Members;
             model.PunchoutEnabled = source.PunchoutEnabled;
-            model.PunchoutUser = source.PunchoutUser;
+            model.PunchoutUserId = source.PunchoutUserId;
             model.PunchoutKeyCreatedUtc = source.PunchoutKeyCreatedUtc;
             model.PunchoutUrl = source.PunchoutUrl;
             model.Prefix = Prefix;
         });
     }
 
-    // Checks the form and copies it onto the part. Buyers are found by their user name or email, and a user buys for
-    // one account only.
+    // Checks the form and copies it onto the part. The order limits and the punchout buyer are kept by user id; a
+    // member who leaves the account loses both.
     private async Task<bool> ApplyAsync(B2BAccountPartViewModel model, B2BAccountPart part, ModelStateDictionary modelState)
     {
         if (model.NetDays is < 0 or > 365)
@@ -185,100 +163,34 @@ internal sealed class B2BAccountPartDisplayDriver : ContentPartDisplayDriver<B2B
             modelState.AddModelError(Key(nameof(model.CreditLimit)), S["A credit limit or budget can't be negative."]);
         }
 
-        var accountId = part.ContentItem.ContentItemId;
-        var buyers = new List<AccountBuyer>();
+        var members = Members(part.ContentItem);
+        var limits = new List<BuyerOrderLimit>();
 
-        foreach (var row in (model.Buyers ?? []).Where(row => !string.IsNullOrWhiteSpace(row.User)))
+        foreach (var row in model.OrderLimits ?? [])
         {
-            var name = row.User.Trim();
-            var user = await _userManager.FindByEmailAsync(name) ?? await _userManager.FindByNameAsync(name);
-
-            if (user is null)
-            {
-                modelState.AddModelError(Key(nameof(model.Buyers)), S["There's no user {0}. Add the buyer as a user first.", name]);
-
-                continue;
-            }
-
-            var userId = await _userManager.GetUserIdAsync(user);
-
-            if (buyers.Any(buyer => buyer.UserId == userId))
+            if (string.IsNullOrEmpty(row?.UserId) || row.Limit is not > 0m || limits.Any(limit => limit.UserId == row.UserId))
             {
                 continue;
             }
 
-            if (await _accounts.FindByBuyerAsync(userId) is { } other && other.AccountId != accountId)
-            {
-                modelState.AddModelError(Key(nameof(model.Buyers)), S["{0} already buys for {1}.", name, other.Name]);
-
-                continue;
-            }
-
-            var existing = FindBuyer(part, userId);
-
-            buyers.Add(new AccountBuyer
-            {
-                UserId = userId,
-                UserName = await _userManager.GetUserNameAsync(user),
-                Email = await _userManager.GetEmailAsync(user),
-                Role = row.Role,
-                OrderLimit = row.OrderLimit is > 0m ? row.OrderLimit : null,
-                ContactContentItemId = existing?.ContactContentItemId,
-            });
+            limits.Add(new BuyerOrderLimit { UserId = row.UserId, Limit = row.Limit.Value });
         }
 
-        // Each location is checked against its country's rules by the shared address editor; a row left blank is no
-        // location. Its recipient is the account.
-        var locations = new List<AccountLocation>();
-        var locationOptions = LocationEditorOptions(model);
-        var accountName = part.ContentItem.DisplayText?.Trim();
-
-        for (var i = 0; i < (model.Locations?.Count ?? 0); i++)
-        {
-            var row = model.Locations[i];
-            row.Address ??= new AddressEditorViewModel();
-
-            if (string.IsNullOrWhiteSpace(row.Name) && !row.Address.HasAnyValue())
-            {
-                continue;
-            }
-
-            row.Address.Name = accountName;
-            row.Address.Company = accountName;
-
-            var result = await _addressEditor.ValidateAsync(row.Address, modelState, LocationEditorPrefix(i), locationOptions);
-
-            if (!result.IsValid)
-            {
-                continue;
-            }
-
-            locations.Add(new AccountLocation
-            {
-                LocationId = string.IsNullOrEmpty(row.LocationId) ? IdGenerator.GenerateId() : row.LocationId,
-                Name = string.IsNullOrWhiteSpace(row.Name) ? result.Address.City : row.Name.Trim(),
-                Address = result.Address,
-            });
-        }
-
-        // The procurement system shops as one of the account's buyers, and never as a site administrator.
+        // The procurement system shops as one of the account's members, and never as a site administrator.
         string punchoutUserId = null;
 
         if (model.PunchoutEnabled)
         {
-            var punchoutUser = string.IsNullOrWhiteSpace(model.PunchoutUser)
-                ? null
-                : await _userManager.FindByEmailAsync(model.PunchoutUser.Trim()) ?? await _userManager.FindByNameAsync(model.PunchoutUser.Trim());
+            punchoutUserId = string.IsNullOrWhiteSpace(model.PunchoutUserId) ? null : model.PunchoutUserId;
+            var punchoutUser = punchoutUserId is null ? null : await _userManager.FindByIdAsync(punchoutUserId);
 
-            punchoutUserId = punchoutUser is null ? null : await _userManager.GetUserIdAsync(punchoutUser);
-
-            if (punchoutUserId is null || !buyers.Any(buyer => buyer.UserId == punchoutUserId))
+            if (punchoutUser is null || members.FindMember(punchoutUserId) is null)
             {
-                modelState.AddModelError(Key(nameof(model.PunchoutUser)), S["Choose one of the account's buyers for punchout, by user name or email."]);
+                modelState.AddModelError(Key(nameof(model.PunchoutUserId)), S["Choose one of the account's members for punchout."]);
             }
-            else if (await _userManager.IsInRoleAsync(punchoutUser, "Administrator"))
+            else if (await _userManager.IsInRoleAsync(punchoutUser, OrchardCoreConstants.Roles.Administrator))
             {
-                modelState.AddModelError(Key(nameof(model.PunchoutUser)), S["A site administrator can't be the punchout buyer. Use a user who only buys."]);
+                modelState.AddModelError(Key(nameof(model.PunchoutUserId)), S["A site administrator can't be the punchout buyer. Use a user who only buys."]);
             }
         }
 
@@ -299,8 +211,7 @@ internal sealed class B2BAccountPartDisplayDriver : ContentPartDisplayDriver<B2B
         };
         part.MonthlyBudget = model.MonthlyBudget;
         part.PriceListId = string.IsNullOrWhiteSpace(model.PriceListId) ? null : model.PriceListId;
-        part.Buyers = buyers;
-        part.Locations = locations;
+        part.OrderLimits = limits;
         part.Punchout ??= new AccountPunchout();
         part.Punchout.Enabled = model.PunchoutEnabled;
         part.Punchout.UserId = punchoutUserId;
@@ -320,30 +231,36 @@ internal sealed class B2BAccountPartDisplayDriver : ContentPartDisplayDriver<B2B
         return true;
     }
 
-    private async Task PopulateAsync(B2BAccountPartViewModel model, string accountId)
+    private async Task PopulateAsync(B2BAccountPartViewModel model, B2BAccountPart part)
     {
+        var accountId = part.ContentItem.ContentItemId;
+        var members = Members(part.ContentItem).Members ?? [];
+        var posted = (model.OrderLimits ?? [])
+            .Where(row => !string.IsNullOrEmpty(row?.UserId))
+            .GroupBy(row => row.UserId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First().Limit, StringComparer.Ordinal);
+
+        // One row for each of the account's current members: the limit as posted, or as saved.
+        model.OrderLimits = [.. members
+            .Where(member => !string.IsNullOrEmpty(member?.UserId))
+            .Select(member => new BuyerOrderLimitRowViewModel
+            {
+                UserId = member.UserId,
+                User = member.Email ?? member.UserName,
+                Role = member.Role,
+                Limit = posted.TryGetValue(member.UserId, out var limit)
+                    ? limit
+                    : part.OrderLimits?.FirstOrDefault(saved => saved?.UserId == member.UserId)?.Limit,
+            })];
+
+        model.Members = [.. members
+            .Where(member => !string.IsNullOrEmpty(member?.UserId))
+            .Select(member => new SelectListItem(member.Email ?? member.UserName, member.UserId, member.UserId == model.PunchoutUserId))];
+
         model.AccountId = accountId;
         model.PunchoutUrl = string.IsNullOrEmpty(accountId) ? null : PunchoutUrl(accountId);
         model.StoreCurrency = (await _siteService.GetSettingsAsync<CheckoutSettings>()).Currency;
         model.PriceLists = [.. (await _priceLists.ListAllAsync()).Select(list => new SelectListItem(list.Name, list.ItemId, list.ItemId == model.PriceListId))];
-
-        for (var i = 0; i < SpareRows; i++)
-        {
-            model.Buyers.Add(new AccountBuyerRowViewModel());
-        }
-
-        model.Locations.Add(new AccountLocationRowViewModel());
-
-        var locationOptions = LocationEditorOptions(model);
-
-        for (var i = 0; i < model.Locations.Count; i++)
-        {
-            var row = model.Locations[i];
-            row.Address ??= new AddressEditorViewModel();
-
-            await _addressEditor.PopulateAsync(row.Address, locationOptions);
-            row.AddressEditor = await _shapeFactory.CreateAddressEditorAsync(row.Address, LocationEditorPrefix(i));
-        }
     }
 
     private async Task<bool> CanManageAsync()
@@ -360,19 +277,6 @@ internal sealed class B2BAccountPartDisplayDriver : ContentPartDisplayDriver<B2B
     private string Key(string name)
         => $"{Prefix}.{name}";
 
-    private string LocationEditorPrefix(int index)
-        => $"{Prefix}.{nameof(B2BAccountPartViewModel.Locations)}[{index}].{nameof(AccountLocationRowViewModel.Address)}";
-
-    private static AccountBuyer FindBuyer(B2BAccountPart part, string userId)
-        => string.IsNullOrEmpty(userId) ? null : part.Buyers?.FirstOrDefault(buyer => string.Equals(buyer.UserId, userId, StringComparison.Ordinal));
-
-    // A location is where the account receives orders, addressed to the account itself, so the editor asks for neither
-    // a recipient nor a company. A new one starts in the country of the account's first location.
-    private static AddressEditorOptions LocationEditorOptions(B2BAccountPartViewModel model)
-        => new()
-        {
-            ShowName = false,
-            ShowCompany = false,
-            DefaultCountry = model.Locations?.Select(row => row.Address?.Country).FirstOrDefault(country => !string.IsNullOrWhiteSpace(country)),
-        };
+    private static AccountMembersPart Members(ContentItem contentItem)
+        => contentItem.TryGet<AccountMembersPart>(out var part) ? part : new AccountMembersPart();
 }

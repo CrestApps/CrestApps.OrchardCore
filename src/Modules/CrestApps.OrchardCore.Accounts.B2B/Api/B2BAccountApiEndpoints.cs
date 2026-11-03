@@ -1,11 +1,12 @@
+using CrestApps.OrchardCore.Accounts.B2B.Controllers;
+using CrestApps.OrchardCore.Accounts.B2B.Models;
+using CrestApps.OrchardCore.Accounts.B2B.Services;
+using CrestApps.OrchardCore.Accounts.Models;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Api;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Commerce.Api;
-using CrestApps.OrchardCore.Accounts.B2B.Models;
-using CrestApps.OrchardCore.Accounts.B2B.Controllers;
-using CrestApps.OrchardCore.Accounts.B2B.Services;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -80,7 +81,7 @@ internal static class B2BAccountApiEndpoints
             account.AccountId,
             account.Name,
             account.TaxId,
-            buyer.Role == AccountBuyerRole.Admin ? "admin" : "buyer",
+            buyer.Role == AccountMemberRole.Admin ? "admin" : "buyer",
             ApiMoney.From(buyer.OrderLimit, currency),
             account.Terms?.OffersTerms == true ? new ApiAccountTerms(account.Terms.NetDays ?? 0, account.Terms.DepositPercent, ApiMoney.From(account.Terms.CreditLimit, currency), ApiMoney.From(owed, currency)) : null,
             account.Terms?.RequirePurchaseOrder == true,
@@ -120,7 +121,7 @@ internal static class B2BAccountApiEndpoints
     {
         var (account, buyer) = await accounts.GetCurrentAsync(httpContext.RequestAborted);
 
-        if (account is null || buyer?.Role != AccountBuyerRole.Admin)
+        if (account is null || buyer?.Role != AccountMemberRole.Admin)
         {
             return ApiProblems.NotFound("You aren't an admin of an account.");
         }
@@ -142,7 +143,7 @@ internal static class B2BAccountApiEndpoints
     {
         var (account, buyer) = await accounts.GetCurrentAsync(httpContext.RequestAborted);
 
-        if (account is null || buyer?.Role != AccountBuyerRole.Admin ||
+        if (account is null || buyer?.Role != AccountMemberRole.Admin ||
             await orders.FindByIdAsync(orderId, httpContext.RequestAborted) is not { } order || order.AccountId != account.AccountId)
         {
             return ApiProblems.NotFound();

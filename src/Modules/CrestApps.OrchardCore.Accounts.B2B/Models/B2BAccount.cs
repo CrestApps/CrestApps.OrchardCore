@@ -1,11 +1,12 @@
-using CrestApps.OrchardCore.Addresses.Models;
+using CrestApps.OrchardCore.Accounts.Models;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Accounts.B2B.Models;
 
 /// <summary>
-/// Lets an account buy from the store as a business: the people who buy for it, the places it ships to, the terms it
-/// buys on and the prices it pays. The account's name is its title.
+/// Lets an account buy from the store as a business: the terms it buys on, the prices it pays, and the most each of its
+/// buyers may order. The account's name is its title, its buyers are its members, kept by the Account Members feature,
+/// and the places it ships to are its locations, kept by the Account Locations feature.
 /// </summary>
 public sealed class B2BAccountPart : ContentPart
 {
@@ -24,9 +25,11 @@ public sealed class B2BAccountPart : ContentPart
     /// </summary>
     public string BillingEmail { get; set; }
 
-    public List<AccountBuyer> Buyers { get; set; } = [];
-
-    public List<AccountLocation> Locations { get; set; } = [];
+    /// <summary>
+    /// Gets or sets the most an order each buyer places may come to before an account admin has to approve it, for the
+    /// buyers that have a limit.
+    /// </summary>
+    public List<BuyerOrderLimit> OrderLimits { get; set; } = [];
 
     public AccountTerms Terms { get; set; } = new();
 
@@ -48,7 +51,24 @@ public sealed class B2BAccountPart : ContentPart
 }
 
 /// <summary>
-/// An account that buys as a business: the account content item with its <see cref="B2BAccountPart"/>, read together.
+/// The most an order one buyer places may come to before an account admin has to approve it.
+/// </summary>
+public sealed class BuyerOrderLimit
+{
+    /// <summary>
+    /// Gets or sets the buyer's user id: one of the account's members.
+    /// </summary>
+    public string UserId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the limit, in the store's currency.
+    /// </summary>
+    public decimal Limit { get; set; }
+}
+
+/// <summary>
+/// An account that buys as a business: the account content item with its <see cref="B2BAccountPart"/>, its members and
+/// its locations, read together.
 /// </summary>
 public sealed class B2BAccount
 {
@@ -62,6 +82,26 @@ public sealed class B2BAccount
 
         ContentItem = contentItem;
         Part = contentItem.TryGet<B2BAccountPart>(out var part) ? part : new B2BAccountPart();
+
+        var limits = (Part.OrderLimits ?? [])
+            .Where(limit => !string.IsNullOrEmpty(limit?.UserId))
+            .GroupBy(limit => limit.UserId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First().Limit, StringComparer.Ordinal);
+
+        Buyers = [.. ((contentItem.TryGet<AccountMembersPart>(out var members) ? members.Members : null) ?? [])
+            .Where(member => member is not null)
+            .Select(member => new AccountBuyer
+            {
+                UserId = member.UserId,
+                UserName = member.UserName,
+                Email = member.Email,
+                Role = member.Role,
+                OrderLimit = member.UserId is { } userId && limits.TryGetValue(userId, out var limit) && limit > 0m ? limit : null,
+                ContactContentItemId = member.ContactContentItemId,
+            })];
+
+        Locations = [.. ((contentItem.TryGet<AccountLocationsPart>(out var locations) ? locations.Locations : null) ?? [])
+            .Where(location => location is not null)];
     }
 
     /// <summary>
@@ -98,11 +138,15 @@ public sealed class B2BAccount
     public string BillingEmail
         => Part.BillingEmail;
 
-    public IReadOnlyList<AccountBuyer> Buyers
-        => Part.Buyers ?? [];
+    /// <summary>
+    /// Gets the people who buy for the account: its members, each with their order limit.
+    /// </summary>
+    public IReadOnlyList<AccountBuyer> Buyers { get; }
 
-    public IReadOnlyList<AccountLocation> Locations
-        => Part.Locations ?? [];
+    /// <summary>
+    /// Gets the places the account has orders shipped to: its locations.
+    /// </summary>
+    public IReadOnlyList<AccountLocation> Locations { get; }
 
     public AccountTerms Terms
         => Part.Terms ?? new AccountTerms();
@@ -124,7 +168,9 @@ public sealed class B2BAccount
 }
 
 /// <summary>
-/// Someone who buys for an account: a buyer, or an admin who also manages the account's buyers and approves orders.
+/// Someone who buys for an account: one of its members, a buyer or an admin who also approves orders, with the most an
+/// order of theirs may come to. It is read from the account's members and its <see cref="B2BAccountPart"/>, never
+/// stored.
 /// </summary>
 public sealed class AccountBuyer
 {
@@ -134,7 +180,11 @@ public sealed class AccountBuyer
 
     public string Email { get; set; }
 
-    public AccountBuyerRole Role { get; set; }
+    /// <summary>
+    /// Gets or sets the member's role. An admin sees all of the account's orders, and approves orders over a buyer's
+    /// limit or the account's budget.
+    /// </summary>
+    public AccountMemberRole Role { get; set; }
 
     /// <summary>
     /// Gets or sets the most an order the buyer places may come to before an account admin has to approve it, or none.
@@ -165,28 +215,6 @@ public sealed class AccountPunchout
     public string KeyHash { get; set; }
 
     public DateTime? KeyCreatedUtc { get; set; }
-}
-
-public enum AccountBuyerRole
-{
-    Buyer,
-
-    /// <summary>
-    /// Sees all of the account's orders, and approves orders over a buyer's limit or the account's budget.
-    /// </summary>
-    Admin,
-}
-
-/// <summary>
-/// A place an account has goods shipped to, offered to its buyers at checkout.
-/// </summary>
-public sealed class AccountLocation
-{
-    public string LocationId { get; set; }
-
-    public string Name { get; set; }
-
-    public Address Address { get; set; }
 }
 
 /// <summary>

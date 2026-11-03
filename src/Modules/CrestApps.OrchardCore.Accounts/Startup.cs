@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Accounts.Drivers;
 using CrestApps.OrchardCore.Accounts.Endpoints;
 using CrestApps.OrchardCore.Accounts.Handlers;
+using CrestApps.OrchardCore.Accounts.Indexes;
 using CrestApps.OrchardCore.Accounts.Migrations;
 using CrestApps.OrchardCore.Accounts.Models;
 using CrestApps.OrchardCore.Accounts.Navigation;
@@ -12,10 +13,12 @@ using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentTypes.Events;
+using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes.Services;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Accounts;
 
@@ -42,6 +45,42 @@ public sealed class Startup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes.AddAccountSearchEndpoints();
+    }
+}
+
+/// <summary>
+/// Registers the members part, its editor and index, and the service that finds the account a user signs in for.
+/// </summary>
+[Feature(AccountsConstants.MembersFeature)]
+public sealed class MembersStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddContentPart<AccountMembersPart>()
+            .UseDisplayDriver<AccountMembersPartDisplayDriver>()
+            .AddHandler<AccountMembersPartHandler>();
+
+        services.AddScoped<IAccountMemberService, AccountMemberService>();
+        services.AddIndexProvider<AccountMemberIndexProvider>();
+        services.AddDataMigration<AccountMembersMigrations>();
+        services.AddPermissionProvider<AccountMembersPermissionProvider>();
+    }
+}
+
+/// <summary>
+/// Registers the locations part and its editor.
+/// </summary>
+[Feature(AccountsConstants.LocationsFeature)]
+public sealed class LocationsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddContentPart<AccountLocationsPart>()
+            .UseDisplayDriver<AccountLocationsPartDisplayDriver>();
+
+        services.AddDataMigration<AccountLocationsMigrations>();
     }
 }
 

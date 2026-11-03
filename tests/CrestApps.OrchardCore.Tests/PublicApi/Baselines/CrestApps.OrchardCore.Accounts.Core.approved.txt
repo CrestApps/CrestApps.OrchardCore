@@ -1,4 +1,20 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
+namespace CrestApps.OrchardCore.Accounts.Indexes
+{
+    public sealed class AccountMemberIndex : YesSql.Indexes.MapIndex
+    {
+        public AccountMemberIndex() { }
+        public string AccountContentItemId { get; set; }
+        public bool Latest { get; set; }
+        public bool Published { get; set; }
+        public string UserId { get; set; }
+    }
+    public sealed class AccountMemberIndexProvider : YesSql.Indexes.IndexProvider<OrchardCore.ContentManagement.ContentItem>
+    {
+        public AccountMemberIndexProvider() { }
+        public override void Describe(YesSql.Indexes.DescribeContext<OrchardCore.ContentManagement.ContentItem> context) { }
+    }
+}
 namespace CrestApps.OrchardCore.Accounts.Services
 {
     public sealed class AccountContentTypeProvider : CrestApps.OrchardCore.Accounts.Services.IAccountContentTypeProvider
@@ -15,5 +31,11 @@ namespace CrestApps.OrchardCore.Accounts.Services
         public AccountListSynchronizer(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager, CrestApps.OrchardCore.Accounts.Services.IAccountContentTypeProvider accountContentTypeProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Accounts.Services.AccountListSynchronizer> logger) { }
         public System.Threading.Tasks.Task<string[]> GetChildTypesAsync() { }
         public System.Threading.Tasks.Task SynchronizeAsync() { }
+    }
+    public sealed class AccountMemberService : CrestApps.OrchardCore.Accounts.Services.IAccountMemberService
+    {
+        public AccountMemberService(YesSql.ISession session) { }
+        public System.Threading.Tasks.Task<OrchardCore.ContentManagement.ContentItem> FindAccountAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<string> FindOtherAccountIdAsync(string userId, string exceptAccountId, System.Threading.CancellationToken cancellationToken = default) { }
     }
 }

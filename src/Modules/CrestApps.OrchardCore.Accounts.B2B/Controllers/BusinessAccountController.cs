@@ -1,8 +1,9 @@
 using CrestApps.OrchardCore.Accounts.B2B.Models;
 using CrestApps.OrchardCore.Accounts.B2B.Services;
 using CrestApps.OrchardCore.Accounts.B2B.ViewModels;
-using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Accounts.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
+using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -60,10 +61,10 @@ public sealed class BusinessAccountController : Controller
         var (_, orders) = await _orders.PageAsync(new OrderQuery
         {
             AccountId = account.AccountId,
-            UserId = buyer.Role == AccountBuyerRole.Admin ? null : buyer.UserId,
+            UserId = buyer.Role == AccountMemberRole.Admin ? null : buyer.UserId,
         }, 0, RecentOrders, HttpContext.RequestAborted);
         var (owed, currency) = await _terms.GetOwedAsync(account, HttpContext.RequestAborted);
-        var approvals = buyer.Role == AccountBuyerRole.Admin ? await ListApprovalsAsync(_orders, account.AccountId, HttpContext.RequestAborted) : [];
+        var approvals = buyer.Role == AccountMemberRole.Admin ? await ListApprovalsAsync(_orders, account.AccountId, HttpContext.RequestAborted) : [];
         decimal? spent = account.MonthlyBudget is null ? null : await _approvals.GetSpentThisMonthAsync(account, currency, cancellationToken: HttpContext.RequestAborted);
 
         return View(await _shapeFactory.CreateAsync<BusinessAccountViewModel>("BusinessAccount", model =>
@@ -84,7 +85,7 @@ public sealed class BusinessAccountController : Controller
     {
         var (account, buyer) = await _accounts.GetCurrentAsync(HttpContext.RequestAborted);
 
-        if (account is null || buyer?.Role != AccountBuyerRole.Admin ||
+        if (account is null || buyer?.Role != AccountMemberRole.Admin ||
             await _orders.FindByIdAsync(orderId, HttpContext.RequestAborted) is not { } order || order.AccountId != account.AccountId)
         {
             return NotFound();

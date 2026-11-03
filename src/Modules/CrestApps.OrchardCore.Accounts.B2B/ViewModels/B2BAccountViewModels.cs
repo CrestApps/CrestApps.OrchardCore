@@ -1,10 +1,9 @@
-using CrestApps.OrchardCore.Addresses.Core.Editing;
 using CrestApps.OrchardCore.Accounts.B2B.Models;
+using CrestApps.OrchardCore.Accounts.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
-using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Accounts.B2B.ViewModels;
 
@@ -34,9 +33,10 @@ public class B2BAccountPartViewModel
 
     public string PriceListId { get; set; }
 
-    public List<AccountBuyerRowViewModel> Buyers { get; set; } = [];
-
-    public List<AccountLocationRowViewModel> Locations { get; set; } = [];
+    /// <summary>
+    /// Gets or sets the order limit of each of the account's members.
+    /// </summary>
+    public List<BuyerOrderLimitRowViewModel> OrderLimits { get; set; } = [];
 
     [BindNever]
     public string StoreCurrency { get; set; }
@@ -46,7 +46,16 @@ public class B2BAccountPartViewModel
 
     public bool PunchoutEnabled { get; set; }
 
-    public string PunchoutUser { get; set; }
+    /// <summary>
+    /// Gets or sets the user id of the member the procurement system shops as.
+    /// </summary>
+    public string PunchoutUserId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the account's members, to choose the punchout buyer from.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> Members { get; set; } = [];
 
     public bool NewPunchoutKey { get; set; }
 
@@ -71,34 +80,23 @@ public class PunchoutTransferViewModel
     public int ItemCount { get; set; }
 }
 
-public class AccountBuyerRowViewModel
+/// <summary>
+/// One member's order limit on an account's editor.
+/// </summary>
+public class BuyerOrderLimitRowViewModel
 {
-    /// <summary>
-    /// Gets or sets the buyer's user name or email.
-    /// </summary>
-    public string User { get; set; }
-
-    public AccountBuyerRole Role { get; set; }
-
-    public decimal? OrderLimit { get; set; }
-}
-
-public class AccountLocationRowViewModel
-{
-    public string LocationId { get; set; }
-
-    public string Name { get; set; }
+    public string UserId { get; set; }
 
     /// <summary>
-    /// Gets or sets the address as the editor posts it, under the row's <c>Address</c> prefix.
-    /// </summary>
-    public AddressEditorViewModel Address { get; set; } = new();
-
-    /// <summary>
-    /// Gets or sets the address editor, laid out for the address's country.
+    /// Gets or sets the member's email or user name.
     /// </summary>
     [BindNever]
-    public IShape AddressEditor { get; set; }
+    public string User { get; set; }
+
+    [BindNever]
+    public AccountMemberRole Role { get; set; }
+
+    public decimal? Limit { get; set; }
 }
 
 /// <summary>

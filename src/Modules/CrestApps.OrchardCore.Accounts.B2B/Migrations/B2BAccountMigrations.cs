@@ -23,7 +23,7 @@ internal sealed class B2BAccountMigrations : DataMigration
         await _contentDefinitionManager.AlterPartDefinitionAsync(B2BAccountsConstants.ContentParts.B2BAccount, part => part
             .Attachable()
             .WithDisplayName("B2B Account")
-            .WithDescription("Lets an account buy as a business: its buyers, locations, payment terms, budget, price list and punchout."));
+            .WithDescription("Lets an account buy as a business: its payment terms, budget, price list, buyers' order limits and punchout."));
 
         // The part goes on the account type the Accounts feature creates; another account type can be given it by hand.
         if (await _contentDefinitionManager.GetTypeDefinitionAsync(AccountsConstants.ContentTypes.Account) is { } accountType &&
@@ -46,15 +46,6 @@ internal sealed class B2BAccountMigrations : DataMigration
 
         await SchemaBuilder.AlterIndexTableAsync<B2BAccountIndex>(table => table
             .CreateIndex("IDX_B2BAccountIndex_PriceListId", "PriceListId", "Latest"));
-
-        await SchemaBuilder.CreateMapIndexTableAsync<B2BAccountBuyerIndex>(table => table
-            .Column<string>("AccountContentItemId", column => column.WithLength(26))
-            .Column<string>("UserId", column => column.WithLength(26))
-            .Column<bool>("Published")
-            .Column<bool>("Latest"));
-
-        await SchemaBuilder.AlterIndexTableAsync<B2BAccountBuyerIndex>(table => table
-            .CreateIndex("IDX_B2BAccountBuyerIndex_UserId", "UserId", "Published", "Latest"));
 
         await SchemaBuilder.CreateMapIndexTableAsync<PriceListIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))

@@ -20,10 +20,11 @@ A business you sell to is an [account](../accounts.md), the same account your sa
 
 1. Open the account, or create one, and click **Edit**.
 2. Under **Business buying**, switch on **This account buys as a business**. If you like, enter its **Tax or VAT number** (printed on its invoices) and a **Billing email** that gets its invoices too.
-3. Under **Buyers**, enter each person's **User name or email** (they need a user account first), choose **Buyer** or **Admin**, and give a buyer an **Order limit** if their bigger orders need approval. An admin sees all of the account's orders and approves orders. Save to get more empty rows.
+3. Under **Members**, enter each person who buys for it by their **User name or email** (they need a user account first), and choose **Member** or **Admin**. An admin sees all of the account's orders and approves orders. See [the people who sign in for an account](../accounts.md#the-people-who-sign-in-for-an-account).
 4. Fill in **Payment terms** and the other sections below, and click **Publish**.
+5. Once the members are saved, give a buyer an **Order limit** under **Buyers** if their bigger orders need approval.
 
-**Commerce > B2B Accounts** lists the accounts that buy as a business. A user buys for one account. Switch **This account buys as a business** off to let its buyers buy for themselves again; its orders keep the account.
+**Commerce > B2B Accounts** lists the accounts that buy as a business. A user is a member of one account, and buys for it. Switch **This account buys as a business** off to let its buyers buy for themselves again; its orders keep the account.
 
 When a buyer's email is the email of one of the account's contacts, the buyer is linked to that contact, and the account's page shows a **Contact** link next to them.
 
@@ -48,7 +49,7 @@ The invoice is the transaction *on account*, with its purchase order number, due
 
 ## Locations
 
-Under **Locations**, add the places the account has orders shipped to, with a name such as *Head office* and the address, in the same address form as the rest of the store: choose the country first and the form asks for what that country's addresses need. Its buyers pick one at checkout. To remove a location, clear its fields.
+The account's **Locations** are the places it has orders shipped to; its buyers pick one at checkout. See [an account's locations](../accounts.md#an-accounts-locations).
 
 ## Price lists
 
@@ -88,8 +89,8 @@ Buyers can ask for a quote from their cart, with their purchase order number, wh
 
 **Punchout** lets an account's procurement system, such as SAP, open your store: the buyer fills a cart, and it goes back to their system, where it's approved and ordered. Your store speaks OCI.
 
-1. Add a user who only buys for the account (not a site administrator), and add them under **Buyers**.
-2. Under **Punchout (OCI)**, tick **Its procurement system shops here by punchout**, and enter that user as the **Punchout buyer**.
+1. Add a user who only buys for the account (not a site administrator), add them under **Members**, and save.
+2. Under **Punchout (OCI)**, tick **Its procurement system shops here by punchout**, and choose that member as the **Punchout buyer**.
 3. Click **Publish**. A message shows the account's new **punchout key** and its **punchout address**. Copy the key now: it isn't shown again.
 4. Give the address and key to the business to set up in their procurement system. It sends the key as *PASSWORD* and the address to send carts back to as *HOOK_URL*.
 

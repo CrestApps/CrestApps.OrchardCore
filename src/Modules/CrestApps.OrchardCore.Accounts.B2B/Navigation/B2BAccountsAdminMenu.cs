@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Accounts.B2B.Services;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Accounts.B2B.Controllers;
+using CrestApps.OrchardCore.Accounts.Services;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Mvc.Core.Utilities;
@@ -13,16 +14,6 @@ namespace CrestApps.OrchardCore.Accounts.B2B.Navigation;
 /// </summary>
 public sealed class B2BAccountsAdminMenu : AdminNavigationProvider
 {
-    // Orchard Core's content list of the account type, narrowed by the b2b term to the accounts that buy as a business.
-    private static readonly RouteValueDictionary _accounts = new()
-    {
-        { "area", "OrchardCore.Contents" },
-        { "controller", "Admin" },
-        { "action", "List" },
-        { "contentTypeId", AccountsConstants.ContentTypes.Account },
-        { "q", $"{B2BAccountsContentsAdminListFilterProvider.TermName}:true" },
-    };
-
     private static readonly RouteValueDictionary _priceLists = new()
     {
         { "area", B2BAccountsConstants.Feature },
@@ -30,20 +21,41 @@ public sealed class B2BAccountsAdminMenu : AdminNavigationProvider
         { "action", nameof(PriceListsAdminController.Index) },
     };
 
+    private readonly IAccountContentTypeProvider _accountContentTypeProvider;
+
     internal readonly IStringLocalizer S;
 
-    public B2BAccountsAdminMenu(IStringLocalizer<B2BAccountsAdminMenu> stringLocalizer)
+    public B2BAccountsAdminMenu(
+        IAccountContentTypeProvider accountContentTypeProvider,
+        IStringLocalizer<B2BAccountsAdminMenu> stringLocalizer)
     {
+        _accountContentTypeProvider = accountContentTypeProvider;
         S = stringLocalizer;
     }
 
-    protected override ValueTask BuildAsync(NavigationBuilder builder)
+    protected override async ValueTask BuildAsync(NavigationBuilder builder)
     {
+        // Orchard Core's content list of the account types that have the B2B part, narrowed by the b2b term to the
+        // accounts that buy as a business.
+        var accountTypes = (await _accountContentTypeProvider.GetAccountTypesAsync())
+            .Where(type => AccountRecordKinds.HasPart(type, B2BAccountsConstants.ContentParts.B2BAccount))
+            .Select(type => type.Name)
+            .ToArray();
+
+        var accountsRoute = new RouteValueDictionary
+        {
+            { "area", "OrchardCore.Contents" },
+            { "controller", "Admin" },
+            { "action", "List" },
+            { "contentTypeId", accountTypes.Length > 0 ? string.Join(',', accountTypes) : AccountsConstants.ContentTypes.Account },
+            { "q", $"{B2BAccountsContentsAdminListFilterProvider.TermName}:true" },
+        };
+
         builder
             .Add(S["Commerce"], commerce => commerce
                 .Add(S["B2B Accounts"], S["B2B Accounts"].PrefixPosition("3"), accounts => accounts
                     .Id("commerceB2BAccounts")
-                    .Action(_accounts)
+                    .Action(accountsRoute)
                     .Permission(B2BAccountsPermissions.ManageB2BAccounts)
                     .LocalNav())
                 .Add(S["Price lists"], S["Price lists"].PrefixPosition("3.1"), priceLists => priceLists
@@ -51,7 +63,5 @@ public sealed class B2BAccountsAdminMenu : AdminNavigationProvider
                     .Action(_priceLists)
                     .Permission(B2BAccountsPermissions.ManageB2BAccounts)
                     .LocalNav()));
-
-        return ValueTask.CompletedTask;
     }
 }

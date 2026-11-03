@@ -26,8 +26,17 @@ description: Make the Account content item the one organization record, in its o
   route were removed rather than kept as obsolete aliases.
 - **Menu.** Accounts adds a top-level **Accounts** item with an icon. The CRM turns it off with
   `AccountsAdminMenuOptions.ShowAccountsMenu` and keeps **Interaction Center > Accounts**.
-- **Contact links.** `IAccountContactFinder` (Accounts.Abstractions) lets Accounts B2B link a buyer to the account's
-  contact by email without knowing what a contact is. The CRM implements it on the contact's primary email.
+- **Contact links.** `IAccountContactFinder` (Accounts.Abstractions) lets the Account Members feature link a member to
+  the account's contact by email without knowing what a contact is. The CRM implements it on the contact's primary email.
+- **Members and locations are Accounts features, not B2B data.** After review, the users who sign in for an account
+  (`AccountMembersPart`, `AccountMemberIndex`, `IAccountMemberService`, roles Member/Admin, `ManageAccountMembers`) and
+  its places (`AccountLocationsPart`) moved out of `B2BAccountPart` into the **Account Members** and **Account
+  Locations** features of the Accounts module, so a portal or Field Service can use them without depending on
+  Commerce. B2B keeps only commerce settings: terms, price list, budget, each buyer's order limit (`OrderLimits`, by
+  user id) and punchout. `B2BAccount.Buyers` is read from the members. Accounts B2B stays its own project because it
+  needs about a dozen Commerce projects that Accounts, used by CRM-only sites, must not reference.
+- **Search and picker rights.** The account search lists only the account types the user may view, and the picker
+  places a record only in an account its editor may view.
 - **List of B2B accounts.** **Commerce > B2B Accounts** is Orchard Core's content list with a new `b2b:` term.
 - **Reports.** The B2B account data sets read content items through `B2BAccountIndex`, so name filters and grouping
   run after the read instead of in the database.

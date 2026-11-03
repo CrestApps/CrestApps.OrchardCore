@@ -9,10 +9,10 @@ user_manual: user-manual/commerce/b2b-accounts
 | --- | --- |
 | **Feature** | `CrestApps.OrchardCore.Accounts.B2B` (Accounts B2B) |
 | **Category** | Commerce |
-| **Depends on** | [Accounts](accounts.md) (`CrestApps.OrchardCore.Accounts`), Commerce, Orders (`CrestApps.OrchardCore.Orders`), Addresses, Transactions |
+| **Depends on** | [Accounts](accounts.md) with Account Members and Account Locations, Commerce, Orders (`CrestApps.OrchardCore.Orders`), Transactions |
 | **Seams it fills** | `ICheckoutTenderProvider`, `ICheckoutHandler`, `ICheckoutPaymentGate` (Checkout), `IOrderEventHandler` (Orders), `IBuyerPriceProvider` (Products), `ICartActionProvider` (Carts) |
 
-The **Accounts B2B** feature sells to businesses. The business is an [account](accounts.md), the same `Account` content item the CRM and Field Service use; the feature adds `B2BAccountPart` to it. An account that buys as a business has buyers, some of them admins, the places it ships to, the terms it pays on, a price list, limits and a monthly budget that send orders for approval, and a punchout key for its procurement system. The admin screens are described in the [User Manual](../user-manual/commerce/b2b-accounts.md).
+The **Accounts B2B** feature sells to businesses. The business is an [account](accounts.md), the same `Account` content item the CRM and Field Service use; the feature adds `B2BAccountPart` to it. An account that buys as a business has buyers, some of them admins (the account's [members](accounts.md#account-members)), the places it ships to (its [locations](accounts.md#account-locations)), the terms it pays on, a price list, limits and a monthly budget that send orders for approval, and a punchout key for its procurement system. The admin screens are described in the [User Manual](../user-manual/commerce/b2b-accounts.md).
 
 ## Model
 
@@ -22,27 +22,28 @@ The feature's migration defines `B2BAccountPart` and adds it to the `Account` ty
 | --- | --- |
 | `Enabled` | Whether the account buys as a business. While it is off, its buyers buy for themselves. |
 | `TaxId`, `BillingEmail` | The tax number prints on its invoices. |
-| `Buyers` | `AccountBuyer`: `UserId`, `UserName`, `Email`, `Role` (`Buyer` or `Admin`), `OrderLimit` (store currency, or none), `ContactContentItemId`. A user buys for one account. |
-| `Locations` | `AccountLocation`: `LocationId`, `Name`, `Address`, offered at checkout. |
+| `OrderLimits` | `BuyerOrderLimit`: `UserId`, `Limit` (store currency), for the buyers that have one. A limit for a user who is no longer a member is ignored. |
 | `Terms` | `AccountTerms`: `NetDays`, `DepositPercent`, `CreditLimit`, `RequirePurchaseOrder`. `OffersTerms` is true when `NetDays` is set. |
 | `PriceListId` | The `PriceList` its buyers pay, or none. |
 | `MonthlyBudget` | What its buyers may order in a calendar month, in the store's currency, or none. |
 | `Punchout` | `AccountPunchout`: `Enabled`, `UserId` (the buyer the procurement system shops as), `KeyHash` (SHA-256 of the key, hex), `KeyCreatedUtc`. |
 
-The account's name is its title. `B2BAccount` reads an account content item together with its part: `AccountId` (the content item id), `Name`, `IsEnabled` (the part is on and the version is published) and the part's values.
+The account's name is its title. `B2BAccount` reads an account content item together with its part: `AccountId` (the content item id), `Name`, `IsEnabled` (the part is on and the version is published) and the part's values, plus:
+
+- `Buyers`: an `AccountBuyer` for each of the account's members, with their `Role` (`AccountMemberRole.Member` or `Admin`), their `OrderLimit` and their `ContactContentItemId`. Buyers are read, never stored: add or remove a buyer by adding or removing the member.
+- `Locations`: the account's `AccountLocation`s, offered at checkout.
 
 ### Indexes
 
 | Index | Columns | |
 | --- | --- | --- |
 | `B2BAccountIndex` | `ContentItemId`, `Enabled`, `PriceListId`, `Published`, `Latest` | One row per version of an account with the part. Backs the `b2b:` content list term, the price list lookup and the report data sets. |
-| `B2BAccountBuyerIndex` | `AccountContentItemId`, `UserId`, `Published`, `Latest` | One row per buyer, so `IB2BAccountStore.FindByBuyerAsync(userId)` finds the published account a user buys for. |
 
-`B2BAccountService.GetCurrentAsync()` returns the signed-in user's enabled account and buyer, cached for the request.
+`IB2BAccountStore.FindByBuyerAsync(userId)` finds the published account a user buys for through `IAccountMemberService`. `B2BAccountService.GetCurrentAsync()` returns the signed-in user's enabled account and buyer, cached for the request.
 
 ### Buyers and contacts
 
-When an account is saved, `B2BAccountPartHandler` links each buyer to the account's contact with the buyer's email, through the registered `IAccountContactFinder`s (see [Accounts](accounts.md)). The CRM registers one that matches the contact's primary email among the contacts in the account. A buyer with no match, or more than one, has no contact.
+A buyer is linked to the account's contact with their email by the Account Members feature, when the account is saved (see [Account members](accounts.md#account-members)).
 
 ## Payment terms and the Business account step
 
@@ -95,7 +96,7 @@ public sealed record BuyerPriceContext(ContentItem ContentItem, string VariantId
 
 | Route | |
 | --- | --- |
-| `GET` or `POST punchout/oci/{accountId}` | Takes the key as `PASSWORD` or `key`, `HOOK_URL` and `~TARGET`. Refuses (401) an unknown account, one that doesn't buy as a business, a wrong key (compared by hash in fixed time), a `HOOK_URL` that isn't absolute `https` (or `http` on loopback) or carries user info, a punchout user who isn't one of its buyers, or one in the `Administrator` role. Otherwise signs the punchout buyer in, keeps `{ AccountId, HookUrl, Target }` in a data-protected `punchout` cookie, and opens the home page. |
+| `GET` or `POST punchout/oci/{accountId}` | Takes the key as `PASSWORD` or `key`, `HOOK_URL` and `~TARGET`. Refuses (401) an unknown account, one that doesn't buy as a business, a wrong key (compared by hash in fixed time), a `HOOK_URL` that isn't absolute `https` (or `http` on loopback) or carries user info, a punchout user who isn't one of its members, or one in the `Administrator` role. A refusal is logged without the account's id. Otherwise signs the punchout buyer in, keeps `{ AccountId, HookUrl, Target }` in a data-protected `punchout` cookie, and opens the home page. |
 | `GET punchout/oci/transfer` (`PunchoutTransfer`) | Renders the `PunchoutTransfer` shape: a form of OCI fields that posts itself to the `HOOK_URL` in the target frame (`_top`, `_parent`, `_self` or `_blank`). |
 
 `PunchoutCartActionProvider` adds **Transfer to your procurement system** to the cart while the cookie is there. `PunchoutService.ToOciFields(pricing)` writes, for each line that can be bought, numbered from 1: `NEW_ITEM-DESCRIPTION[n]` (40 characters, the full title in `NEW_ITEM-LONGTEXT_n:132[]` when longer), `QUANTITY`, `UNIT` (`EA`), `PRICE` (one unit with its add-ons, invariant), `PRICEUNIT` (`1`), `CURRENCY`, `VENDORMAT` (SKU) and `EXT_PRODUCT_ID` (content item id). The cart stays; the order is placed in the procurement system.
@@ -118,8 +119,9 @@ The store's sign-in cookie is `SameSite=Lax`, so open the punchout in a top-leve
 
 | Screen | Permission | Default roles |
 | --- | --- | --- |
-| The **Business buying**, **Buyers**, **Payment terms**, **Locations** and **Punchout (OCI)** cards on the account editor, and the business buying cards on the account's page | `ManageB2BAccounts` (**Manage B2B accounts**) | Administrator |
-| **Commerce > B2B Accounts**: Orchard Core's content list of the `Account` type with `b2b:true` | `ListContent` and `ManageB2BAccounts` | Administrator |
+| The **Business buying**, **Buyers** (order limits), **Payment terms** and **Punchout (OCI)** cards on the account editor, and the business buying cards on the account's page | `ManageB2BAccounts` (**Manage B2B accounts**) | Administrator |
+| The **Members** card, which chooses the buyers | `ManageAccountMembers` (Account Members) | Administrator |
+| **Commerce > B2B Accounts**: Orchard Core's content list of the account types with the B2B part, with `b2b:true`. `b2b:false` lists the items that don't buy as a business, accounts saved before the part was added included. | `ListContent` and `ManageB2BAccounts` | Administrator |
 | **Commerce > Price lists** (`PriceListsAdminController`, admin route `b2b/price-lists`), on Orchard Core's `AdminList` | `ManageB2BAccounts` | Administrator |
 | The storefront **Business account** page (`account/business`) | An account buyer; approvals for its admins | |
 
@@ -185,7 +187,7 @@ Accounts are read from their published version through `B2BAccountIndex`, and pr
 
 ### B2B buyers
 
-Each account gives its buyers in their order, buyers without a user included. The buyers are read with their account, so a join on **Account ID** is applied in the database. A join on **User ID** is applied after the read.
+Each account gives its buyers, its members, in their order, members without a user included. The buyers are read with their account, so a join on **Account ID** is applied in the database. A join on **User ID** is applied after the read.
 
 | Field | Display name | Notes |
 | --- | --- | --- |

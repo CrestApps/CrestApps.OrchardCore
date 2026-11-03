@@ -43,8 +43,8 @@
         <div class="card h-100">
             <div class="card-body">
                 <div class="text-body-secondary small">@T["You buy as"]</div>
-                <div class="fs-5">@(Model.Buyer.Role == AccountBuyerRole.Admin ? T["An admin"] : T["A buyer"])</div>
-                @if (Model.Buyer.OrderLimit is { } limit && Model.Buyer.Role != AccountBuyerRole.Admin)
+                <div class="fs-5">@(Model.Buyer.Role == AccountMemberRole.Admin ? T["An admin"] : T["A buyer"])</div>
+                @if (Model.Buyer.OrderLimit is { } limit && Model.Buyer.Role != AccountMemberRole.Admin)
                 {
                     <div class="small text-body-secondary">@T["Orders over {0} need an admin's approval.", ProductPriceFormatter.Format(limit, Model.Currency)]</div>
                 }
@@ -100,18 +100,18 @@
     </ul>
 }
 
-@if (Model.Buyer.Role == AccountBuyerRole.Admin)
+@if (Model.Buyer.Role == AccountMemberRole.Admin)
 {
     <h2 class="h5">@T["Buyers"]</h2>
     <ul class="list-unstyled mb-3">
         @foreach (var buyer in Model.Account.Buyers)
         {
-            <li class="mb-1">@(buyer.Email ?? buyer.UserName) <span class="badge bg-secondary-subtle text-body fw-normal">@(buyer.Role == AccountBuyerRole.Admin ? T["Admin"] : T["Buyer"])</span></li>
+            <li class="mb-1">@(buyer.Email ?? buyer.UserName) <span class="badge bg-secondary-subtle text-body fw-normal">@(buyer.Role == AccountMemberRole.Admin ? T["Admin"] : T["Buyer"])</span></li>
         }
     </ul>
 }
 
-<h2 class="h5">@(Model.Buyer.Role == AccountBuyerRole.Admin ? T["The account's orders"] : T["Your orders for the account"])</h2>
+<h2 class="h5">@(Model.Buyer.Role == AccountMemberRole.Admin ? T["The account's orders"] : T["Your orders for the account"])</h2>
 @if (Model.Orders.Count == 0)
 {
     <p class="text-body-secondary">@T["No orders yet."]</p>

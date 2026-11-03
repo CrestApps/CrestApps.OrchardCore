@@ -49,7 +49,7 @@
                 {
                     <li>
                         @(buyer.Email ?? buyer.UserName)
-                        <span class="badge ta-badge fw-normal ms-1">@(buyer.Role == AccountBuyerRole.Admin ? T["Admin"] : T["Buyer"])</span>
+                        <span class="badge ta-badge fw-normal ms-1">@(buyer.Role == AccountMemberRole.Admin ? T["Admin"] : T["Buyer"])</span>
                         @if (!string.IsNullOrEmpty(buyer.ContactContentItemId))
                         {
                             <a class="small ms-1" asp-action="Display" asp-controller="Admin" asp-route-area="OrchardCore.Contents" asp-route-contentItemId="@buyer.ContactContentItemId">@T["Contact"]</a>

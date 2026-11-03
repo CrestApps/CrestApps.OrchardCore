@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Accounts;
 using CrestApps.OrchardCore.Accounts.B2B;
-using CrestApps.OrchardCore.Addresses;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Transactions;
@@ -21,13 +20,13 @@ using OrchardCore.Modules.Manifest;
     Category = "Commerce",
     Dependencies =
     [
-        // The business is an account: the B2B part is added to the Account type.
+        // The business is an account: the B2B part is added to the Account type. Its buyers are the account's members,
+        // and the places it ships to are the account's locations.
         AccountsConstants.Feature,
+        AccountsConstants.MembersFeature,
+        AccountsConstants.LocationsFeature,
         CommerceConstants.Features.Area,
         OrderConstants.Features.Orders,
-
-        // A location's address is entered and checked with the shared address editor.
-        AddressConstants.Feature.ModuleId,
 
         // An account's terms are owed as transactions: what its deposit doesn't cover goes on its account in the ledger.
         TransactionsConstants.Features.Area,

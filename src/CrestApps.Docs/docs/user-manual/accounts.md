@@ -39,6 +39,23 @@ example the account's opportunities or its orders.
 If the page says *Please specify at least one contained content type*, no type has been set up to sit in accounts yet.
 Turning on a feature that uses accounts, such as the CRM, sets this up for you.
 
+## The people who sign in for an account
+
+With **Account Members** on, an account's editor has a **Members** card. Enter the **User name or email** of each
+person who signs in for the account (they need a user account first) and choose a **Role**: a **Member** acts for the
+account in what they do themselves, and an **Admin** also manages it for the others, such as approving their orders. A
+person is a member of one account only. When a member's email is the email of one of the account's contacts, the
+member is linked to that contact. Save to get more empty rows; clear a row to remove a member.
+
+You need **Manage the users who sign in for accounts** to see the card.
+
+## An account's locations
+
+With **Account Locations** on, an account's editor has a **Locations** card for the places the account has, such as
+its head office or its warehouses. Give each a name and its address, in the same address form as the rest of the site:
+choose the country first and the form asks for what that country's addresses need. Save to add another; clear a
+location's fields to remove it.
+
 ## Deleting an account
 
 Use **Actions > Delete** on the account's row and confirm. The contacts and other records it held are kept, now

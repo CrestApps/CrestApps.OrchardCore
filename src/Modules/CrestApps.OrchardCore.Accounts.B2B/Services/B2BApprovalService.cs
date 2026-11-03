@@ -1,7 +1,8 @@
 using System.Text;
 using System.Text.Encodings.Web;
-using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Accounts.B2B.Models;
+using CrestApps.OrchardCore.Accounts.Models;
+using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Services;
@@ -64,7 +65,7 @@ public sealed class B2BApprovalService
     /// </summary>
     public async Task<string> GetReasonAsync(B2BAccount account, AccountBuyer buyer, decimal total, string currency, string excludeOrderId = null, CancellationToken cancellationToken = default)
     {
-        if (account is null || buyer is null || buyer.Role == AccountBuyerRole.Admin || (buyer.OrderLimit is null && account.MonthlyBudget is null))
+        if (account is null || buyer is null || buyer.Role == AccountMemberRole.Admin || (buyer.OrderLimit is null && account.MonthlyBudget is null))
         {
             return null;
         }
@@ -141,7 +142,7 @@ public sealed class B2BApprovalService
         await _orderService.AddNoteAsync(order, S["{0} asked {1} to approve the order: {2}.", buyerName, account.Name, reason], OrderNoteKind.Event, buyerName, cancellationToken);
         await _orders.UpdateAsync(order, cancellationToken);
         await EmailAsync(
-            account.Buyers.Where(buyer => buyer.Role == AccountBuyerRole.Admin).Select(buyer => buyer.Email),
+            account.Buyers.Where(buyer => buyer.Role == AccountMemberRole.Admin).Select(buyer => buyer.Email),
             S["Order {0} needs your approval", order.OrderNumber],
             S["{0} placed order {1} for {2}, which needs your approval: {3}. Approve or reject it on your account page.", buyerName, order.OrderNumber, ProductPriceFormatter.Format(total, currency), reason],
             "BusinessAccount",

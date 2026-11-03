@@ -1,8 +1,9 @@
 using System.Security.Claims;
-using CrestApps.OrchardCore.Checkout;
-using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Accounts.B2B.Models;
 using CrestApps.OrchardCore.Accounts.B2B.Services;
+using CrestApps.OrchardCore.Accounts.Models;
+using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Services;
@@ -93,7 +94,7 @@ public sealed class B2BAccountsTests
     public async Task AnOrderOverABuyersLimit_OrPastTheMonthlyBudget_NeedsApproval_ButNotAnAdmins()
     {
         var account = Account(new AccountTerms());
-        var buyer = new AccountBuyer { UserId = "buyer-2", Role = AccountBuyerRole.Buyer, OrderLimit = 50m };
+        var buyer = new AccountBuyer { UserId = "buyer-2", Role = AccountMemberRole.Member, OrderLimit = 50m };
         var admin = account.Buyers[0];
         var orders = PaidThisMonth(80m);
         var approvals = Approvals(orders.Object);
@@ -112,8 +113,17 @@ public sealed class B2BAccountsTests
     [Fact]
     public async Task TheBusinessAccountStep_SendsAnOrderForApproval_AndPassesOnceItsApproved()
     {
-        var account = Account(new AccountTerms());
-        account.Part.Buyers.Add(new AccountBuyer { UserId = "buyer-2", UserName = "sam", Role = AccountBuyerRole.Buyer, OrderLimit = 50m });
+        var account = TestB2BAccounts.Create(
+            configure: part =>
+            {
+                part.Terms = new AccountTerms();
+                part.OrderLimits = [new BuyerOrderLimit { UserId = "buyer-2", Limit = 50m }];
+            },
+            members:
+            [
+                new AccountMember { UserId = BuyerId, Role = AccountMemberRole.Admin },
+                new AccountMember { UserId = "buyer-2", UserName = "sam", Role = AccountMemberRole.Member },
+            ]);
 
         var order = new Order { ItemId = "order-1", OrderNumber = "261020-APPRV1", Status = OrderStatus.AwaitingPayment };
         var orders = PaidThisMonth(0m);
@@ -197,11 +207,7 @@ public sealed class B2BAccountsTests
     }
 
     private static B2BAccount Account(AccountTerms terms)
-        => TestB2BAccounts.Create(configure: part =>
-        {
-            part.Terms = terms;
-            part.Buyers = [new AccountBuyer { UserId = BuyerId, Role = AccountBuyerRole.Admin }];
-        });
+        => TestB2BAccounts.Create(configure: part => part.Terms = terms, members: [new AccountMember { UserId = BuyerId, Role = AccountMemberRole.Admin }]);
 
     private static CheckoutFlow Flow(string ownerId = BuyerId)
         => new(new CheckoutSession

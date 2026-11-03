@@ -3,6 +3,10 @@ using CrestApps.OrchardCore.Accounts.B2B.Indexes;
 using CrestApps.OrchardCore.Accounts.B2B.Migrations;
 using CrestApps.OrchardCore.Accounts.B2B.Models;
 using CrestApps.OrchardCore.Accounts.B2B.Services;
+using CrestApps.OrchardCore.Accounts.Indexes;
+using CrestApps.OrchardCore.Accounts.Migrations;
+using CrestApps.OrchardCore.Accounts.Models;
+using CrestApps.OrchardCore.Accounts.Services;
 using CrestApps.OrchardCore.Tests.Modules.Accounts;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Moq;
@@ -29,14 +33,10 @@ public sealed class B2BAccountStoreTests
         {
             await using (var session = yesSql.CreateSession())
             {
-                await session.SaveAsync(TestB2BAccounts.CreateItem("account-1", "Northwind Traders", part =>
-                {
-                    part.Buyers = [new AccountBuyer { UserId = "user-1" }];
-                    part.PriceListId = "list-1";
-                }), cancellationToken: TestContext.Current.CancellationToken);
+                await session.SaveAsync(TestB2BAccounts.CreateItem("account-1", "Northwind Traders", part => part.PriceListId = "list-1", members: [new AccountMember { UserId = "user-1" }]), cancellationToken: TestContext.Current.CancellationToken);
 
                 // A draft account doesn't buy yet, so its buyers buy for themselves.
-                await session.SaveAsync(TestB2BAccounts.CreateItem("account-2", "Contoso", part => part.Buyers = [new AccountBuyer { UserId = "user-2" }], published: false), cancellationToken: TestContext.Current.CancellationToken);
+                await session.SaveAsync(TestB2BAccounts.CreateItem("account-2", "Contoso", published: false, members: [new AccountMember { UserId = "user-2" }]), cancellationToken: TestContext.Current.CancellationToken);
 
                 // An account without the part isn't indexed at all.
                 var plain = new ContentItem { ContentItemId = "account-3", ContentItemVersionId = "account-3-v1", ContentType = "Account", Published = true, Latest = true };
@@ -47,7 +47,7 @@ public sealed class B2BAccountStoreTests
 
             await using (var session = yesSql.CreateSession())
             {
-                var store = new B2BAccountStore(session, Mock.Of<IContentManager>());
+                var store = new B2BAccountStore(session, Mock.Of<IContentManager>(), new AccountMemberService(session));
 
                 var account = await store.FindByBuyerAsync("user-1", TestContext.Current.CancellationToken);
 
@@ -125,7 +125,7 @@ public sealed class B2BAccountStoreTests
     private static async Task<IStore> CreateStoreAsync(string databasePath, InMemoryContentDefinitionManager definitions = null)
     {
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
-        store.RegisterIndexes([new B2BAccountIndexProvider()]);
+        store.RegisterIndexes([new B2BAccountIndexProvider(), new AccountMemberIndexProvider()]);
         store.RegisterIndexes([new PriceListIndexProvider()], B2BAccountsConstants.PriceListsCollectionName);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
         await store.InitializeCollectionAsync(B2BAccountsConstants.PriceListsCollectionName, TestContext.Current.CancellationToken);
@@ -137,6 +137,10 @@ public sealed class B2BAccountStoreTests
             SchemaBuilder = new SchemaBuilder(store.Configuration, transaction),
         };
         await migration.CreateAsync();
+        await new AccountMembersMigrations(definitions ?? new InMemoryContentDefinitionManager())
+        {
+            SchemaBuilder = new SchemaBuilder(store.Configuration, transaction),
+        }.CreateAsync();
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
         return store;

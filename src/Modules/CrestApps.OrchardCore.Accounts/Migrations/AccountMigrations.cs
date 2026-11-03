@@ -74,17 +74,6 @@ internal sealed class AccountMigrations : DataMigration
 
         await _accountListSynchronizer.SynchronizeAsync();
 
-        return 2;
-    }
-
-    /// <summary>
-    /// Brings the account lists up to date once on a site that already had accounts. A recipe that enabled the CRM and
-    /// defined its contact types in one run left the list of the <c>Account</c> type empty.
-    /// </summary>
-    public async Task<int> UpdateFrom1Async()
-    {
-        await _accountListSynchronizer.SynchronizeAsync();
-
-        return 2;
+        return 1;
     }
 }
