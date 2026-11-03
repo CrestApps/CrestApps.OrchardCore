@@ -294,6 +294,30 @@ body .ta-content {
   line-height: 1.35;
 }
 
+.cc-bar__notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0.35rem 0 0;
+  padding: 0.3rem 0.6rem;
+  border-radius: 0.35rem;
+  background: rgba(255, 138, 128, 0.16);
+  border: 1px solid rgba(255, 138, 128, 0.55);
+  color: #ffd6d1 !important;
+  font-size: 0.85em;
+  line-height: 1.35;
+}
+.cc-bar__notice > span {
+  flex: 1 1 auto;
+}
+.cc-bar__notice .btn-close {
+  flex: 0 0 auto;
+  width: 0.6rem;
+  height: 0.6rem;
+  padding: 0.2rem;
+  filter: invert(1) grayscale(100%) brightness(200%);
+}
+
 .cc-bar__open-phone {
   font-weight: 600;
   white-space: nowrap;
@@ -337,5 +361,13 @@ body .ta-content {
   }
   .cc-bar__presence-label {
     max-width: 6rem;
+  }
+}
+@media (max-width: 767.98px) {
+  html:has(.action-bar-bottom.action-bar-ready) .cc-agent-bar {
+    bottom: var(--oc-action-bar-bottom-height, 0px);
+  }
+  html:has(.action-bar-bottom.action-bar-ready) body .ta-content {
+    padding-bottom: calc(var(--oc-action-bar-bottom-height, 3.5rem) + 3rem);
   }
 }/*$vite$:1*/

@@ -123,7 +123,7 @@ public sealed class UpdateContactTaskTests
             new PassThroughStringLocalizer<UpdateContactTask>())
         {
             ContactContentItemId = contactId,
-            Properties = properties,
+            ContentProperties = properties,
         };
     }
 

@@ -196,6 +196,47 @@ public sealed class VoiceQueueOfferServiceTests
         harness.AssertReservationNotReleased();
     }
 
+    // Production: a preview record whose number was on the national do-not-call registry was offered, the agent clicked
+    // Call, the dialer refused it and nothing rang. A record that can never be dialed is now closed before it is
+    // offered, and the next record is offered instead.
+    [Fact]
+    public async Task APreviewRecordThatCanNeverBeDialed_IsClosedAndTheNextOneIsOffered()
+    {
+        // Arrange
+        var harness = new OfferHarness();
+        harness.ReserveSequence(("agent-1", "activity-1"), ("agent-1", "activity-2"));
+        harness.WithAgent("agent-1", "user-1");
+        harness.WithActivity("activity-1", ActivitySources.PreviewDial);
+        harness.WithActivity("activity-2", ActivitySources.PreviewDial);
+        harness.MakeUndialable("activity-1");
+
+        // Act
+        var userId = await harness.Service.OfferNextAsync("queue-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(userId);
+        harness.AssertScreened("activity-1");
+        harness.AssertScreened("activity-2");
+        harness.AssertReservationNotReleased();
+    }
+
+    [Fact]
+    public async Task APreviewRecordIsNotScreened_WhenTheDialerIsOff()
+    {
+        // Arrange
+        var harness = new OfferHarness(dialerEnabled: false);
+        harness.Reserve("agent-1", "activity-1");
+        harness.WithAgent("agent-1", "user-1");
+        harness.WithActivity("activity-1", ActivitySources.PreviewDial);
+
+        // Act
+        var userId = await harness.Service.OfferNextAsync("queue-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(userId);
+        harness.AssertReservationNotReleased();
+    }
+
     // A caller who asked to be called back has hung up: there is no call until the agent accepts and the platform dials
     // them. Live, releasing the reservation re-reserved the same agent every second and the callback never rang.
     [Fact]
@@ -306,9 +347,18 @@ public sealed class VoiceQueueOfferServiceTests
         private readonly Mock<IActivityReservationService> _reservationService = new();
         private readonly Mock<IActivityReservationReclaimer> _reclaimer = new();
         private readonly Mock<IProviderVoiceOfferSynchronizationService> _offerSynchronization = new();
+        private readonly Mock<IDialerAttemptService> _dialerAttempt = new();
+        private readonly HashSet<string> _undialable = new(StringComparer.Ordinal);
 
-        public OfferHarness()
+        public OfferHarness(bool dialerEnabled = true)
         {
+            _dialerAttempt.Setup(x => x.TrySuppressUndialableAsync(It.IsAny<DialerProfile>(), It.IsAny<ActivityReservation>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((DialerProfile _, ActivityReservation reservation, CancellationToken _) => _undialable.Contains(reservation.ActivityItemId));
+
+            var dialerProfileReader = new Mock<IDialerProfileReader>();
+            dialerProfileReader.Setup(x => x.FindByIdAsync("profile-1", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new DialerProfile { ItemId = "profile-1", Enabled = true, Mode = DialerMode.Preview });
+
             _assignment.Setup(x => x.AssignNextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() => _reservations.Count > 0 ? _reservations.Dequeue() : null);
             _assignment.Setup(x => x.AssignSpecificAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
@@ -341,6 +391,8 @@ public sealed class VoiceQueueOfferServiceTests
                 agentManager.Object,
                 interactionManager.Object,
                 activityManager.Object,
+                dialerProfileReader.Object,
+                dialerEnabled ? [_dialerAttempt.Object] : [],
                 _offerSynchronization.Object,
                 workManager.Object,
                 AuditRecorder,
@@ -376,6 +428,17 @@ public sealed class VoiceQueueOfferServiceTests
         public void WithActivity(string activityId, string source)
             => _activities[activityId] = new OmnichannelActivity { ItemId = activityId, Source = source };
 
+        public void MakeUndialable(string activityId)
+            => _undialable.Add(activityId);
+
+        public void AssertScreened(string activityId)
+            => _dialerAttempt.Verify(
+                x => x.TrySuppressUndialableAsync(
+                    It.IsAny<DialerProfile>(),
+                    It.Is<ActivityReservation>(reservation => reservation.ActivityItemId == activityId),
+                    It.IsAny<CancellationToken>()),
+                Times.Once);
+
         public void MakeReclaimThrow()
             => _reclaimer.Setup(x => x.ReclaimDueAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException("The reclaim pass could not run."));
@@ -399,6 +462,7 @@ public sealed class VoiceQueueOfferServiceTests
                 AgentId = agentId,
                 ActivityItemId = activityId,
                 QueueId = "queue-1",
+                DialerProfileId = "profile-1",
             };
 
         private sealed class NoOpWorkLease : IContactCenterFeatureWorkLease

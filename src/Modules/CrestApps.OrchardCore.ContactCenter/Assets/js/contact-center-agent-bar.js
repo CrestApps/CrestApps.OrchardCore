@@ -12,7 +12,7 @@
  */
 import { coalesceRefresh } from './shared/coalesced-refresh.js';
 import { agentStatusLabel, dialPhaseHint, dialPhaseLabel, normalizeDialPhase, showsDialProgress } from './shared/agent-presence.js';
-import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actions.js';
+import { readOfferRefusal, showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actions.js';
 import { activityToAutoOpen, autoOpenWorkKey, readPoppedActivities, rememberPoppedActivity } from './shared/agent-bar-work.js';
 
 (function (window, document) {
@@ -191,6 +191,10 @@ import { activityToAutoOpen, autoOpenWorkKey, readPoppedActivities, rememberPopp
         var state = null;
         var serverOffsetMs = 0;
         var activeSignature = null;
+
+        // A refusal whose offer card is already gone (the dialer released the record) is shown on the bar itself until
+        // the agent dismisses it, accepts again, or new work arrives.
+        var barNotice = null;
         // The real-time connection's last status, drawn again by every render: each one replaces the bar's markup, and
         // the label used to come back empty after the first.
         var connectionStatus = null;
@@ -473,7 +477,12 @@ import { activityToAutoOpen, autoOpenWorkKey, readPoppedActivities, rememberPopp
             var active = state.activeInteraction;
             var pendingDial = state.pendingDial;
 
+            if (barNotice && offer && offer.reservationId !== barNotice.reservationId) {
+                barNotice = null;
+            }
+
             var signature = [
+                barNotice ? barNotice.message : '',
                 status,
                 reason || '',
                 offer ? offer.reservationId : '',
@@ -500,6 +509,7 @@ import { activityToAutoOpen, autoOpenWorkKey, readPoppedActivities, rememberPopp
                     renderTail() +
                 '</div>' +
                 renderPhoneMissing() +
+                renderBarNotice() +
                 '<div class="cc-bar__context" data-cc-context>' + renderContext(offer, active, pendingDial) + '</div>';
 
             bindEvents();
@@ -527,6 +537,33 @@ import { activityToAutoOpen, autoOpenWorkKey, readPoppedActivities, rememberPopp
                 escapeHtml(label('noPhoneOpen', 'You are signed in to take calls, but no phone of yours is open, so calls cannot reach you.')) +
                 link +
             '</div>';
+        }
+
+        function renderBarNotice() {
+            if (!barNotice) {
+                return '';
+            }
+
+            var dismissTitle = label('dismiss', 'Dismiss');
+
+            return '<div class="cc-bar__notice text-danger small" role="alert" data-cc-notice>' +
+                '<span>' + escapeHtml(barNotice.message) + '</span>' +
+                '<button type="button" class="btn-close" data-cc-notice-dismiss title="' + escapeHtml(dismissTitle) + '" aria-label="' + escapeHtml(dismissTitle) + '"></button>' +
+            '</div>';
+        }
+
+        function showBarNotice(message, reservationId) {
+            var next = message ? { message: message, reservationId: reservationId || null } : null;
+
+            if ((barNotice ? barNotice.message : null) === (next ? next.message : null)) {
+                barNotice = next;
+
+                return;
+            }
+
+            barNotice = next;
+            activeSignature = null;
+            renderBar();
         }
 
         // Presence is read-only here: the soft phone is the single place an agent changes their status, so the
@@ -711,6 +748,11 @@ import { activityToAutoOpen, autoOpenWorkKey, readPoppedActivities, rememberPopp
 
         function bindEvents() {
             var collapseButton = inner.querySelector('[data-cc-collapse]');
+            var noticeDismiss = inner.querySelector('[data-cc-notice-dismiss]');
+
+            if (noticeDismiss) {
+                noticeDismiss.addEventListener('click', function () { showBarNotice(null); });
+            }
 
             if (collapseButton) {
                 collapseButton.addEventListener('click', function () { setCollapsed(true); });
@@ -750,33 +792,44 @@ import { activityToAutoOpen, autoOpenWorkKey, readPoppedActivities, rememberPopp
             };
 
             showOfferError(null);
+            showBarNotice(null);
             showOfferAccepting(offer, { pending: true, preview: offerState.preview }, offerLabels);
 
             withOfferAcceptTimeout(post(config.acceptOfferUrl, config.antiForgeryToken, { reservationId: reservationId }))
                 .then(function (response) {
-                    return refresh().then(function () {
-                        if (response && response.ok === false) {
-                            showOfferError(label('acceptFailed', 'The call could not be answered. It may have been taken or re-offered.'));
-                        }
+                    return readOfferRefusal(response).then(function (reason) {
+                        return refresh().then(function () {
+                            if (response && response.ok === false) {
+                                showOfferError(reason || label('acceptFailed', 'The call could not be answered. It may have been taken or re-offered.'), reservationId);
+                            }
+                        });
                     });
                 })
                 .catch(function (error) {
                     showOfferError(error && error.offerAcceptTimedOut
                         ? label('acceptTimedOut', 'The call is taking too long to connect. Check your soft phone, then try again.')
-                        : label('acceptFailed', 'The call could not be answered. It may have been taken or re-offered.'));
+                        : label('acceptFailed', 'The call could not be answered. It may have been taken or re-offered.'), reservationId);
                 })
                 .finally(function () {
                     showOfferAccepting(inner.querySelector('[data-cc-offer]'), { pending: false, preview: offerState.preview }, offerLabels);
                 });
         }
 
-        // An accept that failed says so on the offer itself, so the agent knows to act rather than wait.
-        function showOfferError(message) {
+        // An accept that failed says so on the offer itself, so the agent knows to act rather than wait. When the offer is
+        // already gone -- a preview record the dialer refused is released before the bar refreshes -- it says so on the
+        // bar instead; it used to say nothing, and the agent was left clicking Call with nothing ringing.
+        function showOfferError(message, reservationId) {
             var offer = inner.querySelector('[data-cc-offer]');
             var existing = offer ? offer.querySelector('[data-cc-offer-error]') : null;
 
             if (existing) {
                 existing.remove();
+            }
+
+            if (!offer && message) {
+                showBarNotice(message, reservationId);
+
+                return;
             }
 
             if (offer && message) {

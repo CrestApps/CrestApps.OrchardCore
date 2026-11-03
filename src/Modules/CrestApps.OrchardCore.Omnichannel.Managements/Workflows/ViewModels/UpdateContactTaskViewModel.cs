@@ -13,7 +13,7 @@ public class UpdateContactTaskViewModel
     /// <summary>
     /// Gets or sets the Liquid expression that renders the JSON merged into the record.
     /// </summary>
-    public string Properties { get; set; }
+    public string ContentProperties { get; set; }
 
     /// <summary>
     /// Gets or sets whether a record whose latest version is a draft is published once changed.

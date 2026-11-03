@@ -24,7 +24,7 @@ import {
     pendingPresenceLabel,
     showsDialProgress,
 } from './shared/agent-presence.js';
-import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actions.js';
+import { readOfferRefusal, showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actions.js';
 
 (function (window, document) {
     'use strict';
@@ -556,13 +556,15 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
 
             withOfferAcceptTimeout(post(config.acceptOfferUrl, config.antiForgeryToken, { reservationId: reservationId }))
                 .then(function (response) {
-                    if (!response.ok) {
-                        showError(label('acceptFailed', 'The offer could not be accepted. It may have been re-offered.'));
-                    } else {
-                        clearError();
-                    }
+                    return readOfferRefusal(response).then(function (reason) {
+                        if (!response.ok) {
+                            showError(reason || label('acceptFailed', 'The offer could not be accepted. It may have been re-offered.'));
+                        } else {
+                            clearError();
+                        }
 
-                    return refresh();
+                        return refresh();
+                    });
                 })
                 .catch(function (error) {
                     showError(error && error.offerAcceptTimedOut

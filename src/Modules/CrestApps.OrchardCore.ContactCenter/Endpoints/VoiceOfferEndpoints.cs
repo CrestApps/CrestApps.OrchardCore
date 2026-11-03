@@ -72,7 +72,12 @@ internal static class VoiceOfferEndpoints
 
         if (!result.Succeeded)
         {
-            return TypedResults.NotFound();
+            // The reason goes back with the refusal so the agent bar can say why nothing rang.
+            return TypedResults.NotFound(new
+            {
+                result.Succeeded,
+                result.Reason,
+            });
         }
 
         return TypedResults.Ok(new

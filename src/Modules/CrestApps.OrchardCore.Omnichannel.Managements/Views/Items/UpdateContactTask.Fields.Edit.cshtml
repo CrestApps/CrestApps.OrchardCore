@@ -11,11 +11,11 @@
     </div>
 </div>
 
-<div class="ocat-wrapper" asp-validation-class-for="Properties">
-    <label class="ocat-label ocat-label-required" asp-for="Properties">@T["Fields to set"]</label>
+<div class="ocat-wrapper" asp-validation-class-for="ContentProperties">
+    <label class="ocat-label ocat-label-required" asp-for="ContentProperties">@T["Fields to set"]</label>
     <div class="ocat-end">
-        <textarea class="form-control font-monospace" rows="6" asp-for="Properties"></textarea>
-        <span asp-validation-for="Properties"></span>
+        <textarea class="form-control font-monospace" rows="6" asp-for="ContentProperties"></textarea>
+        <span asp-validation-for="ContentProperties"></span>
         <span class="hint">@T["A Liquid expression rendering the JSON merged into the record, for example {0}. Only the fields it names change.", "{ \"Customer\": { \"NoAnswerTextSent\": { \"Value\": true } } }"]</span>
     </div>
 </div>

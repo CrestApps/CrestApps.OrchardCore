@@ -75,6 +75,21 @@ export function showOfferAccepting(container, state, labels) {
     }
 }
 
+// Resolves to the reason the server gave for refusing an accept (a number on a do-not-call registry, say), or null
+// when it gave none. Without it the agent saw a generic failure, or nothing, and could not tell a refused call from a
+// broken phone.
+export function readOfferRefusal(response) {
+    if (!response || response.ok !== false || typeof response.json !== 'function') {
+        return Promise.resolve(null);
+    }
+
+    return response.json().then(function (body) {
+        return body && typeof body.reason === 'string' && body.reason ? body.reason : null;
+    }, function () {
+        return null;
+    });
+}
+
 // Settles like `promise`, or rejects with an error flagged `offerAcceptTimedOut` once the accept has gone
 // unanswered for OFFER_ACCEPT_TIMEOUT_MS.
 export function withOfferAcceptTimeout(promise) {

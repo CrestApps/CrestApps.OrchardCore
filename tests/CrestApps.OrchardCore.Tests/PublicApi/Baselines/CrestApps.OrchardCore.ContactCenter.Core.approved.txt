@@ -1846,6 +1846,15 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public static bool IsPreConnect(string outcome) { }
         public static string Resolve(CrestApps.OrchardCore.Telephony.Models.HangupCause? hangupCause, bool answered, bool agentJoined = true) { }
     }
+    public sealed class DialerAttemptResult
+    {
+        public DialerAttemptResult() { }
+        public bool Started { get; }
+        public CrestApps.OrchardCore.ContactCenter.Core.Services.DialerEligibilityResult Suppression { get; }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Models.DialerAttemptResult Dialed { get; }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Models.DialerAttemptResult NotStarted { get; }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Models.DialerAttemptResult Suppressed(CrestApps.OrchardCore.ContactCenter.Core.Services.DialerEligibilityResult suppression) { }
+    }
     public static class DialerCallMetadata
     {
         public const string AbandonedReasonKey = "dialer_abandoned_reason";
@@ -4602,8 +4611,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
                     OrchardCore.Modules.IClock clock,
                     Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterCoordinationOptions> coordinationOptions,
                     Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.DialerAttemptService> logger) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerAttemptResult> DialAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile profile, CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation reservation, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> TryDialAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile profile, CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation reservation, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> TryDialUnreservedAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile profile, CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem queueItem, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> TrySuppressUndialableAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile profile, CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation reservation, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class DialerDispatchDiagnosticsService : CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerDispatchDiagnosticsService
     {
@@ -5355,8 +5366,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public interface IDialerAttemptService
     {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerAttemptResult> DialAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile profile, CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation reservation, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> TryDialAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile profile, CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation reservation, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> TryDialUnreservedAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile profile, CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem queueItem, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> TrySuppressUndialableAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile profile, CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation reservation, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IDialerDecisionLog
     {

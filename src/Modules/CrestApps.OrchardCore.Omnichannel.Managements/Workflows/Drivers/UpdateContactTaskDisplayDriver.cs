@@ -35,7 +35,7 @@ public sealed class UpdateContactTaskDisplayDriver : ActivityDisplayDriver<Updat
     protected override void EditActivity(UpdateContactTask activity, UpdateContactTaskViewModel model)
     {
         model.ContactContentItemId = activity.ContactContentItemId;
-        model.Properties = activity.Properties;
+        model.ContentProperties = activity.ContentProperties;
         model.Publish = activity.Publish;
     }
 
@@ -55,17 +55,17 @@ public sealed class UpdateContactTaskDisplayDriver : ActivityDisplayDriver<Updat
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ContactContentItemId), S["The contact expression is invalid."]);
         }
 
-        if (string.IsNullOrWhiteSpace(model.Properties))
+        if (string.IsNullOrWhiteSpace(model.ContentProperties))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Properties), S["The fields to set are required."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ContentProperties), S["The fields to set are required."]);
         }
-        else if (!_liquidTemplateManager.Validate(model.Properties, out _))
+        else if (!_liquidTemplateManager.Validate(model.ContentProperties, out _))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Properties), S["The fields expression is invalid."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ContentProperties), S["The fields expression is invalid."]);
         }
 
         activity.ContactContentItemId = model.ContactContentItemId?.Trim();
-        activity.Properties = model.Properties?.Trim();
+        activity.ContentProperties = model.ContentProperties?.Trim();
         activity.Publish = model.Publish;
 
         return Edit(activity, context);

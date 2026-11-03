@@ -444,6 +444,87 @@ public sealed class DialerAttemptServiceTests
         VerifyNoOutboundRouting(voiceCallRouter);
     }
 
+    // Production: a preview record whose number was on the national do-not-call registry was offered to an agent, who
+    // clicked Call and saw nothing ring. A record that can never be dialed is closed before it is offered; one that is
+    // only not callable yet is still offered, so the agent is told why when they try.
+    [Theory]
+    [InlineData(DialerSuppressionReason.NationalDoNotCallRegistry, true)]
+    [InlineData(DialerSuppressionReason.DoNotCall, true)]
+    [InlineData(DialerSuppressionReason.OutsideCallingWindow, false)]
+    [InlineData(DialerSuppressionReason.ComplianceScreeningUnavailable, false)]
+    public async Task TrySuppressUndialableAsync_ClosesOnlyARecordThatCanNeverBeDialed(DialerSuppressionReason reason, bool closed)
+    {
+        // Arrange
+        var reservation = Reservation();
+        var activity = CreateActivity();
+        var activityManager = CreateActivityManager(activity);
+        activityManager
+            .Setup(manager => manager.UpdateAsync(activity, It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.CompletedTask);
+        var reservationService = new Mock<IActivityReservationService>(MockBehavior.Strict);
+        reservationService
+            .Setup(service => service.CompensateAsync("r1", true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        var voiceCallRouter = new Mock<IVoiceContactCenterCallRouter>(MockBehavior.Strict);
+
+        var service = CreateService(
+            SuppressedGate(reason),
+            reservationService,
+            new Mock<IInteractionManager>(MockBehavior.Strict),
+            activityManager,
+            voiceCallRouter,
+            publisher);
+
+        // Act
+        var suppressed = await service.TrySuppressUndialableAsync(CreateProfile(), reservation, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(closed, suppressed);
+        reservationService.Verify(
+            service => service.CompensateAsync("r1", true, It.IsAny<CancellationToken>()),
+            closed ? Times.Once() : Times.Never());
+        publisher.Verify(
+            service => service.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()),
+            closed ? Times.Once() : Times.Never());
+        Assert.Equal(closed ? ActivityStatus.Cancelled : ActivityStatus.Pending, activity.Status);
+        VerifyNoOutboundRouting(voiceCallRouter);
+    }
+
+    [Fact]
+    public async Task DialAsync_WhenEligibilitySuppresses_ReportsWhy()
+    {
+        // Arrange
+        var reservation = Reservation();
+        var activity = CreateActivity();
+        var activityManager = CreateActivityManager(activity);
+        activityManager
+            .Setup(manager => manager.UpdateAsync(activity, It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.CompletedTask);
+        var reservationService = new Mock<IActivityReservationService>(MockBehavior.Strict);
+        reservationService
+            .Setup(service => service.CompensateAsync("r1", true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+        var voiceCallRouter = new Mock<IVoiceContactCenterCallRouter>(MockBehavior.Strict);
+
+        var service = CreateService(
+            SuppressedGate(DialerSuppressionReason.NationalDoNotCallRegistry),
+            reservationService,
+            new Mock<IInteractionManager>(MockBehavior.Strict),
+            activityManager,
+            voiceCallRouter,
+            new Mock<IContactCenterEventPublisher>());
+
+        // Act
+        var result = await service.DialAsync(CreateProfile(), reservation, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Started);
+        Assert.Equal(DialerSuppressionReason.NationalDoNotCallRegistry, result.Suppression?.Reason);
+        Assert.Equal("Suppressed by policy.", result.Suppression?.Description);
+        VerifyNoOutboundRouting(voiceCallRouter);
+    }
+
     // With screening off the agent is connected the moment anything answers, a voicemail included; with it on, the
     // provider is asked who answered before the agent hears the call.
     [Theory]

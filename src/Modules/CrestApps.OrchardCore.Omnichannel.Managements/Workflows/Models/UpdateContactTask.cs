@@ -80,7 +80,7 @@ public sealed class UpdateContactTask : TaskActivity<UpdateContactTask>
     /// Gets or sets the Liquid expression that renders the JSON merged into the record, such as
     /// <c>{ "Customer": { "NoAnswerTextSent": { "Value": true } } }</c>.
     /// </summary>
-    public string Properties
+    public string ContentProperties
     {
         get => GetProperty<string>();
         set => SetProperty(value);
@@ -127,7 +127,7 @@ public sealed class UpdateContactTask : TaskActivity<UpdateContactTask>
             return Outcome("Failed");
         }
 
-        if (string.IsNullOrWhiteSpace(Properties))
+        if (string.IsNullOrWhiteSpace(ContentProperties))
         {
             _logger.LogWarning("The Update Contact task has no fields to set, so nothing was changed.");
 
@@ -135,7 +135,7 @@ public sealed class UpdateContactTask : TaskActivity<UpdateContactTask>
         }
 
         // The values are written into JSON, so they are encoded for it, as Orchard Core's own content tasks do.
-        var json = await _expressionEvaluator.EvaluateAsync(new WorkflowExpression<string>(Properties), workflowContext, JavaScriptEncoder.Default);
+        var json = await _expressionEvaluator.EvaluateAsync(new WorkflowExpression<string>(ContentProperties), workflowContext, JavaScriptEncoder.Default);
 
         JsonObject properties;
 

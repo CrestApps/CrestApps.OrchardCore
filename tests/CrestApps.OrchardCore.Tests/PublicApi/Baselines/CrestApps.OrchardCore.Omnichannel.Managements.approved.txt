@@ -2364,8 +2364,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models
         public UpdateContactTask(OrchardCore.ContentManagement.IContentManager contentManager, OrchardCore.Workflows.Services.IWorkflowExpressionEvaluator expressionEvaluator, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.UpdateContactTask> logger, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.UpdateContactTask> stringLocalizer) { }
         public override Microsoft.Extensions.Localization.LocalizedString Category { get; }
         public string ContactContentItemId { get; set; }
+        public string ContentProperties { get; set; }
         public override Microsoft.Extensions.Localization.LocalizedString DisplayText { get; }
-        public string Properties { get; set; }
         public bool Publish { get; set; }
         public override System.Threading.Tasks.Task<OrchardCore.Workflows.Activities.ActivityExecutionResult> ExecuteAsync(OrchardCore.Workflows.Models.WorkflowExecutionContext workflowContext, OrchardCore.Workflows.Models.ActivityContext activityContext) { }
         public override System.Collections.Generic.IEnumerable<OrchardCore.Workflows.Abstractions.Models.Outcome> GetPossibleOutcomes(OrchardCore.Workflows.Models.WorkflowExecutionContext workflowContext, OrchardCore.Workflows.Models.ActivityContext activityContext) { }
@@ -2404,7 +2404,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Workflows.ViewModels
     {
         public UpdateContactTaskViewModel() { }
         public string ContactContentItemId { get; set; }
-        public string Properties { get; set; }
+        public string ContentProperties { get; set; }
         public bool Publish { get; set; }
     }
 }
