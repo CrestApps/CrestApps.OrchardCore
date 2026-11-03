@@ -1,8 +1,8 @@
 @model CertificationEditViewModel
 
 <zone Name="Title">
-    <breadcrumb name="CertificationsEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Certification"] : T["Edit '{0}' Certification", Model.Name])">
-        <breadcrumb-item id="Certifications" action="Index" controller="Certifications" area="CrestApps.OrchardCore.Skills">@T["Certifications"]</breadcrumb-item>
+    <breadcrumb name="CertificationsEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Certification Type"] : T["Edit '{0}' Certification Type", Model.Name])">
+        <breadcrumb-item id="Certifications" action="Index" controller="Certifications" area="CrestApps.OrchardCore.Skills">@T["Certification Types"]</breadcrumb-item>
     </breadcrumb>
 </zone>
 

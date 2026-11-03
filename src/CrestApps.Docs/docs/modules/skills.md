@@ -10,7 +10,7 @@ The **Skills** module keeps one skill catalog for the site. Contact Center routi
 
 - **Skills**: a name, a category, a description and an optional required certification.
 - **Skill assignments**: a person holds a skill at a proficiency from 1 to 5, optionally between two dates. A person is an Orchard Core user, or a workforce worker who may have no user account.
-- **Certifications**: a licence that expires after a number of months, with reminder days before expiry.
+- **Certifications** (shown as **Certification Types**): a licence that expires after a number of months, with reminder days before expiry.
 - **Certification records** (certificates): one person's certificate, with its number, issue and expiry dates, a copy in the media library, and a status (`Pending`, `Valid`, `Expired`, `Revoked`).
 - A **daily check** that raises reminders, marks certificates expired, and tells other modules about assignments that start or end that day.
 

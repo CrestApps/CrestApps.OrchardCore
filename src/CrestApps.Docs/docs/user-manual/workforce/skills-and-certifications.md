@@ -12,7 +12,7 @@ The same skills are used across the site. When Contact Center is on, the skills 
 
 | | |
 | --- | --- |
-| **Menu** | Workforce > Skills, Workforce > Certifications, Workforce > Certificates |
+| **Menu** | Workforce > Skills, Workforce > Certification Types, Workforce > Certificates |
 | **Permission** | Manage skills and certifications (the lists of skills and certifications), Assign skills and record certifications (giving people skills and recording their certificates), View skills and certifications |
 | **Feature** | Skills |
 
@@ -40,7 +40,7 @@ Contact Center agents' skills are also set on **Interaction Center > Management 
 
 ## Add a certification
 
-Open **Workforce > Certifications** and choose **Add certification**.
+Open **Workforce > Certification Types** and choose **Add certification type**. A certification type is a credential people can hold, such as *Gas safety*; a certificate is one person holding it.
 
 | Field | What it does |
 | --- | --- |

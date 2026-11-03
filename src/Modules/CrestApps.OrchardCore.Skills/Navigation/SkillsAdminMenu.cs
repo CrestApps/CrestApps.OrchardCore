@@ -33,7 +33,7 @@ public sealed class SkillsAdminMenu : AdminNavigationProvider
                 .Action("Index", "Skills", SkillsConstants.Features.Skills)
                 .Permission(SkillsPermissions.ManageSkills)
                 .LocalNav())
-            .Add(S["Certifications"], S["Certifications"].PrefixPosition("81"), certifications => certifications
+            .Add(S["Certification Types"], S["Certification Types"].PrefixPosition("81"), certifications => certifications
                 .Id("certifications")
                 .Action("Index", "Certifications", SkillsConstants.Features.Skills)
                 .Permission(SkillsPermissions.ManageSkills)
