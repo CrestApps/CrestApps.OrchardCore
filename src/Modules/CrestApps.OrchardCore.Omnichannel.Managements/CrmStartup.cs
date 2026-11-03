@@ -1,4 +1,6 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Accounts;
+using CrestApps.OrchardCore.Accounts.Services;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -8,14 +10,11 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Drivers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Sources;
 using CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps;
 using CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
-using CrestApps.OrchardCore.Omnichannel.Managements.Endpoints;
 using CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 using CrestApps.OrchardCore.Omnichannel.Managements.Recipes;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
@@ -68,22 +67,19 @@ public sealed class CrmStartup : StartupBase
             .UseDisplayDriver<LeadPartDisplayDriver>()
             .AddHandler<LeadPartHandler>();
 
-        services.AddContentPart<AccountPart>()
-            .AddHandler<AccountPartHandler>();
-
         services.AddContentPart<OpportunityPart>()
             .UseDisplayDriver<OpportunityPartDisplayDriver>()
             .AddHandler<OpportunityPartHandler>();
 
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, LeadPartSettingsDisplayDriver>();
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, OpportunityPartSettingsDisplayDriver>();
-        services.AddScoped<IContentDisplayDriver, AccountPickerDisplayDriver>();
 
         services
             .AddIndexProvider<LeadIndexProvider>()
             .AddIndexProvider<LeadImportIndexProvider>()
             .AddIndexProvider<OpportunityIndexProvider>()
-            .AddDataMigration<CrmMigrations>();
+            .AddDataMigration<CrmMigrations>()
+            .AddDataMigration<CrmAccountsFeatureMigrations>();
 
         services.AddScoped<ICatalogEntryHandler<LeadStatus>, LeadStatusHandler>();
         services.AddScoped<ICatalogEntryHandler<OpportunityStage>, OpportunityStageHandler>();
@@ -103,7 +99,12 @@ public sealed class CrmStartup : StartupBase
             serviceProvider.GetRequiredService<ILocalClock>(),
             serviceProvider.GetRequiredService<IStringLocalizer<LeadImportProvider>>(),
             importsCache: serviceProvider.GetRequiredService<LeadImportListCache>()));
-        services.AddScoped<CrmAccountListSynchronizer>();
+        services.AddScoped<OpportunityContactFieldSynchronizer>();
+
+        // Contacts and opportunities sit in accounts, and leads never do. The CRM lists accounts in the Interaction
+        // Center, so the Accounts feature's own menu item would only repeat it.
+        services.AddScoped<IAccountChildTypeRule, CrmAccountChildTypeRule>();
+        services.Configure<AccountsAdminMenuOptions>(options => options.ShowAccountsMenu = false);
         services.AddScoped<IContentDefinitionEventHandler, CrmContentDefinitionEventHandler>();
 
         services.AddNavigationProvider<CrmAdminMenu>();
@@ -130,12 +131,6 @@ public sealed class CrmStartup : StartupBase
                 entry.Description = S["Converts the activity's lead into a contact, and optionally an account and an opportunity. The actions after it work on the contact."];
             });
         });
-    }
-
-    /// <inheritdoc/>
-    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
-    {
-        routes.AddCrmSearchEndpoints();
     }
 
     // Wraps the content list query service the Contents feature registered, so a leads list is counted from the
@@ -192,7 +187,7 @@ public sealed class CrmRecipesStartup : StartupBase
 }
 
 /// <summary>
-/// Registers the lead and account columns of the content import and export.
+/// Registers the lead columns of the content import and export.
 /// </summary>
 [Feature(OmnichannelConstants.Features.Crm)]
 [RequireFeatures(ContentTransferConstants.Feature.ModuleId)]
@@ -202,7 +197,6 @@ public sealed class CrmContentTransferStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddContentPartImportHandler<LeadPart, LeadPartContentImportHandler>();
-        services.AddScoped<IContentImportHandler, AccountContentImportHandler>();
         services.AddScoped<IContentImportHandler, LeadExportFilterHandler>();
         services.AddDisplayDriver<ExportRequest, LeadExportOptionsDisplayDriver>();
 

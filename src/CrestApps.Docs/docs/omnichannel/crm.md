@@ -27,10 +27,10 @@ A type's parts decide what it is. The rules live in `OmnichannelRecordKinds`.
 | --- | --- | --- |
 | Contact | `OmnichannelContactPart` without `LeadPart` | Unchanged. |
 | Lead | `OmnichannelContactPart` and `LeadPart` | Reachable like a contact; listed under **Leads**, not **Contacts**. |
-| Account | `AccountPart` | Holds its children through Orchard's `ListPart`. |
+| Account | `AccountPart` | From the [Accounts](../modules/accounts.md) feature, which the CRM depends on. Holds its children through Orchard's `ListPart`. |
 | Opportunity | `OpportunityPart` | Attach it to one type per kind of deal. |
 
-Contacts and opportunities are **account children**: they can belong to an account. Leads never do.
+Contacts and opportunities are **account children**: they can belong to an account. Leads never do. The CRM registers this as an `IAccountChildTypeRule` (`CrmAccountChildTypeRule`), and the Accounts feature keeps every account type's list in line with it.
 
 Because a lead keeps `OmnichannelContactPart`, every channel works on it with no second code path. That covers the dialer, SMS, do-not-contact checks, time zones and phone verification. The same compliance checks apply to leads and contacts.
 
@@ -38,11 +38,12 @@ Because a lead keeps `OmnichannelContactPart`, every channel works on it with no
 
 The feature's migration runs once per tenant and never changes a type that already exists.
 
-- The `LeadPart`, `AccountPart` and `OpportunityPart` definitions.
-- An `Account` type, only if none exists. It has `TitlePart`, `AccountPart` and a `ListPart` with its header shown.
-  - Its list contains every account-child type.
-  - A contact or opportunity type added later joins the list automatically.
+- The `LeadPart` and `OpportunityPart` definitions.
+- The `Account` type comes from the [Accounts](../modules/accounts.md) feature.
+  - Its list contains every contact and opportunity type, and one added later joins the list automatically.
   - An administrator can remove a type from the list, and it is not added back.
+  - The account picker, the account search and the `Account` import column come from that feature too.
+- On a site that ran the CRM before accounts had a feature of their own, `CrmAccountsFeatureMigrations` enables the Accounts feature. The site's `Account` type and its accounts were created under the same names and are kept as they are.
 - The `LeadIndex` and `OpportunityIndex` tables. `LeadIndex` carries an index on `ContentType`, `IsConverted`, `Latest` and `Published` (`IDX_LeadIndex_ContentType_Converted`), which the count of the Leads list reads.
 - `ContentType` and `IsConverted` columns on `OmnichannelContactIndex`, backfilled from existing rows.
 - A seeded **Lead Status** catalog and **Opportunity Stage** catalog.
@@ -73,7 +74,7 @@ Holds stage, open/closed/won flags, probability, amount, close date, owner, sour
 
 ### `AccountPart`
 
-A marker. Its setting records which types the feature added to the account's list, so a type an administrator removed is not added again.
+A marker from the [Accounts](../modules/accounts.md) feature. Its setting records which types were added to the account's list, so a type an administrator removed is not added again.
 
 ## Leads list count
 

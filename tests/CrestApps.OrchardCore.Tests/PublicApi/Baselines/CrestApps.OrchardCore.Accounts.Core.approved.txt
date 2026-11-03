@@ -1,0 +1,19 @@
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
+namespace CrestApps.OrchardCore.Accounts.Services
+{
+    public sealed class AccountContentTypeProvider : CrestApps.OrchardCore.Accounts.Services.IAccountContentTypeProvider
+    {
+        public AccountContentTypeProvider(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Accounts.Services.IAccountChildTypeRule> rules) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition>> GetAccountTypesAsync() { }
+        public bool IsAccountChildType(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition) { }
+        public System.Threading.Tasks.Task<bool> IsAccountChildTypeAsync(string contentType) { }
+        public System.Threading.Tasks.Task<bool> IsAccountTypeAsync(string contentType) { }
+        public bool IsExcludedFromAccounts(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition) { }
+    }
+    public sealed class AccountListSynchronizer
+    {
+        public AccountListSynchronizer(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager, CrestApps.OrchardCore.Accounts.Services.IAccountContentTypeProvider accountContentTypeProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Accounts.Services.AccountListSynchronizer> logger) { }
+        public System.Threading.Tasks.Task<string[]> GetChildTypesAsync() { }
+        public System.Threading.Tasks.Task SynchronizeAsync() { }
+    }
+}

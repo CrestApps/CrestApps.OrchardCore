@@ -1,0 +1,52 @@
+[assembly: Microsoft.AspNetCore.Mvc.ApplicationParts.ProvideApplicationPartFactory("Microsoft.AspNetCore.Mvc.ApplicationParts.ConsolidatedAssemblyApplicationPartFact" +
+    "ory, Microsoft.AspNetCore.Mvc.Razor")]
+[assembly: OrchardCore.Modules.Manifest.Feature(Category="Content Management", Dependencies=new string[] {
+        "CrestApps.OrchardCore.Resources",
+        "OrchardCore.Contents",
+        "OrchardCore.ContentTypes",
+        "OrchardCore.Lists",
+        "OrchardCore.Title"}, Description="Keeps the businesses and households that contacts, orders, assets and work orders" +
+    " belong to as Account content items, with a picker, a search and an account page" +
+    " that other modules add to.", Id="CrestApps.OrchardCore.Accounts", Name="Accounts")]
+[assembly: OrchardCore.Modules.Manifest.Module(Author="The CrestApps Team", Name="Accounts", Version="3.0.0", Website="https://crestapps.com")]
+[assembly: OrchardCore.Modules.Manifest.ModuleMarker("CrestApps.OrchardCore.Accounts", "Module")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
+namespace CrestApps.OrchardCore.Accounts
+{
+    public sealed class AccountsAdminMenuOptions
+    {
+        public AccountsAdminMenuOptions() { }
+        public bool ShowAccountsMenu { get; set; }
+    }
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.ContentTransfer"})]
+    public sealed class ContentTransferStartup : OrchardCore.Modules.StartupBase
+    {
+        public ContentTransferStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "OrchardCore.Recipes.Core"})]
+    public sealed class RecipesStartup : OrchardCore.Modules.StartupBase
+    {
+        public RecipesStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    public sealed class Startup : OrchardCore.Modules.StartupBase
+    {
+        public Startup() { }
+        public override void Configure(Microsoft.AspNetCore.Builder.IApplicationBuilder app, Microsoft.AspNetCore.Routing.IEndpointRouteBuilder routes, System.IServiceProvider serviceProvider) { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+}
+namespace CrestApps.OrchardCore.Accounts.ViewModels
+{
+    public class AccountPickerViewModel
+    {
+        public AccountPickerViewModel() { }
+        public string AccountContentItemId { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public string AccountDisplayText { get; set; }
+        public bool Rendered { get; set; }
+    }
+}

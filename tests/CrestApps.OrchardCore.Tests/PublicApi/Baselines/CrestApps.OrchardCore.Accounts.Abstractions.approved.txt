@@ -1,0 +1,53 @@
+namespace CrestApps.OrchardCore.Accounts
+{
+    public static class AccountsConstants
+    {
+        public const string Feature = "CrestApps.OrchardCore.Accounts";
+        public static class ContentParts
+        {
+            public const string Account = "AccountPart";
+            public const string List = "ListPart";
+        }
+        public static class ContentTypes
+        {
+            public const string Account = "Account";
+        }
+        public static class RouteNames
+        {
+            public const string Search = "CrestApps.Accounts.Search";
+        }
+    }
+}
+namespace CrestApps.OrchardCore.Accounts.Models
+{
+    public sealed class AccountPart : OrchardCore.ContentManagement.ContentPart
+    {
+        public AccountPart() { }
+    }
+    public sealed class AccountPartSettings
+    {
+        public AccountPartSettings() { }
+        public string[] OfferedContentTypes { get; set; }
+    }
+}
+namespace CrestApps.OrchardCore.Accounts.Services
+{
+    public static class AccountRecordKinds
+    {
+        public static bool HasPart(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition, string partName) { }
+        public static bool IsAccount(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition) { }
+    }
+    public interface IAccountChildTypeRule
+    {
+        bool CanBelongToAccount(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition);
+        bool MustNotBelongToAccount(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition);
+    }
+    public interface IAccountContentTypeProvider
+    {
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition>> GetAccountTypesAsync();
+        bool IsAccountChildType(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition);
+        System.Threading.Tasks.Task<bool> IsAccountChildTypeAsync(string contentType);
+        System.Threading.Tasks.Task<bool> IsAccountTypeAsync(string contentType);
+        bool IsExcludedFromAccounts(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition);
+    }
+}

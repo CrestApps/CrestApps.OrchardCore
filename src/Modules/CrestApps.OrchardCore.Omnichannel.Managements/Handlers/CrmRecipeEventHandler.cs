@@ -5,19 +5,19 @@ using OrchardCore.Recipes.Models;
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 
 /// <summary>
-/// Brings the account lists up to date after a recipe defines content types. Orchard Core's content definition step
-/// saves the types without raising the definition events the administration raises, so a contact or opportunity type
-/// a recipe adds would otherwise never be offered in the account list.
+/// Brings the opportunity's primary contact field up to date after a recipe defines content types. Orchard Core's
+/// content definition step saves the types without raising the definition events the administration raises, so a
+/// contact type a recipe adds would otherwise never be offered as a primary contact.
 /// </summary>
 internal sealed class CrmRecipeEventHandler : IRecipeEventHandler
 {
-    private readonly CrmAccountListSynchronizer _synchronizer;
+    private readonly OpportunityContactFieldSynchronizer _synchronizer;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CrmRecipeEventHandler"/> class.
     /// </summary>
     /// <param name="synchronizer">The account list synchronizer.</param>
-    public CrmRecipeEventHandler(CrmAccountListSynchronizer synchronizer)
+    public CrmRecipeEventHandler(OpportunityContactFieldSynchronizer synchronizer)
     {
         _synchronizer = synchronizer;
     }

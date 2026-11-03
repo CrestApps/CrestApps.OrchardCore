@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Accounts;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -390,7 +391,7 @@ internal sealed class LeadConversionService : ILeadConversionService
 
     private async Task<bool> CreateAccountAsync(LeadConversionContext context, string name, ContentTypeDefinition[] accountTypes, LeadConversionResult result)
     {
-        var accountType = accountTypes.FirstOrDefault(type => type.Name == OmnichannelConstants.ContentTypes.Account) ?? accountTypes.FirstOrDefault();
+        var accountType = accountTypes.FirstOrDefault(type => type.Name == AccountsConstants.ContentTypes.Account) ?? accountTypes.FirstOrDefault();
 
         if (accountType is null)
         {

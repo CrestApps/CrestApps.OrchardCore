@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Accounts.Services;
 using OrchardCore.ContentManagement.Metadata.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -36,7 +37,7 @@ public static class OmnichannelRecordKinds
     /// </summary>
     /// <param name="definition">The content type definition.</param>
     public static bool IsAccount(ContentTypeDefinition definition)
-        => HasPart(definition, OmnichannelConstants.ContentParts.Account);
+        => AccountRecordKinds.IsAccount(definition);
 
     /// <summary>
     /// Determines whether the content type is an opportunity type.
