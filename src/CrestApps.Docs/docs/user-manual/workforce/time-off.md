@@ -128,7 +128,7 @@ When approved time off overlaps a worker's published shifts, the team's **Shifts
 - **Keep them, flagged for cover** (the default): the shifts stay, and the request and the queue show how many need cover.
 - **Take them off the schedule**: the shifts are removed from the calendar and the schedule, so the next publish doesn't put them back, and the change log shows **Removed** as the worker's request.
 
-Shifts that were removed aren't put back when the time off is canceled.
+When the time off is canceled, the removed shifts that are still to come are put back on the schedule, with their drafts, and the change log shows them **Added**, unless the worker has been given another shift at that time since.
 
 ### On the calendar
 

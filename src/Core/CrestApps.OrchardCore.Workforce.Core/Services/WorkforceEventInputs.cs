@@ -22,6 +22,24 @@ internal static class WorkforceEventInputs
         };
     }
 
+    public static Dictionary<string, object> ShiftChange(ScheduleChange change)
+    {
+        return new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["WorkerId"] = change.WorkerId,
+            ["TeamId"] = change.TeamId,
+            ["ShiftKey"] = change.ShiftKey,
+            ["Kind"] = change.Kind.ToString(),
+            ["PreviousWorkerId"] = change.PreviousWorkerId,
+            ["BeforeStartUtc"] = change.BeforeStartUtc,
+            ["BeforeEndUtc"] = change.BeforeEndUtc,
+            ["StartUtc"] = change.AfterStartUtc,
+            ["EndUtc"] = change.AfterEndUtc,
+            ["Reason"] = change.Reason,
+            ["InitiatedBy"] = change.InitiatedBy.ToString(),
+        };
+    }
+
     public static Dictionary<string, object> Punch(TimePunch punch)
     {
         return new Dictionary<string, object>(StringComparer.Ordinal)

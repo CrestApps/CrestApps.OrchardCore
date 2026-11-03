@@ -331,6 +331,18 @@ public sealed class TimeOffTests
         Assert.Equal(ScheduleChangeInitiator.Worker, change.InitiatedBy);
         Assert.Equal(setup.Ben.ItemId, change.WorkerId);
         Assert.NotNull(change.Reason);
+
+        // Canceling Ben's time off puts his shift and its draft back, and a republish keeps it.
+        await harness.RunAsync(services => services.GetRequiredService<ITimeOffRequestService>().CancelAsync(benRequest.Value.ItemId, "manager"));
+        await PlanningKit.PublishAsync(harness, period);
+
+        var restored = await PlanningKit.ListShiftsAsync(harness, setup.Team);
+        var restoredDrafts = await PlanningKit.ListDraftsAsync(harness, period);
+        var putBack = (await PlanningKit.ListChangesAsync(harness, period)).Where(item => item.Kind == ScheduleChangeKind.Added).ToList();
+
+        Assert.Equal(new[] { setup.Ana.ItemId, setup.Ben.ItemId }.Order(StringComparer.Ordinal), restored.Select(PlanningKit.WorkerOf).Order(StringComparer.Ordinal));
+        Assert.Contains(restoredDrafts, draft => draft.WorkerId == setup.Ben.ItemId);
+        Assert.Equal(setup.Ben.ItemId, Assert.Single(putBack).WorkerId);
     }
 
     [Fact]

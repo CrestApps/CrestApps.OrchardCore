@@ -52,6 +52,8 @@ With **Workflows** on, workflows can start from Workforce events, in the **Workf
 | **Attendance Exception Raised** | A late start, missed punch, no-show or other exception is raised |
 | **Attendance Points Threshold Reached** | A worker's points reach their policy's threshold |
 | **Timesheet Submitted**, **Timesheet Approved** | A timesheet is submitted or approved |
+| **Shift Assigned**, **Shift Changed**, **Shift Removed** | A shift is added to the published schedule for a worker; moved, given to someone else, swapped or its breaks changed; or taken off, however the change was made |
+| **Time Off Waitlist Promoted** | A waitlisted time-off request gets a place because another was canceled |
 
 Each event can be limited to some teams. The workflow's input has the worker and team, and the ids of what happened, so later activities can look it up. For example, an **Attendance Exception Raised** workflow can email a team's manager about each no-show.
 

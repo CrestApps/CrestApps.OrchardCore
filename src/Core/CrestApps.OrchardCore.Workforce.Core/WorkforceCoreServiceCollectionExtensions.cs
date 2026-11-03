@@ -69,6 +69,7 @@ public static class WorkforceCoreServiceCollectionExtensions
         services.TryAddScoped<WorkerShiftReader>();
         services.TryAddScoped<WorkerLocks>();
         services.TryAddScoped<ScheduleChangeRecorder>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IScheduleChangeHandler, ShiftChangeEvents>());
         services.TryAddScoped<IWorkforceNotifier, NullWorkforceNotifier>();
         services.TryAddScoped<IWorkforceEvents, NullWorkforceEvents>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ISchedulePublishHandler, SchedulePublishedEvents>());

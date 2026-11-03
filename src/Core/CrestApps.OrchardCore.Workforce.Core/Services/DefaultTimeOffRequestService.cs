@@ -488,6 +488,7 @@ internal sealed class DefaultTimeOffRequestService : ITimeOffRequestService
         foreach (var request in promoted)
         {
             await NotifyObserversAsync(request, cancellationToken);
+            await _events.RaiseAsync(WorkforceEvents.TimeOffWaitlistPromoted, WorkforceEventInputs.TimeOff(request), request.ItemId, cancellationToken);
         }
     }
 

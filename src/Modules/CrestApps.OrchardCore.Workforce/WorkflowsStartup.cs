@@ -29,5 +29,9 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddActivity<WorkforceAttendancePointsThresholdReachedEvent, WorkforceEventActivityDisplayDriver<WorkforceAttendancePointsThresholdReachedEvent>>();
         services.AddActivity<WorkforceTimesheetSubmittedEvent, WorkforceEventActivityDisplayDriver<WorkforceTimesheetSubmittedEvent>>();
         services.AddActivity<WorkforceTimesheetApprovedEvent, WorkforceEventActivityDisplayDriver<WorkforceTimesheetApprovedEvent>>();
+        services.AddActivity<WorkforceShiftAssignedEvent, WorkforceEventActivityDisplayDriver<WorkforceShiftAssignedEvent>>();
+        services.AddActivity<WorkforceShiftChangedEvent, WorkforceEventActivityDisplayDriver<WorkforceShiftChangedEvent>>();
+        services.AddActivity<WorkforceShiftRemovedEvent, WorkforceEventActivityDisplayDriver<WorkforceShiftRemovedEvent>>();
+        services.AddActivity<WorkforceTimeOffWaitlistPromotedEvent, WorkforceEventActivityDisplayDriver<WorkforceTimeOffWaitlistPromotedEvent>>();
     }
 }

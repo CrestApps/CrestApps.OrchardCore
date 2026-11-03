@@ -172,6 +172,11 @@ internal sealed class TimeOffApprovals
         {
             await _eventManager.CancelAsync(calendarEvent, Options(actor), cancellationToken);
         }
+
+        foreach (var handler in _handlers)
+        {
+            await handler.CanceledAsync(request, actor, cancellationToken);
+        }
     }
 
     /// <summary>
