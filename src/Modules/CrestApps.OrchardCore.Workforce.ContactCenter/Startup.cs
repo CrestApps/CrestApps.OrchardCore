@@ -386,3 +386,17 @@ public sealed class DeploymentSchemaStartup : StartupBase
         services.AddDeploymentStepSchema<WorkforceForecastingDeploymentStepSchema>();
     }
 }
+
+/// <summary>
+/// Adds the Adherence page to My Work.
+/// </summary>
+[Feature(WorkforceContactCenterConstants.Features.Adherence)]
+[RequireFeatures(WorkforceConstants.Features.Portal)]
+public sealed class MyAdherenceStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IMyWorkLinkProvider, Controllers.MyAdherenceLinkProvider>();
+    }
+}

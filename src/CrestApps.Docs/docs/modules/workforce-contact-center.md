@@ -61,7 +61,11 @@ The **Contact Center Time Tracker** feature keeps every agent's states in [Time 
 
 The workflow event's input has `WorkerId`, `WorkerName`, `TeamId`, `Status`, `Reason`, `ScheduledActivity`, `OutSinceUtc` and `Minutes`.
 
-### Reports
+### My Work
+
+With the Workforce My Work Portal feature on, `MyAdherenceController` serves `my-work/adherence`: the signed-in worker's latest 14 saved `AdherenceDay`s with time scheduled, newest first, with adherence, conformance and the minutes out of adherence. `MyAdherenceLinkProvider` (an `IMyWorkLinkProvider`) adds **Adherence** to the My Work menu once the worker has a saved day.
+
+## Reports
 
 The **Workforce** report data source gains two data sets, limited to the reader's teams and to readers with **View adherence**:
 
