@@ -33,7 +33,7 @@ public static class TimeClockTimeTracker
 public sealed class TimeClockTimeTrackerOptions
 {
     /// <summary>
-    /// Gets or sets where a worker clocks in, such as <c>~/my-work</c>; <see langword="null"/> when they clock in only
+    /// Gets or sets where a worker clocks in, such as <c>~/Admin/my-work</c>; <see langword="null"/> when they clock in only
     /// at a kiosk.
     /// </summary>
     public string ClockUrl { get; set; }

@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.Admin;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 
@@ -61,7 +62,8 @@ public sealed class MyTimeController : Controller
     /// <param name="source">Web, or Mobile from the installed app.</param>
     /// <param name="returnUrl">Where to go back to.</param>
     /// <returns>A redirect back.</returns>
-    [HttpPost("my-work/punch")]
+    [HttpPost]
+    [Admin("my-work/punch")]
     public async Task<IActionResult> Punch(TimePunchKind kind, double? latitude, double? longitude, string key, string source, string returnUrl)
     {
         var (worker, timeClock, denied) = await AuthorizeAsync();
@@ -109,7 +111,7 @@ public sealed class MyTimeController : Controller
             }
         }
 
-        return Url.IsLocalUrl(returnUrl) ? LocalRedirect(returnUrl) : Redirect(Url.Content("~/my-work"));
+        return Url.IsLocalUrl(returnUrl) ? LocalRedirect(returnUrl) : Redirect(Url.Content("~/Admin/my-work"));
     }
 
     /// <summary>
@@ -117,7 +119,7 @@ public sealed class MyTimeController : Controller
     /// </summary>
     /// <param name="date">The day; today when empty.</param>
     /// <returns>The timesheet.</returns>
-    [HttpGet("my-work/timesheet", Name = "MyWorkTimesheet")]
+    [Admin("my-work/timesheet", "MyWorkTimesheet")]
     public async Task<IActionResult> Timesheet(DateOnly? date)
     {
         var (worker, _, denied) = await AuthorizeAsync();
@@ -152,7 +154,8 @@ public sealed class MyTimeController : Controller
     /// <param name="id">The timesheet.</param>
     /// <param name="attest">Whether the worker ticked that the hours are right.</param>
     /// <returns>A redirect to the timesheet.</returns>
-    [HttpPost("my-work/timesheet/{id}/submit")]
+    [HttpPost]
+    [Admin("my-work/timesheet/{id}/submit")]
     public async Task<IActionResult> Submit(string id, bool attest)
     {
         var (worker, _, denied) = await AuthorizeAsync();
@@ -182,7 +185,7 @@ public sealed class MyTimeController : Controller
             await _notifier.SuccessAsync(H["Your timesheet has been sent to your manager."]);
         }
 
-        return Redirect(Url.Content("~/my-work/timesheet?date=" + timesheet.PeriodStart.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)));
+        return Redirect(Url.Content("~/Admin/my-work/timesheet?date=" + timesheet.PeriodStart.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)));
     }
 
     /// <summary>
@@ -193,7 +196,8 @@ public sealed class MyTimeController : Controller
     /// <param name="time">The time.</param>
     /// <param name="reason">Why.</param>
     /// <returns>A redirect to the timesheet.</returns>
-    [HttpPost("my-work/timesheet/correction")]
+    [HttpPost]
+    [Admin("my-work/timesheet/correction")]
     public async Task<IActionResult> Correction(TimePunchKind kind, DateOnly date, TimeOnly time, string reason)
     {
         var (worker, _, denied) = await AuthorizeAsync();
@@ -218,7 +222,7 @@ public sealed class MyTimeController : Controller
             await _notifier.SuccessAsync(H["Your manager has been asked to add the punch."]);
         }
 
-        return Redirect(Url.Content("~/my-work/timesheet?date=" + date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)));
+        return Redirect(Url.Content("~/Admin/my-work/timesheet?date=" + date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)));
     }
 
     private async Task<(WorkerProfile Worker, ITimeClockService TimeClock, IActionResult Denied)> AuthorizeAsync()
@@ -242,6 +246,6 @@ public sealed class MyTimeController : Controller
 
         var worker = await _portal.GetWorkerAsync(User);
 
-        return worker is null ? (null, null, Redirect(Url.Content("~/my-work"))) : (worker, timeClock, null);
+        return worker is null ? (null, null, Redirect(Url.Content("~/Admin/my-work"))) : (worker, timeClock, null);
     }
 }

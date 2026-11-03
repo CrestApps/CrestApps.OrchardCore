@@ -23,6 +23,6 @@ public interface IMyWorkLinkProvider
 /// </summary>
 /// <param name="Key">The page's key, which marks the link active on its page.</param>
 /// <param name="Title">The link's text.</param>
-/// <param name="Path">The page's path under the site, such as <c>~/my-work/offers</c>.</param>
+/// <param name="Path">The page's path under the site, such as <c>~/Admin/my-work/offers</c>.</param>
 /// <param name="Badge">A count to show next to the link, or zero.</param>
 public sealed record MyWorkLink(string Key, string Title, string Path, int Badge = 0);

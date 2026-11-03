@@ -35,6 +35,6 @@ internal sealed class IntradayOffersLinkProvider : IMyWorkLinkProvider
 
         var open = await _intradayService.OpenForAsync(worker, cancellationToken);
 
-        return [new MyWorkLink("offers", S["Offers"], "~/my-work/offers", open.Count)];
+        return [new MyWorkLink("offers", S["Offers"], "~/Admin/my-work/offers", open.Count)];
     }
 }

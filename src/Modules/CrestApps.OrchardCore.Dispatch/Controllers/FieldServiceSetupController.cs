@@ -132,7 +132,7 @@ public sealed class FieldServiceSetupController : Controller
         });
 
         await AddAsync(model, features, DispatchConstants.Features.Mobile, S["Give technicians the Field page"], S["Their visits on the phone, offline, with checklists, parts, photos and the customer's signature, and their position while they work, if they agree."], () =>
-            Task.FromResult((S["Workers linked to a user: {0}", linked].Value, linked > 0, S["Open the Field page"].Value, Url.Content("~/my-work/field"))));
+            Task.FromResult((S["Workers linked to a user: {0}", linked].Value, linked > 0, S["Open the Field page"].Value, Url.Content("~/Admin/my-work/field"))));
 
         model.Steps.Add(new WorkforceSetupStep
         {

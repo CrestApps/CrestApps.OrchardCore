@@ -63,7 +63,7 @@ The workflow event's input has `WorkerId`, `WorkerName`, `TeamId`, `Status`, `Re
 
 ### My Work
 
-With the Workforce My Work Portal feature on, `MyAdherenceController` serves `my-work/adherence`: the signed-in worker's latest 14 saved `AdherenceDay`s with time scheduled, newest first, with adherence, conformance and the minutes out of adherence. `MyAdherenceLinkProvider` (an `IMyWorkLinkProvider`) adds **Adherence** to the My Work menu once the worker has a saved day.
+With the Workforce My Work Portal feature on, `MyAdherenceController` serves `Admin/my-work/adherence`: the signed-in worker's latest 14 saved `AdherenceDay`s with time scheduled, newest first, with adherence, conformance and the minutes out of adherence. `MyAdherenceLinkProvider` (an `IMyWorkLinkProvider`) adds **Adherence** to the My Work menu once the worker has a saved day.
 
 ## Reports
 

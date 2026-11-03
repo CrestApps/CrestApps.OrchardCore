@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Workforce.Portal;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OrchardCore.Admin;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -50,7 +51,7 @@ public sealed class MyOffersController : Controller
     /// <param name="message">A message to show.</param>
     /// <param name="error">Whether the message is an error.</param>
     /// <returns>The page.</returns>
-    [HttpGet("my-work/offers")]
+    [Admin("my-work/offers")]
     public async Task<IActionResult> Index(string message, bool error)
     {
         if (!await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.UseWorkforcePortal))
@@ -62,7 +63,7 @@ public sealed class MyOffersController : Controller
 
         if (worker is null)
         {
-            return Redirect("~/my-work");
+            return Redirect("~/Admin/my-work");
         }
 
         return View(new MyOffersViewModel
@@ -80,7 +81,8 @@ public sealed class MyOffersController : Controller
     /// </summary>
     /// <param name="id">The offer.</param>
     /// <returns>The page, with what happened.</returns>
-    [HttpPost("my-work/offers/{id}/take")]
+    [HttpPost]
+    [Admin("my-work/offers/{id}/take")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Take(string id)
     {
@@ -93,7 +95,7 @@ public sealed class MyOffersController : Controller
 
         if (worker is null)
         {
-            return Redirect("~/my-work");
+            return Redirect("~/Admin/my-work");
         }
 
         var errors = await _intradayService.TakeAsync(id, worker.ItemId, User.Identity?.Name, HttpContext.RequestAborted);

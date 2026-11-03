@@ -1,8 +1,5 @@
 @model FieldViewModel
 @{
-    Layout = null;
-    ViewData["MyWorkNav"] = Model.Nav;
-    ViewData["Title"] = T["Field"].Value;
 
     var texts = new Dictionary<string, string>
     {
@@ -101,7 +98,12 @@
 @* Registered before the head, which writes the page's styles. *@
 <style asp-name="CrestApps.OrchardCore.Dispatch.Field"></style>
 <script asp-name="CrestApps.OrchardCore.Dispatch.Field" at="Foot"></script>
-<partial name="~/Areas/CrestApps.OrchardCore.Workforce/Views/Shared/_MyWorkHead.cshtml" />
+<zone Name="Title">
+    <breadcrumb name="MyWorkField" title="@T["Field"]">
+        <breadcrumb-item id="MyWork" action="Index" controller="MyWork" area="CrestApps.OrchardCore.Workforce">@T["My Work"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+<partial name="~/Areas/CrestApps.OrchardCore.Workforce/Views/Shared/_MyWorkAssets.cshtml" />
 
 <div id="field-app"
      data-worker-id="@Model.WorkerId"
@@ -109,7 +111,7 @@
      data-retention-days="@Model.RetentionDays"
      data-texts="@System.Text.Json.JsonSerializer.Serialize(texts)">
     <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-        <h1 class="h4 mb-0 me-auto">@T["Field"]</h1>
+        <span class="me-auto"></span>
         <span class="badge text-bg-secondary fw-normal" role="status" aria-live="polite" data-field-sync>@T["Loading"]</span>
     </div>
     <div data-field-notices aria-live="polite"></div>
@@ -118,4 +120,3 @@
         <noscript><div class="alert alert-warning">@T["The Field page needs JavaScript."]</div></noscript>
     </div>
 </div>
-<partial name="~/Areas/CrestApps.OrchardCore.Workforce/Views/Shared/_MyWorkFoot.cshtml" />

@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.Admin;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
@@ -87,7 +88,7 @@ public sealed class MyTeamController : Controller
     /// Lists the time off, trades and claims waiting for the manager.
     /// </summary>
     /// <returns>The approvals page.</returns>
-    [HttpGet("my-work/approvals", Name = "MyWorkApprovals")]
+    [Admin("my-work/approvals", "MyWorkApprovals")]
     public async Task<IActionResult> Approvals()
     {
         var (scope, denied) = await AuthorizeAsync();
@@ -194,7 +195,8 @@ public sealed class MyTeamController : Controller
     /// </summary>
     /// <param name="id">The timesheet.</param>
     /// <returns>A redirect to the approvals.</returns>
-    [HttpPost("my-work/approvals/timesheets/{id}")]
+    [HttpPost]
+    [Admin("my-work/approvals/timesheets/{id}")]
     public async Task<IActionResult> ApproveTimesheet(string id)
     {
         var (scope, denied) = await AuthorizeAsync();
@@ -231,7 +233,8 @@ public sealed class MyTeamController : Controller
     /// <param name="id">The correction.</param>
     /// <param name="approve">Whether to add it.</param>
     /// <returns>A redirect to the approvals.</returns>
-    [HttpPost("my-work/approvals/corrections/{id}")]
+    [HttpPost]
+    [Admin("my-work/approvals/corrections/{id}")]
     public async Task<IActionResult> DecideCorrection(string id, bool approve)
     {
         var (scope, denied) = await AuthorizeAsync();
@@ -268,7 +271,8 @@ public sealed class MyTeamController : Controller
     /// <param name="id">The exception.</param>
     /// <param name="excuse">Whether to excuse it.</param>
     /// <returns>A redirect to the approvals.</returns>
-    [HttpPost("my-work/approvals/exceptions/{id}")]
+    [HttpPost]
+    [Admin("my-work/approvals/exceptions/{id}")]
     public async Task<IActionResult> DecideException(string id, bool excuse)
     {
         var (scope, denied) = await AuthorizeAsync();
@@ -307,7 +311,8 @@ public sealed class MyTeamController : Controller
     /// <param name="id">The request.</param>
     /// <param name="approve">Whether to approve.</param>
     /// <returns>A redirect to the approvals.</returns>
-    [HttpPost("my-work/approvals/time-off/{id}")]
+    [HttpPost]
+    [Admin("my-work/approvals/time-off/{id}")]
     public async Task<IActionResult> DecideTimeOff(string id, bool approve)
     {
         var (scope, denied) = await AuthorizeAsync();
@@ -346,7 +351,8 @@ public sealed class MyTeamController : Controller
     /// <param name="id">The trade.</param>
     /// <param name="approve">Whether to approve.</param>
     /// <returns>A redirect to the approvals.</returns>
-    [HttpPost("my-work/approvals/trades/{id}")]
+    [HttpPost]
+    [Admin("my-work/approvals/trades/{id}")]
     public async Task<IActionResult> DecideTrade(string id, bool approve)
     {
         var (scope, denied) = await AuthorizeAsync();
@@ -379,7 +385,8 @@ public sealed class MyTeamController : Controller
     /// <param name="workerId">The claimant.</param>
     /// <param name="approve">Whether to give them the shift.</param>
     /// <returns>A redirect to the approvals.</returns>
-    [HttpPost("my-work/approvals/claims/{id}")]
+    [HttpPost]
+    [Admin("my-work/approvals/claims/{id}")]
     public async Task<IActionResult> DecideClaim(string id, string workerId, bool approve)
     {
         var (scope, denied) = await AuthorizeAsync();
@@ -409,7 +416,7 @@ public sealed class MyTeamController : Controller
     /// Shows who is on shift now, and who is off today, in the teams the manager manages.
     /// </summary>
     /// <returns>The page.</returns>
-    [HttpGet("my-work/team", Name = "MyWorkTeam")]
+    [Admin("my-work/team", "MyWorkTeam")]
     public async Task<IActionResult> Team()
     {
         var (scope, denied) = await AuthorizeAsync();

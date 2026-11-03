@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.Workforce.Models;
 public sealed class MyWorkOfflineOptions
 {
     /// <summary>
-    /// Gets the pages' paths under the site, such as <c>~/my-work/field</c>.
+    /// Gets the pages' paths under the site, such as <c>~/Admin/my-work/field</c>.
     /// </summary>
     public List<string> Pages { get; } = [];
 }

@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Workforce.Portal;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using OrchardCore.Admin;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Dispatch.Controllers;
@@ -36,7 +37,7 @@ public sealed class FieldController : Controller
     /// Shows the page; its script loads the visits and keeps them for offline use.
     /// </summary>
     /// <returns>The page.</returns>
-    [HttpGet("my-work/field", Name = "MyWorkField")]
+    [Admin("my-work/field", "MyWorkField")]
     public async Task<IActionResult> Index()
     {
         if (User.Identity?.IsAuthenticated != true)
@@ -53,7 +54,7 @@ public sealed class FieldController : Controller
 
         if (worker is null)
         {
-            return Redirect("~/my-work");
+            return Redirect("~/Admin/my-work");
         }
 
         return View(new FieldViewModel

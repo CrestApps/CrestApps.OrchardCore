@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Workforce.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Admin;
 using OrchardCore.Modules;
 using YesSql;
 using ISession = YesSql.ISession;
@@ -44,7 +45,7 @@ public sealed class MyAdherenceController : Controller
     /// Shows the worker's latest saved days.
     /// </summary>
     /// <returns>The page.</returns>
-    [HttpGet("my-work/adherence")]
+    [Admin("my-work/adherence")]
     public async Task<IActionResult> Index()
     {
         if (!await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.UseWorkforcePortal))
@@ -56,7 +57,7 @@ public sealed class MyAdherenceController : Controller
 
         if (worker is null)
         {
-            return Redirect("~/my-work");
+            return Redirect("~/Admin/my-work");
         }
 
         var workerId = worker.ItemId;
@@ -115,6 +116,6 @@ internal sealed class MyAdherenceLinkProvider : IMyWorkLinkProvider
         var workerId = worker.ItemId;
         var any = await _session.QueryIndex<AdherenceDayIndex>(index => index.WorkerId == workerId, collection: WorkforceConstants.CollectionName).FirstOrDefaultAsync(cancellationToken);
 
-        return any is null ? [] : [new MyWorkLink("adherence", S["Adherence"], "~/my-work/adherence", 0)];
+        return any is null ? [] : [new MyWorkLink("adherence", S["Adherence"], "~/Admin/my-work/adherence", 0)];
     }
 }

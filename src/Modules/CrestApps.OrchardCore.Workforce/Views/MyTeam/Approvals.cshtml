@@ -1,13 +1,15 @@
 @model MyApprovalsViewModel
 @{
-    Layout = null;
-    ViewData["MyWorkNav"] = Model.Nav;
-    ViewData["Title"] = T["Approvals"].Value;
     var nothing = Model.TimeOff.Count + Model.Trades.Count + Model.Claims.Count + Model.Timesheets.Count + Model.Corrections.Count + Model.Exceptions.Count == 0;
 }
-<partial name="_MyWorkHead" />
+<zone Name="Title">
+    <breadcrumb name="MyWorkApprovals" title="@T["Approvals"]">
+        <breadcrumb-item id="MyWork" action="Index" controller="MyWork" area="CrestApps.OrchardCore.Workforce">@T["My Work"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+<partial name="~/Areas/CrestApps.OrchardCore.Workforce/Views/Shared/_MyWorkAssets.cshtml" />
 
-<h1 class="h4 mb-3">@T["Waiting for you"]</h1>
+<h2 class="h5 mb-3">@T["Waiting for you"]</h2>
 @if (nothing)
 {
     <div class="alert alert-light">@T["Nothing is waiting for a decision."]</div>
@@ -28,8 +30,8 @@
                         <div class="small text-muted">@row.Request.Reason</div>
                     }
                 </div>
-                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/approvals/time-off/" + row.Request.ItemId)"><input type="hidden" name="approve" value="true" /><button type="submit" class="btn btn-success btn-sm">@T["Approve"]</button></form>
-                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/approvals/time-off/" + row.Request.ItemId)"><input type="hidden" name="approve" value="false" /><button type="submit" class="btn btn-outline-danger btn-sm">@T["Decline"]</button></form>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/approvals/time-off/" + row.Request.ItemId)"><input type="hidden" name="approve" value="true" /><button type="submit" class="btn btn-success btn-sm">@T["Approve"]</button></form>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/approvals/time-off/" + row.Request.ItemId)"><input type="hidden" name="approve" value="false" /><button type="submit" class="btn btn-outline-danger btn-sm">@T["Decline"]</button></form>
                 <a href="@Url.Content("~/Admin/workforce/time-off/requests/" + row.Request.ItemId)" class="btn btn-link btn-sm">@T["Details"]</a>
             </div>
         </div>
@@ -53,8 +55,8 @@
                         @T["{0} gives {1} to {2}.", row.FromName, row.ShiftText, row.ToName]
                     }
                 </div>
-                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/approvals/trades/" + row.Trade.ItemId)"><input type="hidden" name="approve" value="true" /><button type="submit" class="btn btn-success btn-sm">@T["Approve"]</button></form>
-                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/approvals/trades/" + row.Trade.ItemId)"><input type="hidden" name="approve" value="false" /><button type="submit" class="btn btn-outline-danger btn-sm">@T["Decline"]</button></form>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/approvals/trades/" + row.Trade.ItemId)"><input type="hidden" name="approve" value="true" /><button type="submit" class="btn btn-success btn-sm">@T["Approve"]</button></form>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/approvals/trades/" + row.Trade.ItemId)"><input type="hidden" name="approve" value="false" /><button type="submit" class="btn btn-outline-danger btn-sm">@T["Decline"]</button></form>
             </div>
         </div>
     }
@@ -72,8 +74,8 @@
                 {
                     <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
                         <span class="me-auto">@name</span>
-                        <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/approvals/claims/" + shift.ItemId)"><input type="hidden" name="workerId" value="@claim.WorkerId" /><input type="hidden" name="approve" value="true" /><button type="submit" class="btn btn-success btn-sm">@T["Give the shift"]</button></form>
-                        <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/approvals/claims/" + shift.ItemId)"><input type="hidden" name="workerId" value="@claim.WorkerId" /><input type="hidden" name="approve" value="false" /><button type="submit" class="btn btn-outline-danger btn-sm">@T["Decline"]</button></form>
+                        <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/approvals/claims/" + shift.ItemId)"><input type="hidden" name="workerId" value="@claim.WorkerId" /><input type="hidden" name="approve" value="true" /><button type="submit" class="btn btn-success btn-sm">@T["Give the shift"]</button></form>
+                        <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/approvals/claims/" + shift.ItemId)"><input type="hidden" name="workerId" value="@claim.WorkerId" /><input type="hidden" name="approve" value="false" /><button type="submit" class="btn btn-outline-danger btn-sm">@T["Decline"]</button></form>
                     </div>
                 }
             </div>
@@ -92,7 +94,7 @@
                     <strong>@workerName</strong> <span class="text-muted">@timesheet.PeriodStart.ToString("d MMM") – @timesheet.PeriodEnd.ToString("d MMM")</span>
                     <div class="small">@T["{0} h", timesheet.TotalHours.ToString("0.##")]@if (timesheet.OpenExceptions > 0) { <span class="text-warning-emphasis"> · @T.Plural(timesheet.OpenExceptions, "1 exception", "{0} exceptions")</span> }</div>
                 </div>
-                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/approvals/timesheets/" + timesheet.ItemId)"><button type="submit" class="btn btn-success btn-sm">@T["Approve"]</button></form>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/approvals/timesheets/" + timesheet.ItemId)"><button type="submit" class="btn btn-success btn-sm">@T["Approve"]</button></form>
                 <a href="@Url.Content("~/Admin/workforce/timesheets/" + timesheet.ItemId)" class="btn btn-link btn-sm">@T["Review"]</a>
             </div>
         </div>
@@ -110,8 +112,8 @@
                     <strong>@workerName</strong> @PunchName(correction.Kind) <span class="text-muted">@when</span>
                     <div class="small text-muted">@correction.Reason</div>
                 </div>
-                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/approvals/corrections/" + correction.ItemId)"><input type="hidden" name="approve" value="true" /><button type="submit" class="btn btn-success btn-sm">@T["Add it"]</button></form>
-                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/approvals/corrections/" + correction.ItemId)"><input type="hidden" name="approve" value="false" /><button type="submit" class="btn btn-outline-danger btn-sm">@T["Decline"]</button></form>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/approvals/corrections/" + correction.ItemId)"><input type="hidden" name="approve" value="true" /><button type="submit" class="btn btn-success btn-sm">@T["Add it"]</button></form>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/approvals/corrections/" + correction.ItemId)"><input type="hidden" name="approve" value="false" /><button type="submit" class="btn btn-outline-danger btn-sm">@T["Decline"]</button></form>
             </div>
         </div>
     }
@@ -127,14 +129,13 @@
                 <div class="me-auto">
                     <strong>@workerName</strong> @CrestApps.OrchardCore.Workforce.Controllers.AttendanceKinds.Name(T, exception.Kind) <span class="text-muted">@exception.Date.ToString("ddd d MMM")@(exception.Minutes > 0 ? " · " + T.GetString("{0} min", exception.Minutes).Value : null)</span>
                 </div>
-                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/approvals/exceptions/" + exception.ItemId)"><input type="hidden" name="excuse" value="false" /><button type="submit" class="btn btn-outline-secondary btn-sm">@T["Confirm"]</button></form>
-                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/approvals/exceptions/" + exception.ItemId)"><input type="hidden" name="excuse" value="true" /><button type="submit" class="btn btn-outline-success btn-sm">@T["Excuse"]</button></form>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/approvals/exceptions/" + exception.ItemId)"><input type="hidden" name="excuse" value="false" /><button type="submit" class="btn btn-outline-secondary btn-sm">@T["Confirm"]</button></form>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/approvals/exceptions/" + exception.ItemId)"><input type="hidden" name="excuse" value="true" /><button type="submit" class="btn btn-outline-success btn-sm">@T["Excuse"]</button></form>
             </div>
         </div>
     }
 }
 
-<partial name="_MyWorkFoot" />
 @functions {
     private string PunchName(TimePunchKind kind) => kind switch
     {

@@ -91,7 +91,7 @@ Each has `VisitId`, `Number`, `WorkOrderId`, `WorkOrderNumber`, `Status`, `LeadW
 
 ## Technician Mobile
 
-The **Technician Mobile** feature adds a **Field** page to My Work (`~/my-work/field`) that works offline.
+The **Technician Mobile** feature adds a **Field** page to My Work (`~/Admin/my-work/field`) that works offline.
 
 - **The pack.** The page keeps the technician's visits from today through `OfflineDays` on the device (IndexedDB), with each work order's address, contact, access notes, checklists and answers, lines, notes, signatures and photo count, the statuses a technician can move to, and the stock locations with the units each has free of the parts on the pack's lines (`IFieldStockSource.AvailableAsync`, from Inventory). With Assets on, each work order also has its equipment (`IFieldAssetSource`: number, name, make and model, serial number) and its history: the latest five other work orders on the same assets. Visits under way from the day before come too.
 - **The outbox.** Every change is applied to the pack at once and kept as a command with a key the device makes: a status, an answer, a note, parts used, a signature (a drawn image as a data URL, or a typed name), a photo (made at most 1600 pixels on its long side, as JPEG, on the device) or a follow-up (`FollowUp`, with what it is for: `WorkOrderService.FollowUpAsync` makes a work order of the same type for the same customer, place and assets, and a note on this one names it). Commands are sent in order whenever the device is online: at once, then every 30 seconds, and when it reconnects. After each sync, the server's pack gets the commands still waiting applied on top, so the page never goes back.

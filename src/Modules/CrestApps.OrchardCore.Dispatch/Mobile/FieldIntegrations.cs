@@ -84,7 +84,7 @@ internal sealed class FieldLinkProvider : IMyWorkLinkProvider
         var visits = await _dispatchService.ListScheduledAsync(CalendarTime.ToUtc(today, zone), CalendarTime.ToUtc(today.AddDays(1), zone), [worker.ItemId], cancellationToken);
         var open = visits.Count(visit => visit.WorkerIds.Contains(worker.ItemId) && Core.VisitStatusRules.IsOpen(visit.Status) && visit.Status != VisitStatus.Unscheduled);
 
-        return [new MyWorkLink("field", S["Field"], "~/my-work/field", open)];
+        return [new MyWorkLink("field", S["Field"], "~/Admin/my-work/field", open)];
     }
 }
 

@@ -114,7 +114,7 @@ internal sealed class ShiftReminderService
                 Kind = WorkforceNotificationKind.ShiftReminder,
                 Title = S["Your shift starts at {0}", start],
                 Body = teamNames.TryGetValue(data.TeamId ?? string.Empty, out var team) ? S["With {0}, until {1}.", team, CalendarTime.ToLocal(occurrence.EndUtc, zone).ToString("t", CultureInfo.CurrentCulture)] : null,
-                Url = "~/my-work/schedule",
+                Url = "~/Admin/my-work/schedule",
             }, cancellationToken);
             sent++;
         }

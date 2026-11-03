@@ -1,0 +1,13 @@
+@* The styles of the My Work pages, and the service worker that shows their push notifications and keeps the
+   pages that work offline. *@
+<style>
+    .my-work-main { max-width: 64rem; }
+    .my-work-nav .nav-link { white-space: nowrap; }
+    .my-work-shift { border-left: .3rem solid #2b8a3e; }
+    .my-work-time-off { border-left: .3rem solid #e8590c; }
+</style>
+<script at="Foot">
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('@Url.Content("~/my-work/sw.js")', { scope: '@Url.Content("~/Admin/my-work")' }).catch(() => { });
+    }
+</script>

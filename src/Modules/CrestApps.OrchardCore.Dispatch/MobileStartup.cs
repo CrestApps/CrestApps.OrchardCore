@@ -37,7 +37,7 @@ public sealed class MobileStartup : StartupBase
 
         services.AddScoped<IFieldFileStore, MediaFieldFileStore>();
         services.AddScoped<IMyWorkLinkProvider, FieldLinkProvider>();
-        services.Configure<MyWorkOfflineOptions>(options => options.Pages.Add("~/my-work/field"));
+        services.Configure<MyWorkOfflineOptions>(options => options.Pages.Add("~/Admin/my-work/field"));
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, FieldRetentionBackgroundTask>());
     }
 

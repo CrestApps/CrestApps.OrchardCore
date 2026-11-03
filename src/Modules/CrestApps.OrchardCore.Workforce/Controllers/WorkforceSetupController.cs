@@ -121,7 +121,7 @@ public sealed class WorkforceSetupController : Controller
             Done = features.Contains(WorkforceConstants.Features.Portal) && linked > 0,
             FeatureOff = !features.Contains(WorkforceConstants.Features.Portal),
             Action = S["Open My Work"],
-            Url = Url.Content("~/my-work"),
+            Url = Url.Content("~/Admin/my-work"),
         });
 
         return View(model);

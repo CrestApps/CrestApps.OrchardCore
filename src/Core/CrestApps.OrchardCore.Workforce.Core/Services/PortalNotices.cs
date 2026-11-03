@@ -118,7 +118,7 @@ internal sealed class PortalNotices : ISchedulePublishHandler, IScheduleChangeHa
                 Kind = kind,
                 Title = title,
                 Body = body ?? string.Empty,
-                Url = "my-work/schedule",
+                Url = "Admin/my-work/schedule",
             }, cancellationToken);
     }
 }

@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OrchardCore.Admin;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
@@ -114,7 +115,7 @@ public sealed class MyWorkController : Controller
     /// Shows the worker's next shift, today and their notifications.
     /// </summary>
     /// <returns>The home page.</returns>
-    [HttpGet("my-work", Name = "MyWork")]
+    [Admin("my-work", "MyWork")]
     public async Task<IActionResult> Index()
     {
         var (worker, denied) = await AuthorizeAsync();
@@ -151,7 +152,8 @@ public sealed class MyWorkController : Controller
     /// Marks the worker's notifications read.
     /// </summary>
     /// <returns>A redirect to the home page.</returns>
-    [HttpPost("my-work/inbox/read")]
+    [HttpPost]
+    [Admin("my-work/inbox/read")]
     public async Task<IActionResult> MarkRead()
     {
         var (worker, denied) = await AuthorizeWorkerAsync();
@@ -170,7 +172,7 @@ public sealed class MyWorkController : Controller
     /// Lists the worker's shifts and time off for the next four weeks.
     /// </summary>
     /// <returns>The schedule.</returns>
-    [HttpGet("my-work/schedule", Name = "MyWorkSchedule")]
+    [Admin("my-work/schedule", "MyWorkSchedule")]
     public async Task<IActionResult> Schedule()
     {
         var (worker, denied) = await AuthorizeWorkerAsync();
@@ -194,7 +196,7 @@ public sealed class MyWorkController : Controller
     /// Shows the worker's balances, requests and the request form.
     /// </summary>
     /// <returns>The time off page.</returns>
-    [HttpGet("my-work/time-off", Name = "MyWorkTimeOff")]
+    [Admin("my-work/time-off", "MyWorkTimeOff")]
     public async Task<IActionResult> TimeOff()
     {
         var (worker, denied) = await AuthorizeTimeOffAsync();
@@ -218,7 +220,8 @@ public sealed class MyWorkController : Controller
     /// <param name="model">The request.</param>
     /// <param name="check">Whether only to check it.</param>
     /// <returns>The time off page.</returns>
-    [HttpPost("my-work/time-off")]
+    [HttpPost]
+    [Admin("my-work/time-off")]
     public async Task<IActionResult> TimeOffPost(MyTimeOffViewModel model, bool check = false)
     {
         var (worker, denied) = await AuthorizeTimeOffAsync();
@@ -313,7 +316,8 @@ public sealed class MyWorkController : Controller
     /// </summary>
     /// <param name="id">The request.</param>
     /// <returns>A redirect to the time off page.</returns>
-    [HttpPost("my-work/time-off/cancel/{id}")]
+    [HttpPost]
+    [Admin("my-work/time-off/cancel/{id}")]
     public async Task<IActionResult> CancelTimeOff(string id)
     {
         var (worker, denied) = await AuthorizeTimeOffAsync();
@@ -342,7 +346,7 @@ public sealed class MyWorkController : Controller
     /// Shows the open shifts the worker can claim, their shifts to trade and the trades offered to them.
     /// </summary>
     /// <returns>The shifts page.</returns>
-    [HttpGet("my-work/shifts", Name = "MyWorkShifts")]
+    [Admin("my-work/shifts", "MyWorkShifts")]
     public async Task<IActionResult> Shifts()
     {
         var (worker, denied) = await AuthorizeWorkerAsync();
@@ -426,7 +430,8 @@ public sealed class MyWorkController : Controller
     /// </summary>
     /// <param name="id">The open shift.</param>
     /// <returns>A redirect to the shifts page.</returns>
-    [HttpPost("my-work/shifts/claim/{id}")]
+    [HttpPost]
+    [Admin("my-work/shifts/claim/{id}")]
     public async Task<IActionResult> Claim(string id)
     {
         var (worker, denied) = await AuthorizeWorkerAsync();
@@ -448,7 +453,8 @@ public sealed class MyWorkController : Controller
     /// </summary>
     /// <param name="id">The open shift.</param>
     /// <returns>A redirect to the shifts page.</returns>
-    [HttpPost("my-work/shifts/withdraw/{id}")]
+    [HttpPost]
+    [Admin("my-work/shifts/withdraw/{id}")]
     public async Task<IActionResult> Withdraw(string id)
     {
         var (worker, denied) = await AuthorizeWorkerAsync();
@@ -473,7 +479,8 @@ public sealed class MyWorkController : Controller
     /// <param name="swapFor">For a swap, the colleague and their shift, as worker|event.</param>
     /// <param name="note">A note to the colleague.</param>
     /// <returns>A redirect to the shifts page.</returns>
-    [HttpPost("my-work/trades/offer")]
+    [HttpPost]
+    [Admin("my-work/trades/offer")]
     public async Task<IActionResult> Offer(string shiftEventId, string targetWorkerId, string swapFor, string note)
     {
         var (worker, denied) = await AuthorizeWorkerAsync();
@@ -514,7 +521,8 @@ public sealed class MyWorkController : Controller
     /// <param name="id">The trade.</param>
     /// <param name="decision">accept, reject or cancel.</param>
     /// <returns>A redirect to the shifts page.</returns>
-    [HttpPost("my-work/trades/{id}/{decision}")]
+    [HttpPost]
+    [Admin("my-work/trades/{id}/{decision}")]
     public async Task<IActionResult> Trade(string id, string decision)
     {
         var (worker, denied) = await AuthorizeWorkerAsync();
@@ -561,7 +569,7 @@ public sealed class MyWorkController : Controller
     /// Shows the worker's availability.
     /// </summary>
     /// <returns>The availability page.</returns>
-    [HttpGet("my-work/availability", Name = "MyWorkAvailability")]
+    [Admin("my-work/availability", "MyWorkAvailability")]
     public async Task<IActionResult> Availability()
     {
         var (worker, denied) = await AuthorizeWorkerAsync();
@@ -583,7 +591,8 @@ public sealed class MyWorkController : Controller
     /// </summary>
     /// <param name="model">The availability.</param>
     /// <returns>A redirect, or the page with errors.</returns>
-    [HttpPost("my-work/availability")]
+    [HttpPost]
+    [Admin("my-work/availability")]
     public async Task<IActionResult> AvailabilityPost(MyAvailabilityViewModel model)
     {
         var (worker, denied) = await AuthorizeWorkerAsync();
@@ -619,7 +628,7 @@ public sealed class MyWorkController : Controller
     /// Shows the worker's notification settings, devices and calendar feed.
     /// </summary>
     /// <returns>The settings page.</returns>
-    [HttpGet("my-work/settings", Name = "MyWorkSettings")]
+    [Admin("my-work/settings", "MyWorkSettings")]
     public async Task<IActionResult> Settings()
     {
         var (worker, denied) = await AuthorizeWorkerAsync();
@@ -652,7 +661,8 @@ public sealed class MyWorkController : Controller
     /// <param name="channels">The channels left on.</param>
     /// <param name="kinds">The kinds left on.</param>
     /// <returns>A redirect to the settings page.</returns>
-    [HttpPost("my-work/settings")]
+    [HttpPost]
+    [Admin("my-work/settings")]
     public async Task<IActionResult> SettingsPost(string[] channels, string[] kinds, int reminderMinutes, string quietStart, string quietEnd)
     {
         var (worker, denied) = await AuthorizeWorkerAsync();
@@ -691,7 +701,8 @@ public sealed class MyWorkController : Controller
     /// Replaces the worker's calendar feed address, so the old one stops working.
     /// </summary>
     /// <returns>A redirect to the settings page.</returns>
-    [HttpPost("my-work/feed/renew")]
+    [HttpPost]
+    [Admin("my-work/feed/renew")]
     public async Task<IActionResult> RenewFeed()
     {
         var (worker, denied) = await AuthorizeWorkerAsync();
@@ -712,7 +723,8 @@ public sealed class MyWorkController : Controller
     /// </summary>
     /// <param name="input">The browser's push subscription.</param>
     /// <returns>No content.</returns>
-    [HttpPost("my-work/push/subscribe")]
+    [HttpPost]
+    [Admin("my-work/push/subscribe")]
     public async Task<IActionResult> Subscribe([FromBody] PushSubscriptionInput input)
     {
         var (worker, denied) = await AuthorizeWorkerAsync();
@@ -737,7 +749,8 @@ public sealed class MyWorkController : Controller
     /// </summary>
     /// <param name="endpoint">The device's push endpoint.</param>
     /// <returns>A redirect to the settings page.</returns>
-    [HttpPost("my-work/push/unsubscribe")]
+    [HttpPost]
+    [Admin("my-work/push/unsubscribe")]
     public async Task<IActionResult> Unsubscribe(string endpoint)
     {
         var (worker, denied) = await AuthorizeWorkerAsync();
@@ -768,6 +781,18 @@ public sealed class MyWorkController : Controller
     }
 
     /// <summary>
+    /// Sends the addresses of the pages from before they moved into the admin, such as links in notifications already
+    /// sent, to the same page in the admin.
+    /// </summary>
+    /// <param name="path">The rest of the address.</param>
+    /// <returns>A redirect.</returns>
+    [AllowAnonymous]
+    [HttpGet("my-work")]
+    [HttpGet("my-work/{**path}", Order = 1000)]
+    public IActionResult MovedToAdmin(string path)
+        => LocalRedirect(Url.Content("~/Admin/my-work" + (string.IsNullOrEmpty(path) ? string.Empty : "/" + path)) + Request.QueryString);
+
+    /// <summary>
     /// The portal's web app manifest, so it can be installed.
     /// </summary>
     /// <returns>The manifest.</returns>
@@ -782,8 +807,8 @@ public sealed class MyWorkController : Controller
             name = S["My Work: {0}", site.SiteName].Value,
             short_name = S["My Work"].Value,
             description = S["Your shifts, time off and notifications."].Value,
-            start_url = Url.Content("~/my-work"),
-            scope = Url.Content("~/my-work"),
+            start_url = Url.Content("~/Admin/my-work"),
+            scope = Url.Content("~/Admin/my-work"),
             display = "standalone",
             background_color = "#ffffff",
             theme_color = "#2b8a3e",
@@ -808,7 +833,7 @@ public sealed class MyWorkController : Controller
     [HttpGet("my-work/sw.js")]
     public IActionResult ServiceWorker()
     {
-        var home = Url.Content("~/my-work");
+        var home = Url.Content("~/Admin/my-work");
         var icon = Url.Content("~/CrestApps.OrchardCore.Workforce/portal/icon-192.png");
         var offline = System.Text.Json.JsonSerializer.Serialize(S["You're offline. My Work needs a connection; it will load again once you're back online."].Value);
         var offlinePages = System.Text.Json.JsonSerializer.Serialize(HttpContext.RequestServices.GetService<IOptions<MyWorkOfflineOptions>>()?.Value.Pages.Select(page => Url.Content(page)).ToArray() ?? []);
@@ -871,8 +896,11 @@ public sealed class MyWorkController : Controller
             });
             """;
 
-        Response.Headers["Service-Worker-Allowed"] = Url.Content("~/my-work");
+        Response.Headers["Service-Worker-Allowed"] = Url.Content("~/Admin/my-work");
         Response.Headers.CacheControl = "no-cache";
+
+        // The service worker is served here, outside the admin, but looks after the My Work pages in the admin.
+        Response.Headers["Service-Worker-Allowed"] = home;
 
         return Content(script, "text/javascript; charset=utf-8");
     }

@@ -1,13 +1,14 @@
 @model MyOffersViewModel
 @{
-    Layout = null;
-    ViewData["MyWorkNav"] = Model.Nav;
-    ViewData["Title"] = T["Offers"].Value;
     string Clock(DateTime utc) => CalendarTime.ToLocal(utc, Model.TimeZoneId).ToString("t", CultureInfo.CurrentCulture);
 }
-<partial name="~/Areas/CrestApps.OrchardCore.Workforce/Views/Shared/_MyWorkHead.cshtml" />
+<zone Name="Title">
+    <breadcrumb name="MyWorkOffers" title="@T["Offers"]">
+        <breadcrumb-item id="MyWork" action="Index" controller="MyWork" area="CrestApps.OrchardCore.Workforce">@T["My Work"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+<partial name="~/Areas/CrestApps.OrchardCore.Workforce/Views/Shared/_MyWorkAssets.cshtml" />
 
-<h1 class="h4 mb-3">@T["Offers"]</h1>
 <p class="text-muted">@T["Extra hours and time off your team offers today and in the coming days, first come, first served. Overtime is added to a shift that ends when it starts, or starts when it ends; time off comes off the start or the end of a shift."]</p>
 
 @if (!string.IsNullOrEmpty(Model.Message))
@@ -40,7 +41,7 @@ else
                         }
                     </div>
                 </div>
-                <form method="post" action="@Url.Content("~/my-work/offers/" + offer.ItemId + "/take")">
+                <form method="post" action="@Url.Content("~/Admin/my-work/offers/" + offer.ItemId + "/take")">
                     @Html.AntiForgeryToken()
                     <button type="submit" class="btn btn-primary btn-sm">@T["Take it"]</button>
                 </form>
@@ -49,4 +50,3 @@ else
     </div>
 }
 
-<partial name="~/Areas/CrestApps.OrchardCore.Workforce/Views/Shared/_MyWorkFoot.cshtml" />

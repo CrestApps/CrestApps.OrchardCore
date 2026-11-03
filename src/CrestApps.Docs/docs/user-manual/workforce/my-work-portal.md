@@ -6,17 +6,17 @@ technical_manual:
   - modules/workforce
 ---
 
-**My Work** is the workers' own site, at **/my-work**. Workers see their schedule, ask for time off, claim open shifts, trade shifts with colleagues and say when they can work. They hear about changes in the portal, by push notification on their phone or computer, and by email. Managers see what waits for their decision and who is working now. My Work can be installed like an app: on a phone, add it to the home screen.
+**My Work** is the workers' own part of the admin, under the **My Work** menu. Workers see their schedule, ask for time off, claim open shifts, trade shifts with colleagues and say when they can work. They hear about changes in My Work, by push notification on their phone or computer, and by email. Managers see what waits for their decision and who is working now. A site that wants its own front end for workers can build it on the same services and APIs.
 
 | | |
 | --- | --- |
-| **Address** | **/my-work** on your site |
+| **Menu** | My Work > Home, Schedule, Timesheet, Time off, Shifts, Availability, Settings; Approvals and Who's working for managers |
 | **Permission** | Use the My Work portal; Request time off for the time off page |
 | **Feature** | Workforce My Work Portal (it needs Workforce) |
 
 <AskYourAdmin />
 
-Every signed-in user can open My Work. A user sees their own schedule once a manager links their user account to their worker under **Workforce > Workers** (the **User** field). Until then the home page says so.
+A user gets My Work once a manager links their user account to their worker under **Workforce > Workers** (the **User** field). Workers sign in as usual and land in the admin, where they see the **My Work** menu and only the other pages their roles allow: a worker who isn't terminated and has **Use the My Work portal** may open the admin without the **Access admin panel** permission. Addresses from before My Work moved into the admin (**/my-work/...**, such as links in older notifications) open the same page in the admin.
 
 ## Pages for workers
 
@@ -64,6 +64,6 @@ A user who manages teams also sees:
 | **Approvals** | Time off waiting for a decision, trades accepted and waiting for approval, open shifts with claims, submitted timesheets, punches workers asked for, and open attendance exceptions, each with buttons to decide them. **Details** and **Review** open them in the admin. |
 | **Who's working** | Who is on shift now in the teams they manage, with their hours and whether they are on a break, and who is off. |
 
-## Installing My Work
+## Notifications on this device
 
-My Work works in any browser. To install it, open it and use the browser's **Install** or **Add to home screen** option. It then opens in its own window, like an app. Without a connection, it shows a page saying it needs one.
+My Work works in any browser. Under **My Work > Settings**, turn on push notifications to get them on this phone or computer; the site's service worker shows them and opens their page when you tap one. Without a connection, a My Work page shows a message saying it needs one, except the pages that work offline, such as **Field**.

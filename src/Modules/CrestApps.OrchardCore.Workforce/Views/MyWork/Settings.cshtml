@@ -1,12 +1,11 @@
 @model MySettingsViewModel
-@{
-    Layout = null;
-    ViewData["MyWorkNav"] = Model.Nav;
-    ViewData["Title"] = T["Settings"].Value;
-}
-<partial name="_MyWorkHead" />
+<zone Name="Title">
+    <breadcrumb name="MyWorkSettings" title="@T["Settings"]">
+        <breadcrumb-item id="MyWork" action="Index" controller="MyWork" area="CrestApps.OrchardCore.Workforce">@T["My Work"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+<partial name="~/Areas/CrestApps.OrchardCore.Workforce/Views/Shared/_MyWorkAssets.cshtml" />
 
-<h1 class="h4 mb-3">@T["Settings"]</h1>
 
 <div class="card mb-3">
     <div class="card-body">
@@ -23,7 +22,7 @@
                 {
                     <li class="list-group-item px-0 d-flex flex-wrap align-items-center gap-2">
                         <span class="me-auto small">@(string.IsNullOrEmpty(device.UserAgent) ? T["A device"].Value : device.UserAgent)<br /><span class="text-muted">@T["Added {0}", device.CreatedUtc.ToLocalTime().ToString("d")]@if (device.LastSentUtc.HasValue) {<text> · </text>@T["last reached {0}", device.LastSentUtc.Value.ToLocalTime().ToString("g")]}</span></span>
-                        <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/push/unsubscribe")"><input type="hidden" name="endpoint" value="@device.Endpoint" /><button type="submit" class="btn btn-outline-danger btn-sm">@T["Turn off"]</button></form>
+                        <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/push/unsubscribe")"><input type="hidden" name="endpoint" value="@device.Endpoint" /><button type="submit" class="btn btn-outline-danger btn-sm">@T["Turn off"]</button></form>
                     </li>
                 }
             </ul>
@@ -34,7 +33,7 @@
 <div class="card mb-3">
     <div class="card-body">
         <h2 class="h5">@T["What I hear about"]</h2>
-        <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/settings")">
+        <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/settings")">
             <fieldset class="mb-3">
                 <legend class="form-label h6">@T["How"]</legend>
                 <div class="form-check"><input class="form-check-input" type="checkbox" checked disabled id="channel-inbox" /><label class="form-check-label" for="channel-inbox">@T["My Work notifications"] <span class="text-muted small">@T["(always on)"]</span></label></div>
@@ -85,7 +84,7 @@
             <input type="text" class="form-control" value="@Model.FeedUrl" id="feed-url" readonly aria-label="@T["Calendar address"]" />
             <button class="btn btn-outline-secondary" type="button" id="feed-copy">@T["Copy"]</button>
         </div>
-        <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/feed/renew")" class="mt-2"><button type="submit" class="btn btn-link btn-sm p-0">@T["Replace this address (the old one stops working)"]</button></form>
+        <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/feed/renew")" class="mt-2"><button type="submit" class="btn btn-link btn-sm p-0">@T["Replace this address (the old one stops working)"]</button></form>
     </div>
 </div>
 
@@ -127,7 +126,7 @@
                 const registration = await navigator.serviceWorker.ready;
                 const subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: toKey(button.dataset.key) });
                 const token = document.querySelector('#push-form input[name="__RequestVerificationToken"]').value;
-                const response = await fetch('@Url.Content("~/my-work/push/subscribe")', {
+                const response = await fetch('@Url.Content("~/Admin/my-work/push/subscribe")', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
                     body: JSON.stringify(subscription.toJSON()),
@@ -154,4 +153,3 @@
     })();
 </script>
 
-<partial name="_MyWorkFoot" />

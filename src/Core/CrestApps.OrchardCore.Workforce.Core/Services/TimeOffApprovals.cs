@@ -194,7 +194,7 @@ internal sealed class TimeOffApprovals
             Kind = WorkforceNotificationKind.TimeOff,
             Title = title,
             Body = string.IsNullOrWhiteSpace(note) ? days : $"{days}: {note.Trim()}",
-            Url = "my-work/time-off",
+            Url = "Admin/my-work/time-off",
         }, cancellationToken);
     }
 
