@@ -27,7 +27,7 @@ internal sealed class OrderMigrations : DataMigration
             .Column<string>("Channel", column => column.Nullable().WithLength(16))
             .Column<string>("LocationId", column => column.Nullable().WithLength(26))
             .Column<string>("ShiftId", column => column.Nullable().WithLength(26))
-            .Column<string>("CompanyId", column => column.Nullable().WithLength(26))
+            .Column<string>("AccountId", column => column.Nullable().WithLength(26))
             .Column<string>("PurchaseOrderNumber", column => column.Nullable().WithLength(64)),
             collection: OrderConstants.CollectionName
         );
@@ -43,13 +43,13 @@ internal sealed class OrderMigrations : DataMigration
             table.CreateIndex("IDX_OrderIndex_Status_CreatedUtc", "Status", "CreatedUtc");
             table.CreateIndex("IDX_OrderIndex_ShiftId", "ShiftId");
             table.CreateIndex("IDX_OrderIndex_Channel", "Channel", "LocationId");
-            table.CreateIndex("IDX_OrderIndex_CompanyId", "CompanyId");
+            table.CreateIndex("IDX_OrderIndex_AccountId", "AccountId");
             table.CreateIndex("IDX_OrderIndex_PurchaseOrder", "PurchaseOrderNumber");
         }, collection: OrderConstants.CollectionName);
 
         await CreateReportIndexAsync();
 
-        return 2;
+        return 3;
     }
 
     /// <summary>
@@ -62,6 +62,23 @@ internal sealed class OrderMigrations : DataMigration
         await CreateReportIndexAsync();
 
         return 2;
+    }
+
+    /// <summary>
+    /// Adds the order index's account column. The Companies module that filled the company column is gone; a business
+    /// order is placed for an account now, and nothing reads the company column any more. It is left in place and
+    /// dropped in a later release, as the migrations' expand-then-contract rule requires.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<OrderIndex>(table =>
+        {
+            table.AddColumn<string>("AccountId", column => column.Nullable().WithLength(26));
+            table.CreateIndex("IDX_OrderIndex_AccountId", "AccountId");
+        }, collection: OrderConstants.CollectionName);
+
+        return 3;
     }
 
     private Task<bool> CreateReportIndexAsync()

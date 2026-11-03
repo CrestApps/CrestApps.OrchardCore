@@ -1,0 +1,167 @@
+@model B2BAccountPartViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["Business buying"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check form-switch">
+                    <input asp-for="Enabled" type="checkbox" class="form-check-input" />
+                    <label asp-for="Enabled" class="form-check-label">@T["This account buys as a business"]</label>
+                    <span class="hint dashed">@T["Its buyers order for it, on its terms and prices. While it's off, they buy for themselves, at checkout like anyone else."]</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="ocat-limited-wrapper">
+            <label asp-for="TaxId" class="ocat-label">@T["Tax or VAT number"]</label>
+            <div class="ocat-limited">
+                <input asp-for="TaxId" class="form-control" />
+                <span class="hint">@T["Printed on its invoices."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="BillingEmail" class="ocat-label">@T["Billing email"]</label>
+            <div class="ocat-end">
+                <input asp-for="BillingEmail" type="email" class="form-control" />
+                <span class="hint">@T["Optional. Gets its invoices too."]</span>
+            </div>
+        </div>
+
+        @if (Model.PriceLists.Count > 0)
+        {
+            <div class="ocat-wrapper">
+                <label asp-for="PriceListId" class="ocat-label">@T["Price list"]</label>
+                <div class="ocat-end">
+                    <select asp-for="PriceListId" asp-items="Model.PriceLists" class="form-select"><option value="">@T["The store's prices"]</option></select>
+                    <span class="hint">@T["The prices its buyers pay."]</span>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Buyers"]</div>
+    <div class="card-body">
+        @if (Model.OrderLimits.Count == 0)
+        {
+            <p class="text-body-secondary mb-2">@T["The account has no members yet. Its members are its buyers: add them under Members, then save to set their order limits."]</p>
+        }
+        else
+        {
+            <div class="row g-2 small text-body-secondary d-none d-md-flex mb-1">
+                <div class="col-md-6">@T["Member"]</div>
+                <div class="col-md-3">@T["Role"]</div>
+                <div class="col-md-3">@T["Order limit ({0})", Model.StoreCurrency]</div>
+            </div>
+            @for (var i = 0; i < Model.OrderLimits.Count; i++)
+            {
+                <div class="row g-2 mb-2 align-items-center">
+                    <div class="col-md-6">
+                        <input type="hidden" asp-for="OrderLimits[i].UserId" />
+                        @Model.OrderLimits[i].User
+                    </div>
+                    <div class="col-md-3">@(Model.OrderLimits[i].Role == AccountMemberRole.Admin ? T["Admin"] : T["Buyer"])</div>
+                    <div class="col-md-3"><input asp-for="OrderLimits[i].Limit" type="number" step="0.01" min="0" class="form-control" placeholder="@T["No limit"]" aria-label="@T["Order limit"]" /></div>
+                </div>
+            }
+        }
+        <span class="hint">@T["The account's members buy for it. An admin sees all of the account's orders and approves orders over a buyer's limit; an admin's own orders have no limit. Members added in this save get a row once it is saved."]</span>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Payment terms"]</div>
+    <div class="card-body">
+        <div class="ocat-limited-wrapper" asp-validation-class-for="NetDays">
+            <label asp-for="NetDays" class="ocat-label">@T["Net days"]</label>
+            <div class="ocat-limited">
+                <input asp-for="NetDays" type="number" min="0" max="365" class="form-control" placeholder="@T["No terms"]" />
+                <span asp-validation-for="NetDays"></span>
+                <span class="hint">@T["Such as 30: what's owed is invoiced, due in this many days. Blank pays at checkout."]</span>
+            </div>
+        </div>
+        <div class="ocat-limited-wrapper" asp-validation-class-for="DepositPercent">
+            <label asp-for="DepositPercent" class="ocat-label">@T["Deposit (%)"]</label>
+            <div class="ocat-limited">
+                <input asp-for="DepositPercent" type="number" step="0.01" min="0" max="100" class="form-control" />
+                <span asp-validation-for="DepositPercent"></span>
+                <span class="hint">@T["Paid by card at checkout; the rest goes on the invoice."]</span>
+            </div>
+        </div>
+        <div class="ocat-limited-wrapper" asp-validation-class-for="CreditLimit">
+            <label asp-for="CreditLimit" class="ocat-label">@T["Credit limit ({0})", Model.StoreCurrency]</label>
+            <div class="ocat-limited">
+                <input asp-for="CreditLimit" type="number" step="0.01" min="0" class="form-control" placeholder="@T["No limit"]" />
+                <span asp-validation-for="CreditLimit"></span>
+                <span class="hint">@T["The most it may owe at once."]</span>
+            </div>
+        </div>
+        <div class="ocat-limited-wrapper">
+            <label asp-for="MonthlyBudget" class="ocat-label">@T["Monthly budget ({0})", Model.StoreCurrency]</label>
+            <div class="ocat-limited">
+                <input asp-for="MonthlyBudget" type="number" step="0.01" min="0" class="form-control" placeholder="@T["No budget"]" />
+                <span class="hint">@T["Orders beyond it in a month need an admin's approval."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="RequirePurchaseOrder" type="checkbox" class="form-check-input" />
+                    <label asp-for="RequirePurchaseOrder" class="form-check-label">@T["Buyers give a purchase order number"]</label>
+                    <span class="hint dashed">@T["They can't place an order without one; it's printed on the invoice."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Punchout (OCI)"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="PunchoutEnabled" type="checkbox" class="form-check-input" />
+                    <label asp-for="PunchoutEnabled" class="form-check-label">@T["Its procurement system shops here by punchout"]</label>
+                    <span class="hint dashed">@T["The system opens the store with the account's key and sends the buyer back with the cart, where the order is approved and placed."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="PunchoutUserId">
+            <label asp-for="PunchoutUserId" class="ocat-label">@T["Punchout buyer"]</label>
+            <div class="ocat-end">
+                <select asp-for="PunchoutUserId" asp-items="Model.Members" class="form-select"><option value="">@T["Choose a member"]</option></select>
+                <span asp-validation-for="PunchoutUserId" class="text-danger"></span>
+                <span class="hint">@T["One of the account's members, who only buys: the procurement system shops as them."]</span>
+            </div>
+        </div>
+        @if (Model.PunchoutKeyCreatedUtc is { } created)
+        {
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <p class="small text-body-secondary mb-0">@T["The key was made {0:d}.", created]</p>
+                </div>
+            </div>
+        }
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="NewPunchoutKey" type="checkbox" class="form-check-input" />
+                    <label asp-for="NewPunchoutKey" class="form-check-label">@T["Make a new key"]</label>
+                    <span class="hint dashed">@T["The old key stops working. A key is made the first time punchout is turned on; it's shown once, after saving."]</span>
+                </div>
+            </div>
+        </div>
+        @if (!string.IsNullOrEmpty(Model.PunchoutUrl))
+        {
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <p class="small mb-0">@T["Punchout address:"] <code>@Model.PunchoutUrl</code></p>
+                </div>
+            </div>
+        }
+    </div>
+</div>

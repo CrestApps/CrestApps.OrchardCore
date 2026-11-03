@@ -135,7 +135,7 @@
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Commerce.Webhooks\CrestApps.OrchardCore.Commerce.Webhooks.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.DataConnectors\CrestApps.OrchardCore.DataConnectors.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.DataConnectors.SqlServer\CrestApps.OrchardCore.DataConnectors.SqlServer.csproj" />
-    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Companies\CrestApps.OrchardCore.Companies.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Accounts.B2B\CrestApps.OrchardCore.Accounts.B2B.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Marketing\CrestApps.OrchardCore.Marketing.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Bookings\CrestApps.OrchardCore.Bookings.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Memberships\CrestApps.OrchardCore.Memberships.csproj" />
@@ -153,6 +153,9 @@
     <ProjectReference Include="..\..\src\Core\CrestApps.OrchardCore.Taxation.Core\CrestApps.OrchardCore.Taxation.Core.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Taxation\CrestApps.OrchardCore.Taxation.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Addresses\CrestApps.OrchardCore.Addresses.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Accounts\CrestApps.OrchardCore.Accounts.csproj" />
+    <ProjectReference Include="..\..\src\Core\CrestApps.OrchardCore.Accounts.Core\CrestApps.OrchardCore.Accounts.Core.csproj" />
+    <ProjectReference Include="..\..\src\Abstractions\CrestApps.OrchardCore.Accounts.Abstractions\CrestApps.OrchardCore.Accounts.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Calendars\CrestApps.OrchardCore.Calendars.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Scheduling\CrestApps.OrchardCore.Scheduling.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Skills\CrestApps.OrchardCore.Skills.csproj" />

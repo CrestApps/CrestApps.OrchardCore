@@ -6,7 +6,7 @@
 @model ConvertLeadViewModel
 
 @{
-    var accountEndpoint = Url.Content("~/Admin/api/crestapps/omnichannel/crm/accounts/search");
+    var accountEndpoint = Url.RouteUrl(CrestApps.OrchardCore.Accounts.AccountsConstants.RouteNames.Search);
     var selectedAccount = Model.MatchingAccounts.FirstOrDefault(account => account.ContentItemId == Model.ExistingAccountItemId);
     var accountInitialJson = string.IsNullOrEmpty(Model.ExistingAccountItemId)
         ? "[]"

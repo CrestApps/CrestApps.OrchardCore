@@ -85,9 +85,9 @@ public sealed class OrderQuery
     public string Search { get; set; }
 
     /// <summary>
-    /// Gets or sets the company whose orders to match, or none for every order.
+    /// Gets or sets the account whose orders to match, or none for every order.
     /// </summary>
-    public string CompanyId { get; set; }
+    public string AccountId { get; set; }
 
     /// <summary>
     /// Gets or sets the channel to match, such as <see cref="OrderChannels.PointOfSale"/>, or none for every channel.
@@ -215,11 +215,11 @@ public sealed class OrderStore : DocumentCatalog<Order, OrderIndex>, IOrderStore
             orders = orders.Where(index => index.Status.IsIn(statuses));
         }
 
-        if (!string.IsNullOrEmpty(query.CompanyId))
+        if (!string.IsNullOrEmpty(query.AccountId))
         {
-            var companyId = query.CompanyId;
+            var accountId = query.AccountId;
 
-            orders = orders.Where(index => index.CompanyId == companyId);
+            orders = orders.Where(index => index.AccountId == accountId);
         }
 
         if (!string.IsNullOrWhiteSpace(query.Search))
