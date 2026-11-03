@@ -542,7 +542,9 @@ public sealed class SchedulesController : Controller
 
         if (result.Succeeded)
         {
-            await _notifier.SuccessAsync(H.Plural(result.Run.ShiftsAdded, "1 shift was added. The schedule now covers {1:P0} of the people wanted and {2:P0} of the fewest needed.", "{0} shifts were added. The schedule now covers {1:P0} of the people wanted and {2:P0} of the fewest needed.", result.Run.ShiftsAdded, result.Run.CoverageScore, result.Run.MinimumScore));
+            await _notifier.SuccessAsync(H.Plural(result.Run.ShiftsAdded, "1 shift was added. The schedule now covers {1:P0} of the people wanted and {2:P0} of the fewest needed.", "{0} shifts were added. The schedule now covers {1:P0} of the people wanted and {2:P0} of the fewest needed.", result.Run.CoverageScore, result.Run.MinimumScore));
+
+            await _notifier.InformationAsync(H["The {0} solver made this schedule in {1:0.0} seconds.", result.Run.Solver, result.Run.RuntimeMilliseconds / 1000d]);
 
             if (result.Run.TimedOut)
             {

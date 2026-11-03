@@ -4,6 +4,7 @@ title: Dispatch
 description: "Schedule each work order's visit with a technician who has the skills and is free, see everyone's day on the board, and move visits along as the work is done."
 technical_manual:
   - modules/dispatch
+  - modules/or-tools
 ---
 
 A visit is one trip to do a work order's job. Dispatch finds who can do it, books them without double-booking, and puts the job on their calendar.
@@ -45,7 +46,7 @@ Drag a visit onto a technician's row at the time it should start to schedule or 
 
 ## Optimize the day
 
-On the board, select **Optimize the day**. Tick **Fit in unscheduled** to also place waiting visits. A list of moves comes up, with the day's travel now and with the moves; untick any you don't want and select **Apply the chosen moves**. Pinned visits and visits already started stay where they are. When a waiting visit fits nobody's day, **Find technician** on it says why.
+On the board, select **Optimize the day**. Tick **Fit in unscheduled** to also place waiting visits. A list of moves comes up, with the day's travel now and with the moves; untick any you don't want and select **Apply the chosen moves**. Pinned visits and visits already started stay where they are. When a waiting visit fits nobody's day, **Find technician** on it says why. With **OR-Tools Dispatch** on, the OR-Tools solver also looks for a better day and the better of the two is proposed; the list says which solver proposed it.
 
 ## Crews and equipment
 

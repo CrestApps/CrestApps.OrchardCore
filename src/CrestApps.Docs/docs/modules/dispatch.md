@@ -139,7 +139,7 @@ The settings are read from the `CrestApps:Dispatch:Mobile` section of the tenant
 ## Extending
 
 - `IVisitObserver`: hear about visit events after they happen.
-- `IDispatchOptimizer`: a better solver; the last one registered is used (the OR-Tools add-on is one).
+- `IDispatchOptimizer`: a better solver; the last one registered is used (the [OR-Tools](or-tools) add-on is one).
 - `IDispatchEquipmentService`: equipment from somewhere other than Fleet.
 - `IVisitNoticeSender`: another channel for customer notices.
 - `IDispatchSettingsProvider`: give the settings from somewhere else.

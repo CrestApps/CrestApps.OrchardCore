@@ -156,6 +156,7 @@
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Workforce\CrestApps.OrchardCore.Workforce.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Assets\CrestApps.OrchardCore.Assets.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Dispatch\CrestApps.OrchardCore.Dispatch.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.OrTools\CrestApps.OrchardCore.OrTools.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.WorkOrders\CrestApps.OrchardCore.WorkOrders.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.TimeTracker\CrestApps.OrchardCore.TimeTracker.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Geo\CrestApps.OrchardCore.Geo.csproj" />

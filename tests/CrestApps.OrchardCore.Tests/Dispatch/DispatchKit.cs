@@ -121,6 +121,7 @@ internal sealed class DispatchKit : IAsyncDisposable
                 services.AddDispatchCore();
                 services.AddDispatchMobileCore();
                 services.AddSingleton<IFieldFileStore>(kit.Files);
+                services.AddSingleton<Microsoft.AspNetCore.Http.IHttpContextAccessor, Microsoft.AspNetCore.Http.HttpContextAccessor>();
                 services.TryAddScoped<ServiceTerritoryStore>();
                 services.AddSingleton(settings.Object);
                 services.AddSingleton(geo.Object);

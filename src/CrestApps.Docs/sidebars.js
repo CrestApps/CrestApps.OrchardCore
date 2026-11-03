@@ -463,6 +463,7 @@ const sidebars = {
                 'modules/assets',
                 'modules/work-orders',
                 'modules/dispatch',
+                'modules/or-tools',
                 'modules/time-tracker',
             ],
         },

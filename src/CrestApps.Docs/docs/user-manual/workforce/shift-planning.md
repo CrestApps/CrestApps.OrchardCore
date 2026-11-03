@@ -4,6 +4,7 @@ title: Shift Planning
 description: "Plan a team's shifts as a draft from templates, rotations or the auto-scheduler, see where the schedule falls short of the people needed, publish it to the team's calendar, offer the shifts with nobody as open shifts, and let workers trade shifts, with a log of every change made after publishing."
 technical_manual:
   - modules/workforce
+  - modules/or-tools
 ---
 
 Shift Planning builds a team's schedule. You describe your usual shifts once as **shift templates**, set up **rotations** that repeat week after week, and say how many people the team needs with **coverage requirements**. A **schedule** covers one to twelve weeks of one team: you fill it as a draft, by hand, from rotations or with **Auto-schedule**, check it against coverage on the planner board, then **publish** it to the team's Workforce calendar. Workers see their published shifts on the calendar. When you publish again, only the shifts you changed move, and each change is logged.
@@ -103,6 +104,8 @@ It keeps to these rules:
 - The shifts already in the draft stay. They count toward coverage, and so do the worker's shifts on other teams for their own time.
 
 Falling short of the minimum counts far more than falling short of the target, and people beyond the target or the maximum count against a shift. After the run, a message says how many shifts were added and what share of the people wanted and needed the schedule now covers; the share also shows above the board. You can change any shift it added, and run it again after changing the coverage or the templates.
+
+With **OR-Tools Shift Scheduling** on, Auto-schedule also hands the schedule to the OR-Tools solver, which looks for a better one under the same rules and keeps whichever is better. A second message names the solver used and how long it took.
 
 ## Publish
 

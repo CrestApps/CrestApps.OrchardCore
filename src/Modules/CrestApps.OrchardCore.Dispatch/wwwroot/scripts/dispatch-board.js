@@ -279,12 +279,14 @@
 			head.appendChild(close);
 			body.appendChild(head);
 			if (proposal.moves.length === 0) {
-				body.appendChild(element("p", "small text-muted mb-0", proposal.unassigned > 0 ? format(texts.optimizeLeft, proposal.unassigned) : texts.optimizeNothing));
+				body.appendChild(element("p", "small text-muted", proposal.unassigned > 0 ? format(texts.optimizeLeft, proposal.unassigned) : texts.optimizeNothing));
+				if (proposal.solver) body.appendChild(element("p", "small text-muted mb-0", format(texts.optimizeSolver, proposal.solver)));
 				proposalCard.replaceChildren(body);
 				proposalCard.classList.remove("d-none");
 				return;
 			}
 			body.appendChild(element("p", "small", format(texts.optimizeTravel, proposal.travelBefore, proposal.travelAfter)));
+			if (proposal.solver) body.appendChild(element("p", "small text-muted", format(texts.optimizeSolver, proposal.solver)));
 			if (proposal.unassigned > 0) body.appendChild(element("p", "small text-warning-emphasis", format(texts.optimizeLeft, proposal.unassigned)));
 			const boxes = [];
 			proposal.moves.forEach((item, index) => {
