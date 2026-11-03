@@ -42,6 +42,10 @@ namespace CrestApps.OrchardCore.Accounts.Services
         bool CanBelongToAccount(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition);
         bool MustNotBelongToAccount(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition);
     }
+    public interface IAccountContactFinder
+    {
+        System.Threading.Tasks.Task<string> FindContactByEmailAsync(string accountId, string email, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IAccountContentTypeProvider
     {
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition>> GetAccountTypesAsync();

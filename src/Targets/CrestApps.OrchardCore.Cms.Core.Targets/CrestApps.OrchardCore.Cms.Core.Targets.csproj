@@ -69,7 +69,7 @@
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Checkout/CrestApps.OrchardCore.Checkout.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Commerce/CrestApps.OrchardCore.Commerce.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Commerce.Webhooks/CrestApps.OrchardCore.Commerce.Webhooks.csproj" PrivateAssets="none" />
-    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Companies/CrestApps.OrchardCore.Companies.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Accounts.B2B/CrestApps.OrchardCore.Accounts.B2B.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Marketing/CrestApps.OrchardCore.Marketing.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Bookings/CrestApps.OrchardCore.Bookings.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Memberships/CrestApps.OrchardCore.Memberships.csproj" PrivateAssets="none" />

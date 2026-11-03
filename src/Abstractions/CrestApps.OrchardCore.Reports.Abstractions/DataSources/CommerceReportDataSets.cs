@@ -367,27 +367,27 @@ public static class CommerceReportDataSets
     }
 
     /// <summary>
-    /// The names of the companies data source and its data sets.
+    /// The names of the B2B accounts data source and its data sets.
     /// </summary>
-    public static class CompanySource
+    public static class B2BAccountSource
     {
         /// <summary>
-        /// The technical name of the companies data source.
+        /// The technical name of the B2B accounts data source.
         /// </summary>
-        public const string Name = "Companies";
+        public const string Name = "B2BAccounts";
 
         /// <summary>
-        /// The companies data set: one row per company that buys from the store.
+        /// The B2B accounts data set: one row per account that buys from the store as a business.
         /// </summary>
-        public const string Companies = "Companies";
+        public const string B2BAccounts = "B2BAccounts";
 
         /// <summary>
-        /// The company buyers data set: one row per person who buys for a company.
+        /// The B2B buyers data set: one row per person who buys for an account.
         /// </summary>
-        public const string CompanyBuyers = "CompanyBuyers";
+        public const string B2BBuyers = "B2BBuyers";
 
         /// <summary>
-        /// The price lists data set: one row per price list companies buy on.
+        /// The price lists data set: one row per price list accounts buy on.
         /// </summary>
         public const string PriceLists = "PriceLists";
 

@@ -153,7 +153,7 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.Checkout/CrestApps.OrchardCore.Checkout.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Commerce/CrestApps.OrchardCore.Commerce.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Commerce.Webhooks/CrestApps.OrchardCore.Commerce.Webhooks.csproj" />
-    <Project Path="src/Modules/CrestApps.OrchardCore.Companies/CrestApps.OrchardCore.Companies.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Accounts.B2B/CrestApps.OrchardCore.Accounts.B2B.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Marketing/CrestApps.OrchardCore.Marketing.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Bookings/CrestApps.OrchardCore.Bookings.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Memberships/CrestApps.OrchardCore.Memberships.csproj" />

@@ -18,7 +18,7 @@ An account is the business or household that other records belong to. It is one 
 module extends instead of keeping an organization record of its own:
 
 - the [CRM](../omnichannel/crm.md) puts contacts and opportunities in an account;
-- Accounts B2B lets an account order on account, with buyers, terms and price lists;
+- [Accounts B2B](accounts-b2b.md) lets an account buy as a business, with buyers, terms and price lists;
 - Field Service links assets, work orders and service agreements to an account.
 
 ## The account type

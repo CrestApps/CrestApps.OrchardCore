@@ -104,6 +104,7 @@ public sealed class CrmStartup : StartupBase
         // Contacts and opportunities sit in accounts, and leads never do. The CRM lists accounts in the Interaction
         // Center, so the Accounts feature's own menu item would only repeat it.
         services.AddScoped<IAccountChildTypeRule, CrmAccountChildTypeRule>();
+        services.AddScoped<IAccountContactFinder, CrmAccountContactFinder>();
         services.Configure<AccountsAdminMenuOptions>(options => options.ShowAccountsMenu = false);
         services.AddScoped<IContentDefinitionEventHandler, CrmContentDefinitionEventHandler>();
 
