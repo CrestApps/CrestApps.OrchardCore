@@ -1640,6 +1640,12 @@ html:has(.action-bar-bottom) .telephony-soft-phone {
     bottom: calc(var(--oc-action-bar-bottom-height, 3.5rem) + 1rem);
 }
 
+// While the bar's "more actions" menu is open, it opens upward into the phone's corner on small screens; drop the
+// phone one layer under the bar so the menu's items stay clickable.
+html:has(.action-bar-bottom .dropdown-menu.show) .telephony-soft-phone {
+    z-index: calc(var(--oc-action-bar-bottom-zindex, 980) - 1);
+}
+
 // Keep dark mode consistent across host themes: the widget uses its own dark palette rather than each
 // theme's, so it looks the same in the admin and on the front end when a dark theme is active.
 [data-bs-theme="dark"] .telephony-soft-phone {

@@ -7849,7 +7849,7 @@ import {
             // Keep the toggle on screen so the widget can be dragged to any edge, including the far
             // right and over other widgets such as the AI chat widget.
             var maxLeft = Math.max(margin, window.innerWidth - toggleWidth - margin);
-            var maxTop = Math.max(margin, window.innerHeight - toggleHeight - margin);
+            var maxTop = Math.max(margin, window.innerHeight - getActionBarHeight() - toggleHeight - margin);
             var minLeft = margin;
             var minTop = margin;
 
@@ -7870,6 +7870,15 @@ import {
                 maxLeft: maxLeft,
                 maxTop: maxTop
             };
+        }
+
+        // Admin edit pages fix their Save and Cancel buttons to the bottom of the screen in Orchard Core's action bar.
+        // A dragged or restored phone stays above that bar, so it never covers those buttons.
+        function getActionBarHeight() {
+            var actionBar = document.querySelector('.action-bar-bottom');
+
+            // A hidden bar measures 0, so it reserves nothing.
+            return actionBar ? actionBar.getBoundingClientRect().height : 0;
         }
 
         function clampPosition(left, top) {
