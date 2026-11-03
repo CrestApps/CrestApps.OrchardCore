@@ -84,10 +84,10 @@ public sealed class Order : CatalogItem
     public string Channel { get; set; }
 
     /// <summary>
-    /// Gets or sets the company the order was placed for, when its buyer buys for one: the company sees it, and pays
-    /// it on its terms.
+    /// Gets or sets the account the order was placed for, when its buyer buys for a business account: the account
+    /// sees it, and pays it on its terms.
     /// </summary>
-    public string CompanyId { get; set; }
+    public string AccountId { get; set; }
 
     /// <summary>
     /// Gets or sets the quote the order started as, when a buyer asked the store for one: what they asked, and whether

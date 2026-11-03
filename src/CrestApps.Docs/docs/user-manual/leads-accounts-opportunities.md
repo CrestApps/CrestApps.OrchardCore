@@ -143,7 +143,7 @@ Every subject action also has a **Set lead status** field. When the activity bel
 
 ## Accounts
 
-An account is the company or household your contacts and opportunities belong to. Open **Interaction Center > Accounts** to list them.
+An account is the company or household your contacts and opportunities belong to. Open **Interaction Center > Accounts** to list them. Accounts are shared with the rest of the site, so the same account can also place orders or own equipment; see [Accounts](accounts.md).
 
 - **Add a contact or opportunity to an account** with the **Account** picker on its editor, or create it from the account's page.
 - **See everything in an account.** The account's page lists its contacts and opportunities. **List Activities** shows the activities of every contact in the account.

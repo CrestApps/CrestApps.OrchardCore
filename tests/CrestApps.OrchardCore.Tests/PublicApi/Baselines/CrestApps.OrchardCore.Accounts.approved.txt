@@ -1,0 +1,99 @@
+[assembly: Microsoft.AspNetCore.Mvc.ApplicationParts.ProvideApplicationPartFactory("Microsoft.AspNetCore.Mvc.ApplicationParts.ConsolidatedAssemblyApplicationPartFact" +
+    "ory, Microsoft.AspNetCore.Mvc.Razor")]
+[assembly: OrchardCore.Modules.Manifest.Feature(Category="Content Management", Dependencies=new string[] {
+        "CrestApps.OrchardCore.Accounts",
+        "CrestApps.OrchardCore.Addresses"}, Description="Keeps the places an account has, such as its head office, its warehouses or the s" +
+    "ites where it is serviced, with addresses checked against each country\'s rules.", Id="CrestApps.OrchardCore.Accounts.Locations", Name="Account Locations")]
+[assembly: OrchardCore.Modules.Manifest.Feature(Category="Content Management", Dependencies=new string[] {
+        "CrestApps.OrchardCore.Accounts",
+        "OrchardCore.Users"}, Description="Lets users sign in for an account: who its members are, and which of them manage " +
+    "it for the others. Other modules read the members to know who acts for an accoun" +
+    "t.", Id="CrestApps.OrchardCore.Accounts.Members", Name="Account Members")]
+[assembly: OrchardCore.Modules.Manifest.Feature(Category="Content Management", Dependencies=new string[] {
+        "CrestApps.OrchardCore.Resources",
+        "OrchardCore.Contents",
+        "OrchardCore.ContentTypes",
+        "OrchardCore.Lists",
+        "OrchardCore.Title"}, Description="Keeps the businesses and households that contacts, orders, assets and work orders" +
+    " belong to as Account content items, with a picker, a search and an account page" +
+    " that other modules add to.", Id="CrestApps.OrchardCore.Accounts", Name="Accounts")]
+[assembly: OrchardCore.Modules.Manifest.Module(Author="The CrestApps Team", Name="Accounts", Version="3.0.0", Website="https://crestapps.com")]
+[assembly: OrchardCore.Modules.Manifest.ModuleMarker("CrestApps.OrchardCore.Accounts", "Module")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
+namespace CrestApps.OrchardCore.Accounts
+{
+    public static class AccountsPermissions
+    {
+        public static readonly OrchardCore.Security.Permissions.Permission ManageAccountMembers;
+    }
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.ContentTransfer"})]
+    public sealed class ContentTransferStartup : OrchardCore.Modules.StartupBase
+    {
+        public ContentTransferStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Accounts.Locations")]
+    public sealed class LocationsStartup : OrchardCore.Modules.StartupBase
+    {
+        public LocationsStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Accounts.Members")]
+    public sealed class MembersStartup : OrchardCore.Modules.StartupBase
+    {
+        public MembersStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "OrchardCore.Recipes.Core"})]
+    public sealed class RecipesStartup : OrchardCore.Modules.StartupBase
+    {
+        public RecipesStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    public sealed class Startup : OrchardCore.Modules.StartupBase
+    {
+        public Startup() { }
+        public override void Configure(Microsoft.AspNetCore.Builder.IApplicationBuilder app, Microsoft.AspNetCore.Routing.IEndpointRouteBuilder routes, System.IServiceProvider serviceProvider) { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+}
+namespace CrestApps.OrchardCore.Accounts.ViewModels
+{
+    public class AccountLocationRowViewModel
+    {
+        public AccountLocationRowViewModel() { }
+        public CrestApps.OrchardCore.Addresses.Core.Editing.AddressEditorViewModel Address { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public OrchardCore.DisplayManagement.IShape AddressEditor { get; set; }
+        public string LocationId { get; set; }
+        public string Name { get; set; }
+    }
+    public class AccountLocationsPartViewModel
+    {
+        public AccountLocationsPartViewModel() { }
+        public System.Collections.Generic.List<CrestApps.OrchardCore.Accounts.ViewModels.AccountLocationRowViewModel> Locations { get; set; }
+    }
+    public class AccountMemberRowViewModel
+    {
+        public AccountMemberRowViewModel() { }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public string ContactContentItemId { get; set; }
+        public CrestApps.OrchardCore.Accounts.Models.AccountMemberRole Role { get; set; }
+        public string User { get; set; }
+    }
+    public class AccountMembersPartViewModel
+    {
+        public AccountMembersPartViewModel() { }
+        public System.Collections.Generic.List<CrestApps.OrchardCore.Accounts.ViewModels.AccountMemberRowViewModel> Members { get; set; }
+    }
+    public class AccountPickerViewModel
+    {
+        public AccountPickerViewModel() { }
+        public string AccountContentItemId { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public string AccountDisplayText { get; set; }
+        public bool Rendered { get; set; }
+    }
+}

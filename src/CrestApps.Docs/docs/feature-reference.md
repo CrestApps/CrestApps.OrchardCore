@@ -173,6 +173,9 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.ContentTransfer.Azure` | Content Transfer - Azure Blob Storage | [Content Transfer](./modules/content-transfer#store-import-and-export-files-in-azure-blob-storage) |
 | `CrestApps.OrchardCore.Seo` | Advanced SEO | [Advanced SEO](./modules/advanced-seo) |
 | `CrestApps.OrchardCore.NLWeb` | NLWeb | [NLWeb](./modules/nlweb) |
+| `CrestApps.OrchardCore.Accounts` | Accounts | [Accounts](./modules/accounts) |
+| `CrestApps.OrchardCore.Accounts.Members` | Account Members | [Accounts](./modules/accounts#account-members) |
+| `CrestApps.OrchardCore.Accounts.Locations` | Account Locations | [Accounts](./modules/accounts#account-locations) |
 | `CrestApps.OrchardCore.Addresses` | Addresses | [Addresses](./modules/addresses) |
 | `CrestApps.OrchardCore.Addresses.Countries` | Address Countries | [Addresses](./modules/addresses#country-lists) |
 | `CrestApps.OrchardCore.Addresses.GooglePlaces` | Address Suggestions (Google Places) | [Addresses](./modules/addresses#address-suggestions) |
@@ -226,7 +229,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Commerce` | Commerce (dependency only) | [Commerce](./modules/commerce) |
 | `CrestApps.OrchardCore.Checkout` | Checkout | [Checkout](./modules/checkout) |
 | `CrestApps.OrchardCore.Markets` | Markets | [Markets](./modules/markets) |
-| `CrestApps.OrchardCore.Companies` | Companies | [Companies](./modules/companies) |
+| `CrestApps.OrchardCore.Accounts.B2B` | Accounts B2B | [Accounts B2B](./modules/accounts-b2b) |
 | `CrestApps.OrchardCore.Marketing` | Marketing | [Marketing](./modules/marketing) |
 | `CrestApps.OrchardCore.Carts.Wishlists` | Wishlists | [Carts and Orders](./modules/carts-and-orders#wishlists) |
 | `CrestApps.OrchardCore.Reports.Subscriptions` | Report Subscriptions | [Reports](./modules/reports#report-subscriptions) |

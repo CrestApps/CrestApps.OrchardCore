@@ -14,7 +14,7 @@ Register an implementation in your module's `Startup`, and depend on the feature
 
 | To | Implement | Lives in | See |
 | --- | --- | --- | --- |
-| Give a buyer their own price, such as a company price list | `IBuyerPriceProvider` | Products.Core | [Companies](companies.md) |
+| Give a buyer their own price, such as a business account's price list | `IBuyerPriceProvider` | Products.Core | [Accounts B2B](accounts-b2b.md) |
 | Say a product can't be bought here, with the reason shown in place of Add to cart | `IProductSaleRestriction` | Products.Core | [Markets](markets.md) |
 | Show and convert prices in the shopper's currency | `IShopperCurrency` (one per site; replace the default) | Products.Core | [Markets](markets.md) |
 | Say how many are available, such as from a supplier | `IProductAvailabilityProvider` | Products.Core | [Inventory](inventory.md) |
@@ -26,9 +26,9 @@ Register an implementation in your module's `Startup`, and depend on the feature
 | To | Implement | Lives in | See |
 | --- | --- | --- | --- |
 | Keep what the buyer chose with a cart line (a date, an amount, a listing) and price, limit or refuse the line by it | `ICartLineHandler` | Carts.Core | [Bookings](bookings.md), [Fundraising](fundraising.md) |
-| Add an action to the cart page, such as Request a quote | `ICartActionProvider` | Carts.Core | [Companies](companies.md) |
+| Add an action to the cart page, such as Request a quote | `ICartActionProvider` | Carts.Core | [Accounts B2B](accounts-b2b.md) |
 | Follow a checkout through its life: started, loaded, completing, completed, failed, canceled or expired | `ICheckoutHandler` | Checkout.Abstractions | [Checkout](checkout.md) |
-| Hold back the payment step until something is done, such as an approval | `ICheckoutPaymentGate` | Checkout.Abstractions | [Companies](companies.md) |
+| Hold back the payment step until something is done, such as an approval | `ICheckoutPaymentGate` | Checkout.Abstractions | [Accounts B2B](accounts-b2b.md) |
 | Add a step or a panel to the checkout flow | A display driver for `CheckoutFlow` | Checkout | [Bookings](bookings.md) |
 | Pay part of an order from a balance (a gift card, credit, terms, a deposit) | `ICheckoutTenderProvider` | Checkout.Abstractions | [Checkout](checkout.md) |
 | Add a payment method | `ICheckoutPaymentProvider`, with `ICheckoutPaymentRefundProvider` to refund it | Checkout.Abstractions | [Payments](payments.md) |
