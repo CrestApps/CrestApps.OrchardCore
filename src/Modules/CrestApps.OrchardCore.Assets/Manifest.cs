@@ -13,7 +13,11 @@ using OrchardCore.Modules.Manifest;
     Id = AssetsConstants.Features.Assets,
     Name = "Assets",
     Description = "Equipment, vehicles, tools and units installed at customers: types with attributes and meters, a hierarchy, warranty and meter readings.",
-    Category = "Field Service"
+    Category = "Field Service",
+    Dependencies =
+    [
+        "CrestApps.OrchardCore.Resources",
+    ]
 )]
 
 [assembly: Feature(

@@ -30,7 +30,7 @@ namespace CrestApps.OrchardCore.Dispatch.Api;
 /// permission as the admin. Creating a work order takes an <c>Idempotency-Key</c> header, so sending it again returns
 /// the work order made the first time.
 /// </summary>
-internal static class FieldServiceApiEndpoints
+internal static partial class FieldServiceApiEndpoints
 {
     public const string WorkOrdersPrefix = "api/work-orders/v1";
 
@@ -53,6 +53,7 @@ internal static class FieldServiceApiEndpoints
         var workOrders = Group(routes, WorkOrdersPrefix, "Work Orders");
 
         workOrders.MapGet("types", (Delegate)ListTypesAsync).WithSummary("Lists the work order types.");
+        workOrders.MapGet("checklists", (Delegate)ListChecklistsAsync).WithSummary("Lists the checklist templates with their questions.");
         workOrders.MapGet("work-orders", (Delegate)ListWorkOrdersAsync).WithSummary("Lists work orders, newest first, by status, open or not, and text.");
         workOrders.MapGet("work-orders/{id}", (Delegate)GetWorkOrderAsync).WithSummary("Gets a work order with its lines, checklists, notes and signatures.");
         workOrders.MapPost("work-orders", (Delegate)CreateWorkOrderAsync).WithSummary("Creates a work order, once per Idempotency-Key.");
@@ -66,6 +67,7 @@ internal static class FieldServiceApiEndpoints
 
         var dispatch = Group(routes, DispatchPrefix, "Dispatch");
 
+        dispatch.MapGet("board", (Delegate)BoardAsync).WithSummary("Gets a day's board: the technicians with their open time and time off, the visits scheduled, and the ones waiting.");
         dispatch.MapGet("visits", (Delegate)ListVisitsAsync).WithSummary("Lists visits scheduled between two times, or the ones waiting for a time.");
         dispatch.MapGet("visits/{id}", (Delegate)GetVisitAsync).WithSummary("Gets a visit with its history.");
         dispatch.MapGet("visits/{id}/candidates", (Delegate)CandidatesAsync).WithSummary("Lists the technicians who can do a visit on a day, best first, and why the others can't.");

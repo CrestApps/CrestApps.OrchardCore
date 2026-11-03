@@ -47,7 +47,7 @@
                 <dt class="col-5">@T["Asset number"]</dt><dd class="col-7">@asset.Number</dd>
                 @if (!string.IsNullOrEmpty(asset.SerialNumber)) { <dt class="col-5">@T["Serial number"]</dt><dd class="col-7">@asset.SerialNumber</dd> }
                 @if (!string.IsNullOrEmpty(asset.Manufacturer) || !string.IsNullOrEmpty(asset.Model)) { <dt class="col-5">@T["Make and model"]</dt><dd class="col-7">@asset.Manufacturer @asset.Model</dd> }
-                <dt class="col-5">@T["Owned by"]</dt><dd class="col-7">@(asset.OwnerKind == AssetOwnerKind.Internal ? T["The business"].Value : $"{asset.OwnerKind}: {asset.OwnerId}")</dd>
+                <dt class="col-5">@T["Owned by"]</dt><dd class="col-7">@(asset.OwnerKind == AssetOwnerKind.Internal ? T["The business"].Value : $"{asset.OwnerKind}: {Model.OwnerName}")</dd>
                 @if (asset.Location is { } place) { <dt class="col-5">@T["Where"]</dt><dd class="col-7">@string.Join(", ", new[] { place.AddressLine1, place.City, place.Region, place.PostalCode }.Where(part => !string.IsNullOrEmpty(part)))</dd> }
                 @if (asset.InstallDate is { } installed) { <dt class="col-5">@T["Installed"]</dt><dd class="col-7">@installed.ToString("d", culture)</dd> }
                 @foreach (var field in asset.Attributes) { <dt class="col-5">@field.Key</dt><dd class="col-7">@field.Value</dd> }

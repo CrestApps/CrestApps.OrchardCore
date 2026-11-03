@@ -55,7 +55,7 @@ public sealed class AssetsTests
         }, commit: false);
 
         Assert.Equal(
-            ["Say which customer or company owns the asset.", "Another asset has the number A-00002.", "An asset can't be inside itself."],
+            ["Choose who owns the asset.", "Another asset has the number A-00002.", "An asset can't be inside itself."],
             errors);
 
         var tree = await harness.RunAsync(async services =>
@@ -110,6 +110,44 @@ public sealed class AssetsTests
         Assert.Equal("Hours run", readings[2].Meter);
     }
 
+    [Fact]
+    public async Task TheOwnerDirectory_NamesOwners_ByKind_AndListsOnlyKindsWithASource()
+    {
+        await using var harness = await CreateAsync(services => services.AddScoped<global::CrestApps.OrchardCore.Assets.Services.IAssetOwnerSource>(_ => new FakeOwnerSource(AssetOwnerKind.Contact, ("c1", "Dana Reyes"), ("c2", "Lee Park"))));
+        var type = await AddTypeAsync(harness);
+
+        var result = await harness.RunAsync(async services =>
+        {
+            var manager = services.GetRequiredService<AssetManager>();
+            var owners = services.GetRequiredService<AssetOwnerDirectory>();
+            var boiler = await manager.NewAsync();
+
+            boiler.Name = "Boiler";
+            boiler.AssetTypeId = type.ItemId;
+            boiler.OwnerKind = AssetOwnerKind.Contact;
+            boiler.OwnerId = "c2";
+            await manager.CreateAsync(boiler);
+
+            var van = await manager.NewAsync();
+
+            van.Name = "Van";
+            van.AssetTypeId = type.ItemId;
+            await manager.CreateAsync(van);
+
+            var names = await owners.GetNamesAsync([boiler, van]);
+            var found = await owners.GetSource(AssetOwnerKind.Contact).SearchAsync("dana", 10);
+
+            return (owners.Kinds, names, Name: await owners.GetNameAsync(AssetOwnerKind.Contact, "c1"), Missing: await owners.GetNameAsync(AssetOwnerKind.Company, "x"), found);
+        });
+
+        Assert.Equal([AssetOwnerKind.Internal, AssetOwnerKind.Contact], result.Kinds);
+        Assert.Equal("Lee Park", Assert.Single(result.names).Value);
+        Assert.Equal(AssetOwnerDirectory.Key(AssetOwnerKind.Contact, "c2"), Assert.Single(result.names).Key);
+        Assert.Equal("Dana Reyes", result.Name);
+        Assert.Null(result.Missing);
+        Assert.Equal(["c1"], result.found.Select(owner => owner.Id));
+    }
+
     internal static Task<AssetType> AddTypeAsync(CalendarTestHarness harness, AssetCategory category = AssetCategory.Equipment)
         => harness.RunAsync(async services =>
         {
@@ -134,4 +172,23 @@ public sealed class AssetsTests
             AssetsIndexSchema.CreateAsync,
             [new AssetTypeIndexProvider(), new AssetIndexProvider(), new AssetMeterReadingIndexProvider()],
             [AssetsConstants.CollectionName]);
+}
+
+internal sealed class FakeOwnerSource : global::CrestApps.OrchardCore.Assets.Services.IAssetOwnerSource
+{
+    private readonly (string Id, string Name)[] _owners;
+
+    public FakeOwnerSource(AssetOwnerKind kind, params (string Id, string Name)[] owners)
+    {
+        Kind = kind;
+        _owners = owners;
+    }
+
+    public AssetOwnerKind Kind { get; }
+
+    public Task<IReadOnlyList<global::CrestApps.OrchardCore.Assets.Services.AssetOwnerOption>> SearchAsync(string query, int count, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<global::CrestApps.OrchardCore.Assets.Services.AssetOwnerOption>>([.. _owners.Where(owner => string.IsNullOrEmpty(query) || owner.Name.Contains(query, StringComparison.OrdinalIgnoreCase)).Take(count).Select(owner => new global::CrestApps.OrchardCore.Assets.Services.AssetOwnerOption(owner.Id, owner.Name))]);
+
+    public Task<IReadOnlyDictionary<string, string>> GetNamesAsync(IReadOnlyCollection<string> ids, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyDictionary<string, string>>(_owners.Where(owner => ids.Contains(owner.Id)).ToDictionary(owner => owner.Id, owner => owner.Name));
 }

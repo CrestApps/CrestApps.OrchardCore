@@ -126,6 +126,20 @@ public interface IDispatchCandidateFinder
     Task<DispatchCandidateResult> FindAsync(ServiceVisit visit, DateTime fromUtc, DateTime toUtc, DispatchObjective objective = null, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Finds the workers who can take a visit of a work order given here rather than read from the store, such as
+    /// one a booking would make, to see whether there is capacity for it.
+    /// </summary>
+    /// <param name="visit">The visit.</param>
+    /// <param name="workOrder">Its work order, with its skills, place and window.</param>
+    /// <param name="fromUtc">The earliest start, in UTC.</param>
+    /// <param name="toUtc">The latest end, in UTC.</param>
+    /// <param name="objective">The weights, or <see langword="null"/> for the site's.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The candidates and the workers ruled out.</returns>
+    Task<DispatchCandidateResult> FindAsync(ServiceVisit visit, WorkOrder workOrder, DateTime fromUtc, DateTime toUtc, DispatchObjective objective = null, CancellationToken cancellationToken = default)
+        => FindAsync(visit, fromUtc, toUtc, objective, cancellationToken);
+
+    /// <summary>
     /// Checks only what never changes in a day: that a worker may do the visit at all, with its skills,
     /// certifications and territory, leaving their time aside.
     /// </summary>

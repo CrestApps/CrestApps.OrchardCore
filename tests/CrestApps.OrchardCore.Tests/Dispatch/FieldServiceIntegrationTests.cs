@@ -94,13 +94,18 @@ public sealed class FieldServiceIntegrationTests
         Assert.Equal("Boiler service booking", made.Summary);
         Assert.Equal(WorkOrderSource.Appointment, made.Source);
         Assert.Equal(DispatchKit.Monday(14), made.EarliestUtc);
+
+        // The booked time is when the technician arrives; the job's hour comes after it.
+        Assert.Equal(appointment.EndUtc.AddMinutes(60), made.LatestUtc);
         Assert.Equal("Pat Customer", made.Contact.Name);
 
         appointment.StartUtc = DispatchKit.Monday(10);
         appointment.EndUtc = DispatchKit.Monday(12);
         await ChangeAsync(AppointmentChangeKind.Rescheduled);
 
-        Assert.Equal(DispatchKit.Monday(10), Assert.Single(await MadeAsync()).EarliestUtc);
+        var moved = Assert.Single(await MadeAsync());
+
+        Assert.Equal((DispatchKit.Monday(10), DispatchKit.Monday(13)), (moved.EarliestUtc, moved.LatestUtc));
 
         await ChangeAsync(AppointmentChangeKind.Cancelled);
 

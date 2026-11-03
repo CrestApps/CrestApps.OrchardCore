@@ -41,7 +41,52 @@
     <div class="card text-bg-theme mb-3">
         <div class="card-header">@T["Who and where"]</div>
         <div class="card-body">
-            <input type="hidden" asp-for="ContactId" />
+            @foreach (var (kind, name) in Model.CustomerPickers)
+            {
+                var field = kind switch { "Customer" => Html.NameFor(m => m.CustomerId).ToString(), "Company" => Html.NameFor(m => m.CompanyId).ToString(), _ => Html.NameFor(m => m.ContactId).ToString() };
+                var value = kind switch { "Customer" => Model.CustomerId, "Company" => Model.CompanyId, _ => Model.ContactId };
+                var label = kind switch { "Customer" => T["Customer"].Value, "Company" => T["Company"].Value, _ => T["CRM contact"].Value };
+                var choose = kind switch { "Customer" => T["Choose a customer"].Value, "Company" => T["Choose a company"].Value, _ => T["Choose a contact"].Value };
+                var initial = string.IsNullOrEmpty(value) ? "[]" : System.Text.Json.JsonSerializer.Serialize(new[] { new { value, text = string.IsNullOrEmpty(name) ? value : name, selected = true } });
+
+                <div class="ocat-wrapper">
+                    <label class="ocat-label">@label</label>
+                    <div class="ocat-end">
+                        @await Component.InvokeAsync("ItemSelector", new
+                        {
+                            id = $"work-order-{kind.ToLowerInvariant()}",
+                            inputName = field,
+                            endpoint = Url.Content($"~/Admin/api/crestapps/work-orders/customers/search?kind={kind}"),
+                            initialItemsJson = initial,
+                            multiple = false,
+                            enableSearch = true,
+                            buttonText = choose,
+                            searchPlaceholder = T["Search by name"].Value,
+                            emptyResultsText = T["Nothing found."].Value,
+                            noSelectionText = choose,
+                            selectedItemsLabel = label,
+                            availableItemsLabel = label,
+                            smallButton = false,
+                        })
+                        @if (kind == "Contact")
+                        {
+                            <span class="hint">@T["When the name below is left empty, the contact's name fills it in."]</span>
+                        }
+                    </div>
+                </div>
+            }
+            @if (!Model.CustomerPickers.ContainsKey("Contact"))
+            {
+                <input type="hidden" asp-for="ContactId" />
+            }
+            @if (!Model.CustomerPickers.ContainsKey("Customer"))
+            {
+                <input type="hidden" asp-for="CustomerId" />
+            }
+            @if (!Model.CustomerPickers.ContainsKey("Company"))
+            {
+                <input type="hidden" asp-for="CompanyId" />
+            }
             <div class="ocat-wrapper">
                 <label asp-for="ContactName" class="ocat-label">@T["Contact"]</label>
                 <div class="ocat-end">

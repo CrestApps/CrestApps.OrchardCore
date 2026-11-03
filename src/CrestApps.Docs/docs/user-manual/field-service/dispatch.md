@@ -87,7 +87,7 @@ The first time, the page asks whether to share their location while they work. I
 
 ## KPIs
 
-**Reports > Field Service > KPIs** shows how field service went over a range of days, the last 30 by default: the share of jobs done the first time, arrivals inside the window, completed jobs per technician a day, return visits, time on the road against time on site, work orders answered and resolved in time, and the mean time to repair. Choose the days and select **Show**. For your own charts and tables, use the **Field Service** data source in the Report Builder, which has a row per work order or per visit.
+**Reports > Field Service > KPIs** shows how field service went over a range of days, the last 30 by default: the share of jobs done the first time, arrivals inside the window, completed jobs per technician a day, return visits, time on the road against time on site, work orders answered and resolved in time, the mean time to repair, what a completed work order bills on average, and repeat work: completed work orders whose asset needed another work order soon after. Below them, **Parts used by stock location** shows the parts each van or store gave. Choose the days and, under **Repeat within**, how many days count as soon after (30 by default), then select **Show**. For your own charts and tables, use the **Field Service** data source in the Report Builder, which has a row per work order, visit, asset, meter reading or asset serviced.
 
 ## Settings
 

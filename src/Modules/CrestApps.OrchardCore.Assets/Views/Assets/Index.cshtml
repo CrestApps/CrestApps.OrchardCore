@@ -12,6 +12,17 @@
                         <input asp-for="Q" class="form-control" placeholder="@T["Search by name, number or serial number"]" aria-label="@T["Search assets"]" />
                     </div>
                 </div>
+                @if (!string.IsNullOrEmpty(Model.OwnerName))
+                {
+                    <div class="col-auto">
+                        <input type="hidden" asp-for="OwnerKind" />
+                        <input type="hidden" asp-for="OwnerId" />
+                        <span class="badge text-bg-secondary fw-normal fs-6">
+                            @T["Owned by {0}", Model.OwnerName]
+                            <a asp-action="Index" asp-route-q="@Model.Q" asp-route-typeId="@Model.TypeId" asp-route-status="@Model.Status" class="text-reset ms-1" title="@T["Every owner"]" aria-label="@T["Every owner"]"><i class="fa-solid fa-xmark" aria-hidden="true"></i></a>
+                        </span>
+                    </div>
+                }
                 <div class="col-auto">
                     @if (Model.TypeOptions.Count > 0)
                     {
@@ -20,7 +31,7 @@
                             <ul class="dropdown-menu dropdown-menu-end">
                                 @foreach (var type in Model.TypeOptions)
                                 {
-                                    <li><a class="dropdown-item" asp-action="Edit" asp-route-assetTypeId="@type.Value">@type.Text</a></li>
+                                    <li><a class="dropdown-item" asp-action="Edit" asp-route-assetTypeId="@type.Value" asp-route-ownerKind="@(string.IsNullOrEmpty(Model.OwnerName) ? null : Model.OwnerKind)" asp-route-ownerId="@(string.IsNullOrEmpty(Model.OwnerName) ? null : Model.OwnerId)">@type.Text</a></li>
                                 }
                             </ul>
                         </div>

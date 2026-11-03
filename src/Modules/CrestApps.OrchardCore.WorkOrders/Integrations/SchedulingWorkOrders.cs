@@ -76,10 +76,12 @@ internal sealed class AppointmentWorkOrderObserver : IAppointmentObserver
         if (existing is not null)
         {
             // A rescheduled booking moves the work order's window; a visit already given a time stays with dispatch.
-            if (existing.EarliestUtc != appointment.StartUtc || existing.LatestUtc != appointment.EndUtc)
+            var latest = LatestUtc(appointment, existing.EstimatedMinutes);
+
+            if (existing.EarliestUtc != appointment.StartUtc || existing.LatestUtc != latest)
             {
                 existing.EarliestUtc = appointment.StartUtc;
-                existing.LatestUtc = appointment.EndUtc;
+                existing.LatestUtc = latest;
                 await _workOrders.UpdateAsync(existing, actor, cancellationToken);
                 await _workOrders.AddNoteAsync(existing.ItemId, S["The booking moved to {0:g}.", CalendarTime.ToLocal(appointment.StartUtc, appointment.TimeZoneId)], actor, cancellationToken);
                 await _session.SaveChangesAsync(cancellationToken);
@@ -101,7 +103,7 @@ internal sealed class AppointmentWorkOrderObserver : IAppointmentObserver
         workOrder.Description = appointment.Notes;
         workOrder.Contact = new WorkOrderContact { Name = appointment.CustomerName, Phone = appointment.CustomerPhone, Email = appointment.CustomerEmail };
         workOrder.EarliestUtc = appointment.StartUtc;
-        workOrder.LatestUtc = appointment.EndUtc;
+        workOrder.LatestUtc = LatestUtc(appointment, workOrder.EstimatedMinutes > 0 ? workOrder.EstimatedMinutes : type.DefaultDurationMinutes);
         workOrder.Source = WorkOrderSource.Appointment;
         workOrder.SourceId = appointment.ItemId;
 
@@ -110,4 +112,14 @@ internal sealed class AppointmentWorkOrderObserver : IAppointmentObserver
             await _session.SaveChangesAsync(cancellationToken);
         }
     }
+
+    /// <summary>
+    /// Gives the end of a booked work order's window. The booked time is when the technician arrives, so the job may
+    /// start as late as the booking's end and still needs its own length after that.
+    /// </summary>
+    /// <param name="appointment">The booking.</param>
+    /// <param name="jobMinutes">The job's length.</param>
+    /// <returns>The window's end, in UTC.</returns>
+    internal static DateTime LatestUtc(Appointment appointment, int jobMinutes)
+        => appointment.EndUtc.AddMinutes(Math.Max(0, jobMinutes));
 }

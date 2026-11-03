@@ -93,11 +93,18 @@ public sealed class DefaultDispatchCandidateFinder : IDispatchCandidateFinder
     {
         ArgumentNullException.ThrowIfNull(visit);
 
+        return await FindAsync(visit, await _workOrderStore.FindByIdAsync(visit.WorkOrderId, cancellationToken), fromUtc, toUtc, objective, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<DispatchCandidateResult> FindAsync(ServiceVisit visit, WorkOrder workOrder, DateTime fromUtc, DateTime toUtc, DispatchObjective objective = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(visit);
+
         var settings = await _settingsProvider.GetAsync();
 
         objective ??= settings.Objective ?? new DispatchObjective();
 
-        var workOrder = await _workOrderStore.FindByIdAsync(visit.WorkOrderId, cancellationToken);
         var type = string.IsNullOrEmpty(visit.TypeId) ? null : await _types.FindByIdAsync(visit.TypeId, cancellationToken);
         var from = Max(Max(fromUtc, _clock.UtcNow), workOrder?.EarliestUtc ?? DateTime.MinValue);
         var to = workOrder?.LatestUtc is { } latest && latest < toUtc ? latest : toUtc;

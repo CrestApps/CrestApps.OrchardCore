@@ -34,6 +34,7 @@ public sealed class AssetsController : Controller
     private readonly ISession _session;
     private readonly IClock _clock;
     private readonly INotifier _notifier;
+    private readonly AssetOwnerDirectory _owners;
     private readonly bool _fleet;
 
     internal readonly IHtmlLocalizer H;
@@ -58,6 +59,7 @@ public sealed class AssetsController : Controller
         ISession session,
         IClock clock,
         INotifier notifier,
+        AssetOwnerDirectory owners,
         IEnumerable<FleetFeature> fleet,
         IHtmlLocalizer<AssetsController> htmlLocalizer)
     {
@@ -68,6 +70,7 @@ public sealed class AssetsController : Controller
         _session = session;
         _clock = clock;
         _notifier = notifier;
+        _owners = owners;
         _fleet = fleet.Any();
         H = htmlLocalizer;
     }
@@ -103,6 +106,15 @@ public sealed class AssetsController : Controller
             query = query.Where(index => index.Status == value);
         }
 
+        if (Enum.TryParse<AssetOwnerKind>(form.OwnerKind, out var ownerKind) && !string.IsNullOrEmpty(form.OwnerId))
+        {
+            var kind = ownerKind.ToString();
+            var ownerId = form.OwnerId;
+
+            query = query.Where(index => index.OwnerKind == kind && index.OwnerId == ownerId);
+            form.OwnerName = await _owners.GetNameAsync(ownerKind, ownerId, HttpContext.RequestAborted) ?? ownerId;
+        }
+
         if (!string.IsNullOrWhiteSpace(form.Q))
         {
             var q = form.Q.Trim();
@@ -116,6 +128,7 @@ public sealed class AssetsController : Controller
         var parentIds = page.Select(asset => asset.ParentAssetId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
         var parents = parentIds.Length == 0 ? [] : (await _session.QueryIndex<AssetIndex>(index => index.ItemId.IsIn(parentIds), collection: AssetsConstants.CollectionName).ListAsync(HttpContext.RequestAborted)).ToDictionary(index => index.ItemId, index => index.Name, StringComparer.Ordinal);
         var typeNames = types.ToDictionary(type => type.ItemId, type => type.Name, StringComparer.Ordinal);
+        var ownerNames = await _owners.GetNamesAsync(page, HttpContext.RequestAborted);
         var today = DateOnly.FromDateTime(_clock.UtcNow);
 
         form.TypeOptions = [.. types.Select(type => new SelectListItem(type.Name, type.ItemId, type.ItemId == form.TypeId))];
@@ -126,6 +139,7 @@ public sealed class AssetsController : Controller
                 Asset = asset,
                 TypeName = typeNames.GetValueOrDefault(asset.AssetTypeId ?? string.Empty),
                 ParentName = parents.GetValueOrDefault(asset.ParentAssetId ?? string.Empty),
+                OwnerName = asset.OwnerKind == AssetOwnerKind.Internal ? null : ownerNames.GetValueOrDefault(AssetOwnerDirectory.Key(asset.OwnerKind, asset.OwnerId ?? string.Empty)) ?? asset.OwnerId,
                 Today = today,
             }).ToList(),
             Pager = await shapeFactory.PagerAsync(pager, count),
@@ -217,7 +231,7 @@ public sealed class AssetsController : Controller
     /// <param name="parentAssetId">The asset a new asset is part of.</param>
     /// <returns>The page.</returns>
     [Admin("assets/edit/{id?}", "AssetsEdit")]
-    public async Task<IActionResult> Edit(string id, string assetTypeId, string parentAssetId)
+    public async Task<IActionResult> Edit(string id, string assetTypeId, string parentAssetId, AssetOwnerKind? ownerKind, string ownerId)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AssetsPermissions.ManageAssets))
         {
@@ -242,8 +256,8 @@ public sealed class AssetsController : Controller
             Manufacturer = item.Manufacturer,
             Model = item.Model,
             Status = item.Status,
-            OwnerKind = item.OwnerKind,
-            OwnerId = item.OwnerId,
+            OwnerKind = isNew && ownerKind is { } newKind && !string.IsNullOrEmpty(ownerId) ? newKind : item.OwnerKind,
+            OwnerId = isNew && ownerKind is not null && !string.IsNullOrEmpty(ownerId) ? ownerId : item.OwnerId,
             ParentAssetId = isNew ? parentAssetId : item.ParentAssetId,
             InstallDate = item.InstallDate,
             AddressLine1 = item.Location?.AddressLine1,
@@ -302,7 +316,8 @@ public sealed class AssetsController : Controller
         item.Model = Blank(form.Model);
         item.Status = form.Status;
         item.OwnerKind = form.OwnerKind;
-        item.OwnerId = form.OwnerKind == AssetOwnerKind.Internal ? null : Blank(form.OwnerId);
+        item.OwnerId = form.OwnerKind == AssetOwnerKind.Internal ? null : Blank(form.OwnerIds?.GetValueOrDefault(form.OwnerKind.ToString()) ?? form.OwnerId);
+        form.OwnerId = item.OwnerId;
         item.ParentAssetId = Blank(form.ParentAssetId);
         item.InstallDate = form.InstallDate;
         item.Location = MakeAddress(form, item.Location);
@@ -403,6 +418,7 @@ public sealed class AssetsController : Controller
             Readings = await _service.ReadingsAsync(asset.ItemId, cancellationToken: HttpContext.RequestAborted),
             Today = DateOnly.FromDateTime(_clock.UtcNow),
             CanManage = await _authorizationService.AuthorizeAsync(User, AssetsPermissions.ManageAssets),
+            OwnerName = asset.OwnerKind == AssetOwnerKind.Internal ? null : await _owners.GetNameAsync(asset.OwnerKind, asset.OwnerId, HttpContext.RequestAborted) ?? asset.OwnerId,
         };
     }
 
@@ -416,6 +432,8 @@ public sealed class AssetsController : Controller
             .Where(index => index.ItemId != model.Id)
             .OrderBy(index => index.Name, StringComparer.CurrentCultureIgnoreCase)
             .Select(index => new SelectListItem($"{index.Name} ({index.Number})", index.ItemId, index.ItemId == model.ParentAssetId))];
+        model.OwnerKinds = [.. _owners.Kinds.Union(model.OwnerKind == AssetOwnerKind.Internal ? [] : [model.OwnerKind])];
+        model.OwnerName = model.OwnerKind == AssetOwnerKind.Internal ? null : await _owners.GetNameAsync(model.OwnerKind, model.OwnerId, HttpContext.RequestAborted) ?? model.OwnerId;
         model.ShowFleet = _fleet && model.Type is not null && _fleetCategories.Contains(model.Type.Category);
     }
 

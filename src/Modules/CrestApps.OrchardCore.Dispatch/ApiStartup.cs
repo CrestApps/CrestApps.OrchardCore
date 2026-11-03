@@ -31,3 +31,17 @@ public sealed class AssetsApiStartup : StartupBase
         routes.MapAssetsApi();
     }
 }
+
+/// <summary>
+/// Maps the service agreement reads of the HTTP API, when Service Agreements is on.
+/// </summary>
+[Feature(DispatchConstants.Features.Api)]
+[RequireFeatures("CrestApps.OrchardCore.WorkOrders.Agreements")]
+public sealed class AgreementsApiStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.MapServiceAgreementsApi();
+    }
+}

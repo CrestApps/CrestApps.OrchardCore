@@ -1,0 +1,38 @@
+@model CrestApps.OrchardCore.Assets.Owners.ContactAssetsViewModel
+
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+            <h2 class="h6 mb-0 me-auto">@T["Assets"] <span class="badge text-bg-secondary fw-normal">@Model.Count</span></h2>
+            @if (Model.Count > Model.Assets.Count)
+            {
+                <a class="btn btn-sm btn-secondary" asp-area="CrestApps.OrchardCore.Assets" asp-controller="Assets" asp-action="Index" asp-route-ownerKind="@AssetOwnerKind.Contact" asp-route-ownerId="@Model.ContactId">@T["All {0}", Model.Count]</a>
+            }
+            @if (Model.CanManage)
+            {
+                <a class="btn btn-sm btn-primary" asp-area="CrestApps.OrchardCore.Assets" asp-controller="Assets" asp-action="Edit" asp-route-ownerKind="@AssetOwnerKind.Contact" asp-route-ownerId="@Model.ContactId">@T["Add an asset"]</a>
+            }
+        </div>
+        @if (Model.Assets.Count == 0)
+        {
+            <p class="small text-muted mb-0">@T["This contact owns no assets yet."]</p>
+        }
+        else
+        {
+            <div class="list-group list-group-flush">
+                @foreach (var asset in Model.Assets)
+                {
+                    <a class="list-group-item list-group-item-action d-flex flex-wrap gap-2 align-items-center px-0" asp-area="CrestApps.OrchardCore.Assets" asp-controller="Assets" asp-action="Details" asp-route-id="@asset.ItemId">
+                        <span class="fw-semibold">@asset.Number</span>
+                        <span class="me-auto">@asset.Name</span>
+                        <span class="badge text-bg-light border">@Model.TypeNames.GetValueOrDefault(asset.AssetTypeId ?? string.Empty)</span>
+                        @if (asset.Status != AssetStatus.Active)
+                        {
+                            <span class="badge text-bg-light border">@asset.Status</span>
+                        }
+                    </a>
+                }
+            </div>
+        }
+    </div>
+</div>

@@ -22,10 +22,24 @@ The admin screens are described in the User Manual: [Assets](../user-manual/fiel
 All live in the `Assets` YesSql collection.
 
 - **`AssetType`**: `Name`, `Category` (`Equipment`, `Vehicle`, `Tool`, `CustomerUnit`, `Component`, `Facility`), `Description`, `Attributes` (`AssetAttributeDefinition`: `Name`, `Kind` Text, Number, Date or YesNo) and `Meters` (`MeterDefinition`: `Name`, `Unit`, `Cumulative`, true by default). Two attributes or meters can't share a name.
-- **`Asset`**: `Number` (the next `A-00042` when left empty, unique), `Name`, `AssetTypeId`, `ProductId`, `SerialNumber`, `Manufacturer`, `Model`, `OwnerKind` (`Internal`, `Customer`, `Company`) and `OwnerId` (required unless internal), `Location` (an `Address`, with coordinates once geocoded; a changed address loses its old ones), `ParentAssetId` (the hierarchy; an asset can't be inside itself, directly or further up), `Status` (`Active`, `InService`, `OutOfService`, `Retired`), `InstallDate`, `Warranty` (`StartDate`, `EndDate`, `Provider`, `Terms`; `Covers(date)`), `Attributes` (values of its type's attributes, by name), `Documents` (media paths) and `Fleet`.
+- **`Asset`**: `Number` (the next `A-00042` when left empty, unique), `Name`, `AssetTypeId`, `ProductId`, `SerialNumber`, `Manufacturer`, `Model`, `OwnerKind` (`Internal`, `Customer`, `Company`, `Contact`) and `OwnerId` (required unless internal), `Location` (an `Address`, with coordinates once geocoded; a changed address loses its old ones), `ParentAssetId` (the hierarchy; an asset can't be inside itself, directly or further up), `Status` (`Active`, `InService`, `OutOfService`, `Retired`), `InstallDate`, `Warranty` (`StartDate`, `EndDate`, `Provider`, `Terms`; `Covers(date)`), `Attributes` (values of its type's attributes, by name), `Documents` (media paths) and `Fleet`.
 - **`AssetMeterReading`** (only ever added): `AssetId`, `Meter`, `Value`, `Utc`, `Source` (`Manual`, `WorkOrder`, `Api`), `SourceId`, `RecordedBy`.
 
 `AssetService.RecordReadingAsync` refuses a meter the asset's type doesn't have, and a reading of a cumulative meter lower than the last one before it. `ReadingsAsync`, `ChildrenAsync` and `AncestorsAsync` read an asset's history and hierarchy.
+
+## Owners
+
+An asset is owned by the business, or by a customer, a company or a CRM contact, picked in the editor by name. Each kind of owner comes from an `IAssetOwnerSource` (`Kind`, `SearchAsync`, `GetNamesAsync`), and only the kinds with a source can be chosen:
+
+| Kind | Source | Comes with |
+| --- | --- | --- |
+| Customer | Users, by user name or email | `OrchardCore.Users` |
+| Company | Companies, by name | Companies (`CrestApps.OrchardCore.Companies`) |
+| Contact | Content items with the Omnichannel Contact part, by display text | Omnichannel Management |
+
+`AssetOwnerDirectory` names owners for the list, the asset's page and the editor; an owner it can't find shows its id. The editor's pickers search `Admin/api/crestapps/assets/owners/search?kind=&query=` (View assets), which returns up to 50 `{ value, text }` items. The asset list filters by owner with `ownerKind` and `ownerId`, and its **Add asset** keeps that owner.
+
+With Omnichannel Management on, a CRM contact's page shows an **Assets** card: the contact's first ten assets by name, **All** when there are more, and **Add an asset** for them.
 
 ## Fleet
 

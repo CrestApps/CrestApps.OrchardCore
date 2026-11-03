@@ -28,11 +28,13 @@ Assets are the things you service or use: your own vans, equipment and tools, an
 
 1. Go to **Assets > Assets**, select **Add asset** and choose its type.
 2. Enter its name, and its serial number, manufacturer and model. Leave the asset number empty for the next one.
-3. Under **Owner and place**, choose who owns it: the business, a customer or a company (with its number), the asset it is part of, if any, and its address.
+3. Under **Owner and place**, choose who owns it: the business, a customer, a company or a contact, then search for them by name. Choose the asset it is part of, if any, and enter its address.
 4. Enter when it was installed and its warranty, and fill in the values its type records.
 5. Select **Save**. The asset's page opens.
 
 Search the list by name, number or serial number, and filter it by type and state.
+
+A contact's page lists the assets they own. **Add an asset** there starts one with the contact as its owner, and **All** lists every asset they own.
 
 ## Record a meter reading
 

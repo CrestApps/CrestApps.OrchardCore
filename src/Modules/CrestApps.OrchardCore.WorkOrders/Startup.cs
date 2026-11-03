@@ -86,6 +86,13 @@ public sealed class AssetsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IWorkOrderLookup, AssetsWorkOrderLookup>();
+        services.AddScoped<Integrations.WorkOrderCustomers>();
+    }
+
+    /// <inheritdoc/>
+    public override void Configure(Microsoft.AspNetCore.Builder.IApplicationBuilder app, Microsoft.AspNetCore.Routing.IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        Integrations.WorkOrderCustomerEndpoints.AddWorkOrderCustomerEndpoints(routes);
     }
 }
 

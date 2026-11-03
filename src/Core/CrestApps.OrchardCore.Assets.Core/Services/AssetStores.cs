@@ -220,7 +220,7 @@ internal sealed class AssetHandler : CatalogEntryHandlerBase<Asset>
 
         if (asset.OwnerKind != AssetOwnerKind.Internal && string.IsNullOrWhiteSpace(asset.OwnerId))
         {
-            context.Result.Fail(new ValidationResult(S["Say which customer or company owns the asset."], [nameof(Asset.OwnerId)]));
+            context.Result.Fail(new ValidationResult(S["Choose who owns the asset."], [nameof(Asset.OwnerId)]));
         }
 
         if (asset.Number is not null)

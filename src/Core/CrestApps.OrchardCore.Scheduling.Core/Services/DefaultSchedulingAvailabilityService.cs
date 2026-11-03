@@ -18,6 +18,7 @@ public sealed class DefaultSchedulingAvailabilityService : ISchedulingAvailabili
     private readonly ICalendarAvailabilityService _availabilityService;
     private readonly ICalendarQueryService _queryService;
     private readonly IClock _clock;
+    private readonly IAppointmentSlotFilter[] _filters;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultSchedulingAvailabilityService"/> class.
@@ -27,18 +28,21 @@ public sealed class DefaultSchedulingAvailabilityService : ISchedulingAvailabili
     /// <param name="availabilityService">The calendar free/busy service.</param>
     /// <param name="queryService">The calendar occurrence query service, for shifts.</param>
     /// <param name="clock">The clock.</param>
+    /// <param name="filters">The filters that narrow the slots, such as to dispatch capacity.</param>
     public DefaultSchedulingAvailabilityService(
         SchedulingResourceStore resourceStore,
         AppointmentStore appointmentStore,
         ICalendarAvailabilityService availabilityService,
         ICalendarQueryService queryService,
-        IClock clock)
+        IClock clock,
+        IEnumerable<IAppointmentSlotFilter> filters = null)
     {
         _resourceStore = resourceStore;
         _appointmentStore = appointmentStore;
         _availabilityService = availabilityService;
         _queryService = queryService;
         _clock = clock;
+        _filters = filters?.ToArray() ?? [];
     }
 
     /// <inheritdoc />
@@ -169,7 +173,19 @@ public sealed class DefaultSchedulingAvailabilityService : ISchedulingAvailabili
             }
         }
 
-        return result;
+        IReadOnlyList<AppointmentSlot> slots = result;
+
+        if (slots.Count > 0 && _filters.Length > 0)
+        {
+            var context = new AppointmentSlotFilterContext { AppointmentType = appointmentType, ExcludeAppointmentId = excludeAppointmentId };
+
+            foreach (var filter in _filters)
+            {
+                slots = await filter.FilterAsync(context, slots, cancellationToken);
+            }
+        }
+
+        return slots;
     }
 
     /// <summary>

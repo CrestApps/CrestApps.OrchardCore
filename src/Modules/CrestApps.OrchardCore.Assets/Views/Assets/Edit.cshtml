@@ -60,16 +60,47 @@
             <div class="ocat-wrapper">
                 <label asp-for="OwnerKind" class="ocat-label">@T["Owned by"]</label>
                 <div class="ocat-end">
-                    <select asp-for="OwnerKind" asp-items="Html.GetEnumSelectList<AssetOwnerKind>()" class="form-select"></select>
+                    <select asp-for="OwnerKind" class="form-select" data-asset-owner-kind>
+                        @foreach (var kind in Model.OwnerKinds)
+                        {
+                            <option value="@kind" selected="@(kind == Model.OwnerKind)">@(kind switch { AssetOwnerKind.Internal => T["The business"].Value, AssetOwnerKind.Customer => T["A customer"].Value, AssetOwnerKind.Company => T["A company"].Value, _ => T["A contact"].Value })</option>
+                        }
+                    </select>
                 </div>
             </div>
-            <div class="ocat-wrapper">
-                <label asp-for="OwnerId" class="ocat-label">@T["Customer or company"]</label>
-                <div class="ocat-end">
-                    <input asp-for="OwnerId" class="form-control" />
-                    <span class="hint">@T["Its number, when a customer or company owns it."]</span>
+            @foreach (var kind in Model.OwnerKinds.Where(kind => kind != AssetOwnerKind.Internal))
+            {
+                var current = kind == Model.OwnerKind && !string.IsNullOrEmpty(Model.OwnerId);
+                var initial = current ? System.Text.Json.JsonSerializer.Serialize(new[] { new { value = Model.OwnerId, text = Model.OwnerName ?? Model.OwnerId, selected = true } }) : "[]";
+                var label = kind switch { AssetOwnerKind.Customer => T["Customer"].Value, AssetOwnerKind.Company => T["Company"].Value, _ => T["Contact"].Value };
+                var choose = kind switch { AssetOwnerKind.Customer => T["Choose a customer"].Value, AssetOwnerKind.Company => T["Choose a company"].Value, _ => T["Choose a contact"].Value };
+
+                <div class="ocat-wrapper" data-asset-owner="@kind" hidden="@(kind != Model.OwnerKind)">
+                    <label class="ocat-label">@label</label>
+                    <div class="ocat-end">
+                        @await Component.InvokeAsync("ItemSelector", new
+                        {
+                            id = $"asset-owner-{kind.ToString().ToLowerInvariant()}",
+                            inputName = $"{Html.NameFor(m => m.OwnerIds)}[{kind}]",
+                            endpoint = Url.Content($"~/Admin/api/crestapps/assets/owners/search?kind={kind}"),
+                            initialItemsJson = initial,
+                            multiple = false,
+                            enableSearch = true,
+                            buttonText = choose,
+                            searchPlaceholder = T["Search by name"].Value,
+                            emptyResultsText = T["Nothing found."].Value,
+                            noSelectionText = choose,
+                            selectedItemsLabel = label,
+                            availableItemsLabel = label,
+                            smallButton = false,
+                        })
+                    </div>
                 </div>
-            </div>
+            }
+            @if (Model.OwnerKind != AssetOwnerKind.Internal && !Model.OwnerKinds.Contains(Model.OwnerKind))
+            {
+                <input type="hidden" asp-for="OwnerId" />
+            }
             <div class="ocat-wrapper">
                 <label asp-for="ParentAssetId" class="ocat-label">@T["Part of"]</label>
                 <div class="ocat-end">
@@ -236,3 +267,18 @@
         <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
     </div>
 </form>
+
+<script at="Foot">
+    (() => {
+        const kind = document.querySelector('[data-asset-owner-kind]');
+
+        if (!kind) {
+            return;
+        }
+
+        const show = () => document.querySelectorAll('[data-asset-owner]').forEach(row => row.hidden = row.dataset.assetOwner !== kind.value);
+
+        kind.addEventListener('change', show);
+        show();
+    })();
+</script>

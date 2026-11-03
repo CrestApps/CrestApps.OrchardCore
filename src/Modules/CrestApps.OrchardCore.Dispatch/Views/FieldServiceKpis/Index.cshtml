@@ -22,6 +22,13 @@
                     <input asp-for="To" type="date" class="form-control form-control-sm" />
                 </div>
                 <div class="col-auto">
+                    <div class="input-group input-group-sm">
+                        <label asp-for="RepeatDays" class="input-group-text">@T["Repeat within"]</label>
+                        <input asp-for="RepeatDays" type="number" min="1" max="365" class="form-control" style="width: 5rem" />
+                        <span class="input-group-text">@T["days"]</span>
+                    </div>
+                </div>
+                <div class="col-auto">
                     <button type="submit" class="btn btn-sm btn-primary">@T["Show"]</button>
                 </div>
             </div>
@@ -46,6 +53,8 @@
             (T["Answered in time"], Percent(result.ResponseCompliance), T["Work orders answered by their response time, of {0} made.", result.WorkOrders]),
             (T["Resolved in time"], Percent(result.ResolutionCompliance), T["Completed work orders resolved by their resolution time."]),
             (T["Time to repair"], result.MeanHoursToRepair is { } hours ? string.Format(CultureInfo.CurrentCulture, T["{0} h"].Value, Number(hours)) : "–", T["The mean time from making a work order to completing it."]),
+            (T["Revenue per work order"], result.RevenuePerWorkOrder is { } revenue ? revenue.ToString("N2", CultureInfo.CurrentCulture) + " " + result.RevenueCurrency : "–", T["What the completed work orders billed on average."]),
+            (T["Repeat work"], Percent(result.RepeatWorkRate), T["Completed work orders with another work order on the same asset within {0} days.", result.RepeatDays]),
         };
     }
     @foreach (var (title, value, hint) in tiles)
@@ -62,4 +71,34 @@
     }
 </div>
 
-<p class="text-muted small">@T["Build your own charts and tables from the Field Service data source in the Report Builder: one row per work order or per visit."]</p>
+@if (result.PartsByLocation.Count > 0)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h2 class="h6">@T["Parts used by stock location"]</h2>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">@T["Stock location"]</th>
+                            <th scope="col" class="text-end">@T["Units"]</th>
+                            <th scope="col" class="text-end">@T["Work orders"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var parts in result.PartsByLocation)
+                        {
+                            <tr>
+                                <td>@parts.Name</td>
+                                <td class="text-end">@parts.Quantity.ToString("0.##", CultureInfo.CurrentCulture)</td>
+                                <td class="text-end">@parts.WorkOrders</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+<p class="text-muted small">@T["Build your own charts and tables from the Field Service data source in the Report Builder: one row per work order, visit, asset, meter reading or asset serviced."]</p>

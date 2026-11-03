@@ -55,6 +55,21 @@
                 <p class="small">@workOrder.Description</p>
             }
             <dl class="row mb-0 small">
+                @if (Model.CustomerNames.GetValueOrDefault("Customer") is { } customerName)
+                {
+                    <dt class="col-4">@T["Customer"]</dt>
+                    <dd class="col-8">@customerName</dd>
+                }
+                @if (Model.CustomerNames.GetValueOrDefault("Company") is { } companyName)
+                {
+                    <dt class="col-4">@T["Company"]</dt>
+                    <dd class="col-8">@companyName</dd>
+                }
+                @if (Model.CustomerNames.GetValueOrDefault("Contact") is { } contactName)
+                {
+                    <dt class="col-4">@T["CRM contact"]</dt>
+                    <dd class="col-8"><a href="@Url.Content($"~/Admin/Contents/ContentItems/{workOrder.ContactId}/Display")">@contactName</a></dd>
+                }
                 @if (!string.IsNullOrEmpty(workOrder.Contact?.Name) || !string.IsNullOrEmpty(workOrder.Contact?.Phone))
                 {
                     <dt class="col-4">@T["Contact"]</dt>

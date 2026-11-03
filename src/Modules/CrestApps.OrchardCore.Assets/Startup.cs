@@ -4,6 +4,12 @@ using CrestApps.OrchardCore.Assets.Drivers;
 using CrestApps.OrchardCore.Assets.Fleet;
 using CrestApps.OrchardCore.Assets.Migrations;
 using CrestApps.OrchardCore.Assets.Navigation;
+using CrestApps.OrchardCore.Assets.Owners;
+using CrestApps.OrchardCore.Assets.Services;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
+using OrchardCore.ContentManagement.Display.ContentDisplay;
 using CrestApps.OrchardCore.Assets.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -37,6 +43,40 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<AssetTypeRow, AssetTypeRowDisplayDriver>();
         services.AddDisplayDriver<AssetRow, AssetRowDisplayDriver>();
         services.AddNavigationProvider<AssetsAdminMenu>();
+    }
+
+    /// <inheritdoc/>
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.AddAssetOwnerEndpoints();
+    }
+}
+
+/// <summary>
+/// Lets users, the customers of the store, own assets.
+/// </summary>
+[RequireFeatures("OrchardCore.Users")]
+public sealed class CustomerOwnersStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAssetOwnerSource, CustomerAssetOwnerSource>());
+    }
+}
+
+/// <summary>
+/// Lets CRM contacts own assets, and lists them on the contact's page.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.Omnichannel.Managements")]
+public sealed class ContactOwnersStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.TryAddScoped<IOmnichannelContactTypeProvider, ContentDefinitionOmnichannelContactTypeProvider>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAssetOwnerSource, ContactAssetOwnerSource>());
+        services.AddScoped<IContentDisplayDriver, ContactAssetsDisplayDriver>();
     }
 }
 

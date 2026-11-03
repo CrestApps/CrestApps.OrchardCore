@@ -482,6 +482,11 @@ public class FieldServiceKpisViewModel
     public string TimeZoneId { get; set; }
 
     /// <summary>
+    /// Gets or sets the days within which another work order on the same asset counts as repeat work.
+    /// </summary>
+    public int? RepeatDays { get; set; }
+
+    /// <summary>
     /// Gets or sets the KPIs.
     /// </summary>
     public Reports.FieldServiceKpiResult Result { get; set; }

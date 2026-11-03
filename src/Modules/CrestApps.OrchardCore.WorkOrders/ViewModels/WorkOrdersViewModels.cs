@@ -545,6 +545,22 @@ public class WorkOrderEditViewModel
     public string ContactId { get; set; }
 
     /// <summary>
+    /// Gets or sets the customer (a user) the work order is for.
+    /// </summary>
+    public string CustomerId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the company the work order is for.
+    /// </summary>
+    public string CompanyId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the pickers shown, by kind (Customer, Company and Contact), with the current choice's name.
+    /// </summary>
+    [BindNever]
+    public Dictionary<string, string> CustomerPickers { get; set; } = new(StringComparer.Ordinal);
+
+    /// <summary>
     /// Gets or sets the contact's name.
     /// </summary>
     public string ContactName { get; set; }
@@ -657,6 +673,11 @@ public class WorkOrderDetailsViewModel
     /// Gets or sets the work order.
     /// </summary>
     public WorkOrder WorkOrder { get; set; }
+
+    /// <summary>
+    /// Gets or sets the names of the work order's customer, company and CRM contact, by kind, when known.
+    /// </summary>
+    public Dictionary<string, string> CustomerNames { get; set; } = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Gets or sets its type.

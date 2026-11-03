@@ -79,6 +79,7 @@ A group session (`Capacity` > 1) shares one calendar event per time, with `Sourc
 | --- | --- |
 | `IAppointmentService` | Book, confirm, reschedule, cancel and complete appointments from another module. |
 | `ISchedulingAvailabilityService` | Find open times for an appointment type. |
+| `IAppointmentSlotFilter` | `FilterAsync(AppointmentSlotFilterContext, slots)` narrows the open times the resources' hours give: it can drop slots or lower `Remaining`, never add any. The context has the `AppointmentType` and the `ExcludeAppointmentId` of a booking being moved. Booking and rescheduling check the time against the same slots, so a time a filter drops can't be booked. Dispatch uses it for technicians' capacity. |
 | `IAppointmentObserver` | `OnChangedAsync(AppointmentChange)` after the change commits: `Kind` (`Held`, `Requested`, `Confirmed`, `Rescheduled`, `Cancelled`, `Completed`, `NoShow`, `HoldExpired`, `WaitlistSlotAvailable`), `Appointment`, `AppointmentType`, `PreviousStartUtc`, `WaitlistEntry`, `Actor`. The workflow integration listens here. |
 | Calendar seams | Appointments are calendar events, so `ICalendarEventObserver`, the calendar workflows and free/busy all see them. Busy time from an `ICalendarBusyTimeSource` closes slots. |
 

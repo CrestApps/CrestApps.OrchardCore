@@ -150,3 +150,31 @@ public sealed class ReportsStartup : StartupBase
         services.AddScoped<Reports.IFieldServiceReportDataSet, Reports.VisitsReportDataSet>();
     }
 }
+
+/// <summary>
+/// Adds the asset data sets to the Field Service report data source: assets, meter readings and service history.
+/// </summary>
+[RequireFeatures("OrchardCore.DataPipelines.Core", "CrestApps.OrchardCore.Assets")]
+public sealed class AssetReportsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<Reports.IFieldServiceReportDataSet, Reports.AssetsReportDataSet>();
+        services.AddScoped<Reports.IFieldServiceReportDataSet, Reports.MeterReadingsReportDataSet>();
+        services.AddScoped<Reports.IFieldServiceReportDataSet, Reports.ServiceHistoryReportDataSet>();
+    }
+}
+
+/// <summary>
+/// Offers the booking slots of appointment types that make work orders only while a technician can take the job.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.Scheduling")]
+public sealed class SchedulingStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<CrestApps.OrchardCore.Scheduling.Services.IAppointmentSlotFilter, Integrations.DispatchCapacitySlotFilter>();
+    }
+}

@@ -15,6 +15,7 @@ using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
@@ -66,4 +67,17 @@ public sealed class ApiStartup : StartupBase
 {
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
         => routes.MapCompanyApi();
+}
+
+/// <summary>
+/// Lets companies own assets, picked in the asset editor.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.Assets")]
+public sealed class AssetsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<CrestApps.OrchardCore.Assets.Services.IAssetOwnerSource, CompanyAssetOwnerSource>());
+    }
 }

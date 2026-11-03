@@ -86,6 +86,57 @@ public sealed class FieldServiceApiTests
         Assert.Equal(ana.ItemId, Assert.Single(moves.EnumerateArray()).GetProperty("toWorkerId").GetString());
     }
 
+    [Fact]
+    public async Task TheBoard_GivesTheDaysTechnicians_Visits_AndTheOnesWaiting()
+    {
+        await using var kit = await DispatchKit.CreateAsync();
+        var ana = await kit.AddTechnicianAsync("Ana Field");
+
+        await kit.PublishShiftsAsync(ana);
+        kit.Now = DispatchKit.Monday(7);
+
+        var (_, booked) = await kit.AddJobAsync("No heat", DispatchKit.Depot);
+        var (_, waiting) = await kit.AddJobAsync("Leak", DispatchKit.Depot);
+
+        Assert.True((await kit.AssignAsync(booked, DispatchKit.Monday(10), ana)).Succeeded);
+
+        var viewer = CalendarTestHarness.User("viewer", DispatchPermissions.ViewDispatch.Name);
+        var stranger = CalendarTestHarness.User("stranger");
+        var board = await kit.Harness.RunAsync(services => FieldServiceApiEndpoints.BoardAsync("2026-11-09", null, Context(services, viewer)), commit: false);
+        var refused = await kit.Harness.RunAsync(services => FieldServiceApiEndpoints.BoardAsync("2026-11-09", null, Context(services, stranger)), commit: false);
+        var value = Value(board);
+        var technician = Assert.Single(value.GetProperty("technicians").EnumerateArray());
+
+        Assert.Equal(403, Status(refused));
+        Assert.Equal("2026-11-09", value.GetProperty("day").GetString());
+        Assert.Equal(("Ana Field", true), (technician.GetProperty("name").GetString(), technician.GetProperty("onShift").GetBoolean()));
+        Assert.Equal(booked.ItemId, Assert.Single(value.GetProperty("visits").EnumerateArray()).GetProperty("id").GetString());
+        Assert.Equal(waiting.ItemId, Assert.Single(value.GetProperty("unscheduled").EnumerateArray()).GetProperty("id").GetString());
+    }
+
+    [Fact]
+    public async Task TheChecklists_AreListedWithTheirQuestions()
+    {
+        await using var kit = await DispatchKit.CreateAsync();
+
+        await kit.Harness.RunAsync(async services =>
+        {
+            var checklists = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<CrestApps.OrchardCore.WorkOrders.Core.Services.WorkOrderSettingManager<ChecklistTemplate>>(services);
+            var checklist = await checklists.NewAsync();
+
+            checklist.Name = "Boiler safety";
+            checklist.Questions = [new ChecklistQuestion { Id = "flue", Text = "Flue clear?", Kind = ChecklistQuestionKind.YesNo, Required = true }];
+            await checklists.CreateAsync(checklist);
+        });
+
+        var viewer = CalendarTestHarness.User("viewer", WorkOrdersPermissions.ViewWorkOrders.Name);
+        var listed = Value(await kit.Harness.RunAsync(services => FieldServiceApiEndpoints.ListChecklistsAsync(Context(services, viewer)), commit: false));
+        var checklist = Assert.Single(listed.EnumerateArray());
+
+        Assert.Equal("Boiler safety", checklist.GetProperty("name").GetString());
+        Assert.Equal("Flue clear?", Assert.Single(checklist.GetProperty("questions").EnumerateArray()).GetProperty("text").GetString());
+    }
+
     private static DefaultHttpContext Context(IServiceProvider services, ClaimsPrincipal user, string body = null, string idempotencyKey = null)
     {
         var context = new DefaultHttpContext { User = user, RequestServices = services };

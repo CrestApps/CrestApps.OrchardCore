@@ -63,7 +63,8 @@ public sealed class FieldServiceKpisController : Controller
         form.From = from.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         form.To = to.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         form.TimeZoneId = zone;
-        form.Result = await _kpis.GetAsync(CalendarTime.ToUtc(from, zone), CalendarTime.ToUtc(to.AddDays(1), zone), zone, HttpContext.RequestAborted);
+        form.RepeatDays = Math.Clamp(form.RepeatDays ?? Reports.FieldServiceKpiService.DefaultRepeatDays, 1, 365);
+        form.Result = await _kpis.GetAsync(CalendarTime.ToUtc(from, zone), CalendarTime.ToUtc(to.AddDays(1), zone), zone, form.RepeatDays.Value, HttpContext.RequestAborted);
 
         return View(form);
     }

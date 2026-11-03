@@ -28,7 +28,8 @@ It works with other features when they are on:
 | Fleet (`CrestApps.OrchardCore.Assets.Fleet`) | Work order types can need equipment (asset types); assigning books a free one on its Equipment calendar. |
 | SMS (`OrchardCore.Sms`), Email (`OrchardCore.Email`) | Customer notices, by text when the contact has a phone, else by email. |
 | CrestApps AI (`CrestApps.OrchardCore.AI`) | The field service [AI tools](#ai-tools). |
-| Data Pipelines (`OrchardCore.DataPipelines.Core`) | The **Field Service** report data source, with work orders and visits ([Reports and KPIs](#reports-and-kpis)). |
+| Data Pipelines (`OrchardCore.DataPipelines.Core`) | The **Field Service** report data source, with work orders and visits, and with Assets on, assets, meter readings and service history ([Reports and KPIs](#reports-and-kpis)). |
+| Scheduling (`CrestApps.OrchardCore.Scheduling`) | Appointment types that make work orders offer only the times a technician can take the job ([Booking capacity](#booking-capacity)). |
 | Inventory, with Technician Mobile | The technician app lists stock locations for parts used, the van the technician drives first (`IFieldStockSource`). |
 
 ## Records
@@ -139,6 +140,10 @@ The settings are read from the `CrestApps:Dispatch:Mobile` section of the tenant
 }
 ```
 
+## Booking capacity
+
+With Scheduling on, `DispatchCapacitySlotFilter` (an `IAppointmentSlotFilter`) narrows the open times of every appointment type a work order type lists under **Bookings**. For each slot it asks the candidate finder about the job a booking would make: the type's skills, certifications, crew size and length, arriving in the slot (`IDispatchCandidateFinder.FindAsync` with a work order that isn't saved). The slot stays while enough technicians are on a published shift and free for the whole job, less one for each booking of the type already made whose job would overlap and that no one has been given yet (status *New* or *Ready*); `Remaining` is lowered to what is left. A booking being moved doesn't count against itself. Appointment types no work order type lists keep their slots.
+
 ## Reports and KPIs
 
 **Reports > Field Service > KPIs** (`FieldServiceKpisController`, View visits and the dispatch board) shows, for a range of days (the last 30 by default, at most a year) in the dispatch time zone, from the visits that started and the work orders made in it:
@@ -153,14 +158,24 @@ The settings are read from the `CrestApps:Dispatch:Mobile` section of the tenant
 | Answered in time, resolved in time | Work orders answered by their response time, and completed by their resolution time, of those that have one. |
 | Time to repair | The mean hours from making a work order to completing it. |
 
+| Revenue per work order | What the completed work orders billed on average (`WorkOrderService.BillableAmount`), in the currency most of them bill in. |
+| Repeat work | Completed work orders with assets that had another work order on one of the assets within the days chosen (30 by default), made after they were completed. |
+
+Below the tiles, **Parts used by stock location** lists the parts the completed work orders used from each location, such as a van, with how many work orders used them.
+
 `FieldServiceKpiService` reads at most 5,000 visits and 5,000 work orders a range; the page says so when there are more.
 
-With **Data Pipelines** on, the **Field Service** report data source (`FieldServiceReportDataSource`) has two data sets for the Report Builder:
+With **Data Pipelines** on, the **Field Service** report data source (`FieldServiceReportDataSource`) has these data sets for the Report Builder:
 
 - **Work orders** (`FieldServiceWorkOrders`, View work orders): number, type, status, priority, summary, territory, customer, source, when made, answered and completed, the response and resolution times and whether they were met, hours to complete, parts used, and the work order followed up.
 - **Visits** (`FieldServiceVisits`, View visits and the dispatch board): number, work order, status, lead technician, crew size, territory, start and end, travel minutes and kilometers, when they arrived and whether in the window, minutes on site, whether the job was done the first time, and why not finished.
 
-Both filter by the day they were made, and by their id, type or worker and status columns, in the index. More data sets are added through `IFieldServiceReportDataSet`.
+- With Assets on:
+  - **Assets** (`FieldServiceAssets`, View assets): number, name, type, state, owner kind and id, the asset it is part of, serial number, make and model, city and postal code, when installed, when the warranty ends, whether it can be booked and carries stock, and when it was added.
+  - **Meter readings** (`FieldServiceMeterReadings`, View assets): the asset, meter, value, when it was read, and its source.
+  - **Service history** (`FieldServiceServiceHistory`, View work orders and View assets): a row for each asset on each work order, with the work order's number, type, status, summary, when it was made and completed, the parts used and the work order followed up.
+
+They filter by the day they were made (or read), and by their id, type, worker, owner and status columns, in the index. More data sets are added through `IFieldServiceReportDataSet`.
 
 ## AI tools
 
@@ -187,6 +202,7 @@ The **Field Service API** feature maps HTTP endpoints for other systems and apps
 | Endpoint | Permission | Does |
 | --- | --- | --- |
 | `GET types` | View work orders | The work order types. |
+| `GET checklists` | View work orders | The checklist templates with their questions. |
 | `GET work-orders?status=&open=&q=&skip=&take=` | View work orders | Work orders, newest first, with the count; `q` matches the number or summary. |
 | `GET work-orders/{id}` | View work orders | A work order with its lines, checklists, notes and signatures. |
 | `POST work-orders` | Manage work orders | Creates a work order from `typeId`, `summary`, `description`, `priority`, `customerId`, `companyId`, `contactId`, `contact`, `serviceAddress`, `accessNotes`, `assetIds`, `earliestUtc` and `latestUtc`. With an `Idempotency-Key` header, sending it again returns the work order made the first time. |
@@ -197,11 +213,14 @@ The **Field Service API** feature maps HTTP endpoints for other systems and apps
 | `POST work-orders/{id}/signatures` | Manage work orders | `{ "name", "imagePath" }`. |
 | `POST work-orders/{id}/attachments` | Manage work orders | `{ "path" }`, a file in the media library. |
 | `POST work-orders/{id}/complete` | Manage work orders | Completes it, or answers what is missing. |
+| `GET agreements?status=&q=&skip=&take=` | Manage service agreements | Service agreements, highest number first, with the count; `q` matches the number or name. With Service Agreements on. |
+| `GET agreements/{id}` | Manage service agreements | An agreement with its schedules. |
 
 ### Visits: `api/dispatch/v1`
 
 | Endpoint | Permission | Does |
 | --- | --- | --- |
+| `GET board?day=&teamId=` | View visits and the dispatch board | A day's board (today in the dispatch time zone by default): the technicians, of a team and the teams under it when given, with their open time and time off, the visits scheduled that day and the ones waiting. |
 | `GET visits?from=&to=&workerId=` | View visits and the dispatch board | Visits scheduled between two UTC times (at most 31 days apart), for one technician or all. |
 | `GET visits?unscheduled=true` | View visits and the dispatch board | The visits waiting for a time. |
 | `GET visits/{id}` | View visits and the dispatch board | A visit with its history and notices. |

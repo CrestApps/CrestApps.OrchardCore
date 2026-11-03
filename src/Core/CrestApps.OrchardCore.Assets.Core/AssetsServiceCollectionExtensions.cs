@@ -25,6 +25,7 @@ public static class AssetsServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Asset>, AssetHandler>());
         services.TryAddScoped<AssetMeterReadingStore>();
         services.TryAddScoped<AssetService>();
+        services.TryAddScoped<AssetOwnerDirectory>();
 
         return services;
     }

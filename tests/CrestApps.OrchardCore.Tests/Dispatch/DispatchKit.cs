@@ -124,6 +124,7 @@ internal sealed class DispatchKit : IAsyncDisposable
                 services.AddSingleton<IFieldFileStore>(kit.Files);
                 services.AddSingleton<Microsoft.AspNetCore.Http.IHttpContextAccessor, Microsoft.AspNetCore.Http.HttpContextAccessor>();
                 services.AddScoped<CrestApps.OrchardCore.Dispatch.Reports.FieldServiceKpiService>();
+                services.AddScoped<CrestApps.OrchardCore.Dispatch.Controllers.DispatchTimeZone>();
                 services.TryAddScoped<ServiceTerritoryStore>();
                 services.TryAddScoped<ServiceTerritoryManager>();
                 services.TryAddEnumerable(ServiceDescriptor.Scoped<CrestApps.Core.Services.ICatalogEntryHandler<ServiceTerritory>, ServiceTerritoryHandler>());

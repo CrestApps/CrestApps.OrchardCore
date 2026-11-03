@@ -43,6 +43,11 @@ public sealed class AssetRow
     public string ParentName { get; set; }
 
     /// <summary>
+    /// Gets or sets the name of the customer, company or contact that owns it.
+    /// </summary>
+    public string OwnerName { get; set; }
+
+    /// <summary>
     /// Gets or sets today, for the warranty.
     /// </summary>
     public DateOnly Today { get; set; }
@@ -67,6 +72,22 @@ public class AssetsListViewModel
     /// Gets or sets the state filter.
     /// </summary>
     public string Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets the kind of owner to list the assets of.
+    /// </summary>
+    public string OwnerKind { get; set; }
+
+    /// <summary>
+    /// Gets or sets the owner to list the assets of.
+    /// </summary>
+    public string OwnerId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the owner listed.
+    /// </summary>
+    [BindNever]
+    public string OwnerName { get; set; }
 
     /// <summary>
     /// Gets or sets the types.
@@ -208,6 +229,23 @@ public class AssetEditViewModel
     /// Gets or sets the customer or company that owns it.
     /// </summary>
     public string OwnerId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the owner picked for each kind, as the pickers post them.
+    /// </summary>
+    public Dictionary<string, string> OwnerIds { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Gets or sets the kinds of owner that can be picked.
+    /// </summary>
+    [BindNever]
+    public IList<AssetOwnerKind> OwnerKinds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the current owner's name.
+    /// </summary>
+    [BindNever]
+    public string OwnerName { get; set; }
 
     /// <summary>
     /// Gets or sets the asset it is part of.
@@ -370,6 +408,12 @@ public class AssetDetailsViewModel
     /// </summary>
     [BindNever]
     public bool CanManage { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the customer, company or contact that owns it.
+    /// </summary>
+    [BindNever]
+    public string OwnerName { get; set; }
 
     /// <summary>
     /// Gets or sets the meter of a new reading.

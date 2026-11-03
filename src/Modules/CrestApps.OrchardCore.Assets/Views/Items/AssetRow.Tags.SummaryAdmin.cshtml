@@ -10,7 +10,7 @@
 }
 @if (asset.OwnerKind != AssetOwnerKind.Internal)
 {
-    <span class="badge ta-badge fw-normal">@T["{0}: {1}", asset.OwnerKind, asset.OwnerId]</span>
+    <span class="badge ta-badge fw-normal">@T["{0}: {1}", asset.OwnerKind, Model.Value.OwnerName]</span>
 }
 @if (!string.IsNullOrEmpty(Model.Value.ParentName))
 {
