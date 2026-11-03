@@ -34,7 +34,7 @@ Go to **Time Tracker > Time Entries**, find the entry by user name, stage or day
 
 ## Time from the time clock
 
-With the Workforce time clock on, a worker's punches keep their day here: their **Time Entries** say **From the Time Clock**, open read-only, and are corrected with punches on the worker's timesheet. Their **My Time** says their time is kept by the time clock, with a link to My Work. See [Time Clock](./time-clock.md).
+With the Workforce time clock on, the punches of a worker whose team uses a time clock policy keep their day here: their **Time Entries** say **From the Time Clock**, open read-only, and are corrected with punches on the worker's timesheet. Their **My Time** says their time is kept by the time clock and shows its buttons, **Clock in**, **Start break**, **Start meal**, the matching **End** buttons and **Clock out**, the same as in My Work. A worker whose team has no time clock policy has no clock to punch, so they clock in and switch stages on My Time as anyone else does. See [Time Clock](./time-clock.md).
 
 ## Time from the Contact Center
 

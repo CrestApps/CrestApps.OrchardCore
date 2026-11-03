@@ -42,6 +42,11 @@ public sealed class TimeClockTimeTrackerOptions
     /// Gets or sets where a manager corrects punches, such as the timesheets.
     /// </summary>
     public string ManageUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the view component that shows the punch buttons on My Time; <see langword="null"/> for a link.
+    /// </summary>
+    public string ControlsViewComponent { get; set; }
 }
 
 /// <summary>
@@ -347,18 +352,28 @@ internal sealed class ActivityCodeStageHandler : CatalogEntryHandlerBase<Activit
 }
 
 /// <summary>
-/// The time clock, as Time Tracker sees it: it keeps the time of every worker with a login.
+/// The time clock, as Time Tracker sees it: it keeps the time of every worker with a login whose team uses a time
+/// clock policy. Other people keep their time in Time Tracker, since they have no clock to punch.
 /// </summary>
 internal sealed class TimeClockExternalClock : IExternalTimeClock
 {
     private readonly WorkerStore _workers;
+    private readonly Lazy<ITimeClockService> _timeClock;
+    private readonly IClock _clock;
     private readonly TimeClockTimeTrackerOptions _options;
 
     internal readonly IStringLocalizer S;
 
-    public TimeClockExternalClock(WorkerStore workers, IOptions<TimeClockTimeTrackerOptions> options, IStringLocalizer<TimeClockExternalClock> stringLocalizer)
+    public TimeClockExternalClock(
+        WorkerStore workers,
+        Lazy<ITimeClockService> timeClock,
+        IClock clock,
+        IOptions<TimeClockTimeTrackerOptions> options,
+        IStringLocalizer<TimeClockExternalClock> stringLocalizer)
     {
         _workers = workers;
+        _timeClock = timeClock;
+        _clock = clock;
         _options = options.Value;
         S = stringLocalizer;
     }
@@ -372,7 +387,12 @@ internal sealed class TimeClockExternalClock : IExternalTimeClock
 
         var worker = await _workers.FindByUserIdAsync(userId, cancellationToken);
 
-        return worker is null || worker.Status == WorkerStatus.Terminated ? null : Info();
+        if (worker is null || worker.Status == WorkerStatus.Terminated)
+        {
+            return null;
+        }
+
+        return await _timeClock.Value.GetPolicyAsync(worker, DateOnly.FromDateTime(_clock.UtcNow), cancellationToken) is null ? null : Info();
     }
 
     public Task<ExternalTimeClockInfo> FindByIdAsync(string id, CancellationToken cancellationToken = default)
@@ -384,6 +404,7 @@ internal sealed class TimeClockExternalClock : IExternalTimeClock
         Name = S["the Time Clock"],
         Url = _options.ClockUrl,
         ManageUrl = _options.ManageUrl,
+        ControlsViewComponent = _options.ControlsViewComponent,
     };
 }
 

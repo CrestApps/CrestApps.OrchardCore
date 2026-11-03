@@ -359,6 +359,12 @@ public sealed class ExternalTimeClockInfo
     /// Gets or sets where a manager corrects the time it keeps.
     /// </summary>
     public string ManageUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the view component that shows the clock's own buttons on My Time, such as clocking in and
+    /// starting a break; <see langword="null"/> to link to <see cref="Url"/> instead.
+    /// </summary>
+    public string ControlsViewComponent { get; set; }
 }
 
 /// <summary>

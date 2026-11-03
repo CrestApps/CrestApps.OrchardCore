@@ -1,3 +1,4 @@
+using System.Globalization;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using CrestApps.OrchardCore.Workforce.ViewModels;
@@ -125,6 +126,9 @@ public sealed class TimeClockPoliciesController : Controller
             DailyOvertimeHours = item.DailyOvertimeHours,
             DailyDoubleTimeHours = item.DailyDoubleTimeHours,
             WeeklyOvertimeHours = item.WeeklyOvertimeHours,
+            SeventhDayOvertime = item.SeventhDayOvertime,
+            Holidays = string.Join(Environment.NewLine, item.Holidays.Select(date => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))),
+            WeekendDays = item.WeekendDays.Select(day => day.ToString()).ToList(),
             Points = Enum.GetValues<AttendanceExceptionKind>().ToDictionary(kind => kind.ToString(), kind => item.AttendancePoints.FirstOrDefault(rule => rule.Kind == kind)?.Points),
             PointsWindowDays = item.PointsWindowDays,
             PointsThreshold = item.PointsThreshold,
@@ -177,6 +181,21 @@ public sealed class TimeClockPoliciesController : Controller
         item.DailyOvertimeHours = model.DailyOvertimeHours;
         item.DailyDoubleTimeHours = model.DailyDoubleTimeHours;
         item.WeeklyOvertimeHours = model.WeeklyOvertimeHours;
+        item.SeventhDayOvertime = model.SeventhDayOvertime;
+        item.WeekendDays = (model.WeekendDays ?? []).Select(day => Enum.TryParse<DayOfWeek>(day, out var parsed) ? parsed : (DayOfWeek?)null).Where(day => day.HasValue).Select(day => day.Value).Distinct().ToList();
+        item.Holidays = [];
+
+        foreach (var line in (model.Holidays ?? string.Empty).Split(['\r', '\n', ','], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (DateOnly.TryParseExact(line, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var holiday))
+            {
+                item.Holidays.Add(holiday);
+            }
+            else
+            {
+                ModelState.AddModelError(nameof(model.Holidays), S["\"{0}\" isn't a date written as year-month-day, such as 2026-12-25.", line]);
+            }
+        }
         item.AttendancePoints = (model.Points ?? new Dictionary<string, decimal?>())
             .Where(pair => pair.Value is > 0 && Enum.TryParse<AttendanceExceptionKind>(pair.Key, out _))
             .Select(pair => new AttendancePointRule { Kind = Enum.Parse<AttendanceExceptionKind>(pair.Key), Points = pair.Value.Value })

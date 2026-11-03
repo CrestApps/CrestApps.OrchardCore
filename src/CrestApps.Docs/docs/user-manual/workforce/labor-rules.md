@@ -10,7 +10,7 @@ Labor rules keep schedules within the limits your teams must follow, such as the
 
 | | |
 | --- | --- |
-| **Menu** | Workforce > Labor Rules, Workforce > Rule Overrides; Predictability Pay is under Time Tracker when the time clock is on, and under Workforce otherwise |
+| **Menu** | Workforce > Labor Rules, Workforce > Rule Overrides, Workforce > Time Management > Predictability Pay |
 | **Permission** | Manage labor rules, Override labor rules, Approve predictability pay, Manage the whole workforce |
 | **Feature** | Workforce Labor Rules (it needs Workforce Shift Planning) |
 
@@ -89,7 +89,7 @@ Add the **Predictability pay** rule to a rule set to record a premium when the e
 
 Changes a worker asked for, such as trades, claims and time off, owe nothing.
 
-Open **Predictability Pay** (under **Time Tracker** with the time clock on, or **Workforce**) to see what is owed for the teams you manage. Choose **Approve** to have it paid, or give the reason it isn't owed, such as an emergency closure, and choose **Waive**. Filter by status to see approved, waived and exported entries.
+Open **Workforce > Time Management > Predictability Pay** to see what is owed for the teams you manage. Choose **Approve** to have it paid, or give the reason it isn't owed, such as an emergency closure, and choose **Waive**. Filter by status to see approved, waived and exported entries.
 
 ## Permissions
 

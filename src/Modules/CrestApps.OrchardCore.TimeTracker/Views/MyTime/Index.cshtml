@@ -32,7 +32,12 @@
                 @TimeTrackerTimeZone.Hours((decimal)(Model.NowUtc - open.StartUtc).TotalMinutes)
             </p>
         }
-        @if (Model.ExternalClock is { } keeper)
+        @if (Model.ExternalClock is { ControlsViewComponent.Length: > 0 } controls)
+        {
+            <p class="mb-3">@T["Your time is kept by {0}, and shown here as it is clocked.", controls.Name]</p>
+            @await Component.InvokeAsync(controls.ControlsViewComponent)
+        }
+        else if (Model.ExternalClock is { } keeper)
         {
             <p class="mb-0">
                 @T["Your time is kept by {0}, and shown here as it is clocked.", keeper.Name]

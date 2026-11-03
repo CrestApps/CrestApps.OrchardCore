@@ -29,7 +29,8 @@ internal sealed class PayCodeSeeder
             ("DT", "Double time", PayCodeKind.DoubleTime, 2m),
             ("PTO", "Paid time off", PayCodeKind.PaidTimeOff, 1m),
             ("PP", "Predictability pay", PayCodeKind.PredictabilityPay, 1m),
-            ("HOL", "Holiday", PayCodeKind.Holiday, 1m),
+            ("HOL", "Holiday", PayCodeKind.Holiday, 1.5m),
+            ("WKND", "Weekend", PayCodeKind.Weekend, 1.5m),
             ("UNPAID", "Unpaid", PayCodeKind.Unpaid, 0m),
         })
         {

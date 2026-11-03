@@ -25,14 +25,12 @@ public sealed class GeoAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Territories"], S["Territories"].PrefixPosition("7"), territories => territories
-                .Id("geoTerritories")
-                .AddClass("geo-territories")
-                .AddClass("icon-class-fa-solid")
-                .AddClass("icon-class-fa-map-location-dot")
-                .Action("Index", "Territories", GeoConstants.Features.Geo)
-                .Permission(GeoPermissions.ManageTerritories)
-                .LocalNav())
+            .Add(S["Field Service"], fieldService => fieldService
+                .Add(S["Territories"], S["Territories"].PrefixPosition("64"), territories => territories
+                    .Id("geoTerritories")
+                    .Action("Index", "Territories", GeoConstants.Features.Geo)
+                    .Permission(GeoPermissions.ManageTerritories)
+                    .LocalNav()))
             .Add(S["Settings"], settings => settings
                 .Add(S["Maps and Geocoding"], S["Maps and Geocoding"].PrefixPosition(), maps => maps
                     .Id("geoSettings")

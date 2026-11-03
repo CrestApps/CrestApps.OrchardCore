@@ -69,6 +69,12 @@ public sealed class TimeClockPolicyEditViewModel
 
     public decimal? WeeklyOvertimeHours { get; set; }
 
+    public bool SeventhDayOvertime { get; set; }
+
+    public string Holidays { get; set; }
+
+    public IList<string> WeekendDays { get; set; } = [];
+
     public IDictionary<string, decimal?> Points { get; set; } = new Dictionary<string, decimal?>();
 
     public int PointsWindowDays { get; set; }

@@ -23,7 +23,7 @@ A visit is one trip to do a work order's job. Dispatch finds who can do it, book
 
 - Technicians are workers in a team, with published shifts. Give them a home base, or their team a place, so travel is counted from there.
 - On a work order type, under **Who can do it**, choose the skills the job needs (with the lowest level) and the certifications the technician must hold.
-- On a territory's page (**Territories**), choose under **Who serves it** the technicians and teams that work there.
+- On a territory's page (**Field Service > Territories**), choose under **Who serves it** the technicians and teams that work there.
 - On a work order, place the job on the map: click the map under the address, or drag the pin. Without a pin, the address is placed in the background when a geocoding provider is set.
 
 ## Schedule a visit

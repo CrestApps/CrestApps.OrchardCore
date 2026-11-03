@@ -18,7 +18,7 @@ Territories group the places you serve, so work can go to the people who cover t
 
 ## Add a territory
 
-1. Go to **Territories** and select **Add territory**.
+1. Go to **Field Service > Territories** and select **Add territory**.
 2. Enter a name, and choose the larger territory it is part of, if any.
 3. Under **Area**, draw it with the tools on the left of the map: a rectangle or a polygon (click each corner, then the first one again). Draw more than one shape if the territory has separate parts. Drag a corner to change a shape, move it, cut a hole in it, or erase it. Other territories show in grey.
 4. Under **Postal codes**, list its codes, separated by commas. End a code with `*` to take every code that starts with it, such as `021*`.

@@ -10,7 +10,7 @@ The time clock records when workers start and stop work, turns their punches int
 
 | | |
 | --- | --- |
-| **Menu** | Time Tracker > Timesheets, Attendance, Payroll Export, Time Clock Policies, Pay Periods, Pay Codes, Time Clock Kiosks |
+| **Menu** | Workforce > Time Management > Timesheets, Attendance, Payroll Export, Time Clock Policies, Pay Periods, Pay Codes, Time Clock Kiosks |
 | **Permission** | Manage time clock policies, Approve timesheets, Edit punches, Export payroll, View pay rates, Clock in and out |
 | **Feature** | Workforce Time Clock (it needs Workforce and Time Tracker) |
 
@@ -27,9 +27,9 @@ Every punch of a worker who has a login also keeps their day in [Time Tracker](.
 
 ## Setting it up
 
-1. Under **Time Tracker > Pay Periods**, choose **Add pay periods**: how often workers are paid (every week, every two weeks, twice a month or every month), the first day of any one period for weekly and two-weekly pay, and the day the overtime week starts. The editor shows the next periods.
-2. Under **Time Tracker > Pay Codes**, check the codes. Regular, overtime, double time, paid time off, predictability pay, holiday and unpaid codes are added when the feature is turned on. Give a code a **payroll code** when your payroll system calls it something else.
-3. Under **Time Tracker > Time Clock Policies**, choose **Add policy** (see below).
+1. Under **Workforce > Time Management > Pay Periods**, choose **Add pay periods**: how often workers are paid (every week, every two weeks, twice a month or every month), the first day of any one period for weekly and two-weekly pay, and the day the overtime week starts. The editor shows the next periods.
+2. Under **Workforce > Time Management > Pay Codes**, check the codes. Regular, overtime, double time, paid time off, predictability pay, holiday (time and a half), weekend (time and a half) and unpaid codes are added when the feature is turned on. Give a code a **payroll code** when your payroll system calls it something else.
+3. Under **Workforce > Time Management > Time Clock Policies**, choose **Add policy** (see below).
 4. Under **Workforce > Teams**, give the team its **time clock policy**. Sub-teams use their parent's. A team with no policy, and no parent with one, doesn't clock time.
 5. For kiosks, give each worker an **employee number** (their badge number) and a PIN under **Workers > Actions > Time clock**.
 
@@ -47,7 +47,10 @@ Every punch of a worker who has a login also keeps their day in [Time Tracker](.
 | **A forgotten clock-out** | Isn't paid until a manager fixes it, or is paid to the end of the shift. Either way it is raised as a missed punch. |
 | **Take a meal off after** | A day longer than this with no meal punched has the **meal taken off**. |
 | **Longest meal** | A longer meal is a *long meal*. |
-| **Overtime** | Hours past the weekly limit, or past the daily limit, are overtime; hours past the double-time limit are double time. |
+| **Overtime** | Hours past the weekly limit, or past the daily limit, are overtime; hours past the double-time limit are double time. Only regular hours count toward the weekly limit, so hours already paid as daily overtime aren't counted again. |
+| **Seventh day in a row is overtime** | When all seven days of a week are worked, the seventh day's first eight hours are overtime and the rest double time. |
+| **Holidays** | Dates, one a line, such as 2026-12-25. Regular hours worked on them are paid with the **Holiday** pay code; hours past an overtime limit stay overtime. |
+| **Weekend days** | Regular hours worked on these days are paid with the **Weekend** pay code instead of the regular one. |
 | **Attendance points** | The points each kind of exception earns, how many days they count, and the points at which the worker's line manager is told in My Work. |
 
 Site coordinates are set on the team, under **Workforce > Teams**, when the time clock is on.
@@ -56,13 +59,21 @@ Site coordinates are set on the team, under **Workforce > Teams**, when the time
 The time clock pays overtime from its policy's limits. The labor rules' Overtime rule warns when a schedule plans too many hours; keep the two in step.
 :::
 
+### Overtime by state
+
+Each team uses one policy, so teams in places with different overtime laws use different policies:
+
+- **Overtime after 40 hours a week:** set **Overtime after** to 40 and leave **Daily overtime after** empty.
+- **Overtime after 8 hours a day, and after 40 a week:** set both, 8 a day and 40 a week; add **Double time after** 12 hours a day and tick **Seventh day in a row is overtime** where the law asks for them.
+- **Time and a half on holidays or weekends:** list the **Holidays**, tick the **Weekend days**, and set the **Holiday** and **Weekend** pay codes' multipliers to 1.5. Without a Weekend or Holiday code in use, those hours are paid as regular hours.
+
 ## Clocking in
 
 In **My Work**, the home page shows a **Time clock** card: whether the worker is clocked in, on a meal or on a break, since when, and buttons for what they can do next (**Clock in**, **Start meal**, **End meal**, **Start break**, **End break**, **Clock out**). Punches follow each other: a worker can't clock in twice or end a meal they didn't start. A worker who forgot to clock out can clock in again the next day; the forgotten punch is raised as missed.
 
 ### Kiosks
 
-Under **Time Tracker > Time Clock Kiosks**, choose **Add kiosk**, name it, and optionally limit it to a team. After saving, the kiosk's **private address** is shown once: open it on the device and leave it open. Workers enter their badge number and PIN, then choose what to punch. After five wrong PINs in a row, the kiosk refuses that worker's PIN for 15 minutes. **Give it a new address** when the address is lost or seen by someone it shouldn't be; the old one stops working.
+Under **Workforce > Time Management > Time Clock Kiosks**, choose **Add kiosk**, name it, and optionally limit it to a team. After saving, the kiosk's **private address** is shown once: open it on the device and leave it open. Workers enter their badge number and PIN, then choose what to punch. After five wrong PINs in a row, the kiosk refuses that worker's PIN for 15 minutes. **Give it a new address** when the address is lost or seen by someone it shouldn't be; the old one stops working.
 
 ## Timesheets
 
@@ -71,13 +82,13 @@ Each worker has a timesheet for each pay period. It is worked out from their pun
 - punches pair into work, paid breaks and unpaid meals;
 - grace and rounding apply;
 - days split at midnight in the worker's time zone, so a night shift is paid on both days, and the nights the clocks change are paid the hours really worked;
-- hours are regular, overtime or double time by the policy's limits;
+- hours are regular, overtime or double time by the policy's limits, and regular hours on its holidays and weekend days are holiday and weekend hours;
 - approved time off is added under its type's pay code (or paid time off), and approved predictability pay under the predictability pay code;
 - shift differentials add a premium for the hours in their window.
 
 Workers see theirs under **My Work > Timesheet**: the hours each day, their punches, anything that looks off, and the periods before. **Forgot to punch?** asks the manager for a punch they missed. **Submit** sends the timesheet with their confirmation that the hours are right.
 
-Managers open **Time Tracker > Timesheets**, choose the pay period, and open a timesheet. It shows each day's punches, hours and exceptions, the totals by pay code, and the punches the worker asked for. From there a manager can:
+Managers open **Workforce > Time Management > Timesheets**, choose the pay period, and open a timesheet. It shows each day's punches, hours and exceptions, the totals by pay code, and the punches the worker asked for. From there a manager can:
 
 - **Approve** the timesheet, **Send back** a submitted one with what to fix, or **Reopen** an approved one;
 - **Add a punch**, or **change or remove** one, with a reason. The original stays in the history;
@@ -90,7 +101,7 @@ Several timesheets can be approved at once from the list. **Make this period's t
 
 ## Attendance
 
-**Time Tracker > Attendance** lists the exceptions found against the published schedule:
+**Workforce > Time Management > Attendance** lists the exceptions found against the published schedule:
 
 | Exception | When |
 | --- | --- |
@@ -105,7 +116,7 @@ Several timesheets can be approved at once from the list. **Make this period's t
 
 ## Payroll export
 
-Under **Time Tracker > Payroll Export**, choose the pay period. The counts show how many timesheets are open, submitted, approved and locked. **Export locked timesheets** writes a CSV file with a row per worker and pay code, which you download from the list of exports. Each timesheet is exported once; tick **Export again the ones already exported** to include them again.
+Under **Workforce > Time Management > Payroll Export**, choose the pay period. The counts show how many timesheets are open, submitted, approved and locked. **Export locked timesheets** writes a CSV file with a row per worker and pay code, which you download from the list of exports. Each timesheet is exported once; tick **Export again the ones already exported** to include them again.
 
 **Choose the CSV columns** sets the file's columns and headings: payroll id, employee number, name, pay code, day, hours, rate, amount, period, activity and job. A day, activity or job column gives a row per day, activity or job. Rates come from the worker's **pay rates** under **Workers > Actions > Time clock** (people with the View pay rates permission see them): a rate an hour from a day on, for all work or one activity. The amount is the hours times the rate and the code's multiplier, or the hours times a differential's premium.
 
@@ -114,7 +125,7 @@ Under **Time Tracker > Payroll Export**, choose the pay period. The counts show 
 | Field | What it does |
 | --- | --- |
 | **Code** | Short and unique, such as REG. |
-| **Pays for** | Regular hours, overtime, double time, holiday hours, paid time off, predictability pay, call back, a shift differential, or unpaid time. |
+| **Pays for** | Regular hours, overtime, double time, holiday hours, weekend hours, paid time off, predictability pay, call back, a shift differential, or unpaid time. |
 | **Multiplier** | What the rate is multiplied by, such as 1.5 for overtime. |
 | **Premium an hour**, **Hours**, **On** | For a shift differential: the premium, the window in the worker's time (an end before the start runs past midnight), and the days it starts on. |
 | **Payroll code** | What payroll calls it, when that differs. |

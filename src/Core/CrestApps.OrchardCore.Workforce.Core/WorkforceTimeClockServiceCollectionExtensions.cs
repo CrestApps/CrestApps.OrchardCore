@@ -59,7 +59,7 @@ public static class WorkforceTimeClockServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Keeps the time of every worker with a login in Time Tracker, from their punches, in the stages of their
+    /// Keeps the time of every worker with a login and a time clock policy in Time Tracker, from their punches, in the stages of their
     /// activities. Time Tracker's services must be added too.
     /// </summary>
     /// <param name="services">The services.</param>
@@ -74,6 +74,7 @@ public static class WorkforceTimeClockServiceCollectionExtensions
         services.TryAddScoped<TimeClockTrackerBackfill>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITimePunchObserver, TimeClockTimeTrackerSync>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IExternalTimeClock, TimeClockExternalClock>());
+        services.TryAddScoped(provider => new Lazy<ITimeClockService>(provider.GetRequiredService<ITimeClockService>));
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ActivityCode>, ActivityCodeStageHandler>());
 
         return services;

@@ -20,13 +20,14 @@
                     <option value="Overtime">@T["Overtime"]</option>
                     <option value="DoubleTime">@T["Double time"]</option>
                     <option value="Holiday">@T["Holiday hours"]</option>
+                    <option value="Weekend">@T["Weekend hours"]</option>
                     <option value="PaidTimeOff">@T["Paid time off"]</option>
                     <option value="PredictabilityPay">@T["Predictability pay"]</option>
                     <option value="CallBack">@T["Call back"]</option>
                     <option value="ShiftDifferential">@T["A shift differential (a premium for hours in a window)"]</option>
                     <option value="Unpaid">@T["Unpaid time"]</option>
                 </select>
-                <span class="hint">@T["Worked hours use the first code in use of regular, overtime and double time. Holiday and call-back codes are for lines managers add."]</span>
+                <span class="hint">@T["Worked hours use the code in use of regular, overtime and double time. Regular hours on a policy's holidays and weekend days use the holiday and weekend codes, instead of the regular one; call-back codes are for lines managers add."]</span>
             </div>
         </div>
         <div class="ocat-wrapper"><label asp-for="Multiplier" class="ocat-label">@T["Multiplier"]</label><div class="ocat-end"><input asp-for="Multiplier" type="number" step="0.05" min="0" max="10" class="form-control" style="max-width: 8rem" /><span class="hint">@T["What the hourly rate is multiplied by, such as 1.5 for overtime."]</span></div></div>

@@ -76,28 +76,33 @@ public sealed class TimeClockTimeTrackerTests
     }
 
     [Fact]
-    public async Task AWorkerWithoutALogin_IsLeftOut_AndALinkedWorkersTimeIsKeptByTheTimeClock()
+    public async Task AWorkerWithoutALogin_IsLeftOut_AndALinkedWorkersTimeIsKeptByTheTimeClock_WhenTheirTeamUsesOne()
     {
         await using var kit = await CreateAsync();
         var team = await kit.AddTeamAsync("Field");
         var kiosk = await PlanningKit.AddMemberAsync(kit.Harness, "Kiosk only", team, worker => worker.UserId = null);
         await PlanningKit.AddMemberAsync(kit.Harness, "Ana", team, worker => worker.UserId = "ana");
+        var office = await WorkforceTests.AddTeamAsync(kit.Harness, "Office", TeamKind.Team);
+        await PlanningKit.AddMemberAsync(kit.Harness, "Bo", office, worker => worker.UserId = "bo");
 
         await kit.PunchAtAsync(kiosk, TimePunchKind.In, _monday, 9);
 
         var all = await kit.Harness.RunAsync(services => services.GetRequiredService<ITimeTrackerService>().ListAsync(new TimeEntryQuery()), commit: false);
-        var (anaClock, nobodyClock, switched) = await kit.Harness.RunAsync(async services =>
+        var (anaClock, nobodyClock, boClock, switched) = await kit.Harness.RunAsync(async services =>
         {
             var clock = services.GetServices<IExternalTimeClock>().Single();
             var tracker = services.GetRequiredService<ITimeTrackerService>();
             var stage = (await services.GetRequiredService<global::CrestApps.OrchardCore.TimeTracker.Core.Services.TimeStageManager>().GetAllAsync()).First();
 
-            return (await clock.FindAsync("ana"), await clock.FindAsync("someone"), await tracker.SwitchAsync("ana", "ana", stage.ItemId, TimeTrackerConstants.Sources.Self, "ana"));
+            return (await clock.FindAsync("ana"), await clock.FindAsync("someone"), await clock.FindAsync("bo"), await tracker.SwitchAsync("ana", "ana", stage.ItemId, TimeTrackerConstants.Sources.Self, "ana"));
         });
 
         Assert.Empty(all);
         Assert.Equal(TimeClockTimeTracker.ClockId, anaClock.Id);
         Assert.Null(nobodyClock);
+
+        // A worker whose team has no time clock policy can't punch, so they keep their time in Time Tracker.
+        Assert.Null(boClock);
         Assert.Equal("Your time is kept by the Time Clock.", Assert.Single(switched.Errors));
     }
 

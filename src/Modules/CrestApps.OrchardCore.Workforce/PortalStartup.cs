@@ -32,7 +32,11 @@ public sealed class PortalStartup : StartupBase
             .AddIndexProvider<WebPushSubscriptionIndexProvider>()
             .AddIndexProvider<WorkerFeedIndexProvider>();
         services.AddScoped<MyWorkPortal>();
-        services.Configure<TimeClockTimeTrackerOptions>(options => options.ClockUrl = "~/my-work");
+        services.Configure<TimeClockTimeTrackerOptions>(options =>
+        {
+            options.ClockUrl = "~/my-work";
+            options.ControlsViewComponent = Portal.TimeClockControlsViewComponent.Name;
+        });
         services.AddPermissionProvider<PortalPermissionsProvider>();
         services.AddNavigationProvider<PortalAdminMenu>();
     }

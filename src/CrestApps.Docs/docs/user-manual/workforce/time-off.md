@@ -10,7 +10,7 @@ Time Off keeps track of the time workers may take and the time they ask for. You
 
 | | |
 | --- | --- |
-| **Menu** | Workforce > Time Off, Workforce > Time-Off Types, Workforce > Time-Off Policies, Workforce > Time-Off Allotments, Workforce > Blackout Dates |
+| **Menu** | Workforce > Time Management > Time-Off Requests, Time-Off Types, Time-Off Policies, Time-Off Allotments, Blackout Dates |
 | **Permission** | Approve time off, Adjust time-off balances, Manage time-off policies, Manage the whole workforce |
 | **Feature** | Workforce Time Off (it needs Workforce) |
 
@@ -20,7 +20,7 @@ A manager sees and decides the time off of the teams they manage, as described i
 
 ## Time-off types
 
-Open **Workforce > Time-Off Types** and choose **Add time-off type**.
+Open **Workforce > Time Management > Time-Off Types** and choose **Add time-off type**.
 
 | Field | What it does |
 | --- | --- |
@@ -43,7 +43,7 @@ A day on which the worker has published shifts counts the paid time of those shi
 
 ## Time-off policies
 
-A policy says how workers earn one type of time off and keep it. Open **Workforce > Time-Off Policies** and choose **Add time-off policy**.
+A policy says how workers earn one type of time off and keep it. Open **Workforce > Time Management > Time-Off Policies** and choose **Add time-off policy**.
 
 | Field | What it does |
 | --- | --- |
@@ -88,7 +88,7 @@ With [Time Tracker](./time-tracker.md) on, every day of approved time off of a w
 
 ## Requesting time off
 
-Open **Workforce > Time Off** and choose **Request time off** to record a request for a worker of a team you manage.
+Open **Workforce > Time Management > Time-Off Requests** and choose **Request time off** to record a request for a worker of a team you manage.
 
 | Field | What it does |
 | --- | --- |
@@ -110,7 +110,7 @@ A request that is accepted is approved at once when it fits an allotment that ap
 
 ## Deciding on requests
 
-**Workforce > Time Off** lists the requests that wait for a place or a decision, from the teams you manage, earliest first. Filter by team or status to see approved, declined, canceled or withdrawn requests. Tick requests and use the bulk actions to **Approve** or **Decline** several at once.
+**Workforce > Time Management > Time-Off Requests** lists the requests that wait for a place or a decision, from the teams you manage, earliest first. Filter by team or status to see approved, declined, canceled or withdrawn requests. Tick requests and use the bulk actions to **Approve** or **Decline** several at once.
 
 Choose **View** to open a request. It shows each day and what it counts, the worker's balance on the first day, the worker's published shifts on those days, and who else on the team is off or has asked to be off then. Add an optional note to the worker and choose:
 
@@ -136,7 +136,7 @@ Approved time off is an event on the team's Workforce calendar that can't be edi
 
 ## Allotments
 
-An allotment says how many people of a team, and the teams under it, may be off on a day. Open **Workforce > Time-Off Allotments** and choose **Add allotment**.
+An allotment says how many people of a team, and the teams under it, may be off on a day. Open **Workforce > Time Management > Time-Off Allotments** and choose **Add allotment**.
 
 | Field | What it does |
 | --- | --- |
@@ -153,7 +153,7 @@ When time off is canceled or a pending request is withdrawn, the waitlisted requ
 
 ## Blackout dates
 
-Open **Workforce > Blackout Dates** and choose **Add blackout dates** to block time off on dates such as a busy season.
+Open **Workforce > Time Management > Blackout Dates** and choose **Add blackout dates** to block time off on dates such as a busy season.
 
 | Field | What it does |
 | --- | --- |
