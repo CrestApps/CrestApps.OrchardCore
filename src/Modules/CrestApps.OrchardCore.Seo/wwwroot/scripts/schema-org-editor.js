@@ -169,6 +169,7 @@
 			return suggested >= 0 ? 30 - suggested : 0;
 		}
 		function suggestMapping(property, sources) {
+			/** @type {{ key: string } | null} */
 			var best = null;
 			var bestScore = 0;
 			(sources || []).forEach(function(source) {
