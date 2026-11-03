@@ -34,6 +34,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
+using OrchardCore.Recipes.Services;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Workflows.Helpers;
 using YesSql;
@@ -183,7 +184,7 @@ public sealed class CrmRecipesStartup : StartupBase
     {
         services.AddRecipeExecutionStep<LeadStatusStep>();
         services.AddRecipeExecutionStep<OpportunityStageStep>();
-        services.AddScoped<global::OrchardCore.Recipes.Events.IRecipeEventHandler, CrmRecipeEventHandler>();
+        services.AddScoped<IRecipeStepHandler, CrmRecipeStepHandler>();
     }
 }
 

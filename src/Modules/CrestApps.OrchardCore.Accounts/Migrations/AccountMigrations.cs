@@ -9,12 +9,13 @@ using OrchardCore.Title.Models;
 namespace CrestApps.OrchardCore.Accounts.Migrations;
 
 /// <summary>
-/// Defines the account part and creates the <c>Account</c> type when it is missing.
+/// Defines the account part, creates the <c>Account</c> type when it is missing, and brings every account type's list up
+/// to date.
 /// </summary>
 /// <remarks>
 /// A site that ran the Omnichannel CRM before accounts had a module of their own already has both, created under the
 /// same names. The type is only created when it is missing, so that site's type, its settings and every account
-/// stored with it are left exactly as they are.
+/// stored with it are kept; its list only gains the types that can belong to an account and were never offered.
 /// </remarks>
 internal sealed class AccountMigrations : DataMigration
 {
@@ -71,6 +72,19 @@ internal sealed class AccountMigrations : DataMigration
                     })));
         }
 
-        return 1;
+        await _accountListSynchronizer.SynchronizeAsync();
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Brings the account lists up to date once on a site that already had accounts. A recipe that enabled the CRM and
+    /// defined its contact types in one run left the list of the <c>Account</c> type empty.
+    /// </summary>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await _accountListSynchronizer.SynchronizeAsync();
+
+        return 2;
     }
 }

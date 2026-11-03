@@ -65,8 +65,9 @@ internal sealed class OrderMigrations : DataMigration
     }
 
     /// <summary>
-    /// Replaces the order index's company column with the account column. The Companies module that filled it is gone;
-    /// a business order is placed for an account now, and the column starts empty.
+    /// Adds the order index's account column. The Companies module that filled the company column is gone; a business
+    /// order is placed for an account now, and nothing reads the company column any more. It is left in place and
+    /// dropped in a later release, as the migrations' expand-then-contract rule requires.
     /// </summary>
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom2Async()
@@ -76,15 +77,6 @@ internal sealed class OrderMigrations : DataMigration
             table.AddColumn<string>("AccountId", column => column.Nullable().WithLength(26));
             table.CreateIndex("IDX_OrderIndex_AccountId", "AccountId");
         }, collection: OrderConstants.CollectionName);
-
-        // The column has to lose its index before it can be dropped.
-        await SchemaBuilder.AlterIndexTableAsync<OrderIndex>(table => table
-            .DropIndex("IDX_OrderIndex_CompanyId"),
-            collection: OrderConstants.CollectionName);
-
-        await SchemaBuilder.AlterIndexTableAsync<OrderIndex>(table => table
-            .DropColumn("CompanyId"),
-            collection: OrderConstants.CollectionName);
 
         return 3;
     }

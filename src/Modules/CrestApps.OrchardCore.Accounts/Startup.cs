@@ -15,7 +15,7 @@ using OrchardCore.ContentTypes.Events;
 using OrchardCore.Data.Migration;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
-using OrchardCore.Recipes.Events;
+using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.Accounts;
 
@@ -54,7 +54,7 @@ public sealed class RecipesStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IRecipeEventHandler, AccountsRecipeEventHandler>();
+        services.AddScoped<IRecipeStepHandler, AccountsRecipeStepHandler>();
     }
 }
 

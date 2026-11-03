@@ -7,9 +7,32 @@ description: Make the Account content item the one organization record, in its o
 
 # Accounts — Project Plan
 
-> **Status: approved, in progress.** Written against `cbaf74596` (main). Each step below is one commit on
+> **Status: built** in PR #1266. [As built](#as-built) lists where the build differs from the design below.
+>
+> **Earlier status: approved, in progress.** Written against `cbaf74596` (main). Each step below is one commit on
 > `claude/accounts-module`, all in one PR. Revised on 2026-11-03: the Companies module is deleted rather than migrated
 > (see [Commerce: Accounts B2B](#commerce-accounts-b2b)).
+
+## As built
+
+- **Account page.** The account's page is Orchard Core's content display page (`DetailAdmin`), which Field Service already
+  adds cards to, rather than a new `Admin/accounts/{id}` route. Cards go at `Content:20` and after.
+- **Permissions.** No `ManageAccounts`/`ViewAccounts`: the `Account` type is securable, so Orchard Core's content
+  permissions already cover it, and the search needs `ListContent` as before.
+- **Recipes and deployment.** No account-specific recipe or deployment step: accounts and their parts move with Orchard
+  Core's `ContentDefinition` and `Content` steps. Price lists got `PriceLists` (recipe step, `IRecipeStep` schema,
+  deployment step and its schema).
+- **Clean breaks.** Following the decision to delete Companies, Omnichannel's account constants and the old CRM search
+  route were removed rather than kept as obsolete aliases.
+- **Menu.** Accounts adds a top-level **Accounts** item with an icon. The CRM turns it off with
+  `AccountsAdminMenuOptions.ShowAccountsMenu` and keeps **Interaction Center > Accounts**.
+- **Contact links.** `IAccountContactFinder` (Accounts.Abstractions) lets Accounts B2B link a buyer to the account's
+  contact by email without knowing what a contact is. The CRM implements it on the contact's primary email.
+- **List of B2B accounts.** **Commerce > B2B Accounts** is Orchard Core's content list with a new `b2b:` term.
+- **Reports.** The B2B account data sets read content items through `B2BAccountIndex`, so name filters and grouping
+  run after the read instead of in the database.
+- **Upgrade.** `CrmAccountsFeatureMigrations` records the Accounts feature as enabled on a site that had the CRM on.
+  An Orders migration (`UpdateFrom2Async`) adds `OrderIndex.AccountId`. The unused `CompanyId` column stays until a later release, as the migration guard's expand-then-contract rule requires.
 
 ## Goal
 
@@ -174,8 +197,8 @@ redirects. B2B selling is rebuilt as an extension of the account.
   - the API routes become `account/b2b` and `checkout/{id}/b2b`;
   - the terms tender key becomes `account-terms`;
   - the reports source becomes `B2BAccountSource`.
-- **Order index column.** An Orders migration step adds `AccountId` and its index, and drops `CompanyId` and its
-  index. Existing dev databases lose nothing that matters, since no company data is kept.
+- **Order index column.** An Orders migration step adds `AccountId` and its index. Nothing reads `CompanyId` any
+  more; a later release drops it, as the migration guard's expand-then-contract rule requires.
 - **Removed.**
   - The `CrestApps.OrchardCore.Companies` project.
   - Its Targets and test references.

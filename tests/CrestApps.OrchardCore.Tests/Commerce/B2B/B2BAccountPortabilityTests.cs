@@ -26,7 +26,7 @@ namespace CrestApps.OrchardCore.Tests.Commerce.B2B;
 
 /// <summary>
 /// Price lists move between sites by recipe and deployment, buyers are linked to the account's contacts, and an
-/// existing order index loses the company column for the account column.
+/// existing order index gains the account column.
 /// </summary>
 public sealed class B2BAccountPortabilityTests
 {
@@ -118,7 +118,7 @@ public sealed class B2BAccountPortabilityTests
     }
 
     [Fact]
-    public async Task TheOrdersMigration_ReplacesTheCompanyColumnWithTheAccountColumn()
+    public async Task TheOrdersMigration_AddsTheAccountColumnBesideTheCompanyColumn()
     {
         // Arrange: an order index made before accounts, with its company column and index.
         var path = Path.Combine(Path.GetTempPath(), $"crestapps-orders-{Guid.NewGuid():N}.db");
@@ -165,8 +165,9 @@ public sealed class B2BAccountPortabilityTests
                 }
             }
 
+            // The company column stays until a later release drops it, so a node still reading it keeps working.
             Assert.Contains("AccountId", columns);
-            Assert.DoesNotContain("CompanyId", columns);
+            Assert.Contains("CompanyId", columns);
         }
         finally
         {
