@@ -16,9 +16,13 @@ Everyone who signs in has a **user account**. Orchard Core gives you the user li
 
 <AskYourAdmin />
 
+<YouTube video="users-roles" title="Video overview of users, roles, names and avatars" />
+
 <YouTube video="site-administration-walkthroughs" title="Video of enabling User Display Name, choosing a format, and editing a user" start={105} end={135} />
 
 ## Add a user and give them access
+
+<YouTube video="users-roles" title="Video of reading the user list and adding a person" start={97} end={163} />
 
 
 1. Open **Access Control > Users** and click **Add User**.
@@ -35,6 +39,8 @@ To change what someone can do later, edit their user and change their roles. You
 :::
 
 ## Choose how names are shown
+
+<YouTube video="users-roles" title="Video of choosing how names appear" start={225} end={268} />
 
 
 Open **Settings > User Display Name**. It decides how a person's name is built everywhere the site shows a user.
@@ -77,6 +83,8 @@ In the content type's Common part settings you can also choose the **Permission 
 
 ## Avatars
 
+<YouTube video="users-roles" title="Video of the avatar settings and the Avatar box on a user" start={268} end={295} />
+
 
 Open **Settings > User Avatars** to set how avatars work, then click **Save**.
 
@@ -88,6 +96,8 @@ Open **Settings > User Avatars** to set how avatars work, then click **Save**.
 To give someone a picture, edit the user and use the **Avatar** box to pick or upload an image from the media library. Only image files are accepted. The box is shown only to people who have the **Manage Media** permission. The avatar appears next to the person's name in places that show who a user is.
 
 ## Sign in with an email code
+
+<YouTube video="users-roles" title="Video of the sign-in page that offers an emailed code" start={295} end={320} />
 
 
 With the **Sign in with an email code** feature on, the login page offers **Email me a sign-in code instead**. The user clicks **Email me a code** after entering their email, and gets a six-digit code, which they type on the next page to sign in, without a password.

@@ -33,6 +33,8 @@ Your platform administrator may have renamed these words for your organization. 
 
 ## See your child tenants
 
+<YouTube video="tenant-hierarchy-operations" title="Video of the client list: the state filter, the sort menu, and fixing a setup that failed" start={50} end={102} />
+
 Open **Child tenants > All child tenants**. Each row shows the name, the address, the description and the state:
 
 | State | Meaning |
@@ -75,6 +77,8 @@ You arrive in the child tenant's admin, already signed in. Click the building ic
 | **Back to** *your organization* | Returns to your own site. You stay signed in to the child tenant. |
 | **Leave this child tenant** | Signs you out of the child tenant and returns to your own site. |
 
+<YouTube video="tenant-hierarchy-operations" title="Video of favorites and signing out of every client" start={142} end={170} />
+
 On the **Open a child tenant** page, click the star next to a child tenant to mark it as a favorite. When you have more than a handful of child tenants, favorites and the ones you opened recently are listed first, and a search box appears. **Sign out of every child tenant** ends every session you have open in your child tenants, on every device.
 
 If a child tenant says **You cannot open this**, you do not have an access rule for it, or it is suspended. Ask the person who manages access in your organization.
@@ -98,6 +102,8 @@ Open **Child tenants > All child tenants**, click **Manage** next to the child t
 | **Reload** | Restarts the child tenant, for example after a change that has not shown up yet. |
 | **Suspend** | Closes the child tenant to everybody until you **Resume** it. Its address then shows that the site is not available. |
 | **Remove** | Only for a suspended child tenant. See below. |
+
+<YouTube video="tenant-hierarchy-operations" title="Video of suspending and resuming several clients at once" start={102} end={142} />
 
 To change several child tenants at once, tick them in the list and use the bulk action menu: **Suspend**, **Resume**, **Reload** and **Remove** (a child tenant must be suspended before it can be removed).
 

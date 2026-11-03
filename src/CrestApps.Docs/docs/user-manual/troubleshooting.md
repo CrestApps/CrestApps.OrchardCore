@@ -10,7 +10,11 @@ technical_manual:
 
 Find your symptom below and work through the checks in order. Most problems are a missing permission, a missing setup record, or a phone that is not signed in. When a check needs your administrator or IT, it says so.
 
+<YouTube video="contact-center-troubleshooting" title="Video overview of troubleshooting the contact center: a missing menu, an empty page, a phone that does not ring, no audio, the dialer, and what to send your administrator" />
+
 ## I don't see a menu or a button
+
+<YouTube video="contact-center-troubleshooting" title="Video of what to check when a menu or a button is missing" start={41} end={107} />
 
 1. **Check the page for that task in this manual.** The table at the top names the **Menu**, the **Permission** and the **Feature** it needs. If you lack the permission, or the feature is off, the menu is hidden.
 2. **Ask your administrator** for the permission, or to turn on the feature. [Roles and permissions](getting-started/roles-and-permissions.md) has a message you can copy.
@@ -19,6 +23,8 @@ Find your symptom below and work through the checks in order. Most problems are 
 5. **Agents: the soft phone needs its own permission.** The Agent role does not include **Use the telephony soft phone**. Ask your administrator to add it.
 
 ## A page opens but is empty
+
+<YouTube video="contact-center-troubleshooting" title="Video of an empty live dashboard and the Work tab, and why they are empty" start={107} end={165} />
 
 - **Live dashboard or shared voicemail is empty.** These show only the queues and campaigns on **your own** [agent entitlement](skills-and-entitlements.md) record, even for administrators. Ask your manager to give you an entitlement record with the queues you supervise.
 - **A report shows nothing.** See [A report is empty](#a-report-is-empty).
@@ -32,6 +38,8 @@ Find your symptom below and work through the checks in order. Most problems are 
 4. **Removed from a queue?** When a manager removes a queue from your entitlements, you are signed out of it.
 
 ## My phone doesn't ring
+
+<YouTube video="contact-center-troubleshooting" title="Video of the checks when a phone does not ring" start={165} end={227} />
 
 1. **Is the phone app running?** The browser extension or Windows app must be installed and signed in to the site. The Windows app keeps running in the system tray after you close its window; if you chose **Quit**, calls do not ring. See [Browser extension and Windows app](phone-apps.md).
 2. **Are you signed in and Available?** In the soft phone's **Work** tab you must be signed in to the queue, and your presence must be **Available**. A break or another reason code stops new offers. See [Agent workspace](agent-workspace.md).
@@ -49,6 +57,8 @@ Find your symptom below and work through the checks in order. Most problems are 
 
 ## My calls have no audio, or the audio is poor
 
+<YouTube video="contact-center-troubleshooting" title="Video of the checks when a call has no audio, and the Diagnostics tab" start={227} end={268} />
+
 1. **Is the microphone allowed?** If the browser blocked the microphone, allow it in the browser and click **Retry microphone** in the soft phone.
 2. **Is the right device picked?** Click the **headset** button and check the **Microphone** and **Speaker**. You can switch during a call. See [Soft phone](soft-phone.md).
 3. **Is the call muted or on hold?** Check the **Mute** and **Hold** buttons. See [Placing and handling calls](calls.md).
@@ -59,6 +69,8 @@ Find your symptom below and work through the checks in order. Most problems are 
 Supervisors: listening is blocked while the agent has paused the recording to take card details. That is expected.
 
 ## Texts aren't being sent or received
+
+<YouTube video="contact-center-troubleshooting" title="Video of the checks when texts do not arrive, and when the AI does not answer" start={268} end={310} />
 
 1. **Is the number set up for texting?** It must be on **Omnichannel Addresses** with **Text messages (SMS)** ticked and the right SMS provider. See [Omnichannel addresses](channel-endpoints.md).
 2. **Did the customer opt out?** A customer who texted **STOP**, or is marked **Do not SMS**, gets no messages until they text **START** or the mark is removed. See [Messaging workspace](messaging.md) and [Contacts](contacts.md).
@@ -102,6 +114,8 @@ See [Automated AI SMS and voice](automated-ai.md) and [Inbound entry points and 
 
 ## I'm stuck in wrap-up
 
+<YouTube video="contact-center-troubleshooting" title="Video of the quick answers: wrap-up, a missing contact and a load that created less" start={352} end={391} />
+
 Complete the activity: pick a disposition and click **Complete**. You become available again. If you leave it open, wrap-up ends on its own after 15 minutes unless your administrator changed that. See [Agent workspace](agent-workspace.md).
 
 ## A report is empty
@@ -128,6 +142,8 @@ See [Reports](reports.md).
 - Numbers on the [Numbers not in service](numbers-not-in-service.md) list are never loaded. Use **Allow dialing** on a number that is back in service.
 
 ## Still stuck?
+
+<YouTube video="contact-center-troubleshooting" title="Video of what to send your administrator" start={391} end={410} />
 
 - Write down what you did, what you expected, what happened, and the time, and send it to your administrator.
 - For IT and support teams, the Technical Manual has the [operations runbooks](../contact-center/runbooks.md), [production support](../contact-center/production-support.md) and the [telephony](../telephony/index.md) pages.

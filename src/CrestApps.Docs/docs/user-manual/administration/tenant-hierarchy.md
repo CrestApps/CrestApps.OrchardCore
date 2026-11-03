@@ -88,6 +88,8 @@ A parent cannot be removed on the **Tenants** screen while it still has child te
 
 ## Orphaned child tenants
 
+<YouTube video="tenant-hierarchy-operations" title="Video of the platform: an orphaned client made ordinary, a client moved to another parent, and a parent with no clients made ordinary" start={170} end={224} />
+
 A child tenant is orphaned when its parent no longer exists, for example after an older backup of the tenant list is restored. The hierarchy lists it under **orphaned child tenants**:
 
 - Pick a **New parent** and click **Move** to give it to that parent. Its address changes to one under the new parent.

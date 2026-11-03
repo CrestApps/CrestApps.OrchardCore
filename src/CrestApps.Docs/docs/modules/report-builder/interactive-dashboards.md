@@ -8,6 +8,8 @@ user_manual:
 
 A designed report can work as an interactive dashboard: several queries grouped different ways on one page, containers that frame visuals and scroll them within a height, and click actions that filter some visuals by the value clicked in another. How people build one is described in the User Manual, at [Interactive dashboards](../../user-manual/report-builder/dashboards.md).
 
+<YouTube video="report-builder-dashboards" title="Video overview of Report Builder dashboards" />
+
 ## The design
 
 `ReportDesign` stores the three parts next to its query and visuals.

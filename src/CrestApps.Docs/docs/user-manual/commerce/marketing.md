@@ -18,11 +18,15 @@ Email the customers who said yes to your news and offers. Group them into **segm
 
 This video shows why to market from your orders, the segments and campaigns, consent and unsubscribing, and the ready-made automations:
 
+<YouTube video="marketing" title="Narrated video overview of Marketing" />
+
 Campaigns only go to customers who ticked **Send me news and offers** in their account, or whom you marked as accepting marketing on **Commerce > Customers**. Emails about their orders aren't affected. Every campaign carries a link to unsubscribe in one click.
 
 When you turn Marketing on, it reads the orders already paid to learn what each customer has bought. On a big store that takes a few minutes.
 
 ## Segments
+
+<YouTube video="marketing" title="Video of segments" start={94} end={155} />
 
 1. On **Commerce > Segments**, click **Add segment**.
 2. Give it a **Name**, such as *Lapsed buyers*, and a **Description** that only your staff see.
@@ -40,6 +44,8 @@ When you turn Marketing on, it reads the orders already paid to learn what each 
 Click **Save**. The segment shows how many customers are in it, and how many of them accept marketing and so get its campaigns.
 
 ## Campaigns
+
+<YouTube video="marketing" title="Video of campaigns" start={155} end={231} />
 
 1. On **Commerce > Campaigns**, click **Add campaign**.
 2. Name it (only staff see the name), and choose its **Segment**.
@@ -61,9 +67,13 @@ Campaigns need your site's email to be set up, and your site's base URL for the 
 
 ## When a customer unsubscribes
 
+<YouTube video="marketing" title="Video of consent and unsubscribing" start={231} end={262} />
+
 The unsubscribe link opens a page that asks them to confirm. Once they do, they no longer accept marketing, and no campaign or review request goes to them. They can tick **Send me news and offers** again in their account.
 
 ## Ready-made automations
+
+<YouTube video="marketing" title="Video of the ready-made automations" start={262} end={313} />
 
 Under **Tools > Recipes**, three recipes add workflows you can change under **Workflows**:
 

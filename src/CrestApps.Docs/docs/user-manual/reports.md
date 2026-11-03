@@ -22,11 +22,16 @@ Reports show what happened in your contact center over a period you choose: call
 
 <AskYourAdmin />
 
+<YouTube video="reports-run-and-export" title="Video overview of finding, running, filtering and exporting reports" />
 <YouTube video="contact-center-reports" title="Video overview of Contact Center reports: running, filtering, reading and exporting a report" />
 
 <YouTube video="contact-center-reports-catalog" title="Video tour of the report categories and which report answers which question" />
 
+<YouTube video="reports-run-and-export" title="Video of finding a report in the Reports menu" start={47} end={79} />
+
 You only see the reports your permissions allow.
+
+<YouTube video="reports-run-and-export" title="Video of the permissions that decide which reports you see" start={79} end={121} />
 
 If the **Reports** page says *No reports are available*, ask your administrator to turn on a feature that adds reports, or to give you the permission.
 
@@ -34,6 +39,7 @@ To build your own reports with drag and drop, see [Report Builder](report-builde
 
 ## Run a report
 
+<YouTube video="reports-run-and-export" title="Video of running a report and choosing its date range" start={121} end={190} />
 <YouTube video="contact-center-reports" title="Video of running a report and choosing the date range" start={108} end={161} />
 
 1. Open **Reports** and pick a category, then a report.
@@ -42,6 +48,7 @@ To build your own reports with drag and drop, see [Report Builder](report-builde
 4. Click **Show**.
 5. To keep a copy, click **Export CSV**. When the Reports (OpenXml) or Reports (PDF) feature is on, the button becomes an **Export** menu with **Export CSV**, **Export Excel (.xlsx)** and **Export PDF**. Excel puts each section of the report on its own worksheet. PDF lays the report out as it looks on screen, with its charts, and numbers the pages; a wide table turns the pages sideways.
 
+<YouTube video="reports-run-and-export" title="Video of filtering a report" start={190} end={237} />
 <YouTube video="contact-center-reports" title="Video of filtering a report" start={161} end={192} />
 
 How the filters work:
@@ -51,6 +58,8 @@ How the filters work:
 - Every number, total, percentage and average is worked out again from the filtered records, so it always matches what you picked.
 - An export uses the same date range and filters as the report on screen. It keeps the detail, subtotal and grand-total rows, in the order shown. The file is named after the report and the first and last day of the period, for example `contact-center-call-insights-20260929-to-20261029.csv`.
 - If a report needs a feature your site does not use (for example call transfers or recording), it shows the notice *Capability not enabled*, which names that feature, instead of showing zeroes. A report that still has real figures leaves out only the columns that feature would fill.
+
+<YouTube video="reports-run-and-export" title="Video of exporting a report to CSV, Excel and PDF" start={237} end={313} />
 
 Reports of the modules above can be emailed on a schedule (see [Email a report on a schedule](#email-a-report-on-a-schedule)). Reports you build yourself in the [Report Builder](report-builder/index.md) cannot be subscribed to; to email one, use the **Email Report** task in a workflow (see [Report Builder workflows](report-builder/workflows.md)).
 The reports of this page can be emailed on a schedule; see [Email a report on a schedule](#email-a-report-on-a-schedule). A report made with the [Report Builder](report-builder/index.md) cannot be subscribed to: use the **Email Report** task of a workflow instead.
@@ -87,7 +96,15 @@ The cards at the top of **Executive performance dashboard**, **Call insights** a
 
 With **Report Subscriptions** on, a report can be emailed every day, week or month, such as your queue service level every Monday morning. It is a feature under **Tools > Features**, in the *Reporting* category, and it needs the **Reports** feature and the **Email** feature, which it turns on with it. Report Subscriptions adds **Reports > Subscriptions**, and **Manage report subscriptions** is the permission that opens it (administrators have it by default). A person can only choose a report they may open.
 
+<YouTube video="report-subscriptions" title="Video overview of report subscriptions" />
+
+<YouTube video="report-subscriptions" title="Video of turning on Report Subscriptions and its permission" start={59} end={111} />
+
 **Email must be set up first.** A subscription goes out through your site's email provider. Under **Settings > Email**, the site says *No email providers are currently enabled* until you enable a provider feature, such as the SMTP provider, and enter its settings (sender address, host name, port and, when the server asks for them, credentials). Until then a subscription can be saved, but each send fails, and the list tells you why.
+
+<YouTube video="report-subscriptions" title="Video of setting up the email provider that subscriptions need" start={111} end={164} />
+
+<YouTube video="report-subscriptions" title="Video of adding a subscription" start={164} end={229} />
 
 1. On **Reports > Subscriptions**, click **Add subscription**.
 2. Choose the **Report**, listed by category. **Name** is optional; the report's name is used when it is blank.
@@ -96,13 +113,21 @@ With **Report Subscriptions** on, a report can be emailed every day, week or mon
 5. Under **Email to**, enter the addresses, separated by commas. Choose a file format under **Attach the report as** (*CSV*, *Excel (.xlsx)* or *PDF*) to get the report as a file too, or leave *No file*. The email shows the report's numbers and tables either way.
 6. Leave **On** ticked, and click **Save**, or **Save and send now** to send it straight away for the period before.
 
+<YouTube video="report-subscriptions" title="Video of Save and send now and of reading why a send failed" start={229} end={266} />
+
 The list shows each subscription with its schedule, its recipients and when it goes out next, and you can search it by name. A background task checks every five minutes for subscriptions that are due and sends them. If a send fails, such as when the site's email is not set up, the row says *Last run didn't go out* with the reason, and the subscription's page shows when it goes out next and what happened last time. Fix the cause, and save it again with **Save and send now**. Untick **On** to pause a subscription: it stays in the list with an *Off* badge and is not sent. **Delete** removes it.
+
+<YouTube video="report-subscriptions" title="Video of pausing, searching and deleting subscriptions" start={266} end={291} />
 
 Reports you build yourself in the [Report Builder](report-builder/index.md) cannot be subscribed to. To email one, use the **Email Report** task in a workflow (see [Report Builder workflows](report-builder/workflows.md)).
 
 ## Show a report on the dashboard
 
 With the **Admin Dashboard** feature on (under **Tools > Features**), any report you may view can be a widget on the admin dashboard: its figures, tables and charts for a period that moves with the clock, so the numbers are there without opening the report. The **Report** widget shows any report on this page. The **Custom Report** widget, which comes with the Report Builder, shows a report you built (see [Show a report on the dashboard](report-builder/share-and-run.md#show-a-report-on-the-dashboard)).
+
+<YouTube video="reports-dashboard-widgets" title="Video overview of report widgets on the dashboard" />
+
+<YouTube video="reports-dashboard-widgets" title="Video of turning on the Admin Dashboard and opening its editor" start={55} end={85} />
 
 1. Open the admin **Dashboard** and click **Manage Dashboard**, then **Add Widget**, and pick **Report**.
 2. **Position**, **Width** and **Height** place the tile on the dashboard, and **Title** is the name above it.
@@ -112,14 +137,21 @@ With the **Admin Dashboard** feature on (under **Tools > Features**), any report
 6. **Rows per table** limits how many rows of each table appear (it starts at 5), and **Keep for (minutes)** is how long the widget keeps what it shows before it runs the report again (it starts at 30). 0 runs the report on every visit. Saving the widget starts over.
 7. Click **Publish**, then **Close Editor**.
 
+<YouTube video="reports-dashboard-widgets" title="Video of adding a Report widget" start={85} end={154} />
+
 Each tile names its report, says its period in words, says when its result was made, and has an **Open the full report** link that opens the report with its filters and exports.
 
+<YouTube video="reports-dashboard-widgets" title="Video of the dashboard tiles" start={154} end={175} />
+
 Every tile checks the person looking at it. Someone who may open the dashboard but not the report sees *You can't view the report* in its place, instead of numbers, and a widget that has no report chosen says *Choose the report this widget shows by editing it*. If the report cannot run, the tile says so, and the details are in the log. A tile that has nothing for its period says *Nothing to show for this period*.
+
+<YouTube video="reports-dashboard-widgets" title="Video of what each person sees on the dashboard" start={213} end={227} />
 
 The **Access the Admin Dashboard** permission opens the dashboard, and **Manage the Admin Dashboard** opens its editor. The person also needs the permission of each report whose tile they should see.
 
 ## Agent time over long periods
 
+<YouTube video="reports-run-and-export" title="Video of a period that is too long and of a report whose feature is off" start={313} end={354} />
 <YouTube video="contact-center-reports" title="Video of the 31-day limit on reports about agents' time" start={289} end={343} />
 
 The reports on agents' time read every state change of every agent in the period: all the *Workforce & Payroll* reports, **Agent presence audit** and **Agent activity timeline**. To keep them quick, they have these limits:
@@ -572,7 +604,11 @@ Tips:
 
 ## Omnichannel reports
 
+<YouTube video="omnichannel-reports" title="Video overview of the omnichannel reports: which report answers which question" />
+
 The omnichannel reports read your CRM activities (the calls to make, texts to send and follow-ups), the campaigns and dispositions they carry, and your leads and opportunities. Each one needs **View Omnichannel reports**, which administrators and supervisors have by default, and so does anyone who may manage activities. They come with **Omnichannel Management**; the three lead and opportunity reports also need **Omnichannel CRM**. They sit in the categories below, and most are under **CRM & Campaigns**.
+
+<YouTube video="omnichannel-reports" title="Video of where the omnichannel reports are, their filters and the permission they need" start={43} end={83} />
 
 ### The filters they share
 
@@ -584,6 +620,8 @@ The rows show the source as stored, so a dialer activity appears as *PreviewDial
 
 ### Volume and completion
 
+<YouTube video="omnichannel-reports" title="Video of the volume and completion reports" start={83} end={114} />
+
 | Report | Category | What it answers |
 | --- | --- | --- |
 | **Activity summary** | Operations | How many activities were created, how many are completed, pending, in progress, failed or cancelled, the completion rate, and the daily trend. Bars break the same activities down by source, channel and status. |
@@ -592,6 +630,8 @@ The rows show the source as stored, so a dialer activity appears as *PreviewDial
 
 ### Backlog and age
 
+<YouTube video="omnichannel-reports" title="Video of the backlog and age reports" start={114} end={148} />
+
 | Report | Category | What it answers |
 | --- | --- | --- |
 | **Activity backlog** | Queue & Routing | How much work is still open: the open, unassigned, overdue and reserved counts, and the open work by status. |
@@ -599,6 +639,8 @@ The rows show the source as stored, so a dialer activity appears as *PreviewDial
 | **Overdue workload by user** | Agent Performance | Who holds the overdue work: the count per person, how much is unassigned, and the average and maximum age. |
 
 ### Workload by group
+
+<YouTube video="omnichannel-reports" title="Video of the reports that group the workload" start={148} end={201} />
 
 These reports share one table, with the total, the completed, in progress, pending, failed and cancelled counts, the completion rate and the average attempts of each group. Only the grouping changes.
 
@@ -615,6 +657,8 @@ These reports share one table, with the total, the completed, in progress, pendi
 
 ### People
 
+<YouTube video="omnichannel-reports" title="Video of the reports about people" start={201} end={234} />
+
 | Report | Category | What it answers |
 | --- | --- | --- |
 | **Assigned user performance** | Agent Performance | Each person's activities, outcomes, completion rate and attempts. |
@@ -623,6 +667,8 @@ These reports share one table, with the total, the completed, in progress, pendi
 | **Activity creation by user** | Compliance & Audit | Who or what created the work and how it ended, for audits. |
 
 ### Campaigns, customers and addresses
+
+<YouTube video="omnichannel-reports" title="Video of the campaign, customer and address reports" start={234} end={258} />
 
 | Report | Category | What it answers |
 | --- | --- | --- |
@@ -635,12 +681,16 @@ These reports share one table, with the total, the completed, in progress, pendi
 
 ### Dialer and AI
 
+<YouTube video="omnichannel-reports" title="Video of the dialer call detail and AI handoff reports" start={258} end={288} />
+
 | Report | Category | What it answers |
 | --- | --- | --- |
 | **Dialer call detail** | CRM & Campaigns | Which numbers the dialer worked: one row per number with its contact, campaign, last disposition, attempts, completion time, agent and status. It shows 100 rows a page, and an export includes every row. |
 | **AI handoff & containment** | CRM & Campaigns | Of the automated conversations completed in the period, how many the AI contained and how many it passed to a live agent, the containment and escalation rates, the average time to escalate, and the reasons. |
 
 ### Leads and deals
+
+<YouTube video="omnichannel-reports" title="Video of the lead funnel, lead conversion and opportunity pipeline reports" start={288} end={322} />
 
 | Report | Category | What it answers |
 | --- | --- | --- |
@@ -649,6 +699,8 @@ These reports share one table, with the total, the completed, in progress, pendi
 | **Opportunity pipeline** | CRM & Campaigns | The open opportunities by stage with their amount and weighted amount (the amount times the stage's probability), and for deals closed in the period the win rate and the amount won. |
 
 ### Build your own from the same data
+
+<YouTube video="omnichannel-reports" title="Video of the omnichannel and messaging data sets in the Report Builder" start={322} end={373} />
 
 The [Report Builder](report-builder/data-sources.md) reads the same records. The **Omnichannel** data source offers **Activities**, **Dispositions**, **Campaigns**, **Campaign groups** and **Activity batches**; contacts, leads, accounts and opportunities are content items, under **Content items**. The **Messaging** data source offers **Conversations** and **Messages**, including each outbound text's delivery status but never its text. Related data sets are joined for you.
 

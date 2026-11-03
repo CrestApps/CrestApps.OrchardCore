@@ -6,6 +6,8 @@ technical_manual:
   - omnichannel/cadences
 ---
 
+<YouTube video="use-case-automatic-follow-ups" title="Video recap of this use case" />
+
 ## Who it's for and what you get
 
 For **managers** who run automated text outreach and do not want conversations to die when a customer goes quiet.

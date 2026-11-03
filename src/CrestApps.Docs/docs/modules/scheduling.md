@@ -52,6 +52,8 @@ All records live in the `Scheduling` collection.
 
 The video shows the rules on screen:
 
+<YouTube video="scheduling-open-times" title="Video of how open times are worked out" start={20} end={212} />
+
 `ISchedulingAvailabilityService.FindSlotsAsync(type, fromUtc, toUtc, resourceId)` returns `AppointmentSlot`s (`StartUtc`, `EndUtc`, the free `ResourceIds`, and `Remaining` places for a group session):
 
 1. The window is cut to the type's minimum notice and booking horizon.
@@ -138,6 +140,8 @@ Scheduling sends no email of its own. To send the confirmation and the manage li
 
 The video builds a workflow from the Scheduling events and tasks:
 
+<YouTube video="scheduling-workflows-and-ai" title="Video of the Scheduling workflow events and tasks" start={17} end={79} />
+
 Activities are in the **Scheduling** category.
 
 | Event | Raised when |
@@ -171,6 +175,8 @@ Appointments booked by a workflow have `Source = Workflow`.
 ## Recipes and deployment
 
 The video builds a deployment plan with the Calendars and Scheduling steps:
+
+<YouTube video="scheduling-workflows-and-ai" title="Video of copying scheduling to another site with a deployment plan" start={122} end={171} />
 
 The **Scheduling** deployment step exports the scheduling resources and appointment types, with **Include appointments** every appointment (with the customer's name, email and phone, but without its manage link), and with **Include the waitlist** the waitlist. Add the **Calendars** step too (with events when appointments are included), so the resources' calendars and the appointments' calendar events come along.
 
@@ -231,6 +237,8 @@ A time that was taken, or a booking the customer already has, returns `409 Confl
 ## AI tools
 
 The video shows the Scheduling tools in an AI profile:
+
+<YouTube video="scheduling-workflows-and-ai" title="Video of the Scheduling AI tools" start={78} end={123} />
 
 With `CrestApps.OrchardCore.AI` enabled, Scheduling registers these tools in the **Scheduling** category (an `AIToolsStartup` with `[RequireFeatures("CrestApps.OrchardCore.AI")]`). They are meant for customer-facing assistants, so they work for anonymous visitors, but only with appointment types that are enabled and allow self-service, unless the caller has **Manage appointments**.
 
