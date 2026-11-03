@@ -355,6 +355,16 @@ public class QuestionEditModel
     /// Gets or sets the help.
     /// </summary>
     public string Help { get; set; }
+
+    /// <summary>
+    /// Gets or sets the earlier question whose answer shows this one, or empty to always show it.
+    /// </summary>
+    public string ShowWhenQuestionId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the answer to that question that shows this one.
+    /// </summary>
+    public string ShowWhenEquals { get; set; }
 }
 
 /// <summary>

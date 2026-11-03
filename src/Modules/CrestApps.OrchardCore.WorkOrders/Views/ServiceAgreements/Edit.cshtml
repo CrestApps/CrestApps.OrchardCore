@@ -53,10 +53,13 @@
     <div class="card text-bg-theme mb-3">
         <div class="card-header">@T["Visits"]</div>
         <div class="card-body">
-            <p class="hint">@T["Each schedule repeats from the start date. Its work order is made the number of days ahead you choose, once for each visit. Leave a row empty to skip it."]</p>
+            <p class="hint">@T["Each schedule repeats from the start date. Its work order is made the number of days ahead you choose, once for each visit. A schedule covers the agreement's assets unless you choose some of them for it. Leave a row empty to skip it."]</p>
             <div class="table-responsive mb-3">
                 <table class="table table-sm align-middle">
-                    <thead><tr><th scope="col">@T["Name"]</th><th scope="col">@T["Work order type"]</th><th scope="col">@T["Repeats"]</th><th scope="col">@T["Made ahead (days)"]</th></tr></thead>
+                    <thead><tr><th scope="col">@T["Name"]</th><th scope="col">@T["Work order type"]</th><th scope="col">@T["Repeats"]</th><th scope="col">@T["Made ahead (days)"]</th>@if (Model.AssetOptions.Count > 0)
+                        {
+                            <th scope="col">@T["Assets"]</th>
+                        }</tr></thead>
                     <tbody>
                         @for (var i = 0; i < Model.Schedules.Count; i++)
                         {
@@ -82,6 +85,17 @@
                                     <input asp-for="Schedules[i].CustomRule" class="form-control form-control-sm mt-1" placeholder="FREQ=MONTHLY;BYDAY=2SU" aria-label="@T["Custom rule"]" />
                                 </td>
                                 <td><input asp-for="Schedules[i].LeadDays" type="number" min="0" max="365" class="form-control form-control-sm" aria-label="@T["Made ahead (days)"]" style="max-width: 12rem" /></td>
+                                @if (Model.AssetOptions.Count > 0)
+                                {
+                                    <td>
+                                        <select asp-for="Schedules[i].AssetIds" class="form-select form-select-sm" multiple size="3" aria-label="@T["Assets"]">
+                                            @foreach (var asset in Model.AssetOptions)
+                                            {
+                                                <option value="@asset.Value" selected="@schedule.AssetIds.Contains(asset.Value)">@asset.Text</option>
+                                            }
+                                        </select>
+                                    </td>
+                                }
                             </tr>
                         }
                     </tbody>

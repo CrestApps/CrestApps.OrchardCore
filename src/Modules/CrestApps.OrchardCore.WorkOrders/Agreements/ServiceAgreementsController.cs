@@ -268,6 +268,7 @@ public sealed class ServiceAgreementsController : Controller
                 Rule = Presets.ContainsKey(schedule.Rule ?? string.Empty) ? schedule.Rule : string.Empty,
                 CustomRule = Presets.ContainsKey(schedule.Rule ?? string.Empty) ? null : schedule.Rule,
                 LeadDays = schedule.LeadDays,
+                AssetIds = [.. schedule.AssetIds],
             })],
         };
 
@@ -336,8 +337,6 @@ public sealed class ServiceAgreementsController : Controller
                 : new Address { AddressLine1 = Clean(form.AddressLine1), City = Clean(form.City), Region = Clean(form.Region), PostalCode = Clean(form.PostalCode), Country = Clean(form.Country) };
         }
 
-        var previous = agreement.Schedules.Where(schedule => !string.IsNullOrEmpty(schedule.Id)).ToDictionary(schedule => schedule.Id, StringComparer.Ordinal);
-
         agreement.Schedules = [.. (form.Schedules ?? []).Where(row => !string.IsNullOrEmpty(row.TypeId) || !string.IsNullOrWhiteSpace(row.Name)).Select(row => new AgreementSchedule
         {
             Id = string.IsNullOrEmpty(row.Id) ? CrestApps.Core.UniqueId.GenerateId() : row.Id,
@@ -345,7 +344,7 @@ public sealed class ServiceAgreementsController : Controller
             TypeId = row.TypeId,
             Rule = string.IsNullOrEmpty(row.Rule) ? Clean(row.CustomRule) : row.Rule,
             LeadDays = row.LeadDays,
-            AssetIds = !string.IsNullOrEmpty(row.Id) && previous.TryGetValue(row.Id, out var old) ? old.AssetIds : [],
+            AssetIds = [.. (row.AssetIds ?? []).Where(assetId => !string.IsNullOrEmpty(assetId)).Distinct(StringComparer.Ordinal)],
         })];
 
         var validation = await _agreements.ValidateAsync(agreement);

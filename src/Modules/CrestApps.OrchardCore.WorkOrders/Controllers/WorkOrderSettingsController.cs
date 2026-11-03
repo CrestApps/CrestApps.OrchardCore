@@ -291,6 +291,8 @@ public sealed class WorkOrderSettingsController : Controller
                 Max = question.Max,
                 Unit = question.Unit ?? question.Meter,
                 Help = question.Help,
+                ShowWhenQuestionId = question.ShowWhen?.QuestionId,
+                ShowWhenEquals = question.ShowWhen?.EqualsValue,
             })],
         };
 
@@ -338,8 +340,19 @@ public sealed class WorkOrderSettingsController : Controller
             Unit = row.Kind == ChecklistQuestionKind.Number && !string.IsNullOrWhiteSpace(row.Unit) ? row.Unit.Trim() : null,
             Meter = row.Kind == ChecklistQuestionKind.MeterReading && !string.IsNullOrWhiteSpace(row.Unit) ? row.Unit.Trim() : null,
             Help = string.IsNullOrWhiteSpace(row.Help) ? null : row.Help.Trim(),
-            ShowWhen = !string.IsNullOrEmpty(row.Id) && previous.TryGetValue(row.Id, out var old) ? old.ShowWhen : null,
+            ShowWhen = ShowWhen(row, previous),
         })];
+
+        // A question shows only after the one it depends on, so it can't depend on itself or on one asked later.
+        var positions = item.Questions.Select((question, index) => (question.Id, index)).ToDictionary(entry => entry.Id, entry => entry.index, StringComparer.Ordinal);
+
+        foreach (var question in item.Questions.Where(question => question.ShowWhen is not null))
+        {
+            if (!positions.TryGetValue(question.ShowWhen.QuestionId, out var at) || at >= positions[question.Id])
+            {
+                ModelState.AddModelError(string.Empty, S["\"{0}\" can only depend on a question asked before it.", question.Text]);
+            }
+        }
 
         await ValidateAsync(_checklists, item);
 
@@ -802,4 +815,10 @@ public sealed class WorkOrderSettingsController : Controller
     private string Duration(int minutes) => minutes <= 0
         ? S["no target"]
         : minutes % 60 == 0 ? S["{0} h", minutes / 60] : S["{0} min", minutes];
+
+    // The condition a question row asks for: a saved question and the answer that shows it, or none.
+    private static ChecklistCondition ShowWhen(QuestionEditModel row, Dictionary<string, ChecklistQuestion> previous)
+        => string.IsNullOrWhiteSpace(row.ShowWhenQuestionId) || row.ShowWhenQuestionId == row.Id || !previous.ContainsKey(row.ShowWhenQuestionId) || string.IsNullOrWhiteSpace(row.ShowWhenEquals)
+            ? null
+            : new ChecklistCondition { QuestionId = row.ShowWhenQuestionId, EqualsValue = row.ShowWhenEquals.Trim() };
 }

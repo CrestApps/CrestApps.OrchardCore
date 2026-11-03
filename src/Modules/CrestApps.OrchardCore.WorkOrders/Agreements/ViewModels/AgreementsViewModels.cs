@@ -72,6 +72,11 @@ public class ScheduleEditModel
     /// Gets or sets how many days ahead the work order is made.
     /// </summary>
     public int LeadDays { get; set; } = 14;
+
+    /// <summary>
+    /// Gets or sets the assets the schedule's visits are for, or none for the agreement's.
+    /// </summary>
+    public List<string> AssetIds { get; set; } = [];
 }
 
 /// <summary>

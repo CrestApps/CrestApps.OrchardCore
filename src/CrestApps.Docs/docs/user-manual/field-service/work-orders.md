@@ -31,7 +31,8 @@ A service level says how fast work orders are responded to and resolved.
 
 1. Go to **Field Service > Checklists** and select **Add checklist**.
 2. Enter a name, then a row for each question: its section, the question, the kind of answer, whether it is required, and the choices (one per line), the range and the unit where they apply.
-3. Select **Save**.
+3. To ask a question only after a given answer, such as a photo of the damage only when a check fails, choose the earlier question under **Shown when** and type the answer, such as `Fail`. A new question can be chosen there once the checklist is saved.
+4. Select **Save**.
 
 A required question must be answered before the work order is completed.
 
@@ -83,7 +84,7 @@ A service agreement makes the work orders of a customer's recurring visits, such
 
 1. Go to **Field Service > Service Agreements** and select **Add service agreement**.
 2. Enter a name, the days it starts and ends, and the notice you want before the end.
-3. Under **Visits**, add a row for each recurring visit: its name, the work order type, how often it repeats, and how many days ahead its work order is made. For anything else, choose **Custom rule** and enter an iCalendar rule, such as `FREQ=MONTHLY;BYDAY=2SU` for the second Sunday of each month.
+3. Under **Visits**, add a row for each recurring visit: its name, the work order type, how often it repeats, how many days ahead its work order is made, and, when the visit is for only some of the assets covered, those assets. For anything else, choose **Custom rule** and enter an iCalendar rule, such as `FREQ=MONTHLY;BYDAY=2SU` for the second Sunday of each month.
 4. Under **Pricing**, choose whether the visits are included, so their work orders aren't invoiced, or invoiced at a price per visit.
 5. Enter the customer, contact, address and the assets covered, set the status to **Active** and select **Save**.
 

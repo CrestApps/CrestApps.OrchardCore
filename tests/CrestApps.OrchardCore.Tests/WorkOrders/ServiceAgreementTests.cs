@@ -149,6 +149,31 @@ public sealed class ServiceAgreementTests
         });
     }
 
+    [Fact]
+    public async Task AScheduleWithItsOwnAssets_UsesThem_AndTheOthersTheAgreements()
+    {
+        await using var setup = await SetupAsync();
+
+        await setup.Harness.RunAsync(services => CreateAgreementAsync(services, setup.TypeId, agreement =>
+        {
+            agreement.AssetIds = ["boiler", "pump"];
+            agreement.Schedules =
+            [
+                new AgreementSchedule { Id = "pump", Name = "Pump check", TypeId = setup.TypeId, Rule = "FREQ=YEARLY", LeadDays = 0, AssetIds = ["pump"] },
+                new AgreementSchedule { Id = "all", Name = "Full service", TypeId = setup.TypeId, Rule = "FREQ=YEARLY", LeadDays = 0 },
+            ];
+            agreement.StartDate = new DateOnly(2026, 11, 2);
+        }));
+
+        await setup.Harness.RunAsync(services => services.GetRequiredService<ServiceAgreementScheduler>().RunAsync());
+
+        var assets = await setup.Harness.RunAsync(async services => (await services.GetRequiredService<WorkOrderStore>().GetAllAsync())
+            .ToDictionary(item => item.Summary.Split(' ')[0], item => item.AssetIds.ToArray()), commit: false);
+
+        Assert.Equal(["pump"], assets["Pump"]);
+        Assert.Equal(["boiler", "pump"], assets["Full"]);
+    }
+
     private static async Task<string> CreateAgreementAsync(IServiceProvider services, string typeId, Action<ServiceAgreement> configure)
     {
         var manager = services.GetRequiredService<ServiceAgreementManager>();

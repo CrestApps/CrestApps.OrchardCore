@@ -12,7 +12,8 @@
     </div>
 
     <h2 class="h5 mt-4">@T["Questions"]</h2>
-    <p class="hint">@T["Asked in this order, grouped by section. Choices go one per line. A number's range and unit, or a meter reading's meter, go in the last columns. Leave a row empty to skip it."]</p>
+    <p class="hint">@T["Asked in this order, grouped by section. Choices go one per line. A number's range and unit, or a meter reading's meter, go in their columns. Leave a row empty to skip it."]</p>
+    <p class="hint">@T["To ask a question only after a given answer, choose an earlier question under Shown when and type the answer, such as Yes or Fail. New questions can be chosen once they are saved."]</p>
     <div class="table-responsive mb-3">
         <table class="table table-sm align-top">
             <thead>
@@ -25,6 +26,7 @@
                     <th scope="col">@T["From"]</th>
                     <th scope="col">@T["To"]</th>
                     <th scope="col">@T["Unit or meter"]</th>
+                    <th scope="col">@T["Shown when"]</th>
                 </tr>
             </thead>
             <tbody>
@@ -55,6 +57,21 @@
                         <td><input asp-for="Questions[i].Min" type="number" step="any" class="form-control form-control-sm" aria-label="@T["From"]" /></td>
                         <td><input asp-for="Questions[i].Max" type="number" step="any" class="form-control form-control-sm" aria-label="@T["To"]" /></td>
                         <td><input asp-for="Questions[i].Unit" class="form-control form-control-sm" aria-label="@T["Unit or meter"]" /></td>
+                        <td>
+                            <select asp-for="Questions[i].ShowWhenQuestionId" class="form-select form-select-sm" aria-label="@T["Shown when"]">
+                                <option value="">@T["Always"]</option>
+                                @for (var j = 0; j < i; j++)
+                                {
+                                    var earlier = Model.Questions[j];
+
+                                    if (!string.IsNullOrEmpty(earlier.Id) && !string.IsNullOrWhiteSpace(earlier.Text))
+                                    {
+                                        <option value="@earlier.Id" selected="@(earlier.Id == Model.Questions[i].ShowWhenQuestionId)">@earlier.Text</option>
+                                    }
+                                }
+                            </select>
+                            <input asp-for="Questions[i].ShowWhenEquals" class="form-control form-control-sm mt-1" placeholder="@T["is (answer)"]" aria-label="@T["The answer that shows it"]" />
+                        </td>
                     </tr>
                 }
             </tbody>
