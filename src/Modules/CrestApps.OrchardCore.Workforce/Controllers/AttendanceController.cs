@@ -149,13 +149,18 @@ public sealed class AttendanceController : Controller
         }
 
         var scope = await _scopeService.GetManagedScopeAsync(User, HttpContext.RequestAborted);
-        var allowed = (await _attendance.PageAsync(new AttendanceQuery { TeamIds = scope.All ? null : scope.TeamIds.ToArray() }, 0, 1000, HttpContext.RequestAborted)).Items
-            .Select(exception => exception.ItemId)
-            .ToHashSet(StringComparer.Ordinal);
         var done = 0;
 
-        foreach (var id in (itemIds ?? []).Where(allowed.Contains))
+        foreach (var id in (itemIds ?? []).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal))
         {
+            // Each exception is read by its id, so one the user manages is never refused for being past a list's first page.
+            var exception = await _attendance.FindByIdAsync(id, HttpContext.RequestAborted);
+
+            if (exception is null || !scope.Covers(exception.TeamId))
+            {
+                continue;
+            }
+
             var result = bulkAction == "Excuse"
                 ? await _attendance.ExcuseAsync(id, null, User.Identity?.Name, HttpContext.RequestAborted)
                 : await _attendance.ConfirmAsync(id, User.Identity?.Name, HttpContext.RequestAborted);
@@ -194,10 +199,9 @@ public sealed class AttendanceController : Controller
         }
 
         var scope = await _scopeService.GetManagedScopeAsync(User, HttpContext.RequestAborted);
-        var exception = (await _attendance.PageAsync(new AttendanceQuery { TeamIds = scope.All ? null : scope.TeamIds.ToArray() }, 0, 1000, HttpContext.RequestAborted)).Items
-            .FirstOrDefault(item => item.ItemId == id);
+        var exception = await _attendance.FindByIdAsync(id, HttpContext.RequestAborted);
 
-        if (exception is null)
+        if (exception is null || !scope.Covers(exception.TeamId))
         {
             return NotFound();
         }

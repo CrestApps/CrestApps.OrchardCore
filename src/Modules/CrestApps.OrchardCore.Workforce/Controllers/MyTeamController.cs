@@ -290,9 +290,9 @@ public sealed class MyTeamController : Controller
             return Forbid();
         }
 
-        var open = await attendance.PageAsync(new AttendanceQuery { TeamIds = scope.All ? null : scope.TeamIds.ToArray(), Status = AttendanceExceptionStatus.Open }, 0, 1000, HttpContext.RequestAborted);
+        var exception = await attendance.FindByIdAsync(id, HttpContext.RequestAborted);
 
-        if (open.Items.All(exception => exception.ItemId != id))
+        if (exception is null || exception.Status != AttendanceExceptionStatus.Open || !scope.Covers(exception.TeamId))
         {
             return NotFound();
         }

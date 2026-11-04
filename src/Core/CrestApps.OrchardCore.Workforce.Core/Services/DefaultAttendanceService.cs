@@ -57,6 +57,11 @@ internal sealed class DefaultAttendanceService : IAttendanceService
         return _exceptionStore.PageAsync(query, skip, take, cancellationToken);
     }
 
+    public async Task<AttendanceException> FindByIdAsync(string id, CancellationToken cancellationToken = default)
+    {
+        return string.IsNullOrEmpty(id) ? null : await _exceptionStore.FindByIdAsync(id, cancellationToken);
+    }
+
     public Task<PlanningResult<AttendanceException>> ExcuseAsync(string id, string note, string actor, CancellationToken cancellationToken = default)
     {
         return DecideAsync(id, actor, exception =>
