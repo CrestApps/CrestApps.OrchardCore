@@ -60,7 +60,9 @@ public sealed class QueueItemStore : DocumentCatalog<QueueItem, QueueItemIndex>,
     {
         ArgumentException.ThrowIfNullOrEmpty(queueId);
 
-        return await Session.Query<QueueItem, QueueItemIndex>(
+        // Counted from the index alone: a queue item has exactly one index row, and counting through the documents
+        // joined every waiting row to its document on each poll.
+        return await Session.QueryIndex<QueueItemIndex>(
             index => index.QueueId == queueId && index.Status == QueueItemStatus.Waiting,
             collection: ContactCenterStorage.CollectionName)
             .CountAsync(cancellationToken);
@@ -69,13 +71,20 @@ public sealed class QueueItemStore : DocumentCatalog<QueueItem, QueueItemIndex>,
     /// <inheritdoc/>
     public async Task<IReadOnlyCollection<string>> GetWaitingQueueIdsAsync(CancellationToken cancellationToken = default)
     {
-        var rows = await Session.QueryIndex<QueueItemIndex>(
-            index => index.Status == QueueItemStatus.Waiting,
-            collection: ContactCenterStorage.CollectionName)
-            .ListAsync(cancellationToken);
+        // Only the queue column is read, so the status and queue index answers it. Reading the index rows
+        // themselves read every column of every waiting item to keep a handful of distinct queues. The flush lets
+        // the statement, which runs on the session's own transaction, see the caller's pending writes.
+        await Session.FlushAsync(cancellationToken);
+        var transaction = await Session.BeginTransactionAsync(cancellationToken);
 
-        return rows
-            .Select(row => row.QueueId)
+        var queueIds = await transaction.Connection.QueryAsync<string>(
+            new CommandDefinition(
+                QueueItemQueries.BuildWaitingQueueIdsSql(Session.Store.Configuration),
+                transaction: transaction,
+                cancellationToken: cancellationToken));
+
+        return queueIds
+            .Where(queueId => !string.IsNullOrEmpty(queueId))
             .Distinct(StringComparer.Ordinal)
             .ToArray();
     }
@@ -83,7 +92,7 @@ public sealed class QueueItemStore : DocumentCatalog<QueueItem, QueueItemIndex>,
     /// <inheritdoc/>
     public async Task<int> CountAllWaitingAsync(CancellationToken cancellationToken = default)
     {
-        return await Session.Query<QueueItem, QueueItemIndex>(
+        return await Session.QueryIndex<QueueItemIndex>(
             index => index.Status == QueueItemStatus.Waiting,
             collection: ContactCenterStorage.CollectionName)
             .CountAsync(cancellationToken);
@@ -148,7 +157,7 @@ public sealed class QueueItemStore : DocumentCatalog<QueueItem, QueueItemIndex>,
     {
         ArgumentException.ThrowIfNullOrEmpty(queueId);
 
-        return await Session.Query<QueueItem, QueueItemIndex>(
+        return await Session.QueryIndex<QueueItemIndex>(
             index => index.QueueId == queueId
                 && index.Status == QueueItemStatus.Waiting
                 && index.EnqueuedUtc < thresholdUtc,
@@ -259,7 +268,7 @@ public sealed class QueueItemStore : DocumentCatalog<QueueItem, QueueItemIndex>,
     {
         ArgumentException.ThrowIfNullOrEmpty(queueId);
 
-        return await Session.Query<QueueItem, QueueItemIndex>(
+        return await Session.QueryIndex<QueueItemIndex>(
             index => index.QueueId == queueId && index.Status == QueueItemStatus.Assigned && index.AgentId == null,
             collection: ContactCenterStorage.CollectionName)
             .CountAsync(cancellationToken);

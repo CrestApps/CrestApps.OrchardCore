@@ -297,6 +297,7 @@ namespace CrestApps.OrchardCore.Telephony.Migrations
         public System.Threading.Tasks.Task<int> CreateAsync() { }
         public System.Threading.Tasks.Task<int> UpdateFrom1Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom2Async() { }
+        public System.Threading.Tasks.Task<int> UpdateFrom3Async() { }
     }
     public sealed class TelephonyUserConnectionIndexMigrations : OrchardCore.Data.Migration.DataMigration
     {

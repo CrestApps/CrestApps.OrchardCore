@@ -46,7 +46,9 @@ internal sealed class OmnichannelMessageIndexMigrations : DataMigration
 
         await CreateReportIndexAsync();
 
-        return 4;
+        await CreateLookupIndexesAsync();
+
+        return 5;
     }
 
     /// <summary>
@@ -113,6 +115,19 @@ internal sealed class OmnichannelMessageIndexMigrations : DataMigration
         return 4;
     }
 
+    /// <summary>
+    /// Adds the indexes the message reads seek. Every earlier index leads with <c>DocumentId</c>, so a thread's
+    /// messages, a delivery receipt's message and a channel's recent inbound or outbound messages were each found by
+    /// reading the whole table.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom4Async()
+    {
+        await CreateLookupIndexesAsync();
+
+        return 5;
+    }
+
     private Task<bool> CreateReportIndexAsync()
     {
         return IndexTableIndexCreation.CreateIfMissingAsync<OmnichannelMessageIndex>(
@@ -120,5 +135,29 @@ internal sealed class OmnichannelMessageIndexMigrations : DataMigration
             "IDX_OmnichannelMessageIndex_Report",
             OmnichannelConstants.CollectionName,
             "CreatedUtc", "Id");
+    }
+
+    private async Task CreateLookupIndexesAsync()
+    {
+        // A channel's messages in one direction, oldest first, which the channel's message lists page through.
+        await IndexTableIndexCreation.CreateIfMissingAsync<OmnichannelMessageIndex>(
+            SchemaBuilder,
+            "IDX_OmnichannelMessageIndex_ChannelDirection",
+            OmnichannelConstants.CollectionName,
+            "Channel", "IsInbound", "CreatedUtc", "DocumentId");
+
+        // The message a provider's delivery receipt or redelivery names.
+        await IndexTableIndexCreation.CreateIfMissingAsync<OmnichannelMessageIndex>(
+            SchemaBuilder,
+            "IDX_OmnichannelMessageIndex_ProviderMessage",
+            OmnichannelConstants.CollectionName,
+            "Channel", "ProviderMessageId", "DocumentId");
+
+        // A thread's messages in the order they were sent.
+        await IndexTableIndexCreation.CreateIfMissingAsync<OmnichannelMessageIndex>(
+            SchemaBuilder,
+            "IDX_OmnichannelMessageIndex_Conversation",
+            OmnichannelConstants.CollectionName,
+            "ConversationId", "CreatedUtc", "DocumentId");
     }
 }
