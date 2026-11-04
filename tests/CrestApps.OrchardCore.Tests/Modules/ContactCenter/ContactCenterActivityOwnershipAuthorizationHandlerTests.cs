@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContactCenter.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.Security;
@@ -142,7 +143,7 @@ public sealed class ContactCenterActivityOwnershipAuthorizationHandlerTests
         var workStateManager = new Mock<IContactCenterWorkStateManager>(MockBehavior.Strict);
         var handler = new ContactCenterActivityOwnershipAuthorizationHandler(
             workStateManager.Object,
-            new Lazy<IAuthorizationService>(CreateAuthorizationService(authorizeOwnActivity: true)));
+            CreateServiceProvider(authorizeOwnActivity: true));
         var context = new AuthorizationHandlerContext(
             [new PermissionRequirement(OmnichannelConstants.Permissions.EditActivity)],
             CreatePrincipal("user-1"),
@@ -165,10 +166,10 @@ public sealed class ContactCenterActivityOwnershipAuthorizationHandlerTests
 
         return new ContactCenterActivityOwnershipAuthorizationHandler(
             workStateManager.Object,
-            new Lazy<IAuthorizationService>(CreateAuthorizationService(authorizeOwnActivity)));
+            CreateServiceProvider(authorizeOwnActivity));
     }
 
-    private static IAuthorizationService CreateAuthorizationService(bool authorizeOwnActivity)
+    private static IServiceProvider CreateServiceProvider(bool authorizeOwnActivity)
     {
         var authorizationService = new Mock<IAuthorizationService>();
         authorizationService
@@ -180,7 +181,9 @@ public sealed class ContactCenterActivityOwnershipAuthorizationHandlerTests
                 ? AuthorizationResult.Success()
                 : AuthorizationResult.Failed());
 
-        return authorizationService.Object;
+        return new ServiceCollection()
+            .AddSingleton(authorizationService.Object)
+            .BuildServiceProvider();
     }
 
     private static AuthorizationHandlerContext CreateContext(ClaimsPrincipal user, object resource)

@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Security;
 
 namespace CrestApps.OrchardCore.ContactCenter.Handlers;
@@ -21,22 +22,22 @@ namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 internal sealed class ContactCenterActivityOwnershipAuthorizationHandler : AuthorizationHandler<PermissionRequirement>
 {
     private readonly IContactCenterWorkStateManager _workStateManager;
-    private readonly Lazy<IAuthorizationService> _authorizationService;
+    private readonly IServiceProvider _serviceProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterActivityOwnershipAuthorizationHandler"/> class.
     /// </summary>
     /// <param name="workStateManager">The work state manager.</param>
-    /// <param name="authorizationService">
-    /// The authorization service, resolved lazily: an authorization handler that constructed it eagerly would
-    /// close the cycle between the service and the handlers it runs.
+    /// <param name="serviceProvider">
+    /// The service provider the authorization service is resolved from when it is needed: an authorization handler
+    /// that constructed it eagerly would close the cycle between the service and the handlers it runs.
     /// </param>
     public ContactCenterActivityOwnershipAuthorizationHandler(
         IContactCenterWorkStateManager workStateManager,
-        Lazy<IAuthorizationService> authorizationService)
+        IServiceProvider serviceProvider)
     {
         _workStateManager = workStateManager;
-        _authorizationService = authorizationService;
+        _serviceProvider = serviceProvider;
     }
 
     /// <inheritdoc/>
@@ -64,7 +65,9 @@ internal sealed class ContactCenterActivityOwnershipAuthorizationHandler : Autho
 
         // A role check is cheap and a work state lookup is not, so ask the permission first: most callers of this
         // check are rows in a list, and a user who cannot complete their own work never needs the lookup.
-        if (!await _authorizationService.Value.AuthorizeAsync(context.User, OmnichannelConstants.Permissions.CompleteOwnActivity))
+        var authorizationService = _serviceProvider.GetRequiredService<IAuthorizationService>();
+
+        if (!await authorizationService.AuthorizeAsync(context.User, OmnichannelConstants.Permissions.CompleteOwnActivity))
         {
             return;
         }

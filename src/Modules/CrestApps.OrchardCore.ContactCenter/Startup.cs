@@ -276,8 +276,6 @@ public sealed class Startup : StartupBase
         // contends with a CRM edit of the same activity row. The work state itself is a Contact Center document;
         // the base feature composes Omnichannel Management so its CRM activity projection and administration
         // surfaces are available together.
-        services.TryAddScoped(sp => new Lazy<IAuthorizationService>(sp.GetRequiredService<IAuthorizationService>));
-
         services
             .AddScoped<IContactCenterWorkStateStore, ContactCenterWorkStateStore>()
             .AddScoped<IContactCenterRetentionPolicy, ContactCenterWorkStateRetentionPolicy>()
