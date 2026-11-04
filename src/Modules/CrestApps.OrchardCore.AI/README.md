@@ -12,7 +12,7 @@ Provides AI services.
 | AI Connection Management | `CrestApps.OrchardCore.AI.ConnectionManagement` | Provides user interface to manage AI connections. |
 | AI Tool Instances | `CrestApps.OrchardCore.AI.ToolInstances` | Provides user interface to manage AI tool instances. |
 | AI Personas | `CrestApps.OrchardCore.AI.Personas` | Reusable characters for AI profiles and chat interactions, with their own instructions, assistant name, avatar and voice. Profiles link to a persona, so an edit applies to all of them from the next message. |
-| AI Quality | `CrestApps.OrchardCore.AI.Quality` | Simulation test cases you run against AI profiles from the admin or a CI pipeline, QA cohorts that score a sample of real conversations, a QA dashboard, and alert rules that watch the AI's metrics. |
+| AI Quality | `CrestApps.OrchardCore.AI.Quality` | Simulation test cases you run against AI profiles from the admin or a CI pipeline, QA cohorts that score a sample of real conversations, the AI QA Dashboard report (with Reports on), and alert rules that watch the AI's metrics. |
 | Custom LLM (WebSocket) | `CrestApps.OrchardCore.AI.CustomLlm` | A provider that sends each turn to your own server over a WebSocket and streams its reply back, for a model or agent you host that does not speak an OpenAI-compatible API. |
 | AI Webhooks | `CrestApps.OrchardCore.AI.Webhooks` | Posts signed AI events (a conversation starting, ending, analyzed, transferred or scored, an alert triggering or resolving) to outside addresses, with retries and a delivery log. |
 

@@ -7,7 +7,10 @@ using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Drivers;
 using CrestApps.OrchardCore.AI.Endpoints.Api;
 using CrestApps.OrchardCore.AI.Migrations;
+using CrestApps.OrchardCore.AI.Reports;
 using CrestApps.OrchardCore.AI.Services;
+using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -39,6 +42,7 @@ public sealed class QualityStartup : StartupBase
             .AddScoped<AIQACohortEvaluator>()
             .AddScoped<AIConversationKnowledgeCollector>()
             .AddScoped<AIQADashboardService>()
+            .AddScoped<IAIQADashboardService>(serviceProvider => serviceProvider.GetRequiredService<AIQADashboardService>())
             .AddIndexProvider<AIQACohortIndexProvider>()
             .AddDisplayDriver<AIQACohort, AIQACohortDisplayDriver>()
             .AddScoped<IAIAlertRuleStore, AIAlertRuleStore>()
@@ -65,6 +69,21 @@ public sealed class QualityStartup : StartupBase
 /// <summary>
 /// Maps the AI tests API when both the AI Quality and the AI Chat WebAPI features are on.
 /// </summary>
+/// <summary>
+/// Publishes the QA dashboard as a report, with its QA cohort filter, while Reports is enabled.
+/// </summary>
+[Feature(AIConstants.Feature.Quality)]
+[RequireFeatures(ReportsConstants.Feature)]
+public sealed class QualityReportsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddReport<AIQualityReport>()
+            .AddDisplayDriver<ReportFilter, AIQACohortReportFilterDisplayDriver>();
+    }
+}
+
 [RequireFeatures(AIConstants.Feature.Quality, AIConstants.Feature.ChatApi)]
 public sealed class QualityApiStartup : StartupBase
 {

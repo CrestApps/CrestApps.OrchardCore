@@ -1,4 +1,8 @@
 @model ListCatalogEntryViewModel
+@using CrestApps.OrchardCore.AI.Reports
+@using CrestApps.OrchardCore.Reports
+@using Microsoft.Extensions.Options
+@inject IOptions<ReportOptions> ReportOptions
 
 <zone Name="Title">
     <breadcrumb name="AIQACohorts" title="@T["QA Cohorts"]" />
@@ -17,7 +21,10 @@
                     </div>
                 </div>
                 <div class="col-auto">
-                    <a class="btn btn-outline-secondary" asp-action="Index" asp-controller="AIQADashboard">@T["QA dashboard"]</a>
+                    @if (ReportOptions.Value.Reports.Any(report => report.Name == AIQualityReport.Name))
+                    {
+                        <a class="btn btn-outline-secondary" href="@Url.Action("Display", "Reports", new { area = ReportsConstants.Feature, id = AIQualityReport.Name })">@T["QA dashboard"]</a>
+                    }
                     <a class="btn btn-secondary create" asp-action="Create">@T["Add cohort"]</a>
                 </div>
             </div>
