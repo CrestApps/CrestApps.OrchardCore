@@ -64,6 +64,33 @@ public static class CalendarTime
     }
 
     /// <summary>
+    /// Converts a wall-clock time in a <see cref="TimeZoneInfo"/> to UTC, with the same rules as the IANA conversions: a
+    /// skipped time moves forward by the gap, and one that happens twice is the earlier of the two. A zone the time zone
+    /// database knows is converted by its id; any other, such as a custom zone, by its own adjustment rules.
+    /// </summary>
+    /// <param name="local">The wall-clock time; its kind is ignored.</param>
+    /// <param name="timeZone">The time zone, or <see langword="null"/> for UTC.</param>
+    /// <returns>The UTC time.</returns>
+    public static DateTime ToUtc(DateTime local, TimeZoneInfo timeZone)
+    {
+        var zone = timeZone ?? TimeZoneInfo.Utc;
+
+        if (FindZone(zone.Id) is { } known)
+        {
+            return ToUtc(ToLocalDateTime(local), known);
+        }
+
+        var unspecified = DateTime.SpecifyKind(local, DateTimeKind.Unspecified);
+        var offset = zone.IsInvalidTime(unspecified)
+            ? zone.GetUtcOffset(unspecified.AddHours(-3))
+            : zone.IsAmbiguousTime(unspecified)
+                ? zone.GetAmbiguousTimeOffsets(unspecified).Max()
+                : zone.GetUtcOffset(unspecified);
+
+        return DateTime.SpecifyKind(unspecified - offset, DateTimeKind.Utc);
+    }
+
+    /// <summary>
     /// Converts a UTC time to the wall-clock time in a time zone.
     /// </summary>
     /// <param name="utc">The UTC time; an unspecified kind is treated as UTC.</param>

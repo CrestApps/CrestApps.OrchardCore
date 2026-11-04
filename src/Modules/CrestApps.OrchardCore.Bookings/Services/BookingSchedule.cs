@@ -1,5 +1,6 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Bookings.Models;
+using CrestApps.OrchardCore.Calendars.Core;
 
 namespace CrestApps.OrchardCore.Bookings.Services;
 
@@ -67,11 +68,12 @@ public static class BookingSchedule
                 : null;
 
     /// <summary>
-    /// Returns when a date or time key starts, in UTC.
+    /// Returns when a date or time key starts, in UTC. A start that a daylight-saving change skips moves forward by the
+    /// gap, and one that happens twice is the earlier of the two.
     /// </summary>
     public static DateTime? GetStartUtc(string slotKey, TimeZoneInfo timeZone)
         => GetLocalStart(slotKey) is { } local
-            ? TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(local, DateTimeKind.Unspecified), timeZone ?? TimeZoneInfo.Utc)
+            ? CalendarTime.ToUtc(local, timeZone)
             : null;
 
     /// <summary>

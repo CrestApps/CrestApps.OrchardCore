@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Calendars.Core;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.WorkOrders.Services;
 
@@ -116,23 +117,21 @@ public sealed class SlaClock
     /// Gives the open stretches of weekly hours, in a time zone, between two times. Pure.
     /// </summary>
     /// <param name="weekly">The hours.</param>
-    /// <param name="timeZoneId">The time zone, or <see langword="null"/> for UTC.</param>
+    /// <param name="timeZoneId">The time zone, an IANA or Windows id, or <see langword="null"/> for UTC.</param>
     /// <param name="fromUtc">The start.</param>
     /// <param name="toUtc">The end.</param>
     /// <returns>The stretches, in order.</returns>
+    /// <remarks>
+    /// An opening or closing time that a daylight-saving change skips moves forward by the gap, and one that happens twice
+    /// is the earlier of the two, as <see cref="CalendarTime"/> converts every wall-clock time.
+    /// </remarks>
     public static IEnumerable<(DateTime StartUtc, DateTime EndUtc)> OpenWeekly(WeeklyHours weekly, string timeZoneId, DateTime fromUtc, DateTime toUtc)
     {
         ArgumentNullException.ThrowIfNull(weekly);
 
-        var zone = TimeZoneInfo.Utc;
-
-        if (!string.IsNullOrEmpty(timeZoneId) && TimeZoneInfo.TryFindSystemTimeZoneById(timeZoneId, out var found))
-        {
-            zone = found;
-        }
-
-        var day = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(fromUtc, zone)).AddDays(-1);
-        var lastDay = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(toUtc, zone));
+        var zone = CalendarTime.GetZone(timeZoneId);
+        var day = DateOnly.FromDateTime(CalendarTime.ToLocal(fromUtc, zone.Id)).AddDays(-1);
+        var lastDay = DateOnly.FromDateTime(CalendarTime.ToLocal(toUtc, zone.Id));
 
         for (; day <= lastDay; day = day.AddDays(1))
         {
@@ -141,8 +140,8 @@ public sealed class SlaClock
                 continue;
             }
 
-            var start = TimeZoneInfo.ConvertTimeToUtc(day.ToDateTime(weekly.Opens), zone);
-            var end = TimeZoneInfo.ConvertTimeToUtc(day.ToDateTime(weekly.Closes), zone);
+            var start = CalendarTime.ToUtc(CalendarTime.ToLocalDateTime(day.ToDateTime(weekly.Opens)), zone);
+            var end = CalendarTime.ToUtc(CalendarTime.ToLocalDateTime(day.ToDateTime(weekly.Closes)), zone);
 
             if (end > fromUtc && start < toUtc)
             {

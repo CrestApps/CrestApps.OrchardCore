@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Bookings.Models;
+using CrestApps.OrchardCore.Calendars.Core;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
@@ -95,7 +96,7 @@ public sealed class BookingDepositService
             return null;
         }
 
-        var dueUtc = TimeZoneInfo.ConvertTimeToUtc(due.Value.ToDateTime(new TimeOnly(9, 0)), await _capacity.GetTimeZoneAsync());
+        var dueUtc = CalendarTime.ToUtc(due.Value.ToDateTime(new TimeOnly(9, 0)), await _capacity.GetTimeZoneAsync());
 
         return new BookingDepositOffer(balance, percent, dueUtc, due.Value);
     }
