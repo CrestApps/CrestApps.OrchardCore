@@ -54,9 +54,19 @@ internal sealed class CalendarSubscriptionDisplayDriver : DisplayDriver<Calendar
             model.LastSyncedUtc = subscription.LastSyncedUtc;
             model.LastError = subscription.LastError;
             model.LastResult = subscription.LastResult;
+            model.TwoWay = subscription.TwoWay;
+            model.ConflictPolicy = subscription.ConflictPolicy;
+            model.NeedsReconnect = subscription.NeedsReconnect;
             model.ProviderOptions = _syncService.ListProviders()
                 .Select(provider => new SelectListItem(_localizerFactory.Localize(provider.DisplayName).Value, provider.Name))
                 .ToList();
+            model.AddressProviders = _syncService.ListProviders().Where(provider => provider.UsesAddress).Select(provider => provider.Name).ToList();
+            model.WritableProviders = _syncService.ListProviders().OfType<IWritableCalendarProvider>().Select(provider => provider.Name).ToList();
+            model.ConflictPolicyOptions =
+            [
+                new SelectListItem(S["The external calendar's copy wins"], nameof(CalendarSyncConflictPolicy.ExternalWins)),
+                new SelectListItem(S["This calendar's copy wins"], nameof(CalendarSyncConflictPolicy.LocalWins)),
+            ];
         }).Location("Content:20%Subscription;5");
     }
 
@@ -72,23 +82,43 @@ internal sealed class CalendarSubscriptionDisplayDriver : DisplayDriver<Calendar
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         var subscription = calendar.GetOrCreate<CalendarSubscription>();
-        var url = model.SubscriptionUrl?.Trim();
+        var providerName = string.IsNullOrWhiteSpace(model.SubscriptionProvider) ? ICalendarUrlProvider.ProviderName : model.SubscriptionProvider;
+        var provider = _syncService.FindProvider(providerName);
+        var usesAddress = provider?.UsesAddress ?? true;
+        var url = usesAddress ? model.SubscriptionUrl?.Trim() : null;
 
-        if (model.SubscriptionEnabled && !string.IsNullOrEmpty(url) && !(url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) || url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || url.StartsWith("webcal://", StringComparison.OrdinalIgnoreCase)))
+        if (model.SubscriptionEnabled && provider is null)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubscriptionProvider), S["The provider is not available."]);
+        }
+
+        if (model.SubscriptionEnabled && usesAddress && !string.IsNullOrEmpty(url) && !(url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) || url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || url.StartsWith("webcal://", StringComparison.OrdinalIgnoreCase)))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubscriptionUrl), S["The address must start with https://, http:// or webcal://."]);
         }
 
-        if (!string.Equals(subscription.Url, url, StringComparison.Ordinal))
+        if (!string.Equals(subscription.Url, url, StringComparison.Ordinal) || !string.Equals(subscription.Provider, providerName, StringComparison.OrdinalIgnoreCase))
         {
             subscription.LastAttemptUtc = null;
             subscription.Failures = 0;
+            subscription.SyncToken = null;
+            subscription.PendingDeletes.Clear();
         }
 
-        subscription.Provider = string.IsNullOrWhiteSpace(model.SubscriptionProvider) ? ICalendarUrlProvider.ProviderName : model.SubscriptionProvider;
+        subscription.Provider = providerName;
         subscription.Url = string.IsNullOrEmpty(url) ? null : url;
         subscription.IntervalMinutes = Math.Clamp(model.SubscriptionInterval, 5, 10080);
-        subscription.Enabled = model.SubscriptionEnabled && !string.IsNullOrEmpty(url);
+        subscription.TwoWay = model.TwoWay && provider is IWritableCalendarProvider;
+        subscription.ConflictPolicy = model.ConflictPolicy;
+        subscription.Enabled = model.SubscriptionEnabled && (provider?.IsConfigured(calendar, subscription) ?? false);
+
+        // Saving the subscription again is how someone says the account was reconnected.
+        if (subscription.NeedsReconnect)
+        {
+            subscription.NeedsReconnect = false;
+            subscription.LastAttemptUtc = null;
+            subscription.Failures = 0;
+        }
 
         calendar.Put(subscription);
 

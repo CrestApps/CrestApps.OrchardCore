@@ -179,6 +179,43 @@ public sealed class DialerAttemptService : IDialerAttemptService
 
     /// <inheritdoc/>
     public async Task<bool> TryDialAsync(DialerProfile profile, ActivityReservation reservation, CancellationToken cancellationToken = default)
+        => (await DialAsync(profile, reservation, cancellationToken)).Started;
+
+    /// <inheritdoc/>
+    public async Task<bool> TrySuppressUndialableAsync(DialerProfile profile, ActivityReservation reservation, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        ArgumentNullException.ThrowIfNull(reservation);
+
+        var activity = await _activityManager.FindByIdAsync(reservation.ActivityItemId, cancellationToken);
+
+        if (activity is null)
+        {
+            return false;
+        }
+
+        var eligibility = await _eligibilityService.EvaluateAsync(new DialerEligibilityContext
+        {
+            Profile = profile,
+            Activity = activity,
+        }, cancellationToken);
+
+        // Only a record that can never be dialed is closed before it is offered. One that is merely not callable yet
+        // (a cool-down, the calling window, a registry that could not answer) is still offered, and the agent is told
+        // why when they try to call it.
+        if (eligibility.IsEligible ||
+            (eligibility.Reason != DialerSuppressionReason.MaxAttemptsReached && !ResolveSuppressedStatus(eligibility.Reason).HasValue))
+        {
+            return false;
+        }
+
+        await SuppressAsync(profile, reservation, activity, eligibility, cancellationToken);
+
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public async Task<DialerAttemptResult> DialAsync(DialerProfile profile, ActivityReservation reservation, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(profile);
         ArgumentNullException.ThrowIfNull(reservation);
@@ -189,7 +226,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
         {
             await _compensationService.CompensateAsync(reservation, removeFromQueue: true, cancellationToken);
 
-            return false;
+            return DialerAttemptResult.NotStarted;
         }
 
         if (_logger.IsEnabled(LogLevel.Debug))
@@ -207,7 +244,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
         {
             await SuppressAsync(profile, reservation, activity, eligibility, cancellationToken);
 
-            return false;
+            return DialerAttemptResult.Suppressed(eligibility);
         }
 
         var agent = await _agentManager.FindByIdAsync(reservation.AgentId, cancellationToken);
@@ -219,7 +256,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
                 reservation.ActivityItemId.SanitizeLogValue(),
                 reservation.AgentId.SanitizeLogValue());
 
-            return false;
+            return DialerAttemptResult.NotStarted;
         }
 
         // An automated dial is the dialer's until a person answers and the agent is connected, so it only holds the
@@ -231,7 +268,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
 
         if (acceptedReservation is null)
         {
-            return false;
+            return DialerAttemptResult.NotStarted;
         }
 
         if (_logger.IsEnabled(LogLevel.Debug))
@@ -258,7 +295,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
             throw;
         }
 
-        return true;
+        return DialerAttemptResult.Dialed;
     }
 
     /// <inheritdoc/>

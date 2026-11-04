@@ -1,0 +1,15 @@
+{
+  "code": "Ok",
+  "routes": [
+    {
+      "distance": 6012.2,
+      "duration": 840.4,
+      "geometry": { "type": "LineString", "coordinates": [ [-71.058, 42.3603], [-71.08, 42.365], [-71.1097, 42.3736] ] },
+      "legs": [ { "steps": [
+        { "name": "City Hall Square", "maneuver": { "type": "depart" } },
+        { "name": "Cambridge Street", "maneuver": { "type": "turn", "modifier": "left" } },
+        { "name": "", "maneuver": { "type": "arrive" } }
+      ] } ]
+    }
+  ]
+}

@@ -10,7 +10,7 @@ This page covers what helps you set up Workforce and use what it records: the **
 
 | | |
 | --- | --- |
-| **Menu** | Workforce > Get Started; Reports; Workflows; Configuration > Recipes; Configuration > Import/Export |
+| **Menu** | Workforce > Workers > Get started; Reports; Workflows; Configuration > Recipes; Configuration > Import/Export |
 | **Permission** | Manage workforce teams for Get Started; the permission of each data set for reports |
 | **Feature** | Workforce, and Reports, Workflows, AI or Workforce API for each part |
 
@@ -18,7 +18,7 @@ This page covers what helps you set up Workforce and use what it records: the **
 
 ## Get started
 
-**Workforce > Get Started** lists the steps of setting up Workforce in order: the team tree, workers, shift planning, time off, labor rules, the time clock and My Work. Each step shows what is there now, is marked **Done** once it is set up, and has a button to its page. A step whose feature is off says so, with a link to the features.
+Open **Workforce > Workers** and choose **Get started**. The page lists the steps of setting up Workforce in order: the team tree, workers, shift planning, time off, labor rules, the time clock and My Work. Each step shows what is there now, is marked **Done** once it is set up, and has a button to its page. A step whose feature is off says so, with a link to the features.
 
 To try Workforce with sample data, run **Workforce sample** under **Configuration > Recipes**. It adds a region with a clinic and two teams, six workers, early and late shift templates, vacation and sick time, an example rule set, and a time clock with pay periods every two weeks. Link the sample workers to user accounts under **Workforce > Workers** to try My Work as them.
 
@@ -32,13 +32,15 @@ With **Reports** on, the report builder has a **Workforce** data source. Each da
 
 | Data set | One row per | Needs |
 | --- | --- | --- |
+| **Workers** | Worker: main team, employment, status, contracted hours, when hired and when they left | View workers |
+| **Schedule changes** | Change to a published schedule: added, moved, reassigned, swapped or removed, for whom, how many hours before the shift, whether the worker asked, and why | Plan team schedules, with Shift Planning |
 | **Punches** | Punch: when, what, from where, at the site or not, corrected or removed | Approve timesheets, with the Time Clock |
 | **Timesheet lines** | Line of a timesheet: day, pay code, hours, where they came from, and the timesheet's period and status | Approve timesheets, with the Time Clock |
 | **Attendance exceptions** | Exception: kind, day, minutes, points and status | Approve timesheets, with the Time Clock |
 | **Time-off requests** | Request: dates, amount, status, when asked for and decided | Approve time off, with Time Off |
 | **Predictability pay** | Entry: the change, the notice, the premium and its status | Approve predictability pay, with Labor Rules |
 
-For example, a report of **Timesheet lines** grouped by team and pay code shows overtime hours by team for a pay period.
+For example, a report of **Timesheet lines** grouped by team and pay code shows overtime hours by team for a pay period, and one of **Schedule changes** grouped by team, counting those the worker didn't ask for, shows how often each team's schedule changes after it is published.
 
 ## Workflows
 
@@ -52,6 +54,9 @@ With **Workflows** on, workflows can start from Workforce events, in the **Workf
 | **Attendance Exception Raised** | A late start, missed punch, no-show or other exception is raised |
 | **Attendance Points Threshold Reached** | A worker's points reach their policy's threshold |
 | **Timesheet Submitted**, **Timesheet Approved** | A timesheet is submitted or approved |
+| **Shift Assigned**, **Shift Changed**, **Shift Removed** | A shift is added to the published schedule for a worker; moved, given to someone else, swapped or its breaks changed; or taken off, however the change was made |
+| **Time Off Waitlist Promoted** | A waitlisted time-off request gets a place because another was canceled |
+| **Open Shift Posted** | A shift with nobody is offered to the team; when someone gets it, **Shift Assigned** follows |
 
 Each event can be limited to some teams. The workflow's input has the worker and team, and the ids of what happened, so later activities can look it up. For example, an **Attendance Exception Raised** workflow can email a team's manager about each no-show.
 

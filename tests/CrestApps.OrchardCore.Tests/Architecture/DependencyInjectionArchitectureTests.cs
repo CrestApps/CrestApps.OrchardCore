@@ -94,6 +94,9 @@ public sealed class DependencyInjectionArchitectureTests
             "SharedAgentSkillsHandler",
             "The skill assignment service constructs every assignment handler, and the agent profile manager (whose handlers write back to the shared catalog) and the skills sync both lead back to the assignment service, so injecting them would close an assignment-service-to-handler construction cycle."),
         new DependencyInjectionException(
+            "VoiceQueueOfferService",
+            "It resolves the dialer attempt service only when it screens a preview record: that service places calls through the call router, which offers work through this service, so injecting it closed a construction cycle that hung every request at startup. The dialer attempt service is also absent when the dialer feature is off."),
+        new DependencyInjectionException(
             "ContactActivityExportHandler",
             "An import handler that injected the import manager would close a manager-to-handler construction cycle."),
         new DependencyInjectionException(

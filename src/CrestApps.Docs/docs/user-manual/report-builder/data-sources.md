@@ -38,7 +38,7 @@ Watch the short video, then read about each data source below.
 | **Orders** | **Orders**, **Order lines**, **Order refunds**, **Order disputes**, **Order discounts** and **Order taxes**; **Returns** and **Gift cards** when those features are on. | **Orders** is on. | **Manage orders**. Gift cards also need **Manage gift cards**. |
 | **Products** | **Products**, **Product variants** and **Product prices**; **Product bundle items** and **Product attributes** when those features are on. | **Products** is on. | Permission to view the product type. You see the drafts of the types you may edit. |
 | **Customers** | **Customers**; **Loyalty accounts** and **Loyalty activity**, **Store credit accounts** and **Store credit activity**, and **Referrals** and **Referral rewards** when those features are on. | **Customers** is on. | **View customers**. Referrals need **Manage customers**. |
-| **Companies** | **Companies**, **Company buyers**, **Price lists** and **Price list entries**. | **Companies** is on. | **Manage companies**. |
+| **B2B accounts** | **B2B accounts**, **B2B buyers**, **Price lists** and **Price list entries**. | **Accounts B2B** is on. | **Manage B2B accounts**. |
 | **Inventory** | **Stock items**, **Stock levels** (each item at each location), **Stock movements**, **Stock reservations** and **Locations**; **Purchase orders**, **Purchase order lines** and **Back-in-stock alerts** when those features are on. | **Inventory** is on. | **View inventory**. |
 | **Checkout** | **Checkout sessions** (including the ones a buyer left), **Coupons**, **Coupon uses** and **Saved payment methods**. | **Checkout** is on. | Checkout sessions need **Manage orders**, coupons **Manage coupons**, and saved payment methods **Manage payments and refunds**. |
 | **Carts** | **Carts** and **Cart lines**; **Wishlists** and **Wishlist items** when Wishlists is on. | **Carts** is on. | **Manage orders**. |
@@ -52,8 +52,12 @@ Watch the short video, then read about each data source below.
 | **Point of Sale** | **Registers** and **Register shifts**. | **Point of Sale** is on. | **Manage registers and shifts**. |
 | **Phone number verifications** | **Verifications**: the phone numbers checked, and what the check found. | **Phone Number Verifications** is on. | **Run 'Phone Number Verifications' Report**. |
 | **DNC registry** | **DNC lists** and **DNC entries** of your own do-not-call lists. | **Local Do Not Call Registry** is on. | **Manage DNC registry settings**. |
+| **Calendars** | **Calendars** and **Calendar events**: only the calendars you can read, as on the calendar. A private event on a calendar you can't change shows its time but not its title. A repeating event is one row. | **Calendars** is on. | **Use calendars**. |
+| **Scheduling** | **Appointments** (with how far ahead each was booked), **Appointment resources** (one row for each staff member, room or piece of equipment an appointment books), **Appointment types**, **Scheduling resources** and the **Waitlist**. | **Scheduling** is on. | **View appointments**. The waitlist needs **Manage appointments**. |
 
 If a data source or data set is missing, your site may not use the feature that stores that data, or you may not have the permission it asks for. Ask your administrator.
+
+<YouTube video="omnichannel-reports" title="Video of the omnichannel and messaging data sets in the Report Builder" start={322} end={373} />
 
 ## Content items
 

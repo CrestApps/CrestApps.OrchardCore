@@ -103,14 +103,10 @@
             </div>
         </div>
 
-        <div class="ocat-wrapper">
-            <div class="ocat-end-offset">
-                <div class="d-flex flex-wrap gap-2">
-                    <button type="submit" name="submit" value="save" class="btn btn-secondary">@T["Save draft"]</button>
-                    <button type="submit" name="submit" value="send" class="btn btn-primary">@T["Send"]</button>
-                    <a asp-action="Index" class="btn btn-link">@T["Back to campaigns"]</a>
-                </div>
-            </div>
+        <div class="action-bar-bottom">
+            <button type="submit" name="submit" value="save" class="btn btn-secondary">@T["Save draft"]</button>
+            <button type="submit" name="submit" value="send" class="btn btn-primary">@T["Send"]</button>
+            <a asp-action="Index" class="btn btn-link">@T["Back to campaigns"]</a>
         </div>
     </fieldset>
 </form>

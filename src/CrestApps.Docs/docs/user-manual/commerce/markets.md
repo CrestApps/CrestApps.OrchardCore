@@ -16,6 +16,10 @@ A **market** is a group of countries you sell to on the same terms. Its shoppers
 
 <AskYourAdmin />
 
+Watch the video for a tour of every screen, from adding a market to a checkout with prices that include tax.
+
+<YouTube video="markets" title="Markets in CrestApps for Orchard Core" />
+
 ## How a market works
 
 Your store has one currency of its own: the one set under **Settings > Commerce > Checkout**. In this page it's called **your store's currency**. A market adds another currency, and an **exchange rate**: how much of the market's currency 1 unit of your store's currency is worth.
@@ -30,6 +34,8 @@ When a shopper is in a market:
 Shoppers in countries that aren't in a market, and everyone in the admin, see your store's own prices.
 
 ## Add a market
+
+<YouTube video="markets" title="Add a market" start={89} end={141} />
 
 1. Open **Commerce > Markets** and click **Add market**.
 2. Fill in the fields (below), and click **Save**.
@@ -80,6 +86,8 @@ Shoppers in a market with that currency pay that price. Everyone else keeps seei
 
 ## The market picker
 
+<YouTube video="markets" title="The market picker on the storefront" start={141} end={172} />
+
 When you have at least one market that's on, the storefront's top bar shows the shopper's market and its currency, such as *Germany · EUR*, with a globe icon. Clicking it lists your markets under **Shop in**, and **Everywhere else**, which shows your store's own prices in your store's currency.
 
 The shopper's market is:
@@ -98,6 +106,8 @@ A shopper who picks another market sees their cart in the new market's currency 
 
 ## Prices that include tax
 
+<YouTube video="markets" title="The checkout with prices that include tax" start={222} end={245} />
+
 In many countries shoppers expect the price they see to be the price they pay, with VAT in it. Turn on **Prices include tax** for those markets.
 
 At checkout, the tax your [tax rules](taxes.md) give is then taken out of the prices instead of added on top: a shopper who saw 23.99 pays 23.99, and the order summary shows the VAT in it, such as *VAT 19% (included)*. With it off, the summary adds the tax to the prices.
@@ -105,6 +115,8 @@ At checkout, the tax your [tax rules](taxes.md) give is then taken out of the pr
 The checkout uses the market of the order's currency that has the country the order goes to. When none has it, it uses the shopper's own market, if the order is in that market's currency.
 
 ## Shipping in a market
+
+<YouTube video="markets" title="A shipping method in the market's currency" start={195} end={222} />
 
 Each shipping method has a **Currency** (see [Shipping](shipping.md#methods-how-you-ship-and-what-it-costs)). For a shopper in a market:
 
@@ -116,6 +128,8 @@ Each shipping method has a **Currency** (see [Shipping](shipping.md#methods-how-
 :::
 
 ## Leave a product out of a market
+
+<YouTube video="markets" title="Leaving a product out of a market" start={172} end={195} />
 
 Some products can't be sold everywhere, such as a product not allowed in one country. On the product's editor, under **Not sold in**, tick the markets it isn't sold in, and save. The list shows each market with its countries; it appears once you have a market.
 

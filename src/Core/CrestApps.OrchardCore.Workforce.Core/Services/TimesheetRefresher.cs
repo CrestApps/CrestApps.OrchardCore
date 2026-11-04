@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Calendars.Core;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Logging;
@@ -52,7 +53,7 @@ internal sealed class TimesheetRefresher
         var now = _clock.UtcNow;
         var workerIds = new HashSet<string>(await _punchStore.ListWorkerIdsSinceAsync(now.AddHours(-36), cancellationToken), StringComparer.Ordinal);
         var calendarIds = (await _teamStore.ListAsync(cancellationToken))
-            .Select(team => team.CalendarId)
+            .Select(team => team.GetWorkforceSettings().CalendarId)
             .Where(id => !string.IsNullOrEmpty(id))
             .Distinct(StringComparer.Ordinal)
             .ToArray();

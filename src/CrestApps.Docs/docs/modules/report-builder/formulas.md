@@ -6,6 +6,8 @@ user_manual:
   - user-manual/report-builder/columns-and-formulas
 ---
 
+<YouTube video="report-builder-formulas" title="Video overview of Report Builder formulas" />
+
 Calculated fields (`ReportCalculatedField`) are written in a small, spreadsheet-like formula language: Orchard Core's, from the Data Pipelines Core feature (namespace `OrchardCore.DataSources.Expressions`, package `OrchardCore.DataSources.Core`), which Orchard Core's data pipelines use too. `ReportQueryPlanner` compiles each formula with `ExpressionCompiler` against the fields of the report's data sets and the `IExpressionFunctionCatalog`, which holds the built-in functions and those modules add. The builder lists the functions from the same catalog (`/Admin/reports/builder/api/functions`), so the formula window always lists every function the site has. The full reference of the language is in Orchard Core's [Data Sources](https://docs.orchardcore.net/en/latest/reference/modules/DataSources/#formulas) documentation; this page describes it as reports use it. How people write formulas in the builder is described in the User Manual: [Columns and formulas](../../user-manual/report-builder/columns-and-formulas.md#calculated-fields).
 
 ## Syntax

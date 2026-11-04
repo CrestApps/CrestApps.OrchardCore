@@ -636,6 +636,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels
         public ThreadContact() { }
         public string ContentItemId { get; set; }
         public string DisplayName { get; set; }
+        public bool IsLead { get; set; }
         public bool IsPrimary { get; set; }
     }
     public class ThreadViewModel

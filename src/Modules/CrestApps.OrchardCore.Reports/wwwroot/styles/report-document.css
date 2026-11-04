@@ -69,4 +69,14 @@
 .report-container-body.is-scrolling .report-section .card {
     box-shadow: none !important;
 }
+
+/* The header rows of a cross-tab group the column headers under them. */
+.report-section .table thead tr.report-header-group th {
+    font-weight: 600;
+    border-bottom-width: 1px;
+}
+
+.report-section .table thead tr.report-header-group th:not(:empty) {
+    background-color: var(--bs-tertiary-bg);
+}
 /*$vite$:1*/

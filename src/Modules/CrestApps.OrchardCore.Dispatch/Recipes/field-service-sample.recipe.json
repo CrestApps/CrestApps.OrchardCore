@@ -1,0 +1,166 @@
+{
+  "name": "FieldServiceSample",
+  "displayName": "Field service sample",
+  "description": "Sets up a sample field service business: a field team of three technicians and a dispatcher with a day shift template, two service territories, boiler and van asset types with a training boiler and a van that carries stock, a boiler safety checklist, a standard service level, a waiting-on-parts sub-status, and boiler service and no-heat work order types. Publish a schedule for the Field Operations team, then add work orders and dispatch them from the board.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "field service"
+  ],
+  "tags": [
+    "field service",
+    "work orders",
+    "dispatch",
+    "sample"
+  ],
+  "steps": [
+    {
+      "name": "feature",
+      "enable": [
+        "CrestApps.OrchardCore.Geo",
+        "CrestApps.OrchardCore.Assets",
+        "CrestApps.OrchardCore.Assets.Fleet",
+        "CrestApps.OrchardCore.WorkOrders",
+        "CrestApps.OrchardCore.Workforce",
+        "CrestApps.OrchardCore.Workforce.ShiftPlanning",
+        "CrestApps.OrchardCore.Workforce.Portal",
+        "CrestApps.OrchardCore.Dispatch",
+        "CrestApps.OrchardCore.Dispatch.Mobile"
+      ]
+    },
+    {
+      "name": "Workforce",
+      "Teams": [
+        { "name": "Field Operations", "kind": "Team", "timeZoneId": "America/New_York", "description": "Technicians who visit customers.", "location": { "address": "1 Depot Way, Boston, MA 02118" } }
+      ],
+      "Workers": [
+        { "displayName": "Morgan Hale", "employeeNumber": "2001", "jobTitle": "Dispatcher", "employmentType": "FullTime", "teamMemberships": [ { "teamName": "Field Operations", "role": "Manager" } ] },
+        { "displayName": "Ana Field", "employeeNumber": "2002", "jobTitle": "Service technician", "employmentType": "FullTime", "contractedHoursPerWeek": 40, "teamMemberships": [ { "teamName": "Field Operations" } ] },
+        { "displayName": "Ben Ortega", "employeeNumber": "2003", "jobTitle": "Service technician", "employmentType": "FullTime", "contractedHoursPerWeek": 40, "teamMemberships": [ { "teamName": "Field Operations" } ] },
+        { "displayName": "Cam Doyle", "employeeNumber": "2004", "jobTitle": "Apprentice technician", "employmentType": "FullTime", "contractedHoursPerWeek": 40, "teamMemberships": [ { "teamName": "Field Operations" } ] }
+      ]
+    },
+    {
+      "name": "WorkforceShiftPlanning",
+      "Templates": [
+        {
+          "name": "Field day",
+          "color": "#0c8599",
+          "start": "08:00:00",
+          "lengthMinutes": 540,
+          "teamNames": [ "Field Operations" ],
+          "segments": [
+            { "activityName": "Meal", "offsetMinutes": 240, "lengthMinutes": 30 }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Geo",
+      "Territories": [
+        { "ItemId": "4fs7kjkcahkr0q5vh31ktg943y", "Name": "Boston", "PostalCodes": [ "021*" ], "TimeZoneId": "America/New_York", "TravelSpeedKmh": 35 },
+        { "ItemId": "4f0n4hbx15vatb9tg9ykcbsym1", "Name": "Cambridge", "ParentId": "4fs7kjkcahkr0q5vh31ktg943y", "PostalCodes": [ "02138", "02139", "02140", "02141", "02142" ], "TimeZoneId": "America/New_York" }
+      ]
+    },
+    {
+      "name": "Assets",
+      "Types": [
+        {
+          "ItemId": "4f50djz4d49v2hdqg8ynxj481n",
+          "Name": "Boiler",
+          "Category": "CustomerUnit",
+          "Description": "A customer's gas boiler.",
+          "Attributes": [ { "Name": "Fuel", "Kind": "Text" }, { "Name": "Output (kW)", "Kind": "Number" } ],
+          "Meters": [ { "Name": "Run hours", "Unit": "h", "Cumulative": true } ]
+        },
+        {
+          "ItemId": "4frxjzg9rc0mtph04y78qk38dy",
+          "Name": "Service van",
+          "Category": "Vehicle",
+          "Description": "A van that carries the parts technicians use most."
+        }
+      ],
+      "Assets": [
+        {
+          "ItemId": "4fs9svm62gjxb5tzqxya3q8q20",
+          "Name": "Training boiler",
+          "AssetTypeId": "4f50djz4d49v2hdqg8ynxj481n",
+          "SerialNumber": "BX200-0451",
+          "Manufacturer": "Northwind Heating",
+          "Model": "BX200",
+          "Status": "Active",
+          "OwnerKind": "Internal",
+          "Location": { "AddressLine1": "1 Depot Way", "City": "Boston", "Region": "MA", "PostalCode": "02118", "Country": "US" },
+          "Attributes": { "Fuel": "Natural gas", "Output (kW)": "24" }
+        },
+        {
+          "ItemId": "4fvne1bd88btzjbfsx0fjs17gp",
+          "Name": "Van 1",
+          "AssetTypeId": "4frxjzg9rc0mtph04y78qk38dy",
+          "Status": "Active",
+          "OwnerKind": "Internal",
+          "Fleet": { "Plate": "FS-1001", "CarriesStock": true }
+        }
+      ]
+    },
+    {
+      "name": "WorkOrders",
+      "Checklists": [
+        {
+          "ItemId": "4fexpaa3vgvp6s1h1y9jzak6dt",
+          "Name": "Boiler safety check",
+          "Questions": [
+            { "Id": "gas-smell", "Section": "Before", "Text": "Gas smell on arrival?", "Kind": "YesNo", "Required": true },
+            { "Id": "flue-co", "Section": "After", "Text": "Flue gas CO reading", "Kind": "Number", "Required": true, "Min": 0, "Max": 1000, "Unit": "ppm" },
+            { "Id": "pressure", "Section": "After", "Text": "System pressure", "Kind": "PassFailNA", "Required": true },
+            { "Id": "photo", "Section": "After", "Text": "Photo of the data plate", "Kind": "Photo", "MinPhotos": 1 }
+          ]
+        }
+      ],
+      "ServiceLevels": [
+        {
+          "ItemId": "4ff712gq9zvzfks9tqyqgawkmb",
+          "Name": "Standard service",
+          "TimeZoneId": "America/New_York",
+          "WarningPercent": 75,
+          "PauseStatuses": [ "OnHold" ],
+          "Targets": [
+            { "Priority": "Urgent", "ResponseMinutes": 120, "ResolveMinutes": 480 },
+            { "Priority": "High", "ResponseMinutes": 240, "ResolveMinutes": 1440 },
+            { "Priority": "Normal", "ResponseMinutes": 480, "ResolveMinutes": 2880 },
+            { "Priority": "Low", "ResponseMinutes": 1440, "ResolveMinutes": 7200 }
+          ]
+        }
+      ],
+      "SubStatuses": [
+        { "ItemId": "4fqsx194f332rzgh3s4wshe051", "Name": "Waiting on parts", "ParentStatus": "OnHold", "Color": "#e8590c", "PausesSla": true }
+      ],
+      "Types": [
+        {
+          "ItemId": "4fsyaebpefs8a296tfsf55b5ec",
+          "Name": "Boiler service",
+          "Color": "#0c8599",
+          "DefaultDurationMinutes": 90,
+          "CrewSize": 1,
+          "DefaultPriority": "Normal",
+          "ChecklistTemplateIds": [ "4fexpaa3vgvp6s1h1y9jzak6dt" ],
+          "ServiceLevelPolicyId": "4ff712gq9zvzfks9tqyqgawkmb",
+          "RequiresSignature": true,
+          "RequiredPhotos": 1
+        },
+        {
+          "ItemId": "4f4cr6a68f529ayad8d5he25xq",
+          "Name": "No heat",
+          "Color": "#c92a2a",
+          "DefaultDurationMinutes": 60,
+          "CrewSize": 1,
+          "DefaultPriority": "High",
+          "ServiceLevelPolicyId": "4ff712gq9zvzfks9tqyqgawkmb",
+          "RequiresSignature": true
+        }
+      ]
+    }
+  ]
+}

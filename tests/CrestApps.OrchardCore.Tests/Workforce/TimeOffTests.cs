@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Calendars.Models;
+using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -312,7 +313,7 @@ public sealed class TimeOffTests
         // Act
         var flagged = await harness.RunAsync(services => services.GetRequiredService<ITimeOffRequestService>().ApproveAsync(anaRequest.Value.ItemId, "manager"));
 
-        await PlanningKit.UpdateTeamAsync(harness, setup.Team, team => team.TimeOffShiftHandling = TimeOffShiftHandling.Remove);
+        await PlanningKit.UpdateTeamAsync(harness, setup.Team, team => team.GetWorkforceSettings().TimeOffShiftHandling = TimeOffShiftHandling.Remove);
 
         var removed = await harness.RunAsync(services => services.GetRequiredService<ITimeOffRequestService>().ApproveAsync(benRequest.Value.ItemId, "manager"));
         var after = await PlanningKit.ListShiftsAsync(harness, setup.Team);
@@ -331,6 +332,18 @@ public sealed class TimeOffTests
         Assert.Equal(ScheduleChangeInitiator.Worker, change.InitiatedBy);
         Assert.Equal(setup.Ben.ItemId, change.WorkerId);
         Assert.NotNull(change.Reason);
+
+        // Canceling Ben's time off puts his shift and its draft back, and a republish keeps it.
+        await harness.RunAsync(services => services.GetRequiredService<ITimeOffRequestService>().CancelAsync(benRequest.Value.ItemId, "manager"));
+        await PlanningKit.PublishAsync(harness, period);
+
+        var restored = await PlanningKit.ListShiftsAsync(harness, setup.Team);
+        var restoredDrafts = await PlanningKit.ListDraftsAsync(harness, period);
+        var putBack = (await PlanningKit.ListChangesAsync(harness, period)).Where(item => item.Kind == ScheduleChangeKind.Added).ToList();
+
+        Assert.Equal(new[] { setup.Ana.ItemId, setup.Ben.ItemId }.Order(StringComparer.Ordinal), restored.Select(PlanningKit.WorkerOf).Order(StringComparer.Ordinal));
+        Assert.Contains(restoredDrafts, draft => draft.WorkerId == setup.Ben.ItemId);
+        Assert.Equal(setup.Ben.ItemId, Assert.Single(putBack).WorkerId);
     }
 
     [Fact]
@@ -423,5 +436,5 @@ public sealed class TimeOffTests
         return new Setup(team, ana, ben, cy, vacation, policy);
     }
 
-    private sealed record Setup(WorkforceTeam Team, WorkerProfile Ana, WorkerProfile Ben, WorkerProfile Cy, TimeOffType Vacation, TimeOffPolicy Policy);
+    private sealed record Setup(Team Team, WorkerProfile Ana, WorkerProfile Ben, WorkerProfile Cy, TimeOffType Vacation, TimeOffPolicy Policy);
 }

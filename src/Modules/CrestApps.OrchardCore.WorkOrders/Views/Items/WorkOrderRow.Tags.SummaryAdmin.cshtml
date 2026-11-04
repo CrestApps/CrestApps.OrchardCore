@@ -1,0 +1,27 @@
+@model ShapeViewModel<WorkOrderRow>
+
+@{
+    var workOrder = Model.Value.WorkOrder;
+    var open = workOrder.Status is not (WorkOrderStatus.Completed or WorkOrderStatus.Closed or WorkOrderStatus.Canceled);
+    var due = workOrder.Sla?.ResolveByUtc;
+}
+@if (!string.IsNullOrEmpty(Model.Value.TypeName))
+{
+    <span class="badge ta-badge fw-normal">@Model.Value.TypeName</span>
+}
+<span class="badge ta-badge fw-normal">@(string.IsNullOrEmpty(Model.Value.SubStatusName) ? workOrder.Status.Text() : $"{workOrder.Status.Text()}: {Model.Value.SubStatusName}")</span>
+@if (workOrder.Priority is WorkOrderPriority.Urgent or WorkOrderPriority.High)
+{
+    <span class="badge @(workOrder.Priority == WorkOrderPriority.Urgent ? "text-bg-danger" : "text-bg-warning") fw-normal">@workOrder.Priority</span>
+}
+@if (open && due is { } resolveBy)
+{
+    @if (resolveBy < Model.Value.NowUtc)
+    {
+        <span class="badge text-bg-danger fw-normal">@T["Past its resolution target"]</span>
+    }
+    else
+    {
+        <span class="badge ta-badge fw-normal">@T["Resolve by"] @await DisplayAsync(await New.DateTime(Utc: resolveBy, Format: "g"))</span>
+    }
+}

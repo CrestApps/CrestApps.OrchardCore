@@ -16,6 +16,7 @@ internal sealed class OpenShiftPosting
     private readonly ShiftTemplateStore _templateStore;
     private readonly TeamPlanningPolicy _policy;
     private readonly ShiftPlanningOptions _options;
+    private readonly IWorkforceEvents _events;
     private readonly IClock _clock;
 
     public OpenShiftPosting(
@@ -23,14 +24,22 @@ internal sealed class OpenShiftPosting
         ShiftTemplateStore templateStore,
         TeamPlanningPolicy policy,
         IOptions<ShiftPlanningOptions> options,
+        IWorkforceEvents events,
         IClock clock)
     {
         _openShiftStore = openShiftStore;
         _templateStore = templateStore;
         _policy = policy;
         _options = options.Value;
+        _events = events;
         _clock = clock;
     }
+
+    /// <summary>
+    /// Raises the Open Shift Posted event of a shift just offered.
+    /// </summary>
+    public Task PostedAsync(OpenShift shift, CancellationToken cancellationToken = default)
+        => _events.RaiseAsync(WorkforceEvents.OpenShiftPosted, WorkforceEventInputs.OpenShift(shift), shift.ItemId, cancellationToken);
 
     /// <summary>
     /// Posts the open drafts that aren't posted yet, updates the posted ones that changed, and cancels the posted ones
@@ -53,7 +62,9 @@ internal sealed class OpenShiftPosting
 
             if (existing.Remove(draft.ShiftKey, out var shift))
             {
-                if (shift.Status is OpenShiftStatus.Filled or OpenShiftStatus.Canceled)
+                var offeredAgain = shift.Status is OpenShiftStatus.Filled or OpenShiftStatus.Canceled;
+
+                if (offeredAgain)
                 {
                     // The shift has nobody again: offer it afresh.
                     shift.Status = OpenShiftStatus.Open;
@@ -66,6 +77,11 @@ internal sealed class OpenShiftPosting
                 Copy(draft, shift, skills, timeZoneId);
                 await _openShiftStore.UpdateAsync(shift, cancellationToken);
                 posted++;
+
+                if (offeredAgain)
+                {
+                    await PostedAsync(shift, cancellationToken);
+                }
 
                 continue;
             }
@@ -85,6 +101,7 @@ internal sealed class OpenShiftPosting
             Copy(draft, created, skills, timeZoneId);
             created.ClaimDeadlineUtc = Deadline(created, now);
             await _openShiftStore.CreateAsync(created, cancellationToken);
+            await PostedAsync(created, cancellationToken);
             posted++;
         }
 

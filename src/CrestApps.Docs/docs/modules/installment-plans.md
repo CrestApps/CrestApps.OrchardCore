@@ -14,6 +14,8 @@ user_manual:
 | **Module** | Subscriptions |
 | **Dependencies** | `CrestApps.OrchardCore.Transactions`, `CrestApps.OrchardCore.Checkout`, `OrchardCore.Users` |
 
+<YouTube video="installment-plans" title="Narrated video overview of installment plans" />
+
 **Subscriptions - Installment Plans** lets a balance be paid in installments. A plan is created in one of three ways:
 
 - **By an administrator**, who sells something on a payment plan without the customer going through the storefront, for example over the phone or at a counter. The administrator enters the customer, the total, a down payment (or none) and a schedule. The first payment is taken by card on the spot.

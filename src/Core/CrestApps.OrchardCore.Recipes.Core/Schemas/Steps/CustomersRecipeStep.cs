@@ -30,7 +30,11 @@ public sealed class CustomersRecipeStep : RecipeStepSchemaBase
                 ("City", NullableString("The city or locality.")),
                 ("District", NullableString("The district, where the country uses one.")),
                 ("PostalCode", NullableString("The postal or ZIP code.")),
-                ("Phone", NullableString("The phone number for deliveries to this address.")))
+                ("Phone", NullableString("The phone number for deliveries to this address.")),
+                ("Latitude", new JsonSchemaBuilder().Type(SchemaValueType.Number | SchemaValueType.Null).Minimum(-90).Maximum(90).Description("The latitude, when the address was geocoded or pinned on a map.")),
+                ("Longitude", new JsonSchemaBuilder().Type(SchemaValueType.Number | SchemaValueType.Null).Minimum(-180).Maximum(180).Description("The longitude, when the address was geocoded or pinned on a map.")),
+                ("GeocodedUtc", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Format(Formats.DateTime).Description("When the coordinates were found, in UTC.")),
+                ("GeocodeSource", NullableString("Where the coordinates came from, such as a geocoding provider's name or 'Manual'.")))
             .AdditionalProperties(true);
 
         var customerAddress = new JsonSchemaBuilder()

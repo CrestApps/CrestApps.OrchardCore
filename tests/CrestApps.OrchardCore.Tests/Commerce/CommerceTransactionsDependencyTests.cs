@@ -1,13 +1,13 @@
 using System.Reflection;
 using CrestApps.OrchardCore.Bookings;
-using CrestApps.OrchardCore.Companies;
-using CrestApps.OrchardCore.Companies.Services;
+using CrestApps.OrchardCore.Accounts.B2B;
+using CrestApps.OrchardCore.Accounts.B2B.Services;
 using CrestApps.OrchardCore.Transactions;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules.Manifest;
 using BookingsStartup = CrestApps.OrchardCore.Bookings.Startup;
-using CompaniesStartup = CrestApps.OrchardCore.Companies.Startup;
+using B2BAccountsStartup = CrestApps.OrchardCore.Accounts.B2B.Startup;
 using IStartup = OrchardCore.Modules.IStartup;
 using RequireFeaturesAttribute = OrchardCore.Modules.RequireFeaturesAttribute;
 
@@ -22,7 +22,7 @@ public sealed class CommerceTransactionsDependencyTests
 {
     public static TheoryData<Type, string> FeaturesThatOweOnTheLedger => new()
     {
-        { typeof(CompaniesStartup), CompaniesConstants.Feature },
+        { typeof(B2BAccountsStartup), B2BAccountsConstants.Feature },
         { typeof(BookingsStartup), BookingsConstants.Feature },
     };
 
@@ -57,14 +57,14 @@ public sealed class CommerceTransactionsDependencyTests
     }
 
     [Fact]
-    public void CompanyTerms_AreRegisteredWithTheCompaniesFeature()
+    public void AccountTerms_AreRegisteredWithTheAccountsB2BFeature()
     {
-        // The terms tender and the company account page need the terms service, so it can't move behind
-        // [RequireFeatures(Transactions)] on its own; Companies declares Transactions instead.
+        // The terms tender and the account account page need the terms service, so it can't move behind
+        // [RequireFeatures(Transactions)] on its own; B2BAccounts declares Transactions instead.
         var services = new ServiceCollection();
-        new CompaniesStartup().ConfigureServices(services);
+        new B2BAccountsStartup().ConfigureServices(services);
 
-        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(CompanyTermsService));
-        Assert.Null(typeof(CompaniesStartup).GetCustomAttribute<RequireFeaturesAttribute>());
+        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(AccountTermsService));
+        Assert.Null(typeof(B2BAccountsStartup).GetCustomAttribute<RequireFeaturesAttribute>());
     }
 }

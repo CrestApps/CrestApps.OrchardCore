@@ -4,6 +4,8 @@ using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
+using CrestApps.OrchardCore.Teams.Core.Services;
+using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Localization;
@@ -229,9 +231,9 @@ internal sealed class DefaultCoverageService : ICoverageService
             .ToArray();
     }
 
-    private async Task<IReadOnlyList<ScheduledSpan>> ListPublishedAsync(WorkforceTeam team, CoverageQuery query, string timeZoneId, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<ScheduledSpan>> ListPublishedAsync(Team team, CoverageQuery query, string timeZoneId, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrEmpty(team.CalendarId))
+        if (string.IsNullOrEmpty(team.GetWorkforceSettings().CalendarId))
         {
             return [];
         }
@@ -239,7 +241,7 @@ internal sealed class DefaultCoverageService : ICoverageService
         var excluded = await ExcludedCodesAsync(cancellationToken);
         var occurrences = await _queryService.GetOccurrencesAsync(new CalendarOccurrenceQuery
         {
-            CalendarIds = [team.CalendarId],
+            CalendarIds = [team.GetWorkforceSettings().CalendarId],
             FromUtc = CalendarTime.ToUtc(query.From.ToDateTime(TimeOnly.MinValue), timeZoneId),
             ToUtc = CalendarTime.ToUtc(query.To.AddDays(1).ToDateTime(TimeOnly.MinValue), timeZoneId),
             EventTypes = [WorkforceConstants.EventTypes.Shift],

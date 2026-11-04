@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Teams.Models;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using OrchardCore.Recipes.Models;
@@ -65,7 +67,7 @@ internal sealed class TimeClockRecipeStep : NamedRecipeStepHandler
                 incoming.PayPeriodCalendarId = calendar?.ItemId;
             }
 
-            var usedBy = new List<WorkforceTeam>();
+            var usedBy = new List<Team>();
 
             foreach (var teamName in RecipeImport.Strings(node, "teamNames"))
             {
@@ -89,9 +91,9 @@ internal sealed class TimeClockRecipeStep : NamedRecipeStepHandler
                 policies.Add(saved);
             }
 
-            foreach (var team in usedBy.Where(team => team.TimeClockPolicyId != saved.ItemId))
+            foreach (var team in usedBy.Where(team => team.GetWorkforceSettings().TimeClockPolicyId != saved.ItemId))
             {
-                team.TimeClockPolicyId = saved.ItemId;
+                team.GetWorkforceSettings().TimeClockPolicyId = saved.ItemId;
                 await _teamManager.UpdateAsync(team);
             }
         }

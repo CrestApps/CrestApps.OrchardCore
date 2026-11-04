@@ -4,6 +4,7 @@ sidebar_position: 3
 title: MCP SFTP Resource Handler
 description: SFTP (SSH File Transfer Protocol) resource support for the MCP Server, allowing remote files on SFTP servers to be exposed as MCP resources.
 user_manual:
+  - user-manual/ai/mcp
   - user-manual/ai/tools-and-agents
 ---
 

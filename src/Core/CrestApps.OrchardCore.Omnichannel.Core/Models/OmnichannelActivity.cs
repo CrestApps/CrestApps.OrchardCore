@@ -321,6 +321,12 @@ public sealed class OmnichannelActivity : CatalogItem
     public string DispositionId { get; set; }
 
     /// <summary>
+    /// Gets or sets the disposition of the attempt this activity tries again, so a list of scheduled work can show how
+    /// the last attempt ended without loading it. Copied when the next attempt is created; empty on a first attempt.
+    /// </summary>
+    public string PreviousDispositionId { get; set; }
+
+    /// <summary>
     /// Gets or sets the notes.
     /// </summary>
     public string Notes { get; set; }

@@ -11,34 +11,45 @@ technical_manual:
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > Management > Skills, and Interaction Center > Management > Agent entitlements |
+| **Menu** | Content > Skills, and Interaction Center > Management > Agent entitlements |
 | **Permission** | Manage Contact Center skills; Manage Contact Center agents |
-| **Features** | Skills come with Contact Center Work Distribution. Entitlements are the optional **Contact Center Agent Entitlements** feature. |
+| **Features** | Skills come with Contact Center Work Distribution, and are kept by the **Skills** feature, which Contact Center turns on. Entitlements are the optional **Contact Center Agent Entitlements** feature. |
 
 <AskYourAdmin />
+
+<YouTube video="contact-center-skills-entitlements" title="Video overview of skills and agent entitlements: creating a skill, and giving an agent queues, campaigns and skills" />
 
 <YouTube video="contact-center-setup-walkthroughs" title="Video of creating a skill and granting an agent queues, campaigns and skills on the agent entitlements screen" start={343} end={389} />
 
 ## Create a skill
 
-1. Open **Interaction Center > Management > Skills** and click **Add Skill**.
+<YouTube video="contact-center-routing-explained" title="Video of skill requirements, Relax after, agent skills, capacity and queue preferences" start={137} end={210} />
+
+
+1. Open **Content > Skills** and click **Add skill**.
 2. Enter a **Name** (for example *Spanish*) and an optional **Description**.
 3. Leave **Enabled** ticked and click **Save**.
 
 A disabled skill stays on the agents and queues that already use it, but it can no longer be picked for new ones.
 
 :::tip[One skill list for the whole site]
-When the **Skills** feature is on, these are the same skills as the ones under **Workforce > Skills**, and an agent's skills are the same as the skills in their user's **Skills** section. A skill added or changed on either screen shows on the other. See [Skills and Certifications](./workforce/skills-and-certifications.md).
+Skills are shared across the site, by Contact Center, Workforce and other features. An agent's skills are the same as the skills in their user's **Skills** section, and a change on either shows on the other. See [Skills and Certifications](./workforce/skills-and-certifications.md).
 :::
 
 ## Grant an agent queues, campaigns and skills
 
+<YouTube video="contact-center-skills-entitlements" title="Video of giving an agent allowed queues with a priority and a delay" start={111} end={153} />
+
+<YouTube video="contact-center-skills-entitlements" title="Video of giving an agent campaigns and skills with a proficiency, and the entitlements list" start={153} end={216} />
+
 1. Open **Interaction Center > Management > Agent entitlements** and click **Add agent entitlements**.
 2. Click **Browse users**, search for the person and pick them as the **User**. Each user has one entitlement record; the screen tells you if one already exists.
 3. Under **Allowed queues**, pick every queue the agent may sign in to. Removing a queue later also signs the agent out of it.
-4. Under **Queue preferences**, set a **Priority** for each allowed queue (a lower number is served first) and an optional **Delay (s)**, which makes a caller wait that many seconds before this agent is offered work from that queue. Use delays to make an agent a backup for a queue.
+4. Under **Queue preferences**, set a **Priority** for each allowed queue (a lower number is served first) and an optional **Delay (seconds)**, which makes a caller wait that many seconds before this agent is offered work from that queue. Use delays to make an agent a backup for a queue. Both apply when an agent who has just become free chooses which queue to take work from; they do not change which idle agent a new call is offered to, which the queue's routing strategy decides.
 5. Under **Allowed campaigns**, pick the dialer campaigns the agent may work.
 6. Under **Skills**, add each skill with a **Proficiency** from 1 (basic) to 5 (expert).
+
+An agent holds one interaction at a time by default, and an agent on a voice call is never offered another call. How many interactions an agent may hold (their capacity) has no field on this screen: it is set by the entitlement recipe or a deployment step.
 7. Click **Save**.
 
 The list shows how many queues and campaigns each agent is allowed. Entitlement records cannot be deleted; remove the queues and campaigns instead.

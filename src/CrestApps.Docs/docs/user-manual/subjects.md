@@ -34,6 +34,8 @@ Create an **inbound** subject for calls customers make. This one is a manual pho
 
 ## Create a subject
 
+<YouTube video="omnichannel-subjects" title="Video of creating an outbound subject with the Omnichannel Subject part and its settings" start={51} end={100} />
+
 1. Open **Interaction Center > Management > Subject Flows** and click **Add Subject**. (When there are no subjects yet, the page shows a **Create a new content type** link instead.)
 2. Enter the subject's **Display Name**, for example *Support Request*, and click **Create**.
 3. On the **Add Parts** page, click **Add & Configure** next to **Omnichannel Subject**. The subject's settings open straight away (described below). Save them.
@@ -45,9 +47,13 @@ Later, use the buttons next to the subject on the Subject Flows list:
 - **Edit Content Type** opens the whole content type, to add or change fields. Both buttons are shown only when you have the **Edit content types** permission.
 - **Manage Flow** opens the [subject flow](subject-flows.md).
 
+<YouTube video="omnichannel-subjects" title="Video of adding a field to a subject" start={100} end={131} />
+
 Agents fill in a subject's fields while they work an activity, so the usual **Publish**, **Save Draft** and **Preview** buttons are hidden on a subject's editor.
 
 ## Subject settings
+
+<YouTube video="omnichannel-subjects" title="Video of creating an inbound subject and the settings it adds" start={131} end={170} />
 
 | Setting | Applies to | What it does |
 | --- | --- | --- |
@@ -60,6 +66,8 @@ Agents fill in a subject's fields while they work an activity, so the usual **Pu
 
 For outbound subjects, the interaction type, channel and address are hidden, because they are chosen when activities are loaded.
 
+<YouTube video="omnichannel-subjects" title="Video of the settings of an automated subject" start={170} end={207} />
+
 When the AI features are enabled, more settings appear:
 
 | Setting | Applies to | What it does |
@@ -70,6 +78,8 @@ When the AI features are enabled, more settings appear:
 | **Allow AI to update contact** / **Allow AI to update subject** | Inbound automated | Lets the AI write what it learns back to the records. An opt-out text always updates the contact's **Do not SMS**, even when this is off. |
 | **No-response timeout (minutes)**, **Response delay (seconds)**, **Opt-out keywords** | Inbound automated SMS | When to give up on a silent customer, the minimum pause before each reply, and the words that opt the customer out (STOP, STOPALL, UNSUBSCRIBE, CANCEL, END and QUIT by default; one per line or separated by commas). |
 | **Allow the AI to hand off to a live agent**, **Handoff queue**, **Escalate when** | Inbound automated, and every outbound subject | Lets the AI pass the conversation to a person in the chosen queue when **The customer asks for a human**, **The customer is a qualified, ready lead**, or **The customer is frustrated or the AI cannot help**. Handoff only happens when a queue is picked and at least one condition is ticked. Handing off an SMS conversation needs the [Messaging workspace](messaging.md). |
+
+<YouTube video="omnichannel-ai-handoff" title="Video overview of live agent handoff: the queue, the subject settings and what the agent reads" />
 
 Only the settings that apply to the chosen direction, type and channel are shown. The AI settings change as soon as you change the direction, interaction type or channel. The **Live agent handoff** card follows the saved settings, so save after changing the direction or interaction type to show or hide it. Hidden settings keep their values, so switching back and forth loses nothing.
 

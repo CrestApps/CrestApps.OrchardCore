@@ -6,7 +6,7 @@ namespace CrestApps.OrchardCore.Calendars.Models;
 public sealed class CalendarProviderMapping
 {
     /// <summary>
-    /// Gets or sets the id of the connection to the external calendar.
+    /// Gets or sets the id of the connection to the external calendar: the id of the calendar whose subscription made it.
     /// </summary>
     public string ConnectionId { get; set; }
 
@@ -24,6 +24,12 @@ public sealed class CalendarProviderMapping
     /// Gets or sets the external copy's version marker (an ETag, a change key or a last-modified stamp).
     /// </summary>
     public string Version { get; set; }
+
+    /// <summary>
+    /// Gets or sets a fingerprint of the event's synchronized fields as they were last synchronized, so a later local change can
+    /// be told apart from an unchanged event.
+    /// </summary>
+    public string ContentHash { get; set; }
 
     /// <summary>
     /// Gets or sets when the event was last synchronized with the external copy.

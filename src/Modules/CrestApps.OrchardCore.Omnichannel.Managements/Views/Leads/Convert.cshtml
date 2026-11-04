@@ -6,7 +6,7 @@
 @model ConvertLeadViewModel
 
 @{
-    var accountEndpoint = Url.Content("~/Admin/api/crestapps/omnichannel/crm/accounts/search");
+    var accountEndpoint = Url.RouteUrl(CrestApps.OrchardCore.Accounts.AccountsConstants.RouteNames.Search);
     var selectedAccount = Model.MatchingAccounts.FirstOrDefault(account => account.ContentItemId == Model.ExistingAccountItemId);
     var accountInitialJson = string.IsNullOrEmpty(Model.ExistingAccountItemId)
         ? "[]"
@@ -200,7 +200,7 @@
         </div>
     </div>
 
-    <div class="mb-3">
+    <div class="action-bar-bottom">
         <button class="btn btn-primary" type="submit">@T["Convert"]</button>
         <a class="btn btn-secondary cancel" role="button" asp-action="Edit" asp-controller="Admin" asp-route-area="OrchardCore.Contents" asp-route-contentItemId="@Model.Lead.ContentItemId">@T["Cancel"]</a>
     </div>

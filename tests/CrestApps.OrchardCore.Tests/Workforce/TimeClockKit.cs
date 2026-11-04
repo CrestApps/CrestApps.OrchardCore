@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Workforce.Core;
 using CrestApps.OrchardCore.Workforce.Core.Services;
@@ -33,7 +34,7 @@ internal sealed class TimeClockKit : IAsyncDisposable
 
     public IReadOnlyDictionary<string, PayCode> Codes { get; private set; }
 
-    public static async Task<TimeClockKit> CreateAsync(Action<IServiceCollection> configure = null)
+    public static async Task<TimeClockKit> CreateAsync(Action<IServiceCollection> configure = null, Func<global::YesSql.Sql.ISchemaBuilder, Task> schema = null, IEnumerable<global::YesSql.Indexes.IIndexProvider> indexProviders = null, IEnumerable<string> collections = null)
     {
         TimeClockKit kit = null;
         var clock = new Mock<IClock>();
@@ -46,7 +47,7 @@ internal sealed class TimeClockKit : IAsyncDisposable
             services.AddSingleton<IDistributedLock, TimeOffKit.KeyedLock>();
             services.AddSingleton(clock.Object);
             configure?.Invoke(services);
-        });
+        }, schema, indexProviders, collections);
 
         kit = new TimeClockKit(harness);
 
@@ -71,7 +72,7 @@ internal sealed class TimeClockKit : IAsyncDisposable
         return kit;
     }
 
-    public async Task<WorkforceTeam> AddTeamAsync(string name, Action<TimeClockPolicy> configure = null)
+    public async Task<Team> AddTeamAsync(string name, Action<TimeClockPolicy> configure = null)
     {
         var team = await WorkforceTests.AddTeamAsync(Harness, name, TeamKind.Team);
 
@@ -95,7 +96,7 @@ internal sealed class TimeClockKit : IAsyncDisposable
             return policy;
         });
 
-        return await PlanningKit.UpdateTeamAsync(Harness, team, stored => stored.TimeClockPolicyId = Policy.ItemId);
+        return await PlanningKit.UpdateTeamAsync(Harness, team, stored => stored.GetWorkforceSettings().TimeClockPolicyId = Policy.ItemId);
     }
 
     public Task<PlanningResult<TimePunch>> PunchAsync(WorkerProfile worker, TimePunchKind kind, Action<TimePunchRequest> configure = null)

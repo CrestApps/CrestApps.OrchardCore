@@ -1,5 +1,8 @@
 using CrestApps.Core.AI.ElevenLabs;
+using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.ElevenLabs.Drivers;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ElevenLabs;
@@ -13,5 +16,7 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddCoreAIElevenLabs();
+
+        services.AddDisplayDriver<AIDeployment, ElevenLabsDeploymentDisplayDriver>();
     }
 }

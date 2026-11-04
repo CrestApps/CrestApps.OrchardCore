@@ -8,11 +8,11 @@ technical_manual:
 
 Skills and certifications tell the site who can do what. A **skill** is something a person can do, such as speaking Spanish or servicing boilers, held at a level from 1 (trainee) to 5 (expert). A **certification** is a licence or certificate that expires and has to be renewed, such as a gas safety certificate. A **certificate** is one person's copy of a certification, with its number and its expiry date.
 
-The same skills are used across the site. When Contact Center is on, the skills on **Interaction Center > Management > Skills** and the agents' skills are the same ones you see here, so you set an agent's skills once.
+The same skills are used across the site. When Contact Center is on, the agents' skills are the same ones you see here, so you set an agent's skills once.
 
 | | |
 | --- | --- |
-| **Menu** | Workforce > Skills, Workforce > Certifications, Workforce > Certificates |
+| **Menu** | Content > Skills, Content > Certification Types, Content > Certificates |
 | **Permission** | Manage skills and certifications (the lists of skills and certifications), Assign skills and record certifications (giving people skills and recording their certificates), View skills and certifications |
 | **Feature** | Skills |
 
@@ -20,7 +20,7 @@ The same skills are used across the site. When Contact Center is on, the skills 
 
 ## Add a skill
 
-Open **Workforce > Skills** and choose **Add skill**.
+Open **Content > Skills** and choose **Add skill**.
 
 | Field | What it does |
 | --- | --- |
@@ -40,7 +40,7 @@ Contact Center agents' skills are also set on **Interaction Center > Management 
 
 ## Add a certification
 
-Open **Workforce > Certifications** and choose **Add certification**.
+Open **Content > Certification Types** and choose **Add certification type**. A certification type is a credential people can hold, such as *Gas safety*; a certificate is one person holding it.
 
 | Field | What it does |
 | --- | --- |
@@ -54,7 +54,7 @@ Open **Workforce > Certifications** and choose **Add certification**.
 
 ## Record a certificate
 
-Open **Workforce > Certificates** and choose **Add certificate**.
+Open **Content > Certificates** and choose **Add certificate**.
 
 | Field | What it does |
 | --- | --- |
@@ -69,7 +69,7 @@ Open **Workforce > Certificates** and choose **Add certificate**.
 
 ## Check, withdraw and find certificates
 
-In **Workforce > Certificates**, each certificate's menu has **Mark as checked** (for one waiting to be checked), **Withdraw** (for a valid one that should no longer count) and **Delete**.
+In **Content > Certificates**, each certificate's menu has **Mark as checked** (for one waiting to be checked), **Withdraw** (for a valid one that should no longer count) and **Delete**.
 
 Use the filters above the list to show one certification, one status, or **Expiring in 60 days**, which lists the valid certificates that run out in the next 60 days, soonest first. Search finds a person's name or a certificate number.
 

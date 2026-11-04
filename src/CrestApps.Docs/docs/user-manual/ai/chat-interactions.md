@@ -16,9 +16,13 @@ A **chat interaction** is a free-form chat where you set everything up yourself,
 
 <AskYourAdmin />
 
-<YouTube video="ai-walkthroughs" title="Video of starting a new AI chat interaction and chatting with the model" start={101} end={130} />
+<YouTube video="ai-chat-interactions" title="Video overview of AI chat interactions" />
+
+The video covers why chat interactions exist, how to start one and set it up, the tools of the Capabilities tab, how to manage your interactions and the site settings.
 
 ## Start a chat interaction
+
+<YouTube video="ai-chat-interactions" title="Video of starting a chat interaction" start={92} end={145} />
 
 1. Open **Artificial Intelligence > Chat Interactions** and click **New Chat**. A new interaction opens and is saved straight away.
 2. In the settings panel on the left, give it a **Title** and pick a **Chat deployment** (or leave **Default**).
@@ -30,7 +34,9 @@ The chat area works like the chat page of an assistant: answers appear as they a
 
 ## Find, copy and delete interactions
 
-- The list shows your interactions with their titles. Click **Chat** to reopen one and continue. Use **Search** and **Go** to find one.
+<YouTube video="ai-chat-interactions" title="Video of reopening, copying, clearing and deleting interactions" start={255} end={306} />
+
+- The list shows your interactions with their titles. Click **Chat** to reopen one and continue. Type in **Search** and click the search button to find one.
 - In an open interaction, **New Chat** offers **Empty Chat** (start fresh) or **Chat with Preset Settings** (a new interaction with the same model, instructions, files and tools).
 - **Clear History** removes the messages but keeps your files, settings and tools. It cannot be undone.
 - To delete an interaction, open its **Actions** menu in the list and choose **Delete**. To delete several, tick them and use **Actions > Delete** above the list. Deleting an interaction also deletes its files.
@@ -39,11 +45,14 @@ You see only your own interactions, unless you have the **List chat interactions
 
 ## Settings tab
 
+<YouTube video="ai-chat-interactions" title="Video of the Settings tab of a chat interaction" start={145} end={215} />
+
 | Field | What it does |
 | --- | --- |
 | **Title** | A name to find the interaction again later. |
 | **Orchestrator** | The engine that plans the answer and decides which tools to use. Shown only when your site has more than one. |
 | **Chat deployment** | The model to chat with. **Default** uses the site's default chat deployment. The list is grouped by connection. |
+| **AI persona** | A reusable character for the assistant, such as a name and a tone. Shown when the **AI Personas** feature is on. See [Personas](profiles.md#personas). |
 | **Model parameters** | Options the chosen model supports, such as reasoning effort. |
 | **Conversation deployment** / **Voice** | For spoken conversations: the voice model and the voice. Leave empty to use the site defaults. See [Talk instead of type](#talk-instead-of-type). |
 | **Utility deployment** | A smaller model for side jobs. Leave it on **Default**. |
@@ -76,7 +85,9 @@ If the **Knowledge** tab has no upload area, your administrator has not set up d
 
 ## Capabilities tab
 
-Let the AI use tools in this interaction. Tick what you need:
+<YouTube video="ai-chat-interactions" title="Video of letting the AI use tools in a chat interaction" start={215} end={255} />
+
+Let the AI use tools in this interaction. Tick what you need. In **Tools**, type in **Search tools...** to find a tool by name or description, and use **Select All Tools** or **Select All** in a category to tick several at once:
 
 | Section | What it does |
 | --- | --- |
@@ -99,6 +110,8 @@ Voice in chat interactions is set for the whole site by an administrator (see be
 How these buttons work is described in [Chat with an AI assistant](chat.md#talk-instead-of-type).
 
 ## Site settings for chat interactions (administrators)
+
+<YouTube video="ai-chat-interactions" title="Video of the site settings for chat interactions" start={306} end={342} />
 
 Open **Settings > Artificial Intelligence**:
 

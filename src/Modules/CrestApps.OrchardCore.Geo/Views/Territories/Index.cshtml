@@ -1,0 +1,81 @@
+@model TerritoryListViewModel
+@using System.Text.Json
+
+<zone Name="Title"><breadcrumb name="GeoTerritories" title="@T["Territories"]" /></zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2">
+            <div class="col">
+                <p class="mb-0 text-muted small">@T["Areas served together, drawn on the map or listed by postal code. A point belongs to the smallest shape it is in; otherwise its postal code decides."]</p>
+            </div>
+            <div class="col-auto"><a asp-action="Edit" class="btn btn-secondary create">@T["Add territory"]</a></div>
+        </div>
+    </div>
+</div>
+
+@if (Model.Shapes.Count > 0)
+{
+    ViewData["MapId"] = "territory-overview";
+    ViewData["MapLabel"] = T["Map of the territories"].Value;
+    <partial name="_GeoMap" model="Model.Map" />
+    <script at="Foot">
+        (function () {
+            const map = window.crestappsMap.create('territory-overview');
+            window.crestappsMap.showShapes(map, @Html.Raw(JsonSerializer.Serialize(Model.Shapes.Select(shape => new { label = shape.Label, geoJson = shape.GeoJson }))));
+            @if (Model.Latitude.HasValue && Model.Longitude.HasValue)
+            {
+                <text>window.crestappsMap.addMarkers(map, [{ latitude: @Model.Latitude.Value.ToString(CultureInfo.InvariantCulture), longitude: @Model.Longitude.Value.ToString(CultureInfo.InvariantCulture), label: @Html.Raw(JsonSerializer.Serialize(Model.Match?.Territory.Name ?? T["No territory covers this place."].Value)) }], { fit: false });</text>
+            }
+        })();
+    </script>
+}
+
+<form asp-action="Index" method="get" class="card mb-3">
+    <div class="card-body">
+        <h2 class="h6">@T["Find the territory of a place"]</h2>
+        <div class="row g-2 align-items-end">
+            <div class="col-6 col-md-3">
+                <label asp-for="Latitude" class="form-label small">@T["Latitude"]</label>
+                <input asp-for="Latitude" type="number" min="-90" max="90" step="any" class="form-control form-control-sm" />
+            </div>
+            <div class="col-6 col-md-3">
+                <label asp-for="Longitude" class="form-label small">@T["Longitude"]</label>
+                <input asp-for="Longitude" type="number" min="-180" max="180" step="any" class="form-control form-control-sm" />
+            </div>
+            <div class="col-8 col-md-3">
+                <label asp-for="PostalCode" class="form-label small">@T["Postal code"]</label>
+                <input asp-for="PostalCode" class="form-control form-control-sm" />
+            </div>
+            <div class="col-4 col-md-3">
+                <button type="submit" class="btn btn-secondary btn-sm w-100">@T["Find"]</button>
+            </div>
+        </div>
+        @if (Model.Searched)
+        {
+            <div class="mt-2" role="status">
+                @if (Model.Match is null)
+                {
+                    <span class="text-warning-emphasis">@T["No territory covers this place."]</span>
+                }
+                else if (Model.Match.MatchedBy == TerritoryMatchKind.Shape)
+                {
+                    <span>@T["In <strong>{0}</strong>, by its shape on the map.", Model.Match.Territory.Name]</span>
+                }
+                else
+                {
+                    <span>@T["In <strong>{0}</strong>, by its postal code.", Model.Match.Territory.Name]</span>
+                }
+            </div>
+        }
+    </div>
+</form>
+
+<admin-list name="GeoTerritories" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> Add a territory to group the places you serve."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Territory"]" />
+        <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

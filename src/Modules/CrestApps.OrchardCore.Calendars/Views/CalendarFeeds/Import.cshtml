@@ -13,6 +13,8 @@
             <input type="file" name="file" accept=".ics,text/calendar" class="form-control" required />
         </div>
     </div>
-    <button type="submit" class="btn btn-primary">@T["Import"]</button>
-    <a class="btn btn-secondary" asp-controller="Calendars" asp-action="Index">@T["Cancel"]</a>
+    <div class="action-bar-bottom">
+        <button type="submit" class="btn btn-primary">@T["Import"]</button>
+        <a class="btn btn-secondary" asp-controller="Calendars" asp-action="Index">@T["Cancel"]</a>
+    </div>
 </form>

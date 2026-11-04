@@ -1,6 +1,8 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Core;
 using CrestApps.OrchardCore.Workforce.Core.Services;
+using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Recipes;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -71,7 +73,7 @@ public sealed class WorkforceSampleRecipeTests
             Assert.True(tree.Count >= 3);
             Assert.True(workers >= 5);
             Assert.NotEmpty(templates);
-            Assert.Contains(tree, entry => entry.Team.TimeClockPolicyId == policy.ItemId);
+            Assert.Contains(tree, entry => entry.Team.GetWorkforceSettings().TimeClockPolicyId == policy.ItemId);
         }, commit: false);
     }
 

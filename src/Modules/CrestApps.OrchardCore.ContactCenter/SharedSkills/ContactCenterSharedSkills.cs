@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -23,7 +24,9 @@ internal static class ContactCenterSharedSkills
         services.AddScoped<IContactCenterSkillStore, SharedContactCenterSkillStore>();
         services.TryAddSingleton<SharedSkillsCatalogBackfillState>();
         services.TryAddScoped<SharedSkillsCatalogBackfill>();
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Skill>, ContactCenterSkillMirrorHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Skill>, ContactCenterSkillCacheHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAuthorizationHandler, ContactCenterSkillsAuthorizationHandler>());
+        services.TryAddScoped(provider => new Lazy<IAuthorizationService>(provider.GetRequiredService<IAuthorizationService>));
 
         return services;
     }

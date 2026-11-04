@@ -1,9 +1,13 @@
 using System.Security.Cryptography;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Teams.Core.Services;
+using CrestApps.OrchardCore.Teams.Models;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -33,6 +37,8 @@ internal sealed class DefaultTimeClockService : ITimeClockService
     private readonly WorkerTimeZones _timeZones;
     private readonly TimeOffLocks _locks;
     private readonly IWorkforceEvents _events;
+    private readonly IEnumerable<ITimePunchObserver> _observers;
+    private readonly ILogger _logger;
     private readonly ISession _session;
     private readonly IClock _clock;
 
@@ -50,8 +56,10 @@ internal sealed class DefaultTimeClockService : ITimeClockService
         WorkerTimeZones timeZones,
         TimeOffLocks locks,
         IWorkforceEvents events,
+        IEnumerable<ITimePunchObserver> observers,
         ISession session,
         IClock clock,
+        ILogger<DefaultTimeClockService> logger,
         IStringLocalizer<DefaultTimeClockService> stringLocalizer)
     {
         _punchStore = punchStore;
@@ -65,8 +73,10 @@ internal sealed class DefaultTimeClockService : ITimeClockService
         _timeZones = timeZones;
         _locks = locks;
         _events = events;
+        _observers = observers;
         _session = session;
         _clock = clock;
+        _logger = logger;
         S = stringLocalizer;
     }
 
@@ -76,12 +86,12 @@ internal sealed class DefaultTimeClockService : ITimeClockService
 
         foreach (var team in await LineageAsync(WorkerTimeZones.TeamOn(worker, date), cancellationToken))
         {
-            if (string.IsNullOrEmpty(team.TimeClockPolicyId))
+            if (string.IsNullOrEmpty(team.GetWorkforceSettings().TimeClockPolicyId))
             {
                 continue;
             }
 
-            var policy = await _policyStore.FindByIdAsync(team.TimeClockPolicyId, cancellationToken);
+            var policy = await _policyStore.FindByIdAsync(team.GetWorkforceSettings().TimeClockPolicyId, cancellationToken);
 
             return policy is { Enabled: true } ? policy : null;
         }
@@ -268,6 +278,8 @@ internal sealed class DefaultTimeClockService : ITimeClockService
         {
             await TimeOffLocks.ReleaseAsync(lockers);
         }
+
+        await NotifyAsync(result.Value, null, cancellationToken);
 
         if (result.Value.Kind is TimePunchKind.In or TimePunchKind.Out)
         {
@@ -570,12 +582,30 @@ internal sealed class DefaultTimeClockService : ITimeClockService
             await _session.SaveChangesAsync(cancellationToken);
 
             result.Value = punch;
-
-            return result;
         }
         finally
         {
             await TimeOffLocks.ReleaseAsync(lockers);
+        }
+
+        await NotifyAsync(result.Value, original, cancellationToken);
+
+        return result;
+    }
+
+    // A failing observer doesn't undo the punch, which is saved.
+    private async Task NotifyAsync(TimePunch punch, TimePunch replaced, CancellationToken cancellationToken)
+    {
+        foreach (var observer in _observers)
+        {
+            try
+            {
+                await observer.PunchedAsync(punch, replaced, cancellationToken);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                _logger.LogError(exception, "A punch observer failed for punch {PunchId}.", punch.ItemId);
+            }
         }
     }
 
@@ -602,16 +632,16 @@ internal sealed class DefaultTimeClockService : ITimeClockService
     {
         foreach (var team in await LineageAsync(teamId, cancellationToken))
         {
-            if (team.Location is { Latitude: not null, Longitude: not null })
+            if (team.GetWorkforceSettings().Location is { Latitude: not null, Longitude: not null } location)
             {
-                return team.Location;
+                return location;
             }
         }
 
         return null;
     }
 
-    private async Task<IReadOnlyList<WorkforceTeam>> LineageAsync(string teamId, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<Team>> LineageAsync(string teamId, CancellationToken cancellationToken)
     {
         var team = string.IsNullOrEmpty(teamId) ? null : await _teamStore.FindByIdAsync(teamId, cancellationToken);
 

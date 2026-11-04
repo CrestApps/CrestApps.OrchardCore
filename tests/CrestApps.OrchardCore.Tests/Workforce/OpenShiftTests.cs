@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Skills.Models;
+using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.Core.Services;
@@ -274,7 +275,7 @@ public sealed class OpenShiftTests
     {
         var team = await WorkforceTests.AddTeamAsync(harness, "Clinic", TeamKind.Team);
 
-        team = await PlanningKit.UpdateTeamAsync(harness, team, stored => stored.OpenShiftClaimPolicy = policy);
+        team = await PlanningKit.UpdateTeamAsync(harness, team, stored => stored.GetWorkforceSettings().OpenShiftClaimPolicy = policy);
 
         var ana = await PlanningKit.AddMemberAsync(harness, "Ana", team);
         var ben = await PlanningKit.AddMemberAsync(harness, "Ben", team);
@@ -291,7 +292,7 @@ public sealed class OpenShiftTests
         return new Setup(team, ana, ben, cy, skill, template, period, open);
     }
 
-    private static Task<IReadOnlyList<OpenShift>> ListAsync(CalendarTestHarness harness, WorkforceTeam team)
+    private static Task<IReadOnlyList<OpenShift>> ListAsync(CalendarTestHarness harness, Team team)
     {
         return harness.RunAsync(async services => (await services.GetRequiredService<IOpenShiftService>().PageAsync(new OpenShiftQuery { TeamIds = [team.ItemId] }, 0, 50)).Items, commit: false);
     }
@@ -316,5 +317,5 @@ public sealed class OpenShiftTests
         return harness.RunAsync(services => services.GetRequiredService<IOpenShiftService>().AwardDueAsync());
     }
 
-    private sealed record Setup(WorkforceTeam Team, WorkerProfile Ana, WorkerProfile Ben, WorkerProfile Cy, Skill Skill, ShiftTemplate Template, SchedulePeriod Period, DraftShift Open);
+    private sealed record Setup(Team Team, WorkerProfile Ana, WorkerProfile Ben, WorkerProfile Cy, Skill Skill, ShiftTemplate Template, SchedulePeriod Period, DraftShift Open);
 }

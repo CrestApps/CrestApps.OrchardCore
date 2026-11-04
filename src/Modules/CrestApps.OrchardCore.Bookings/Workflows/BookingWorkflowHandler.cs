@@ -82,7 +82,7 @@ internal sealed class BookingWorkflowHandler : IBookingHandler
     public Task DeletingAsync(Booking booking, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 
-    private static Dictionary<string, object> CreateInput(Booking booking, BookingStatus? previousStatus)
+    internal static Dictionary<string, object> CreateInput(Booking booking, BookingStatus? previousStatus)
         => new()
         {
             ["Booking"] = booking,

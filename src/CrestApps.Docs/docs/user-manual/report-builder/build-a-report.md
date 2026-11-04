@@ -30,7 +30,23 @@ Watch the short video, then follow the steps below.
 6. The **Preview** under the shelves refreshes as you work. Click **Refresh** to run it again.
 7. Click **Publish** (or press Ctrl+S). Unfinished designs can be published: the builder lists their problems, and the report shows them when it runs until they are fixed.
 
-Drag a column along the **Columns** shelf to move it. Click the cross on a column to remove it.
+Drag a column along the **Columns** shelf to move it. Click the cross on a column to remove it, or the arrow next to it (or right-click it) for its menu: make it a dimension or pick a measure such as **Sum** or **Count (distinct)**, transform it, sort by it, filter on it, move it to **Rows**, change its format and colors, hide it or remove it.
+
+Right-click a field in the **Data** pane, or click its **⋮** button, to add it to **Columns**, **Rows** or **Filters**, or to make a [calculated field](columns-and-formulas.md#calculated-fields) of it with a common formula, such as its sum or its number of distinct values.
+
+## Lay out rows and columns
+
+Fields dropped on **Columns** become the columns of the table, side by side. To lay out a cross-tab, drag the dimensions that should head the rows onto the **Rows** shelf instead:
+
+- the dimensions on **Rows** head the rows, down the side;
+- the dimensions on **Columns** spread their values across the top, under a header that names them;
+- the measures fill the cells, and the table ends with a total for each row and each column.
+
+For example, *Agent* on **Rows**, *Disposition* on **Columns** and **Number of rows** shows how many calls each agent closed with each disposition: one row per agent, one column per disposition.
+
+With two dimensions on **Columns**, such as *Region* and *Disposition*, the columns are grouped by region, then by disposition. With several measures, each value across the top gets one column per measure. To list the measures one under the other instead, move every measure to **Rows**.
+
+A report with nothing on **Rows** shows its columns side by side, as before. A table visual that lists its own columns also shows them side by side.
 
 ## Add data sets
 

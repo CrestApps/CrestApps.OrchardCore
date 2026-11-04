@@ -378,6 +378,7 @@ internal sealed class IvrIntegrationFixture : IAsyncDisposable
             (IActivityAssignmentService)assignmentService,
             (IActivityReservationService)reservationService,
             (IActivityReservationReclaimer)reservationService,
+            (IDialerProfileReader)new NullDialerProfileReader(),
             Mock.Of<IProviderVoiceOfferSynchronizationService>());
 
         var entryPoints = new Mock<IContactCenterEntryPointManager>();

@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars.Core;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Localization;
@@ -410,7 +411,7 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
         var period = await FindPeriodAsync(periodId, cancellationToken);
         var team = period is null ? null : await _teamStore.FindByIdAsync(period.TeamId, cancellationToken);
 
-        if (team is null || string.IsNullOrEmpty(team.CalendarId) || !_publishValidators.Any())
+        if (team is null || string.IsNullOrEmpty(team.GetWorkforceSettings().CalendarId) || !_publishValidators.Any())
         {
             return [];
         }
@@ -420,7 +421,7 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
         var codes = (await _activityCodeStore.GetAllAsync(cancellationToken)).ToDictionary(code => code.ItemId, StringComparer.Ordinal);
         var workers = (await _workerStore.GetAsync(drafts.Select(draft => draft.WorkerId).Where(id => id is not null).Distinct(StringComparer.Ordinal), cancellationToken))
             .ToDictionary(worker => worker.ItemId, StringComparer.Ordinal);
-        var published = await ListPublishedAsync(team.CalendarId, period, timeZoneId, cancellationToken);
+        var published = await ListPublishedAsync(team.GetWorkforceSettings().CalendarId, period, timeZoneId, cancellationToken);
         var context = await ValidatePublishAsync(period, timeZoneId, drafts, workers, published, codes, null, null, true, cancellationToken);
 
         return context.Violations.ToArray();
@@ -448,7 +449,7 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
 
         await _calendarService.EnsureCalendarAsync(team, cancellationToken);
 
-        var calendarId = team.CalendarId;
+        var calendarId = team.GetWorkforceSettings().CalendarId;
         var timeZoneId = await GetTimeZoneAsync(team.ItemId, cancellationToken);
         var version = period.PublishedVersion + 1;
         var republish = period.PublishedVersion > 0;

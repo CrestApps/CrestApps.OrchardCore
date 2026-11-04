@@ -270,32 +270,15 @@ function initialize() {
             dayGridMonth: { dayHeaderFormat: { weekday: narrow ? 'narrow' : 'short' } },
         },
         loading: (/** @type {boolean} */ isLoading) => root.classList.toggle('calendar-loading', isLoading),
-        windowResize: () => {
-            const nowNarrow = isNarrow();
-
-            if (nowNarrow === narrow) {
-                return;
-            }
-
-            narrow = nowNarrow;
-            root.classList.toggle('calendar-narrow', narrow);
-
-            const layout = toolbars(narrow);
-
-            calendar.setOption('headerToolbar', layout.headerToolbar);
-            calendar.setOption('footerToolbar', layout.footerToolbar);
-
-            if (narrow && calendar.view.type === 'timeGridWeek') {
-                calendar.changeView('timeGridDay');
-            }
-        },
-        buttonText: {
-            today: labels.today,
-            day: labels.day,
-            week: labels.week,
-            month: labels.month,
-            list: labels.agenda,
-        },
+        // Style hooks for calendar-view.css; FullCalendar 7 has no stable class names of its own.
+        headerToolbarClass: 'calendar-fc-toolbar',
+        footerToolbarClass: 'calendar-fc-toolbar',
+        viewClass: 'calendar-fc-view',
+        todayText: labels.today,
+        dayText: labels.day,
+        weekTextLong: labels.week,
+        monthText: labels.month,
+        listText: labels.agenda,
         height: 'auto',
         nowIndicator: true,
         navLinks: true,
@@ -639,6 +622,29 @@ function initialize() {
     }));
 
     calendar.render();
+
+    // FullCalendar 7 has no windowResize callback, so the calendar's own width decides when the toolbars switch.
+    if (typeof ResizeObserver === 'function') {
+        new ResizeObserver(() => {
+            const nowNarrow = isNarrow();
+
+            if (nowNarrow === narrow) {
+                return;
+            }
+
+            narrow = nowNarrow;
+            root.classList.toggle('calendar-narrow', narrow);
+
+            const layout = toolbars(narrow);
+
+            calendar.setOption('headerToolbar', layout.headerToolbar);
+            calendar.setOption('footerToolbar', layout.footerToolbar);
+
+            if (narrow && calendar.view.type === 'timeGridWeek') {
+                calendar.changeView('timeGridDay');
+            }
+        }).observe(element);
+    }
 }
 
 if (document.readyState === 'loading') {

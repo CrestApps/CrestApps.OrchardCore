@@ -15,6 +15,8 @@ user_manual: user-manual/commerce/customers
 
 The Addresses module gives the platform one address structure that works for any country. Customers, checkout, orders and taxation all hold the same `Address` value, and every country's rules decide which parts it has, which are required, and how it is checked and printed.
 
+<YouTube video="content-fields" title="Video overview of the phone and address fields, the country list and address suggestions" />
+
 | Feature | What it adds | Depends on |
 | --- | --- | --- |
 | **Addresses** | Each country's address format, the checks and the printing (`AddAddressesCore()`). Countries come from the ISO list. | Nothing |

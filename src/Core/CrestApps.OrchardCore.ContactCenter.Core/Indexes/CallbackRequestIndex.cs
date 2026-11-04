@@ -33,4 +33,10 @@ public sealed class CallbackRequestIndex : CatalogItemIndex
     /// that has reached a terminal status and is what retention ages it by.
     /// </summary>
     public DateTime? ModifiedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the agent profile the callback is reserved for, when it is a personal callback. Left empty for an
+    /// identifier longer than an agent profile identifier, which no agent can have.
+    /// </summary>
+    public string AgentId { get; set; }
 }

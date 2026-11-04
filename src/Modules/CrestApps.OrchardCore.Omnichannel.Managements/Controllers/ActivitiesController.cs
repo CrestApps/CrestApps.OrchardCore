@@ -3,6 +3,7 @@ using System.Security.Claims;
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Accounts.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;

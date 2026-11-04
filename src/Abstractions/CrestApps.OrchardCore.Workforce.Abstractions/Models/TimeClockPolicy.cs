@@ -102,6 +102,22 @@ public sealed class TimeClockPolicy : CatalogItem, INameAwareModel, IModifiedUtc
     public decimal? WeeklyOvertimeHours { get; set; } = 40;
 
     /// <summary>
+    /// Gets or sets whether the seventh day worked in a row in a week is overtime for its first eight hours and
+    /// double time after.
+    /// </summary>
+    public bool SeventhDayOvertime { get; set; }
+
+    /// <summary>
+    /// Gets or sets the holidays: regular hours worked on them are paid with the holiday pay code.
+    /// </summary>
+    public IList<DateOnly> Holidays { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the weekend days: regular hours worked on them are paid with the weekend pay code.
+    /// </summary>
+    public IList<DayOfWeek> WeekendDays { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the points each kind of attendance exception earns; empty for no points.
     /// </summary>
     public IList<AttendancePointRule> AttendancePoints { get; set; } = [];

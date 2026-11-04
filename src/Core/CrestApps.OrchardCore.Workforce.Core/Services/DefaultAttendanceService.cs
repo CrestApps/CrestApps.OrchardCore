@@ -215,7 +215,7 @@ internal sealed class DefaultAttendanceService : IAttendanceService
             Kind = WorkforceNotificationKind.Attendance,
             Title = approve ? S["Your punch was added"] : S["Your punch wasn't added"],
             Body = S["The punch you asked for at {0} was {1}.", when.ToString("g", CultureInfo.CurrentCulture), approve ? S["added"] : S["declined"]],
-            Url = "~/my-work/timesheet?date=" + DateOnly.FromDateTime(when).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            Url = "~/Admin/my-work/timesheet?date=" + DateOnly.FromDateTime(when).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
         }, cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
 

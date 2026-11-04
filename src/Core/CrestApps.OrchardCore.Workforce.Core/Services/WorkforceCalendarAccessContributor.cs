@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using OrchardCore.Modules;
@@ -65,9 +66,9 @@ internal sealed class WorkforceCalendarAccessContributor : ICalendarAccessContri
         var teams = await _teamStore.ListAsync(cancellationToken);
 
         return teams
-            .Where(team => !string.IsNullOrEmpty(team.CalendarId)
+            .Where(team => !string.IsNullOrEmpty(team.GetWorkforceSettings().CalendarId)
                 && (scope.Covers(team.ItemId) || memberTeams.Contains(team.ItemId) || (team.LinkedRoleName is { } role && user.IsInRole(role))))
-            .Select(team => team.CalendarId)
+            .Select(team => team.GetWorkforceSettings().CalendarId)
             .ToArray();
     }
 

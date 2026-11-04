@@ -12,26 +12,31 @@ using OrchardCore.Indexing;
 namespace CrestApps.OrchardCore.AI.Documents.Handlers;
 
 /// <summary>
-/// An <see cref="IAIChatSessionHandler"/> that removes all documents associated
-/// with a chat session from the document store and schedules deferred removal
-/// of their chunks from all AI document indexes when the session is deleted.
+/// An <see cref="IAIChatSessionHandler"/> that removes everything a chat session holds when it is deleted:
+/// its documents, their chunks, the files stored for them in the document file store (so no blob is
+/// orphaned on a remote backend such as Azure Blob Storage), and the working state its features keep.
+/// It also schedules deferred removal of the chunks from all AI document indexes.
 /// </summary>
 public sealed class AIChatSessionDocumentCleanupHandler : AIChatSessionHandlerBase
 {
     private readonly IAIDocumentStore _documentStore;
     private readonly IAIDocumentChunkStore _chunkStore;
+    private readonly IConversationDocumentCleanupService _cleanupService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AIChatSessionDocumentCleanupHandler"/> class.
     /// </summary>
     /// <param name="documentStore">The document store.</param>
     /// <param name="chunkStore">The chunk store.</param>
+    /// <param name="cleanupService">The service that removes a conversation's documents and stored files.</param>
     public AIChatSessionDocumentCleanupHandler(
         IAIDocumentStore documentStore,
-        IAIDocumentChunkStore chunkStore)
+        IAIDocumentChunkStore chunkStore,
+        IConversationDocumentCleanupService cleanupService)
     {
         _documentStore = documentStore;
         _chunkStore = chunkStore;
+        _cleanupService = cleanupService;
     }
 
     public override async Task DeletingAsync(
@@ -44,11 +49,6 @@ public sealed class AIChatSessionDocumentCleanupHandler : AIChatSessionHandlerBa
             session.SessionId,
             AIConstants.DocumentReferenceTypes.ChatSession);
 
-        if (documents.Count == 0)
-        {
-            return;
-        }
-
         var chunkIds = new List<string>();
 
         foreach (var doc in documents)
@@ -59,10 +59,12 @@ public sealed class AIChatSessionDocumentCleanupHandler : AIChatSessionHandlerBa
             {
                 chunkIds.Add(chunk.ItemId);
             }
-
-            await _chunkStore.DeleteByDocumentIdAsync(doc.ItemId);
-            await _documentStore.DeleteAsync(doc, cancellationToken);
         }
+
+        // The chunk ids are read above because the cleanup service deletes the chunks. It also deletes the
+        // stored file of every document, which removing the rows alone leaves behind as an orphaned blob.
+        // It runs even when no document is left, since the session's workspaces outlive the document rows.
+        await _cleanupService.CleanupAsync(session.SessionId, AIConstants.DocumentReferenceTypes.ChatSession, cancellationToken);
 
         if (chunkIds.Count > 0)
         {

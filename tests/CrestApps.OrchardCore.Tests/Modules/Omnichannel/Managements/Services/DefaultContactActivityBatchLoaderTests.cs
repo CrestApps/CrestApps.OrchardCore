@@ -94,6 +94,41 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
     }
 
     [Fact]
+    public async Task LoadAsync_SchedulesTheActivitiesAtTheLoadsScheduleAsStored()
+    {
+        // Arrange
+        // The load's schedule is stored in UTC. Converted again as local time, every activity it created would be due
+        // the site's offset from UTC early.
+        var databasePath = DatabasePath("schedule-in-utc");
+        var connectionString = $"Data Source={databasePath};Pooling=False";
+        var store = await CreateStoreAsync(connectionString);
+
+        try
+        {
+            await using (var seedSession = store.CreateSession())
+            {
+                await SaveContactAsync(seedSession, cellPhoneNumber: "+15555550111", cellNationalNumber: "5555550111");
+
+                await seedSession.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            var batch = NewBatch(ActivitySources.Automatic, OmnichannelConstants.Channels.Phone);
+            batch.ScheduleAt = new DateTime(2026, 7, 17, 7, 0, 0, DateTimeKind.Utc);
+
+            // Act
+            await LoadAsync(store, connectionString, batch, localClock: new TwoHoursAheadLocalClock());
+
+            // Assert
+            var activity = Assert.Single(await ListLoadedActivitiesAsync(store));
+            Assert.Equal(batch.ScheduleAt, activity.ScheduledUtc);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    [Fact]
     public async Task LoadAsync_WhenAContactSharesANumberWithSomebodyWhoAskedNotToBeCalled_CreatesNoActivityForThem()
     {
         // Arrange
@@ -790,11 +825,12 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
         IStore store,
         string connectionString,
         OmnichannelActivityBatch batch,
-        IReadOnlyCollection<string> leadContentTypes = null)
+        IReadOnlyCollection<string> leadContentTypes = null,
+        ILocalClock localClock = null)
     {
         await using var session = store.CreateSession();
 
-        var loader = CreateLoader(session, store, connectionString, batch.Source, leadContentTypes);
+        var loader = CreateLoader(session, store, connectionString, batch.Source, leadContentTypes, localClock: localClock);
         var context = new ActivityBatchLoadContext(batch, LoaderId, LoaderUserName);
 
         await loader.LoadAsync(context, TestContext.Current.CancellationToken);
@@ -806,7 +842,8 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
         string connectionString,
         string source,
         IReadOnlyCollection<string> leadContentTypes = null,
-        ICatalog<OmnichannelActivityBatch> batchCatalog = null)
+        ICatalog<OmnichannelActivityBatch> batchCatalog = null,
+        ILocalClock localClock = null)
     {
         var sourceOptions = new ActivityBatchSourceOptions();
 
@@ -817,7 +854,7 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
         return new DefaultContactActivityBatchLoader(
             batchCatalog ?? CreateBatchCatalog(),
             session,
-            new UtcLocalClock(),
+            localClock ?? new UtcLocalClock(),
             new StubClock(_now),
             new StubSubjectFlowSettingsService(new SubjectFlowSettings
             {
@@ -1206,6 +1243,26 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
 
         public Task<DateTime> ConvertToUtcAsync(DateTime dateTimeLocal)
             => Task.FromResult(DateTime.SpecifyKind(dateTimeLocal, DateTimeKind.Utc));
+    }
+
+    /// <summary>
+    /// A local clock two hours ahead of UTC, as Athens is in winter, so a time that is not converted shows.
+    /// </summary>
+    private sealed class TwoHoursAheadLocalClock : ILocalClock
+    {
+        private static readonly TimeSpan _offset = TimeSpan.FromHours(2);
+
+        public Task<DateTimeOffset> GetLocalNowAsync()
+            => throw new NotSupportedException();
+
+        public Task<ITimeZone> GetLocalTimeZoneAsync()
+            => throw new NotSupportedException();
+
+        public Task<DateTimeOffset> ConvertToLocalAsync(DateTimeOffset utcDateTime)
+            => Task.FromResult(utcDateTime.ToOffset(_offset));
+
+        public Task<DateTime> ConvertToUtcAsync(DateTime dateTimeLocal)
+            => Task.FromResult(DateTime.SpecifyKind(dateTimeLocal - _offset, DateTimeKind.Utc));
     }
 
     private sealed class StubSubjectFlowSettingsService : ISubjectFlowSettingsService

@@ -40,8 +40,8 @@
                 </select>
             </div>
         </div>
-        <div class="ocat-wrapper"><label asp-for="EarlyGraceMinutes" class="ocat-label">@T["Early grace"]</label><div class="ocat-end"><div class="input-group" style="max-width: 12rem"><input asp-for="EarlyGraceMinutes" type="number" step="1" min="0" max="120" class="form-control" /><span class="input-group-text">@T["minutes"]</span></div><span class="hint">@T["Clocking in this early, or out this late, is paid from the shift&#39;s start or to its end."]</span></div></div>
-        <div class="ocat-wrapper"><label asp-for="LateGraceMinutes" class="ocat-label">@T["Late grace"]</label><div class="ocat-end"><div class="input-group" style="max-width: 12rem"><input asp-for="LateGraceMinutes" type="number" step="1" min="0" max="120" class="form-control" /><span class="input-group-text">@T["minutes"]</span></div><span class="hint">@T["Clocking in this late, or out this early, is paid as on time and isn&#39;t an exception."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="EarlyGraceMinutes" class="ocat-label">@T["Early grace"]</label><div class="ocat-end"><div class="input-group" style="max-width: 12rem"><input asp-for="EarlyGraceMinutes" type="number" step="1" min="0" max="120" class="form-control" style="max-width: 12rem" /><span class="input-group-text">@T["minutes"]</span></div><span class="hint">@T["Clocking in this early, or out this late, is paid from the shift&#39;s start or to its end."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="LateGraceMinutes" class="ocat-label">@T["Late grace"]</label><div class="ocat-end"><div class="input-group" style="max-width: 12rem"><input asp-for="LateGraceMinutes" type="number" step="1" min="0" max="120" class="form-control" style="max-width: 12rem" /><span class="input-group-text">@T["minutes"]</span></div><span class="hint">@T["Clocking in this late, or out this early, is paid as on time and isn&#39;t an exception."]</span></div></div>
     </div></div>
 
     <h2 class="h5">@T["Clocking in"]</h2>
@@ -77,9 +77,9 @@
                 <span class="hint">@T["Tick none to allow all. Managers can always add and correct punches."]</span>
             </div>
         </div>
-        <div class="ocat-wrapper"><label asp-for="BlockEarlyPunchInMinutes" class="ocat-label">@T["Earliest clock-in"]</label><div class="ocat-end"><div class="input-group" style="max-width: 16rem"><input asp-for="BlockEarlyPunchInMinutes" type="number" step="1" min="0" max="720" class="form-control" /><span class="input-group-text">@T["minutes before"]</span></div><span class="hint">@T["Optional. Clocking in more than this long before a shift is refused. Leave empty to allow it any time."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="BlockEarlyPunchInMinutes" class="ocat-label">@T["Earliest clock-in"]</label><div class="ocat-end"><div class="input-group" style="max-width: 16rem"><input asp-for="BlockEarlyPunchInMinutes" type="number" step="1" min="0" max="720" class="form-control" style="max-width: 12rem" /><span class="input-group-text">@T["minutes before"]</span></div><span class="hint">@T["Optional. Clocking in more than this long before a shift is refused. Leave empty to allow it any time."]</span></div></div>
         <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="RequireGeofence" class="form-check-input" /><label asp-for="RequireGeofence" class="form-check-label">@T["Workers clock in at the work site"]</label><span class="hint dashed">@T["Punches from the browser or the app must share a location. Punches farther from the team&#39;s site coordinates than the radius are recorded and flagged."]</span></div></div></div>
-        <div class="ocat-wrapper"><label asp-for="GeofenceRadiusMeters" class="ocat-label">@T["Site radius"]</label><div class="ocat-end"><div class="input-group" style="max-width: 12rem"><input asp-for="GeofenceRadiusMeters" type="number" step="10" min="10" max="50000" class="form-control" /><span class="input-group-text">@T["meters"]</span></div></div></div>
+        <div class="ocat-wrapper"><label asp-for="GeofenceRadiusMeters" class="ocat-label">@T["Site radius"]</label><div class="ocat-end"><div class="input-group" style="max-width: 12rem"><input asp-for="GeofenceRadiusMeters" type="number" step="10" min="10" max="50000" class="form-control" style="max-width: 12rem" /><span class="input-group-text">@T["meters"]</span></div></div></div>
         <div class="ocat-wrapper">
             <label asp-for="MissedPunchHandling" class="ocat-label">@T["A forgotten clock-out"]</label>
             <div class="ocat-end">
@@ -94,54 +94,125 @@
 
     <h2 class="h5">@T["Meals"]</h2>
     <div class="card text-bg-theme mb-3"><div class="card-body">
-        <div class="ocat-wrapper"><label asp-for="AutoMealAfterHours" class="ocat-label">@T["Take a meal off after"]</label><div class="ocat-end"><div class="input-group" style="max-width: 12rem"><input asp-for="AutoMealAfterHours" type="number" step="0.25" min="0" max="24" class="form-control" /><span class="input-group-text">@T["hours"]</span></div><span class="hint">@T["Optional. A day longer than this with no meal punched has the meal taken off."]</span></div></div>
-        <div class="ocat-wrapper"><label asp-for="AutoMealMinutes" class="ocat-label">@T["Meal taken off"]</label><div class="ocat-end"><div class="input-group" style="max-width: 12rem"><input asp-for="AutoMealMinutes" type="number" step="1" min="0" max="240" class="form-control" /><span class="input-group-text">@T["minutes"]</span></div></div></div>
-        <div class="ocat-wrapper"><label asp-for="LongMealMinutes" class="ocat-label">@T["Longest meal"]</label><div class="ocat-end"><div class="input-group" style="max-width: 12rem"><input asp-for="LongMealMinutes" type="number" step="1" min="0" max="480" class="form-control" /><span class="input-group-text">@T["minutes"]</span></div><span class="hint">@T["Optional. A meal longer than this is a long meal."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="AutoMealAfterHours" class="ocat-label">@T["Take a meal off after"]</label><div class="ocat-end"><div class="input-group" style="max-width: 12rem"><input asp-for="AutoMealAfterHours" type="number" step="0.25" min="0" max="24" class="form-control" style="max-width: 12rem" /><span class="input-group-text">@T["hours"]</span></div><span class="hint">@T["Optional. A day longer than this with no meal punched has the meal taken off."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="AutoMealMinutes" class="ocat-label">@T["Meal taken off"]</label><div class="ocat-end"><div class="input-group" style="max-width: 12rem"><input asp-for="AutoMealMinutes" type="number" step="1" min="0" max="240" class="form-control" style="max-width: 12rem" /><span class="input-group-text">@T["minutes"]</span></div></div></div>
+        <div class="ocat-wrapper"><label asp-for="LongMealMinutes" class="ocat-label">@T["Longest meal"]</label><div class="ocat-end"><div class="input-group" style="max-width: 12rem"><input asp-for="LongMealMinutes" type="number" step="1" min="0" max="480" class="form-control" style="max-width: 12rem" /><span class="input-group-text">@T["minutes"]</span></div><span class="hint">@T["Optional. A meal longer than this is a long meal."]</span></div></div>
     </div></div>
 
     <h2 class="h5">@T["Overtime"]</h2>
     <div class="card text-bg-theme mb-3"><div class="card-body">
-        <div class="ocat-wrapper"><label asp-for="WeeklyOvertimeHours" class="ocat-label">@T["Overtime after"]</label><div class="ocat-end"><div class="input-group" style="max-width: 16rem"><input asp-for="WeeklyOvertimeHours" type="number" step="0.25" min="0" max="168" class="form-control" /><span class="input-group-text">@T["hours a week"]</span></div><span class="hint">@T["Hours in a pay period&#39;s week. Leave empty for no weekly overtime."]</span></div></div>
-        <div class="ocat-wrapper"><label asp-for="DailyOvertimeHours" class="ocat-label">@T["Daily overtime after"]</label><div class="ocat-end"><div class="input-group" style="max-width: 16rem"><input asp-for="DailyOvertimeHours" type="number" step="0.25" min="0" max="24" class="form-control" /><span class="input-group-text">@T["hours a day"]</span></div><span class="hint">@T["Optional."]</span></div></div>
-        <div class="ocat-wrapper"><label asp-for="DailyDoubleTimeHours" class="ocat-label">@T["Double time after"]</label><div class="ocat-end"><div class="input-group" style="max-width: 16rem"><input asp-for="DailyDoubleTimeHours" type="number" step="0.25" min="0" max="24" class="form-control" /><span class="input-group-text">@T["hours a day"]</span></div><span class="hint">@T["Optional. More than the daily overtime."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="WeeklyOvertimeHours" class="ocat-label">@T["Overtime after"]</label><div class="ocat-end"><div class="input-group" style="max-width: 16rem"><input asp-for="WeeklyOvertimeHours" type="number" step="0.25" min="0" max="168" class="form-control" style="max-width: 12rem" /><span class="input-group-text">@T["hours a week"]</span></div><span class="hint">@T["Hours in a pay period&#39;s week. Leave empty for no weekly overtime."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="DailyOvertimeHours" class="ocat-label">@T["Daily overtime after"]</label><div class="ocat-end"><div class="input-group" style="max-width: 16rem"><input asp-for="DailyOvertimeHours" type="number" step="0.25" min="0" max="24" class="form-control" style="max-width: 12rem" /><span class="input-group-text">@T["hours a day"]</span></div><span class="hint">@T["Optional."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="DailyDoubleTimeHours" class="ocat-label">@T["Double time after"]</label><div class="ocat-end"><div class="input-group" style="max-width: 16rem"><input asp-for="DailyDoubleTimeHours" type="number" step="0.25" min="0" max="24" class="form-control" style="max-width: 12rem" /><span class="input-group-text">@T["hours a day"]</span></div><span class="hint">@T["Optional. More than the daily overtime."]</span></div></div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end">
+                <div class="form-check">
+                    <input asp-for="SeventhDayOvertime" class="form-check-input" type="checkbox" />
+                    <label asp-for="SeventhDayOvertime" class="form-check-label">@T["Seventh day in a row is overtime"]</label>
+                    <span class="hint dashed">@T["When all seven days of a week are worked, the seventh day's first eight hours are overtime and the rest double time."]</span>
+                </div>
+            </div>
+        </div>
+        <p class="text-muted small mb-0">@T["Overtime counts regular hours only, so hours already paid as daily overtime don't count toward the weekly overtime."]</p>
+    </div></div>
+
+    <h2 class="h5">@T["Holidays and weekends"]</h2>
+    <div class="card text-bg-theme mb-3"><div class="card-body">
+        <div class="ocat-wrapper">
+            <label asp-for="Holidays" class="ocat-label">@T["Holidays"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="Holidays" rows="4" class="form-control font-monospace" style="max-width: 16rem" placeholder="2026-12-25"></textarea>
+                <span asp-validation-for="Holidays" class="text-danger"></span>
+                <span class="hint">@T["One date a line, such as 2026-12-25. Regular hours worked on them are paid with the Holiday pay code; overtime stays overtime."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Weekend days"]</label>
+            <div class="ocat-end">
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="WeekendDays" value="Monday" id="weekend-Monday" checked="@Model.WeekendDays.Contains("Monday")" />
+                    <label class="form-check-label" for="weekend-Monday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Monday)</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="WeekendDays" value="Tuesday" id="weekend-Tuesday" checked="@Model.WeekendDays.Contains("Tuesday")" />
+                    <label class="form-check-label" for="weekend-Tuesday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Tuesday)</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="WeekendDays" value="Wednesday" id="weekend-Wednesday" checked="@Model.WeekendDays.Contains("Wednesday")" />
+                    <label class="form-check-label" for="weekend-Wednesday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Wednesday)</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="WeekendDays" value="Thursday" id="weekend-Thursday" checked="@Model.WeekendDays.Contains("Thursday")" />
+                    <label class="form-check-label" for="weekend-Thursday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Thursday)</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="WeekendDays" value="Friday" id="weekend-Friday" checked="@Model.WeekendDays.Contains("Friday")" />
+                    <label class="form-check-label" for="weekend-Friday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Friday)</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="WeekendDays" value="Saturday" id="weekend-Saturday" checked="@Model.WeekendDays.Contains("Saturday")" />
+                    <label class="form-check-label" for="weekend-Saturday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Saturday)</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="WeekendDays" value="Sunday" id="weekend-Sunday" checked="@Model.WeekendDays.Contains("Sunday")" />
+                    <label class="form-check-label" for="weekend-Sunday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Sunday)</label>
+                </div>
+                <span class="hint d-block">@T["Regular hours worked on these days are paid with the Weekend pay code instead of the regular one. Tick none for no weekend pay."]</span>
+            </div>
+        </div>
     </div></div>
 
     <h2 class="h5">@T["Attendance points"]</h2>
     <div class="card text-bg-theme mb-3"><div class="card-body">
         <p class="text-muted small">@T["Points each exception earns. Excused exceptions earn none. Leave all empty for no points."]</p>
-        <div class="row g-3 mb-3">
-                    <div class="col-6 col-md-4 col-xl-3">
-                        <label class="form-label small mb-1" for="points-Late">@T["Late start"]</label>
-                        <input class="form-control" type="number" step="0.5" min="0" name="Points[Late]" id="points-Late" value="@(Model.Points.TryGetValue("Late", out var pointsLate) ? pointsLate?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : null)" />
-                    </div>
-                    <div class="col-6 col-md-4 col-xl-3">
-                        <label class="form-label small mb-1" for="points-EarlyOut">@T["Early finish"]</label>
-                        <input class="form-control" type="number" step="0.5" min="0" name="Points[EarlyOut]" id="points-EarlyOut" value="@(Model.Points.TryGetValue("EarlyOut", out var pointsEarlyOut) ? pointsEarlyOut?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : null)" />
-                    </div>
-                    <div class="col-6 col-md-4 col-xl-3">
-                        <label class="form-label small mb-1" for="points-MissedPunch">@T["Missed punch"]</label>
-                        <input class="form-control" type="number" step="0.5" min="0" name="Points[MissedPunch]" id="points-MissedPunch" value="@(Model.Points.TryGetValue("MissedPunch", out var pointsMissedPunch) ? pointsMissedPunch?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : null)" />
-                    </div>
-                    <div class="col-6 col-md-4 col-xl-3">
-                        <label class="form-label small mb-1" for="points-NoShow">@T["No-show"]</label>
-                        <input class="form-control" type="number" step="0.5" min="0" name="Points[NoShow]" id="points-NoShow" value="@(Model.Points.TryGetValue("NoShow", out var pointsNoShow) ? pointsNoShow?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : null)" />
-                    </div>
-                    <div class="col-6 col-md-4 col-xl-3">
-                        <label class="form-label small mb-1" for="points-UnscheduledAbsence">@T["Unscheduled absence"]</label>
-                        <input class="form-control" type="number" step="0.5" min="0" name="Points[UnscheduledAbsence]" id="points-UnscheduledAbsence" value="@(Model.Points.TryGetValue("UnscheduledAbsence", out var pointsUnscheduledAbsence) ? pointsUnscheduledAbsence?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : null)" />
-                    </div>
-                    <div class="col-6 col-md-4 col-xl-3">
-                        <label class="form-label small mb-1" for="points-LongMeal">@T["Long meal"]</label>
-                        <input class="form-control" type="number" step="0.5" min="0" name="Points[LongMeal]" id="points-LongMeal" value="@(Model.Points.TryGetValue("LongMeal", out var pointsLongMeal) ? pointsLongMeal?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : null)" />
-                    </div>
-                    <div class="col-6 col-md-4 col-xl-3">
-                        <label class="form-label small mb-1" for="points-OutsideGeofence">@T["Away from the site"]</label>
-                        <input class="form-control" type="number" step="0.5" min="0" name="Points[OutsideGeofence]" id="points-OutsideGeofence" value="@(Model.Points.TryGetValue("OutsideGeofence", out var pointsOutsideGeofence) ? pointsOutsideGeofence?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : null)" />
-                    </div>
+        <div class="ocat-wrapper">
+            <label class="ocat-label" for="points-Late">@T["Late start"]</label>
+            <div class="ocat-end">
+                <input class="form-control" type="number" step="0.5" min="0" name="Points[Late]" id="points-Late" value="@(Model.Points.TryGetValue("Late", out var pointsLate) ? pointsLate?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : null)" style="max-width: 12rem" />
+            </div>
         </div>
-        <div class="ocat-wrapper"><label asp-for="PointsWindowDays" class="ocat-label">@T["Points count for"]</label><div class="ocat-end"><div class="input-group" style="max-width: 12rem"><input asp-for="PointsWindowDays" type="number" step="1" min="1" max="3650" class="form-control" /><span class="input-group-text">@T["days"]</span></div></div></div>
-        <div class="ocat-wrapper"><label asp-for="PointsThreshold" class="ocat-label">@T["Tell the manager at"]</label><div class="ocat-end"><div class="input-group" style="max-width: 12rem"><input asp-for="PointsThreshold" type="number" step="0.5" min="0" class="form-control" /><span class="input-group-text">@T["points"]</span></div><span class="hint">@T["Optional. When a worker&#39;s points reach this, their line manager is told in My Work."]</span></div></div>
+        <div class="ocat-wrapper">
+            <label class="ocat-label" for="points-EarlyOut">@T["Early finish"]</label>
+            <div class="ocat-end">
+                <input class="form-control" type="number" step="0.5" min="0" name="Points[EarlyOut]" id="points-EarlyOut" value="@(Model.Points.TryGetValue("EarlyOut", out var pointsEarlyOut) ? pointsEarlyOut?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : null)" style="max-width: 12rem" />
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label class="ocat-label" for="points-MissedPunch">@T["Missed punch"]</label>
+            <div class="ocat-end">
+                <input class="form-control" type="number" step="0.5" min="0" name="Points[MissedPunch]" id="points-MissedPunch" value="@(Model.Points.TryGetValue("MissedPunch", out var pointsMissedPunch) ? pointsMissedPunch?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : null)" style="max-width: 12rem" />
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label class="ocat-label" for="points-NoShow">@T["No-show"]</label>
+            <div class="ocat-end">
+                <input class="form-control" type="number" step="0.5" min="0" name="Points[NoShow]" id="points-NoShow" value="@(Model.Points.TryGetValue("NoShow", out var pointsNoShow) ? pointsNoShow?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : null)" style="max-width: 12rem" />
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label class="ocat-label" for="points-UnscheduledAbsence">@T["Unscheduled absence"]</label>
+            <div class="ocat-end">
+                <input class="form-control" type="number" step="0.5" min="0" name="Points[UnscheduledAbsence]" id="points-UnscheduledAbsence" value="@(Model.Points.TryGetValue("UnscheduledAbsence", out var pointsUnscheduledAbsence) ? pointsUnscheduledAbsence?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : null)" style="max-width: 12rem" />
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label class="ocat-label" for="points-LongMeal">@T["Long meal"]</label>
+            <div class="ocat-end">
+                <input class="form-control" type="number" step="0.5" min="0" name="Points[LongMeal]" id="points-LongMeal" value="@(Model.Points.TryGetValue("LongMeal", out var pointsLongMeal) ? pointsLongMeal?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : null)" style="max-width: 12rem" />
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label class="ocat-label" for="points-OutsideGeofence">@T["Away from the site"]</label>
+            <div class="ocat-end">
+                <input class="form-control" type="number" step="0.5" min="0" name="Points[OutsideGeofence]" id="points-OutsideGeofence" value="@(Model.Points.TryGetValue("OutsideGeofence", out var pointsOutsideGeofence) ? pointsOutsideGeofence?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : null)" style="max-width: 12rem" />
+            </div>
+        </div>
+        <div class="ocat-wrapper"><label asp-for="PointsWindowDays" class="ocat-label">@T["Points count for"]</label><div class="ocat-end"><div class="input-group" style="max-width: 12rem"><input asp-for="PointsWindowDays" type="number" step="1" min="1" max="3650" class="form-control" style="max-width: 12rem" /><span class="input-group-text">@T["days"]</span></div></div></div>
+        <div class="ocat-wrapper"><label asp-for="PointsThreshold" class="ocat-label">@T["Tell the manager at"]</label><div class="ocat-end"><div class="input-group" style="max-width: 12rem"><input asp-for="PointsThreshold" type="number" step="0.5" min="0" class="form-control" style="max-width: 12rem" /><span class="input-group-text">@T["points"]</span></div><span class="hint">@T["Optional. When a worker&#39;s points reach this, their line manager is told in My Work."]</span></div></div>
     </div></div>
 
-    <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Save"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a></div></div>
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a>
+    </div>
 </form>

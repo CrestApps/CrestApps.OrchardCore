@@ -1,0 +1,62 @@
+@model VisitTrackingViewModel
+@{
+    // A customer's page: on its own, with none of the site's navigation.
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="@CultureInfo.CurrentUICulture.Name">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <title>@(Model.Expired ? T["Your visit"] : T["Your visit {0}", Model.Number]) - @Model.Company</title>
+    <style asp-name="bootstrap"></style>
+    <resources type="Meta" />
+    <resources type="HeadLink" />
+    <resources type="Stylesheet" />
+    <resources type="HeadScript" />
+</head>
+<body class="bg-body-tertiary">
+    <main class="container py-4" style="max-width: 36rem">
+        <div class="card">
+            <div class="card-body">
+                <p class="text-muted small mb-1">@Model.Company</p>
+                @if (Model.Expired)
+                {
+                    <h1 class="h4">@T["This link has expired"]</h1>
+                    <p class="mb-0">@T["The visit is over, or the link is no longer valid. Contact us if you need anything."]</p>
+                }
+                else
+                {
+                    <h1 class="h4">@T["Your visit {0}", Model.Number]</h1>
+                    <p class="fs-5 mb-3"><span class="badge text-bg-primary">@Model.Status</span></p>
+                    <dl class="mb-0">
+                        @if (!string.IsNullOrEmpty(Model.Day))
+                        {
+                            <dt>@T["Day"]</dt>
+                            <dd>@Model.Day</dd>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.Window))
+                        {
+                            <dt>@T["Arrival window"]</dt>
+                            <dd>@Model.Window</dd>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.Technician))
+                        {
+                            <dt>@T["Technician"]</dt>
+                            <dd>@Model.Technician</dd>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.Eta))
+                        {
+                            <dt>@T["Expected at"]</dt>
+                            <dd class="fs-4">@Model.Eta</dd>
+                        }
+                    </dl>
+                }
+            </div>
+        </div>
+    </main>
+    <resources type="FootScript" />
+</body>
+</html>

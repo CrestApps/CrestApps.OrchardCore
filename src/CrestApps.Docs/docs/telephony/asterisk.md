@@ -15,6 +15,8 @@ user_manual:
 
 The **Asterisk** module integrates the [Asterisk](https://www.asterisk.org/) platform as a provider for the [Telephony](./index.md) soft phone. It uses the **Asterisk REST Interface (ARI)** over HTTP basic authentication and performs call control server-side, so the browser never needs direct access to Asterisk credentials. Here, **provider** means the Asterisk backend adapter that the soft phone talks to, not a separate telecom billing provider.
 
+<YouTube video="telephony-asterisk-setup" title="Video overview of setting up Asterisk for calls" />
+
 ## Two Asterisk providers
 
 When the **Asterisk** feature is enabled, the telephony settings can expose up to two selectable providers:
@@ -259,7 +261,7 @@ The equivalent environment variables are `AsteriskWeb__AsteriskUserName` and `As
 
 The Asterisk package can run as a Telephony provider without Contact Center. Install the Contact Center module package and enable **Contact Center Voice** (and, for media, **Contact Center Voice Media**) before the Asterisk contact center adapters can activate. The adapters are integration glue, not selectable features: the voice adapter activates whenever the Asterisk module and Contact Center Voice are both enabled, and the media adapter whenever the Asterisk module and Contact Center Voice Media are both enabled.
 
-`CrestApps.OrchardCore.ContactCenter.Voice.Media` is a dependency-only development foundation and is not included in either approved GA-Core profile. It remains hidden from direct selection in the Orchard Features UI until the transport certification tracked for R9 is complete. The Asterisk media adapter registers `AsteriskContactCenterVoiceMediaProvider`; the base Asterisk voice provider does not advertise media through a capability flag. The adapter uses ARI External Media over RTP/UDP with G.711 mu-law, 8 kHz, mono audio.
+`CrestApps.OrchardCore.ContactCenter.Voice.Media` is a feature an administrator can turn on from the Features page (it is not dependency-only); it gives automated calls a live two-way audio path. Its transport certification is tracked for R9, and it is not included in either approved GA-Core profile. The Asterisk media adapter registers `AsteriskContactCenterVoiceMediaProvider`; the base Asterisk voice provider does not advertise media through a capability flag. The adapter uses ARI External Media over RTP/UDP with G.711 mu-law, 8 kHz, mono audio.
 
 Opening a media session:
 

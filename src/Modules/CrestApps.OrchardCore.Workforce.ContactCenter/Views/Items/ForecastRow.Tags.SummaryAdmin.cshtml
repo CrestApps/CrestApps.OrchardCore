@@ -1,0 +1,20 @@
+@model ShapeViewModel<ForecastRow>
+
+@{
+    var forecast = Model.Value.Forecast;
+    var badge = forecast.Status switch
+    {
+        ForecastStatus.Active => "text-bg-success",
+        ForecastStatus.Draft => "text-bg-secondary",
+        _ => "ta-badge",
+    };
+    var status = forecast.Status switch
+    {
+        ForecastStatus.Active => T["Active"],
+        ForecastStatus.Draft => T["Draft"],
+        _ => T["Superseded"],
+    };
+}
+<span class="badge @badge fw-normal">@status</span>
+<span class="badge ta-badge fw-normal">@(forecast.Model == ForecastModelKind.HoltWinters ? T["Holt-Winters"] : T["Weighted history"])</span>
+<span class="badge ta-badge fw-normal">@T["{0} contacts", Math.Round(forecast.Intervals.Sum(interval => interval.Volume)).ToString("N0", CultureInfo.CurrentCulture)]</span>

@@ -78,6 +78,26 @@ public sealed class Address
     public string Phone { get; init; }
 
     /// <summary>
+    /// Gets or sets the latitude of the address, when it was geocoded or pinned on a map.
+    /// </summary>
+    public double? Latitude { get; init; }
+
+    /// <summary>
+    /// Gets or sets the longitude of the address, when it was geocoded or pinned on a map.
+    /// </summary>
+    public double? Longitude { get; init; }
+
+    /// <summary>
+    /// Gets or sets when the address was geocoded.
+    /// </summary>
+    public DateTime? GeocodedUtc { get; init; }
+
+    /// <summary>
+    /// Gets or sets where the coordinates came from: a geocoding provider's name, or <c>Manual</c> when pinned.
+    /// </summary>
+    public string GeocodeSource { get; init; }
+
+    /// <summary>
     /// Creates a shallow copy of the current address.
     /// </summary>
     /// <returns>A new <see cref="Address"/> with the same values.</returns>
@@ -98,6 +118,10 @@ public sealed class Address
             SortingCode = SortingCode,
             PostalCode = PostalCode,
             Phone = Phone,
+            Latitude = Latitude,
+            Longitude = Longitude,
+            GeocodedUtc = GeocodedUtc,
+            GeocodeSource = GeocodeSource,
         };
     }
 }

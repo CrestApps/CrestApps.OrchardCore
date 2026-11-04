@@ -12,6 +12,8 @@ user_manual: user-manual/commerce/classifieds
 | **Depends on** | Commerce, Orders |
 | **Seams it fills** | `ICartLineHandler` (Carts), `IOrderEventHandler` (Orders) |
 
+<YouTube video="marketplace-classifieds" title="Narrated video overview of the Marketplace and Classifieds modules" />
+
 The **Classifieds** feature lets visitors post content from the site, such as ads, directory entries or properties. The attachable **Classified** part makes a content type one they post. The **Classified upgrade** part makes a product an upgrade that features or bumps a listing. Admin screens are described in the [User Manual](../user-manual/commerce/classifieds.md). The **Classifieds sample** recipe adds a Classified Ad type and a $5 upgrade that features an ad for 7 days.
 
 ## The parts

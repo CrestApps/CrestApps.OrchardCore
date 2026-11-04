@@ -1,0 +1,22 @@
+@using CrestApps.OrchardCore.Accounts.ViewModels
+
+@model AccountLocationsPartViewModel
+
+<div class="card mb-3">
+    <div class="card-body">
+        @for (var i = 0; i < Model.Locations.Count; i++)
+        {
+            <div class="border rounded p-3 mb-3">
+                <input type="hidden" asp-for="Locations[i].LocationId" />
+                <div class="ocat-wrapper">
+                    <label asp-for="Locations[i].Name" class="ocat-label">@T["Name"]</label>
+                    <div class="ocat-end">
+                        <input asp-for="Locations[i].Name" class="form-control" placeholder="@T["Head office, Warehouse…"]" />
+                    </div>
+                </div>
+                @await DisplayAsync(Model.Locations[i].AddressEditor)
+            </div>
+        }
+        <span class="hint">@T["The places the account has, such as where its orders are shipped or where it is serviced. Save to add another; leave a location blank to remove it."]</span>
+    </div>
+</div>

@@ -10,19 +10,30 @@ namespace CrestApps.OrchardCore.Workforce.Recipes;
 
 /// <summary>
 /// What the Workforce settings recipe steps share: reading a section, finding records by id or name, and saving one
-/// with the same checks as the admin.
+/// with the same checks as the admin. Recipe steps of modules that build on Workforce use it too.
 /// </summary>
-internal sealed class RecipeImport
+public sealed class RecipeImport
 {
     private readonly RecipeExecutionContext _context;
     private readonly string _stepName;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RecipeImport"/> class.
+    /// </summary>
+    /// <param name="context">The recipe step being run.</param>
+    /// <param name="stepName">The step's name, for the errors it reports.</param>
     public RecipeImport(RecipeExecutionContext context, string stepName)
     {
         _context = context;
         _stepName = stepName;
     }
 
+    /// <summary>
+    /// Reads the records of a section of the step, reporting those that can't be read.
+    /// </summary>
+    /// <typeparam name="T">The record type.</typeparam>
+    /// <param name="section">The section, such as <c>PlanningGroups</c>.</param>
+    /// <returns>Each record with the JSON it was read from.</returns>
     public IEnumerable<(JsonObject Node, T Item)> Read<T>(string section)
         where T : class
     {
@@ -49,6 +60,14 @@ internal sealed class RecipeImport
     /// <summary>
     /// Finds a record by name, or reports the name as missing and returns <see langword="null"/>.
     /// </summary>
+    /// <typeparam name="T">The record type.</typeparam>
+    /// <param name="items">The records to look in.</param>
+    /// <param name="name">Gets a record's name.</param>
+    /// <param name="value">The name to find.</param>
+    /// <param name="owner">What names it, such as <c>planning group</c>.</param>
+    /// <param name="ownerName">The name of what names it.</param>
+    /// <param name="kind">What it names, such as <c>a queue</c>.</param>
+    /// <returns>The record, or <see langword="null"/>.</returns>
     public T Named<T>(IEnumerable<T> items, Func<T, string> name, string value, string owner, string ownerName, string kind)
         where T : class
     {
@@ -62,6 +81,12 @@ internal sealed class RecipeImport
         return found;
     }
 
+    /// <summary>
+    /// Reads a list of texts, leaving out empty ones.
+    /// </summary>
+    /// <param name="node">The JSON of a record.</param>
+    /// <param name="property">The property.</param>
+    /// <returns>The texts.</returns>
     public static IReadOnlyList<string> Strings(JsonObject node, string property)
     {
         return (node[property] as JsonArray ?? [])
@@ -70,6 +95,12 @@ internal sealed class RecipeImport
             .ToArray();
     }
 
+    /// <summary>
+    /// Reads a text, or <see langword="null"/> when it is missing or empty.
+    /// </summary>
+    /// <param name="node">The JSON of a record.</param>
+    /// <param name="property">The property.</param>
+    /// <returns>The text.</returns>
     public static string String(JsonObject node, string property)
     {
         return node[property] is JsonValue value && value.TryGetValue<string>(out var text) && !string.IsNullOrWhiteSpace(text) ? text : null;
@@ -78,6 +109,12 @@ internal sealed class RecipeImport
     /// <summary>
     /// Saves a record over the one with its id or name, or as a new one, after the same checks as the admin.
     /// </summary>
+    /// <typeparam name="T">The record type.</typeparam>
+    /// <param name="manager">The record's manager.</param>
+    /// <param name="incoming">The record read from the step.</param>
+    /// <param name="existing">The record it updates, or <see langword="null"/> for a new one.</param>
+    /// <param name="label">The record, for the errors, such as <c>planning group 'Sales'</c>.</param>
+    /// <returns>The saved record, or <see langword="null"/> when it was refused.</returns>
     public async Task<T> SaveAsync<T>(ICatalogManager<T> manager, T incoming, T existing, string label)
         where T : CatalogItem
     {
@@ -115,6 +152,14 @@ internal sealed class RecipeImport
         return target;
     }
 
+    /// <summary>
+    /// Finds the record a record of the step updates: the one with its id, else the one with its name.
+    /// </summary>
+    /// <typeparam name="T">The record type.</typeparam>
+    /// <param name="items">The records to look in.</param>
+    /// <param name="incoming">The record read from the step.</param>
+    /// <param name="name">Gets a record's name.</param>
+    /// <returns>The record, or <see langword="null"/>.</returns>
     public static T Existing<T>(IEnumerable<T> items, T incoming, Func<T, string> name)
         where T : CatalogItem
     {

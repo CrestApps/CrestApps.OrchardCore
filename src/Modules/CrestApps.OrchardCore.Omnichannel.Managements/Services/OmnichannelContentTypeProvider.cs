@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Accounts;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -508,7 +509,7 @@ public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHand
             OmnichannelConstants.ContentParts.OmnichannelSubject => Markers.Subject,
             OmnichannelConstants.ContentParts.OmnichannelContact => Markers.Reachable,
             OmnichannelConstants.ContentParts.Lead => Markers.Lead,
-            OmnichannelConstants.ContentParts.Account => Markers.Account,
+            AccountsConstants.ContentParts.Account => Markers.Account,
             OmnichannelConstants.ContentParts.Opportunity => Markers.Opportunity,
             _ => Markers.None,
         };

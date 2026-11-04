@@ -163,7 +163,8 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
     public string OwnerId { get; set; }
 
     /// <summary>
-    /// Gets or sets the schedule at.
+    /// Gets or sets when the activities the load creates are due, in UTC. The load form shows and reads it in the
+    /// user's local time.
     /// </summary>
     public DateTime ScheduleAt { get; set; }
 

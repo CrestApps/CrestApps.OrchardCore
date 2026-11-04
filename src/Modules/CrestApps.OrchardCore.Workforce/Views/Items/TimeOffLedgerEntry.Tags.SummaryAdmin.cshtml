@@ -11,8 +11,13 @@
     TimeOffLedgerKind.Carryover => T["Carried over"],
     TimeOffLedgerKind.Expiry => T["Expired"],
     TimeOffLedgerKind.Payout => T["Paid out"],
+    TimeOffLedgerKind.Grant => T["Granted"],
     _ => T["Adjusted"],
 })</span>
+@if (entry.Kind == TimeOffLedgerKind.Grant && entry.ExpiresOn is { } lastDay)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-regular fa-hourglass-half text-secondary me-1" aria-hidden="true"></i>@T["Use by {0}", lastDay.ToString("d MMM yyyy")]</span>
+}
 @if (!string.IsNullOrEmpty(entry.Actor))
 {
     <span class="badge ta-badge fw-normal"><i class="fa-solid fa-user-pen text-secondary me-1" aria-hidden="true"></i>@(entry.Actor == "Accrual" ? T["Accrual"].Value : entry.Actor)</span>

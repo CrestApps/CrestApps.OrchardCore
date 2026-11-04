@@ -23,6 +23,8 @@ Each data set is read in one of two ways:
 
 ## Add a connection
 
+<YouTube video="data-connectors-connections" title="Video overview of connections: the four kinds, Save and test, secrets, and deleting" />
+
 1. Go to **Tools > Data Connectors > Connections** and click **Add Connection**.
 2. In **Which kind of system should the connection reach?**, find the kind of system (type in **Filter** to narrow the list), then click **Add** on its card.
 3. Enter a **Name** and the settings of the system (see the tables below).
@@ -77,11 +79,13 @@ It also reads OpenSearch clusters.
 | --- | --- |
 | **Folder** | The folder of the media library whose files data sets can read, with its subfolders. Leave it empty for the whole library. |
 
-Upload CSV, JSON, JSON Lines or Excel files to that folder with **Media > Library**.
+Upload CSV, JSON, JSON Lines or Excel files to that folder with **Media > Library**. Out of the box the media library accepts Excel files only: your administrator has to allow CSV, JSON and JSON Lines in the site's media settings before you can upload them, and the library does not list them until then.
 
 The site can't reach servers on its own private network unless your administrator allows them. If a check fails with a message about the site's own network, ask your administrator.
 
 ## Add a data set
+
+<YouTube video="data-connectors-data-sets" title="Video overview of adding data sets from a file and a web API, and reviewing their fields" />
 
 1. Go to **Tools > Data Connectors > Data Sets** and click **Add Data Set**, or open **Actions** on a connection and click **Add data set**.
 2. In **Which connection should the new data set read?**, find the connection and click **Add** on its card. The connections are grouped by the kind of system they reach: click a group on the left, such as **SQL Server** or **HTTP API**, to see only its connections, or type in **Filter** to search their names and descriptions.
@@ -96,7 +100,7 @@ The site can't reach servers on its own private network unless your administrato
 7. Pick a **Default date field** if reports should filter by a date by default.
 8. Fill in the settings of the connector (see below), then click **Save**.
 
-If you save without discovering the fields, the site reads them for you. An imported data set starts its first import as soon as you save it.
+If you save without discovering the fields, the site reads them for you. An imported data set is queued for its first import as soon as you save it, and the site's background task runs it within a minute: until then its row in the list says the first import is waiting to run.
 
 ### Settings by connector
 
@@ -114,6 +118,8 @@ If you save without discovering the fields, the site reads them for you. An impo
 
 ## Keep an imported data set up to date
 
+<YouTube video="data-connectors-refresh" title="Video of refreshing imported data sets: schedule, Refresh now, history and failed refreshes" />
+
 In the **Refresh** section of an imported data set:
 
 | Field | What it does |
@@ -123,7 +129,7 @@ In the **Refresh** section of an imported data set:
 | **Changed rows have a larger** | For changed rows only: a modification date or a version number that grows when a row changes. |
 | **When the source's fields change** | Add the new fields and keep the removed ones empty, or fail the refresh and keep the rows you have until you review the fields. |
 
-To refresh now, open **Actions** on the data set's row and click **Refresh now**. The list shows the result of the last refresh, how many rows it published and, when it failed, why. A refresh that fails never removes rows: reports keep reading the rows of the last refresh that worked.
+To refresh now, open **Actions** on the data set's row and click **Refresh now**. The refresh is queued, and the background task runs it within a minute: the row shows **Refresh waiting** until it does. The list shows the result of the last refresh, how many rows it published and, when it failed, why. A refresh that fails never removes rows: reports keep reading the rows of the last refresh that worked.
 
 To see every refresh, open **Actions** and click **History**. Each entry shows when it ran, who or what started it, whether it read every row or only changed ones, how many rows it read and published, and any change of the source's fields or error.
 
@@ -133,11 +139,15 @@ Open **Actions** on a data set and click **Preview**. You see its first rows exa
 
 ## Use a data set in a report or pipeline
 
+<YouTube video="data-connectors-reports-and-pipelines" title="Video of using live and imported data sets in the Report Builder and in a data pipeline" />
+
 Live data sets are listed under **Connected data (live)** and imported ones under **Connected data (imported)**, grouped by their connection, wherever you pick a data source: in the [Report Builder](report-builder/data-sources.md) and in a data pipeline's **Read a data source** step.
 
 You only see a data set there when your role has **Read every connected data set**, or **Read the connected data set** with that data set's name. This is the same for live and imported data sets, so importing data never shows it to more people. Ask your administrator to grant the permission in **Access Control > Roles**.
 
 ## Copy connections and data sets to another site
+
+<YouTube video="data-connectors-deployment-and-permissions" title="Video of the permissions of Data Connectors, deployment plans and troubleshooting" />
 
 You can move your connections and data sets to another site, such as from a staging site to the live one, with a deployment plan.
 

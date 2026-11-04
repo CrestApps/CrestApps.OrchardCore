@@ -4,7 +4,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.Workforce.Navigation;
 
 /// <summary>
-/// Adds the Workers, Teams and Activity Codes items to the Workforce menu.
+/// Adds the Workers and Activity Codes items to the Workforce menu. Teams have their own top-level menu item.
 /// </summary>
 public sealed class WorkforceAdminMenu : AdminNavigationProvider
 {
@@ -24,21 +24,13 @@ public sealed class WorkforceAdminMenu : AdminNavigationProvider
     {
         builder.Add(S["Workforce"], S["Workforce"].PrefixPosition("6"), workforce => workforce
             .AddClass("workforce")
+            .AddClass("icon-class-fa-solid")
+            .AddClass("icon-class-fa-users")
             .Id("workforce")
-            .Add(S["Get Started"], S["Get Started"].PrefixPosition("01"), start => start
-                .Id("workforceGetStarted")
-                .Action("Index", "WorkforceSetup", WorkforceConstants.Features.Workforce)
-                .Permission(WorkforcePermissions.ManageTeams)
-                .LocalNav())
             .Add(S["Workers"], S["Workers"].PrefixPosition("10"), workers => workers
                 .Id("workers")
                 .Action("Index", "Workers", WorkforceConstants.Features.Workforce)
                 .Permission(WorkforcePermissions.ViewWorkers)
-                .LocalNav())
-            .Add(S["Teams"], S["Teams"].PrefixPosition("11"), teams => teams
-                .Id("workforceTeams")
-                .Action("Index", "Teams", WorkforceConstants.Features.Workforce)
-                .Permission(WorkforcePermissions.ManageTeams)
                 .LocalNav())
             .Add(S["Activity Codes"], S["Activity Codes"].PrefixPosition("90"), codes => codes
                 .Id("activityCodes")

@@ -1,0 +1,87 @@
+@model AdherenceRuleSetEditViewModel
+@using CrestApps.OrchardCore.ContactCenter.Models
+@inject IStringLocalizer<AdherenceRuleSetEditViewModel> S
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+<zone Name="Title"><breadcrumb name="WorkforceAdherenceRuleSetsEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["Add an Adherence Rule Set"] : T["Edit {0}", Model.Name])" /></zone>
+
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="no-multisubmit">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <input type="hidden" asp-for="Id" />
+
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Rule set"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Name" class="form-control" required />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="TeamIds" class="ocat-label">@T["Teams"]</label>
+                <div class="ocat-end">
+                    <select asp-for="TeamIds" asp-items="Model.TeamOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3"></select>
+                    <span class="hint">@T["Their sub-teams use it too, unless they have their own."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <p class="hint">@T["For each scheduled activity, the agent states that are in adherence. Grace lets an agent finish one activity late or start the next early; a slip shorter than the minimum is forgiven."]</p>
+
+    @for (var i = 0; i < Model.Rules.Count; i++)
+    {
+        var rule = Model.Rules[i];
+        <div class="card text-bg-theme mb-3">
+            <div class="card-header">@AdherenceNames.Kind(S, rule.Kind)</div>
+            <div class="card-body">
+                <input type="hidden" name="Rules[@i].Kind" value="@rule.Kind" />
+                <div class="ocat-wrapper">
+                    <span class="ocat-label">@T["In adherence when"]</span>
+                    <div class="ocat-end">
+                        <div class="d-flex flex-wrap gap-3">
+                            @foreach (var status in Enum.GetValues<AgentPresenceStatus>())
+                            {
+                                var id = "rule-" + i + "-" + status;
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="@id" name="Rules[@i].AllowedStatuses" value="@status" checked="@rule.AllowedStatuses.Contains(status.ToString())" />
+                                    <label class="form-check-label" for="@id">@AdherenceNames.Status(S, status)</label>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <label class="ocat-label" for="rule-@i-reasons">@T["Reasons"]</label>
+                    <div class="ocat-end">
+                        <input class="form-control" id="rule-@i-reasons" name="Rules[@i].AllowedReasons" value="@rule.AllowedReasons" />
+                        <span class="hint">@T["Optional, comma-separated, such as Meal."]</span>
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <label class="ocat-label" for="rule-@i-start">@T["Start grace (min)"]</label>
+                    <div class="ocat-end"><input class="form-control" type="number" min="0" id="rule-@i-start" name="Rules[@i].StartGraceMinutes" value="@rule.StartGraceMinutes" style="max-width: 10rem" /></div>
+                </div>
+                <div class="ocat-wrapper">
+                    <label class="ocat-label" for="rule-@i-end">@T["End grace (min)"]</label>
+                    <div class="ocat-end"><input class="form-control" type="number" min="0" id="rule-@i-end" name="Rules[@i].EndGraceMinutes" value="@rule.EndGraceMinutes" style="max-width: 10rem" /></div>
+                </div>
+                <div class="ocat-wrapper">
+                    <label class="ocat-label" for="rule-@i-min">@T["Shortest slip (min)"]</label>
+                    <div class="ocat-end"><input class="form-control" type="number" min="0" id="rule-@i-min" name="Rules[@i].MinimumOutMinutes" value="@rule.MinimumOutMinutes" style="max-width: 10rem" /></div>
+                </div>
+                <div class="ocat-wrapper">
+                    <label class="ocat-label" for="rule-@i-alert">@T["Alert after (min)"]</label>
+                    <div class="ocat-end"><input class="form-control" type="number" min="0" id="rule-@i-alert" name="Rules[@i].AlertAfterMinutes" value="@rule.AlertAfterMinutes" style="max-width: 10rem" /></div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+        <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+    </div>
+</form>

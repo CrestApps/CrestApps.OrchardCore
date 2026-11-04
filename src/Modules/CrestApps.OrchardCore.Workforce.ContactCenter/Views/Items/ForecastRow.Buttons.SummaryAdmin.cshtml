@@ -1,0 +1,4 @@
+@model ShapeViewModel<ForecastRow>
+
+<a asp-controller="Forecasts" asp-action="Details" asp-route-id="@Model.Value.Forecast.ItemId" class="btn btn-primary btn-sm">@T["Open"]</a>
+<a asp-controller="Forecasts" asp-action="Delete" asp-route-id="@Model.Value.Forecast.ItemId" class="btn btn-danger btn-sm" data-title="@T["Delete"]" data-message="@T["Delete this forecast? If it is active, the team's coverage stays until another forecast is activated."]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>

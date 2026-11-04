@@ -55,23 +55,38 @@ public sealed class ChangeAppointmentTool : SchedulingAIToolBase
         var appointment = await service.FindByIdAsync(Read(arguments, "appointmentId"), cancellationToken);
         var proof = Read(arguments, "proof");
 
-        if (appointment is null || !(await CanManageAsync(arguments.Services) || Matches(appointment, proof)))
+        var canManage = await CanManageAsync(arguments.Services);
+
+        if (appointment is null || !(canManage || Matches(appointment, proof)))
         {
             return "No appointment matches that id and proof.";
         }
 
+        // A customer is held to the type's cancel and reschedule notice; someone who may manage appointments isn't.
         var result = Read(arguments, "action") == "move" && DateTimeOffset.TryParse(Read(arguments, "newStartUtc"), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var start)
-            ? await service.RescheduleAsync(appointment, start.UtcDateTime, actor: "AI", cancellationToken: cancellationToken)
-            : Read(arguments, "action") == "cancel" ? await service.CancelAsync(appointment, "Cancelled through the AI assistant.", "AI", cancellationToken) : null;
+            ? await service.RescheduleAsync(appointment, start.UtcDateTime, actor: "AI", selfService: !canManage, cancellationToken: cancellationToken)
+            : Read(arguments, "action") == "cancel" ? await service.CancelAsync(appointment, "Cancelled through the AI assistant.", "AI", selfService: !canManage, cancellationToken: cancellationToken) : null;
 
         return result is null ? "Say cancel, or move with a newStartUtc." : result.Succeeded ? "Done." : "Not changed: " + string.Join(" ", result.Errors);
     }
 
-    private static bool Matches(Appointment appointment, string proof)
+    internal static bool Matches(Appointment appointment, string proof)
     {
-        return !string.IsNullOrEmpty(proof) &&
-            (string.Equals(proof, appointment.ManageToken, StringComparison.Ordinal) ||
-             string.Equals(proof, appointment.CustomerEmail, StringComparison.OrdinalIgnoreCase) ||
-             (!string.IsNullOrEmpty(appointment.CustomerPhone) && new string(proof.Where(char.IsDigit).ToArray()) == new string(appointment.CustomerPhone.Where(char.IsDigit).ToArray())));
+        if (string.IsNullOrEmpty(proof))
+        {
+            return false;
+        }
+
+        if (AppointmentManageToken.Matches(appointment, proof) ||
+            (!string.IsNullOrEmpty(appointment.CustomerEmail) && string.Equals(proof, appointment.CustomerEmail, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        // A phone number proves it only when it has digits to compare: proof without digits must not match a number
+        // saved without any.
+        var phoneDigits = new string((appointment.CustomerPhone ?? string.Empty).Where(char.IsDigit).ToArray());
+
+        return phoneDigits.Length > 0 && string.Equals(new string(proof.Where(char.IsDigit).ToArray()), phoneDigits, StringComparison.Ordinal);
     }
 }

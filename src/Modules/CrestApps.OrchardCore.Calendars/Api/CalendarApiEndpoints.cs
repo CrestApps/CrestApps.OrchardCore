@@ -39,8 +39,14 @@ internal static class CalendarApiEndpoints
         return routes;
     }
 
-    private static async Task<IResult> ListCalendarsAsync(HttpContext httpContext, ICalendarAccessService accessService)
+    internal static async Task<IResult> ListCalendarsAsync(HttpContext httpContext, IAuthorizationService authorizationService, ICalendarAccessService accessService)
     {
+        // Like the calendar screens, someone who may not use calendars is refused rather than shown an empty list.
+        if (!await authorizationService.AuthorizeAsync(httpContext.User, CalendarPermissions.AccessCalendars))
+        {
+            return Results.Forbid();
+        }
+
         var calendars = await accessService.ListAccessibleAsync(httpContext.User, CalendarAccessLevel.FreeBusy);
 
         return Results.Ok(calendars.Select(access => new
@@ -56,8 +62,13 @@ internal static class CalendarApiEndpoints
         }));
     }
 
-    private static async Task<IResult> ListEventsAsync(string calendarIds, string from, string to, HttpContext httpContext, ICalendarAccessService accessService, ICalendarQueryService queryService)
+    internal static async Task<IResult> ListEventsAsync(string calendarIds, string from, string to, HttpContext httpContext, IAuthorizationService authorizationService, ICalendarAccessService accessService, ICalendarQueryService queryService)
     {
+        if (!await authorizationService.AuthorizeAsync(httpContext.User, CalendarPermissions.AccessCalendars))
+        {
+            return Results.Forbid();
+        }
+
         if (!DateTimeOffset.TryParse(from, out var fromValue) || !DateTimeOffset.TryParse(to, out var toValue) || toValue <= fromValue)
         {
             return Results.ValidationProblem(new Dictionary<string, string[]> { ["from"] = ["Give from and to as ISO 8601 times, with to after from."] });
@@ -88,7 +99,7 @@ internal static class CalendarApiEndpoints
             : WithOccurrence(occurrence)));
     }
 
-    private static async Task<IResult> GetEventAsync(string id, HttpContext httpContext, ICalendarService calendarService, ICalendarEventManager eventManager, CalendarEventEditor editor)
+    internal static async Task<IResult> GetEventAsync(string id, HttpContext httpContext, ICalendarService calendarService, ICalendarEventManager eventManager, CalendarEventEditor editor)
     {
         var (calendarEvent, calendar) = await LoadAsync(id, calendarService, eventManager);
 
@@ -102,7 +113,7 @@ internal static class CalendarApiEndpoints
             : Results.Forbid();
     }
 
-    private static async Task<IResult> CreateEventAsync(CalendarEventInput input, HttpContext httpContext, ICalendarService calendarService, ICalendarEventManager eventManager, CalendarEventEditor editor)
+    internal static async Task<IResult> CreateEventAsync(CalendarEventInput input, HttpContext httpContext, ICalendarService calendarService, ICalendarEventManager eventManager, CalendarEventEditor editor)
     {
         var calendar = await calendarService.FindByIdAsync(input?.CalendarId);
 
@@ -131,7 +142,7 @@ internal static class CalendarApiEndpoints
         return ToResult(result, created: true);
     }
 
-    private static async Task<IResult> UpdateEventAsync(string id, string occurrence, string scope, CalendarEventInput input, HttpContext httpContext, ICalendarService calendarService, ICalendarEventManager eventManager, CalendarEventEditor editor)
+    internal static async Task<IResult> UpdateEventAsync(string id, string occurrence, string scope, CalendarEventInput input, HttpContext httpContext, ICalendarService calendarService, ICalendarEventManager eventManager, CalendarEventEditor editor)
     {
         var (calendarEvent, calendar) = await LoadAsync(id, calendarService, eventManager);
 
@@ -159,7 +170,7 @@ internal static class CalendarApiEndpoints
         return ToResult(result, created: false);
     }
 
-    private static async Task<IResult> CancelEventAsync(string id, string occurrence, string scope, HttpContext httpContext, ICalendarService calendarService, ICalendarEventManager eventManager, CalendarEventEditor editor)
+    internal static async Task<IResult> CancelEventAsync(string id, string occurrence, string scope, HttpContext httpContext, ICalendarService calendarService, ICalendarEventManager eventManager, CalendarEventEditor editor)
     {
         var (calendarEvent, calendar) = await LoadAsync(id, calendarService, eventManager);
 
@@ -181,7 +192,7 @@ internal static class CalendarApiEndpoints
         return ToResult(result, created: false);
     }
 
-    private static async Task<IResult> DeleteEventAsync(string id, HttpContext httpContext, ICalendarService calendarService, ICalendarEventManager eventManager, CalendarEventEditor editor)
+    internal static async Task<IResult> DeleteEventAsync(string id, HttpContext httpContext, ICalendarService calendarService, ICalendarEventManager eventManager, CalendarEventEditor editor)
     {
         var (calendarEvent, calendar) = await LoadAsync(id, calendarService, eventManager);
 
@@ -200,7 +211,7 @@ internal static class CalendarApiEndpoints
         return Results.NoContent();
     }
 
-    private static async Task<IResult> RespondAsync(string id, CalendarResponseInput input, HttpContext httpContext, ICalendarEventManager eventManager)
+    internal static async Task<IResult> RespondAsync(string id, CalendarResponseInput input, HttpContext httpContext, ICalendarEventManager eventManager)
     {
         var calendarEvent = await eventManager.FindByIdAsync(id);
         var userId = GetUserId(httpContext.User);
@@ -218,8 +229,13 @@ internal static class CalendarApiEndpoints
         return ToResult(await eventManager.RespondAsync(calendarEvent, "user:" + userId, response, new CalendarChangeOptions { Actor = userId }), created: false);
     }
 
-    private static async Task<IResult> FreeBusyAsync(CalendarFreeBusyInput input, HttpContext httpContext, IAuthorizationService authorizationService, ICalendarService calendarService, ICalendarAccessService accessService, ICalendarAvailabilityService availabilityService)
+    internal static async Task<IResult> FreeBusyAsync(CalendarFreeBusyInput input, HttpContext httpContext, IAuthorizationService authorizationService, ICalendarService calendarService, ICalendarAccessService accessService, ICalendarAvailabilityService availabilityService)
     {
+        if (Validate(input) is { } invalid)
+        {
+            return invalid;
+        }
+
         var query = await BuildQueryAsync(input, httpContext, authorizationService, calendarService, accessService);
 
         if (query is null)
@@ -239,8 +255,13 @@ internal static class CalendarApiEndpoints
         }));
     }
 
-    private static async Task<IResult> FreeTimeAsync(CalendarFreeBusyInput input, HttpContext httpContext, IAuthorizationService authorizationService, ICalendarService calendarService, ICalendarAccessService accessService, ICalendarAvailabilityService availabilityService)
+    internal static async Task<IResult> FreeTimeAsync(CalendarFreeBusyInput input, HttpContext httpContext, IAuthorizationService authorizationService, ICalendarService calendarService, ICalendarAccessService accessService, ICalendarAvailabilityService availabilityService)
     {
+        if (Validate(input) is { } invalid)
+        {
+            return invalid;
+        }
+
         var query = await BuildQueryAsync(input, httpContext, authorizationService, calendarService, accessService);
 
         if (query is null)
@@ -257,9 +278,20 @@ internal static class CalendarApiEndpoints
         }));
     }
 
+    // A missing body or a range that ends before it starts is a bad request, not a refusal.
+    private static IResult Validate(CalendarFreeBusyInput input)
+    {
+        if (input is null || input.To <= input.From)
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["from"] = ["Give from and to as ISO 8601 times, with to after from."] });
+        }
+
+        return null;
+    }
+
     private static async Task<CalendarBusyQuery> BuildQueryAsync(CalendarFreeBusyInput input, HttpContext httpContext, IAuthorizationService authorizationService, ICalendarService calendarService, ICalendarAccessService accessService)
     {
-        if (input is null || !await authorizationService.AuthorizeAsync(httpContext.User, CalendarPermissions.AccessCalendars))
+        if (!await authorizationService.AuthorizeAsync(httpContext.User, CalendarPermissions.AccessCalendars))
         {
             return null;
         }

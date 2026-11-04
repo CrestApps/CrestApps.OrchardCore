@@ -98,7 +98,10 @@ import {
                 timeZone: 'UTC',
                 now: () => toZoneCalendarDate(new Date()),
                 headerToolbar: { left: 'prev,next today', center: 'title', right: 'timeGridDay,timeGridWeek' },
-                buttonText: { today: data.todayText, day: data.dayText, week: data.weekText },
+                headerToolbarClass: 'calendar-fc-toolbar',
+                todayText: data.todayText,
+                dayText: data.dayText,
+                weekTextLong: data.weekText,
                 // A fixed height keeps the toolbar in view and lets the calendar open at the chosen time.
                 height: Math.max(360, Math.round(window.innerHeight * 0.65)),
                 nowIndicator: true,

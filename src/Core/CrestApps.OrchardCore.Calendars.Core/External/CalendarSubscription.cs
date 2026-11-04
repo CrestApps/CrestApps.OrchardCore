@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Calendars.Models;
+
 namespace CrestApps.OrchardCore.Calendars.Core.External;
 
 /// <summary>
@@ -49,4 +51,36 @@ public sealed class CalendarSubscription
     /// Gets or sets what the last synchronization did, for display.
     /// </summary>
     public string LastResult { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether changes made here are written back to the external calendar. Only providers that implement
+    /// <see cref="IWritableCalendarProvider"/> can; with others the calendar is a read-only copy.
+    /// </summary>
+    public bool TwoWay { get; set; }
+
+    /// <summary>
+    /// Gets or sets which copy wins when an event changed on both sides since it was last synchronized.
+    /// </summary>
+    public CalendarSyncConflictPolicy ConflictPolicy { get; set; }
+
+    /// <summary>
+    /// Gets or sets the token to read the next changes from, for an <see cref="IIncrementalCalendarProvider"/>.
+    /// </summary>
+    public string SyncToken { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether local changes wait to be written back, so the next run comes early.
+    /// </summary>
+    public bool PendingPush { get; set; }
+
+    /// <summary>
+    /// Gets or sets the external copies of events deleted here, still to be deleted in the external calendar.
+    /// </summary>
+    public IList<CalendarProviderMapping> PendingDeletes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether the external account refused access. Synchronization is paused until the subscription is saved
+    /// again, usually after reconnecting the account.
+    /// </summary>
+    public bool NeedsReconnect { get; set; }
 }

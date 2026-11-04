@@ -1,0 +1,11 @@
+@model ShapeViewModel<ForecastEvent>
+
+@{
+    var item = Model.Value;
+    var change = (item.VolumeMultiplier - 1) * 100;
+}
+<span class="badge ta-badge fw-normal">@(item.VolumeMultiplier == 0 ? T["No work"] : change >= 0 ? T["{0}% more work", change.ToString("0.#", CultureInfo.CurrentCulture)] : T["{0}% less work", (-change).ToString("0.#", CultureInfo.CurrentCulture)])</span>
+@if (item.RecursYearly)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-rotate text-secondary me-1" aria-hidden="true"></i>@T["Every year"]</span>
+}

@@ -1,5 +1,10 @@
 using System.Globalization;
+using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Calendars.Models;
+using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Teams.Models;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -9,6 +14,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -226,7 +232,7 @@ public sealed class SchedulesController : Controller
         {
             Period = period,
             TeamName = team.Name,
-            CalendarId = team.CalendarId,
+            CalendarId = team.GetWorkforceSettings().CalendarId,
             Week = week,
             WeekCount = weekCount,
             Days = days,
@@ -363,7 +369,94 @@ public sealed class SchedulesController : Controller
 
         await PopulateShiftAsync(model, period, team, codes);
 
+        if (!string.IsNullOrEmpty(id) && await FindPublishedAsync(period, id) is { } published)
+        {
+            var zone = await TimeZoneOfAsync(team);
+
+            model.PublishedEventId = published.Event.ItemId;
+            model.PublishedStart = CalendarTime.ToLocal(published.Event.StartUtc, zone);
+            model.PublishedEnd = CalendarTime.ToLocal(published.Event.EndUtc, zone);
+            model.PublishedWorkerName = string.IsNullOrEmpty(published.Data.WorkerId) ? null : (await _workerManager.FindByIdAsync(published.Data.WorkerId, HttpContext.RequestAborted))?.DisplayName;
+        }
+
         return View(model);
+    }
+
+    /// <summary>
+    /// Changes a shift on the published schedule now, without republishing: its times, who works it, or taking it
+    /// off. The change is checked, logged and paid like a republish's, and the draft follows.
+    /// </summary>
+    /// <param name="periodId">The schedule.</param>
+    /// <param name="id">The draft shift.</param>
+    /// <param name="operation">What to do: <c>times</c>, <c>reassign</c> or <c>remove</c>.</param>
+    /// <param name="start">The new start, for <c>times</c>.</param>
+    /// <param name="end">The new end, for <c>times</c>; at or before the start is the next day.</param>
+    /// <param name="workerId">Who takes it, for <c>reassign</c>.</param>
+    /// <param name="reason">Why, for the change log and the worker.</param>
+    /// <param name="workerAsked">Whether the worker asked for it, so no predictability pay is owed.</param>
+    /// <returns>The shift page, or the planner board once removed.</returns>
+    [HttpPost]
+    [Admin("workforce/schedules/published-shift/{periodId}/{id}", "WorkforceSchedulesPublishedShift")]
+    public async Task<IActionResult> PublishedShift(string periodId, string id, string operation, string start, string end, string workerId, string reason, bool workerAsked)
+    {
+        var (period, team, denied) = await AuthorizePeriodAsync(periodId);
+
+        if (denied is not null)
+        {
+            return denied;
+        }
+
+        if (await FindPublishedAsync(period, id) is not { } published)
+        {
+            return NotFound();
+        }
+
+        var shifts = HttpContext.RequestServices.GetRequiredService<IShiftService>();
+        var initiator = workerAsked ? ScheduleChangeInitiator.Worker : ScheduleChangeInitiator.Employer;
+        var why = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
+        var actor = User.Identity?.Name;
+        PlanningResult<CalendarEvent> result;
+
+        switch (operation)
+        {
+            case "times":
+                if (!TimeOnly.TryParse(start, CultureInfo.InvariantCulture, out var from) || !TimeOnly.TryParse(end, CultureInfo.InvariantCulture, out var to))
+                {
+                    await _notifier.ErrorAsync(H["Enter the start and end."]);
+
+                    return RedirectToAction(nameof(Shift), new { periodId, id });
+                }
+
+                var zone = await TimeZoneOfAsync(team);
+                var day = DateOnly.FromDateTime(CalendarTime.ToLocal(published.Event.StartUtc, zone));
+                var startLocal = day.ToDateTime(from);
+                var endLocal = to <= from ? day.AddDays(1).ToDateTime(to) : day.ToDateTime(to);
+
+                result = await shifts.ChangeTimesAsync(published.Event.ItemId, CalendarTime.ToUtc(startLocal, zone), CalendarTime.ToUtc(endLocal, zone), initiator, why, actor, HttpContext.RequestAborted);
+                break;
+            case "reassign":
+                result = await shifts.ReassignAsync(published.Event.ItemId, workerId, initiator, why, actor, HttpContext.RequestAborted);
+                break;
+            case "remove":
+                result = await shifts.RemoveAsync(published.Event.ItemId, initiator, why, actor, HttpContext.RequestAborted);
+                break;
+            default:
+                return BadRequest();
+        }
+
+        if (!result.Succeeded)
+        {
+            foreach (var error in result.Errors)
+            {
+                await _notifier.ErrorAsync(H["{0}", error]);
+            }
+
+            return RedirectToAction(nameof(Shift), new { periodId, id });
+        }
+
+        await _notifier.SuccessAsync(operation == "remove" ? H["The shift has been taken off the published schedule."] : H["The published shift has been changed."]);
+
+        return operation == "remove" ? RedirectToAction(nameof(Plan), new { id = periodId }) : RedirectToAction(nameof(Shift), new { periodId, id });
     }
 
     /// <summary>
@@ -542,7 +635,9 @@ public sealed class SchedulesController : Controller
 
         if (result.Succeeded)
         {
-            await _notifier.SuccessAsync(H.Plural(result.Run.ShiftsAdded, "1 shift was added. The schedule now covers {1:P0} of the people wanted and {2:P0} of the fewest needed.", "{0} shifts were added. The schedule now covers {1:P0} of the people wanted and {2:P0} of the fewest needed.", result.Run.ShiftsAdded, result.Run.CoverageScore, result.Run.MinimumScore));
+            await _notifier.SuccessAsync(H.Plural(result.Run.ShiftsAdded, "1 shift was added. The schedule now covers {1:P0} of the people wanted and {2:P0} of the fewest needed.", "{0} shifts were added. The schedule now covers {1:P0} of the people wanted and {2:P0} of the fewest needed.", result.Run.CoverageScore, result.Run.MinimumScore));
+
+            await _notifier.InformationAsync(H["The {0} solver made this schedule in {1:0.0} seconds.", result.Run.Solver, result.Run.RuntimeMilliseconds / 1000d]);
 
             if (result.Run.TimedOut)
             {
@@ -731,7 +826,7 @@ public sealed class SchedulesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    private async Task<(SchedulePeriod Period, WorkforceTeam Team, IActionResult Denied)> AuthorizePeriodAsync(string id, global::OrchardCore.Security.Permissions.Permission permission = null)
+    private async Task<(SchedulePeriod Period, Team Team, IActionResult Denied)> AuthorizePeriodAsync(string id, global::OrchardCore.Security.Permissions.Permission permission = null)
     {
         if (!await _authorizationService.AuthorizeAsync(User, permission ?? WorkforcePermissions.ManageSchedules))
         {
@@ -751,13 +846,36 @@ public sealed class SchedulesController : Controller
         return scope.Covers(team.ItemId) ? (period, team, null) : (null, null, Forbid());
     }
 
+    // The draft's shift on the published schedule, found by its shift key.
+    private async Task<(CalendarEvent Event, ShiftData Data)?> FindPublishedAsync(SchedulePeriod period, string draftId)
+    {
+        var draft = await FindDraftAsync(period, draftId);
+
+        if (draft is null || string.IsNullOrEmpty(draft.ShiftKey))
+        {
+            return null;
+        }
+
+        var events = await HttpContext.RequestServices.GetRequiredService<ICalendarEventManager>().FindBySourceAsync(WorkforceConstants.Source, draft.ShiftKey, HttpContext.RequestAborted);
+
+        foreach (var calendarEvent in events)
+        {
+            if (calendarEvent.Status != CalendarEventStatus.Cancelled && calendarEvent.TryGet<ShiftData>(out var data))
+            {
+                return (calendarEvent, data);
+            }
+        }
+
+        return null;
+    }
+
     private async Task<DraftShift> FindDraftAsync(SchedulePeriod period, string id)
     {
         return (await _planningService.ListDraftShiftsAsync(period.PrimaryScenarioId, HttpContext.RequestAborted))
             .FirstOrDefault(shift => shift.ItemId == id);
     }
 
-    private async Task<string> TimeZoneOfAsync(WorkforceTeam team)
+    private async Task<string> TimeZoneOfAsync(Team team)
     {
         if (!string.IsNullOrEmpty(team.TimeZoneId))
         {
@@ -772,7 +890,7 @@ public sealed class SchedulesController : Controller
     private static int WeekOf(SchedulePeriod period, DateOnly date)
         => Math.Max(0, (date.DayNumber - period.StartDate.DayNumber) / 7);
 
-    private async Task AddCoverageAsync(ScheduleBoardViewModel model, SchedulePeriod period, WorkforceTeam team)
+    private async Task AddCoverageAsync(ScheduleBoardViewModel model, SchedulePeriod period, Team team)
     {
         if (model.Days.Count == 0)
         {
@@ -830,7 +948,7 @@ public sealed class SchedulesController : Controller
         }
     }
 
-    private async Task PopulateShiftAsync(DraftShiftEditViewModel model, SchedulePeriod period, WorkforceTeam team, IEnumerable<ActivityCode> codes)
+    private async Task PopulateShiftAsync(DraftShiftEditViewModel model, SchedulePeriod period, Team team, IEnumerable<ActivityCode> codes)
     {
         var day = model.Date ?? period.StartDate;
         var workers = (await _workerManager.ListByTeamAsync(team.ItemId, day, HttpContext.RequestAborted)).ToList();

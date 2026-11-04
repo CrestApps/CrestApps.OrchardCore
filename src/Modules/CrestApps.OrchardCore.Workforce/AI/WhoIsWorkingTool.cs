@@ -3,6 +3,7 @@ using System.Text.Json;
 using CrestApps.OrchardCore.Calendars.Core;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Controllers;
 using CrestApps.OrchardCore.Workforce.Core;
 using CrestApps.OrchardCore.Workforce.Core.Services;
@@ -77,7 +78,7 @@ public sealed class WhoIsWorkingTool : WorkforceAIToolBase
             teams = teams.Where(team => subtree.Contains(team.ItemId)).ToList();
         }
 
-        teams = teams.Where(team => scope.Covers(team.ItemId) && !string.IsNullOrEmpty(team.CalendarId)).ToList();
+        teams = teams.Where(team => scope.Covers(team.ItemId) && !string.IsNullOrEmpty(team.GetWorkforceSettings().CalendarId)).ToList();
 
         var at = ReadDateTime(arguments, "at");
         var queries = services.GetRequiredService<ICalendarQueryService>();
@@ -94,7 +95,7 @@ public sealed class WhoIsWorkingTool : WorkforceAIToolBase
             var atUtc = at.HasValue ? CalendarTime.ToUtc(at.Value, zone) : clock.UtcNow;
             var occurrences = await queries.GetOccurrencesAsync(new CalendarOccurrenceQuery
             {
-                CalendarIds = [team.CalendarId],
+                CalendarIds = [team.GetWorkforceSettings().CalendarId],
                 FromUtc = atUtc,
                 ToUtc = atUtc.AddMinutes(1),
                 EventTypes = [WorkforceConstants.EventTypes.Shift],

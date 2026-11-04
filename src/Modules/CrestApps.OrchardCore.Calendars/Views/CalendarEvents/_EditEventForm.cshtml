@@ -42,26 +42,37 @@
 
     @await DisplayAsync(Model.Editor)
 
-    <div class="ocat-wrapper">
-        <div class="ocat-end-offset d-flex flex-wrap gap-2">
+    @{
+        void EventActions()
+        {
             <button class="btn btn-primary" type="submit">@T["Save"]</button>
             @if (Model.CanConfirm)
             {
                 <button class="btn btn-success" type="submit" formaction="@Url.Action("Confirm", new { id = Model.Id, modal = modalRoute })">@T["Confirm"]</button>
             }
-            <button class="btn btn-warning" type="submit" formaction="@Url.Action("Cancel", new { id = Model.Id, occurrence = Model.Occurrence, modal = modalRoute })">@(Model.IsOccurrence ? T["Cancel"] : T["Cancel event"])</button>
-            <button class="btn btn-danger" type="submit" formaction="@Url.Action("Delete", new { id = Model.Id, modal = modalRoute })" data-confirm-message="@T["Delete this event, with every occurrence if it repeats?"]">@T["Delete"]</button>
-            @if (modal)
-            {
+            <button class="btn btn-warning action-bar-secondary" type="submit" formaction="@Url.Action("Cancel", new { id = Model.Id, occurrence = Model.Occurrence, modal = modalRoute })">@(Model.IsOccurrence ? T["Cancel"] : T["Cancel event"])</button>
+            <button class="btn btn-danger action-bar-secondary" type="submit" formaction="@Url.Action("Delete", new { id = Model.Id, modal = modalRoute })" data-confirm-message="@T["Delete this event, with every occurrence if it repeats?"]">@T["Delete"]</button>
+        }
+    }
+
+    @if (modal)
+    {
+        @* The page's sticky action bar can't be used inside the calendar's modal. *@
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset d-flex flex-wrap gap-2">
+                @{ EventActions(); }
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Close"]</button>
                 <a class="btn btn-link" asp-action="Edit" asp-route-id="@Model.Id" asp-route-occurrence="@Model.Occurrence">@T["Open full page"]</a>
-            }
-            else
-            {
-                <a class="btn btn-secondary cancel" role="button" asp-controller="Calendar" asp-action="Index">@T["Back"]</a>
-            }
+            </div>
         </div>
-    </div>
+    }
+    else
+    {
+        <div class="action-bar-bottom">
+            @{ EventActions(); }
+            <a class="btn btn-secondary cancel" role="button" asp-controller="Calendar" asp-action="Index">@T["Back"]</a>
+        </div>
+    }
 </form>
 
 <script at="Foot">

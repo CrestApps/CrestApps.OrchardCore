@@ -1,16 +1,17 @@
 @model MyTimesheetViewModel
 @using CrestApps.OrchardCore.Calendars.Core
 @{
-    Layout = null;
-    ViewData["MyWorkNav"] = Model.Nav;
-    ViewData["Title"] = T["Timesheet"].Value;
     var details = Model.Details;
 }
-<partial name="_MyWorkHead" />
+<zone Name="Title">
+    <breadcrumb name="MyWorkTimesheet" title="@T["Timesheet"]">
+        <breadcrumb-item id="MyWork" action="Index" controller="MyWork" area="CrestApps.OrchardCore.Workforce">@T["My Work"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+<partial name="~/Areas/CrestApps.OrchardCore.Workforce/Views/Shared/_MyWorkAssets.cshtml" />
 
 @if (details is null)
 {
-    <h1 class="h4 mb-3">@T["Timesheet"]</h1>
     <div class="alert alert-info">@Model.Problem</div>
 }
 else
@@ -19,11 +20,11 @@ else
     string Local(DateTime utc) => CalendarTime.ToLocal(utc, details.TimeZoneId).ToString("t");
 
     <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-        <a href="@Url.Content("~/my-work/timesheet?date=" + details.PreviousPeriod?.ToString("yyyy-MM-dd"))" class="btn btn-outline-secondary btn-sm" aria-label="@T["Previous period"]"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></a>
-        <h1 class="h4 mb-0">@timesheet.PeriodStart.ToString("d MMM") – @timesheet.PeriodEnd.ToString("d MMM yyyy")</h1>
+        <a href="@Url.Content("~/Admin/my-work/timesheet?date=" + details.PreviousPeriod?.ToString("yyyy-MM-dd"))" class="btn btn-outline-secondary btn-sm" aria-label="@T["Previous period"]"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></a>
+        <h2 class="h5 mb-0">@timesheet.PeriodStart.ToString("d MMM") – @timesheet.PeriodEnd.ToString("d MMM yyyy")</h2>
         @if (details.NextPeriod.HasValue)
         {
-            <a href="@Url.Content("~/my-work/timesheet?date=" + details.NextPeriod.Value.ToString("yyyy-MM-dd"))" class="btn btn-outline-secondary btn-sm" aria-label="@T["Next period"]"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></a>
+            <a href="@Url.Content("~/Admin/my-work/timesheet?date=" + details.NextPeriod.Value.ToString("yyyy-MM-dd"))" class="btn btn-outline-secondary btn-sm" aria-label="@T["Next period"]"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></a>
         }
         <span class="badge text-bg-light border fw-normal">@(timesheet.Status switch
         {
@@ -108,7 +109,7 @@ else
                 <div class="card h-100">
                     <div class="card-body">
                         <h2 class="h6">@T["Forgot to punch?"]</h2>
-                        <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/timesheet/correction")" class="row g-2">
+                        <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/timesheet/correction")" class="row g-2">
                             <div class="col-12">
                                 <select name="kind" class="form-select" aria-label="@T["Punch"]">
                                     <option value="In">@T["Clocked in"]</option>
@@ -133,7 +134,7 @@ else
                         {
                             <p class="small text-warning-emphasis">@T.Plural(timesheet.OpenExceptions, "Something looks off on 1 day. Ask for any punch you missed first.", "Something looks off on {0} days. Ask for any punch you missed first.")</p>
                         }
-                        <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/timesheet/" + timesheet.ItemId + "/submit")">
+                        <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/timesheet/" + timesheet.ItemId + "/submit")">
                             <div class="form-check mb-2">
                                 <input class="form-check-input" type="checkbox" name="attest" value="true" id="attest" required />
                                 <label class="form-check-label" for="attest">@T[Model.Attestation]</label>
@@ -147,7 +148,6 @@ else
     }
 }
 
-<partial name="_MyWorkFoot" />
 @functions {
     private string PunchName(TimePunchKind kind) => kind switch
     {

@@ -1,0 +1,91 @@
+@model TimeStageEditViewModel
+
+<zone Name="Title"><breadcrumb name="TimeTrackerStagesEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Stage"] : T["Edit {0}", Model.Name])" /></zone>
+
+<form asp-action="EditStage" asp-route-id="@Model.Id" method="post">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="card mb-3">
+        <div class="card-header">@T["The stage"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper" asp-validation-class-for="Name">
+                <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Name" class="form-control" placeholder="@T["Such as: Work"]" />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Code" class="ocat-label">@T["Code"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Code" class="form-control" maxlength="32" />
+                    <span class="hint">@T["A short code for exports and for mapping Contact Center states, such as WORK."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Color" class="ocat-label">@T["Color"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Color" type="color" class="form-control form-control-color" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Position" class="ocat-label">@T["Position"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Position" type="number" class="form-control" />
+                    <span class="hint">@T["Lower comes first on the clock and in lists."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">@T["How its time counts"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@T["Categories"]</span>
+                <div class="ocat-end">
+                    @if (Model.CategoryOptions.Count == 0)
+                    {
+                        <p class="hint mb-0">@T["No categories yet."] <a asp-action="EditCategory">@T["Add a category"]</a></p>
+                    }
+                    @foreach (var option in Model.CategoryOptions)
+                    {
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" name="CategoryIds" value="@option.Value" id="category-@option.Value" checked="@option.Selected" />
+                            <label class="form-check-label" for="category-@option.Value">@option.Text</label>
+                        </div>
+                    }
+                    <span class="hint">@T["Its time adds to each category ticked, such as Work to both Payable and Billable."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Use"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <div class="form-check">
+                        <input asp-for="SelfService" class="form-check-input" />
+                        <label asp-for="SelfService" class="form-check-label">@T["People pick it on their clock"]</label>
+                        <span class="hint dashed">@T["Off for stages that come only from Contact Center or a manager, such as On a call."]</span>
+                    </div>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <div class="form-check">
+                        <input asp-for="Enabled" class="form-check-input" />
+                        <label asp-for="Enabled" class="form-check-label">@T["In use"]</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+        <a asp-action="Index" asp-route-kind="@TimeSettingsController.Stages" class="btn btn-secondary">@T["Cancel"]</a>
+    </div>
+</form>

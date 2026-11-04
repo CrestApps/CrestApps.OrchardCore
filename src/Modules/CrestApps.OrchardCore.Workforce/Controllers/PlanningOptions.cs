@@ -1,6 +1,7 @@
+using CrestApps.OrchardCore.Teams.Models;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using CrestApps.OrchardCore.Workforce.Models;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 
@@ -25,7 +26,7 @@ internal static class PlanningOptions
     /// <summary>
     /// Returns a team's time zone, else the site's, else UTC.
     /// </summary>
-    public static async Task<string> TimeZoneOfAsync(WorkforceTeam team, ISiteService siteService)
+    public static async Task<string> TimeZoneOfAsync(Team team, ISiteService siteService)
     {
         if (!string.IsNullOrEmpty(team?.TimeZoneId))
         {

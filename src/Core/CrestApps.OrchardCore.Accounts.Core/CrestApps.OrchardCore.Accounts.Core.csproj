@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore Accounts Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      The services behind accounts: which content types are accounts, which can belong to one, and keeping each account
+      type's list of contained types up to date.
+    </Description>
+    <PackageTags>$(PackageTags) Accounts Core</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.ContentManagement" />
+    <PackageReference Include="OrchardCore.Lists" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Accounts.Abstractions\CrestApps.OrchardCore.Accounts.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

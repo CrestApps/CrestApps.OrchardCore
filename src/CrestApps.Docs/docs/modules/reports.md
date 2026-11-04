@@ -16,6 +16,8 @@ user_manual:
 
 The **Reports** module is a reusable reporting framework. It provides a single admin **Reports** area and a small contract that any module can implement to surface an industry-standard report — with a shared from/to date-range filter, extensible filters, a uniform renderer (metric cards, tables, bars, and interactive charts), and pluggable exports (CSV built in). The feature depends on **CrestApps Resources** and loads its named `chart.js` resource only when the current report contains a chart section. Modules such as [Omnichannel](../omnichannel/index.md) and [Phone Number Verifications](phone-number-verifications) contribute their reports through this framework so every report looks and behaves the same.
 
+<YouTube video="reports-run-and-export" title="Video overview of finding, running, filtering and exporting reports" />
+
 | | |
 | --- | --- |
 | **Add-on Feature Name** | Reports (OpenXml) |
@@ -39,7 +41,7 @@ The add-on embeds a TrueType font of the host, with only the characters the repo
 
 The optional **Report Builder** add-on lets people design their own reports with drag and drop from pluggable data sources, and share them. See [Report Builder](report-builder/index.md).
 
-The modules publish their records as data sources for the builder and for Orchard Core's data pipelines: **Orders**, **Products**, **Customers**, **Companies**, **Inventory**, **Checkout**, **Carts**, **Transactions**, **Subscriptions**, **Shipping**, **Reviews**, **Downloads**, **Bookings**, **Marketplace**, **Point of Sale**, **Contact Center**, **Omnichannel**, **Messaging**, **AI chat** (with AI usage), **Phone number verifications** and **DNC registry**, beside Orchard Core's **Content items**, **Users** and **Queries** and the builder's **Report views**. Each one is registered when Data Pipelines Core and the feature that stores its data are on, and each data set needs the permission of the module's own screens. [Data sources](report-builder/data-sources.md) lists them with their data sets, permissions and relationships, and each module's page lists the fields of its data sets. Where a built-in report can be built in the builder, the module ships a recipe that adds it as a report you can copy and change, such as **Reports: store reports to adapt** for the order reports.
+The modules publish their records as data sources for the builder and for Orchard Core's data pipelines: **Orders**, **Products**, **Customers**, **B2B accounts**, **Inventory**, **Checkout**, **Carts**, **Transactions**, **Subscriptions**, **Shipping**, **Reviews**, **Downloads**, **Bookings**, **Marketplace**, **Point of Sale**, **Contact Center**, **Omnichannel**, **Messaging**, **AI chat** (with AI usage), **Phone number verifications** and **DNC registry**, beside Orchard Core's **Content items**, **Users** and **Queries** and the builder's **Report views**. Each one is registered when Data Pipelines Core and the feature that stores its data are on, and each data set needs the permission of the module's own screens. [Data sources](report-builder/data-sources.md) lists them with their data sets, permissions and relationships, and each module's page lists the fields of its data sets. Where a built-in report can be built in the builder, the module ships a recipe that adds it as a report you can copy and change, such as **Reports: store reports to adapt** for the order reports.
 
 The implementation is split into three layers:
 

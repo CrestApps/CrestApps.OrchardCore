@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.Core;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -55,6 +56,59 @@ public sealed class WorkforceEventsTests
         Assert.Equal(WorkforceEvents.SchedulePublished, published.Name);
         Assert.Equal(period.ItemId, published.Input["PeriodId"]);
         Assert.Equal(team.ItemId, published.Input["TeamId"]);
+    }
+
+    [Fact]
+    public async Task ChangesToThePublishedSchedule_RaiseShiftAssignedChangedAndRemoved()
+    {
+        var events = new RecordingEvents();
+        await using var harness = await WorkforceTests.CreateAsync(services => services.AddSingleton<IWorkforceEvents>(events));
+        var team = await WorkforceTests.AddTeamAsync(harness, "Front desk", TeamKind.Team);
+        var ana = await PlanningKit.AddMemberAsync(harness, "Ana", team);
+        var ben = await PlanningKit.AddMemberAsync(harness, "Ben", team);
+        var period = await PlanningKit.CreatePeriodAsync(harness, team);
+
+        await PlanningKit.AddDraftAsync(harness, period, ana.ItemId, _monday, new TimeOnly(9, 0), new TimeOnly(17, 0));
+        await PlanningKit.PublishAsync(harness, period);
+
+        var shift = Assert.Single(await PlanningKit.ListShiftsAsync(harness, team));
+
+        await harness.RunAsync(services => services.GetRequiredService<IShiftService>().ReassignAsync(shift.ItemId, ben.ItemId, ScheduleChangeInitiator.Employer, "Cover", "manager"));
+        await harness.RunAsync(services => services.GetRequiredService<IShiftService>().RemoveAsync(shift.ItemId, ScheduleChangeInitiator.Employer, "Closed", "manager"));
+
+        // A republish with a new shift assigns it.
+        await PlanningKit.AddDraftAsync(harness, period, ana.ItemId, _monday.AddDays(1), new TimeOnly(9, 0), new TimeOnly(17, 0));
+        await PlanningKit.PublishAsync(harness, period);
+
+        var shiftEvents = events.Raised.Where(raised => raised.Name.StartsWith("WorkforceShift", StringComparison.Ordinal)).ToList();
+
+        Assert.Equal([WorkforceEvents.ShiftChanged, WorkforceEvents.ShiftRemoved, WorkforceEvents.ShiftAssigned], shiftEvents.Select(raised => raised.Name));
+        Assert.Equal((ben.ItemId, ana.ItemId, "Cover"), ((string)shiftEvents[0].Input["WorkerId"], (string)shiftEvents[0].Input["PreviousWorkerId"], (string)shiftEvents[0].Input["Reason"]));
+        Assert.Equal(team.ItemId, shiftEvents[1].Input["TeamId"]);
+        Assert.Equal(ana.ItemId, shiftEvents[2].Input["WorkerId"]);
+    }
+
+    [Fact]
+    public async Task AnOpenShift_RaisesPosted_ThenAssignedWhenFilled()
+    {
+        var events = new RecordingEvents();
+        await using var harness = await WorkforceTests.CreateAsync(services => services.AddSingleton<IWorkforceEvents>(events));
+        var team = await WorkforceTests.AddTeamAsync(harness, "Front desk", TeamKind.Team);
+        var ana = await PlanningKit.AddMemberAsync(harness, "Ana", team);
+        var period = await PlanningKit.CreatePeriodAsync(harness, team);
+
+        await PlanningKit.AddDraftAsync(harness, period, null, _monday, new TimeOnly(9, 0), new TimeOnly(17, 0));
+        await PlanningKit.PublishAsync(harness, period);
+
+        var posted = Assert.Single(events.Raised, raised => raised.Name == WorkforceEvents.OpenShiftPosted);
+        var openShiftId = (string)posted.Input["OpenShiftId"];
+
+        await harness.RunAsync(services => services.GetRequiredService<IOpenShiftService>().AssignAsync(openShiftId, ana.ItemId, "manager"));
+
+        var assigned = Assert.Single(events.Raised, raised => raised.Name == WorkforceEvents.ShiftAssigned);
+
+        Assert.Equal(team.ItemId, posted.Input["TeamId"]);
+        Assert.Equal(ana.ItemId, assigned.Input["WorkerId"]);
     }
 
     [Fact]

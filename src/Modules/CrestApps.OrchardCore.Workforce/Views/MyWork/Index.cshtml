@@ -1,11 +1,8 @@
 @model MyWorkHomeViewModel
-@{
-    Layout = null;
-    ViewData["MyWorkNav"] = Model.Nav;
-}
-<partial name="_MyWorkHead" />
+<zone Name="Title"><breadcrumb name="MyWork" title="@T["My Work"]" /></zone>
+<partial name="~/Areas/CrestApps.OrchardCore.Workforce/Views/Shared/_MyWorkAssets.cshtml" />
 
-<h1 class="h4 mb-3">@T["Hello, {0}", Model.Nav.WorkerName]</h1>
+<p class="lead">@T["Hello, {0}", Model.Nav.WorkerName]</p>
 
 @if (!Model.Nav.IsWorker)
 {
@@ -52,7 +49,7 @@ else
                     {
                         <partial name="_MyShift" model="item" />
                     }
-                    <a href="@Url.Content("~/my-work/schedule")" class="small">@T["See my schedule"]</a>
+                    <a href="@Url.Content("~/Admin/my-work/schedule")" class="small">@T["See my schedule"]</a>
                 </div>
             </div>
         </div>
@@ -64,7 +61,7 @@ else
                 <h2 class="h6 text-muted text-uppercase mb-0 me-auto">@T["Notifications"]</h2>
                 @if (Model.Nav.Unread > 0)
                 {
-                    <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/inbox/read")"><button type="submit" class="btn btn-link btn-sm p-0">@T["Mark all read"]</button></form>
+                    <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/inbox/read")"><button type="submit" class="btn btn-link btn-sm p-0">@T["Mark all read"]</button></form>
                 }
             </div>
             @if (Model.Inbox.Count == 0)
@@ -107,4 +104,3 @@ else
     </script>
 }
 
-<partial name="_MyWorkFoot" />

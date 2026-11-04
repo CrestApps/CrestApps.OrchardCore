@@ -3,6 +3,8 @@ using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
+using CrestApps.OrchardCore.Teams.Core.Services;
+using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Localization;
@@ -206,7 +208,7 @@ internal sealed class ScheduleAutoScheduler
         return result;
     }
 
-    private async Task<ShiftScheduleWorker> ToWorkerAsync(WorkerProfile worker, WorkforceTeam team, SchedulePeriod period, int days, CancellationToken cancellationToken)
+    private async Task<ShiftScheduleWorker> ToWorkerAsync(WorkerProfile worker, Team team, SchedulePeriod period, int days, CancellationToken cancellationToken)
     {
         var subject = SkillSubject.Worker(worker.ItemId);
         var first = (await _skillAssignments.GetEffectiveAsync(subject, period.StartDate, cancellationToken)).Select(assignment => assignment.SkillId);
@@ -262,10 +264,10 @@ internal sealed class ScheduleAutoScheduler
     /// Returns the members' published shifts that aren't this schedule's: on this team from another schedule, which
     /// count, and on other teams, which only take the worker's time.
     /// </summary>
-    private async Task<IReadOnlyList<ShiftScheduleFixedShift>> ListOtherShiftsAsync(WorkforceTeam team, SchedulePeriod period, IReadOnlyDictionary<string, WorkerProfile> members, string timeZoneId, DateTime origin, Dictionary<string, ActivityCode> codes, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<ShiftScheduleFixedShift>> ListOtherShiftsAsync(Team team, SchedulePeriod period, IReadOnlyDictionary<string, WorkerProfile> members, string timeZoneId, DateTime origin, Dictionary<string, ActivityCode> codes, CancellationToken cancellationToken)
     {
         var teamIds = members.Values.SelectMany(worker => worker.TeamMemberships.Select(membership => membership.TeamId)).Append(team.ItemId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal);
-        var calendarIds = (await _teamStore.GetAsync(teamIds, cancellationToken)).Select(item => item.CalendarId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
+        var calendarIds = (await _teamStore.GetAsync(teamIds, cancellationToken)).Select(item => item.GetWorkforceSettings().CalendarId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
 
         if (calendarIds.Length == 0 || members.Count == 0)
         {
@@ -309,7 +311,7 @@ internal sealed class ScheduleAutoScheduler
         int Minutes(DateTime utc) => (int)(CalendarTime.ToLocal(utc, timeZoneId) - origin).TotalMinutes;
     }
 
-    private async Task<IReadOnlyList<ShiftScheduleDemand>> BuildDemandAsync(WorkforceTeam team, SchedulePeriod period, int interval, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<ShiftScheduleDemand>> BuildDemandAsync(Team team, SchedulePeriod period, int interval, CancellationToken cancellationToken)
     {
         var requirements = await _requirementStore.ListForTeamAsync(team.ItemId, cancellationToken);
         var perDay = 1440 / interval;

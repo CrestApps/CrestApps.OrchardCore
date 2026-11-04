@@ -1,11 +1,12 @@
 using CrestApps.OrchardCore.Workforce.Models;
+using CrestApps.OrchardCore.Workforce.Services;
 
 namespace CrestApps.OrchardCore.Workforce.Core.Services;
 
 /// <summary>
 /// Works out the team a worker's time off belongs to on a day, and the time zone their days are in.
 /// </summary>
-internal sealed class WorkerTimeZones
+internal sealed class WorkerTimeZones : IWorkerTimeZoneService
 {
     private readonly TeamTimeZoneResolver _teamTimeZones;
 
@@ -38,4 +39,7 @@ internal sealed class WorkerTimeZones
 
         return await _teamTimeZones.GetAsync(teamId ?? TeamOn(worker, DateOnly.FromDateTime(worker.CreatedUtc)), cancellationToken);
     }
+
+    public Task<string> GetTeamAsync(string teamId, CancellationToken cancellationToken = default)
+        => _teamTimeZones.GetAsync(teamId, cancellationToken);
 }

@@ -19,9 +19,13 @@ Phone number verification asks an outside service whether a contact's phone numb
 
 <AskYourAdmin />
 
+<YouTube video="phone-number-verification" title="Video overview of Phone Number Verification: providers, status icons, the queue and the report" />
+
 ![Phone Number Verifications settings, General tab](/img/docs/phone-number-verifications-settings.png)
 
 ## When numbers are checked
+
+<YouTube video="phone-number-verification" title="Video of when numbers are checked" start={58} end={103} />
 
 - **When a contact is saved with a new or changed phone number.** The number is marked as not yet verified right away, and the check runs just after the save. The site checks the contact's preferred number: cell first, then home, office, work and other.
 - **When a check is due again.** A verified number is checked again after the **Revalidation interval**. A background task looks for due numbers every five minutes.
@@ -30,6 +34,8 @@ Phone number verification asks an outside service whether a contact's phone numb
 The services charge per check, so a number is only checked when it is new, changed, due again or retried. If no provider is set up yet, new numbers wait and are checked once a provider is available.
 
 ## Set up a provider
+
+<YouTube video="phone-number-verification" title="Video of setting up a provider and the general settings" start={103} end={203} />
 
 Your administrator first turns on the feature for the service your company has an account with. Then:
 
@@ -74,6 +80,8 @@ After you save an API key, secret or token, the box stays empty and a green note
 
 ## What the status icons mean
 
+<YouTube video="phone-number-verification" title="Video of the status icons" start={203} end={250} />
+
 Wherever a phone field shows a checked number, an icon shows the result. Point at it to see the details and the date of the check.
 
 | Icon | Meaning |
@@ -89,6 +97,8 @@ On a contact type that has the **Phone Number Verification** part, the item also
 
 ## Work the verification queue
 
+<YouTube video="phone-number-verification" title="Video of working the verification queue" start={250} end={330} />
+
 Open **Tools > Phone Verifications Queue** to see every number that has verification data.
 
 - Click a tile (**All**, **Verified**, **Invalid**, **Failed**, **Pending** or **Needs attention**) to show only those records. The tiles never overlap and always add up to the total.
@@ -96,11 +106,13 @@ Open **Tools > Phone Verifications Queue** to see every number that has verifica
   - **Failed**: the last check failed, and the site will try again by itself.
   - **Needs attention**: failed **Maximum verification attempts** times in a row, so the site stopped trying. The latest error is shown in red.
 - Use **Search by phone number** and **Sort by** (**Recently attempted**, **Least recently attempted**, **Recently created**, **Oldest created**) to find a record.
-- Click **Retry now** on a record, tick records (or **Select all on this page**) and click **Retry selected**, or click **Retry all failed** to retry every failed and needs-attention record on every page that matches your search.
+- Click **Retry now** on a failed or needs-attention record, or open the **Actions** menu of a verified or invalid record and click **Verify again**. Tick records (or **Select all on this page**) and choose **Actions > Retry** to retry them together, or click **Retry all failed** to retry every failed and needs-attention record on every page that matches your search.
 
 Retries need the **Verify phone numbers** permission. They are queued, not instant: the records show **Pending** right away and are checked shortly after, spaced out by the **Request delay**.
 
 ## Read the report
+
+<YouTube video="phone-number-verification" title="Video of reading the report" start={330} end={368} />
 
 Open **Reports > General > Phone Number Verifications**.
 
@@ -112,4 +124,4 @@ Open **Reports > General > Phone Number Verifications**.
 | **Line and queue status** | Mobile, landline and VoIP numbers, numbers pending verification, and numbers requiring revalidation. |
 | **Provider usage** | How many records each provider checked. |
 
-The report shows the current state of all numbers. Use the export button to download it as a file. See [Reports](../reports.md) for how report pages work.
+The report shows the current state of all numbers. Use the **Export CSV** button to download it as a file (with the Reports OpenXml or Pdf features on, it becomes an **Export** menu with more formats). See [Reports](../reports.md) for how report pages work.

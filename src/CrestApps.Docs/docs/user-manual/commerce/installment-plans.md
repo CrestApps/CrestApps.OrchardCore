@@ -26,6 +26,10 @@ Installment plans need a payment provider that can keep a card for later payment
 
 <YouTube video="commerce" title="Narrated video of setting up an installment plan and taking the down payment" start={304} end={363} />
 
+This video shows how a plan works, the settings, creating and managing a plan, and what happens with a card, declines and checkout installments:
+
+<YouTube video="installment-plans" title="Narrated video overview of installment plans" />
+
 ## How a plan works
 
 A plan is made of:
@@ -41,6 +45,8 @@ The rest of the total is split into equal payments. When it does not divide exac
 Nothing is scheduled until the down payment (or, without one, the first payment) is received. Every payment on the plan, the down payment included, is also a [transaction](transactions.md), so it appears in **Commerce > Transactions** and in the customer's **My Transactions**, and a payment that was received can be refunded from **Commerce > Payments** like any other (see [Payments and refunds](payments-and-refunds.md)).
 
 ## Create a plan
+
+<YouTube video="installment-plans" title="Video of creating an installment plan" start={135} end={200} />
 
 1. Open **Subscriptions > Installment Plans** and click **New plan**.
 2. In **Customer**, choose who is paying (see [Pick or create the customer](#pick-or-create-the-customer)).
@@ -103,6 +109,8 @@ If the card used for the down payment cannot be kept for later payments, the pla
 
 ## Manage a plan
 
+<YouTube video="installment-plans" title="Video of the plan list, the plan page and canceling a plan" start={200} end={249} />
+
 <YouTube video="commerce" title="Narrated video of managing installment plans: Charge now, Cancel the plan, and the list" start={362} end={409} />
 
 Open a plan by clicking its title or **Manage** in the list. The plan page has these cards:
@@ -134,6 +142,8 @@ The page then says whether the payment was charged and received, or that it was 
 Payments already received stay received and can be refunded from **Commerce > Payments**. Payments not yet received are canceled and will not be collected. When the plan had started, the customer is notified that it was canceled, with how much was received. A plan still **Waiting for down payment** took nothing from the customer, so no notice is sent.
 
 ## When a card is declined
+
+<YouTube video="installment-plans" title="Video of declined cards and statuses" start={296} end={336} />
 
 When the plan charges the card, each payment is charged on its due date. If the card is declined:
 
@@ -184,6 +194,8 @@ The customer can also see every payment of the plan in **My Transactions** and p
 
 ## Let customers choose installments at checkout
 
+<YouTube video="installment-plans" title="Video of customers choosing installments at checkout" start={336} end={380} />
+
 A customer paying an outstanding balance, from **My Transactions** or from the link in a reminder, can be offered a **Choose how to pay** step before the payment: **Pay in full**, or one of the installment choices you offer, such as **3 monthly payments**. When they choose installments:
 
 1. A plan is created for them, with no down payment: the first payment is charged in the same checkout, and the card is saved.
@@ -197,6 +209,8 @@ Installments are offered only for a balance still owed in full by a customer wit
 A plan a customer chose appears in **Subscriptions > Installment Plans** like any other. While its first payment has not been paid, its page says *The customer chose this plan at checkout and has not paid the first payment yet.* and has no **Take the down payment** button: the customer pays it in their own checkout.
 
 ## Change the plan settings
+
+<YouTube video="installment-plans" title="Video of the installment plan settings" start={87} end={135} />
 
 The plan settings are on **Settings > Installment Plans**, which needs the **Manage installment plans and charge customers' saved cards** permission.
 

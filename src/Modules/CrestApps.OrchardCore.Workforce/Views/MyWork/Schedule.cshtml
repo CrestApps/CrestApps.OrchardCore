@@ -1,14 +1,14 @@
 @model MyScheduleViewModel
-@{
-    Layout = null;
-    ViewData["MyWorkNav"] = Model.Nav;
-    ViewData["Title"] = T["Schedule"].Value;
-}
-<partial name="_MyWorkHead" />
+<zone Name="Title">
+    <breadcrumb name="MyWorkSchedule" title="@T["Schedule"]">
+        <breadcrumb-item id="MyWork" action="Index" controller="MyWork" area="CrestApps.OrchardCore.Workforce">@T["My Work"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+<partial name="~/Areas/CrestApps.OrchardCore.Workforce/Views/Shared/_MyWorkAssets.cshtml" />
 
 <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-    <h1 class="h4 mb-0 me-auto">@T["My schedule"]</h1>
-    <a href="@Url.Content("~/my-work/settings#calendar")" class="btn btn-outline-success btn-sm"><i class="fa-regular fa-calendar-plus me-1" aria-hidden="true"></i>@T["Add to my calendar"]</a>
+        <span class="me-auto"></span>
+    <a href="@Url.Content("~/Admin/my-work/settings#calendar")" class="btn btn-outline-success btn-sm"><i class="fa-regular fa-calendar-plus me-1" aria-hidden="true"></i>@T["Add to my calendar"]</a>
 </div>
 <p class="text-muted small">@T["Your published shifts and approved time off for the next four weeks."]</p>
 
@@ -25,4 +25,3 @@
     }
 }
 
-<partial name="_MyWorkFoot" />

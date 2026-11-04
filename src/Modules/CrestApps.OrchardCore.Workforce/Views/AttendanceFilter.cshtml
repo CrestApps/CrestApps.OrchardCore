@@ -2,21 +2,27 @@
     var filters = (AttendanceListViewModel)Model.ViewModel;
     var formId = (string)Model.FormId;
 }
-<div class="btn-group filter gap-2 flex-wrap">
-    <select name="teamId" form="@formId" class="form-select form-select-sm w-auto" aria-label="@T["Team"]" onchange="this.form.submit()">
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+<div class="btn-group filter">
+    <select name="teamId" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Team"]" data-dropdown-align-right="auto" aria-label="@T["Team"]" onchange="this.form.submit()">
         <option value="">@T["All teams"]</option>
         @foreach (var option in filters.TeamOptions)
         {
             <option value="@option.Value" selected="@option.Selected">@option.Text</option>
         }
     </select>
-    <select name="kind" form="@formId" class="form-select form-select-sm w-auto" aria-label="@T["Kind"]" onchange="this.form.submit()">
+</div>
+<div class="btn-group filter">
+    <select name="kind" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Kind"]" data-dropdown-align-right="auto" aria-label="@T["Kind"]" onchange="this.form.submit()">
         @foreach (var option in filters.KindOptions)
         {
             <option value="@option.Value" selected="@option.Selected">@option.Text</option>
         }
     </select>
-    <select name="status" form="@formId" class="form-select form-select-sm w-auto" aria-label="@T["Status"]" onchange="this.form.submit()">
+</div>
+<div class="btn-group filter">
+    <select name="status" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Status"]" data-dropdown-align-right="auto" aria-label="@T["Status"]" onchange="this.form.submit()">
         @foreach (var option in filters.StatusOptions)
         {
             <option value="@option.Value" selected="@option.Selected">@option.Text</option>

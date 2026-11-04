@@ -2,6 +2,8 @@
 
 @model AIQACohortViewModel
 
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 <div class="ocat-wrapper" asp-validation-class-for="Name">
     <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
     <div class="ocat-end">
@@ -23,7 +25,7 @@
 <div class="ocat-wrapper" asp-validation-class-for="ProfileIds">
     <label asp-for="ProfileIds" class="ocat-label ocat-label-required">@T["AI profiles"]</label>
     <div class="ocat-end">
-        <select asp-for="ProfileIds" asp-items="Model.Profiles" class="form-select" multiple size="6"></select>
+        <select asp-for="ProfileIds" asp-items="Model.Profiles" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3"></select>
         <span asp-validation-for="ProfileIds" class="text-danger"></span>
         <span class="hint">@T["The conversations of these profiles are sampled once they close."]</span>
     </div>

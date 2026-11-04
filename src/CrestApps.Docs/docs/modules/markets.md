@@ -18,6 +18,10 @@ The **store's currency** throughout is `CheckoutSettings.Currency` (**Settings >
 
 ## Model
 
+The video shows what a market does for a shopper and the screens the technical guide builds on.
+
+<YouTube video="markets" title="Markets in CrestApps for Orchard Core" />
+
 Markets live in the `Markets` YesSql collection, indexed by `MarketIndex` (`Name`, `Currency`, `IsEnabled`), through `IMarketStore` (an `ICatalog<Market>` with `PageAsync`).
 
 | `Market` | |

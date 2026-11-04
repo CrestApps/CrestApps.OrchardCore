@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Seo;
+using CrestApps.OrchardCore.Reviews.StructuredData;
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Products.Core;
 using CrestApps.OrchardCore.Products.Core.Listing;
@@ -79,5 +81,17 @@ public sealed class ReviewRequestsStartup : StartupBase
     {
         services.AddScoped<ReviewRequestService>();
         services.AddSingleton<global::OrchardCore.BackgroundTasks.IBackgroundTask, ReviewRequestBackgroundTask>();
+    }
+}
+
+/// <summary>
+/// Adds a product's average review rating to its schema.org data when the Advanced SEO feature is enabled.
+/// </summary>
+[RequireFeatures(StructuredDataConstants.Feature.Area)]
+public sealed class StructuredDataStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IStructuredDataProvider, ProductRatingStructuredDataProvider>();
     }
 }

@@ -1,5 +1,6 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.TimeTracker.Services;
 using CrestApps.OrchardCore.Workforce.Core.Handlers;
 using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -52,6 +53,27 @@ public static class WorkforceTimeOffServiceCollectionExtensions
         services.TryAddScoped<ITimeOffRequestService, DefaultTimeOffRequestService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITimeOffApprovalHandler, TimeOffShiftRemover>());
         services.AddCalendarEventSource<PendingTimeOffEventSource>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Keeps the days of approved time off of every worker with a login in Time Tracker, in the stage of each type.
+    /// Time Tracker's services must be added too.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    /// <returns>The services.</returns>
+    public static IServiceCollection AddWorkforceTimeOffTimeTracker(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddScoped<TimeOffTimeTrackerSync>();
+        services.TryAddScoped<TimeOffTimeTrackerRefresher>();
+        services.TryAddScoped<TimeOffTypeStageAttacher>();
+        services.TryAddScoped<TimeOffTypeStageSeeder>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ITimeOffRequestObserver, TimeOffTimeTrackerObserver>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IExternalTimeClock, TimeOffExternalClock>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TimeOffType>, TimeOffTypeStageHandler>());
 
         return services;
     }

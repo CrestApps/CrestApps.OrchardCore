@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Workforce.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<WorkforceShiftChangedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-calendar-day" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Shift Changed"])
+    </h4>
+</header>

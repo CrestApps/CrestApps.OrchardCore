@@ -16,7 +16,9 @@ Orchard Core **Workflows** let you automate work without code. The AI features a
 
 <AskYourAdmin />
 
-<YouTube video="ai-walkthroughs" title="Video of adding an AI Completion using Profile task to a workflow" start={618} end={656} />
+<YouTube video="ai-workflows" title="Video overview of AI in workflows" />
+
+<YouTube video="ai-workflows" title="Video of creating a workflow and adding an AI Completion using Profile task" start={60} end={141} />
 
 ## Add an AI task to a workflow
 
@@ -25,6 +27,8 @@ Orchard Core **Workflows** let you automate work without code. The AI features a
 3. Fill in the fields described below and click **Save**.
 4. On the canvas, connect the task to the step before it, and connect its outcomes to the steps that follow.
 5. Click **Save**.
+
+<YouTube video="ai-workflows" title="Video of connecting the steps on the canvas" start={141} end={167} />
 
 The answer is stored under the name you give in **Result property name**, so later steps can use it. For example, with the name `AI-Summary`, a later task can insert the answer with `{{ Workflow.Output["AI-Summary"].Content }}`.
 
@@ -52,6 +56,8 @@ Uses an existing [AI profile](profiles.md), with its model, instructions, knowle
 
 ### AI Completion using Direct Config
 
+<YouTube video="ai-workflows" title="Video of AI Completion using Direct Config" start={167} end={194} />
+
 Sets up the model and the instructions right inside the task, without a profile. Its editor has the same settings as a [chat interaction](chat-interactions.md), spread over tabs:
 
 | Tab | What you set |
@@ -61,6 +67,8 @@ Sets up the model and the instructions right inside the task, without a profile.
 | **Capabilities** | Tools, tool instances, MCP connections and agent connections the AI may use (when those features are on). See [Tools and agents](tools-and-agents.md). |
 
 ## Start a workflow from an AI chat
+
+<YouTube video="ai-workflows" title="Video of the AI Chat events" start={75} end={101} />
 
 Four events, under **AI Chat**, start a workflow when something happens in a chat. Each has one field, **Profile**: leave it on **Any profile**, or pick one profile to react only to its chats. Each event has one outcome, **Done**.
 

@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.Core;
@@ -18,14 +19,14 @@ namespace CrestApps.OrchardCore.Tests.Workforce;
 /// </summary>
 internal static class TimeOffKit
 {
-    public static Task<CalendarTestHarness> CreateAsync(Action<IServiceCollection> configure = null)
+    public static Task<CalendarTestHarness> CreateAsync(Action<IServiceCollection> configure = null, Func<global::YesSql.Sql.ISchemaBuilder, Task> schema = null, IEnumerable<global::YesSql.Indexes.IIndexProvider> indexProviders = null, IEnumerable<string> collections = null)
     {
         return WorkforceTests.CreateAsync(services =>
         {
             services.AddWorkforceTimeOffCore();
             services.AddSingleton<IDistributedLock, KeyedLock>();
             configure?.Invoke(services);
-        });
+        }, schema, indexProviders, collections);
     }
 
     public static Task<TimeOffType> AddTypeAsync(CalendarTestHarness harness, string name, Action<TimeOffType> configure = null)
@@ -43,7 +44,7 @@ internal static class TimeOffKit
         });
     }
 
-    public static Task<TimeOffPolicy> AddPolicyAsync(CalendarTestHarness harness, TimeOffType type, WorkforceTeam team, Action<TimeOffPolicy> configure = null)
+    public static Task<TimeOffPolicy> AddPolicyAsync(CalendarTestHarness harness, TimeOffType type, Team team, Action<TimeOffPolicy> configure = null)
     {
         return harness.RunAsync(async services =>
         {
@@ -85,7 +86,7 @@ internal static class TimeOffKit
         });
     }
 
-    public static Task<TimeOffAllotment> AddAllotmentAsync(CalendarTestHarness harness, WorkforceTeam team, int slots, Action<TimeOffAllotment> configure = null)
+    public static Task<TimeOffAllotment> AddAllotmentAsync(CalendarTestHarness harness, Team team, int slots, Action<TimeOffAllotment> configure = null)
     {
         return harness.RunAsync(async services =>
         {
@@ -159,7 +160,7 @@ internal static class TimeOffKit
     /// Returns the Time off occurrences on a team's calendar in November 2026, with the pending ones from the event
     /// source.
     /// </summary>
-    public static async Task<IReadOnlyList<CalendarOccurrence>> ListTimeOffAsync(CalendarTestHarness harness, WorkforceTeam team)
+    public static async Task<IReadOnlyList<CalendarOccurrence>> ListTimeOffAsync(CalendarTestHarness harness, Team team)
     {
         var calendarId = await harness.RunAsync(async services => (await services.GetRequiredService<ICalendarService>().FindBySourceAsync(WorkforceConstants.Source, team.ItemId)).ItemId, commit: false);
         var occurrences = await harness.GetOccurrencesAsync(new CalendarOccurrenceQuery

@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore OR-Tools</Title>
+    <Description>
+      $(OCCMSDescription)
+
+      Google OR-Tools solvers for Workforce and Dispatch: a CP-SAT model for auto-scheduling shifts and the OR-Tools
+      routing solver for optimizing a dispatch day. Each starts from the built-in solver's answer and keeps the
+      better one.
+    </Description>
+    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS OrTools Optimization Scheduling Routing</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="Google.OrTools" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Dispatch.Abstractions\CrestApps.OrchardCore.Dispatch.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Workforce.Abstractions\CrestApps.OrchardCore.Workforce.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Dispatch.Core\CrestApps.OrchardCore.Dispatch.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Workforce.Core\CrestApps.OrchardCore.Workforce.Core.csproj" />
+  </ItemGroup>
+
+</Project>

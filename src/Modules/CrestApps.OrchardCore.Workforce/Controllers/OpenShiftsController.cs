@@ -1,5 +1,7 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Skills.Services;
+using CrestApps.OrchardCore.Teams.Models;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -425,7 +427,7 @@ public sealed class OpenShiftsController : Controller
         }
     }
 
-    private async Task<(OpenShift Shift, WorkforceTeam Team, IActionResult Denied)> AuthorizeShiftAsync(string id)
+    private async Task<(OpenShift Shift, Team Team, IActionResult Denied)> AuthorizeShiftAsync(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.ManageOpenShifts))
         {

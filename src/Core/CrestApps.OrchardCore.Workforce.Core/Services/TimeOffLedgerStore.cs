@@ -29,6 +29,17 @@ internal sealed class TimeOffLedgerStore : DocumentCatalog<TimeOffLedgerEntry, T
         return entries.ToArray();
     }
 
+    /// <summary>
+    /// Lists every grant. Grants are given by hand, so there are few.
+    /// </summary>
+    public async Task<IReadOnlyList<TimeOffLedgerEntry>> ListGrantsAsync(CancellationToken cancellationToken = default)
+    {
+        var entries = await Session.Query<TimeOffLedgerEntry, TimeOffLedgerEntryIndex>(index => index.Kind == TimeOffLedgerKind.Grant, collection: CollectionName)
+            .ListAsync(cancellationToken);
+
+        return entries.ToArray();
+    }
+
     public Task<TimeOffLedgerEntry> FindByKeyAsync(string idempotencyKey, CancellationToken cancellationToken = default)
     {
         return Session.Query<TimeOffLedgerEntry, TimeOffLedgerEntryIndex>(index => index.IdempotencyKey == idempotencyKey, collection: CollectionName)

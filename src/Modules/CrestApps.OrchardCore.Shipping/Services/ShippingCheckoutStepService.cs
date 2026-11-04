@@ -116,11 +116,21 @@ public sealed class ShippingCheckoutStepService
 
         var customer = await GetCustomerAsync(session);
         var saved = string.IsNullOrEmpty(model.AddressId) ? null : customer?.FindAddress(model.AddressId);
+
+        // An address from another source, such as a location of the business account the buyer buys for, is shipped
+        // to as it is.
+        var sourced = saved is null && !string.IsNullOrEmpty(model.AddressId)
+            ? (await GetSourcedAddressesAsync(session)).FirstOrDefault(option => string.Equals(option.AddressId, model.AddressId, StringComparison.Ordinal))
+            : null;
         Address address = null;
 
         if (saved is not null)
         {
             address = saved.ToAddress();
+        }
+        else if (sourced?.Address is not null)
+        {
+            address = sourced.Address;
         }
         else
         {
@@ -178,10 +188,10 @@ public sealed class ShippingCheckoutStepService
 
         Choose(session, new ShippingCheckoutStep
         {
-            AddressId = saved?.AddressId,
+            AddressId = saved?.AddressId ?? sourced?.AddressId,
             Address = address,
             RateId = rate.RateId,
-            SaveAddress = saved is null && customer is not null && model.SaveAddress,
+            SaveAddress = saved is null && sourced is null && customer is not null && model.SaveAddress,
         }, address, rate, stockLocationId: null);
 
         await _invoiceBuilder.BuildAsync(flow);
@@ -255,6 +265,28 @@ public sealed class ShippingCheckoutStepService
 
     public async Task<Order> GetOrderAsync(ICheckoutFlowSession session)
         => session is CheckoutSession { ReferenceId: { Length: > 0 } orderId } ? await _orderStore.FindByIdAsync(orderId) : null;
+
+    /// <summary>
+    /// Returns the addresses the signed-in buyer can ship to besides their address book, from every registered
+    /// <see cref="IShippingAddressSource"/>.
+    /// </summary>
+    public async Task<IReadOnlyList<ShippingAddressOption>> GetSourcedAddressesAsync(ICheckoutFlowSession session, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(session?.OwnerId))
+        {
+            return [];
+        }
+
+        var options = new List<ShippingAddressOption>();
+
+        foreach (var source in _serviceProvider.GetServices<IShippingAddressSource>())
+        {
+            options.AddRange((await source.GetAddressesAsync(session.OwnerId, cancellationToken) ?? [])
+                .Where(option => !string.IsNullOrEmpty(option?.AddressId) && option.Address is not null));
+        }
+
+        return options;
+    }
 
     public async Task<Customer> GetCustomerAsync(ICheckoutFlowSession session)
         => string.IsNullOrEmpty(session.OwnerId) || _serviceProvider.GetService<ICustomerService>() is not { } customers

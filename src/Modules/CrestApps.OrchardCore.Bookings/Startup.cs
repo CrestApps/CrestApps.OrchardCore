@@ -13,6 +13,7 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
@@ -48,6 +49,7 @@ public sealed class Startup : StartupBase
             .AddCommerceEmailKind(BookingEmailSender.EmailKind, LocalizationSource.Create<Startup>("Booking confirmed or canceled"));
         services.AddScoped<BookingDepositService>();
         services.AddScoped<BookingBalanceCharger>();
+        services.AddScoped<ITransactionPaymentHandler, BookingBalancePaymentHandler>();
 
         // A booking's date and option ride on its cart line, and its order line books it.
         services.AddScoped<ICartLineHandler, BookingCartLineHandler>();

@@ -13,11 +13,9 @@
     @Html.ValidationSummary()
     @await DisplayAsync(Model.Editor)
 
-    <div class="ocat-wrapper">
-        <div class="ocat-end-offset">
-            <button class="btn btn-primary" type="submit">@T["Save"]</button>
-            <button class="btn btn-success" type="submit" formaction="@Url.Action("Run", "AITestCases", new { area = "CrestApps.OrchardCore.AI", id = ViewContext.HttpContext.Request.RouteValues["id"] })">@T["Run"]</button>
-            <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Cancel"]</a>
-        </div>
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        <button class="btn btn-success" type="submit" formaction="@Url.Action("Run", "AITestCases", new { area = "CrestApps.OrchardCore.AI", id = ViewContext.HttpContext.Request.RouteValues["id"] })">@T["Run"]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Cancel"]</a>
     </div>
 </form>

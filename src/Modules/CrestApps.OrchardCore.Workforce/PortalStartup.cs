@@ -1,11 +1,14 @@
 using CrestApps.OrchardCore.Workforce.Core;
 using CrestApps.OrchardCore.Workforce.Core.Indexes;
+using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Migrations;
 using CrestApps.OrchardCore.Workforce.Navigation;
 using CrestApps.OrchardCore.Workforce.Portal;
 using CrestApps.OrchardCore.Workforce.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Modules;
@@ -24,12 +27,20 @@ public sealed class PortalStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddWorkforcePortalCore();
+        services.AddSingleton<IBackgroundTask, BackgroundTasks.ShiftReminderBackgroundTask>();
         services.AddDataMigration<PortalMigrations>()
             .AddIndexProvider<WorkforceInboxIndexProvider>()
             .AddIndexProvider<WebPushSubscriptionIndexProvider>()
             .AddIndexProvider<WorkerFeedIndexProvider>();
         services.AddScoped<MyWorkPortal>();
+        services.Configure<TimeClockTimeTrackerOptions>(options =>
+        {
+            options.ClockUrl = "~/Admin/my-work";
+            options.ControlsViewComponent = Portal.TimeClockControlsViewComponent.Name;
+        });
         services.AddPermissionProvider<PortalPermissionsProvider>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAuthorizationHandler, Portal.WorkerAdminAccessAuthorizationHandler>());
+        services.TryAddScoped(provider => new Lazy<IAuthorizationService>(provider.GetRequiredService<IAuthorizationService>));
         services.AddNavigationProvider<PortalAdminMenu>();
     }
 }

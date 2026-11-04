@@ -238,6 +238,12 @@ public sealed class DefaultCalendarEventManager : ICalendarEventManager
 
         options ??= new CalendarChangeOptions();
 
+        // Cancelling it again, such as a retried request, changes nothing, so it raises no second cancellation.
+        if (calendarEvent.Status == CalendarEventStatus.Cancelled)
+        {
+            return CalendarResult<CalendarEvent>.Success(calendarEvent);
+        }
+
         var result = await ChangeAsync(calendarEvent, target => target.Status = CalendarEventStatus.Cancelled, CalendarEventChangeKind.Cancelled, options);
 
         if (result.Succeeded && calendarEvent.SeriesId is null && CalendarEventExpander.TryGetRule(calendarEvent, out _))
@@ -415,6 +421,12 @@ public sealed class DefaultCalendarEventManager : ICalendarEventManager
         if (!calendarEvent.Attendees.Any(item => item.GetKey() == attendeeKey))
         {
             return Failed(calendarEvent, nameof(CalendarEvent.Attendees), S["The attendee isn't invited to the event."]);
+        }
+
+        // The same answer again, such as an invitation link opened twice, is already saved: nothing changes or is raised.
+        if (calendarEvent.Attendees.Where(item => item.GetKey() == attendeeKey).All(item => item.Response == response))
+        {
+            return CalendarResult<CalendarEvent>.Success(calendarEvent);
         }
 
         var now = _clock.UtcNow;

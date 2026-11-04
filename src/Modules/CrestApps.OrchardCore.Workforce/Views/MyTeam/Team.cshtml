@@ -1,12 +1,11 @@
 @model MyTeamNowViewModel
-@{
-    Layout = null;
-    ViewData["MyWorkNav"] = Model.Nav;
-    ViewData["Title"] = T["Who's working"].Value;
-}
-<partial name="_MyWorkHead" />
+<zone Name="Title">
+    <breadcrumb name="MyWorkTeam" title="@T["Who's working"]">
+        <breadcrumb-item id="MyWork" action="Index" controller="MyWork" area="CrestApps.OrchardCore.Workforce">@T["My Work"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+<partial name="~/Areas/CrestApps.OrchardCore.Workforce/Views/Shared/_MyWorkAssets.cshtml" />
 
-<h1 class="h4 mb-1">@T["Who's working now"]</h1>
 <p class="text-muted small">@Model.Now.ToString("dddd d MMMM HH:mm")</p>
 
 @if (Model.Working.Count == 0)
@@ -36,4 +35,3 @@
     </ul>
 }
 
-<partial name="_MyWorkFoot" />

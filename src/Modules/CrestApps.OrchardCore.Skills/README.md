@@ -12,9 +12,9 @@ The feature depends on `CrestApps.OrchardCore.Users` and `CrestApps.OrchardCore.
 
 ## Admin
 
-- **Workforce > Skills**: the skill catalog.
-- **Workforce > Certifications**: certifications, their validity and reminder days.
-- **Workforce > Certificates**: the certificates people hold, with filters for certification, status and expiring in 60 days.
+- **Content > Skills**: the skill catalog.
+- **Content > Certification Types**: certification types, their validity and reminder days.
+- **Content > Certificates**: the certificates people hold, with filters for certification, status and expiring in 60 days.
 - **Access Control > Users > Edit**: the user's skills.
 
 ## Extending

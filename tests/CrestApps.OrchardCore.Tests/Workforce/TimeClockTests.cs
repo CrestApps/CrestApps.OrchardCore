@@ -1,4 +1,5 @@
 using CrestApps.Core;
+using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Workforce.Core;
 using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -109,7 +110,7 @@ public sealed class TimeClockTests
             policy.GeofenceRadiusMeters = 200;
         });
 
-        team = await PlanningKit.UpdateTeamAsync(kit.Harness, team, stored => stored.Location = new WorkforceLocation { Latitude = 40.7128, Longitude = -74.0060 });
+        team = await PlanningKit.UpdateTeamAsync(kit.Harness, team, stored => stored.GetWorkforceSettings().Location = new WorkforceLocation { Latitude = 40.7128, Longitude = -74.0060 });
 
         var ana = await PlanningKit.AddMemberAsync(kit.Harness, "Ana", team);
 

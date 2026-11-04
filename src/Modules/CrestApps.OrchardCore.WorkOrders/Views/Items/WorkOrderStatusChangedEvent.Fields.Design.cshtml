@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.WorkOrders.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<WorkOrderStatusChangedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Work Order Status Changed"])
+    </h4>
+</header>

@@ -33,6 +33,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Addresses/CrestApps.OrchardCore.Addresses.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Accounts/CrestApps.OrchardCore.Accounts.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI/CrestApps.OrchardCore.AI.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.A2A/CrestApps.OrchardCore.AI.A2A.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.Agent/CrestApps.OrchardCore.AI.Agent.csproj" PrivateAssets="none" />
@@ -56,6 +57,7 @@
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.Mcp/CrestApps.OrchardCore.AI.Mcp.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.Mcp.Resources.Ftp/CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.Mcp.Resources.Sftp/CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.WebMcp/CrestApps.OrchardCore.AI.WebMcp.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.Memory/CrestApps.OrchardCore.AI.Memory.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.Memory.AzureAI/CrestApps.OrchardCore.AI.Memory.AzureAI.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.Memory.Elasticsearch/CrestApps.OrchardCore.AI.Memory.Elasticsearch.csproj" PrivateAssets="none" />
@@ -67,10 +69,11 @@
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Checkout/CrestApps.OrchardCore.Checkout.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Commerce/CrestApps.OrchardCore.Commerce.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Commerce.Webhooks/CrestApps.OrchardCore.Commerce.Webhooks.csproj" PrivateAssets="none" />
-    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Companies/CrestApps.OrchardCore.Companies.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Accounts.B2B/CrestApps.OrchardCore.Accounts.B2B.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Marketing/CrestApps.OrchardCore.Marketing.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Bookings/CrestApps.OrchardCore.Bookings.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Memberships/CrestApps.OrchardCore.Memberships.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.NLWeb/CrestApps.OrchardCore.NLWeb.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Marketplace/CrestApps.OrchardCore.Marketplace.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Classifieds/CrestApps.OrchardCore.Classifieds.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Fundraising/CrestApps.OrchardCore.Fundraising.csproj" PrivateAssets="none" />
@@ -104,7 +107,18 @@
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Calendars/CrestApps.OrchardCore.Calendars.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Scheduling/CrestApps.OrchardCore.Scheduling.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Skills/CrestApps.OrchardCore.Skills.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Teams/CrestApps.OrchardCore.Teams.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Workforce/CrestApps.OrchardCore.Workforce.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Assets/CrestApps.OrchardCore.Assets.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.WorkOrders/CrestApps.OrchardCore.WorkOrders.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.TimeTracker/CrestApps.OrchardCore.TimeTracker.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Dispatch/CrestApps.OrchardCore.Dispatch.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Geo/CrestApps.OrchardCore.Geo.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Geo.AzureMaps/CrestApps.OrchardCore.Geo.AzureMaps.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Geo.GoogleMaps/CrestApps.OrchardCore.Geo.GoogleMaps.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Geo.Osrm/CrestApps.OrchardCore.Geo.Osrm.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Workforce.ContactCenter/CrestApps.OrchardCore.Workforce.ContactCenter.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Seo/CrestApps.OrchardCore.Seo.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Customers/CrestApps.OrchardCore.Customers.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.DataConnectors/CrestApps.OrchardCore.DataConnectors.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.DataConnectors.SqlServer/CrestApps.OrchardCore.DataConnectors.SqlServer.csproj" PrivateAssets="none" />

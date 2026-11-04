@@ -31,7 +31,7 @@
         <div class="d-flex flex-wrap gap-2">
             @foreach (var kind in punches)
             {
-                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/punch")" class="my-work-punch" data-needs-location="@(Model.NeedsLocation ? "true" : "false")">
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/punch")" class="my-work-punch" data-needs-location="@(Model.NeedsLocation ? "true" : "false")">
                     <input type="hidden" name="kind" value="@kind" />
                     <input type="hidden" name="latitude" />
                     <input type="hidden" name="longitude" />

@@ -22,6 +22,7 @@
             stacked = reportSection.Chart.Stacked,
             showLegend = reportSection.Chart.ShowLegend,
             percentageScale = reportSection.Chart.PercentageScale,
+            referenceLines = (reportSection.Chart.ReferenceLines ?? []).Select(line => new { label = line.Label, value = line.Value, datasetIndex = line.DatasetIndex }),
             keys = selection is null ? null : reportSection.Chart.Keys,
             seriesKeys = selection is null ? null : reportSection.Chart.SeriesKeys,
             selectedKeys,
@@ -76,6 +77,15 @@
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead>
+                        @foreach (var headerRow in reportSection.HeaderRows ?? [])
+                        {
+                            <tr class="report-header-group">
+                                @foreach (var headerCell in headerRow.Cells)
+                                {
+                                    <th colspan="@Math.Max(1, headerCell.Span)" class="text-center@(string.IsNullOrEmpty(headerCell.Label) ? " border-0" : null)">@headerCell.Label</th>
+                                }
+                            </tr>
+                        }
                         <tr>
                             @for (var i = 0; i < reportSection.Columns.Count; i++)
                             {

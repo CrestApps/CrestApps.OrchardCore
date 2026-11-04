@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Logging;
@@ -50,7 +51,7 @@ internal sealed class WorkerManager : CatalogManager<WorkerProfile>, IWorkerMana
 
         if (!string.IsNullOrEmpty(query?.TeamId))
         {
-            var subtree = await TeamTree.GetSubtreeIdsAsync(await _teamStore.ListAsync(cancellationToken), query.TeamId);
+            var subtree = TeamTree.GetSubtreeIds(await _teamStore.ListAsync(cancellationToken), query.TeamId);
 
             teamIds = teamIds is null
                 ? subtree.ToArray()

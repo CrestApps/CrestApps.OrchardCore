@@ -45,6 +45,8 @@ People who only run reports that were shared with them need no permission: they 
 
 ## Who can do what
 
+<YouTube video="report-builder-administration" title="Video of the five Report Builder permissions, and what a person sees before and after the build permission" start={14} end={102} />
+
 Your administrator gives these permissions to roles. Administrators have all of them.
 
 | Permission | What it lets you do |

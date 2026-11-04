@@ -49,6 +49,11 @@ public class MyWorkNavViewModel
     /// Gets or sets whether the worker clocks in and out, so the timesheet is shown.
     /// </summary>
     public bool HasTimeClock { get; set; }
+
+    /// <summary>
+    /// Gets or sets the links other features add to the menu.
+    /// </summary>
+    public IList<MyWorkLink> Links { get; set; } = [];
 }
 
 /// <summary>
@@ -395,6 +400,21 @@ public class MySettingsViewModel
     /// Gets or sets the site's public push key.
     /// </summary>
     public string PushPublicKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many minutes before a shift the worker is reminded, or zero for none.
+    /// </summary>
+    public int ReminderMinutes { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the worker's quiet hours start, as HH:mm, or empty.
+    /// </summary>
+    public string QuietStart { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the worker's quiet hours end, as HH:mm, or empty.
+    /// </summary>
+    public string QuietEnd { get; set; }
 }
 
 /// <summary>

@@ -1,0 +1,15 @@
+@model ShapeViewModel<AssetTypeRow>
+
+@{
+    var type = Model.Value.Type;
+}
+<span class="badge ta-badge fw-normal">@type.Category</span>
+<span class="badge ta-badge fw-normal">@(Model.Value.AssetCount == 1 ? T["1 asset"] : T["{0} assets", Model.Value.AssetCount])</span>
+@if (type.Meters.Count > 0)
+{
+    <span class="badge ta-badge fw-normal" title="@string.Join(", ", type.Meters.Select(meter => meter.Name))">@(type.Meters.Count == 1 ? T["1 meter"] : T["{0} meters", type.Meters.Count])</span>
+}
+@if (type.Attributes.Count > 0)
+{
+    <span class="badge ta-badge fw-normal" title="@string.Join(", ", type.Attributes.Select(attribute => attribute.Name))">@(type.Attributes.Count == 1 ? T["1 attribute"] : T["{0} attributes", type.Attributes.Count])</span>
+}

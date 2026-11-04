@@ -1,0 +1,28 @@
+@using CrestApps.OrchardCore.Accounts.Models
+@using CrestApps.OrchardCore.Accounts.ViewModels
+
+@model AccountMembersPartViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["Members"]</div>
+    @if (Model.Members.Count == 0)
+    {
+        <div class="card-body text-body-secondary">@T["No one signs in for the account yet. Add members on its editor."]</div>
+    }
+    else
+    {
+        <ul class="list-group list-group-flush">
+            @foreach (var member in Model.Members)
+            {
+                <li class="list-group-item d-flex flex-wrap align-items-center gap-2">
+                    <span>@member.User</span>
+                    <span class="badge ta-badge fw-normal">@(member.Role == AccountMemberRole.Admin ? T["Admin"] : T["Member"])</span>
+                    @if (!string.IsNullOrEmpty(member.ContactContentItemId))
+                    {
+                        <a class="small" asp-action="Display" asp-controller="Admin" asp-route-area="OrchardCore.Contents" asp-route-contentItemId="@member.ContactContentItemId">@T["Contact"]</a>
+                    }
+                </li>
+            }
+        </ul>
+    }
+</div>

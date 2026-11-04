@@ -1,0 +1,47 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+@using Microsoft.AspNetCore.Mvc.Localization
+@using OrchardCore.ContentTypes
+@using OrchardCore.Localization.Data
+
+@model AccountContactsTabViewModel
+
+@inject IDataLocalizer D
+
+<div class="card mb-3">
+    <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <span>@T.Plural(Model.Count, "1 contact", "{0} contacts")</span>
+        @foreach (var type in Model.CreatableTypes)
+        {
+            <a class="btn btn-sm btn-secondary" asp-action="Create" asp-controller="Admin" asp-area="OrchardCore.Contents" asp-route-id="@type.Name" asp-route-ListPart.ContainerId="@Model.Account.ContentItemId" asp-route-ListPart.ContainerContentType="@Model.Account.ContentType" asp-route-ListPart.ContentType="@type.Name" asp-route-returnUrl="@(FullRequestPath + "#account-contacts")">
+                @T["New {0}", D[type.DisplayName, DataLocalizationContext.ContentType]]
+            </a>
+        }
+    </div>
+    @if (Model.Contacts.Count == 0)
+    {
+        <div class="card-body text-body-secondary">@T["The account has no contacts yet."]</div>
+    }
+    else
+    {
+        <ul class="list-group list-group-flush">
+            @foreach (var row in Model.Contacts)
+            {
+                <li class="list-group-item d-flex flex-wrap align-items-center gap-3">
+                    <a class="fw-semibold" asp-action="Display" asp-controller="Admin" asp-area="OrchardCore.Contents" asp-route-contentItemId="@row.Contact.ContentItemId">@(string.IsNullOrWhiteSpace(row.Contact.DisplayText) ? T["(No name)"].Value : row.Contact.DisplayText)</a>
+                    @if (!string.IsNullOrEmpty(row.Email))
+                    {
+                        <span class="text-body-secondary"><i class="fa-regular fa-envelope me-1" aria-hidden="true"></i>@row.Email</span>
+                    }
+                    @if (!string.IsNullOrEmpty(row.Phone))
+                    {
+                        <span class="text-body-secondary"><i class="fa-solid fa-phone me-1" aria-hidden="true"></i>@row.Phone</span>
+                    }
+                </li>
+            }
+        </ul>
+        @if (Model.Count > Model.Contacts.Count)
+        {
+            <div class="card-footer small text-body-secondary">@T["Showing {0} of {1}. The Records tab lists them all.", Model.Contacts.Count, Model.Count]</div>
+        }
+    }
+</div>

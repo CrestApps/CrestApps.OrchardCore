@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.Core.Services;
@@ -175,7 +176,7 @@ public sealed class AutoScheduleTests
         return new Setup(team, [ana, ben, cy], day, period);
     }
 
-    private static Task SaveRequirementAsync(CalendarTestHarness harness, WorkforceTeam team, string name, string skillId, int minimum, int target)
+    private static Task SaveRequirementAsync(CalendarTestHarness harness, Team team, string name, string skillId, int minimum, int target)
     {
         return harness.RunAsync(async services =>
         {
@@ -204,5 +205,5 @@ public sealed class AutoScheduleTests
         return harness.RunAsync(services => services.GetRequiredService<ScheduleScenarioStore>().FindByIdAsync(period.PrimaryScenarioId).AsTask(), commit: false);
     }
 
-    private sealed record Setup(WorkforceTeam Team, WorkerProfile[] Members, ShiftTemplate Day, SchedulePeriod Period);
+    private sealed record Setup(Team Team, WorkerProfile[] Members, ShiftTemplate Day, SchedulePeriod Period);
 }

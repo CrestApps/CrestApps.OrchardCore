@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_").Replace(".Abstractions",""))</RootNamespace>
+    <Title>CrestApps OrchardCore Accounts Abstractions</Title>
+    <Description>
+      $(OCCMSDescription)
+
+      The account: the business or household that contacts, orders, assets and work orders belong to. Holds the
+      account part, its settings and the contracts other modules use to extend it.
+    </Description>
+    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Accounts Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Addresses.Abstractions\CrestApps.OrchardCore.Addresses.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

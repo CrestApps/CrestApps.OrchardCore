@@ -4,6 +4,8 @@ using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
+using CrestApps.OrchardCore.Teams.Models;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -43,7 +45,7 @@ internal static class PlanningKit
             .AssignAsync(SkillSubject.Worker(workerId), new SkillAssignmentInput { SkillId = skillId }, "tester"));
     }
 
-    public static Task<WorkerProfile> AddMemberAsync(CalendarTestHarness harness, string name, WorkforceTeam team, Action<WorkerProfile> configure = null)
+    public static Task<WorkerProfile> AddMemberAsync(CalendarTestHarness harness, string name, Team team, Action<WorkerProfile> configure = null)
     {
         return WorkforceTests.AddWorkerAsync(harness, name, worker =>
         {
@@ -70,7 +72,7 @@ internal static class PlanningKit
         });
     }
 
-    public static Task<SchedulePeriod> CreatePeriodAsync(CalendarTestHarness harness, WorkforceTeam team, int weeks = 1)
+    public static Task<SchedulePeriod> CreatePeriodAsync(CalendarTestHarness harness, Team team, int weeks = 1)
     {
         return harness.RunAsync(async services =>
         {
@@ -125,7 +127,7 @@ internal static class PlanningKit
     /// <summary>
     /// Returns the live Shift events on a team's calendar in the four weeks from <see cref="Monday"/>.
     /// </summary>
-    public static async Task<IReadOnlyList<CalendarEvent>> ListShiftsAsync(CalendarTestHarness harness, WorkforceTeam team)
+    public static async Task<IReadOnlyList<CalendarEvent>> ListShiftsAsync(CalendarTestHarness harness, Team team)
     {
         var calendarId = await harness.RunAsync(async services => (await services.GetRequiredService<ICalendarService>().FindBySourceAsync(WorkforceConstants.Source, team.ItemId)).ItemId, commit: false);
         var occurrences = await harness.GetOccurrencesAsync(new CalendarOccurrenceQuery
@@ -153,7 +155,7 @@ internal static class PlanningKit
         return CalendarTime.ToUtc(date.ToDateTime(time), Zone);
     }
 
-    public static Task<WorkforceTeam> UpdateTeamAsync(CalendarTestHarness harness, WorkforceTeam team, Action<WorkforceTeam> change)
+    public static Task<Team> UpdateTeamAsync(CalendarTestHarness harness, Team team, Action<Team> change)
     {
         return harness.RunAsync(async services =>
         {
