@@ -5,7 +5,6 @@ using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Deployments;
 using OrchardCore.Recipes.Models;
-using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.Core.Recipes;
 
@@ -15,16 +14,14 @@ namespace CrestApps.OrchardCore.Core.Recipes;
 /// </summary>
 /// <remarks>
 /// An entry is matched by its identifier, and a derived step can match it some other way through
-/// <see cref="FindExistingAsync"/>. An update is checked on a detached copy first, so an invalid entry is reported as a
+/// <see cref="FindExistingAsync(string, JsonObject)"/>. An update is checked on a detached copy first, so an invalid entry is reported as a
 /// recipe error instead of being written to the store. The step reads the same JSON shape the matching
 /// <see cref="CatalogDeploymentSource{TStep, TEntry}"/> writes.
 /// </remarks>
 /// <typeparam name="TEntry">The catalog entry type.</typeparam>
-public abstract class CatalogRecipeStep<TEntry> : NamedRecipeStepHandler
+public abstract class CatalogRecipeStep<TEntry> : CatalogRecipeStepBase<TEntry>
     where TEntry : CatalogItem
 {
-    private readonly string _entriesName;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="CatalogRecipeStep{TEntry}"/> class.
     /// </summary>
@@ -35,12 +32,10 @@ public abstract class CatalogRecipeStep<TEntry> : NamedRecipeStepHandler
         string stepName,
         string entriesName,
         ICatalogManager<TEntry> manager)
-        : base(stepName)
+        : base(stepName, entriesName)
     {
-        ArgumentException.ThrowIfNullOrEmpty(entriesName);
         ArgumentNullException.ThrowIfNull(manager);
 
-        _entriesName = entriesName;
         Manager = manager;
     }
 
@@ -48,16 +43,6 @@ public abstract class CatalogRecipeStep<TEntry> : NamedRecipeStepHandler
     /// Gets the manager the entries are created and updated through.
     /// </summary>
     protected ICatalogManager<TEntry> Manager { get; }
-
-    /// <summary>
-    /// Gets whether an entry can be imported at all, before it is matched. A step that refuses an entry adds the reason
-    /// to the recipe errors.
-    /// </summary>
-    /// <param name="data">The JSON of the entry.</param>
-    /// <param name="context">The recipe step being run.</param>
-    /// <returns><see langword="true"/> to import the entry; otherwise, <see langword="false"/>.</returns>
-    protected virtual bool CanImport(JsonObject data, RecipeExecutionContext context)
-        => true;
 
     /// <summary>
     /// Finds the stored entry the JSON describes, by its identifier.
@@ -77,18 +62,10 @@ public abstract class CatalogRecipeStep<TEntry> : NamedRecipeStepHandler
         => Manager.NewAsync(data);
 
     /// <summary>
-    /// Gives a derived step the chance to fold a new entry into one that is already stored instead of creating it.
-    /// </summary>
-    /// <param name="entry">The new, unsaved entry.</param>
-    /// <returns><see langword="true"/> when the entry was handled and must not be created; otherwise, <see langword="false"/>.</returns>
-    protected virtual ValueTask<bool> TryMergeNewEntryAsync(TEntry entry)
-        => ValueTask.FromResult(false);
-
-    /// <summary>
     /// Applies the JSON of an entry onto a detached copy of the stored entry, the same way the entry's handler applies
     /// it when the update is saved.
     /// </summary>
-    /// <param name="entry">The copy to populate.</param>
+    /// <param name="entry">The detached copy.</param>
     /// <param name="data">The JSON of the entry.</param>
     protected virtual void Populate(TEntry entry, JsonObject data)
         => CatalogDeploymentSerializer.Populate(entry, data);
@@ -97,7 +74,7 @@ public abstract class CatalogRecipeStep<TEntry> : NamedRecipeStepHandler
     /// Creates a detached copy of a stored entry, so an update can be checked without changing the stored entry.
     /// </summary>
     /// <param name="entry">The stored entry.</param>
-    /// <returns>A copy of the entry.</returns>
+    /// <returns>The copy.</returns>
     protected virtual TEntry CreateDetachedCopy(TEntry entry)
     {
         if (entry is ICloneable<TEntry> cloneable)
@@ -111,69 +88,42 @@ public abstract class CatalogRecipeStep<TEntry> : NamedRecipeStepHandler
     }
 
     /// <inheritdoc/>
-    protected override async Task HandleAsync(RecipeExecutionContext context)
+    /// <remarks>Every entry is matched through <see cref="FindExistingAsync(string, JsonObject)"/>.</remarks>
+    protected sealed override ValueTask<TEntry> FindByIdAsync(string id)
+        => ValueTask.FromResult<TEntry>(null);
+
+    /// <inheritdoc/>
+    protected sealed override async ValueTask<CatalogRecipeLookup<TEntry>> FindExistingAsync(JsonObject token, RecipeExecutionContext context)
     {
-        foreach (var token in CatalogRecipeSections.Section(context.Step, _entriesName))
-        {
-            if (!CanImport(token, context))
-            {
-                continue;
-            }
+        var id = token[nameof(CatalogItem.ItemId)] is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
+        var entry = await FindExistingAsync(id, token);
 
-            var id = token[nameof(CatalogItem.ItemId)] is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
-            var hasId = !string.IsNullOrEmpty(id);
-
-            var entry = await FindExistingAsync(id, token);
-            var isNew = entry is null;
-            TEntry candidate;
-
-            if (isNew)
-            {
-                entry = await NewEntryAsync(token);
-
-                if (entry is null)
-                {
-                    continue;
-                }
-
-                if (hasId && UniqueId.IsValid(id))
-                {
-                    entry.ItemId = id;
-                }
-
-                if (await TryMergeNewEntryAsync(entry))
-                {
-                    continue;
-                }
-
-                candidate = entry;
-            }
-            else
-            {
-                candidate = CreateDetachedCopy(entry);
-                Populate(candidate, token);
-            }
-
-            var validationResult = await Manager.ValidateAsync(candidate);
-
-            if (!validationResult.Succeeded)
-            {
-                foreach (var error in validationResult.Errors)
-                {
-                    context.Errors.Add(error.ErrorMessage);
-                }
-
-                continue;
-            }
-
-            if (isNew)
-            {
-                await Manager.CreateAsync(entry);
-            }
-            else
-            {
-                await Manager.UpdateAsync(entry, token);
-            }
-        }
+        return entry is null ? CatalogRecipeLookup<TEntry>.NotFound : CatalogRecipeLookup<TEntry>.Found(entry);
     }
+
+    /// <inheritdoc/>
+    protected sealed override ValueTask<TEntry> NewAsync(JsonObject token, RecipeExecutionContext context)
+        => NewEntryAsync(token);
+
+    /// <inheritdoc/>
+    /// <remarks>The JSON is applied onto a detached copy, which is validated; the stored entry is not changed yet.</remarks>
+    protected sealed override ValueTask<TEntry> PrepareUpdateAsync(TEntry entry, JsonObject token)
+    {
+        var candidate = CreateDetachedCopy(entry);
+        Populate(candidate, token);
+
+        return ValueTask.FromResult(candidate);
+    }
+
+    /// <inheritdoc/>
+    protected sealed override async ValueTask CommitUpdateAsync(TEntry entry, JsonObject token)
+        => await Manager.UpdateAsync(entry, token);
+
+    /// <inheritdoc/>
+    protected override async ValueTask<ValidationResultDetails> ValidateAsync(TEntry entry)
+        => await Manager.ValidateAsync(entry);
+
+    /// <inheritdoc/>
+    protected override async ValueTask CreateAsync(TEntry entry)
+        => await Manager.CreateAsync(entry);
 }

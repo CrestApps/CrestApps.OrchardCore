@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.Core.Recipes;
 /// An entry is matched by its identifier first, then by <see cref="FindExistingAsync"/>, which a step overrides to
 /// match by name, or by name and source. A found entry is updated through its manager the way the manager applies
 /// JSON, then validated; an entry that fails validation is reported as a recipe error. Use
-/// <see cref="NamedCatalogRecipeStep{TEntry}"/> instead when updates must be checked on a detached copy before they are
+/// <see cref="CatalogRecipeStep{TEntry}"/> instead when updates must be checked on a detached copy before they are
 /// written.
 /// </remarks>
 /// <typeparam name="TEntry">The catalog entry type.</typeparam>
@@ -76,7 +76,42 @@ public abstract class CatalogRecipeStepBase<TEntry> : NamedRecipeStepHandler
     /// <param name="entry">The stored entry.</param>
     /// <param name="token">The JSON of the entry.</param>
     /// <returns>A task that completes when the entry is updated.</returns>
-    protected abstract ValueTask UpdateAsync(TEntry entry, JsonObject token);
+    protected virtual ValueTask UpdateAsync(TEntry entry, JsonObject token)
+        => ValueTask.CompletedTask;
+
+    /// <summary>
+    /// Prepares the entry that is validated for a found entry. By default the JSON is applied onto the stored entry
+    /// through <see cref="UpdateAsync"/> and that entry is validated. A step that validates on a detached copy returns
+    /// the copy instead, and writes the stored entry in <see cref="CommitUpdateAsync"/> once the copy is valid.
+    /// </summary>
+    /// <param name="entry">The stored entry.</param>
+    /// <param name="token">The JSON of the entry.</param>
+    /// <returns>The entry to validate.</returns>
+    protected virtual async ValueTask<TEntry> PrepareUpdateAsync(TEntry entry, JsonObject token)
+    {
+        await UpdateAsync(entry, token);
+
+        return entry;
+    }
+
+    /// <summary>
+    /// Writes a found entry after the entry returned by <see cref="PrepareUpdateAsync"/> passed validation. Nothing is
+    /// written by default, because <see cref="UpdateAsync"/> already saved it.
+    /// </summary>
+    /// <param name="entry">The stored entry.</param>
+    /// <param name="token">The JSON of the entry.</param>
+    /// <returns>A task that completes when the entry is written.</returns>
+    protected virtual ValueTask CommitUpdateAsync(TEntry entry, JsonObject token)
+        => ValueTask.CompletedTask;
+
+    /// <summary>
+    /// Folds a new entry into an existing one instead of creating it, for example when it duplicates a stored entry.
+    /// Nothing is folded by default.
+    /// </summary>
+    /// <param name="entry">The new, unsaved entry.</param>
+    /// <returns><see langword="true"/> when the entry was handled and must not be created.</returns>
+    protected virtual ValueTask<bool> TryMergeNewEntryAsync(TEntry entry)
+        => ValueTask.FromResult(false);
 
     /// <summary>
     /// Creates a new, unsaved entry from its JSON. Add an error to the context and return <see langword="null"/> when
@@ -113,14 +148,14 @@ public abstract class CatalogRecipeStepBase<TEntry> : NamedRecipeStepHandler
     /// <inheritdoc/>
     protected override async Task HandleAsync(RecipeExecutionContext context)
     {
-        foreach (var token in GetEntries(context.Step))
+        foreach (var token in CatalogRecipeSections.Section(context.Step, _entriesName))
         {
             if (!CanImport(token, context))
             {
                 continue;
             }
 
-            var id = token[nameof(CatalogItem.ItemId)]?.GetValue<string>();
+            var id = token[nameof(CatalogItem.ItemId)] is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
             var hasId = !string.IsNullOrEmpty(id);
 
             var entry = hasId ? await FindByIdAsync(id) : null;
@@ -138,6 +173,7 @@ public abstract class CatalogRecipeStepBase<TEntry> : NamedRecipeStepHandler
             }
 
             var isNew = entry is null;
+            TEntry candidate;
 
             if (isNew)
             {
@@ -152,10 +188,17 @@ public abstract class CatalogRecipeStepBase<TEntry> : NamedRecipeStepHandler
                 {
                     entry.ItemId = id;
                 }
+
+                if (await TryMergeNewEntryAsync(entry))
+                {
+                    continue;
+                }
+
+                candidate = entry;
             }
             else
             {
-                await UpdateAsync(entry, token);
+                candidate = await PrepareUpdateAsync(entry, token);
 
                 if (!ValidateUpdatedEntries)
                 {
@@ -163,9 +206,9 @@ public abstract class CatalogRecipeStepBase<TEntry> : NamedRecipeStepHandler
                 }
             }
 
-            Preparing(entry, token);
+            Preparing(candidate, token);
 
-            var validationResult = await ValidateAsync(entry);
+            var validationResult = await ValidateAsync(candidate);
 
             if (!validationResult.Succeeded)
             {
@@ -181,21 +224,10 @@ public abstract class CatalogRecipeStepBase<TEntry> : NamedRecipeStepHandler
             {
                 await CreateAsync(entry);
             }
+            else
+            {
+                await CommitUpdateAsync(entry, token);
+            }
         }
-    }
-
-    private IEnumerable<JsonObject> GetEntries(JsonObject step)
-    {
-        if (step is null)
-        {
-            return [];
-        }
-
-        if (!step.TryGetPropertyValue(_entriesName, out var entries))
-        {
-            entries = step.FirstOrDefault(property => string.Equals(property.Key, _entriesName, StringComparison.OrdinalIgnoreCase)).Value;
-        }
-
-        return (entries as JsonArray ?? []).OfType<JsonObject>();
     }
 }
