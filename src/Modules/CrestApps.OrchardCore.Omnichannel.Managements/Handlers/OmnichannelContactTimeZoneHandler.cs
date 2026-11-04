@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.PhoneNumbers;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Handlers;
@@ -113,7 +114,7 @@ internal sealed class OmnichannelContactTimeZoneHandler : ContentHandlerBase
 
         foreach (var timeZoneId in _phoneNumberService.GetTimeZones(phoneNumber.Value))
         {
-            var normalizedTimeZoneId = NormalizeTimeZoneId(timeZoneId);
+            var normalizedTimeZoneId = TimeZoneIds.Normalize(timeZoneId);
 
             if (!string.IsNullOrEmpty(normalizedTimeZoneId))
             {
@@ -122,15 +123,5 @@ internal sealed class OmnichannelContactTimeZoneHandler : ContentHandlerBase
         }
 
         return null;
-    }
-
-    private static string NormalizeTimeZoneId(string timeZoneId)
-    {
-        if (string.IsNullOrWhiteSpace(timeZoneId))
-        {
-            return null;
-        }
-
-        return NodaTime.DateTimeZoneProviders.Tzdb.GetZoneOrNull(timeZoneId.Trim())?.Id;
     }
 }
