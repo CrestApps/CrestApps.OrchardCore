@@ -2,6 +2,7 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Skills.Services;
+using CrestApps.OrchardCore.Teams;
 using CrestApps.OrchardCore.Teams.Core;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Workforce.Core.Handlers;
@@ -23,7 +24,7 @@ public static class WorkforceCoreServiceCollectionExtensions
 
     /// <summary>
     /// Registers the Teams services, the worker and activity code stores and managers, manager scoping, team calendars,
-    /// the check that keeps a team with workers from being deleted, calendar access by team, the busy time of breaks
+    /// the check that keeps a team with workers from being deleted, the workers as team members, calendar access by team, the busy time of breaks
     /// inside shifts, shift templates, rotations, coverage, schedule planning and publishing, the built-in schedule
     /// solver, open shifts, shift trades and the checks they run, and the Workforce calendar type.
     /// </summary>
@@ -42,6 +43,7 @@ public static class WorkforceCoreServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ISkillSubjectLinkProvider, WorkerSkillSubjectLinkProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Team>, WorkforceTeamCatalogHandler>());
         services.AddTeamDeletionGuard<WorkforceTeamDeletionGuard>();
+        services.AddTeamMemberProvider<WorkerTeamMemberProvider>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ActivityCode>, ActivityCodeCatalogHandler>());
         services.TryAddScoped<IWorkforceScopeService, DefaultWorkforceScopeService>();
         services.TryAddScoped<WorkforceCalendarService>();

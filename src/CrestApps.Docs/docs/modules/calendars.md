@@ -94,7 +94,7 @@ What a user can do with one calendar is a `CalendarAccessLevel`, worked out by `
 | `Write` | Add, change and cancel events. |
 | `Manage` | Change the calendar itself and who it is shared with. |
 
-The rules, in order: `ManageAllCalendars` gives **Manage**; `ViewAllCalendars` gives at least **Read**; without `AccessCalendars` nothing more applies. The owner of a user-owned calendar gets **Manage**, members of a team calendar's role get **Write**, each matching `CalendarShare` (a user or a role) adds its level, and the calendar's `Visibility` raises everyone signed in to **Read** (`Public`) or **FreeBusy** (`Shared`). `Private` adds nothing. A caller with **FreeBusy** only gets occurrences with `BusyOnly` set and no title or details.
+The rules, in order: `ManageAllCalendars` gives **Manage**; `ViewAllCalendars` gives at least **Read**; without `AccessCalendars` nothing more applies. The owner of a user-owned calendar gets **Manage**, members of a team calendar's role get **Write** (and, with the Teams module enabled, so do the members of the team whose linked role is that role and of its sub-teams, through `ITeamMembershipService`), each matching `CalendarShare` (a user or a role) adds its level, and the calendar's `Visibility` raises everyone signed in to **Read** (`Public`) or **FreeBusy** (`Shared`). `Private` adds nothing. A caller with **FreeBusy** only gets occurrences with `BusyOnly` set and no title or details.
 
 ## Calendar types
 

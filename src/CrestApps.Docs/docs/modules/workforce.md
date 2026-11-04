@@ -74,6 +74,10 @@ The module registers the `Workforce` calendar type with `ManagedByCode()` and cr
 
 The calendars it grants appear in each user's calendar list.
 
+## Team members for other modules
+
+`WorkerTeamMemberProvider` is an `ITeamMemberProvider` (Teams): it gives Teams each worker with a user account as a member of the teams in its team memberships, with the role and dates, read from the membership and worker indexes. Any module reads them through `ITeamMembershipService` without naming Workforce, as Team Calendars do. The team editor shows the team's workers today on a **Members** card, from `WorkforceTeamMembersDisplayDriver`.
+
 ## Shift planning
 
 The shift planning pages are under the **Calendars** menu, after Scheduling's, since what they publish lives on each team's Workforce calendar; `WorkforceCalendarRowDisplayDriver` adds **Shift schedules** to that calendar's actions on Manage Calendars, opening the team's schedules.

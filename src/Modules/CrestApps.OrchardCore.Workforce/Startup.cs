@@ -37,6 +37,7 @@ public sealed class Startup : StartupBase
         services.AddWorkforceCore();
         services.AddPersonalDataContributor<WorkerProfilePersonalDataContributor>();
         services.AddDisplayDriver<Team, WorkforceTeamDisplayDriver>();
+        services.AddDisplayDriver<Team, WorkforceTeamMembersDisplayDriver>();
         services.AddDisplayDriver<Team, WorkforceTeamRowDisplayDriver>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAuthorizationHandler, WorkforceTeamsAuthorizationHandler>());
         services.AddDisplayDriver<WorkerProfile, WorkerRowDisplayDriver>();
