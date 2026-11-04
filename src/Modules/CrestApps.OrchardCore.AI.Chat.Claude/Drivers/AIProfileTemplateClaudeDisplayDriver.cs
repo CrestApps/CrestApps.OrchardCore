@@ -6,6 +6,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Claude.Services;
 using CrestApps.OrchardCore.AI.Chat.Claude.Settings;
 using CrestApps.OrchardCore.AI.Chat.Claude.ViewModels;
+using CrestApps.OrchardCore.AI.Core.ViewModels;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.DisplayManagement.Handlers;

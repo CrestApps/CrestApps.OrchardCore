@@ -1,6 +1,6 @@
 using CrestApps.Core.AI.Tooling;
 
-namespace CrestApps.OrchardCore.AI.Tools.Services;
+namespace CrestApps.OrchardCore.AI.Core.Services;
 
 /// <summary>
 /// Provides the AI tool instances the current user is allowed to assign to a model.

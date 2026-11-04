@@ -1,6 +1,6 @@
 ﻿using CrestApps.Core.AI.Models;
 
-namespace CrestApps.OrchardCore.AI.ViewModels;
+namespace CrestApps.OrchardCore.AI.Core.ViewModels;
 
 /// <summary>
 /// Represents the view model for edit profile tools.

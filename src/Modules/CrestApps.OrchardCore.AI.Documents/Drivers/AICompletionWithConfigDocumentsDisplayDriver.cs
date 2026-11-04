@@ -11,6 +11,7 @@ using CrestApps.Core.AI.Resilience;
 using CrestApps.Core.Infrastructure.Indexing;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Workflows;
 using CrestApps.OrchardCore.AI.Documents.Services;
 using CrestApps.OrchardCore.AI.Documents.ViewModels;
 using CrestApps.OrchardCore.AI.Workflows.Models;

@@ -35,21 +35,7 @@ public sealed class LayeringRatchetTests
     /// </summary>
     private static readonly HashSet<string> _knownModuleUses = new(StringComparer.Ordinal)
     {
-        "CrestApps.OrchardCore.AI -> CrestApps.OrchardCore.AI.Prompting",
-        "CrestApps.OrchardCore.AI.A2A -> CrestApps.OrchardCore.AI",
-        "CrestApps.OrchardCore.AI.Chat -> CrestApps.OrchardCore.AI",
-        "CrestApps.OrchardCore.AI.Chat.Claude -> CrestApps.OrchardCore.AI",
-        "CrestApps.OrchardCore.AI.Chat.Copilot -> CrestApps.OrchardCore.AI",
-        "CrestApps.OrchardCore.AI.Chat.Interactions -> CrestApps.OrchardCore.AI",
-        "CrestApps.OrchardCore.AI.DataSources -> CrestApps.OrchardCore.AI",
-        "CrestApps.OrchardCore.AI.Documents -> CrestApps.OrchardCore.AI",
         "CrestApps.OrchardCore.AI.Documents.Azure -> CrestApps.OrchardCore.AI.Documents",
-        "CrestApps.OrchardCore.AI.Mcp -> CrestApps.OrchardCore.AI",
-        "CrestApps.OrchardCore.AI.Memory.AzureAI -> CrestApps.OrchardCore.AI.Memory",
-        "CrestApps.OrchardCore.AI.WebMcp -> CrestApps.OrchardCore.AI",
-
-        // These existed when the ratchet was set but were not seen until every module was built for the scan.
-        "CrestApps.OrchardCore.AI.Memory.Elasticsearch -> CrestApps.OrchardCore.AI.Memory",
 
         // The local file stores the Azure storage modules fall back to; the tenant file store (audit P2) replaces them.
         "CrestApps.OrchardCore.DncRegistry.Azure -> CrestApps.OrchardCore.DncRegistry",

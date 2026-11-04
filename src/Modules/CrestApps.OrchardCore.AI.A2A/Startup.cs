@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.AI.A2A.Handlers;
 using CrestApps.OrchardCore.AI.A2A.Migrations;
 using CrestApps.OrchardCore.AI.A2A.Recipes;
 using CrestApps.OrchardCore.AI.A2A.Services;
+using CrestApps.OrchardCore.AI.Core.Workflows;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;

@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.AI.Memory.Models;
+namespace CrestApps.OrchardCore.AI.Core.Models;
 
 /// <summary>
 /// Represents the AI memory entry index document.

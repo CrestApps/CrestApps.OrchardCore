@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Tooling;
+using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore.AI.Core.ViewModels;
 using CrestApps.OrchardCore.AI.Tools.Services;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.Extensions.Localization;

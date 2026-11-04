@@ -11,7 +11,7 @@ using OrchardCore.Workflows.Abstractions.Models;
 using OrchardCore.Workflows.Activities;
 using OrchardCore.Workflows.Models;
 
-namespace CrestApps.OrchardCore.AI.Workflows.Models;
+namespace CrestApps.OrchardCore.AI.Core.Workflows;
 
 /// <summary>
 /// A workflow task activity that performs AI completion using direct configuration parameters.

@@ -2,6 +2,8 @@ using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore.AI.Core.ViewModels;
 using CrestApps.OrchardCore.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.Services;
 using CrestApps.OrchardCore.AI.Mcp.ViewModels;

@@ -8,6 +8,7 @@ using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Workflows;
 using CrestApps.OrchardCore.AI.Documents.Drivers;
 using CrestApps.OrchardCore.AI.Documents.Handlers;
 using CrestApps.OrchardCore.AI.Documents.Migrations;

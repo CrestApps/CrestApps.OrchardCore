@@ -1,11 +1,11 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Tooling;
-using CrestApps.OrchardCore.AI.Tools.Services;
-using CrestApps.OrchardCore.AI.ViewModels;
+using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore.AI.Core.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
-namespace CrestApps.OrchardCore.AI.Tools.Drivers;
+namespace CrestApps.OrchardCore.AI.Core.Drivers;
 
 /// <summary>
 /// Base display driver that renders the configured AI tool instances for any extensible entity that can

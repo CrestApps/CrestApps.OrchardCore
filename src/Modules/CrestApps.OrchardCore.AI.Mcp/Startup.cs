@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Core.Workflows;
 using CrestApps.OrchardCore.AgentSkills.Mcp.Extensions;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core;

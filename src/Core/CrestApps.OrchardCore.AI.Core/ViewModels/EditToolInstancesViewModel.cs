@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.AI.ViewModels;
+namespace CrestApps.OrchardCore.AI.Core.ViewModels;
 
 /// <summary>
 /// Represents the view model used to select the AI tool instances available to a resource.

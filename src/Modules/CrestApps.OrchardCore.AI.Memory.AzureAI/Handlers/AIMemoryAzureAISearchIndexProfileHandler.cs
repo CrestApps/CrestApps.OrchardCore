@@ -2,7 +2,7 @@ using CrestApps.Core;
 using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Memory;
-using CrestApps.OrchardCore.AI.Memory.Handlers;
+using CrestApps.OrchardCore.AI.Core.Handlers;
 using OrchardCore.AzureAI;
 using OrchardCore.AzureAI.Models;
 using OrchardCore.Entities;

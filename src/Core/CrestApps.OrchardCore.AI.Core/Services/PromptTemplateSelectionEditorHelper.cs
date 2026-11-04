@@ -1,13 +1,16 @@
 using System.Text.Json;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Templates.Models;
-using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Prompting.ViewModels;
+using CrestApps.OrchardCore.AI.Core.ViewModels;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using OrchardCore.Mvc.ModelBinding;
 
-namespace CrestApps.OrchardCore.AI.Prompting.Drivers;
+namespace CrestApps.OrchardCore.AI.Core.Services;
 
+/// <summary>
+/// Fills and reads the prompt template selection editor that AI profiles, profile templates, chat interactions and
+/// workflow tasks share.
+/// </summary>
 public static class PromptTemplateSelectionEditorHelper
 {
     public static async Task PopulateViewModelAsync(

@@ -21,6 +21,8 @@
     <PackageReference Include="OrchardCore.Liquid.Abstractions" />
     <PackageReference Include="OrchardCore.Indexing.Core" />
     <PackageReference Include="OrchardCore.Navigation.Core" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.Workflows.Abstractions" />
     <PackageReference Include="CrestApps.Core.Data.YesSql" />
   </ItemGroup>
 

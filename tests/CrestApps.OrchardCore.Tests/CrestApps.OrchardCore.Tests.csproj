@@ -88,6 +88,14 @@
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Mcp/CrestApps.OrchardCore.AI.Mcp.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.WebMcp/CrestApps.OrchardCore.AI.WebMcp.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Prompting/CrestApps.OrchardCore.AI.Prompting.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Documents.Elasticsearch/CrestApps.OrchardCore.AI.Documents.Elasticsearch.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.FileSources.Ftp/CrestApps.OrchardCore.AI.FileSources.Ftp.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.FileSources.Sftp/CrestApps.OrchardCore.AI.FileSources.Sftp.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Mcp.Resources.Ftp/CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Mcp.Resources.Sftp/CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Memory.Elasticsearch/CrestApps.OrchardCore.AI.Memory.Elasticsearch.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AzureAIInference/CrestApps.OrchardCore.AzureAIInference.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Ollama/CrestApps.OrchardCore.Ollama.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Asterisk/CrestApps.OrchardCore.Asterisk.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/CrestApps.OrchardCore.Omnichannel.Managements.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Omnichannel.Sms/CrestApps.OrchardCore.Omnichannel.Sms.csproj" />

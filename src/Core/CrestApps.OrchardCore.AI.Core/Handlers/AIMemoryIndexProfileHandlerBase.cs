@@ -7,7 +7,7 @@ using CrestApps.OrchardCore.AI.Core;
 using OrchardCore.Indexing.Core.Handlers;
 using OrchardCore.Indexing.Models;
 
-namespace CrestApps.OrchardCore.AI.Memory.Handlers;
+namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
 /// <summary>
 /// Represents the AI memory index profile handler base.

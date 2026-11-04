@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CrestApps.Core.AI.WebMcp.Services;
+using CrestApps.OrchardCore.AI.Core.ViewModels;
 using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.AI.WebMcp.Models;
 using CrestApps.OrchardCore.AI.WebMcp.Services;

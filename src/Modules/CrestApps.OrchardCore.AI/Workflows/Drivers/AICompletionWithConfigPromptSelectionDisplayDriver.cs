@@ -1,8 +1,8 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Prompting.Drivers;
-using CrestApps.OrchardCore.AI.Prompting.ViewModels;
+using CrestApps.OrchardCore.AI.Core.ViewModels;
+using CrestApps.OrchardCore.AI.Core.Workflows;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;

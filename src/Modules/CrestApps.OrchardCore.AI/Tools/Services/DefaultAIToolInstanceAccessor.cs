@@ -1,5 +1,6 @@
 using CrestApps.Core.AI.Tooling;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.AspNetCore.Http;
 
 namespace CrestApps.OrchardCore.AI.Tools.Services;

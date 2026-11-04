@@ -2,7 +2,7 @@ using CrestApps.Core.Templates.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
-namespace CrestApps.OrchardCore.AI.Prompting.ViewModels;
+namespace CrestApps.OrchardCore.AI.Core.ViewModels;
 
 /// <summary>
 /// Represents the view model for AI template selection.

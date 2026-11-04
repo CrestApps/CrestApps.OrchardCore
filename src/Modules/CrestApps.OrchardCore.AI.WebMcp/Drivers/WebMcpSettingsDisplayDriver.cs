@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.ViewModels;
 using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.AI.WebMcp.Models;
 using CrestApps.OrchardCore.AI.WebMcp.Services;

@@ -1,4 +1,4 @@
-﻿namespace CrestApps.OrchardCore.AI.Prompting.ViewModels;
+﻿namespace CrestApps.OrchardCore.AI.Core.ViewModels;
 
 /// <summary>
 /// Represents the view model for prompt template selection item.
