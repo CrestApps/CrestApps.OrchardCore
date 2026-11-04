@@ -53,6 +53,31 @@ The Liquid has:
 
 A segment's editor counts its customers and those who accept marketing (up to 10,000). A campaign's editor sends a test, as the segment's first customer would get it.
 
+## Recipes and deployment
+
+The **Marketing segments and campaigns** deployment step (Commerce category) writes a `MarketingSegments` step, then a `MarketingCampaigns` step, so each campaign's segment is imported first. Both are matched by `ItemId`, so a second run adds nothing, and they are checked the way their editors check them.
+
+A recipe never sends email. A campaign is exported without its delivery (status, schedule, cursor and counts), a new campaign always imports as a draft, and a campaign that is scheduled or sending on the site is left as it is.
+
+```json
+{
+  "steps": [
+    {
+      "name": "MarketingSegments",
+      "Segments": [
+        { "ItemId": "4sg00000000000000000000001", "Name": "Lapsed buyers", "Rules": { "MinOrders": 1, "LastOrderAtLeastDaysAgo": 180 } }
+      ]
+    },
+    {
+      "name": "MarketingCampaigns",
+      "Campaigns": [
+        { "ItemId": "4cp00000000000000000000001", "Name": "Win back", "SegmentId": "4sg00000000000000000000001", "Subject": "We miss you", "Body": "Come back for 10% off." }
+      ]
+    }
+  ]
+}
+```
+
 ## Related modules
 
 - [Customers](customers.md): `AcceptsMarketing`.

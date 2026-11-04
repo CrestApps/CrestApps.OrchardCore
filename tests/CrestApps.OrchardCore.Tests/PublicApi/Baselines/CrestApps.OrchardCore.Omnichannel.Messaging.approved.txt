@@ -46,6 +46,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.BackgroundTasks
 namespace CrestApps.OrchardCore.Omnichannel.Messaging
 {
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Messaging")]
+    public sealed class BroadcastsRecipesStartup : OrchardCore.Modules.StartupBase
+    {
+        public BroadcastsRecipesStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Messaging")]
     [OrchardCore.Modules.RequireFeatures(new string[] {
             "OrchardCore.Deployment"})]
     public sealed class ConfigurationDeploymentStartup : OrchardCore.Modules.StartupBase
@@ -222,6 +228,15 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Deployments
 }
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Deployments.Steps
 {
+    public sealed class MessagingBroadcastsDeploymentStep : OrchardCore.Deployment.DeploymentStep
+    {
+        public MessagingBroadcastsDeploymentStep() { }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public override OrchardCore.Localization.LocalizationSource Category { get; }
+        public override string Name { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public override OrchardCore.Localization.LocalizationSource Title { get; }
+    }
     public sealed class OmnichannelMessageTemplateDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public OmnichannelMessageTemplateDeploymentStep() { }

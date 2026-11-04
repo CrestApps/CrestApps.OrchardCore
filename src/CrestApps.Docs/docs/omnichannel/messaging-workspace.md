@@ -180,7 +180,31 @@ Templates travel between environments through the **Messaging Templates** deploy
 }
 ```
 
-Conversations and broadcasts do not travel: they are the workspace's record of what was said and sent, and replaying a broadcast would message its recipients again. Where a number's messages go travels with its entry point through the `ContactCenterEntryPoint` deployment step.
+Conversations do not travel: they are the workspace's record of what was said. Where a number's messages go travels with its entry point through the `ContactCenterEntryPoint` deployment step.
+
+### Exporting and importing broadcasts
+
+Broadcasts travel through the **Messaging broadcasts** deployment step and the `MessagingBroadcasts` recipe step, as drafts. The export leaves out a broadcast's delivery (its status, the recipients already sent to and the counts), and the import never queues a message: a new broadcast is always a draft, and a broadcast that is queued or sent on the site is left as it is, so replaying a plan never messages anyone again. A broadcast keeps its identifier, so a second run adds nothing. Recipients are personal data: add the step to a plan only to move them to a site you trust.
+
+```json
+{
+  "steps": [
+    {
+      "name": "MessagingBroadcasts",
+      "Broadcasts": [
+        {
+          "ItemId": "4bc00000000000000000000001",
+          "Name": "Holiday hours",
+          "Channel": "sms",
+          "ServiceAddress": "+12025550100",
+          "Body": "We close at noon on Friday.",
+          "Recipients": [ "+12025550101", "+12025550102" ]
+        }
+      ]
+    }
+  ]
+}
+```
 
 ## Configuration
 
