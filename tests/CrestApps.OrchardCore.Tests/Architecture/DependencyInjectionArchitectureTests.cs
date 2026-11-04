@@ -97,6 +97,9 @@ public sealed class DependencyInjectionArchitectureTests
             "VoiceQueueOfferService",
             "It resolves the dialer attempt service only when it screens a preview record: that service places calls through the call router, which offers work through this service, so injecting it closed a construction cycle that hung every request at startup. The dialer attempt service is also absent when the dialer feature is off."),
         new DependencyInjectionException(
+            "ContactCenterActivityOwnershipAuthorizationHandler",
+            "An authorization handler that injected the authorization service would close a service-to-handler construction cycle, since the service constructs every handler; it resolves the service only when it checks the user's own-activity permission."),
+        new DependencyInjectionException(
             "ContactActivityExportHandler",
             "An import handler that injected the import manager would close a manager-to-handler construction cycle."),
         new DependencyInjectionException(

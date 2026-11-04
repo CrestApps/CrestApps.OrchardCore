@@ -214,30 +214,44 @@ public sealed class PortalTests
     [Fact]
     public async Task Reminders_AreSentOncePerShift_AsLongBeforeAsEachWorkerChose()
     {
-        var channel = new RecordingChannel();
-        var clock = new MovableClock();
-        await using var harness = await CreateAsync(channel, clock: clock);
-        var team = await WorkforceTests.AddTeamAsync(harness, "Front desk", TeamKind.Team);
-        var ana = await PlanningKit.AddMemberAsync(harness, "Ana", team);
-        var ben = await PlanningKit.AddMemberAsync(harness, "Ben", team, worker => worker.Put(new WorkerPortalSettings { ReminderMinutes = 0 }));
-        var period = await PlanningKit.CreatePeriodAsync(harness, team);
+        // The time is written in the reader's culture; pin one so the title reads the same on every machine.
+        var previous = System.Globalization.CultureInfo.CurrentCulture;
+        System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.GetCultureInfo("en-US");
 
-        await PlanningKit.AddDraftAsync(harness, period, ana.ItemId, _monday, new TimeOnly(9, 0), new TimeOnly(17, 0));
-        await PlanningKit.AddDraftAsync(harness, period, ben.ItemId, _monday, new TimeOnly(9, 0), new TimeOnly(17, 0));
-        await PlanningKit.PublishAsync(harness, period);
-        channel.Titles.Clear();
+        try
+        {
+            var channel = new RecordingChannel();
+            var clock = new MovableClock();
+            await using var harness = await CreateAsync(channel, clock: clock);
+            var team = await WorkforceTests.AddTeamAsync(harness, "Front desk", TeamKind.Team);
+            var ana = await PlanningKit.AddMemberAsync(harness, "Ana", team);
+            var ben = await PlanningKit.AddMemberAsync(harness, "Ben", team, worker => worker.Put(new WorkerPortalSettings { ReminderMinutes = 0 }));
+            var period = await PlanningKit.CreatePeriodAsync(harness, team);
 
-        Task<int> SendAsync() => harness.RunAsync(services => services.GetRequiredService<ShiftReminderService>().SendDueAsync());
+            await PlanningKit.AddDraftAsync(harness, period, ana.ItemId, _monday, new TimeOnly(9, 0), new TimeOnly(17, 0));
+            await PlanningKit.AddDraftAsync(harness, period, ben.ItemId, _monday, new TimeOnly(9, 0), new TimeOnly(17, 0));
+            await PlanningKit.PublishAsync(harness, period);
+            channel.Titles.Clear();
 
-        // 9:00 in New York; Ana is reminded an hour before, Ben never.
-        clock.UtcNow = PlanningKit.Utc(_monday, new TimeOnly(7, 30));
-        var early = await SendAsync();
-        clock.UtcNow = PlanningKit.Utc(_monday, new TimeOnly(8, 10));
-        var due = await SendAsync();
-        var again = await SendAsync();
+            Task<int> SendAsync() => harness.RunAsync(services => services.GetRequiredService<ShiftReminderService>().SendDueAsync());
 
-        Assert.Equal((0, 1, 0), (early, due, again));
-        Assert.Equal(["Your shift starts at 9:00 AM"], channel.Titles);
+            // 9:00 in New York; Ana is reminded an hour before, Ben never.
+            clock.UtcNow = PlanningKit.Utc(_monday, new TimeOnly(7, 30));
+            var early = await SendAsync();
+            clock.UtcNow = PlanningKit.Utc(_monday, new TimeOnly(8, 10));
+            var due = await SendAsync();
+            var again = await SendAsync();
+
+            Assert.Equal((0, 1, 0), (early, due, again));
+            // Formatted here rather than written out: ICU on Linux puts a narrow no-break space before "AM".
+            var startsAt = new DateTime(2026, 1, 1, 9, 0, 0).ToString("t", System.Globalization.CultureInfo.CurrentCulture);
+
+            Assert.Equal([$"Your shift starts at {startsAt}"], channel.Titles);
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentCulture = previous;
+        }
     }
 
     [Fact]

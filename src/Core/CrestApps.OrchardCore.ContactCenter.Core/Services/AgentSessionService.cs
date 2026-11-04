@@ -258,13 +258,22 @@ public sealed class AgentSessionService : IAgentSessionService
                 result = null;
                 removed = false;
             }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                // YesSql runs identical queries that are in flight at the same time once and hands each the result,
+                // so this read can share the one a request on the closing connection made (the agent bar's
+                // GetSnapshot, say) and be canceled when that request is. The removal itself was not canceled, and
+                // dropping it left the connection in the list. Re-read and re-apply it on the next attempt.
+                result = null;
+                removed = false;
+            }
         }
 
-        // Every attempt lost the version check, so the connection could not be removed. Return without throwing
-        // so the hub disconnect does not crash; the stale-cleanup pass reconciles a connection list that a
-        // sustained write storm left behind.
+        // Every attempt lost the version check or was canceled with a query it shared, so the connection could not
+        // be removed. Return without throwing so the hub disconnect does not crash; the stale-cleanup pass
+        // reconciles a connection list that a sustained write storm left behind.
         _logger.LogWarning(
-            "Could not remove Contact Center connection '{ConnectionId}' for user '{UserId}' after {Attempts} attempts because each lost the session version check.",
+            "Could not remove Contact Center connection '{ConnectionId}' for user '{UserId}' after {Attempts} attempts because each lost the session version check or was canceled.",
             connectionId.SanitizeLogValue(),
             userId.SanitizeLogValue(),
             MaxSessionWriteAttempts);
