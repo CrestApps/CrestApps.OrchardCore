@@ -174,7 +174,7 @@ public sealed class AIProviderConnectionIndexMigrations : DataMigration
             }
         }
 
-        skipped.LogSummary();
+        await skipped.LogSummaryAsync(serviceProvider);
 
         if (importedCount > 0 && logger.IsEnabled(LogLevel.Information))
         {

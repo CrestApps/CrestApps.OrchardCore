@@ -195,7 +195,7 @@ internal sealed class AIProfileDocumentMigrations : DataMigration
                 }
             }
 
-            skipped.LogSummary();
+            await skipped.LogSummaryAsync(serviceProvider);
 
             if (logger.IsEnabled(LogLevel.Information))
             {

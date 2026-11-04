@@ -160,7 +160,7 @@ internal sealed class AIProfileV1DocumentMigrations : DataMigration
             }
         }
 
-        skipped.LogSummary();
+        await skipped.LogSummaryAsync(serviceProvider);
 
         if (totalMigrated > 0 && logger.IsEnabled(LogLevel.Information))
         {

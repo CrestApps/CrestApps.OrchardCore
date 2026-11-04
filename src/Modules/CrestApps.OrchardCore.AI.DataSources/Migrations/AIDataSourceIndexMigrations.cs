@@ -149,7 +149,7 @@ internal sealed class AIDataSourceIndexMigrations : DataMigration
             }
         }
 
-        skipped.LogSummary();
+        await skipped.LogSummaryAsync(serviceProvider);
 
         if (importedCount > 0)
         {

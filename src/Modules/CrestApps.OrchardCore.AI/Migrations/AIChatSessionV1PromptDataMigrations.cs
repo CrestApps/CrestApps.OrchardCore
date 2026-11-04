@@ -186,7 +186,7 @@ internal sealed class AIChatSessionV1PromptDataMigrations : DataMigration
             await session.SaveChangesAsync();
         }
 
-        skipped.LogSummary();
+        await skipped.LogSummaryAsync(serviceProvider);
     }
 
     private static bool NormalizePersistedSessionDocument(JsonObject sessionObject)

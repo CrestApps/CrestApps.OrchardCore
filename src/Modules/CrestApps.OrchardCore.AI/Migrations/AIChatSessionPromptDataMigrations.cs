@@ -174,7 +174,7 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
                     }
                 }
 
-                skipped.LogSummary();
+                await skipped.LogSummaryAsync(scope.ServiceProvider);
 
                 if (logger.IsEnabled(LogLevel.Information))
                 {

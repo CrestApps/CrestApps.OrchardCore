@@ -45,11 +45,14 @@ using CrestApps.OrchardCore.AI.Workflows.Flows;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using CrestApps.OrchardCore.AI.Workflows.Services;
 using CrestApps.OrchardCore.AI.Workflows.Tools;
+using CrestApps.OrchardCore.AI.Filters;
 using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Core.Migrations;
 using CrestApps.OrchardCore.Core.Http;
 using CrestApps.OrchardCore.Core.Services;
 using Fluid;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -77,6 +80,10 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        // Data migrations that skip records show the people who manage AI profiles a warning on admin pages until it is dismissed.
+        services.AddMigrationSkipLog();
+        services.Configure<MvcOptions>(options => options.Filters.Add<MigrationSkipNoticeFilter>(order: -1000));
+
         services.AddAICoreServices()
             .AddCoreAIServicesStoresYesSql()
             // Has to follow the YesSql stores: they bind the connection and deployment catalogs to the

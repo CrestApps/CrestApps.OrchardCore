@@ -1,4 +1,5 @@
 using CrestApps.Core.Support;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Core.Migrations;
@@ -32,6 +33,11 @@ public sealed class MigrationSkipReport
         _migrationName = migrationName;
         _logger = logger;
     }
+
+    /// <summary>
+    /// Gets the name of the migration step.
+    /// </summary>
+    public string MigrationName => _migrationName;
 
     /// <summary>
     /// Gets how many records were skipped.
@@ -84,5 +90,23 @@ public sealed class MigrationSkipReport
             _skippedIds.Count,
             listed.SanitizeLogValue(),
             more);
+    }
+
+    /// <summary>
+    /// Writes the summary warning, and records the summary in the <see cref="IMigrationSkipLog"/> when one is registered,
+    /// so administrators see the skips in the admin until they dismiss them.
+    /// </summary>
+    /// <param name="services">The services of the scope the migration runs in.</param>
+    /// <returns>A task.</returns>
+    public async Task LogSummaryAsync(IServiceProvider services)
+    {
+        LogSummary();
+
+        if (_skippedIds.Count == 0 || services?.GetService<IMigrationSkipLog>() is not { } skipLog)
+        {
+            return;
+        }
+
+        await skipLog.RecordAsync(this);
     }
 }

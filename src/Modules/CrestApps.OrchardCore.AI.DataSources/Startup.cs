@@ -18,6 +18,7 @@ using CrestApps.OrchardCore.AI.DataSources.Migrations;
 using CrestApps.OrchardCore.AI.DataSources.Recipes;
 using CrestApps.OrchardCore.AI.DataSources.Services;
 using CrestApps.OrchardCore.AI.Services;
+using CrestApps.OrchardCore.Core.Migrations;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -46,6 +47,7 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddMigrationSkipLog();
         services.AddCoreAIDataSourceRag()
             .AddCoreAIDataSourceStoresYesSql();
 

@@ -238,7 +238,7 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
             }
         }
 
-        skipped.LogSummary();
+        await skipped.LogSummaryAsync(serviceProvider);
 
         var connections = (await connectionManager.GetAllAsync()).ToList();
         var deploymentDefaults = await CollectDeploymentDefaultsAsync(deploymentManager, existingDeployments);
