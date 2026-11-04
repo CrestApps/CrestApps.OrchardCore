@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.BusinessHours.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Controllers;
@@ -26,7 +27,7 @@ public sealed class ServiceHoursCalendarPickerTests
             new BusinessHoursCalendar { ItemId = "c3", Name = "Retired", Enabled = false },
         ]);
 
-        IServiceHoursProvider provider = new BusinessHoursServiceHoursProvider(manager.Object);
+        IServiceHoursProvider provider = new OpenHoursServiceHoursProvider(new DefaultOpenHoursService([new BusinessHoursCalendarScheduleSource(manager.Object)]));
 
         // Act
         var calendars = await provider.ListCalendarsAsync(TestContext.Current.CancellationToken);

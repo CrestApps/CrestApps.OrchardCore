@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.BusinessHours;
+using CrestApps.OrchardCore.BusinessHours.Models;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.WorkOrders.Services;
@@ -55,7 +57,7 @@ public sealed class SlaClock
 
             foreach (var provider in _providers)
             {
-                open = (await provider.GetOpenAsync(policy.HoursCalendarId, policy.TimeZoneId, from, to, cancellationToken))?.Select(window => new TimeWindow(window.StartUtc, window.EndUtc)).ToArray();
+                open = await provider.GetOpenAsync(policy.HoursCalendarId, policy.TimeZoneId, from, to, cancellationToken);
 
                 if (open is not null)
                 {
@@ -129,25 +131,27 @@ public sealed class SlaClock
     {
         ArgumentNullException.ThrowIfNull(weekly);
 
-        var zone = CalendarTime.GetZone(timeZoneId);
-        var day = DateOnly.FromDateTime(CalendarTime.ToLocal(fromUtc, zone.Id)).AddDays(-1);
-        var lastDay = DateOnly.FromDateTime(CalendarTime.ToLocal(toUtc, zone.Id));
+        return HoursScheduleEvaluator.GetOpenWindows(ToHoursSchedule(weekly, timeZoneId), fromUtc, toUtc);
+    }
 
-        for (; day <= lastDay; day = day.AddDays(1))
+    /// <summary>
+    /// Reads weekly hours as the shared business hours schedule: the same window on each day open. Pure.
+    /// </summary>
+    /// <param name="weekly">The hours.</param>
+    /// <param name="timeZoneId">The time zone.</param>
+    /// <returns>The schedule.</returns>
+    public static HoursSchedule ToHoursSchedule(WeeklyHours weekly, string timeZoneId)
+    {
+        ArgumentNullException.ThrowIfNull(weekly);
+
+        var open = (weekly.Opens.Hour * 60) + weekly.Opens.Minute;
+        var close = (weekly.Closes.Hour * 60) + weekly.Closes.Minute;
+
+        return new HoursSchedule
         {
-            if (!weekly.Days.Contains(day.DayOfWeek))
-            {
-                continue;
-            }
-
-            var start = CalendarTime.ToUtc(CalendarTime.ToLocalDateTime(day.ToDateTime(weekly.Opens)), zone);
-            var end = CalendarTime.ToUtc(CalendarTime.ToLocalDateTime(day.ToDateTime(weekly.Closes)), zone);
-
-            if (end > fromUtc && start < toUtc)
-            {
-                yield return new TimeWindow(start, end);
-            }
-        }
+            TimeZoneId = timeZoneId,
+            Windows = [.. (weekly.Days ?? []).Distinct().Select(day => new HoursWindow { Day = day, OpenMinute = open, CloseMinute = close })],
+        };
     }
 
     /// <summary>

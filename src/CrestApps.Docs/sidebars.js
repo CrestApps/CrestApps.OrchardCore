@@ -446,6 +446,7 @@ const sidebars = {
             className: icon('calendar-days'),
             items: [
                 'modules/calendars',
+                'modules/business-hours',
                 'modules/scheduling',
             ],
         },

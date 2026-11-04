@@ -1499,12 +1499,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         public static System.Collections.Generic.List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> BuildSourceItems(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivitySourceOptions options, string selectedSource) { }
         public static void KeepSelectedValue(System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> items, string selectedValue) { }
     }
-    public sealed class AlwaysOpenBusinessHoursGate : CrestApps.OrchardCore.Omnichannel.Core.Services.IBusinessHoursGate
-    {
-        public AlwaysOpenBusinessHoursGate() { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Services.BusinessHoursCalendarOption>> GetCalendarOptionsAsync(System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<bool> IsOpenAsync(string calendarId, System.DateTime utcInstant, string timeZoneId, System.Threading.CancellationToken cancellationToken = default) { }
-    }
     public sealed class AutomatedActivityScreeningResult
     {
         public AutomatedActivityScreeningResult() { }
@@ -1947,6 +1941,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
                 "Field"})]
         public static System.Collections.Generic.List<System.ValueTuple<string, string>> GetSubjectTextFields(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition typeDefinition) { }
         public static System.Threading.Tasks.Task<bool> TryApplyContactEmailAsync(CrestApps.OrchardCore.Omnichannel.Core.Services.IContactMethodsWriter contactMethodsWriter, OrchardCore.ContentManagement.ContentItem contact, string email) { }
+    }
+    public sealed class OpenHoursBusinessHoursGate : CrestApps.OrchardCore.Omnichannel.Core.Services.IBusinessHoursGate
+    {
+        public OpenHoursBusinessHoursGate(CrestApps.OrchardCore.BusinessHours.Services.IOpenHoursService openHoursService) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Services.BusinessHoursCalendarOption>> GetCalendarOptionsAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> IsOpenAsync(string calendarId, System.DateTime utcInstant, string timeZoneId, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class SmsProviderRefusalScope : System.IDisposable
     {

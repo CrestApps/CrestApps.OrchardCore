@@ -1,7 +1,9 @@
 using CrestApps.OrchardCore.Accounts;
+using CrestApps.OrchardCore.BusinessHours.Core;
 using CrestApps.OrchardCore.Geo.Services;
 using CrestApps.OrchardCore.WorkOrders.BackgroundTasks;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
+using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Drivers;
 using CrestApps.OrchardCore.WorkOrders.Integrations;
 using CrestApps.OrchardCore.WorkOrders.Migrations;
@@ -34,6 +36,11 @@ public sealed class Startup : StartupBase
         services.AddScoped<Integrations.WorkOrderCustomers>();
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(WorkOrdersConstants.CollectionName));
         services.AddWorkOrdersCore();
+
+        // A service level policy's clock runs in the hours of the calendar it names, read through the shared business
+        // hours, so any feature that keeps calendars (the Contact Center business hours) feeds it.
+        services.AddOpenHours();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IServiceHoursProvider, OpenHoursServiceHoursProvider>());
         services.AddPermissionProvider<WorkOrdersPermissionsProvider>();
         services
             .AddIndexProvider<WorkOrderIndexProvider>()

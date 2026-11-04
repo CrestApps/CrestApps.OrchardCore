@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.BusinessHours.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
@@ -90,7 +91,7 @@ public sealed class SlaBusinessHoursTests
 
         manager.Setup(m => m.FindByIdAsync(calendar.ItemId, It.IsAny<CancellationToken>())).ReturnsAsync(calendar);
 
-        return new SlaClock([new BusinessHoursServiceHoursProvider(manager.Object)]);
+        return new SlaClock([new OpenHoursServiceHoursProvider(new DefaultOpenHoursService([new BusinessHoursCalendarScheduleSource(manager.Object)]))]);
     }
 
     private static BusinessHoursCalendar WeekdaysNineToFive()

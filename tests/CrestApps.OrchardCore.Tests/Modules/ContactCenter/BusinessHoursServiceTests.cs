@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.BusinessHours.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
@@ -163,7 +164,7 @@ public sealed class BusinessHoursServiceTests
             .Setup(m => m.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(calendar);
 
-        return new DefaultBusinessHoursService(manager.Object, new StubClock());
+        return new DefaultBusinessHoursService(new DefaultOpenHoursService([new BusinessHoursCalendarScheduleSource(manager.Object)]), new StubClock());
     }
 
     private static BusinessHoursCalendar WeekdayCalendar(DayOfWeek day, int openMinute, int closeMinute)

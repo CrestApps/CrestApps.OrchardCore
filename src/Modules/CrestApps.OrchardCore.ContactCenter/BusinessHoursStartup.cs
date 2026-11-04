@@ -1,4 +1,6 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.BusinessHours;
+using CrestApps.OrchardCore.BusinessHours.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Deployments.Sources;
@@ -9,8 +11,7 @@ using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Recipes;
 using CrestApps.OrchardCore.ContactCenter.Services;
-using CrestApps.OrchardCore.WorkOrders;
-using CrestApps.OrchardCore.WorkOrders.Services;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Data;
@@ -25,9 +26,11 @@ using OrchardCore.Security.Permissions;
 namespace CrestApps.OrchardCore.ContactCenter;
 
 /// <summary>
-/// Registers the Business Hours feature: business-hours calendars, their administration, evaluation, and the
-/// Omnichannel business-hours gate. It is a standalone feature so that work distribution, the outbound dialer, and
-/// automated Omnichannel conversations can each depend on it without depending on one another.
+/// Registers the Business Hours feature: business-hours calendars and their administration. The calendars are a
+/// source of the shared business hours (<see cref="BusinessHoursCalendarScheduleSource"/>), so every module that asks
+/// the open-hours service, the Omnichannel business-hours gate and work-order service levels included, reads them
+/// without depending on the Contact Center. It is a standalone feature so that work distribution, the outbound
+/// dialer, and automated Omnichannel conversations can each depend on it without depending on one another.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.BusinessHours)]
 public sealed class BusinessHoursStartup : StartupBase
@@ -44,9 +47,15 @@ public sealed class BusinessHoursStartup : StartupBase
             .AddScoped<IBusinessHoursCalendarManager, BusinessHoursCalendarManager>()
             .AddScoped<IBusinessHoursService, DefaultBusinessHoursService>();
 
-        // This feature owns business-hours calendars, so it replaces the always-open default the base feature
-        // registers for tenants that have none.
-        services.Replace(ServiceDescriptor.Scoped<CrestApps.OrchardCore.Omnichannel.Core.Services.IBusinessHoursGate, BusinessHoursGate>());
+        // The calendars are read through the shared open-hours service, which the Omnichannel business-hours gate and
+        // work-order service levels read too.
+        services
+            .AddOpenHours()
+            .AddHoursScheduleSource<BusinessHoursCalendarScheduleSource>();
+
+        // Omnichannel Activities registers the same gate; this feature registers it too, so the voice handoff and the
+        // dialer find it when this feature is enabled without the activities.
+        services.TryAddScoped<IBusinessHoursGate, OpenHoursBusinessHoursGate>();
 
         // The calendar manager caches configuration through the shared Contact Center cache, and the invalidation
         // handler keeps it fresh. Both this feature and Work Distribution register the cache, so TryAdd keeps a single
@@ -93,16 +102,3 @@ public sealed class BusinessHoursRecipesStartup : StartupBase
     }
 }
 
-/// <summary>
-/// Runs a work-order service level policy's clock in the hours of the business hours calendar it names.
-/// </summary>
-[Feature(ContactCenterConstants.Feature.BusinessHours)]
-[RequireFeatures(WorkOrdersConstants.Features.WorkOrders)]
-public sealed class BusinessHoursWorkOrdersStartup : StartupBase
-{
-    /// <inheritdoc/>
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IServiceHoursProvider, BusinessHoursServiceHoursProvider>();
-    }
-}

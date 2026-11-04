@@ -52,6 +52,7 @@
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Inventory.Core\CrestApps.OrchardCore.Inventory.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Omnichannel.Core\CrestApps.OrchardCore.Omnichannel.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Scheduling.Core\CrestApps.OrchardCore.Scheduling.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.BusinessHours.Core\CrestApps.OrchardCore.BusinessHours.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.WorkOrders.Core\CrestApps.OrchardCore.WorkOrders.Core.csproj" />
   </ItemGroup>
 

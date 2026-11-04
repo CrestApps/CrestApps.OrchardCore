@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core.Conversations;
+using CrestApps.OrchardCore.BusinessHours.Core;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
@@ -77,10 +78,12 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
         services.AddScoped<IContactOptOutResolver, ContactOptOutResolver>();
 
         // The load editor and the automated sends take the business-hours gate as a plain dependency, and the
-        // contract is declared here, in Omnichannel, so its always-open default is registered here too. The business
-        // hours feature replaces it with the calendar-backed gate. It used to be registered by the Contact Center
-        // feature only, so a tenant without Contact Center could not open Load Activities.
-        services.TryAddScoped<IBusinessHoursGate, AlwaysOpenBusinessHoursGate>();
+        // contract is declared here, in Omnichannel, so it is registered here too. It reads the shared business hours:
+        // with no schedule source every moment is open, and a feature that keeps calendars (the Contact Center business
+        // hours) adds a source. It used to be registered by the Contact Center feature only, so a tenant without
+        // Contact Center could not open Load Activities.
+        services.AddOpenHours();
+        services.TryAddScoped<IBusinessHoursGate, OpenHoursBusinessHoursGate>();
 
         // Which content types are contacts and which are leads, for channels that match callers and search
         // contacts without the administration screens. Whichever feature registers it first provides it.

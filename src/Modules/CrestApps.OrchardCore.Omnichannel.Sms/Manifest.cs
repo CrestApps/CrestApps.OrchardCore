@@ -23,11 +23,6 @@ using OrchardCore.Modules.Manifest;
         OmnichannelConstants.Features.Managements,
         "OrchardCore.Sms",
 
-        // Automated SMS conversations use business-hours calendars to keep background-initiated sends (re-engagement
-        // nudges) within hours, so enabling this feature enables the Business Hours feature that registers the gate and
-        // the calendar administration. Referenced by feature id (resolved at runtime) to avoid an assembly reference.
-        "CrestApps.OrchardCore.ContactCenter.BusinessHours",
-
         // Every SMS webhook commits an inbound text to the durable provider webhook inbox before it is answered, so the
         // text survives a restart and a redelivery is absorbed on any node.
         ContactCenterConstants.Feature.ProviderInbox,
