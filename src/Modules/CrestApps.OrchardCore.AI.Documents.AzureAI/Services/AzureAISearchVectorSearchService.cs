@@ -4,6 +4,7 @@ using Azure.Search.Documents.Models;
 using CrestApps.Core.Infrastructure.Indexing;
 using CrestApps.Core.Infrastructure.Indexing.Models;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Search;
 using Microsoft.Extensions.Logging;
 using OrchardCore.AzureAI.Services;
 
@@ -30,6 +31,15 @@ public sealed class AzureAISearchVectorSearchService : IVectorSearchService
         _clientFactory = clientFactory;
         _logger = logger;
     }
+
+    /// <summary>
+    /// Builds the filter that limits the search to one reference, with both values escaped.
+    /// </summary>
+    /// <param name="referenceId">The reference identifier.</param>
+    /// <param name="referenceType">The reference type.</param>
+    internal static string BuildFilter(string referenceId, string referenceType)
+        => $"{ODataFilter.Equal(AIConstants.ColumnNames.ReferenceId, referenceId)} and {ODataFilter.Equal(AIConstants.ColumnNames.ReferenceType, referenceType)}";
+
     /// <inheritdoc />
     public async Task<IEnumerable<DocumentChunkSearchResult>> SearchAsync(
         IIndexProfileInfo indexProfile,
@@ -64,7 +74,7 @@ public sealed class AzureAISearchVectorSearchService : IVectorSearchService
 
             var searchOptions = new SearchOptions
             {
-                Filter = $"{AIConstants.ColumnNames.ReferenceId} eq '{referenceId}' and {AIConstants.ColumnNames.ReferenceType} eq '{referenceType}'",
+                Filter = BuildFilter(referenceId, referenceType),
                 Size = topN,
                 Select =
                 {

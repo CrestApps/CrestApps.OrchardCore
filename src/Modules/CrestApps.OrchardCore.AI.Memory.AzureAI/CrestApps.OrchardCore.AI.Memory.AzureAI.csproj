@@ -12,6 +12,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="C:\Code\CrestApps\CrestApps.OrchardCore\src\README.md" />
   </ItemGroup>
 

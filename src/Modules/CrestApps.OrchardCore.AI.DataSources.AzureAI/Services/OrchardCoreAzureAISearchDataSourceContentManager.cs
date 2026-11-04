@@ -5,6 +5,7 @@ using CrestApps.Core.Infrastructure;
 using CrestApps.Core.Infrastructure.Indexing;
 using CrestApps.Core.Infrastructure.Indexing.DataSources;
 using CrestApps.Core.Infrastructure.Indexing.Models;
+using CrestApps.OrchardCore.AI.Core.Search;
 using Microsoft.Extensions.Logging;
 using OrchardCore.AzureAI.Services;
 
@@ -17,7 +18,7 @@ internal sealed class OrchardCoreAzureAISearchDataSourceContentManager : IDataSo
 
     internal static string BuildODataFilter(string dataSourceId, string filter)
     {
-        var odataFilter = $"{DataSourceConstants.ColumnNames.DataSourceId} eq '{dataSourceId}'";
+        var odataFilter = ODataFilter.Equal(DataSourceConstants.ColumnNames.DataSourceId, dataSourceId);
 
         if (!string.IsNullOrWhiteSpace(filter))
         {
@@ -171,7 +172,7 @@ internal sealed class OrchardCoreAzureAISearchDataSourceContentManager : IDataSo
         try
         {
             var searchClient = _clientFactory.CreateSearchClient(indexProfile.IndexFullName);
-            var filter = $"{DataSourceConstants.ColumnNames.DataSourceId} eq '{dataSourceId}'";
+            var filter = ODataFilter.Equal(DataSourceConstants.ColumnNames.DataSourceId, dataSourceId);
             long totalDeleted = 0;
 
             while (!cancellationToken.IsCancellationRequested)
