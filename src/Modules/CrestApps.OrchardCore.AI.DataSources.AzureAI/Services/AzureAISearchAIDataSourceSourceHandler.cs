@@ -11,6 +11,10 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.Infrastructure.Indexing.Models;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Extensions;
+using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore.DataConnectors;
+using CrestApps.OrchardCore.DataConnectors.Http;
+using CrestApps.OrchardCore.DataConnectors.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 
@@ -20,23 +24,27 @@ internal sealed class AzureAISearchAIDataSourceSourceHandler : IAIDataSourceSour
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly ILogger<AzureAISearchAIDataSourceSourceHandler> _logger;
+    private readonly IDataConnectionResolver _dataConnectionResolver;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AzureAISearchAIDataSourceSourceHandler"/> class.
     /// </summary>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="dataConnectionResolver">Resolves the data connection a data source may reference; <see langword="null"/> while the Data Connectors feature is off.</param>
     public AzureAISearchAIDataSourceSourceHandler(
         IDataProtectionProvider dataProtectionProvider,
-        ILogger<AzureAISearchAIDataSourceSourceHandler> logger)
+        ILogger<AzureAISearchAIDataSourceSourceHandler> logger,
+        IDataConnectionResolver dataConnectionResolver = null)
     {
         _dataProtectionProvider = dataProtectionProvider;
         _logger = logger;
+        _dataConnectionResolver = dataConnectionResolver;
     }
 
     public string SourceType => AIDataSourceSourceTypes.AzureAISearch;
 
-    public ValueTask ValidateAsync(
+    public async ValueTask ValidateAsync(
         AIDataSource dataSource,
         ValidationResultDetails result,
         CancellationToken cancellationToken = default)
@@ -48,7 +56,27 @@ internal sealed class AzureAISearchAIDataSourceSourceHandler : IAIDataSourceSour
         {
             result.Fail(new ValidationResult("Azure AI Search source settings are required.", [nameof(AzureAISearchSourceMetadata)]));
 
-            return ValueTask.CompletedTask;
+            return;
+        }
+
+        // A data source that references a data connection reads the connection's endpoint and key.
+        var connectionId = AIDataSourceConnectionPicker.GetConnectionId(dataSource);
+
+        if (connectionId is not null)
+        {
+            if (string.IsNullOrWhiteSpace(metadata.IndexName))
+            {
+                result.Fail(new ValidationResult("Azure AI Search index name is required.", [nameof(AzureAISearchSourceMetadata.IndexName)]));
+            }
+
+            var resolution = await _dataConnectionResolver.ResolveForAsync(connectionId, AzureAISearchDataConnectionClient.ConnectorNames, cancellationToken);
+
+            if (!resolution.Succeeded)
+            {
+                result.Fail(new ValidationResult(resolution.Error, [nameof(DataConnectionReference.ConnectionId)]));
+            }
+
+            return;
         }
 
         if (string.IsNullOrWhiteSpace(metadata.Endpoint))
@@ -66,8 +94,6 @@ internal sealed class AzureAISearchAIDataSourceSourceHandler : IAIDataSourceSour
         {
             result.Fail(new ValidationResult("Azure AI Search API key is required.", [nameof(AzureAISearchSourceMetadata.ApiKey)]));
         }
-
-        return ValueTask.CompletedTask;
     }
 
     public ValueTask<string> GetReferenceTypeAsync(
@@ -79,7 +105,7 @@ internal sealed class AzureAISearchAIDataSourceSourceHandler : IAIDataSourceSour
         AIDataSource dataSource,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var searchClient = Resolve(dataSource);
+        var searchClient = await ResolveAsync(dataSource, cancellationToken);
         var response = await searchClient.SearchAsync<SearchDocument>(
             "*",
             new SearchOptions
@@ -112,7 +138,7 @@ internal sealed class AzureAISearchAIDataSourceSourceHandler : IAIDataSourceSour
             yield break;
         }
 
-        var searchClient = Resolve(dataSource);
+        var searchClient = await ResolveAsync(dataSource, cancellationToken);
 
         if (!string.IsNullOrWhiteSpace(dataSource.KeyFieldName))
         {
@@ -174,13 +200,33 @@ internal sealed class AzureAISearchAIDataSourceSourceHandler : IAIDataSourceSour
             ExtractDocument(document, dataSource.TitleFieldName, dataSource.ContentFieldName));
     }
 
-    private SearchClient Resolve(AIDataSource dataSource)
+    /// <summary>
+    /// Creates the client of a data source: from the data connection it references, else from its own settings.
+    /// </summary>
+    /// <param name="dataSource">The data source.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The client.</returns>
+    internal async Task<SearchClient> ResolveAsync(AIDataSource dataSource, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(dataSource);
 
         if (!dataSource.TryGet<AzureAISearchSourceMetadata>(out var metadata))
         {
             throw new InvalidOperationException("Azure AI Search source metadata is missing.");
+        }
+
+        var connectionId = AIDataSourceConnectionPicker.GetConnectionId(dataSource);
+
+        if (connectionId is not null)
+        {
+            var resolution = await _dataConnectionResolver.ResolveForAsync(connectionId, AzureAISearchDataConnectionClient.ConnectorNames, cancellationToken);
+
+            if (!resolution.Succeeded)
+            {
+                throw new InvalidOperationException(resolution.Error);
+            }
+
+            return AzureAISearchDataConnectionClient.Create(resolution.Context.Connection.GetOrCreate<HttpConnectionSettings>(), resolution.Context.Secrets, metadata.IndexName);
         }
 
         var endpoint = new Uri(metadata.Endpoint);

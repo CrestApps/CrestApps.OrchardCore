@@ -42,6 +42,7 @@ public sealed class Startup : StartupBase
         services.TryAddKeyedScoped<IDataSourceDocumentReader, OrchardCoreAzureAISearchDataSourceDocumentReader>(AzureAISearchConstants.ProviderName);
         services.AddIndexProfileHandler<DataSourceAzureAISearchIndexProfileHandler>();
         services.AddScoped<IDocumentIndexHandler, DataSourceAzureAISearchDocumentIndexHandler>();
+        services.TryAddScoped<AIDataSourceConnectionPicker>();
         services.AddDisplayDriver<AIDataSource, AzureAISearchAIDataSourceDisplayDriver>();
         services.AddKeyedScoped<IAIDataSourceSourceHandler, AzureAISearchAIDataSourceSourceHandler>(AIDataSourceSourceTypes.AzureAISearch);
 
@@ -51,7 +52,7 @@ public sealed class Startup : StartupBase
         services.Configure<AIDataSourceSourceOptions>(options => options.AddOrUpdate(
             AIDataSourceSourceTypes.AzureAISearch,
             S["Azure AI Search"],
-            S["Read source documents from an external Azure AI Search index using explicit connection settings."]));
+            S["Read source documents from an external Azure AI Search index using a data connection or explicit connection settings."]));
 
         services.AddAzureAISearchIndexingSource(DataSourceConstants.IndexingTaskType, o =>
         {

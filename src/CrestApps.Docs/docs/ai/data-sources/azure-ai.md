@@ -36,3 +36,9 @@ When AI profiles are configured with data sources, the system needs to search an
 4. The module will automatically sync documents from the source index to the knowledge base index with embeddings.
 
 The data source editor is described in the User Manual under [Data sources](../../user-manual/ai/knowledge.md#data-sources).
+
+## Use a data connection
+
+When the **Data Connectors** feature is on, the external source editor also offers **Data connection**: pick an **HTTP API** connection whose URL is the search service endpoint (`https://<service>.search.windows.net`) and whose authentication is an **API key** (the header name, usually `api-key`, doesn't matter). The data source then stores only the index name and the connection's identifier, and reads the key from the connection, where it stays protected; it is never written to the data source or to a deployment plan. A connection without authentication uses the default Azure credential, such as the site's managed identity.
+
+Only people who may **Manage data connections and their credentials** see the picker; for anyone else, a data source that uses a connection keeps it when they save. A data source without a connection keeps its own endpoint and credentials, so existing data sources are unchanged.

@@ -42,6 +42,14 @@ When AI profiles are configured with data sources, the system needs to search an
 
 The data source editor is described in the User Manual under [Data sources](../../user-manual/ai/knowledge.md#data-sources).
 
+## Use a data connection
+
+When the **Data Connectors** feature is on, the source editor also offers **Data connection**: pick an **Elasticsearch** connection from **Data Connectors** and the data source stores only the index name and the connection's identifier. The URL, the authentication (none, Basic, an API key in a header, or a bearer token), the extra headers and the timeout are the connection's, so one set of credentials serves the AI data sources, the connected data sets and the Report Builder. The connection's secrets stay protected in the connection and are never written to the data source or to a deployment plan.
+
+- Only people who may **Manage data connections and their credentials** see the picker. For anyone else, a data source that uses a connection keeps it when they save.
+- A data source without a connection keeps its own settings, or the global connection below; existing data sources are unchanged.
+- OAuth 2.0, OpenID Connect and query-string API keys are refused, because the Elasticsearch client can't send them.
+
 ## Global connection
 
 A connection can be configured once for the whole application instead of on every data source. When one is configured, the source editor offers **Use the globally configured connection**; a data source that uses it stores only the index name, and the connection fields are hidden.

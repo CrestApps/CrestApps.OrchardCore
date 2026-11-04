@@ -187,6 +187,7 @@ public sealed class ElasticsearchDataSourceOptionsConfigurationTests
             Mock.Of<IDataProtectionProvider>(),
             Options.Create(new ElasticsearchDataSourceOptions { Url = globalUrl }),
             logger,
+            null,
         ]);
     }
 

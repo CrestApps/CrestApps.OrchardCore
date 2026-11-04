@@ -17,6 +17,21 @@
                 <span class="hint">@T["The Azure AI Search index name on the remote service."]</span>
             </div>
 
+            @if (Model.CanPickDataConnection)
+            {
+                <div class="mb-3">
+                    <label asp-for="DataConnectionId" class="form-label">@T["Data connection"]</label>
+                    <select asp-for="DataConnectionId" asp-items="Model.DataConnections" class="form-select" data-ai-data-source-data-connection></select>
+                    <span asp-validation-for="DataConnectionId" class="text-danger"></span>
+                    <span class="hint">@T["Reach the index through an HTTP API connection of Data Connectors whose URL is the search service endpoint and whose API key is the service key, instead of storing them on this data source."]</span>
+                </div>
+            }
+            else if (!string.IsNullOrEmpty(Model.DataConnectionId))
+            {
+                <p class="text-body-secondary">@T["This data source reaches its index through a data connection. Only people who may manage data connections can change it."]</p>
+            }
+
+            <div data-ai-data-source-embedded-connection hidden="@(!string.IsNullOrEmpty(Model.DataConnectionId))">
             <div class="mb-3">
                 <label asp-for="Endpoint" class="form-label ocat-label-required">@T["Azure AI Search endpoint"]</label>
                 <input asp-for="Endpoint" class="form-control" placeholder="https://" />
@@ -48,6 +63,7 @@
                     <input asp-for="ApiKey" class="form-control" type="password" placeholder="@(Model.HasApiKey ? T["Leave empty to keep the saved API key"].Value : string.Empty)" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
                     <span asp-validation-for="ApiKey" class="text-danger"></span>
                 </div>
+            </div>
             </div>
         </div>
     </fieldset>

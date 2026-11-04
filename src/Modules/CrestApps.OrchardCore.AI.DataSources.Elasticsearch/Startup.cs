@@ -47,6 +47,7 @@ public sealed class Startup : StartupBase
         services.AddElasticsearchODataFilterTranslator();
         services.AddIndexProfileHandler<DataSourceElasticsearchIndexProfileHandler>();
         services.AddScoped<IDocumentIndexHandler, DataSourceElasticsearchDocumentIndexHandler>();
+        services.TryAddScoped<AIDataSourceConnectionPicker>();
         services.AddDisplayDriver<AIDataSource, ElasticsearchAIDataSourceDisplayDriver>();
         services.AddKeyedScoped<IAIDataSourceSourceHandler, ElasticsearchAIDataSourceSourceHandler>(AIDataSourceSourceTypes.Elasticsearch);
 
@@ -56,7 +57,7 @@ public sealed class Startup : StartupBase
         services.Configure<AIDataSourceSourceOptions>(options => options.AddOrUpdate(
             AIDataSourceSourceTypes.Elasticsearch,
             S["Elasticsearch"],
-            S["Read source documents from an external Elasticsearch index using explicit or globally configured connection settings."]));
+            S["Read source documents from an external Elasticsearch index using a data connection, explicit or globally configured connection settings."]));
 
         services.AddElasticsearchIndexingSource(DataSourceConstants.IndexingTaskType, o =>
         {

@@ -1,7 +1,9 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Extensions;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Models;
+using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Services;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.ViewModels;
 using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
@@ -17,6 +19,7 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly ElasticsearchDataSourceOptions _options;
+    private readonly AIDataSourceConnectionPicker _connectionPicker;
 
     internal readonly IStringLocalizer S;
 
@@ -25,14 +28,17 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
     /// </summary>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
     /// <param name="options">The global Elasticsearch data source options.</param>
+    /// <param name="connectionPicker">The data connection picker.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ElasticsearchAIDataSourceDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
         IOptions<ElasticsearchDataSourceOptions> options,
+        AIDataSourceConnectionPicker connectionPicker,
         IStringLocalizer<ElasticsearchAIDataSourceDisplayDriver> stringLocalizer)
     {
         _dataProtectionProvider = dataProtectionProvider;
         _options = options.Value;
+        _connectionPicker = connectionPicker;
         S = stringLocalizer;
     }
 
@@ -46,9 +52,17 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
             return null;
         }
 
-        return Initialize<EditElasticsearchAIDataSourceViewModel>("ElasticsearchAIDataSource_Edit", model =>
+        return Initialize<EditElasticsearchAIDataSourceViewModel>("ElasticsearchAIDataSource_Edit", async model =>
         {
             var metadata = dataSource.GetOrCreate<ElasticsearchSourceMetadata>();
+            model.DataConnectionId = AIDataSourceConnectionPicker.GetConnectionId(dataSource);
+            model.CanPickDataConnection = await _connectionPicker.CanPickAsync();
+
+            if (model.CanPickDataConnection)
+            {
+                model.DataConnections = await _connectionPicker.GetOptionsAsync(ElasticsearchDataConnectionSettings.ConnectorNames, model.DataConnectionId);
+            }
+
             model.EnvironmentType = metadata.GetEnvironmentType();
             model.Url = metadata.Url;
             model.CloudId = metadata.CloudId;
@@ -61,7 +75,7 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
             model.HasApiKey = ProtectedSettingExtensions.HasSecret(metadata.ApiKey);
             model.HasBase64ApiKey = ProtectedSettingExtensions.HasSecret(metadata.Base64ApiKey);
             model.HasDefaultConnection = _options.HasConnection;
-            model.UseDefaultConnection = _options.HasConnection && !HasStoredConnection(metadata);
+            model.UseDefaultConnection = _options.HasConnection && !HasStoredConnection(metadata) && model.DataConnectionId is null;
         }).Location("Content:11");
     }
 
@@ -78,6 +92,25 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
         var model = new EditElasticsearchAIDataSourceViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+        // A data source that uses a data connection stores only the index name: the URL and the credentials are the
+        // connection's.
+        var connectionId = await _connectionPicker.UpdateAsync(dataSource, model.DataConnectionId, ElasticsearchDataConnectionSettings.ConnectorNames, context, Prefix, nameof(model.DataConnectionId));
+
+        if (connectionId is not null)
+        {
+            if (string.IsNullOrWhiteSpace(model.IndexName))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexName), S["Elasticsearch index name is required."]);
+            }
+
+            dataSource.Put(new ElasticsearchSourceMetadata
+            {
+                IndexName = model.IndexName?.Trim(),
+            });
+
+            return Edit(dataSource, context);
+        }
 
         // When a connection is configured globally, the operator can opt into it and only the index
         // name is stored on the data source.

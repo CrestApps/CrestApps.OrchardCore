@@ -7,7 +7,11 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.Infrastructure.Indexing.Models;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Extensions;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Models;
+using CrestApps.OrchardCore.DataConnectors;
+using CrestApps.OrchardCore.DataConnectors.Http;
+using CrestApps.OrchardCore.DataConnectors.Models;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Transport;
 using Microsoft.AspNetCore.DataProtection;
@@ -23,6 +27,7 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly ElasticsearchDataSourceOptions _options;
     private readonly ILogger<ElasticsearchAIDataSourceSourceHandler> _logger;
+    private readonly IDataConnectionResolver _dataConnectionResolver;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ElasticsearchAIDataSourceSourceHandler"/> class.
@@ -30,19 +35,22 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
     /// <param name="dataProtectionProvider">The data protection provider.</param>
     /// <param name="options">The global Elasticsearch data source options.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="dataConnectionResolver">Resolves the data connection a data source may reference; <see langword="null"/> while the Data Connectors feature is off.</param>
     public ElasticsearchAIDataSourceSourceHandler(
         IDataProtectionProvider dataProtectionProvider,
         IOptions<ElasticsearchDataSourceOptions> options,
-        ILogger<ElasticsearchAIDataSourceSourceHandler> logger)
+        ILogger<ElasticsearchAIDataSourceSourceHandler> logger,
+        IDataConnectionResolver dataConnectionResolver = null)
     {
         _dataProtectionProvider = dataProtectionProvider;
         _options = options.Value;
         _logger = logger;
+        _dataConnectionResolver = dataConnectionResolver;
     }
 
     public string SourceType => AIDataSourceSourceTypes.Elasticsearch;
 
-    public ValueTask ValidateAsync(
+    public async ValueTask ValidateAsync(
         AIDataSource dataSource,
         ValidationResultDetails result,
         CancellationToken cancellationToken = default)
@@ -54,7 +62,27 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
         {
             result.Fail(new ValidationResult("Elasticsearch source settings are required.", [nameof(ElasticsearchSourceMetadata)]));
 
-            return ValueTask.CompletedTask;
+            return;
+        }
+
+        // A data source that references a data connection reads the connection's URL and credentials.
+        var connectionId = AIDataSourceConnectionPicker.GetConnectionId(dataSource);
+
+        if (connectionId is not null)
+        {
+            if (string.IsNullOrWhiteSpace(metadata.IndexName))
+            {
+                result.Fail(new ValidationResult("Elasticsearch index name is required.", [nameof(ElasticsearchSourceMetadata.IndexName)]));
+            }
+
+            var error = await GetConnectionErrorAsync(connectionId, cancellationToken);
+
+            if (error is not null)
+            {
+                result.Fail(new ValidationResult(error, [nameof(DataConnectionReference.ConnectionId)]));
+            }
+
+            return;
         }
 
         // Data sources without their own connection settings use the globally configured connection.
@@ -70,7 +98,7 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
                 result.Fail(new ValidationResult("Elasticsearch index name is required.", [nameof(ElasticsearchSourceMetadata.IndexName)]));
             }
 
-            return ValueTask.CompletedTask;
+            return;
         }
 
         var environmentType = metadata.GetEnvironmentType();
@@ -125,8 +153,6 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
         {
             result.Fail(new ValidationResult("Elastic Cloud connections require an authentication type and matching credentials.", [nameof(ElasticsearchSourceMetadata.AuthenticationType)]));
         }
-
-        return ValueTask.CompletedTask;
     }
 
     public ValueTask<string> GetReferenceTypeAsync(
@@ -138,7 +164,7 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
         AIDataSource dataSource,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var (client, metadata) = Resolve(dataSource);
+        var (client, metadata) = await ResolveAsync(dataSource, cancellationToken);
         string searchAfterValue = null;
 
         while (!cancellationToken.IsCancellationRequested)
@@ -188,7 +214,7 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
             yield break;
         }
 
-        var (client, metadata) = Resolve(dataSource);
+        var (client, metadata) = await ResolveAsync(dataSource, cancellationToken);
         var response = await client.SearchAsync<JsonObject>(
             search => search.Indices(metadata.IndexName).Query(query => query.Ids(idsQuery => idsQuery.Values(new Ids(ids)))).Size(ids.Length),
             cancellationToken);
@@ -231,13 +257,29 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
             ExtractDocument(source, dataSource.TitleFieldName, dataSource.ContentFieldName));
     }
 
-    private (ElasticsearchClient Client, ElasticsearchSourceMetadata Metadata) Resolve(AIDataSource dataSource)
+    /// <summary>
+    /// Creates the client of a data source: from the data connection it references, else from its own settings, else
+    /// from the globally configured connection.
+    /// </summary>
+    /// <param name="dataSource">The data source.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The client and the data source's settings.</returns>
+    internal async Task<(ElasticsearchClient Client, ElasticsearchSourceMetadata Metadata)> ResolveAsync(AIDataSource dataSource, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(dataSource);
 
         if (!dataSource.TryGet<ElasticsearchSourceMetadata>(out var metadata))
         {
             throw new InvalidOperationException("Elasticsearch source metadata is missing.");
+        }
+
+        var connectionId = AIDataSourceConnectionPicker.GetConnectionId(dataSource);
+
+        if (connectionId is not null)
+        {
+            var context = await ResolveConnectionAsync(connectionId, cancellationToken);
+
+            return (new ElasticsearchClient(ElasticsearchDataConnectionSettings.Create(context.Connection.GetOrCreate<HttpConnectionSettings>(), context.Secrets)), metadata);
         }
 
         if (!HasStoredConnection(metadata))
@@ -276,6 +318,16 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
 
     private static bool HasStoredConnection(ElasticsearchSourceMetadata metadata)
         => !string.IsNullOrWhiteSpace(metadata.Url) || !string.IsNullOrWhiteSpace(metadata.CloudId);
+
+    private async Task<string> GetConnectionErrorAsync(string connectionId, CancellationToken cancellationToken)
+        => (await _dataConnectionResolver.ResolveForAsync(connectionId, ElasticsearchDataConnectionSettings.ConnectorNames, cancellationToken)).Error;
+
+    private async Task<DataConnectorContext> ResolveConnectionAsync(string connectionId, CancellationToken cancellationToken)
+    {
+        var resolution = await _dataConnectionResolver.ResolveForAsync(connectionId, ElasticsearchDataConnectionSettings.ConnectorNames, cancellationToken);
+
+        return resolution.Succeeded ? resolution.Context : throw new InvalidOperationException(resolution.Error);
+    }
 
     private ElasticsearchClient CreateConfiguredClient()
     {

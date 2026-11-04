@@ -1,6 +1,8 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Extensions;
+using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore.AI.DataSources.AzureAI.Services;
 using CrestApps.OrchardCore.AI.DataSources.AzureAI.ViewModels;
 using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
@@ -14,6 +16,7 @@ namespace CrestApps.OrchardCore.AI.DataSources.AzureAI.Drivers;
 internal sealed class AzureAISearchAIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly AIDataSourceConnectionPicker _connectionPicker;
 
     internal readonly IStringLocalizer S;
 
@@ -21,12 +24,15 @@ internal sealed class AzureAISearchAIDataSourceDisplayDriver : DisplayDriver<AID
     /// Initializes a new instance of the <see cref="AzureAISearchAIDataSourceDisplayDriver"/> class.
     /// </summary>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="connectionPicker">The data connection picker.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AzureAISearchAIDataSourceDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
+        AIDataSourceConnectionPicker connectionPicker,
         IStringLocalizer<AzureAISearchAIDataSourceDisplayDriver> stringLocalizer)
     {
         _dataProtectionProvider = dataProtectionProvider;
+        _connectionPicker = connectionPicker;
         S = stringLocalizer;
     }
 
@@ -40,9 +46,17 @@ internal sealed class AzureAISearchAIDataSourceDisplayDriver : DisplayDriver<AID
             return null;
         }
 
-        return Initialize<EditAzureAISearchAIDataSourceViewModel>("AzureAISearchAIDataSource_Edit", model =>
+        return Initialize<EditAzureAISearchAIDataSourceViewModel>("AzureAISearchAIDataSource_Edit", async model =>
         {
             var metadata = dataSource.GetOrCreate<AzureAISearchSourceMetadata>();
+            model.DataConnectionId = AIDataSourceConnectionPicker.GetConnectionId(dataSource);
+            model.CanPickDataConnection = await _connectionPicker.CanPickAsync();
+
+            if (model.CanPickDataConnection)
+            {
+                model.DataConnections = await _connectionPicker.GetOptionsAsync(AzureAISearchDataConnectionClient.ConnectorNames, model.DataConnectionId);
+            }
+
             model.Endpoint = metadata.Endpoint;
             model.AuthenticationType = metadata.GetAuthenticationType();
             model.IndexName = metadata.IndexName;
@@ -64,6 +78,25 @@ internal sealed class AzureAISearchAIDataSourceDisplayDriver : DisplayDriver<AID
         var model = new EditAzureAISearchAIDataSourceViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+        // A data source that uses a data connection stores only the index name: the endpoint and the key are the
+        // connection's.
+        var connectionId = await _connectionPicker.UpdateAsync(dataSource, model.DataConnectionId, AzureAISearchDataConnectionClient.ConnectorNames, context, Prefix, nameof(model.DataConnectionId));
+
+        if (connectionId is not null)
+        {
+            if (string.IsNullOrWhiteSpace(model.IndexName))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexName), S["Azure AI Search index name is required."]);
+            }
+
+            dataSource.Put(new AzureAISearchSourceMetadata
+            {
+                IndexName = model.IndexName?.Trim(),
+            });
+
+            return Edit(dataSource, context);
+        }
 
         var authenticationType = string.Equals(
             model.AuthenticationType,

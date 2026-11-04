@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.AI.DataSources.AzureAI.ViewModels;
 
@@ -37,4 +38,22 @@ public class EditAzureAISearchAIDataSourceViewModel
     /// </summary>
     [BindNever]
     public bool HasApiKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the HTTP API data connection the data source uses, or empty when it uses its own
+    /// endpoint and credentials.
+    /// </summary>
+    public string DataConnectionId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the current user may pick a data connection.
+    /// </summary>
+    [BindNever]
+    public bool CanPickDataConnection { get; set; }
+
+    /// <summary>
+    /// Gets or sets the data connections the user may pick.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> DataConnections { get; set; } = [];
 }
