@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Permissions;
@@ -68,7 +69,7 @@ public sealed class AbstractApiPhoneNumberVerificationSettingsDisplayDriver : Si
         {
             viewModel.IsEnabled = settings.IsEnabled;
             viewModel.AuthenticationType = PhoneNumberVerificationAuthenticationType.ApiKey;
-            viewModel.HasApiKey = !string.IsNullOrWhiteSpace(settings.ProtectedApiKey);
+            viewModel.HasApiKey = ProtectedSettingExtensions.HasSecret(settings.ProtectedApiKey);
         }).Location("Content:5#AbstractAPI")
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(
@@ -93,12 +94,7 @@ public sealed class AbstractApiPhoneNumberVerificationSettingsDisplayDriver : Si
         settings.Username = null;
         settings.ProtectedPassword = null;
 
-        var protector = _dataProtectionProvider.CreateProtector(ProtectorPurpose);
-
-        if (!string.IsNullOrWhiteSpace(viewModel.ApiKey))
-        {
-            settings.ProtectedApiKey = protector.Protect(viewModel.ApiKey.Trim());
-        }
+        settings.ProtectedApiKey = _dataProtectionProvider.ApplySecret(ProtectorPurpose, settings.ProtectedApiKey, viewModel.ApiKey);
 
         if (viewModel.IsEnabled)
         {

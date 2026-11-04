@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Geo;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -17,7 +18,7 @@ public sealed class GoogleMapsSettingsDisplayDriver : SiteDisplayDriver<GoogleMa
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
-    private readonly IDataProtector _protector;
+    private readonly IDataProtectionProvider _dataProtectionProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GoogleMapsSettingsDisplayDriver"/> class.
@@ -29,7 +30,7 @@ public sealed class GoogleMapsSettingsDisplayDriver : SiteDisplayDriver<GoogleMa
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
-        _protector = dataProtectionProvider.CreateProtector(GoogleMapsSettings.ProtectionPurpose);
+        _dataProtectionProvider = dataProtectionProvider;
     }
 
     /// <inheritdoc/>
@@ -37,7 +38,7 @@ public sealed class GoogleMapsSettingsDisplayDriver : SiteDisplayDriver<GoogleMa
 
     /// <inheritdoc/>
     public override IDisplayResult Edit(ISite site, GoogleMapsSettings settings, BuildEditorContext context)
-        => Initialize<GoogleMapsSettingsViewModel>("GoogleMapsSettings_Edit", model => model.HasKey = !string.IsNullOrEmpty(settings.Key))
+        => Initialize<GoogleMapsSettingsViewModel>("GoogleMapsSettings_Edit", model => model.HasKey = ProtectedSettingExtensions.HasSecret(settings.Key))
             .Location("Content:5")
             .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, GeoPermissions.ManageGeoSettings))
             .OnGroup(SettingsGroupId);
@@ -54,14 +55,8 @@ public sealed class GoogleMapsSettingsDisplayDriver : SiteDisplayDriver<GoogleMa
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (model.RemoveKey)
-        {
-            settings.Key = null;
-        }
-        else if (!string.IsNullOrWhiteSpace(model.Key))
-        {
-            settings.Key = _protector.Protect(model.Key.Trim());
-        }
+        settings.Key = _dataProtectionProvider.ApplySecret(GoogleMapsSettings.ProtectionPurpose, settings.Key, model.Key, model.RemoveKey);
+
 
         return Edit(site, settings, context);
     }
