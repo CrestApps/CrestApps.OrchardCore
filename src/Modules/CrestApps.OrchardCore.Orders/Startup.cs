@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Accounts;
 using CrestApps.OrchardCore.Commerce;
+using CrestApps.OrchardCore.Commerce.Core;
 using CrestApps.OrchardCore.Carts.Core.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Orders.BackgroundTasks;
@@ -95,7 +96,6 @@ public sealed class Startup : StartupBase
         services.AddSiteDisplayDriver<OrderSettingsDisplayDriver>();
         services.AddSiteDisplayDriver<OrderEmailTemplateSettingsDisplayDriver>();
         services.AddSiteSettingsPermission(OrderEmailTemplateSettingsDisplayDriver.GroupId, OrderPermissions.ManageOrders);
-        services.AddScoped<IOrderEmailTemplates, LiquidOrderEmailTemplates>();
         services.AddCommerceEmailSender()
             .AddCommerceEmailKind(OrderEmailKinds.Confirmation, LocalizationSource.Create<Startup>("Order confirmation"), LocalizationSource.Create<Startup>("{{ OrderUrl }}: the order's page, for a guest."))
             .AddCommerceEmailKind(OrderEmailKinds.Invoice, LocalizationSource.Create<Startup>("Order to pay (sent by staff)"), LocalizationSource.Create<Startup>("{{ PayUrl }}: where the buyer pays."))

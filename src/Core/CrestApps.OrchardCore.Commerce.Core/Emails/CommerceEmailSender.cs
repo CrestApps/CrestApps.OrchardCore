@@ -1,18 +1,19 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Commerce.Emails;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Email;
 
-namespace CrestApps.OrchardCore.Orders.Core.Services;
+namespace CrestApps.OrchardCore.Commerce.Core.Emails;
 
 /// <summary>
 /// The default <see cref="ICommerceEmailSender"/>. It sends through the site's email service, when the Email feature is
-/// on, and through <see cref="IOrderEmailTemplates"/>, the store's templates of its emails.
+/// on, and through <see cref="ICommerceEmailTemplates"/>, the store's templates of its emails.
 /// </summary>
 public sealed class CommerceEmailSender : ICommerceEmailSender
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly IOrderEmailTemplates _emailTemplates;
+    private readonly ICommerceEmailTemplates _emailTemplates;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -24,7 +25,7 @@ public sealed class CommerceEmailSender : ICommerceEmailSender
     /// <param name="logger">The logger.</param>
     public CommerceEmailSender(
         IServiceProvider serviceProvider,
-        IOrderEmailTemplates emailTemplates,
+        ICommerceEmailTemplates emailTemplates,
         ILogger<CommerceEmailSender> logger)
     {
         _serviceProvider = serviceProvider;
@@ -47,7 +48,7 @@ public sealed class CommerceEmailSender : ICommerceEmailSender
             return false;
         }
 
-        using var language = OrderCulture.Use(email.Culture);
+        using var language = CommerceEmailCulture.Use(email.Culture);
 
         var content = await buildAsync(cancellationToken);
 
@@ -57,11 +58,11 @@ public sealed class CommerceEmailSender : ICommerceEmailSender
         }
 
         var message = string.IsNullOrEmpty(email.Kind)
-            ? new OrderEmailMessage(content.Subject, content.Text, content.Html)
-            : await _emailTemplates.ApplyAsync(new OrderEmailContext
+            ? new CommerceEmailMessage(content.Subject, content.Text, content.Html)
+            : await _emailTemplates.ApplyAsync(new CommerceEmailContext
             {
                 Kind = email.Kind,
-                Order = email.Order,
+                Models = email.Models ?? new Dictionary<string, object>(StringComparer.Ordinal),
                 Subject = content.Subject,
                 Text = content.Text,
                 Html = content.Html,

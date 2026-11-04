@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Encodings.Web;
+using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
@@ -7,9 +8,7 @@ using CrestApps.OrchardCore.Reviews.Models;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
-using OrchardCore.Email;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 
@@ -23,15 +22,19 @@ public sealed class ReviewRequestService
 {
     public const int BatchSize = 200;
 
+    /// <summary>
+    /// The kind of the review request email, which the store can write its own template of.
+    /// </summary>
+    public const string EmailKind = "review-request";
+
     // Orders paid longer ago than this aren't asked about.
     private const int WindowDays = 60;
 
     private readonly IOrderStore _orders;
     private readonly ICustomerStore _customers;
-    private readonly IEmailService _emailService;
+    private readonly ICommerceEmailSender _emailSender;
     private readonly ISiteService _siteService;
     private readonly IClock _clock;
-    private readonly ILogger _logger;
     private readonly LinkGenerator _linkGenerator;
 
     internal readonly IStringLocalizer S;
@@ -39,19 +42,17 @@ public sealed class ReviewRequestService
     public ReviewRequestService(
         IOrderStore orders,
         ICustomerStore customers,
-        IEmailService emailService,
+        ICommerceEmailSender emailSender,
         ISiteService siteService,
         IClock clock,
-        ILogger<ReviewRequestService> logger,
         IStringLocalizer<ReviewRequestService> stringLocalizer,
         LinkGenerator linkGenerator)
     {
         _orders = orders;
         _customers = customers;
-        _emailService = emailService;
+        _emailSender = emailSender;
         _siteService = siteService;
         _clock = clock;
-        _logger = logger;
         _linkGenerator = linkGenerator;
         S = stringLocalizer;
     }
@@ -102,22 +103,23 @@ public sealed class ReviewRequestService
 
             if (customer is { AcceptsMarketing: true } && !string.IsNullOrWhiteSpace(order.CustomerEmail) && order.Lines.Any(line => !string.IsNullOrEmpty(line.ContentItemId)))
             {
-                using var language = OrderCulture.Use(order.Culture);
-
-                var (subject, text, html) = Build(order, site.BaseUrl, site.SiteName);
-
-                try
+                var wasSent = await _emailSender.SendAsync(new CommerceEmail
                 {
-                    var result = await _emailService.SendAsync(new MailMessage { To = order.CustomerEmail, Subject = subject, TextBody = text, HtmlBody = html }, cancellationToken: cancellationToken);
-
-                    if (result.Succeeded)
-                    {
-                        sent++;
-                    }
-                }
-                catch (Exception exception) when (exception is not OperationCanceledException)
+                    Kind = EmailKind,
+                    To = order.CustomerEmail,
+                    Models = OrderEmailModels.For(order),
+                    Culture = order.Culture,
+                    Reference = order.OrderNumber,
+                }, _ =>
                 {
-                    _logger.LogError(exception, "The review request for order {OrderNumber} couldn't be sent.", order.OrderNumber);
+                    var (subject, text, html) = Build(order, site.BaseUrl, site.SiteName);
+
+                    return Task.FromResult(new CommerceEmailContent { Subject = subject, Text = text, Html = html });
+                }, cancellationToken);
+
+                if (wasSent)
+                {
+                    sent++;
                 }
             }
 

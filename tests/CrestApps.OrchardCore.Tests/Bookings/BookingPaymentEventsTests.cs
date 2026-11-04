@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Bookings.Services;
 using CrestApps.OrchardCore.Bookings.Workflows;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;

@@ -346,6 +346,8 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
             transaction.GetGuestContact(),
             new CustomerOwnerMessage
             {
+                Kind = TransactionEmailKinds.PaymentReminder,
+                Models = new Dictionary<string, object>(StringComparer.Ordinal) { [TransactionEmailKinds.TransactionModelName] = transaction },
                 Subject = reminder.Subject,
                 Summary = reminder.Summary,
                 TextBody = reminder.Body,

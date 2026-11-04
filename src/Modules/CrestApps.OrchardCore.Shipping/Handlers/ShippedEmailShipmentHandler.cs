@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Shipping.Models;
 using CrestApps.OrchardCore.Shipping.Services;
@@ -48,7 +49,7 @@ internal sealed class ShippedEmailShipmentHandler : ShipmentEventHandlerBase
         {
             Kind = OrderEmailKinds.Shipped,
             To = order.CustomerEmail,
-            Order = order,
+            Models = OrderEmailModels.For(order),
             Culture = order.Culture,
             Reference = $"{order.OrderNumber}/{shipment.Number}",
         }, async _ =>

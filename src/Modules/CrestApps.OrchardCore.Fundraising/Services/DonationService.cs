@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Encodings.Web;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Fundraising.Indexes;
 using CrestApps.OrchardCore.Fundraising.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
@@ -66,6 +67,12 @@ public sealed record CampaignProgress(decimal Raised, decimal Goal, int Donors, 
 /// </summary>
 public sealed class DonationService
 {
+    /// <summary>
+    /// The kind of the donation receipt email, which the store can write its own template of. The template reads the
+    /// donation as <c>{{ Donation }}</c>.
+    /// </summary>
+    public const string ReceiptEmailKind = "donation-receipt";
+
     private readonly IDonationStore _donations;
     private readonly IContentManager _contentManager;
     private readonly ISiteService _siteService;
@@ -200,7 +207,9 @@ public sealed class DonationService
     private Task<bool> SendReceiptAsync(Donation donation, FundraisingSettings settings, CancellationToken cancellationToken)
         => _emailSender.SendAsync(new CommerceEmail
         {
+            Kind = ReceiptEmailKind,
             To = donation.DonorEmail,
+            Models = new Dictionary<string, object>(StringComparer.Ordinal) { ["Donation"] = donation },
             Reference = donation.ItemId,
         }, _ => BuildReceiptAsync(donation, settings), cancellationToken);
 

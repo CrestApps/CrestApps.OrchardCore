@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Carts.Core.Models;
 using CrestApps.OrchardCore.Carts.Core.Services;
+using CrestApps.OrchardCore.Commerce.Core;
 using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Fundraising.Drivers;
 using CrestApps.OrchardCore.Fundraising.Handlers;
@@ -16,6 +17,7 @@ using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
@@ -33,7 +35,8 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<DonationIndexProvider>();
         services.AddScoped<IDonationStore, DonationStore>();
         services.AddScoped<ICommercePersonalDataContributor, DonationPersonalDataContributor>();
-        services.AddCommerceEmailSender();
+        services.AddCommerceEmailSender()
+            .AddCommerceEmailKind(DonationService.ReceiptEmailKind, LocalizationSource.Create<Startup>("Donation receipt"), LocalizationSource.Create<Startup>("{{ Donation }}: the donation, such as {{ Donation.ReceiptNumber }}."));
         services.AddScoped<DonationService>();
 
         // The amount a donor chose rides on its cart line, and the paid order records it.

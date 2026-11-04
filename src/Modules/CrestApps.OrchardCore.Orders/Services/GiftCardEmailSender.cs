@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Encodings.Web;
+using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Services;
@@ -62,7 +63,7 @@ public sealed class GiftCardEmailSender
         {
             Kind = OrderEmailKinds.GiftCard,
             To = card.RecipientEmail,
-            Order = order,
+            Models = OrderEmailModels.For(order),
             Culture = order?.Culture,
             Reference = card.ItemId,
         }, _ => BuildAsync(card, message), cancellationToken);

@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Commerce.Webhooks;
 using CrestApps.OrchardCore.Webhooks;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.Commerce;
+using CrestApps.OrchardCore.Commerce.Core;
 using CrestApps.OrchardCore.Inventory.Handlers;
 using CrestApps.OrchardCore.Inventory.ContentTransfer;
 using CrestApps.OrchardCore.Inventory.BackgroundTasks;
@@ -38,6 +39,7 @@ using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
@@ -217,6 +219,8 @@ public sealed class StockAlertsStartup : StartupBase
         services.AddDataMigration<StockAlertMigrations>()
             .AddIndexProvider<StockAlertIndexProvider>();
         services.AddScoped<StockAlertService>();
+        services.AddCommerceEmailSender()
+            .AddCommerceEmailKind(StockAlertService.EmailKind, LocalizationSource.Create<StockAlertsStartup>("Back in stock"), LocalizationSource.Create<StockAlertsStartup>("{{ StockItem.Title }} and {{ ProductUrl }}."));
         services.AddScoped<IStockLevelHandler, BackInStockAlertHandler>();
         services.AddScoped<CrestApps.OrchardCore.Customers.PersonalData.ICommercePersonalDataContributor, StockAlertPersonalDataContributor>();
         services.AddContentPart<ProductPart>()

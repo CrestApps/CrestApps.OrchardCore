@@ -1,9 +1,9 @@
-namespace CrestApps.OrchardCore.Orders.Core.Services;
+namespace CrestApps.OrchardCore.Commerce.Emails;
 
 /// <summary>
-/// Sends the store's emails to its customers, such as an order's confirmation, a booking or a gift card: written in the
-/// email's culture, passed through the store's template of its kind and the store's layout, and sent, with a send that
-/// fails logged.
+/// Sends the store's emails to its customers, such as an order's confirmation, a booking, a gift card or a back-in-stock
+/// alert: written in the email's culture, passed through the store's template of its kind and the store's layout, and
+/// sent, with a send that fails logged.
 /// </summary>
 public interface ICommerceEmailSender
 {

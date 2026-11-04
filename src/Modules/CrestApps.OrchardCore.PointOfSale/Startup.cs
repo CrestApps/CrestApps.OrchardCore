@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Commerce.Core;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.PointOfSale.Api;
@@ -14,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
@@ -34,7 +36,8 @@ public sealed class Startup : StartupBase
         services.AddPersonalDataContributor<RegisterShiftPersonalDataContributor>();
         services.AddScoped<PosShiftService>();
         services.AddScoped<PosSaleService>();
-        services.AddCommerceEmailSender();
+        services.AddCommerceEmailSender()
+            .AddCommerceEmailKind(PosReceipts.EmailKind, LocalizationSource.Create<Startup>("Register receipt"), LocalizationSource.Create<Startup>("{{ Order }}: the register sale."));
 
         // Cash at the till is a tender, like a gift card; a card on the counter terminal pays the rest.
         services.AddScoped<ICheckoutTenderProvider, PosCashTenderProvider>();

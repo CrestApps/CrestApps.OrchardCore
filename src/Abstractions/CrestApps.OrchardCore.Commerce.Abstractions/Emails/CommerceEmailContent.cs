@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Orders.Core.Services;
+namespace CrestApps.OrchardCore.Commerce.Emails;
 
 /// <summary>
 /// An email as it was built: its subject, its text and HTML bodies, and the values the store's template of it can use.

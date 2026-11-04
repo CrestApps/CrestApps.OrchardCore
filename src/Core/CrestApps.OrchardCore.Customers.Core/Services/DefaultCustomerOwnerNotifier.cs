@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Customers.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,7 +12,8 @@ namespace CrestApps.OrchardCore.Customers.Core.Services;
 
 /// <summary>
 /// The default <see cref="ICustomerOwnerNotifier"/>. The notification and email services belong to features a site may
-/// leave off, so they are resolved when a message is sent, and a buyer they would reach is not reached without them.
+/// leave off, so they are resolved when a message is sent, and a buyer they would reach is not reached without them. A
+/// message with a kind passes through the store's templates of its emails (<see cref="ICommerceEmailTemplates"/>) first.
 /// </summary>
 public sealed class DefaultCustomerOwnerNotifier : ICustomerOwnerNotifier
 {
@@ -40,14 +42,46 @@ public sealed class DefaultCustomerOwnerNotifier : ICustomerOwnerNotifier
     }
 
     /// <inheritdoc/>
-    public Task<bool> NotifyAsync(CustomerOwner owner, ICustomerContact guestContact, CustomerOwnerMessage message, CancellationToken cancellationToken = default)
+    public async Task<bool> NotifyAsync(CustomerOwner owner, ICustomerContact guestContact, CustomerOwnerMessage message, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(owner);
         ArgumentNullException.ThrowIfNull(message);
 
+        message = await ApplyTemplateAsync(message, cancellationToken);
+
         return owner.Kind == CustomerOwnerKind.Guest
-            ? EmailGuestAsync(owner, guestContact, message, cancellationToken)
-            : NotifyUserAsync(owner, message, cancellationToken);
+            ? await EmailGuestAsync(owner, guestContact, message, cancellationToken)
+            : await NotifyUserAsync(owner, message, cancellationToken);
+    }
+
+    // The store's template of the message's kind, when it wrote one; the built message otherwise.
+    private async Task<CustomerOwnerMessage> ApplyTemplateAsync(CustomerOwnerMessage message, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(message.Kind) || _serviceProvider.GetService<ICommerceEmailTemplates>() is not { } templates)
+        {
+            return message;
+        }
+
+        var applied = await templates.ApplyAsync(new CommerceEmailContext
+        {
+            Kind = message.Kind,
+            Models = message.Models ?? new Dictionary<string, object>(StringComparer.Ordinal),
+            Subject = message.Subject,
+            Text = message.TextBody,
+            Html = message.HtmlBody,
+            Values = message.Values ?? new Dictionary<string, string>(StringComparer.Ordinal),
+        }, cancellationToken);
+
+        return new CustomerOwnerMessage
+        {
+            Kind = message.Kind,
+            Models = message.Models,
+            Values = message.Values,
+            Subject = applied.Subject,
+            Summary = message.Summary,
+            TextBody = applied.Text,
+            HtmlBody = applied.Html,
+        };
     }
 
     private async Task<bool> NotifyUserAsync(CustomerOwner owner, CustomerOwnerMessage message, CancellationToken cancellationToken)

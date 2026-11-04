@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Api;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Commerce.Api;
+using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Orders;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
@@ -324,8 +325,9 @@ internal static class PosApiEndpoints
 
         var sent = await emailSender.SendAsync(new CommerceEmail
         {
+            Kind = PosReceipts.EmailKind,
             To = email,
-            Order = order,
+            Models = OrderEmailModels.For(order),
             Reference = order.OrderNumber,
         }, _ => Task.FromResult(new CommerceEmailContent
         {

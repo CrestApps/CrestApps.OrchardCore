@@ -182,26 +182,47 @@ A signed-in buyer asks for a quote from their cart when `OrderSettings.AllowQuot
 
 ### Commerce emails and their templates
 
-Every email the commerce modules send a customer goes through `ICommerceEmailSender` (Orders.Core, registered with `services.AddCommerceEmailSender()`): the order confirmation, the order to pay and the quote, the shipped email, the return emails, the gift card, the recovery email, Find my order, the booking emails, donation receipts, listing emails and the point of sale receipt. A sender passes a `CommerceEmail` (`Kind`, `To`, `Order`, `Culture`, `Reference`) and a callback that builds the `CommerceEmailContent` (`Subject`, `Text`, `Html` and the template's `Values`). `ICommerceEmailSender` then does the following:
+Every email the commerce modules send a customer goes through `ICommerceEmailSender` (Commerce.Abstractions, namespace `CrestApps.OrchardCore.Commerce.Emails`; registered with `services.AddCommerceEmailSender()` from Commerce.Core): the order confirmation, the order to pay and the quote, the shipped email, the return emails, the gift card, the recovery email, Find my order, the booking emails, business order approvals, back-in-stock alerts, review requests, donation receipts, listing emails and the point of sale receipt. A sender passes a `CommerceEmail` (`Kind`, `To`, `Models`, `Culture`, `Reference`) and a callback that builds the `CommerceEmailContent` (`Subject`, `Text`, `Html` and the template's `Values`). `Models` holds the records the email is about by the name the template reads them under; an email about an order passes `OrderEmailModels.For(order)`, which the template reads as `{{ Order }}`. `ICommerceEmailSender` then does the following:
 
 - It sends nothing, and returns `false`, when the Email feature is off, the email has no recipient, or the callback returns `null`.
 - It builds the email in `Culture`, such as the language the buyer shopped in (`Order.Culture`).
-- It passes an email with a `Kind` through `IOrderEmailTemplates`, the store's template of that kind and its layout. An email without a kind goes as built.
+- It passes an email with a `Kind` through `ICommerceEmailTemplates`, the store's template of that kind and its layout. An email without a kind goes as built.
 - It sends the email, and logs a send that fails or throws and returns `false`. A failed send never undoes what the email is about.
 
-The kinds the store can write templates of are registered by the feature that sends them, with `services.AddCommerceEmailKind(name, title, values)`. The title and the description of the email's own values are `LocalizationSource`s, and **Settings > Commerce > Emails** lists the kinds in the order they were registered. Orders registers `order-confirmation`, `order-invoice`, `order-quote` and `checkout-recovery` (`OrderEmailKinds`), Returns `order-return`, Gift Cards `gift-card`, Shipping `order-shipped` and Bookings `booking`. Saving the page keeps the templates of kinds that no enabled feature registers.
+Messages that reach a buyer through `ICustomerOwnerNotifier` (notifications for a buyer with an account, email for a guest) take the same templates: a `CustomerOwnerMessage` with a `Kind`, `Models` and `Values` passes through `ICommerceEmailTemplates` before it's sent. Payment reminders, payment receipts, refund notices and installment plan notices go this way.
+
+The kinds the store can write templates of are registered by the feature that sends them, with `services.AddCommerceEmailKind(name, title, values)` (Commerce.Abstractions). The title and the description of the email's own values are `LocalizationSource`s, and **Settings > Commerce > Emails** lists the kinds in the order they were registered:
+
+| Kind | Feature | Records |
+| --- | --- | --- |
+| `order-confirmation`, `order-invoice`, `order-quote`, `checkout-recovery` (`OrderEmailKinds`) | Orders | `Order` |
+| `order-return` | Returns | `Order` |
+| `gift-card` | Gift Cards | `Order` |
+| `order-shipped` | Shipping | `Order` |
+| `booking` | Bookings | `Order` |
+| `b2b-approval-requested`, `b2b-approval-decided` | Accounts B2B | `Order` |
+| `stock-alert` | Inventory stock alerts | `StockItem` |
+| `review-request` | Reviews | `Order` |
+| `payment-reminder` | Transactions notifications | `Transaction` |
+| `payment-receipt`, `payment-refund` (`TransactionEmailKinds`) | Transactions receipts | `Transaction` |
+| `installment-plan-notice` | Installment plans | `InstallmentPlan` |
+| `donation-receipt` | Fundraising | `Donation` |
+| `classified-listing` | Classifieds | none |
+| `pos-receipt` | Point of Sale | `Order` |
+
+Saving the page keeps the templates of kinds that no enabled feature registers.
 
 ```csharp
 services.AddCommerceEmailSender()
     .AddCommerceEmailKind("giftwrap-sent", LocalizationSource.Create<Startup>("Gift wrapped"), LocalizationSource.Create<Startup>("{{ Message }}: the gift message."));
 ```
 
-`LiquidOrderEmailTemplates` reads `OrderEmailTemplateSettings` (**Settings > Commerce > Emails**, group `order-emails`):
+`LiquidCommerceEmailTemplates` (Commerce.Core) reads `OrderEmailTemplateSettings` (**Settings > Commerce > Emails**, group `order-emails`). The settings keep the name they had when they served orders only, so the templates a store wrote, its recipes and its deployment plans keep working:
 
-- A `Layout` around every email, with `{{ Content }}`.
+- A `Layout` around every email with a kind and an HTML body, with `{{ Content }}`. A text-only email stays text-only unless its template writes a body.
 - `Templates` by kind, each with `IsEnabled`, a `Subject` and a `Body` in Liquid.
 
-The Liquid has `Content` (the built HTML, unencoded), `Subject`, `StoreName`, `Order` (the order as plain values, statuses by name) and the email's own values (`OrderUrl`, `PayUrl`, `TrackingUrl`, `Carrier`, `ShipmentNumber`, `ReturnNumber`, `ReturnStatus`, `Code`, `Amount`, `RecipientName`, `Message`, `RecoveryUrl`). A template that's used rewrites the text part from its HTML. Liquid that doesn't parse is refused when saved. A template that throws when rendered sends the built email and logs why.
+The Liquid has `Content` (the built HTML, unencoded), `Subject`, `StoreName`, each of the email's records by name (as plain values, statuses by name) and the email's own values (`OrderUrl`, `PayUrl`, `TrackingUrl`, `Carrier`, `ShipmentNumber`, `ReturnNumber`, `ReturnStatus`, `Code`, `Amount`, `RecipientName`, `Message`, `RecoveryUrl`, `ProductUrl`, `Url`). A template that's used rewrites the text part from its HTML. Liquid that doesn't parse is refused when saved. A template that throws when rendered sends the built email and logs why. Without the Liquid feature, every email goes as built.
 
 ### Sales channels
 

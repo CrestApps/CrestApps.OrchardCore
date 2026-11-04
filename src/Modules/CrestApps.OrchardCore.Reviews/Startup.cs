@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Commerce.Core;
 using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Seo;
 using CrestApps.OrchardCore.Reviews.StructuredData;
@@ -17,6 +18,7 @@ using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
@@ -82,6 +84,8 @@ public sealed class ReviewRequestsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ReviewRequestService>();
+        services.AddCommerceEmailSender()
+            .AddCommerceEmailKind(ReviewRequestService.EmailKind, LocalizationSource.Create<ReviewRequestsStartup>("Review request"));
         services.AddSingleton<global::OrchardCore.BackgroundTasks.IBackgroundTask, ReviewRequestBackgroundTask>();
     }
 }

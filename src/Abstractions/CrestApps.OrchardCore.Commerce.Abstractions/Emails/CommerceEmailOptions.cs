@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Orders.Core.Services;
+namespace CrestApps.OrchardCore.Commerce.Emails;
 
 /// <summary>
 /// The kinds of email the store can write its own templates of, in the order the settings page lists them.

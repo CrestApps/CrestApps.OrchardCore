@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
+using CrestApps.OrchardCore.Commerce.Core;
 using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Products.Core.Listing;
@@ -298,6 +299,8 @@ public sealed class InstallmentPlansStartup : StartupBase
 
         services.AddScoped<IInstallmentPlanStore, InstallmentPlanStore>();
         services.AddScoped<IInstallmentPlanService, DefaultInstallmentPlanService>();
+        services.AddCommerceEmailSender()
+            .AddCommerceEmailKind(InstallmentPlanEmailKinds.Notice, LocalizationSource.Create<InstallmentPlansStartup>("Installment plan notice"), LocalizationSource.Create<InstallmentPlansStartup>("{{ InstallmentPlan }}: the plan."));
         services.AddScoped<ITransactionPaymentHandler, InstallmentPlanTransactionPaymentHandler>();
         services.AddScoped<ICommercePersonalDataContributor, InstallmentPlanPersonalDataContributor>();
 

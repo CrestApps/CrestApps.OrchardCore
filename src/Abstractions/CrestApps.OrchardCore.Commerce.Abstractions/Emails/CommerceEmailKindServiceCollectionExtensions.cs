@@ -1,29 +1,13 @@
-using CrestApps.OrchardCore.Orders.Core.Services;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
+using CrestApps.OrchardCore.Commerce.Emails;
 using OrchardCore.Localization;
 
-namespace CrestApps.OrchardCore.Orders.Core;
+namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
-/// Registers the commerce email sender and the kinds of email the store can write its own templates of.
+/// Registers the kinds of email the store can write its own templates of.
 /// </summary>
-public static class CommerceEmailServiceCollectionExtensions
+public static class CommerceEmailKindServiceCollectionExtensions
 {
-    /// <summary>
-    /// Adds the <see cref="ICommerceEmailSender"/>. Without the Orders feature's templates, every email goes as built.
-    /// </summary>
-    /// <param name="services">The services.</param>
-    public static IServiceCollection AddCommerceEmailSender(this IServiceCollection services)
-    {
-        ArgumentNullException.ThrowIfNull(services);
-
-        services.TryAddScoped<ICommerceEmailSender, CommerceEmailSender>();
-        services.TryAddScoped<IOrderEmailTemplates, AsBuiltOrderEmailTemplates>();
-
-        return services;
-    }
-
     /// <summary>
     /// Adds a kind of email the store can write its own template of, listed under Settings › Commerce › Emails.
     /// </summary>

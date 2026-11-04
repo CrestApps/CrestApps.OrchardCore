@@ -1,6 +1,6 @@
 using OrchardCore.Localization;
 
-namespace CrestApps.OrchardCore.Orders.Core.Services;
+namespace CrestApps.OrchardCore.Commerce.Emails;
 
 /// <summary>
 /// A kind of email the store can write its own template of, listed under Settings › Commerce › Emails.

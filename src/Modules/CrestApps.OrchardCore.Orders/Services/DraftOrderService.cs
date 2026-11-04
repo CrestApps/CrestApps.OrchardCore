@@ -3,6 +3,7 @@ using System.Text.Encodings.Web;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Carts.Core.Models;
 using CrestApps.OrchardCore.Carts.Core.Services;
+using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
@@ -215,7 +216,7 @@ public sealed class DraftOrderService
         {
             Kind = order.Quote is null ? OrderEmailKinds.Invoice : OrderEmailKinds.Quote,
             To = order.CustomerEmail,
-            Order = order,
+            Models = OrderEmailModels.For(order),
             Reference = order.ItemId,
         }, async _ =>
         {

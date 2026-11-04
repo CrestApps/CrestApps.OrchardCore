@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Carts.Core.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Commerce.Core;
 using CrestApps.OrchardCore.Accounts.B2B.Api;
 using CrestApps.OrchardCore.Accounts.B2B.Drivers;
 using CrestApps.OrchardCore.Accounts.B2B.Handlers;
@@ -23,6 +24,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
+using OrchardCore.Localization;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Contents.Services;
 using OrchardCore.Data;
@@ -64,6 +66,9 @@ public sealed class Startup : StartupBase
         // The Business account step: the purchase order number, before payment.
         services.AddScoped<B2BCheckoutStepService>();
         services.AddScoped<B2BApprovalService>();
+        services.AddCommerceEmailSender()
+            .AddCommerceEmailKind(B2BApprovalService.ApprovalRequestedEmailKind, LocalizationSource.Create<Startup>("Business order needs approval"))
+            .AddCommerceEmailKind(B2BApprovalService.ApprovalDecidedEmailKind, LocalizationSource.Create<Startup>("Business order approved or rejected"));
         services.AddScoped<PunchoutService>();
         services.AddScoped<ICartActionProvider, PunchoutCartActionProvider>();
         services.AddScoped<ICheckoutPaymentGate, B2BApprovalPaymentGate>();

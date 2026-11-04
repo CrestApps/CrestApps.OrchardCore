@@ -1507,6 +1507,8 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
                 guestContact: null,
                 new CustomerOwnerMessage
                 {
+                    Kind = InstallmentPlanEmailKinds.Notice,
+                    Models = new Dictionary<string, object>(StringComparer.Ordinal) { [InstallmentPlanEmailKinds.PlanModelName] = plan },
                     Subject = subject,
                     Summary = body,
                     TextBody = body,

@@ -188,8 +188,12 @@ public sealed class ProjectReferenceRulesTests
 
             foreach (var reference in ReadProjectReferenceNames(project))
             {
-                var offending = _presentationReferences.FirstOrDefault(forbidden =>
-                    reference.StartsWith(forbidden, StringComparison.Ordinal));
+                // The shared contracts and implementations of a presentation area (its .Abstractions and .Core, such
+                // as the commerce e-mail templates) are reusable building blocks, not presentation.
+                var offending = IsSharedLibrary(reference)
+                    ? null
+                    : _presentationReferences.FirstOrDefault(forbidden =>
+                        reference.StartsWith(forbidden, StringComparison.Ordinal));
 
                 Assert.True(
                     offending is null,
@@ -198,6 +202,10 @@ public sealed class ProjectReferenceRulesTests
             }
         }
     }
+
+    private static bool IsSharedLibrary(string projectName)
+        => projectName.EndsWith(".Abstractions", StringComparison.Ordinal) ||
+            projectName.EndsWith(".Core", StringComparison.Ordinal);
 
     private static bool IsReusableModule(string projectName)
         => _reusableModuleMarkers.Any(marker =>
