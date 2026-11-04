@@ -304,6 +304,8 @@ To integrate another national do-not-call registry:
 4. Register the implementation in `Startup` with `services.AddScoped<INationalDoNotCallRegistry, TRegistry>();`.
 5. If the provider needs configuration, add its own site settings model, display driver, and admin menu entry under **Settings** -> **DNC Registries**.
 
+`CrestApps.OrchardCore.DncRegistry.Abstractions` also holds `DncRegistrySettings` (the global enforcement settings) and `DncRegistryConstants` (feature IDs, settings group IDs), so a module that reads which registries are enforced, such as the contact import of Omnichannel Management, does not use the DNC Registry module's own types.
+
 ```csharp
 services.AddScoped<INationalDoNotCallRegistry, MyRegistry>();
 ```

@@ -49,7 +49,6 @@ public sealed class LayeringRatchetTests
         "CrestApps.OrchardCore.AI.WebMcp -> CrestApps.OrchardCore.AI",
         "CrestApps.OrchardCore.ContactCenter -> CrestApps.OrchardCore.Telephony",
         "CrestApps.OrchardCore.Dispatch -> CrestApps.OrchardCore.Workforce",
-        "CrestApps.OrchardCore.Omnichannel.Managements -> CrestApps.OrchardCore.DncRegistry",
         "CrestApps.OrchardCore.PointOfSale -> CrestApps.OrchardCore.Orders",
         "CrestApps.OrchardCore.Workforce.ContactCenter -> CrestApps.OrchardCore.Workforce",
     };
