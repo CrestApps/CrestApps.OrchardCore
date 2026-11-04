@@ -233,6 +233,8 @@ Each tool also needs the user's **Access AI tool** permission for it, like every
 }
 ```
 
+The **Structured data settings** deployment step writes them into a `Settings` step like the one above, so they move to another site with a deployment plan.
+
 Changing the settings needs the **Manage the advanced SEO settings** permission (`ManageAdvancedSeoSettings`). Administrators have it by default.
 
 ## Products
