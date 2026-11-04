@@ -102,6 +102,10 @@ provider sends it again. The provider webhook inbox fixes both:
 4. The **Provider Webhook Inbox Dispatch** background task retries every delivery whose processing did not complete,
    with exponential backoff, and dead-letters one after 10 failed attempts.
 
+Deliveries are items of the platform's leased work queue (`ILeasedWorkQueue<T>`), the same building block the Contact
+Center outbox and the outreach engine use: one worker owns a delivery at a time under a five-minute lease, and a worker
+whose lease expired cannot settle the delivery any more.
+
 Completed deliveries are kept for at least seven days as idempotency tombstones, so a redelivery within that window is
 still recognized. When Contact Center is enabled, its retention policy also purges completed and dead-lettered
 deliveries, and its `WebhookInboxMessageRetentionDays` setting sets how long completed ones are kept.

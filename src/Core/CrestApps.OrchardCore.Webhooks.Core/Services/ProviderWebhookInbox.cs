@@ -3,6 +3,8 @@ using System.Text;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Webhooks.Core.Models;
 using CrestApps.OrchardCore.Webhooks.Models;
+using CrestApps.OrchardCore.WorkQueues;
+using CrestApps.OrchardCore.YesSql.Core.WorkQueues;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore;
@@ -13,7 +15,9 @@ using YesSql;
 namespace CrestApps.OrchardCore.Webhooks.Core.Services;
 
 /// <summary>
-/// Provides durable, idempotent provider webhook acceptance and retryable payload dispatch.
+/// Provides durable, idempotent provider webhook acceptance and retryable payload dispatch. Claiming, fencing, retrying
+/// and dead-lettering the deliveries is the shared leased work queue's job (<see cref="ILeasedWorkQueue{T}"/>); settled
+/// deliveries stay as completed idempotency tombstones.
 /// </summary>
 public sealed class ProviderWebhookInbox : IProviderWebhookInbox
 {
@@ -51,12 +55,18 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
     /// </summary>
     public const double TombstoneRetentionDays = 7;
 
-    private const int BaseBackoffSeconds = 15;
-    private const int MaxBackoffSeconds = 1800;
+    private static readonly Func<int, TimeSpan> _backoff = LeasedWorkBackoff.Exponential(TimeSpan.FromSeconds(15), TimeSpan.FromMinutes(30));
+
+    private static readonly LeasedWorkQueueOptions _queueOptions = new()
+    {
+        CollectionName = ProviderWebhookInboxStorage.CollectionName,
+        MaxAttempts = MaxAttempts,
+    };
 
     private readonly IReadOnlyList<IProviderWebhookInboxHandler> _handlers;
     private readonly ProviderWebhookInboxOptions _options;
     private readonly IProviderWebhookInboxStore _store;
+    private readonly CatalogLeasedWorkQueue<ProviderWebhookInboxMessage> _queue;
     private readonly ISession _session;
     private readonly IDistributedLock _distributedLock;
     private readonly IWebhookProviderNameNormalizer _providerNameNormalizer;
@@ -90,6 +100,10 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         _handlers = ValidateHandlers(handlers);
         _store = store;
         _session = session;
+
+        // Each delivery runs in an isolated scope with a session of its own (see the scope executor), so the queue
+        // commits claims and settlements in that session.
+        _queue = new CatalogLeasedWorkQueue<ProviderWebhookInboxMessage>(store, session, clock, _queueOptions, store.GetDueAsync);
         _distributedLock = distributedLock;
         _providerNameNormalizer = providerNameNormalizer;
         _scopeExecutor = scopeExecutor;
@@ -195,7 +209,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
             ModifiedUtc = now,
         };
 
-        await _store.CreateAsync(message, cancellationToken);
+        await _queue.EnqueueAsync(message, cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
 
         return new ProviderWebhookInboxAcceptanceResult
@@ -221,29 +235,14 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         }
 
         await using var acquiredLock = locker;
-        var message = await _store.FindByIdAsync(messageId, cancellationToken);
+        // A delivery that does not exist or is not due is left as it is.
+        var message = await _queue.TryClaimAsync(messageId, _claimLease, cancellationToken);
 
         if (message is null)
         {
             return false;
         }
 
-        var now = _clock.UtcNow;
-
-        if ((message.Status != ProviderWebhookInboxStatus.Pending &&
-                message.Status != ProviderWebhookInboxStatus.Claimed) ||
-            message.NextAttemptUtc > now)
-        {
-            return false;
-        }
-
-        message.Status = ProviderWebhookInboxStatus.Claimed;
-        message.OwnerToken = Guid.NewGuid().ToString("N");
-        message.FenceToken++;
-        message.NextAttemptUtc = now.Add(_claimLease);
-        message.ModifiedUtc = now;
-        await _store.UpdateAsync(message, cancellationToken);
-        await _session.SaveChangesAsync(cancellationToken);
         var ownerToken = message.OwnerToken;
         var fenceToken = message.FenceToken;
 
@@ -252,13 +251,8 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
 
         if (handler is null)
         {
-            message.Status = ProviderWebhookInboxStatus.Pending;
-            message.OwnerToken = null;
-            message.LastError = "HandlerUnavailable";
-            message.NextAttemptUtc = _clock.UtcNow.Add(_missingHandlerDelay);
-            message.ModifiedUtc = _clock.UtcNow;
-            await _store.UpdateAsync(message, cancellationToken);
-            await _session.SaveChangesAsync(cancellationToken);
+            // Waiting for a handler that is not enabled yet does not use up an attempt.
+            await _queue.RetryAsync(message, "HandlerUnavailable", _ => _missingHandlerDelay, countAttempt: false, cancellationToken: cancellationToken);
 
             _logger.LogError(
                 "No provider webhook inbox handler named '{HandlerName}' is registered for message '{MessageId}'.",
@@ -346,32 +340,33 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         ArgumentException.ThrowIfNullOrEmpty(messageId);
         ArgumentException.ThrowIfNullOrEmpty(ownerToken);
 
-        var message = await _store.FindByIdAsync(messageId, cancellationToken);
-
-        if (message is null ||
-            message.Status != ProviderWebhookInboxStatus.Claimed ||
-            !string.Equals(message.OwnerToken, ownerToken, StringComparison.Ordinal) ||
-            message.FenceToken != fenceToken)
+        // The queue settles only while this worker still holds the claim; a lost claim surfaces as the concurrency
+        // failure the caller's isolated scope already expects.
+        var claim = new ProviderWebhookInboxMessage
         {
-            throw new ConcurrencyException(new Document());
-        }
+            ItemId = messageId,
+            OwnerToken = ownerToken,
+            FenceToken = fenceToken,
+        };
 
         if (!succeeded)
         {
-            await ScheduleRetryAsync(message, errorType, cancellationToken);
+            await ScheduleRetryAsync(claim, errorType, cancellationToken);
 
             return false;
         }
 
-        message.Status = ProviderWebhookInboxStatus.Completed;
-        message.OwnerToken = null;
-        message.Payload = null;
-        message.LastError = null;
-        message.ProcessedUtc = _clock.UtcNow;
-        message.NextAttemptUtc = message.ProcessedUtc.Value;
-        message.ModifiedUtc = message.ProcessedUtc;
-        await _store.UpdateAsync(message, cancellationToken);
-        await _session.SaveChangesAsync(cancellationToken);
+        // The settled delivery stays as an idempotency tombstone without its payload, aged by when it settled.
+        var completed = await _queue.CompleteAsync(claim, message =>
+        {
+            message.Payload = null;
+            message.ProcessedUtc = message.NextAttemptUtc;
+        }, cancellationToken);
+
+        if (!completed)
+        {
+            throw new ConcurrencyException(new Document());
+        }
 
         return true;
     }
@@ -479,30 +474,23 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
     }
 
     private async Task ScheduleRetryAsync(
-        ProviderWebhookInboxMessage message,
+        ProviderWebhookInboxMessage claim,
         string errorType,
         CancellationToken cancellationToken)
     {
-        message.AttemptCount++;
-        message.LastError = errorType;
-        message.ModifiedUtc = _clock.UtcNow;
-        message.OwnerToken = null;
-
-        if (message.AttemptCount >= MaxAttempts)
+        var status = await _queue.RetryAsync(claim, errorType, _backoff, update: message =>
         {
-            message.Status = ProviderWebhookInboxStatus.DeadLettered;
+            if (message.Status == ProviderWebhookInboxStatus.DeadLettered)
+            {
+                // This is the age settled deliveries are purged by. Without it a dead letter is never selected.
+                message.ProcessedUtc = _clock.UtcNow;
+            }
+        }, cancellationToken: cancellationToken);
 
-            // This is the age settled deliveries are purged by. Without it a dead letter is never selected.
-            message.ProcessedUtc = _clock.UtcNow;
-        }
-        else
+        if (status is null)
         {
-            message.Status = ProviderWebhookInboxStatus.Pending;
-            message.NextAttemptUtc = _clock.UtcNow.Add(GetBackoff(message.AttemptCount));
+            throw new ConcurrencyException(new Document());
         }
-
-        await _store.UpdateAsync(message, cancellationToken);
-        await _session.SaveChangesAsync(cancellationToken);
     }
 
     private static string GetDeliveryLockKey(string providerName, string deliveryId)
@@ -515,13 +503,5 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
     private static string GetDispatchLockKey(string messageId)
     {
         return $"ContactCenterProviderWebhookInbox:Dispatch:{messageId}";
-    }
-
-    private static TimeSpan GetBackoff(int attempt)
-    {
-        var exponent = Math.Min(attempt - 1, 30);
-        var seconds = Math.Min(BaseBackoffSeconds * Math.Pow(2, exponent), MaxBackoffSeconds);
-
-        return TimeSpan.FromSeconds(seconds);
     }
 }

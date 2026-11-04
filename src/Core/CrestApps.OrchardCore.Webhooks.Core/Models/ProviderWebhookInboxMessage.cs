@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.WorkQueues;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Webhooks.Core.Models;
@@ -11,9 +12,13 @@ namespace CrestApps.OrchardCore.Webhooks.Core.Models;
 /// YesSql stores a document's type by name and finds a document by that name. The record moved here from Contact
 /// Center, so it keeps the name it was first stored under: every delivery already in a tenant's database stays
 /// readable, and nothing has to rewrite the stored rows.
+/// <para>
+/// It is an item of the shared leased work queue. Its stored <see cref="Status"/> keeps its own enum, whose values match
+/// <see cref="LeasedWorkItemStatus"/>, so existing deliveries read unchanged.
+/// </para>
 /// </remarks>
 [SimplifiedTypeName(StoredTypeName)]
-public sealed class ProviderWebhookInboxMessage : CatalogItem, IModifiedUtcAwareModel
+public sealed class ProviderWebhookInboxMessage : CatalogItem, IModifiedUtcAwareModel, ILeasedWorkItem
 {
     /// <summary>
     /// The type name inbox documents are stored under. It never changes.
@@ -44,6 +49,13 @@ public sealed class ProviderWebhookInboxMessage : CatalogItem, IModifiedUtcAware
     /// Gets or sets the durable processing status.
     /// </summary>
     public ProviderWebhookInboxStatus Status { get; set; }
+
+    /// <inheritdoc/>
+    LeasedWorkItemStatus ILeasedWorkItem.Status
+    {
+        get => (LeasedWorkItemStatus)Status;
+        set => Status = (ProviderWebhookInboxStatus)value;
+    }
 
     /// <summary>
     /// Gets or sets the opaque token identifying the worker that owns the current claim.

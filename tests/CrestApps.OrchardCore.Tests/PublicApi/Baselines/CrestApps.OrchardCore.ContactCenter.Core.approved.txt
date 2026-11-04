@@ -1734,7 +1734,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public long DocumentId { get; init; }
         public string EventType { get; init; }
     }
-    public sealed class ContactCenterOutboxMessage : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel
+    public sealed class ContactCenterOutboxMessage : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.OrchardCore.WorkQueues.ILeasedWorkItem
     {
         public ContactCenterOutboxMessage() { }
         public int AttemptCount { get; set; }
