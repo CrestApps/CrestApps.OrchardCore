@@ -2,6 +2,8 @@
 
 @model CalendarEventActivityViewModel
 
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 @if (Model.HasMinutesBefore)
 {
     <div class="mb-3">
@@ -13,13 +15,13 @@
 
 <div class="mb-3">
     <label asp-for="CalendarIds" class="form-label">@T["Calendars"]</label>
-    <select asp-for="CalendarIds" asp-items="Model.CalendarOptions" class="form-select" multiple size="5"></select>
+    <select asp-for="CalendarIds" asp-items="Model.CalendarOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3"></select>
     <span class="hint">@T["Leave empty for every calendar."]</span>
 </div>
 
 <div class="mb-3">
     <label asp-for="CalendarTypes" class="form-label">@T["Calendar types"]</label>
-    <select asp-for="CalendarTypes" asp-items="Model.TypeOptions" class="form-select" multiple size="5"></select>
+    <select asp-for="CalendarTypes" asp-items="Model.TypeOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3"></select>
     <span class="hint">@T["Leave empty for every calendar type."]</span>
 </div>
 

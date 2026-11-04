@@ -1,0 +1,3 @@
+@model ShapeViewModel<OpenShiftRowViewModel>
+
+<a asp-controller="OpenShifts" asp-action="Details" asp-route-id="@Model.Value.Shift.ItemId" class="btn btn-primary btn-sm">@T["View"]</a>

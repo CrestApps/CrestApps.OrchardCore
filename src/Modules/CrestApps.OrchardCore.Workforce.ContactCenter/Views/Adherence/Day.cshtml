@@ -1,0 +1,106 @@
+@model AdherenceDayViewModel
+@inject IStringLocalizer<AdherenceDayViewModel> S
+
+@{
+    var day = Model.Day;
+    var zone = day?.TimeZoneId ?? "UTC";
+    string Clock(DateTime utc) => CalendarTime.ToLocal(utc, zone).ToString("t", CultureInfo.CurrentCulture);
+    string Hours(double seconds) => (seconds / 3600d).ToString("0.##", CultureInfo.CurrentCulture);
+    string Percent(double? value) => value.HasValue ? value.Value.ToString("P0", CultureInfo.CurrentCulture) : "–";
+    var dateText = Model.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+    var first = day?.Segments.FirstOrDefault()?.StartUtc;
+    var last = day?.Segments.LastOrDefault()?.EndUtc;
+    var span = first.HasValue && last.HasValue ? (last.Value - first.Value).TotalSeconds : 0;
+}
+
+<zone Name="Title"><breadcrumb name="WorkforceAdherenceWorker" title="@T["Adherence of {0}", Model.Worker.DisplayName]" /></zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 gy-2 align-items-center">
+            <form asp-action="Day" asp-route-workerId="@Model.Worker.ItemId" method="get" class="col-auto d-flex gap-2 align-items-center">
+                <label for="date" class="visually-hidden">@T["Day"]</label>
+                <input id="date" name="date" type="date" value="@dateText" class="form-control form-control-sm w-auto" onchange="this.form.submit()" />
+            </form>
+            <div class="col small text-muted">
+                @if (day is null)
+                {
+                    @T["This worker's user is not a contact center agent."]
+                }
+                else if (Model.Saved)
+                {
+                    @T["Saved {0}. Times are in {1}.", CalendarTime.ToLocal(day.ComputedUtc, zone).ToString("g", CultureInfo.CurrentCulture), zone]
+                }
+                else
+                {
+                    @T["Not saved yet: computed now from the schedule and the agent's states. Times are in {0}.", zone]
+                }
+            </div>
+            @if (Model.CanManage && day is not null)
+            {
+                <div class="col-auto d-flex gap-2">
+                    <a asp-controller="AdherenceExceptions" asp-action="Create" asp-route-workerId="@Model.Worker.ItemId" asp-route-date="@dateText" asp-route-returnUrl="@Url.Action("Day", new { workerId = Model.Worker.ItemId, date = dateText })" class="btn btn-sm btn-outline-secondary">@T["Add exception"]</a>
+                    <form asp-action="SaveDay" asp-route-workerId="@Model.Worker.ItemId" method="post">
+                        <input type="hidden" name="date" value="@dateText" />
+                        <button type="submit" class="btn btn-sm btn-primary">@(Model.Saved ? T["Compute again"] : T["Save"])</button>
+                    </form>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@if (day is not null)
+{
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">@T["Adherence"]</div><div class="fs-4 fw-semibold">@Percent(day.Adherence)</div></div></div></div>
+        <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">@T["Conformance"]</div><div class="fs-4 fw-semibold">@Percent(day.Conformance)</div><div class="small text-muted">@T["{0} h worked of {1} h scheduled work", Hours(day.ActualWorkSeconds), Hours(day.ScheduledWorkSeconds)]</div></div></div></div>
+        <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">@T["Scheduled"]</div><div class="fs-4 fw-semibold">@T["{0} h", Hours(day.ScheduledSeconds)]</div></div></div></div>
+        <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">@T["Exceptions"]</div><div class="fs-4 fw-semibold">@T["{0} h", Hours(day.ExceptionSeconds)]</div></div></div></div>
+    </div>
+
+    @if (day.Segments.Count == 0)
+    {
+        <div class="alert alert-info">@T["Nothing was scheduled that day."]</div>
+    }
+    else
+    {
+        <div class="d-flex rounded overflow-hidden border mb-1" style="height: 1.75rem" role="img" aria-label="@T["The day's segments: green in adherence, red out, grey covered by an exception."]">
+            @foreach (var segment in day.Segments)
+            {
+                var width = span > 0 ? (segment.Seconds / span * 100).ToString("0.###", CultureInfo.InvariantCulture) : "0";
+                var color = segment.Excepted ? "bg-secondary" : segment.InAdherence ? "bg-success" : "bg-danger";
+                <div class="@color" style="width: @width%" title="@Clock(segment.StartUtc)–@Clock(segment.EndUtc): @AdherenceNames.Kind(S, segment.Kind), @AdherenceNames.Status(S, segment.Status)"></div>
+            }
+        </div>
+        <div class="d-flex justify-content-between small text-muted mb-3"><span>@Clock(first.Value)</span><span>@Clock(last.Value)</span></div>
+
+        <div class="card">
+            <ul class="list-group list-group-flush">
+                @foreach (var segment in day.Segments)
+                {
+                    <li class="list-group-item d-flex flex-wrap gap-2 align-items-center">
+                        <span class="text-muted small" style="min-width: 7.5rem">@Clock(segment.StartUtc)–@Clock(segment.EndUtc)</span>
+                        <span>@AdherenceNames.Kind(S, segment.Kind)</span>
+                        <i class="fa-solid fa-arrow-right text-muted small" aria-hidden="true"></i>
+                        <span>@AdherenceNames.Status(S, segment.Status)@(string.IsNullOrEmpty(segment.Reason) ? string.Empty : " (" + segment.Reason + ")")</span>
+                        <span class="ms-auto">
+                            @if (segment.Excepted)
+                            {
+                                <span class="badge text-bg-secondary">@T["Exception"]</span>
+                            }
+                            else if (segment.InAdherence)
+                            {
+                                <span class="badge text-bg-success">@T["In"]</span>
+                            }
+                            else
+                            {
+                                <span class="badge text-bg-danger">@T["Out"]</span>
+                            }
+                        </span>
+                    </li>
+                }
+            </ul>
+        </div>
+    }
+}

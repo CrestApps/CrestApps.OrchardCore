@@ -1,0 +1,6 @@
+@model ShapeViewModel<TimeSettingRow>
+
+<a asp-action="@(Model.Value.Kind == TimeSettingsController.Categories ? "EditCategory" : "EditStage")" asp-route-id="@Model.Value.Id" class="btn btn-primary btn-sm">@T["Edit"]</a>
+<form asp-action="Delete" asp-route-kind="@Model.Value.Kind" asp-route-id="@Model.Value.Id" method="post" class="d-inline">
+    <button type="submit" class="btn btn-danger btn-sm" data-url-af="RemoveUrl UnsafeUrl">@(Model.Value.Kind == TimeSettingsController.Categories ? T["Delete"] : T["Turn off"])</button>
+</form>

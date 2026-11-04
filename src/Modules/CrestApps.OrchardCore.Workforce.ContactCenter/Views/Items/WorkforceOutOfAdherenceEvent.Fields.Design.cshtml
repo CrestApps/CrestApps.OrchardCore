@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Workforce.ContactCenter.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<WorkforceOutOfAdherenceEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-user-clock" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Agent Out Of Adherence"])
+    </h4>
+</header>

@@ -1,0 +1,35 @@
+@model ShapeViewModel<TimesheetRowViewModel>
+@{
+    var timesheet = Model.Value.Timesheet;
+    var codes = Model.Value.PayCodes;
+}
+@Status(timesheet.Status)
+<span class="badge ta-badge fw-normal">@T["{0} h", timesheet.TotalHours.ToString("0.##")]</span>
+@foreach (var group in timesheet.Lines.Where(line => line.PayCodeId is not null && codes.ContainsKey(line.PayCodeId)).GroupBy(line => codes[line.PayCodeId]).Where(group => group.Key.Kind is not PayCodeKind.Regular).OrderBy(group => group.Key.Kind))
+{
+    <span class="badge ta-badge fw-normal">@group.Key.Code @group.Sum(line => line.Hours).ToString("0.##")</span>
+}
+@if (timesheet.OpenExceptions > 0)
+{
+    <span class="badge text-bg-warning fw-normal"><i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@T.Plural(timesheet.OpenExceptions, "1 exception", "{0} exceptions")</span>
+}
+@if (timesheet.ExportBatchIds.Count > 0)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-file-export text-secondary me-1" aria-hidden="true"></i>@T["Exported"]</span>
+}
+@functions {
+    private Microsoft.AspNetCore.Html.IHtmlContent Status(TimesheetStatus status)
+    {
+        var (text, css) = status switch
+        {
+            TimesheetStatus.Submitted => (T["Submitted"], "text-bg-info"),
+            TimesheetStatus.Approved => (T["Approved"], "text-bg-success"),
+            TimesheetStatus.Rejected => (T["Sent back"], "text-bg-warning"),
+            TimesheetStatus.Locked => (T["Locked"], "text-bg-secondary"),
+            TimesheetStatus.Reopened => (T["Reopened"], "text-bg-light border"),
+            _ => (T["Open"], "text-bg-light border"),
+        };
+
+        return new Microsoft.AspNetCore.Html.HtmlString($"<span class=\"badge {css}\">{System.Net.WebUtility.HtmlEncode(text.Value)}</span>");
+    }
+}

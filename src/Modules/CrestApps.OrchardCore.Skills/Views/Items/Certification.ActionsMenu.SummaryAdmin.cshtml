@@ -1,0 +1,4 @@
+@model ShapeViewModel<Certification>
+
+<a asp-controller="CertificationRecords" asp-action="Index" asp-route-certificationId="@Model.Value.ItemId" class="dropdown-item">@T["Certificates"]</a>
+<a asp-controller="Certifications" asp-action="Delete" asp-route-id="@Model.Value.ItemId" class="dropdown-item text-danger" data-title="@T["Delete"]" data-message="@T["Delete this certification? The certificates people hold are kept but no longer count."]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>

@@ -1,0 +1,11 @@
+@model ShapeViewModel<Certification>
+
+@if (!string.IsNullOrEmpty(Model.Value.Issuer))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Issued by"]"><i class="fa-solid fa-building-columns text-secondary me-1" aria-hidden="true"></i>@Model.Value.Issuer</span>
+}
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Valid for"]"><i class="fa-solid fa-hourglass-half text-secondary me-1" aria-hidden="true"></i>@(Model.Value.ValidityMonths is { } months ? T["{0} months", months] : T["Never expires"])</span>
+@if (!Model.Value.Enabled)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-ban text-warning me-1" aria-hidden="true"></i>@T["Disabled"]</span>
+}

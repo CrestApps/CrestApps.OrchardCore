@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Assets.Core</RootNamespace>
+    <Title>CrestApps OrchardCore Assets Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core services for assets: the YesSql stores and indexes, the asset type and asset managers with their checks,
+      numbering, the hierarchy and append-only meter readings.
+    </Description>
+    <PackageTags>$(PackageTags) Assets Equipment Fleet Core</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Assets.Abstractions\CrestApps.OrchardCore.Assets.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,8 @@
+@model ShapeViewModel<TimeEntryRow>
+
+@{
+    var entry = Model.Value.Entry;
+    var zone = Model.Value.TimeZoneId;
+}
+<span class="fw-semibold">@entry.UserName</span>
+<span class="text-muted">@TimeTrackerTimeZone.Format(entry.StartUtc, zone)–@(entry.EndUtc is null ? T["now"].Value : TimeTrackerTimeZone.Format(entry.EndUtc, zone, entry.EndUtc.Value.Date == entry.StartUtc.Date ? "HH:mm" : "ddd d MMM, HH:mm"))</span>

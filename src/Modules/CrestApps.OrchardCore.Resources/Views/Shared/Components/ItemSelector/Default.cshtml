@@ -21,7 +21,7 @@
         title="@Model.ButtonText">
     @if (!Model.Multiple)
     {
-        <option value="">@Model.ButtonText</option>
+        <option value="" data-hidden="@(Model.Required ? "true" : null)">@Model.ButtonText</option>
     }
     @foreach (var item in Model.InitialItems)
     {

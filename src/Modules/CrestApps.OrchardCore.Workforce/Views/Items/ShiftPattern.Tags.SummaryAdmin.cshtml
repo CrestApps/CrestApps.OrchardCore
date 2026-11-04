@@ -1,0 +1,12 @@
+@model RotationRowViewModel
+
+@if (!string.IsNullOrEmpty(Model.TeamName))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Team"]"><i class="fa-solid fa-people-group text-secondary me-1" aria-hidden="true"></i>@Model.TeamName</span>
+}
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Length"]"><i class="fa-solid fa-rotate text-secondary me-1" aria-hidden="true"></i>@T.Plural(Model.Pattern.WeekCount, "1 week", "{0} weeks", Model.Pattern.WeekCount)</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Workers who follow it"]"><i class="fa-solid fa-user text-secondary me-1" aria-hidden="true"></i>@T.Plural(Model.Pattern.Workers.Count, "1 worker", "{0} workers", Model.Pattern.Workers.Count)</span>
+@if (!Model.Pattern.Enabled)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-ban text-warning me-1" aria-hidden="true"></i>@T["Disabled"]</span>
+}

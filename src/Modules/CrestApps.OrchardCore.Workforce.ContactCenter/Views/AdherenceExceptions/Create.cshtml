@@ -1,0 +1,62 @@
+@model AdherenceExceptionEditViewModel
+@inject IStringLocalizer<AdherenceExceptionEditViewModel> S
+
+<zone Name="Title"><breadcrumb name="WorkforceAdherenceExceptionsAdd" title="@T["Add an Adherence Exception"]" /></zone>
+
+<form asp-action="Create" method="post" class="no-multisubmit">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <input type="hidden" asp-for="ReturnUrl" />
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Details"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="WorkerId" class="ocat-label">@T["Worker"]</label>
+                <div class="ocat-end">
+                    <select asp-for="WorkerId" asp-items="Model.WorkerOptions" class="form-select">
+                        <option value="">@T["Choose a worker"]</option>
+                    </select>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Date" class="ocat-label">@T["Day"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Date" type="date" class="form-control" style="max-width: 12rem" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Start" class="ocat-label">@T["From"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Start" type="time" class="form-control" style="max-width: 12rem" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="End" class="ocat-label">@T["To"]</label>
+                <div class="ocat-end">
+                    <input asp-for="End" type="time" class="form-control" style="max-width: 12rem" />
+                </div>
+            </div>
+            <span class="hint d-block mb-3">@T["In the worker's time zone. An end before the start is the next day."]</span>
+            <div class="ocat-wrapper">
+                <label asp-for="Reason" class="ocat-label">@T["Reason"]</label>
+                <div class="ocat-end">
+                    <select asp-for="Reason" class="form-select">
+                        @foreach (var reason in Enum.GetValues<AdherenceExceptionReason>())
+                        {
+                            <option value="@reason" selected="@(reason == Model.Reason)">@AdherenceNames.Reason(S, reason)</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Note" class="ocat-label">@T["Note"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Note" class="form-control" />
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary save">@T["Add"]</button>
+        <a href="@(string.IsNullOrEmpty(Model.ReturnUrl) ? Url.Action("Index") : Model.ReturnUrl)" class="btn btn-secondary">@T["Cancel"]</a>
+    </div>
+</form>

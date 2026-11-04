@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Skills.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CertificationExpiredEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-calendar-xmark" aria-hidden="true"></i> @T["Certificate Expired"]</h4>
+<p>@T["Starts when a certificate passes its expiry date."]</p>

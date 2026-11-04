@@ -1,0 +1,4 @@
+@using CrestApps.OrchardCore.WorkOrders.Agreements.ViewModels
+@model ShapeViewModel<ServiceAgreementRow>
+
+<a asp-controller="ServiceAgreements" asp-action="Details" asp-route-id="@Model.Value.Agreement.ItemId"><span class="text-muted">@Model.Value.Agreement.Number</span> @Model.Value.Agreement.Name</a>

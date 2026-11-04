@@ -1,0 +1,9 @@
+@model ShapeViewModel<OpenShiftRowViewModel>
+@{
+    var shift = Model.Value.Shift;
+}
+<a asp-controller="OpenShifts" asp-action="Details" asp-route-id="@shift.ItemId">@shift.Start.ToString("ddd d MMM") @shift.Start.ToString("HH:mm")&ndash;@shift.End.ToString("HH:mm")</a>
+@if (!string.IsNullOrEmpty(Model.Value.FilledWorkerName))
+{
+    <span class="ms-1 text-muted">@Model.Value.FilledWorkerName</span>
+}

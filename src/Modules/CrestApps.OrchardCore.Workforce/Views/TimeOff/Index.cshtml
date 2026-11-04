@@ -1,0 +1,42 @@
+@model TimeOffQueueViewModel
+
+<zone Name="Title"><breadcrumb name="WorkforceTimeOff" title="@T["Time Off"]" /></zone>
+
+<form asp-action="Index" method="get" id="time-off-filter">
+    <input type="hidden" name="workerId" value="@Model.WorkerId" />
+</form>
+
+<form asp-action="Index" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-client-side-search="false">
+    <input type="hidden" name="Options.BulkAction" />
+    <input type="submit" name="submit.BulkAction" class="visually-hidden" />
+    <input type="hidden" asp-for="TeamId" />
+    <input type="hidden" asp-for="Status" />
+    <input type="hidden" asp-for="WorkerId" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <p class="mb-0 text-muted small">@T["Time off waiting for a place or a decision, from the teams you manage. Requests that fit an allotment that approves on its own are approved as they are made."]</p>
+                </div>
+                <div class="col-auto"><a asp-action="Create" asp-route-workerId="@Model.WorkerId" class="btn btn-secondary create">@T["Request time off"]</a></div>
+            </div>
+        </div>
+    </div>
+
+    @{
+        Model.List.ToolbarActions = await New.WorkforceTeamStatusFilter(ViewModel: Model, FormId: "time-off-filter");
+    }
+
+    <admin-list name="WorkforceTimeOff" context="Model.List" bulk-actions="Model.BulkActions" empty-message="@T["<strong>Nothing here!</strong> No time off matches."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column type="Select" />
+            <admin-list-column name="Name" position="20" title="@T["Request"]" />
+            <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>
+
+<script asp-name="list-management-ui" at="Foot"></script>

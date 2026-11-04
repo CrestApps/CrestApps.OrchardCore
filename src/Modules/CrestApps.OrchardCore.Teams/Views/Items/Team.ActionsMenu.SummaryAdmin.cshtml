@@ -1,0 +1,3 @@
+@model TeamRowViewModel
+
+<a asp-area="CrestApps.OrchardCore.Teams" asp-controller="Teams" asp-action="Create" asp-route-parentId="@Model.Team.ItemId" class="dropdown-item">@T["Add a team under it"]</a>

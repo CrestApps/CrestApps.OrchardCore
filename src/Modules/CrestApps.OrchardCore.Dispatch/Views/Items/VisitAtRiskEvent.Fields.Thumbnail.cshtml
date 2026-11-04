@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Dispatch.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<VisitAtRiskEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+    @T["Visit At Risk"]
+</h4>
+<p>@T["Starts when a visit becomes at risk: running over, not started in time, arriving after its window, or its technician on time off. The input has the visit, its workers and times, and the Reason."]</p>

@@ -1,0 +1,3 @@
+@model ShapeViewModel<TimeOffRequestRowViewModel>
+
+<a asp-controller="TimeOff" asp-action="Details" asp-route-id="@Model.Value.Request.ItemId" class="btn btn-primary btn-sm">@T["View"]</a>

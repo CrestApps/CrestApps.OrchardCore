@@ -1,0 +1,11 @@
+@model ShapeViewModel<AttendanceRowViewModel>
+@{
+    var id = Model.Value.Exception.ItemId;
+}
+@if (Model.Value.Exception.Status != AttendanceExceptionStatus.Excused)
+{
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" value="@id" name="itemIds" id="itemIds-@id" aria-label="@T["Select"]">
+        <label class="form-check-label" for="itemIds-@id">&nbsp;</label>
+    </div>
+}

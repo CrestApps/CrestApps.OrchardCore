@@ -1,0 +1,3 @@
+@model ShapeViewModel<ShiftTradeRowViewModel>
+
+<a asp-controller="ShiftTrades" asp-action="Details" asp-route-id="@Model.Value.Trade.ItemId" class="btn btn-primary btn-sm">@T["View"]</a>

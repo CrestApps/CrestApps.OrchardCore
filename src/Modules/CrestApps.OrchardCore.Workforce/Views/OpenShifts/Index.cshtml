@@ -1,0 +1,29 @@
+@model WorkforceListViewModel
+
+<zone Name="Title"><breadcrumb name="WorkforceOpenShifts" title="@T["Open Shifts"]" /></zone>
+
+<form asp-action="Index" method="get" id="open-shifts-filter">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <p class="mb-0 text-muted small">@T["Shifts with nobody yet, offered to the team's eligible workers. Publishing a schedule posts its shifts that have nobody."]</p>
+                </div>
+                <div class="col-auto"><a asp-action="Create" asp-route-teamId="@Model.TeamId" class="btn btn-secondary create">@T["Post an open shift"]</a></div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@{
+    Model.List.ToolbarActions = await New.WorkforceTeamStatusFilter(ViewModel: Model, FormId: "open-shifts-filter");
+}
+
+<admin-list name="WorkforceOpenShifts" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> There are no open shifts."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Shift"]" />
+        <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

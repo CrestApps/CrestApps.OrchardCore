@@ -1,0 +1,19 @@
+@using CrestApps.OrchardCore.TimeTracker.Recipes
+@model TimeTrackerDeploymentStepViewModel
+
+<h5>@T["Time stages, categories and entries"]</h5>
+<p class="hint">@T["Exports every category and stage."]</p>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="IncludeEntries" class="form-check-input" />
+            <label asp-for="IncludeEntries" class="form-check-label">@T["Include the time entries"]</label>
+        </div>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Days" class="ocat-label">@T["Days back"]</label>
+    <div class="ocat-end">
+        <input asp-for="Days" type="number" min="1" max="3660" class="form-control" />
+    </div>
+</div>

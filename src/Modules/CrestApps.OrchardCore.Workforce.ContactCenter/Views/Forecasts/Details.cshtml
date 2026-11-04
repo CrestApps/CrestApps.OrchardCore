@@ -1,0 +1,133 @@
+@model ForecastDetailsViewModel
+
+@{
+    var forecast = Model.Forecast;
+    var zone = forecast.TimeZoneId ?? "UTC";
+    var days = forecast.Intervals.GroupBy(interval => interval.Date).ToDictionary(group => group.Key, group => group.ToList());
+    var peakVolume = days.Count == 0 ? 0 : days.Values.Max(day => day.Sum(interval => interval.Volume));
+    string Number(double value) => Math.Round(value).ToString("N0", CultureInfo.CurrentCulture);
+    string Percent(double value) => value.ToString("P0", CultureInfo.CurrentCulture);
+    var dayIntervals = days.GetValueOrDefault(Model.Day) ?? [];
+    var statusBadge = forecast.Status switch { ForecastStatus.Active => "text-bg-success", ForecastStatus.Draft => "text-bg-secondary", _ => "ta-badge" };
+}
+
+<zone Name="Title"><breadcrumb name="WorkforceForecastsDetails" title="@T["Forecast of {0}", Model.Group?.Name ?? forecast.PlanningGroupId]" /></zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 gy-2 align-items-center">
+            <div class="col small">
+                <span class="badge @statusBadge me-1">@(forecast.Status == ForecastStatus.Active ? T["Active"] : forecast.Status == ForecastStatus.Draft ? T["Draft"] : T["Superseded"])</span>
+                @T["{0} to {1}, {2}, times in {3}.", forecast.FromDate.ToString("d", CultureInfo.CurrentCulture), forecast.ToDate.ToString("d", CultureInfo.CurrentCulture), forecast.Model == ForecastModelKind.HoltWinters ? T["Holt-Winters"] : T["weighted history"], zone]
+            </div>
+            @if (forecast.Status != ForecastStatus.Active)
+            {
+                <div class="col-auto">
+                    <form asp-action="Activate" asp-route-id="@forecast.ItemId" method="post">
+                        <button type="submit" class="btn btn-primary btn-sm">@T["Make it the team's coverage"]</button>
+                    </form>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">@T["Contacts"]</div><div class="fs-4 fw-semibold">@Number(forecast.Intervals.Sum(interval => interval.Volume))</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">@T["Most agents at once"]</div><div class="fs-4 fw-semibold">@(forecast.Intervals.Count == 0 ? 0 : forecast.Intervals.Max(interval => interval.RequiredScheduled))</div><div class="small text-muted">@T["scheduled, with {0}% shrinkage", forecast.ShrinkagePercent.ToString("0.#", CultureInfo.CurrentCulture)]</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">@T["Agent hours"]</div><div class="fs-4 fw-semibold">@Number(forecast.Intervals.Sum(interval => interval.RequiredScheduled) / 4d)</div></div></div></div>
+    <div class="col-6 col-lg-3">
+        <div class="card h-100"><div class="card-body">
+            <div class="small text-muted">@T["Error on the last two weeks"]</div>
+            @if (forecast.Backtests.Count == 0)
+            {
+                <div class="small">@T["Not enough history to measure."]</div>
+            }
+            @foreach (var backtest in forecast.Backtests)
+            {
+                <div class="small">@(backtest.Model == ForecastModelKind.HoltWinters ? T["Holt-Winters"] : T["Weighted history"]): @Percent(backtest.Wape)</div>
+            }
+        </div></div>
+    </div>
+</div>
+
+<h2 class="h5">@T["Days"]</h2>
+<div class="d-flex align-items-end gap-1 mb-1 overflow-auto pb-1" style="height: 7.5rem" role="list" aria-label="@T["Contacts per day; select a day to see its intervals."]">
+    @for (var date = forecast.FromDate; date <= forecast.ToDate; date = date.AddDays(1))
+    {
+        var total = days.TryGetValue(date, out var list) ? list.Sum(interval => interval.Volume) : 0;
+        var height = peakVolume > 0 ? Math.Max(2, total / peakVolume * 100) : 2;
+        var selected = date == Model.Day;
+        <a role="listitem" asp-action="Details" asp-route-id="@forecast.ItemId" asp-route-day="@date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" class="d-flex flex-column justify-content-end text-decoration-none flex-shrink-0" style="width: 2.25rem; height: 100%" title="@date.ToString("D", CultureInfo.CurrentCulture): @Number(total)">
+            <span class="rounded-top @(selected ? "bg-primary" : "bg-secondary-subtle border")" style="height: @height.ToString("0.#", CultureInfo.InvariantCulture)%"></span>
+            <span class="small text-center @(selected ? "fw-semibold" : "text-muted")">@date.ToString("ddd", CultureInfo.CurrentCulture)<br />@date.Day</span>
+        </a>
+    }
+</div>
+
+<h2 class="h5 mt-3">@Model.Day.ToString("D", CultureInfo.CurrentCulture)</h2>
+@if (dayIntervals.Count == 0)
+{
+    <div class="alert alert-info">@T["No work is forecast this day."]</div>
+}
+else
+{
+    <div class="card mb-3">
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item d-none d-md-flex small text-muted fw-semibold">
+                <span style="width: 5rem">@T["Time"]</span>
+                <span style="width: 6rem" class="text-end">@T["Contacts"]</span>
+                <span style="width: 7rem" class="text-end">@T["Handle time"]</span>
+                <span style="width: 6rem" class="text-end">@T["Agents"]</span>
+                <span style="width: 7rem" class="text-end">@T["Scheduled"]</span>
+                <span style="width: 7rem" class="text-end">@T["Service level"]</span>
+                <span style="width: 6rem" class="text-end">@T["Occupancy"]</span>
+            </li>
+            @foreach (var interval in dayIntervals.OrderBy(interval => interval.Slot))
+            {
+                <li class="list-group-item d-flex flex-wrap small">
+                    <span style="width: 5rem">@CalendarTime.ToLocal(interval.StartUtc, zone).ToString("t", CultureInfo.CurrentCulture)</span>
+                    <span style="width: 6rem" class="text-end">@interval.Volume.ToString("0.#", CultureInfo.CurrentCulture)</span>
+                    <span style="width: 7rem" class="text-end">@T["{0} s", Math.Round(interval.AverageHandleSeconds)]</span>
+                    <span style="width: 6rem" class="text-end">@interval.RequiredAgents</span>
+                    <span style="width: 7rem" class="text-end fw-semibold">@interval.RequiredScheduled</span>
+                    <span style="width: 7rem" class="text-end">@Percent(interval.ServiceLevel)</span>
+                    <span style="width: 6rem" class="text-end">@Percent(interval.Occupancy)</span>
+                </li>
+            }
+        </ul>
+    </div>
+}
+
+<h2 class="h5 mt-3">@T["Adjust"]</h2>
+<form asp-action="Adjust" asp-route-id="@forecast.ItemId" method="post" class="row g-2 align-items-end mb-3">
+    <div class="col-6 col-md-auto">
+        <label asp-for="AdjustFrom" class="form-label small">@T["From"]</label>
+        <input asp-for="AdjustFrom" type="date" class="form-control form-control-sm" />
+    </div>
+    <div class="col-6 col-md-auto">
+        <label asp-for="AdjustTo" class="form-label small">@T["To"]</label>
+        <input asp-for="AdjustTo" type="date" class="form-control form-control-sm" />
+    </div>
+    <div class="col-6 col-md-auto">
+        <label asp-for="AdjustPercent" class="form-label small">@T["Change in work %"]</label>
+        <input asp-for="AdjustPercent" type="number" step="any" class="form-control form-control-sm" />
+    </div>
+    <div class="col-6 col-md">
+        <label asp-for="AdjustNote" class="form-label small">@T["Why"]</label>
+        <input asp-for="AdjustNote" class="form-control form-control-sm" />
+    </div>
+    <div class="col-12 col-md-auto">
+        <button type="submit" class="btn btn-secondary btn-sm">@T["Adjust"]</button>
+    </div>
+</form>
+
+@if (forecast.Adjustments.Count > 0)
+{
+    <ul class="small text-muted">
+        @foreach (var adjustment in forecast.Adjustments)
+        {
+            <li>@T["{0} to {1}: {2}%{3}", adjustment.FromDate.ToString("d", CultureInfo.CurrentCulture), adjustment.ToDate.ToString("d", CultureInfo.CurrentCulture), adjustment.Percent.ToString("+0.#;-0.#", CultureInfo.CurrentCulture), string.IsNullOrEmpty(adjustment.Note) ? string.Empty : " – " + adjustment.Note]</li>
+        }
+    </ul>
+}

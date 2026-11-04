@@ -1,0 +1,171 @@
+@model IntradayViewModel
+
+@{
+    var zone = Model.TimeZoneId ?? "UTC";
+    string Clock(DateTime utc) => CalendarTime.ToLocal(utc, zone).ToString("t", CultureInfo.CurrentCulture);
+    string Number(double? value) => value.HasValue ? value.Value.ToString("0.#", CultureInfo.CurrentCulture) : "–";
+    var dateText = Model.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+    var rows = Model.Rows;
+    var elapsed = rows.Where(row => row.Elapsed).ToArray();
+}
+
+<zone Name="Title"><breadcrumb name="WorkforceIntraday" title="@T["Intraday"]" /></zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <form asp-action="Index" method="get" class="row gx-2 gy-2 align-items-center">
+            <div class="col-auto">
+                <label for="PlanningGroupId" class="visually-hidden">@T["Planning group"]</label>
+                <select id="PlanningGroupId" name="PlanningGroupId" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+                    @foreach (var option in Model.PlanningGroupOptions)
+                    {
+                        <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-auto">
+                <label for="Date" class="visually-hidden">@T["Day"]</label>
+                <input id="Date" name="Date" type="date" value="@dateText" class="form-control form-control-sm w-auto" onchange="this.form.submit()" />
+            </div>
+            <div class="col small text-muted">@T["Forecast against actual work and agents, every 15 minutes, in {0}. Actuals arrive as the interval statistics are computed.", zone]</div>
+        </form>
+    </div>
+</div>
+
+@if (Model.Group is null)
+{
+    <div class="alert alert-info">@T["Add a planning group and make a forecast first."] <a asp-controller="PlanningGroups" asp-action="Index">@T["Planning groups"]</a></div>
+}
+else if (rows.Count == 0)
+{
+    <div class="alert alert-info">@T["Nothing is forecast, scheduled or recorded this day. Make a forecast and make it the team's coverage."]</div>
+}
+else
+{
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">@T["Work so far"]</div><div class="fs-4 fw-semibold">@Number(elapsed.Sum(row => row.ActualVolume ?? 0))</div><div class="small text-muted">@T["forecast {0}", Number(elapsed.Sum(row => row.ForecastVolume))]</div></div></div></div>
+        <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">@T["Rest of the day"]</div><div class="fs-4 fw-semibold">@Number(rows.Where(row => !row.Elapsed).Sum(row => row.ForecastVolume))</div><div class="small text-muted">@T["contacts forecast"]</div></div></div></div>
+        <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body">
+            <div class="small text-muted">@T["Against the forecast"]</div>
+            @if (!elapsed.Any(row => row.ActualVolume.HasValue))
+            {
+                <div class="fs-4 fw-semibold">@T["Not started"]</div>
+                <div class="small text-muted">@T["No intervals of this day are computed yet."]</div>
+            }
+            else
+            {
+                <div class="fs-4 fw-semibold">@(Model.Factor >= 1 ? T["{0}% over", ((Model.Factor - 1) * 200).ToString("0", CultureInfo.CurrentCulture)] : T["{0}% under", ((1 - Model.Factor) * 200).ToString("0", CultureInfo.CurrentCulture)])</div>
+                <form asp-action="Reforecast" method="post" class="mt-1">
+                    <input type="hidden" name="planningGroupId" value="@Model.PlanningGroupId" />
+                    <input type="hidden" name="date" value="@dateText" />
+                    <button type="submit" class="btn btn-sm btn-outline-primary">@T["Reforecast the rest of the day"]</button>
+                </form>
+            }
+        </div></div></div>
+        <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">@T["Most agents short"]</div><div class="fs-4 fw-semibold">@Math.Max(0, rows.Where(row => !row.Elapsed).Select(row => row.Gap).DefaultIfEmpty(0).Max())</div><div class="small text-muted">@T["in the rest of the day"]</div></div></div></div>
+    </div>
+
+    <div class="card mb-3">
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item d-none d-md-flex small text-muted fw-semibold">
+                <span style="width: 5rem">@T["Time"]</span>
+                <span style="width: 9rem" class="text-end">@T["Contacts (forecast)"]</span>
+                <span style="width: 9rem" class="text-end">@T["Handle time"]</span>
+                <span style="width: 6rem" class="text-end">@T["Needed"]</span>
+                <span style="width: 7rem" class="text-end">@T["Scheduled"]</span>
+                <span style="width: 7rem" class="text-end">@T["Available"]</span>
+                <span style="width: 7rem" class="text-end">@T["Service level"]</span>
+            </li>
+            @foreach (var row in rows)
+            {
+                var gap = row.Gap;
+                <li class="list-group-item d-flex flex-wrap small @(row.Elapsed ? "text-muted" : string.Empty)">
+                    <span style="width: 5rem">@Clock(row.StartUtc)</span>
+                    <span style="width: 9rem" class="text-end">@Number(row.ActualVolume) <span class="text-muted">(@Number(row.ForecastVolume))</span></span>
+                    <span style="width: 9rem" class="text-end">@(row.ActualHandleSeconds.HasValue ? T["{0} s", Math.Round(row.ActualHandleSeconds.Value)] : T["{0} s", Math.Round(row.ForecastHandleSeconds)])</span>
+                    <span style="width: 6rem" class="text-end">@row.Required</span>
+                    <span style="width: 7rem" class="text-end">
+                        @row.Scheduled
+                        @if (!row.Elapsed && gap > 0)
+                        {
+                            <span class="badge text-bg-danger ms-1">@T["−{0}", gap]</span>
+                        }
+                    </span>
+                    <span style="width: 7rem" class="text-end">@Number(row.Available)</span>
+                    <span style="width: 7rem" class="text-end">@(row.ServiceLevel.HasValue ? row.ServiceLevel.Value.ToString("P0", CultureInfo.CurrentCulture) : "–")</span>
+                </li>
+            }
+        </ul>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-xl-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h2 class="h6">@T["Best times for a meeting or training"]</h2>
+                    <form asp-action="Index" method="get" class="row g-2 align-items-end mb-2">
+                        <input type="hidden" name="PlanningGroupId" value="@Model.PlanningGroupId" />
+                        <input type="hidden" name="Date" value="@dateText" />
+                        <div class="col-auto"><label for="People" class="form-label small">@T["People"]</label><input id="People" name="People" type="number" min="1" value="@Model.People" class="form-control form-control-sm" style="width: 6rem" /></div>
+                        <div class="col-auto"><label for="Minutes" class="form-label small">@T["Minutes"]</label><input id="Minutes" name="Minutes" type="number" min="15" step="15" value="@Model.Minutes" class="form-control form-control-sm" style="width: 6rem" /></div>
+                        <div class="col-auto"><button type="submit" class="btn btn-sm btn-secondary">@T["Find"]</button></div>
+                    </form>
+                    @if (Model.Windows.Count == 0)
+                    {
+                        <p class="small text-muted mb-0">@T["No time later today has that many people scheduled."]</p>
+                    }
+                    else
+                    {
+                        <ul class="small mb-0">
+                            @foreach (var window in Model.Windows)
+                            {
+                                <li>@Clock(window.StartUtc)–@Clock(window.EndUtc): @(window.AddedShortfall == 0 ? T["no one short"] : T["{0} agent-intervals short", window.AddedShortfall])</li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-xl-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h2 class="h6">@T["Offer extra hours or time off"]</h2>
+                    <form asp-action="Offer" method="post" class="row g-2 align-items-end">
+                        <input type="hidden" name="PlanningGroupId" value="@Model.PlanningGroupId" />
+                        <input type="hidden" name="Date" value="@dateText" />
+                        <div class="col-12 col-sm-auto">
+                            <label for="Kind" class="form-label small">@T["Offer"]</label>
+                            <select id="Kind" name="Kind" class="form-select form-select-sm">
+                                <option value="@IntradayOfferKind.VoluntaryOvertime">@T["Extra hours"]</option>
+                                <option value="@IntradayOfferKind.VoluntaryTimeOff">@T["Time off"]</option>
+                            </select>
+                        </div>
+                        <div class="col-6 col-sm-auto"><label for="Start" class="form-label small">@T["From"]</label><input id="Start" name="Start" type="time" class="form-control form-control-sm" required /></div>
+                        <div class="col-6 col-sm-auto"><label for="End" class="form-label small">@T["To"]</label><input id="End" name="End" type="time" class="form-control form-control-sm" required /></div>
+                        <div class="col-6 col-sm-auto"><label for="Places" class="form-label small">@T["People"]</label><input id="Places" name="Places" type="number" min="1" value="1" class="form-control form-control-sm" style="width: 5rem" /></div>
+                        <div class="col-12 col-sm"><label for="Note" class="form-label small">@T["Note"]</label><input id="Note" name="Note" class="form-control form-control-sm" /></div>
+                        <div class="col-12 col-sm-auto"><button type="submit" class="btn btn-sm btn-primary">@T["Offer"]</button></div>
+                    </form>
+                    <p class="small text-muted mt-2 mb-2">@T["Workers in the team take it in My Work. Extra hours lengthen a shift that ends when the offer starts or starts when it ends; time off comes off the start or end of a shift. Either is the worker's choice, so it earns no predictability pay."]</p>
+                    @if (Model.Offers.Count > 0)
+                    {
+                        <ul class="list-unstyled small mb-0">
+                            @foreach (var offer in Model.Offers)
+                            {
+                                <li class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                    <span class="badge @(offer.Status == IntradayOfferStatus.Open ? "text-bg-success" : "ta-badge")">@(offer.Status == IntradayOfferStatus.Open ? T["Open"] : offer.Status == IntradayOfferStatus.Filled ? T["Filled"] : T["Closed"])</span>
+                                    <span>@(offer.Kind == IntradayOfferKind.VoluntaryOvertime ? T["Extra hours"] : T["Time off"]) @Clock(offer.StartUtc)–@Clock(offer.EndUtc)</span>
+                                    <span class="text-muted">@T["{0} of {1} taken", offer.Claims.Count, offer.Places]@(offer.Claims.Count > 0 ? ": " + string.Join(", ", offer.Claims.Select(claim => Model.WorkerNames.TryGetValue(claim.WorkerId, out var name) ? name : claim.WorkerId)) : string.Empty)</span>
+                                    @if (offer.Status == IntradayOfferStatus.Open)
+                                    {
+                                        <form asp-action="Close" asp-route-id="@offer.ItemId" method="post" class="ms-auto"><button type="submit" class="btn btn-link btn-sm p-0">@T["Close"]</button></form>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}

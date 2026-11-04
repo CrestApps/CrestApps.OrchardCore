@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Workforce.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<WorkforceShiftChangedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-calendar-day" aria-hidden="true"></i>
+    @T["Shift Changed"]
+</h4>
+<p>@T["Starts when a published shift is moved, given to someone else, swapped or has its breaks changed."]</p>

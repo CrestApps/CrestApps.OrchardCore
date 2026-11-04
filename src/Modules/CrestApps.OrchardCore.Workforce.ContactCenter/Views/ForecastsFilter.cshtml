@@ -1,0 +1,16 @@
+@{
+    var model = (ForecastingListViewModel)Model.ViewModel;
+    var formId = (string)Model.FormId;
+}
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="btn-group filter">
+    <select id="forecasts-group" name="planningGroupId" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Planning group"]" data-dropdown-align-right="auto" aria-label="@T["Planning group"]" onchange="this.form.submit()">
+        <option value="">@T["Every planning group"]</option>
+        @foreach (var option in model.PlanningGroupOptions)
+        {
+            <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+        }
+    </select>
+</div>

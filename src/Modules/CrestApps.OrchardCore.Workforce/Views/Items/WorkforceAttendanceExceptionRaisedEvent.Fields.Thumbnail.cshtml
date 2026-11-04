@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Workforce.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<WorkforceAttendanceExceptionRaisedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+    @T["Attendance Exception Raised"]
+</h4>
+<p>@T["Starts when a late start, missed punch, no-show or other attendance exception is raised."]</p>

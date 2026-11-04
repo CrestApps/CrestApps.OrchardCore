@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore Dispatch</Title>
+    <Description>
+      $(OCCMSDescription)
+
+      Dispatch for field service: a visit for each work order, candidates checked for skills, certifications,
+      territory, shifts, time off and travel, assignment under a lock per technician with a job on their team calendar,
+      and a live dispatch board with a timeline, a queue of unscheduled visits and a map.
+    </Description>
+    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Dispatch FieldService</PackageTags>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.Deployment.Abstractions" />
+    <PackageReference Include="OrchardCore.Admin.Abstractions" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.Navigation.Core" />
+    <PackageReference Include="OrchardCore.ResourceManagement" />
+    <PackageReference Include="OrchardCore.Settings.Core" />
+    <PackageReference Include="OrchardCore.Workflows.Abstractions" />
+    <PackageReference Include="OrchardCore.Email.Abstractions" />
+    <PackageReference Include="OrchardCore.Sms.Abstractions" />
+    <PackageReference Include="OrchardCore.Media.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Dispatch.Abstractions\CrestApps.OrchardCore.Dispatch.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Scheduling.Abstractions\CrestApps.OrchardCore.Scheduling.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Assets.Core\CrestApps.OrchardCore.Assets.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Dispatch.Core\CrestApps.OrchardCore.Dispatch.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Inventory.Core\CrestApps.OrchardCore.Inventory.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.SignalR.Core\CrestApps.OrchardCore.SignalR.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Workforce\CrestApps.OrchardCore.Workforce.csproj" />
+  </ItemGroup>
+
+</Project>

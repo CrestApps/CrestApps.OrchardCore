@@ -1,0 +1,11 @@
+@model ShapeViewModel<TimeOffLedgerRowViewModel>
+@{
+    var entry = Model.Value.Entry;
+}
+<span class="text-nowrap">@entry.EffectiveDate.ToString("d MMM yyyy")</span>
+<strong class="ms-2 text-nowrap @(entry.Amount < 0 ? "text-danger" : "text-success")">@(entry.Amount > 0 ? "+" : string.Empty)<partial name="_TimeOffAmount" model="(entry.Amount, Model.Value.Unit)" /></strong>
+<span class="ms-2">@Model.Value.PolicyName</span>
+@if (!string.IsNullOrEmpty(entry.Note))
+{
+    <span class="ms-2 text-muted small">@entry.Note</span>
+}

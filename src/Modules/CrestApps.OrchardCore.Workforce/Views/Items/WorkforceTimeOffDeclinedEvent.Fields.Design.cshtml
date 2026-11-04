@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Workforce.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<WorkforceTimeOffDeclinedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-circle-xmark" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Time Off Declined"])
+    </h4>
+</header>

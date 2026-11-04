@@ -1,0 +1,4 @@
+@model CertificationRecordRowViewModel
+
+<a asp-controller="CertificationRecords" asp-action="Edit" asp-route-id="@Model.Record.ItemId">@(Model.Record.SubjectName ?? Model.Record.SubjectId)</a>
+<div class="hint">@(Model.CertificationName ?? T["Unknown certification"].Value)@(string.IsNullOrEmpty(Model.Record.Number) ? string.Empty : $" · {Model.Record.Number}")</div>

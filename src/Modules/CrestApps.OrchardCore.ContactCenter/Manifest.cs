@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Skills;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Users.Core;
 using OrchardCore.Modules.Manifest;
@@ -43,6 +44,7 @@ using OrchardCore.Modules.Manifest;
         ContactCenterConstants.Feature.Area,
         ContactCenterConstants.Feature.AgentServices,
         UsersConstants.Feature.Area,
+        SkillsConstants.Features.Skills,
     ]
 )]
 
@@ -73,6 +75,17 @@ using OrchardCore.Modules.Manifest;
     [
         ContactCenterConstants.Feature.Agents,
         ContactCenterConstants.Feature.BusinessHours,
+    ]
+)]
+
+[assembly: Feature(
+    Id = ContactCenterConstants.Feature.IntervalStatistics,
+    Name = "Contact Center Interval Statistics",
+    Description = "Keeps 15-minute statistics of every queue and agent: volume, service level, handle time and time in each state. Workforce forecasting, intraday and adherence read them, and the report builder lists them.",
+    Category = "Contact Center",
+    Dependencies =
+    [
+        ContactCenterConstants.Feature.Queues,
     ]
 )]
 

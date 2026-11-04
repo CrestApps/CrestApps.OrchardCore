@@ -1,0 +1,3 @@
+@model ShapeViewModel<TimeOffPolicy>
+
+<a asp-controller="TimeOffPolicies" asp-action="Delete" asp-route-id="@Model.Value.ItemId" class="dropdown-item text-danger" data-title="@T["Delete"]" data-message="@T["Delete this policy? Its ledger entries stay, but workers no longer accrue under it or take time off from it."]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>

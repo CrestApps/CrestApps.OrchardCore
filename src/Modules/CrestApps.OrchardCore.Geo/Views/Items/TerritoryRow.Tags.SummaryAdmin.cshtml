@@ -1,0 +1,21 @@
+@model ShapeViewModel<TerritoryRow>
+
+@{
+    var territory = Model.Value.Territory;
+}
+@if (!string.IsNullOrEmpty(Model.Value.ParentName))
+{
+    <span class="badge ta-badge fw-normal">@T["In {0}", Model.Value.ParentName]</span>
+}
+@if (!string.IsNullOrEmpty(territory.Shape))
+{
+    <span class="badge ta-badge fw-normal">@T["Drawn on the map"]</span>
+}
+@if (territory.PostalCodes.Count > 0)
+{
+    <span class="badge ta-badge fw-normal" title="@string.Join(", ", territory.PostalCodes)">@(territory.PostalCodes.Count == 1 ? T["1 postal code"] : T["{0} postal codes", territory.PostalCodes.Count])</span>
+}
+@if (!string.IsNullOrEmpty(territory.TimeZoneId))
+{
+    <span class="badge ta-badge fw-normal">@territory.TimeZoneId</span>
+}

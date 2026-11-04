@@ -192,6 +192,22 @@ Every admin page that lists records follows one pattern, so all lists look alike
 * Row templates use the shared row layout: the title is a plain link, facts are `badge ta-badge fw-normal` badges with an icon and a tooltip, the description sits under the title, and actions render through `AdminListActions`. `ActionsMenu` items are bare `dropdown-item` elements, never wrapped in `<li>`.
 * The action bar above the list holds only the search (an input group ending with the magnifying-glass button) and the page buttons such as **Add**. Filters (status, type, "Show" selects) go in the list's toolbar through `AdminListContext.ToolbarActions`, never beside the **Add** button.
 * Declare the grid columns in the view (`<admin-list-grid>` with `<admin-list-column>`), give the list a unique PascalCase name, and check the page in both layouts and both action modes before you hand it off.
+* Toolbar filters are bootstrap-select pickers, as on Orchard Core's **Manage Content** list: `<div class="btn-group filter">` holding `<select class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="..." data-dropdown-align-right="auto" aria-label="...">`, with `<style asp-name="bootstrap-select">` and `<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot">` on the page. A filter submits the list's form when it changes. Never a plain `form-select` in the toolbar.
+
+#### Admin Forms and Menus
+
+Build admin UI the way Orchard Core builds it, and add a new concept only when Orchard Core has none.
+
+* Every field uses the `ocat-*` layout (`ocat-wrapper`, `ocat-label`, `ocat-end`, and `ocat-end-offset` for a checkbox): one label and field per line, stacked. No multi-column field grids.
+* Group related fields in Bootstrap cards (`card` with a `card-header` naming the group and a `card-body`), one card per group, especially on forms with many fields.
+* Every top-level admin menu item has an icon (`icon-class-fa-solid`, `icon-class-fa-...`). One-time setup pages, such as a "Get started" page, are not in the menu; link to them from the module's pages.
+* Reports belong under the **Reports** menu, not under the module's own menu.
+
+#### Data Portability
+
+* Every kind of record a module stores (CRUD records and their settings) has an Orchard Core recipe step (`AddRecipeExecutionStep`) and deployment step (`AddDeployment`), so it can be exported and imported.
+* Each recipe step has an `IRecipeStep` schema, and each deployment step a deployment step schema, registered in a startup with `[RequireFeatures("CrestApps.OrchardCore.Recipes")]`, so CrestApps Recipes exports their definitions.
+* Every options class bound from configuration (appsettings) is described in the module's `ConfigurationSchema.json`.
 
 #### Admin Edit (Form) Page Buttons
 

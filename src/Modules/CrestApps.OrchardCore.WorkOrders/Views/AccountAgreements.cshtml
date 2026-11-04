@@ -1,0 +1,28 @@
+@model CrestApps.OrchardCore.WorkOrders.Agreements.AccountAgreementsViewModel
+
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+            <h2 class="h6 mb-0 me-auto">@T["Service agreements"] <span class="badge text-bg-secondary fw-normal">@Model.Count</span></h2>
+            <a class="btn btn-sm btn-primary" asp-area="CrestApps.OrchardCore.WorkOrders" asp-controller="ServiceAgreements" asp-action="Edit" asp-route-accountId="@Model.AccountId">@T["New agreement"]</a>
+        </div>
+        @if (Model.Agreements.Count == 0)
+        {
+            <p class="small text-muted mb-0">@T["No service agreements with this account yet."]</p>
+        }
+        else
+        {
+            <div class="list-group list-group-flush">
+                @foreach (var agreement in Model.Agreements)
+                {
+                    <a class="list-group-item list-group-item-action d-flex flex-wrap gap-2 align-items-center px-0" asp-area="CrestApps.OrchardCore.WorkOrders" asp-controller="ServiceAgreements" asp-action="Details" asp-route-id="@agreement.ItemId">
+                        <span class="fw-semibold">@agreement.Number</span>
+                        <span class="me-auto">@agreement.Name</span>
+                        <span class="badge text-bg-light border">@agreement.Status</span>
+                        <span class="small text-muted">@agreement.StartDate.ToString("d", System.Globalization.CultureInfo.CurrentCulture)@(agreement.EndDate is { } end ? " – " + end.ToString("d", System.Globalization.CultureInfo.CurrentCulture) : null)</span>
+                    </a>
+                }
+            </div>
+        }
+    </div>
+</div>

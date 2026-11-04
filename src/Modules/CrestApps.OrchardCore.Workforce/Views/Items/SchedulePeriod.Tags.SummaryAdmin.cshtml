@@ -1,0 +1,21 @@
+@model SchedulePeriodRowViewModel
+@{
+    var period = Model.Period;
+}
+@if (!string.IsNullOrEmpty(Model.TeamName))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Team"]"><i class="fa-solid fa-people-group text-secondary me-1" aria-hidden="true"></i>@Model.TeamName</span>
+}
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Dates"]"><i class="fa-regular fa-calendar text-secondary me-1" aria-hidden="true"></i>@period.StartDate.ToString("d")&ndash;@period.EndDate.ToString("d")</span>
+@switch (period.Status)
+{
+    case SchedulePeriodStatus.Published:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-circle-check text-success me-1" aria-hidden="true"></i>@T["Published, version {0}", period.PublishedVersion]</span>
+        break;
+    case SchedulePeriodStatus.Locked:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-lock text-secondary me-1" aria-hidden="true"></i>@T["Locked"]</span>
+        break;
+    default:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-pen-ruler text-warning me-1" aria-hidden="true"></i>@T["Draft"]</span>
+        break;
+}

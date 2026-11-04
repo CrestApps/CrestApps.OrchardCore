@@ -1,0 +1,16 @@
+@{
+    var filter = (TimeEntriesListViewModel)Model.ViewModel;
+    var formId = (string)Model.FormId;
+}
+
+<div class="btn-group filter">
+    <select name="stageId" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Filter by stage"]" data-dropdown-align-right="auto" aria-label="@T["Stage"]" onchange="this.form.submit()">
+        <option value="">@T["Every stage"]</option>
+        @foreach (var option in filter.StageOptions)
+        {
+            <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+        }
+    </select>
+</div>
+<label for="time-entries-day" class="visually-hidden">@T["Day"]</label>
+<input id="time-entries-day" type="date" name="day" value="@filter.Day" form="@formId" class="form-control form-control-sm w-auto" onchange="this.form.submit()" />

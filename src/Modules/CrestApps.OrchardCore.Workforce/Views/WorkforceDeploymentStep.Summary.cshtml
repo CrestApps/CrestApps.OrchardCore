@@ -1,0 +1,5 @@
+@using CrestApps.OrchardCore.Workforce.Deployments
+@model ShapeViewModel<WorkforceDeploymentStep>
+
+<h5>@T["Workforce teams and workers"]</h5>
+<span class="hint">@T["Activity codes and teams"]@(Model.Value.IncludeWorkers ? T[", with the workers"] : null)</span>

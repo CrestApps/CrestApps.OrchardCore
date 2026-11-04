@@ -1,0 +1,23 @@
+@model WorkforceListViewModel
+
+<zone Name="Title"><breadcrumb name="WorkforcePayCodes" title="@T["Pay Codes"]" /></zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2">
+            <div class="col">
+                <p class="mb-0 text-muted small">@T["The codes hours are paid under. Regular, overtime, double time, paid time off and predictability pay are used for worked hours; shift differentials add a premium for hours in their window."]</p>
+            </div>
+            <div class="col-auto"><a asp-action="Edit" class="btn btn-secondary create">@T["Add pay code"]</a></div>
+        </div>
+    </div>
+</div>
+
+<admin-list name="WorkforcePayCodes" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> There are none yet."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Pay code"]" />
+        <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

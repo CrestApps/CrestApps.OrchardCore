@@ -1,0 +1,5 @@
+@model ShapeViewModel<LaborRuleOverrideRowViewModel>
+@if (!string.IsNullOrEmpty(Model.Value.Override.PeriodId))
+{
+    <a asp-controller="Schedules" asp-action="Plan" asp-route-id="@Model.Value.Override.PeriodId" class="btn btn-outline-secondary btn-sm">@T["Schedule"]</a>
+}

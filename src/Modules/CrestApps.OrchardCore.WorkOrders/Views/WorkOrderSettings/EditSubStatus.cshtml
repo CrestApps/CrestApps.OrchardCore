@@ -1,0 +1,45 @@
+@model WorkOrderSubStatusEditViewModel
+
+<zone Name="Title"><breadcrumb name="WorkOrderSubStatusesEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["Add a Sub-status"] : T["Edit {0}", Model.Name])" /></zone>
+
+<form asp-action="EditSubStatus" asp-route-id="@Model.Id" method="post" class="no-multisubmit">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <input type="hidden" asp-for="Id" />
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Details"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Name" class="form-control" required />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="ParentStatus" class="ocat-label">@T["Under"]</label>
+                <div class="ocat-end">
+                    <select asp-for="ParentStatus" class="form-select">
+                        @foreach (var status in Enum.GetValues<WorkOrderStatus>())
+                        {
+                            <option value="@status">@T[status.Text()]</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Color" class="ocat-label">@T["Color"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Color" type="color" class="form-control form-control-color" />
+                </div>
+            </div>
+            <div class="form-check mb-3">
+                <input asp-for="PausesSla" type="checkbox" class="form-check-input" />
+                <label asp-for="PausesSla" class="form-check-label">@T["Stops the service level clock"]</label>
+                <span class="hint dashed">@T["Such as waiting for the customer, or for parts."]</span>
+            </div>
+        </div>
+    </div>
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+        <a asp-action="Index" asp-route-kind="@WorkOrderSettingsController.SubStatuses" class="btn btn-secondary">@T["Cancel"]</a>
+    </div>
+</form>

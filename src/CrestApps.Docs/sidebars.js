@@ -167,6 +167,43 @@ const sidebars = {
         },
         {
             type: 'category',
+            label: 'Workforce',
+            className: icon('users'),
+            items: [
+                'user-manual/workforce/teams',
+                'user-manual/workforce/workers-and-teams',
+                'user-manual/workforce/shift-planning',
+                'user-manual/workforce/time-off',
+                'user-manual/workforce/time-tracker',
+                'user-manual/workforce/labor-rules',
+                'user-manual/workforce/time-clock',
+                'user-manual/workforce/reports-and-automation',
+                'user-manual/workforce/my-work-portal',
+                'user-manual/workforce/contact-center-adherence',
+                'user-manual/workforce/contact-center-forecasting',
+                'user-manual/workforce/skills-and-certifications',
+            ],
+        },
+        {
+            type: 'category',
+            label: 'Geo',
+            className: icon('compass'),
+            items: [
+                'user-manual/geo/territories',
+            ],
+        },
+        {
+            type: 'category',
+            label: 'Field Service',
+            className: icon('wrench'),
+            items: [
+                'user-manual/field-service/assets',
+                'user-manual/field-service/work-orders',
+                'user-manual/field-service/dispatch',
+            ],
+        },
+        {
+            type: 'category',
             label: 'Commerce',
             className: icon('shopping-cart'),
             link: { type: 'doc', id: 'user-manual/commerce/index' },
@@ -410,6 +447,37 @@ const sidebars = {
             items: [
                 'modules/calendars',
                 'modules/scheduling',
+            ],
+        },
+        {
+            type: 'category',
+            label: 'Workforce',
+            className: icon('users'),
+            items: [
+                'modules/workforce',
+                'modules/workforce-contact-center',
+                'modules/skills',
+                'modules/teams',
+            ],
+        },
+        {
+            type: 'category',
+            label: 'Geo',
+            className: icon('compass'),
+            items: [
+                'modules/geo',
+            ],
+        },
+        {
+            type: 'category',
+            label: 'Field Service',
+            className: icon('wrench'),
+            items: [
+                'modules/assets',
+                'modules/work-orders',
+                'modules/dispatch',
+                'modules/or-tools',
+                'modules/time-tracker',
             ],
         },
         {

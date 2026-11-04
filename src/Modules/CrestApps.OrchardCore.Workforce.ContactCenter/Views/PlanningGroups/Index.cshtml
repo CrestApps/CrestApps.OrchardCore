@@ -1,0 +1,23 @@
+@model ForecastingListViewModel
+
+<zone Name="Title"><breadcrumb name="WorkforcePlanningGroups" title="@T["Planning Groups"]" /></zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2">
+            <div class="col">
+                <p class="mb-0 text-muted small">@T["Queues forecast and staffed together, the goal they are answered to, and the team that staffs them."]</p>
+            </div>
+            <div class="col-auto"><a asp-action="Edit" class="btn btn-secondary create">@T["Add planning group"]</a></div>
+        </div>
+    </div>
+</div>
+
+<admin-list name="WorkforcePlanningGroups" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> Add a planning group to forecast its queues."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Planning group"]" />
+        <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

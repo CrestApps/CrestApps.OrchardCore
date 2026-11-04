@@ -1,0 +1,153 @@
+@model MyApprovalsViewModel
+@{
+    var nothing = Model.TimeOff.Count + Model.Trades.Count + Model.Claims.Count + Model.Timesheets.Count + Model.Corrections.Count + Model.Exceptions.Count == 0;
+}
+<zone Name="Title">
+    <breadcrumb name="MyWorkApprovals" title="@T["Approvals"]">
+        <breadcrumb-item id="MyWork" action="Index" controller="MyWork" area="CrestApps.OrchardCore.Workforce">@T["My Work"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+<partial name="~/Areas/CrestApps.OrchardCore.Workforce/Views/Shared/_MyWorkAssets.cshtml" />
+
+<h2 class="h5 mb-3">@T["Waiting for you"]</h2>
+@if (nothing)
+{
+    <div class="alert alert-light">@T["Nothing is waiting for a decision."]</div>
+}
+
+@if (Model.TimeOff.Count > 0)
+{
+    <h2 class="h5">@T["Time off"]</h2>
+    @foreach (var row in Model.TimeOff)
+    {
+        <div class="card mb-2 my-work-time-off">
+            <div class="card-body py-2 d-flex flex-wrap align-items-center gap-2">
+                <div class="me-auto">
+                    <strong>@row.WorkerName</strong> @row.Type?.Name <span class="text-muted"><partial name="_TimeOffDates" model="row.Request" /></span>
+                    <div class="small"><partial name="_TimeOffStatus" model="row.Request.Status" /> <partial name="_TimeOffAmount" model="(row.Request.Amount, row.Type?.Unit ?? TimeOffUnit.Hours)" /> · @row.TeamName</div>
+                    @if (!string.IsNullOrEmpty(row.Request.Reason))
+                    {
+                        <div class="small text-muted">@row.Request.Reason</div>
+                    }
+                </div>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/approvals/time-off/" + row.Request.ItemId)"><input type="hidden" name="approve" value="true" /><button type="submit" class="btn btn-success btn-sm">@T["Approve"]</button></form>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/approvals/time-off/" + row.Request.ItemId)"><input type="hidden" name="approve" value="false" /><button type="submit" class="btn btn-outline-danger btn-sm">@T["Decline"]</button></form>
+                <a href="@Url.Content("~/Admin/workforce/time-off/requests/" + row.Request.ItemId)" class="btn btn-link btn-sm">@T["Details"]</a>
+            </div>
+        </div>
+    }
+}
+
+@if (Model.Trades.Count > 0)
+{
+    <h2 class="h5 mt-3">@T["Shift trades"]</h2>
+    @foreach (var row in Model.Trades)
+    {
+        <div class="card mb-2">
+            <div class="card-body py-2 d-flex flex-wrap align-items-center gap-2">
+                <div class="me-auto">
+                    @if (row.Trade.Kind == ShiftTradeKind.Swap)
+                    {
+                        @T["{0} and {1} swap {2} and {3}.", row.FromName, row.ToName, row.ShiftText, row.TargetShiftText]
+                    }
+                    else
+                    {
+                        @T["{0} gives {1} to {2}.", row.FromName, row.ShiftText, row.ToName]
+                    }
+                </div>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/approvals/trades/" + row.Trade.ItemId)"><input type="hidden" name="approve" value="true" /><button type="submit" class="btn btn-success btn-sm">@T["Approve"]</button></form>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/approvals/trades/" + row.Trade.ItemId)"><input type="hidden" name="approve" value="false" /><button type="submit" class="btn btn-outline-danger btn-sm">@T["Decline"]</button></form>
+            </div>
+        </div>
+    }
+}
+
+@if (Model.Claims.Count > 0)
+{
+    <h2 class="h5 mt-3">@T["Open shift claims"]</h2>
+    @foreach (var (shift, teamName, claims) in Model.Claims)
+    {
+        <div class="card mb-2 my-work-shift">
+            <div class="card-body py-2">
+                <strong>@shift.Start.ToString("ddd d MMM HH:mm")&ndash;@shift.End.ToString("HH:mm")</strong> <span class="text-muted">@teamName</span>
+                @foreach (var (claim, name) in claims)
+                {
+                    <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
+                        <span class="me-auto">@name</span>
+                        <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/approvals/claims/" + shift.ItemId)"><input type="hidden" name="workerId" value="@claim.WorkerId" /><input type="hidden" name="approve" value="true" /><button type="submit" class="btn btn-success btn-sm">@T["Give the shift"]</button></form>
+                        <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/approvals/claims/" + shift.ItemId)"><input type="hidden" name="workerId" value="@claim.WorkerId" /><input type="hidden" name="approve" value="false" /><button type="submit" class="btn btn-outline-danger btn-sm">@T["Decline"]</button></form>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+}
+
+@if (Model.Timesheets.Count > 0)
+{
+    <h2 class="h5 mt-3">@T["Timesheets"]</h2>
+    @foreach (var (timesheet, workerName) in Model.Timesheets)
+    {
+        <div class="card mb-2">
+            <div class="card-body py-2 d-flex flex-wrap align-items-center gap-2">
+                <div class="me-auto">
+                    <strong>@workerName</strong> <span class="text-muted">@timesheet.PeriodStart.ToString("d MMM") – @timesheet.PeriodEnd.ToString("d MMM")</span>
+                    <div class="small">@T["{0} h", timesheet.TotalHours.ToString("0.##")]@if (timesheet.OpenExceptions > 0) { <span class="text-warning-emphasis"> · @T.Plural(timesheet.OpenExceptions, "1 exception", "{0} exceptions")</span> }</div>
+                </div>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/approvals/timesheets/" + timesheet.ItemId)"><button type="submit" class="btn btn-success btn-sm">@T["Approve"]</button></form>
+                <a href="@Url.Content("~/Admin/workforce/timesheets/" + timesheet.ItemId)" class="btn btn-link btn-sm">@T["Review"]</a>
+            </div>
+        </div>
+    }
+}
+
+@if (Model.Corrections.Count > 0)
+{
+    <h2 class="h5 mt-3">@T["Missed punches"]</h2>
+    @foreach (var (correction, workerName, when) in Model.Corrections)
+    {
+        <div class="card mb-2">
+            <div class="card-body py-2 d-flex flex-wrap align-items-center gap-2">
+                <div class="me-auto">
+                    <strong>@workerName</strong> @PunchName(correction.Kind) <span class="text-muted">@when</span>
+                    <div class="small text-muted">@correction.Reason</div>
+                </div>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/approvals/corrections/" + correction.ItemId)"><input type="hidden" name="approve" value="true" /><button type="submit" class="btn btn-success btn-sm">@T["Add it"]</button></form>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/approvals/corrections/" + correction.ItemId)"><input type="hidden" name="approve" value="false" /><button type="submit" class="btn btn-outline-danger btn-sm">@T["Decline"]</button></form>
+            </div>
+        </div>
+    }
+}
+
+@if (Model.Exceptions.Count > 0)
+{
+    <h2 class="h5 mt-3">@T["Attendance"]</h2>
+    @foreach (var (exception, workerName) in Model.Exceptions)
+    {
+        <div class="card mb-2">
+            <div class="card-body py-2 d-flex flex-wrap align-items-center gap-2">
+                <div class="me-auto">
+                    <strong>@workerName</strong> @CrestApps.OrchardCore.Workforce.Controllers.AttendanceKinds.Name(T, exception.Kind) <span class="text-muted">@exception.Date.ToString("ddd d MMM")@(exception.Minutes > 0 ? " · " + T.GetString("{0} min", exception.Minutes).Value : null)</span>
+                </div>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/approvals/exceptions/" + exception.ItemId)"><input type="hidden" name="excuse" value="false" /><button type="submit" class="btn btn-outline-secondary btn-sm">@T["Confirm"]</button></form>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/approvals/exceptions/" + exception.ItemId)"><input type="hidden" name="excuse" value="true" /><button type="submit" class="btn btn-outline-success btn-sm">@T["Excuse"]</button></form>
+            </div>
+        </div>
+    }
+}
+
+@functions {
+    private string PunchName(TimePunchKind kind) => kind switch
+    {
+        TimePunchKind.In => T["Clocked in"].Value,
+        TimePunchKind.Out => T["Clocked out"].Value,
+        TimePunchKind.MealStart => T["Meal"].Value,
+        TimePunchKind.MealEnd => T["Back from meal"].Value,
+        TimePunchKind.BreakStart => T["Break"].Value,
+        TimePunchKind.BreakEnd => T["Back from break"].Value,
+        TimePunchKind.ActivityChange => T["Changed activity"].Value,
+        TimePunchKind.JobStart => T["Started a job"].Value,
+        _ => T["Finished a job"].Value,
+    };
+}
+

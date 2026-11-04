@@ -1,0 +1,40 @@
+@model AgentWorkerListViewModel
+
+<zone Name="Title"><breadcrumb name="WorkforceAgents" title="@T["Contact Center Agents"]" /></zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 gy-2 align-items-end">
+            <div class="col-12 col-lg">
+                <p class="mb-0 text-muted small">@T["Every contact center agent with a user account gets a worker, so it can be scheduled, take time off and be paid like everyone else. New agents get one when they are added; agents added before Workforce for Contact Center was turned on get one here."]</p>
+            </div>
+            @if (Model.Missing > 0)
+            {
+                <div class="col-12 col-lg-auto">
+                    <form asp-action="CreateWorkers" method="post" class="d-flex flex-wrap gap-2 align-items-end">
+                        <div>
+                            <label for="TeamId" class="form-label small mb-1">@T["Team for the new workers"]</label>
+                            <select id="TeamId" name="teamId" class="form-select form-select-sm w-auto">
+                                <option value="">@T["No team"]</option>
+                                @foreach (var option in Model.TeamOptions)
+                                {
+                                    <option value="@option.Value">@option.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">@(Model.Missing == 1 ? T["Create 1 worker"] : T["Create {0} workers", Model.Missing])</button>
+                    </form>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<admin-list name="WorkforceAgents" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> There are no agents with a user account."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Agent"]" />
+        <admin-list-column name="Details" position="30" title="@T["Worker"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

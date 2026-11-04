@@ -1,0 +1,43 @@
+@model WorkOrderVisitsViewModel
+
+@{
+    var open = Model.Visits.Where(visit => VisitStatusRules.IsOpen(visit.Status)).ToList();
+    var workOrderOpen = Model.WorkOrder.Status is not (CrestApps.OrchardCore.WorkOrders.Models.WorkOrderStatus.Completed or CrestApps.OrchardCore.WorkOrders.Models.WorkOrderStatus.Closed or CrestApps.OrchardCore.WorkOrders.Models.WorkOrderStatus.Canceled);
+}
+
+<div class="card mb-3"><div class="card-body">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+        <h2 class="h6 mb-0">@T["Visits"]</h2>
+        @if (Model.CanManage && workOrderOpen && open.Count == 0)
+        {
+            <form asp-area="@DispatchConstants.Features.Dispatch" asp-controller="Visits" asp-action="Create" asp-route-workOrderId="@Model.WorkOrder.ItemId" method="post" class="ms-auto">
+                <button type="submit" class="btn btn-sm btn-primary">@T["Add a visit"]</button>
+            </form>
+        }
+    </div>
+    @if (Model.Visits.Count == 0)
+    {
+        <p class="small text-muted mb-0">@T["No visits yet."]</p>
+    }
+    else
+    {
+        <ul class="list-unstyled small mb-0">
+            @foreach (var visit in Model.Visits)
+            {
+                <li class="mb-1 d-flex flex-wrap align-items-center gap-2">
+                    <a asp-area="@DispatchConstants.Features.Dispatch" asp-controller="Visits" asp-action="Details" asp-route-id="@visit.ItemId">@visit.Number</a>
+                    <span class="badge @(visit.Status == VisitStatus.Unscheduled ? "text-bg-warning" : "ta-badge") fw-normal">@T[visit.Status.Text()]</span>
+                    @if (visit.StartUtc is not null)
+                    {
+                        <span>@DispatchTimeZone.Format(visit.StartUtc, Model.TimeZoneId)–@DispatchTimeZone.Format(visit.EndUtc, Model.TimeZoneId, "HH:mm")</span>
+                        <span class="text-muted">@string.Join(", ", visit.WorkerIds.Select(id => Model.WorkerNames.TryGetValue(id, out var name) ? name : id))</span>
+                    }
+                    else if (Model.CanManage && VisitStatusRules.IsOpen(visit.Status))
+                    {
+                        <a asp-area="@DispatchConstants.Features.Dispatch" asp-controller="Visits" asp-action="Details" asp-route-id="@visit.ItemId" class="btn btn-sm btn-secondary">@T["Schedule it"]</a>
+                    }
+                </li>
+            }
+        </ul>
+    }
+</div></div>

@@ -1,0 +1,10 @@
+@model ShapeViewModel<AgentWorkerRow>
+
+@if (Model.Value.Worker is null)
+{
+    <span class="badge text-bg-warning fw-normal">@T["No worker"]</span>
+}
+else
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-link text-secondary me-1" aria-hidden="true"></i>@Model.Value.Worker.DisplayName</span>
+}

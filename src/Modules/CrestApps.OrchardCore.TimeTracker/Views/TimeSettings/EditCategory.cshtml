@@ -1,0 +1,67 @@
+@model TimeCategoryEditViewModel
+
+<zone Name="Title"><breadcrumb name="TimeTrackerCategoriesEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Category"] : T["Edit {0}", Model.Name])" /></zone>
+
+<form asp-action="EditCategory" asp-route-id="@Model.Id" method="post">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="card mb-3">
+        <div class="card-header">@T["The category"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper" asp-validation-class-for="Name">
+                <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Name" class="form-control" placeholder="@T["Such as: Payable"]" />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Code" class="ocat-label">@T["Code"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Code" class="form-control" maxlength="32" />
+                    <span class="hint">@T["A short code for exports to payroll or billing, such as PAY."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Color" class="ocat-label">@T["Color"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Color" type="color" class="form-control form-control-color" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">@T["In the report"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="Position" class="ocat-label">@T["Column position"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Position" type="number" class="form-control" />
+                    <span class="hint">@T["Lower comes first."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper" asp-validation-class-for="Factor">
+                <label asp-for="Factor" class="ocat-label">@T["Each minute counts"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Factor" type="number" min="0" max="10" step="0.01" class="form-control" />
+                    <span asp-validation-for="Factor" class="text-danger"></span>
+                    <span class="hint">@T["1 counts the time as it is; 1.5 counts it half again, such as for an overtime premium."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <div class="form-check">
+                        <input asp-for="Enabled" class="form-check-input" />
+                        <label asp-for="Enabled" class="form-check-label">@T["In use"]</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+        <a asp-action="Index" asp-route-kind="@TimeSettingsController.Categories" class="btn btn-secondary">@T["Cancel"]</a>
+    </div>
+</form>

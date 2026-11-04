@@ -1,0 +1,18 @@
+@model ShapeViewModel<TimeOffRequestRowViewModel>
+@{
+    var request = Model.Value.Request;
+}
+<partial name="_TimeOffStatus" model="request.Status" />
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["What it counts"]"><i class="fa-solid fa-hourglass text-secondary me-1" aria-hidden="true"></i><partial name="_TimeOffAmount" model="(request.Amount, Model.Value.Type?.Unit ?? TimeOffUnit.Hours)" /></span>
+@if (!string.IsNullOrEmpty(Model.Value.TeamName))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Team"]"><i class="fa-solid fa-people-group text-secondary me-1" aria-hidden="true"></i>@Model.Value.TeamName</span>
+}
+@if (request.AutoApproved && request.Status == TimeOffRequestStatus.Approved)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Approved by the allotment, with no manager"]"><i class="fa-solid fa-bolt text-secondary me-1" aria-hidden="true"></i>@T["Within allotment"]</span>
+}
+@if (request.FlaggedShiftEventIds.Count > 0)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Published shifts that need cover"]"><i class="fa-solid fa-triangle-exclamation text-warning me-1" aria-hidden="true"></i>@T.Plural(request.FlaggedShiftEventIds.Count, "1 shift to cover", "{0} shifts to cover", request.FlaggedShiftEventIds.Count)</span>
+}
