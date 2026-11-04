@@ -1,5 +1,4 @@
 using CrestApps.Core.AI;
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.Seo.AI;
 using CrestApps.OrchardCore.Seo.Drivers;
 using CrestApps.OrchardCore.Seo.Handlers;
@@ -96,7 +95,7 @@ public sealed class SearchStartup : StartupBase
 /// Offers AI tools that configure the site's structured data when AI is enabled, so an agent, such as the admin's AI
 /// chat, can describe a content type with schema.org.
 /// </summary>
-[RequireFeatures(AIConstants.Feature.Area)]
+[RequireFeatures("CrestApps.OrchardCore.AI")]
 public sealed class AIStartup : StartupBase
 {
     internal readonly IStringLocalizer S;

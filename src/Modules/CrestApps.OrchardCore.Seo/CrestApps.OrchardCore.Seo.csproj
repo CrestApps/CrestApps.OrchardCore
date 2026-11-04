@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="CrestApps.Core.AI" />
     <PackageReference Include="OrchardCore.Admin.Abstractions" />
     <PackageReference Include="OrchardCore.ContentManagement" />
     <PackageReference Include="OrchardCore.ContentManagement.Display" />
@@ -40,7 +41,6 @@
   <ItemGroup>
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Seo.Abstractions/CrestApps.OrchardCore.Seo.Abstractions.csproj" />
-    <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
   </ItemGroup>
 
 </Project>
