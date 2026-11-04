@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Security.Cryptography;
 using CrestApps.Core;
@@ -237,7 +238,8 @@ public sealed class PortalTests
         var again = await SendAsync();
 
         Assert.Equal((0, 1, 0), (early, due, again));
-        Assert.Equal(["Your shift starts at 9:00 AM"], channel.Titles);
+        // The time is in the culture the site runs in, such as 9:00 AM in en-US.
+        Assert.Equal([$"Your shift starts at {new DateTime(2026, 1, 1, 9, 0, 0).ToString("t", CultureInfo.CurrentCulture)}"], channel.Titles);
     }
 
     [Fact]

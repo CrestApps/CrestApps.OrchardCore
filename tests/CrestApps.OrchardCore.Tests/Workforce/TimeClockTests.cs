@@ -1,3 +1,4 @@
+using System.Globalization;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Workforce.Core;
@@ -158,7 +159,8 @@ public sealed class TimeClockTests
 
         var inTime = await kit.PunchAsync(ana, TimePunchKind.In);
 
-        Assert.Equal(["It's too early to clock in. You can clock in from 8:30 AM."], early.Errors);
+        // The time is in the culture the site runs in, such as 8:30 AM in en-US.
+        Assert.Equal([$"It's too early to clock in. You can clock in from {new DateTime(2026, 1, 1, 8, 30, 0).ToString("t", CultureInfo.CurrentCulture)}."], early.Errors);
         Assert.True(inTime.Succeeded);
     }
 
