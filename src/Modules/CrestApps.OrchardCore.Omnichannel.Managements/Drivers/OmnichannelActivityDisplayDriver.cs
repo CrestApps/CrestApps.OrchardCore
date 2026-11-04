@@ -143,17 +143,6 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                 }
             }
 
-            var users = await _session.Query<User, UserIndex>(x => x.IsEnabled).ListAsync();
-
-            var usersListItems = new List<SelectListItem>();
-
-            foreach (var user in users)
-            {
-                var displayName = await _displayNameProvider.GetAsync(user);
-
-                usersListItems.Add(new SelectListItem(displayName, user.UserId));
-            }
-
             model.UrgencyLevels =
             [
                 new(S["Normal"], nameof(ActivityUrgencyLevel.Normal)),
@@ -165,7 +154,6 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             ];
             model.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);
             model.ContactContentTypes = contactContentTypes.OrderBy(x => x.Text);
-            model.Users = usersListItems.OrderBy(x => x.Text);
         }).Location("Content:5")
         .RenderWhen(() => Task.FromResult(activity.Status == ActivityStatus.NotStated && !isCompletingActivity));
 
@@ -407,9 +395,11 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                 }
             }
 
-            if (string.IsNullOrEmpty(model.UserId))
+            var assignedUser = string.IsNullOrEmpty(model.UserId) ? null : await _userManager.FindByIdAsync(model.UserId);
+
+            if (assignedUser is null)
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.UserId), S["Contact is required."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.UserId), S["Select the user to assign the activity to."]);
             }
 
             if (!model.ScheduleAt.HasValue)
@@ -434,7 +424,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                     !activity.AssignedToUtc.HasValue)
             {
                 activity.AssignedToUtc = _clock.UtcNow;
-                activity.AssignedToUsername = (await _userManager.FindByIdAsync(model.UserId))?.UserName;
+                activity.AssignedToUsername = assignedUser?.UserName;
                 activity.AssignedToId = model.UserId;
             }
 

@@ -47,12 +47,6 @@ public class EditOmnichannelActivity
     public IEnumerable<SelectListItem> ContactContentTypes { get; set; }
 
     /// <summary>
-    /// Gets or sets the users.
-    /// </summary>
-    [BindNever]
-    public IEnumerable<SelectListItem> Users { get; set; }
-
-    /// <summary>
     /// Gets or sets the urgency levels.
     /// </summary>
     [BindNever]
