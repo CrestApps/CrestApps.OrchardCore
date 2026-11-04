@@ -14,7 +14,9 @@
     "the phone is closed.", Id="CrestApps.OrchardCore.Telephony.SoftPhone.Extension", Name="Telephony Soft Phone Extension")]
 [assembly: OrchardCore.Modules.Manifest.Feature(Category="Telephony", Dependencies=new string[] {
         "OrchardCore.Users",
-        "OrchardCore.SignalR"}, Description="Provides the provider-agnostic telephony services, SignalR hub, and site settings" +
+        "OrchardCore.SignalR",
+        "CrestApps.OrchardCore.Users",
+        "CrestApps.OrchardCore.Resources"}, Description="Provides the provider-agnostic telephony services, SignalR hub, and site settings" +
     ".", Id="CrestApps.OrchardCore.Telephony", Name="Telephony")]
 [assembly: OrchardCore.Modules.Manifest.Module(Author="The CrestApps Team", Category="Telephony", Description="Provides a provider-agnostic soft phone and SignalR hub for integrating telephony" +
     " providers.", Name="Telephony", Version="3.0.0", Website="https://crestapps.com")]
@@ -546,8 +548,6 @@ namespace CrestApps.OrchardCore.Telephony.ViewModels
         public string Name { get; set; }
         public string Number { get; set; }
         public string UserId { get; set; }
-        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
-        public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Users { get; set; }
     }
     public class TelephonySettingsViewModel
     {
