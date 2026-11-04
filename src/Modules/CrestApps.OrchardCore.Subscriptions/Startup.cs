@@ -21,6 +21,8 @@ using CrestApps.OrchardCore.Subscriptions.Tasks;
 using CrestApps.OrchardCore.Subscriptions.Workflows.Drivers;
 using CrestApps.OrchardCore.Transactions.Core;
 using CrestApps.OrchardCore.Transactions.Services;
+using CrestApps.OrchardCore.Users;
+using CrestApps.OrchardCore.Users.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -135,6 +137,8 @@ public sealed class RolesStartup : StartupBase
         // long as a subscription is current is what makes member-only access enforceable without any of
         // those gates knowing subscriptions exist.
         services.AddScoped<ISubscriptionEntitlementApplier, RoleSubscriptionEntitlementApplier>();
+        services.AddRoleGrants();
+        services.AddScoped<IRoleGrantSource, SubscriptionRoleGrantSource>();
 
         services.AddDataMigration<SubscriptionEntitlementPartMigrations>()
             .AddContentPart<SubscriptionEntitlementPart>()

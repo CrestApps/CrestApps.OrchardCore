@@ -8,6 +8,8 @@ using CrestApps.OrchardCore.Memberships.Models;
 using CrestApps.OrchardCore.Memberships.Navigation;
 using CrestApps.OrchardCore.Memberships.Services;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Users;
+using CrestApps.OrchardCore.Users.Core;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
@@ -31,6 +33,8 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<MembershipIndexProvider>();
         services.AddScoped<IMembershipStore, MembershipStore>();
         services.AddScoped<MembershipService>();
+        services.AddRoleGrants();
+        services.AddScoped<IRoleGrantSource, MembershipRoleGrantSource>();
         services.AddScoped<IOrderEventHandler, MembershipOrderEventHandler>();
         services.AddScoped<ICartLineHandler, MembershipCartLineHandler>();
         services.AddSingleton<IBackgroundTask, MembershipsBackgroundTask>();
