@@ -18,10 +18,6 @@ using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Modules;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Users;
-using OrchardCore.Users.Indexes;
-using OrchardCore.Users.Models;
-using YesSql;
-using IYesSqlSession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
@@ -39,7 +35,6 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly UserManager<IUser> _userManager;
     private readonly IContentManager _contentManager;
-    private readonly IYesSqlSession _session;
     private readonly ActivityHandlerDescriber _handlerDescriber;
     private readonly IContactMethodsAccessor _contactMethods;
 
@@ -58,7 +53,6 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
     /// <param name="localClock">The local clock.</param>
     /// <param name="userManager">The user manager.</param>
     /// <param name="contentManager">The content manager.</param>
-    /// <param name="session">The YesSql session.</param>
     /// <param name="httpContextAccessor">The http context accessor.</param>
     /// <param name="handlerDescriber">Describes who dispositioned a completed activity.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
@@ -74,7 +68,6 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
         ILocalClock localClock,
         UserManager<IUser> userManager,
         IContentManager contentManager,
-        IYesSqlSession session,
         IHttpContextAccessor httpContextAccessor,
         ActivityHandlerDescriber handlerDescriber,
         IContactMethodsAccessor contactMethods,
@@ -91,7 +84,6 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
         _localClock = localClock;
         _userManager = userManager;
         _contentManager = contentManager;
-        _session = session;
         _httpContextAccessor = httpContextAccessor;
         _handlerDescriber = handlerDescriber;
         _contactMethods = contactMethods;
@@ -143,17 +135,6 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                 }
             }
 
-            var users = await _session.Query<User, UserIndex>(x => x.IsEnabled).ListAsync();
-
-            var usersListItems = new List<SelectListItem>();
-
-            foreach (var user in users)
-            {
-                var displayName = await _displayNameProvider.GetAsync(user);
-
-                usersListItems.Add(new SelectListItem(displayName, user.UserId));
-            }
-
             model.UrgencyLevels =
             [
                 new(S["Normal"], nameof(ActivityUrgencyLevel.Normal)),
@@ -165,7 +146,6 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             ];
             model.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);
             model.ContactContentTypes = contactContentTypes.OrderBy(x => x.Text);
-            model.Users = usersListItems.OrderBy(x => x.Text);
         }).Location("Content:5")
         .RenderWhen(() => Task.FromResult(activity.Status == ActivityStatus.NotStated && !isCompletingActivity));
 
@@ -409,7 +389,13 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
 
             if (string.IsNullOrEmpty(model.UserId))
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.UserId), S["Contact is required."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.UserId), S["Choose the user to assign the activity to."]);
+            }
+            else if (await _userManager.FindByIdAsync(model.UserId) is null)
+            {
+                // The user picker searches on the server, so the posted value is no longer limited to a list the page
+                // rendered; an unknown user is refused here.
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.UserId), S["The user to assign the activity to was not found."]);
             }
 
             if (!model.ScheduleAt.HasValue)

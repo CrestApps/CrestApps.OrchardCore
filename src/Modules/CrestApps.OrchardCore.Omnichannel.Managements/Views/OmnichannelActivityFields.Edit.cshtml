@@ -51,7 +51,17 @@
 <div class="ocat-wrapper">
     <label asp-for="UserId" class="ocat-label ocat-label-required">@T["User to assign activity to"]</label>
     <div class="ocat-end">
-        <select asp-for="UserId" asp-items="Model.Users" class="form-select"></select>
+        @await Component.InvokeAsync("UserPicker", new
+        {
+            name = Html.NameFor(m => m.UserId).ToString(),
+            selectedValues = string.IsNullOrEmpty(Model.UserId) ? Array.Empty<string>() : new[] { Model.UserId },
+            valueType = "userId",
+            multiple = false,
+            buttonText = T["Choose a user"].Value,
+            searchPlaceholder = T["Search users"].Value,
+            smallButton = false,
+            required = true,
+        })
         <span asp-validation-for="UserId" class="text-danger"></span>
     </div>
 </div>

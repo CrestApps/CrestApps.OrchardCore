@@ -29,7 +29,7 @@ An **extension** is a short internal number, such as `1001`, that belongs to one
 | --- | --- |
 | **Display name** | The name a colleague sees when they call this extension, for example *Front desk*. Leave it empty to show the user's own name. |
 | **Extension number** | The number a colleague dials to reach this user, for example `1001`. Required, and it must be unique. |
-| **User** | The user this extension rings. Type to search the list of enabled users. Required. |
+| **User** | The user this extension rings. Choose **Select a user**, then type a name to search the users. Required. |
 
 Every saved extension can be dialed straight away; there is no enabled or disabled switch. To stop an extension ringing, delete it from the list.
 

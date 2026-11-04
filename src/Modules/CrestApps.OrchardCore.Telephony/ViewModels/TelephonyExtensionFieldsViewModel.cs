@@ -1,6 +1,3 @@
-using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.AspNetCore.Mvc.Rendering;
-
 namespace CrestApps.OrchardCore.Telephony.ViewModels;
 
 /// <summary>
@@ -32,10 +29,4 @@ public class TelephonyExtensionFieldsViewModel
     /// Gets or sets the display name shown to a colleague who calls this extension.
     /// </summary>
     public string DisplayName { get; set; }
-
-    /// <summary>
-    /// Gets or sets the selectable users for the user picker.
-    /// </summary>
-    [BindNever]
-    public IEnumerable<SelectListItem> Users { get; set; } = [];
 }

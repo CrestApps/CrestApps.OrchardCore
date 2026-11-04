@@ -1,15 +1,11 @@
 using CrestApps.OrchardCore.Telephony.Core.Models;
 using CrestApps.OrchardCore.Telephony.ViewModels;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Users;
-using OrchardCore.Users.Indexes;
-using OrchardCore.Users.Models;
-using YesSql;
 
 namespace CrestApps.OrchardCore.Telephony.Drivers;
 
@@ -19,14 +15,10 @@ namespace CrestApps.OrchardCore.Telephony.Drivers;
 /// </summary>
 internal sealed class TelephonyExtensionDisplayDriver : DisplayDriver<TelephonyExtension>
 {
-    private readonly ISession _session;
     private readonly UserManager<IUser> _userManager;
 
-    public TelephonyExtensionDisplayDriver(
-        ISession session,
-        UserManager<IUser> userManager)
+    public TelephonyExtensionDisplayDriver(UserManager<IUser> userManager)
     {
-        _session = session;
         _userManager = userManager;
     }
 
@@ -58,14 +50,13 @@ internal sealed class TelephonyExtensionDisplayDriver : DisplayDriver<TelephonyE
 
     public override IDisplayResult Edit(TelephonyExtension extension, BuildEditorContext context)
     {
-        return Initialize<TelephonyExtensionFieldsViewModel>("ExtensionFields_Edit", async model =>
+        return Initialize<TelephonyExtensionFieldsViewModel>("ExtensionFields_Edit", model =>
         {
             model.IsNew = context.IsNew;
             model.Name = extension.Name;
             model.Number = extension.Number;
             model.UserId = extension.UserId;
             model.DisplayName = extension.DisplayName;
-            model.Users = await BuildUserListAsync();
         }).Location("Content:1%General;1");
     }
 
@@ -100,15 +91,5 @@ internal sealed class TelephonyExtensionDisplayDriver : DisplayDriver<TelephonyE
             : $"{number} {extension.DisplayName}".Trim();
 
         return Edit(extension, context);
-    }
-
-    private async Task<IEnumerable<SelectListItem>> BuildUserListAsync()
-    {
-        var users = await _session.Query<User, UserIndex>(x => x.IsEnabled).ListAsync();
-
-        return users
-            .Select(user => new SelectListItem(user.UserName, user.UserId))
-            .OrderBy(item => item.Text, StringComparer.OrdinalIgnoreCase)
-            .ToList();
     }
 }
