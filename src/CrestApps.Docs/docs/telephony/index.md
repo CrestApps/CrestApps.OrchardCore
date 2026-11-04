@@ -16,6 +16,8 @@ user_manual:
 | **Feature Name** | Telephony |
 | **Feature ID** | `CrestApps.OrchardCore.Telephony` |
 
+<YouTube video="telephony" title="Video overview of Telephony: providers, the default provider, extensions and the soft phone" />
+
 The **Telephony** module adds a provider-agnostic soft phone to Orchard Core. It exposes a SignalR hub that receives call-control requests from the browser and routes them to whichever telephony provider is configured for the tenant. The UI never talks to a provider directly, so the same soft phone works with any provider that implements the telephony abstractions (for example [Telnyx](telnyx.md) or [Asterisk](asterisk.md)).
 
 In this module, **provider** means the configured **telephony backend adapter** (for example Telnyx, Asterisk,
@@ -264,6 +266,8 @@ calls) in the user manual.
 
 ### Standalone soft phone page and browser extension
 
+<YouTube video="telephony-phone-apps" title="Video overview of the soft phone browser extension and Windows app" />
+
 Enable the **Telephony Soft Phone Extension** feature (`CrestApps.OrchardCore.Telephony.SoftPhone.Extension`)
 to serve the soft phone outside the admin layout, for the CrestApps Soft Phone browser extension and desktop
 app. Because the phone runs in its own window, a call survives the agent navigating other pages and the phone
@@ -393,6 +397,8 @@ The Diagnostics tab shows:
 Enabling diagnostics does **not** add any browser console logging; the data is shown in the tab and forwarded (throttled and de-duplicated) to server telemetry, where poor call quality and client-side errors are logged for alerting. The soft phone continuously samples media quality during every call regardless of the tab, so a poor connection is reported to the server even when no one has the Diagnostics tab open.
 
 ### Keypad, recent calls, and extension tabs
+
+<YouTube video="telephony-calls" title="Video overview of placing and handling calls from the soft phone" />
 
 The widget's footer is a tab bar that switches the panel between built-in and contributed views:
 
@@ -538,6 +544,8 @@ automatically, and on the shared `telephony-client` helper script, which exposes
 `formatDuration`, `normalizeCallState`, and the call-state names on `window.telephonyClient` for the
 soft phone and the contact-center clients. ResourceManager resolves both dependencies for you, so you
 only reference `telephony-soft-phone`.
+
+<YouTube video="telephony-soft-phone-administration" title="Video of the soft phone administration and the dial button next to phone numbers" />
 
 ## Phone field click-to-dial
 

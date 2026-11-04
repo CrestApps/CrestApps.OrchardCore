@@ -1,0 +1,40 @@
+@{
+    var filter = (WorkOrdersListViewModel)Model.ViewModel;
+    var formId = (string)Model.FormId;
+}
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="btn-group filter">
+    <select id="work-orders-status" name="status" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Status"]" data-dropdown-align-right="auto" aria-label="@T["Status"]" onchange="this.form.submit()">
+        <option value="@WorkOrdersController.OpenFilter" selected="@(filter.Status == WorkOrdersController.OpenFilter)">@T["Still open"]</option>
+        <option value="@WorkOrdersController.AllFilter" selected="@(filter.Status == WorkOrdersController.AllFilter)">@T["Every status"]</option>
+        @foreach (var status in Enum.GetValues<WorkOrderStatus>())
+        {
+            <option value="@status" selected="@(filter.Status == status.ToString())">@T[status.Text()]</option>
+        }
+    </select>
+</div>
+<div class="btn-group filter">
+    <select id="work-orders-type" name="typeId" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Type"]" data-dropdown-align-right="auto" aria-label="@T["Type"]" onchange="this.form.submit()">
+        <option value="">@T["Every type"]</option>
+        @foreach (var option in filter.TypeOptions)
+        {
+            <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+        }
+    </select>
+</div>
+<div class="btn-group filter">
+    <select id="work-orders-priority" name="priority" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Priority"]" data-dropdown-align-right="auto" aria-label="@T["Priority"]" onchange="this.form.submit()">
+        <option value="">@T["Every priority"]</option>
+        @foreach (var priority in Enum.GetValues<WorkOrderPriority>().OrderDescending())
+        {
+            <option value="@priority" selected="@(filter.Priority == priority.ToString())">@priority</option>
+        }
+    </select>
+</div>
+@if (!string.IsNullOrEmpty(filter.AssetId))
+{
+    <input type="hidden" name="assetId" value="@filter.AssetId" form="@formId" />
+    <a class="btn btn-sm btn-secondary" href="@Url.Action("Index", new { status = filter.Status, typeId = filter.TypeId, priority = filter.Priority, q = filter.Q })" title="@T["Show every asset"]">@T["Asset: {0}", filter.AssetName] <i class="fa-solid fa-xmark" aria-hidden="true"></i></a>
+}

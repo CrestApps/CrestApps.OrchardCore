@@ -62,11 +62,6 @@ public static class OmnichannelConstants
         public const string Lead = "LeadPart";
 
         /// <summary>
-        /// The part that marks a content type as an account, the container of contacts and opportunities.
-        /// </summary>
-        public const string Account = "AccountPart";
-
-        /// <summary>
         /// The part that marks a content type as an opportunity, a deal in progress on an account.
         /// </summary>
         public const string Opportunity = "OpportunityPart";
@@ -92,11 +87,6 @@ public static class OmnichannelConstants
         public const string EmailAddress = "EmailAddress";
 
         public const string PhoneNumber = "PhoneNumber";
-
-        /// <summary>
-        /// The account content type the CRM feature creates.
-        /// </summary>
-        public const string Account = "Account";
 
         /// <summary>
         /// The lead source content type the CRM feature creates. Its items are the sources a lead or an opportunity

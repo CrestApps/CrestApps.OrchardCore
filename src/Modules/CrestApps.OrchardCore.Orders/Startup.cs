@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Accounts;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Carts.Core.Services;
 using CrestApps.OrchardCore.Checkout;
@@ -141,6 +142,16 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Adds the order reports to Reports > Commerce.
 /// </summary>
+/// <summary>
+/// Adds the Orders tab to an account's page.
+/// </summary>
+[RequireFeatures(AccountsConstants.Feature)]
+public sealed class AccountsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddScoped<IContentDisplayDriver, AccountOrdersTabDisplayDriver>();
+}
+
 [RequireFeatures(ReportsConstants.Feature)]
 public sealed class ReportsStartup : StartupBase
 {

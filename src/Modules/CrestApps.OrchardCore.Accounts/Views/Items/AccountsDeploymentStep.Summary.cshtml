@@ -1,0 +1,11 @@
+@using CrestApps.OrchardCore.Accounts.Deployments
+
+@model ShapeViewModel<AccountsDeploymentStep>
+
+<h5>@T["Accounts"]</h5>
+
+<span class="badge text-bg-success">@T["All accounts"]</span>
+@if (Model.Value.IncludeRecords)
+{
+    <span class="badge text-bg-success">@T["With the records they hold"]</span>
+}

@@ -18,6 +18,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
@@ -35,6 +36,7 @@ using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using YesSql.Filters.Query;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements;
 
@@ -114,6 +116,23 @@ public sealed class Startup : StartupBase
 
         services.AddTransient<IContentsAdminListFilterProvider, OmnichannelContactPhoneContentsAdminListFilterProvider>();
         services.AddDisplayDriver<ContentOptionsViewModel, OmnichannelContactPhoneContentsAdminListDisplayDriver>();
+
+        // Replaces the content list's parser, built from the same filter providers, so a name searched on a contact or
+        // lead list is one phrase rather than words joined with "or" (see OmnichannelContactListFilterParser).
+        services.AddSingleton<IContentsAdminListFilterParser>(serviceProvider =>
+        {
+            var builder = new QueryEngineBuilder<ContentItem>();
+
+            foreach (var provider in serviceProvider.GetServices<IContentsAdminListFilterProvider>())
+            {
+                provider.Build(builder);
+            }
+
+            return new OmnichannelContactListFilterParser(
+                builder.Build(),
+                serviceProvider.GetRequiredService<IHttpContextAccessor>(),
+                serviceProvider.GetRequiredService<OmnichannelContentTypeProvider>());
+        });
 
         services.AddShapeTableProvider<OmnichannelSubjectButtonsShapeTableProvider>();
         services.AddShapeTableProvider<OmnichannelSubjectPartIndexSettingsShapeTableProvider>();

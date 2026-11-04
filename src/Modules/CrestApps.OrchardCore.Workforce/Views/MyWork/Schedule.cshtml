@@ -1,0 +1,27 @@
+@model MyScheduleViewModel
+<zone Name="Title">
+    <breadcrumb name="MyWorkSchedule" title="@T["Schedule"]">
+        <breadcrumb-item id="MyWork" action="Index" controller="MyWork" area="CrestApps.OrchardCore.Workforce">@T["My Work"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+<partial name="~/Areas/CrestApps.OrchardCore.Workforce/Views/Shared/_MyWorkAssets.cshtml" />
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <span class="me-auto"></span>
+    <a href="@Url.Content("~/Admin/my-work/settings#calendar")" class="btn btn-outline-success btn-sm"><i class="fa-regular fa-calendar-plus me-1" aria-hidden="true"></i>@T["Add to my calendar"]</a>
+</div>
+<p class="text-muted small">@T["Your published shifts and approved time off for the next four weeks."]</p>
+
+@if (Model.Days.Count == 0)
+{
+    <div class="alert alert-light">@T["Nothing is scheduled yet."]</div>
+}
+@foreach (var (date, items) in Model.Days)
+{
+    <h2 class="h6 mt-3">@date.ToString("dddd d MMMM")</h2>
+    @foreach (var item in items)
+    {
+        <partial name="_MyShift" model="item" />
+    }
+}
+

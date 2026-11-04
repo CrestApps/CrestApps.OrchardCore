@@ -165,9 +165,10 @@ internal sealed class MessagingMigrations : DataMigration
         await CreateReportIndexAsync();
         await CreateAttentionIndexesAsync();
         await CreateActivityIndexAsync();
+        await CreateLookupIndexesAsync();
         await CreateOutboxIndexAsync();
 
-        return 6;
+        return 7;
     }
 
     private async Task CreateAddressesUniqueIndexAsync()
@@ -272,11 +273,39 @@ internal sealed class MessagingMigrations : DataMigration
     }
 
     /// <summary>
+    /// Adds the indexes the first-response deadline check and the lookup of a contact's conversations by channel seek.
+    /// Both were carried only by indexes led by <c>DocumentId</c>, so the deadline check, which runs on a timer, read the
+    /// whole table each time, and so did each lookup of a contact's threads on a channel.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom5Async()
+    {
+        await CreateLookupIndexesAsync();
+
+        return 6;
+    }
+
+    private async Task CreateLookupIndexesAsync()
+    {
+        await IndexTableIndexCreation.CreateIfMissingAsync<MessagingConversationIndex>(
+            SchemaBuilder,
+            "IDX_MessagingConversationIndex_FirstResponseDue",
+            MessagingStorage.CollectionName,
+            "Status", "FirstResponseDueUtc", "DocumentId");
+
+        await IndexTableIndexCreation.CreateIfMissingAsync<MessagingConversationIndex>(
+            SchemaBuilder,
+            "IDX_MessagingConversationIndex_Contact",
+            MessagingStorage.CollectionName,
+            "Channel", "ContactAddress", "DocumentId");
+    }
+
+    /// <summary>
     /// Adds the index of outbound messages waiting for another attempt, which the outbox reads instead of scanning every
     /// outbound message.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public async Task<int> UpdateFrom5Async()
+    public async Task<int> UpdateFrom6Async()
     {
         await CreateOutboxIndexAsync();
 
@@ -285,7 +314,7 @@ internal sealed class MessagingMigrations : DataMigration
         // reads and writes documents, so it runs after this step commits (a second connection mid-step deadlocks SQLite).
         ShellScope.AddDeferredTask(scope => MessagingOutboxBackfill.RunAsync(scope.ServiceProvider));
 
-        return 6;
+        return 7;
     }
 
     private async Task CreateOutboxIndexAsync()

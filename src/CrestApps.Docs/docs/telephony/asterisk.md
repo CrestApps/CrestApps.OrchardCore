@@ -15,6 +15,8 @@ user_manual:
 
 The **Asterisk** module integrates the [Asterisk](https://www.asterisk.org/) platform as a provider for the [Telephony](./index.md) soft phone. It uses the **Asterisk REST Interface (ARI)** over HTTP basic authentication and performs call control server-side, so the browser never needs direct access to Asterisk credentials. Here, **provider** means the Asterisk backend adapter that the soft phone talks to, not a separate telecom billing provider.
 
+<YouTube video="telephony-asterisk-setup" title="Video overview of setting up Asterisk for calls" />
+
 ## Two Asterisk providers
 
 When the **Asterisk** feature is enabled, the telephony settings can expose up to two selectable providers:

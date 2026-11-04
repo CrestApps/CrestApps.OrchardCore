@@ -113,6 +113,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.ContactCenter.Agents` | Contact Center Agents | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
 | `CrestApps.OrchardCore.ContactCenter.AgentEntitlements` | Contact Center Agent Entitlements | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
 | `CrestApps.OrchardCore.ContactCenter.Queues` | Contact Center Work Distribution | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
+| `CrestApps.OrchardCore.ContactCenter.IntervalStatistics` | Contact Center Interval Statistics | [Report catalog](./contact-center/report-catalog#interval-statistics) |
 | `CrestApps.OrchardCore.ContactCenter.Dialer` | Contact Center Outbound Dialer | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
 | `CrestApps.OrchardCore.ContactCenter.Dialer.Paced` | Contact Center Paced Dialing | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
 | `CrestApps.OrchardCore.ContactCenter.Voice` | Contact Center Voice (dependency only) | [Voice routing](./contact-center/voice-routing) |
@@ -175,6 +176,9 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.ContentTransfer.Azure` | Content Transfer - Azure Blob Storage | [Content Transfer](./modules/content-transfer#store-import-and-export-files-in-azure-blob-storage) |
 | `CrestApps.OrchardCore.Seo` | Advanced SEO | [Advanced SEO](./modules/advanced-seo) |
 | `CrestApps.OrchardCore.NLWeb` | NLWeb | [NLWeb](./modules/nlweb) |
+| `CrestApps.OrchardCore.Accounts` | Accounts | [Accounts](./modules/accounts) |
+| `CrestApps.OrchardCore.Accounts.Members` | Account Members | [Accounts](./modules/accounts#account-members) |
+| `CrestApps.OrchardCore.Accounts.Locations` | Account Locations | [Accounts](./modules/accounts#account-locations) |
 | `CrestApps.OrchardCore.Addresses` | Addresses | [Addresses](./modules/addresses) |
 | `CrestApps.OrchardCore.Addresses.Countries` | Address Countries | [Addresses](./modules/addresses#country-lists) |
 | `CrestApps.OrchardCore.Addresses.GooglePlaces` | Address Suggestions (Google Places) | [Addresses](./modules/addresses#address-suggestions) |
@@ -210,6 +214,41 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Scheduling.SelfService` | Scheduling Self-Service | [Scheduling](./modules/scheduling#self-service) |
 | `CrestApps.OrchardCore.Scheduling.Api` | Scheduling API | [Scheduling](./modules/scheduling#http-api) |
 
+## Workforce
+
+| Feature ID | Name | Docs |
+| --- | --- | --- |
+| `CrestApps.OrchardCore.Skills` | Skills | [Skills](./modules/skills) |
+| `CrestApps.OrchardCore.Teams` | Teams | [Teams](./modules/teams) |
+| `CrestApps.OrchardCore.Workforce` | Workforce | [Workforce](./modules/workforce) |
+| `CrestApps.OrchardCore.Workforce.ShiftPlanning` | Workforce Shift Planning | [Workforce](./modules/workforce#shift-planning) |
+| `CrestApps.OrchardCore.Workforce.ContactCenter` | Workforce for Contact Center | [Workforce for Contact Center](./modules/workforce-contact-center) |
+| `CrestApps.OrchardCore.Workforce.ContactCenter.SignInPunches` | Contact Center Sign-in Punches | [Workforce for Contact Center](./modules/workforce-contact-center#sign-in-punches) |
+| `CrestApps.OrchardCore.Workforce.ContactCenter.TimeTracker` | Contact Center Time Tracker | [Workforce for Contact Center](./modules/workforce-contact-center#agent-states-in-time-tracker) |
+| `CrestApps.OrchardCore.Workforce.Forecasting` | Workforce Forecasting | [Workforce for Contact Center](./modules/workforce-contact-center#forecasting) |
+| `CrestApps.OrchardCore.Workforce.Intraday` | Workforce Intraday | [Workforce for Contact Center](./modules/workforce-contact-center#intraday) |
+| `CrestApps.OrchardCore.Workforce.Adherence` | Workforce Adherence | [Workforce for Contact Center](./modules/workforce-contact-center#adherence) |
+
+## Geo
+
+| Feature ID | Name | Docs |
+| --- | --- | --- |
+| `CrestApps.OrchardCore.Geo` | Geo, Maps and Territories | [Geo](./modules/geo) |
+| `CrestApps.OrchardCore.Geo.AzureMaps` | Azure Maps | [Geo](./modules/geo#providers) |
+| `CrestApps.OrchardCore.Geo.GoogleMaps` | Google Maps | [Geo](./modules/geo#providers) |
+| `CrestApps.OrchardCore.Geo.Osrm` | OSRM | [Geo](./modules/geo#providers) |
+
+## Field service
+
+| Feature ID | Name | Docs |
+| --- | --- | --- |
+| `CrestApps.OrchardCore.Assets` | Assets | [Assets](./modules/assets) |
+| `CrestApps.OrchardCore.Assets.Fleet` | Fleet | [Assets](./modules/assets#fleet) |
+| `CrestApps.OrchardCore.Dispatch` | Dispatch | [Dispatch](./modules/dispatch) |
+| `CrestApps.OrchardCore.TimeTracker` | Time Tracker | [Time Tracker](./modules/time-tracker) |
+| `CrestApps.OrchardCore.WorkOrders` | Work Orders | [Work Orders](./modules/work-orders) |
+| `CrestApps.OrchardCore.WorkOrders.Agreements` | Service Agreements | [Work Orders](./modules/work-orders#service-agreements) |
+
 ## Data connectors
 
 | Feature ID | Name | Docs |
@@ -228,7 +267,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Commerce` | Commerce (dependency only) | [Commerce](./modules/commerce) |
 | `CrestApps.OrchardCore.Checkout` | Checkout | [Checkout](./modules/checkout) |
 | `CrestApps.OrchardCore.Markets` | Markets | [Markets](./modules/markets) |
-| `CrestApps.OrchardCore.Companies` | Companies | [Companies](./modules/companies) |
+| `CrestApps.OrchardCore.Accounts.B2B` | Accounts B2B | [Accounts B2B](./modules/accounts-b2b) |
 | `CrestApps.OrchardCore.Marketing` | Marketing | [Marketing](./modules/marketing) |
 | `CrestApps.OrchardCore.Carts.Wishlists` | Wishlists | [Carts and Orders](./modules/carts-and-orders#wishlists) |
 | `CrestApps.OrchardCore.Reports.Subscriptions` | Report Subscriptions | [Reports](./modules/reports#report-subscriptions) |

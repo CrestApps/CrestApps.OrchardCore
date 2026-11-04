@@ -1,0 +1,114 @@
+@model PlanningGroupEditViewModel
+@using CrestApps.OrchardCore.ContactCenter.Models
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+<zone Name="Title"><breadcrumb name="WorkforcePlanningGroupsEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["Add a Planning Group"] : T["Edit {0}", Model.Name])" /></zone>
+
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="no-multisubmit">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <input type="hidden" asp-for="Id" />
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Details"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Name" class="form-control" required />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="QueueIds" class="ocat-label">@T["Queues"]</label>
+                <div class="ocat-end">
+                    <select asp-for="QueueIds" asp-items="Model.QueueOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3"></select>
+                    <span class="hint">@T["Their work is forecast together, from their interval statistics."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Channel" class="ocat-label">@T["Channel"]</label>
+                <div class="ocat-end">
+                    <select asp-for="Channel" class="form-select">
+                        <option value="">@T["Every channel"]</option>
+                        @foreach (var channel in Enum.GetValues<InteractionChannel>())
+                        {
+                            <option value="@channel" selected="@(Model.Channel == channel.ToString())">@channel</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="TeamId" class="ocat-label">@T["Team that staffs it"]</label>
+                <div class="ocat-end">
+                    <select asp-for="TeamId" asp-items="Model.TeamOptions" class="form-select">
+                        <option value="">@T["Choose a team"]</option>
+                    </select>
+                    <span class="hint">@T["The active forecast becomes this team's coverage, in its time zone."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Service goal"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="ServiceLevelPercent" class="ocat-label">@T["Answer % "]</label>
+                <div class="ocat-end">
+                    <input asp-for="ServiceLevelPercent" type="number" min="1" max="99" step="any" class="form-control" style="max-width: 12rem" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="ServiceLevelSeconds" class="ocat-label">@T["within (seconds)"]</label>
+                <div class="ocat-end">
+                    <input asp-for="ServiceLevelSeconds" type="number" min="1" class="form-control" style="max-width: 12rem" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="AverageSpeedOfAnswerSeconds" class="ocat-label">@T["Average answer (seconds)"]</label>
+                <div class="ocat-end">
+                    <input asp-for="AverageSpeedOfAnswerSeconds" type="number" min="1" class="form-control" style="max-width: 12rem" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="MaxOccupancyPercent" class="ocat-label">@T["Highest occupancy %"]</label>
+                <div class="ocat-end">
+                    <input asp-for="MaxOccupancyPercent" type="number" min="1" max="100" step="any" class="form-control" style="max-width: 12rem" />
+                </div>
+            </div>
+            <span class="hint d-block mb-3">@T["Set a service level such as 80% within 20 seconds, an average speed of answer, or both. Agents are never planned busier than the highest occupancy."]</span>
+        </div>
+    </div>
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Staffing"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="ShrinkagePercent" class="ocat-label">@T["Shrinkage %"]</label>
+                <div class="ocat-end">
+                    <input asp-for="ShrinkagePercent" type="number" min="0" max="99" step="any" class="form-control" style="max-width: 12rem" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Concurrency" class="ocat-label">@T["Contacts at once"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Concurrency" type="number" min="1" class="form-control" style="max-width: 12rem" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="PatienceSeconds" class="ocat-label">@T["Customer patience (seconds)"]</label>
+                <div class="ocat-end">
+                    <input asp-for="PatienceSeconds" type="number" min="1" class="form-control" style="max-width: 12rem" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="HistoryWeeks" class="ocat-label">@T["Weeks of history"]</label>
+                <div class="ocat-end">
+                    <input asp-for="HistoryWeeks" type="number" min="1" max="104" class="form-control" style="max-width: 12rem" />
+                </div>
+            </div>
+            <span class="hint d-block mb-3">@T["Shrinkage is the share of paid time agents can't answer: breaks, meetings, absence. Contacts at once is for chats and messages. With a customer patience, staffing allows for customers who give up (Erlang A); without, nobody does (Erlang C)."]</span>
+        </div>
+    </div>
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+        <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+    </div>
+</form>

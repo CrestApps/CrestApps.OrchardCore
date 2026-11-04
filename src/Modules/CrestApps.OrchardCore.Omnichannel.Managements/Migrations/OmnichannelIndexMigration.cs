@@ -125,7 +125,8 @@ public abstract class OmnichannelIndexMigration : DataMigration
     /// <param name="columnName">The name of the column to ensure.</param>
     /// <param name="addColumn">Adds the column to the supplied table when it is missing.</param>
     /// <param name="operation">A short description of the schema change used for diagnostic logging.</param>
-    protected async Task EnsureColumnExistsAsync<TIndex>(
+    /// <returns><see langword="true"/> when the column was missing and has been added; otherwise, <see langword="false"/>.</returns>
+    protected async Task<bool> EnsureColumnExistsAsync<TIndex>(
         string collection,
         string columnName,
         Action<IAlterTableCommand> addColumn,
@@ -163,7 +164,7 @@ public abstract class OmnichannelIndexMigration : DataMigration
                     physicalTable);
             }
 
-            return;
+            return false;
         }
 
         if (Logger.IsEnabled(LogLevel.Information))
@@ -174,6 +175,8 @@ public abstract class OmnichannelIndexMigration : DataMigration
                 columnName,
                 physicalTable);
         }
+
+        return true;
     }
 
     /// <summary>

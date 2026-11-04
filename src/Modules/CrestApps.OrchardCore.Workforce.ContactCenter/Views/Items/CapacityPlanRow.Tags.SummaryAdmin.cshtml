@@ -1,0 +1,16 @@
+@model ShapeViewModel<CapacityPlanRow>
+
+@{
+    var plan = Model.Value.Plan;
+}
+@if (string.IsNullOrEmpty(Model.Value.PlanningGroupName))
+{
+    <span class="badge text-bg-warning fw-normal">@T["Planning group removed"]</span>
+}
+else
+{
+    <span class="badge ta-badge fw-normal">@Model.Value.PlanningGroupName</span>
+}
+<span class="badge ta-badge fw-normal">@T["From {0}", plan.StartDate.ToString("d", CultureInfo.CurrentCulture)]</span>
+<span class="badge ta-badge fw-normal">@T["{0} weeks", plan.Weeks]</span>
+<span class="badge ta-badge fw-normal">@(plan.HiringClasses.Count == 1 ? T["1 hiring class"] : T["{0} hiring classes", plan.HiringClasses.Count])</span>

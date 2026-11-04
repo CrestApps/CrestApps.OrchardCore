@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Workforce.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<WorkforcePunchedOutEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Punched Out"])
+    </h4>
+</header>

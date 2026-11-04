@@ -1,0 +1,151 @@
+@model KioskViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@{
+    Layout = null;
+    var action = Url.Content("~/workforce/kiosk/" + Model.Token);
+    var shown = new[] { TimePunchKind.In, TimePunchKind.MealStart, TimePunchKind.MealEnd, TimePunchKind.BreakStart, TimePunchKind.BreakEnd, TimePunchKind.Out };
+}
+<!DOCTYPE html>
+<html lang="@System.Globalization.CultureInfo.CurrentUICulture.Name">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    @if (Model.Done is not null || Model.Error is not null || Model.Worker is not null)
+    {
+        <meta http-equiv="refresh" content="@(Model.Worker is not null ? 30 : 6);url=@action" />
+    }
+    <title>@Model.Kiosk.Name</title>
+    <style asp-name="bootstrap"></style>
+    <style asp-name="font-awesome"></style>
+    <resources type="Header" />
+    <style>
+        body { min-height: 100vh; background: #f1f3f5; }
+        .kiosk { max-width: 34rem; }
+        .kiosk-clock { font-size: 3.5rem; font-variant-numeric: tabular-nums; line-height: 1; }
+        .kiosk input.form-control-lg { font-size: 1.75rem; text-align: center; letter-spacing: .2em; }
+        .kiosk-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+        .kiosk-pad button { font-size: 1.5rem; padding: .9rem 0; }
+        .kiosk .btn-xl { font-size: 1.4rem; padding: 1rem 1.25rem; }
+    </style>
+</head>
+<body class="d-flex align-items-center justify-content-center p-3">
+    <main class="kiosk w-100">
+        <div class="text-center mb-4">
+            <div class="text-muted">@Model.Kiosk.Name</div>
+            <div class="kiosk-clock fw-semibold" id="kiosk-clock" aria-live="off">@((await LocalClock.GetLocalNowAsync()).ToString("t"))</div>
+            <div class="text-muted" id="kiosk-date">@((await LocalClock.GetLocalNowAsync()).ToString("dddd d MMMM"))</div>
+        </div>
+
+        @if (Model.Done is not null)
+        {
+            <div class="alert alert-success text-center fs-4" role="status">
+                <i class="fa-solid fa-circle-check me-2" aria-hidden="true"></i>
+                @(Model.Done.Kind switch
+                {
+                    TimePunchKind.In => T["Clocked in at {0}.", (await LocalClock.ConvertToLocalAsync(Model.Done.Utc)).ToString("t")],
+                    TimePunchKind.Out => T["Clocked out at {0}.", (await LocalClock.ConvertToLocalAsync(Model.Done.Utc)).ToString("t")],
+                    _ => T["Recorded at {0}.", (await LocalClock.ConvertToLocalAsync(Model.Done.Utc)).ToString("t")],
+                })
+            </div>
+            <a href="@action" class="btn btn-secondary btn-lg w-100">@T["Done"]</a>
+        }
+        else if (Model.Worker is not null)
+        {
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <p class="fs-3 mb-1">@T["Hi, {0}", Model.Worker.DisplayName]</p>
+                    <p class="text-muted">
+                        @(Model.Status.State switch
+                        {
+                            TimeClockState.Working => T["You're clocked in"],
+                            TimeClockState.OnMeal => T["You're on a meal"],
+                            TimeClockState.OnBreak => T["You're on a break"],
+                            _ => T["You're clocked out"],
+                        })@if (Model.Status.SinceUtc.HasValue && Model.Status.State != TimeClockState.Out) {<span> @T["since {0}", (await LocalClock.ConvertToLocalAsync(Model.Status.SinceUtc.Value)).ToString("t")]</span>}
+                    </p>
+                    <div class="d-grid gap-2">
+                        @foreach (var kind in shown.Where(kind => Model.Status.NextPunches.Contains(kind)))
+                        {
+                            <form method="post" action="@(action + "/punch")" class="d-grid">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="ticket" value="@Model.Ticket" />
+                                <input type="hidden" name="kind" value="@kind" />
+                                <input type="hidden" name="key" value="@Guid.NewGuid().ToString("n")" />
+                                <button type="submit" class="btn btn-xl @(kind is TimePunchKind.In or TimePunchKind.MealEnd or TimePunchKind.BreakEnd ? "btn-success" : kind == TimePunchKind.Out ? "btn-danger" : "btn-outline-secondary")">
+                                    @(kind switch
+                                    {
+                                        TimePunchKind.In => T["Clock in"],
+                                        TimePunchKind.MealStart => T["Start meal"],
+                                        TimePunchKind.MealEnd => T["End meal"],
+                                        TimePunchKind.BreakStart => T["Start break"],
+                                        TimePunchKind.BreakEnd => T["End break"],
+                                        _ => T["Clock out"],
+                                    })
+                                </button>
+                            </form>
+                        }
+                        <a href="@action" class="btn btn-link">@T["Not you? Start again"]</a>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            @if (!string.IsNullOrEmpty(Model.Error))
+            {
+                <div class="alert alert-danger text-center" role="alert">@Model.Error</div>
+            }
+            <form method="post" action="@action" class="card shadow-sm" autocomplete="off">
+                @Html.AntiForgeryToken()
+                <div class="card-body">
+                    <label class="form-label" for="badge">@T["Badge number"]</label>
+                    <input type="text" name="badge" autocapitalize="characters" id="badge" class="form-control form-control-lg mb-3" required autofocus />
+                    <label class="form-label" for="pin">@T["PIN"]</label>
+                    <input type="password" inputmode="numeric" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore name="pin" id="pin" class="form-control form-control-lg mb-3" required maxlength="8" />
+                    <div class="kiosk-pad mb-3" aria-hidden="true">
+                        @foreach (var key in new[] { "1", "2", "3", "4", "5", "6", "7", "8", "9", "⌫", "0", "✓" })
+                        {
+                            <button type="button" class="btn btn-light border" data-key="@key" tabindex="-1">@key</button>
+                        }
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-xl w-100">@T["Next"]</button>
+                </div>
+            </form>
+        }
+    </main>
+    <script>
+        (() => {
+            const clock = document.getElementById('kiosk-clock');
+            const tick = () => clock.textContent = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+            setInterval(tick, 10000);
+
+            let field = document.getElementById('badge');
+
+            document.querySelectorAll('.kiosk input.form-control-lg').forEach(input => input.addEventListener('focus', () => field = input));
+            document.querySelectorAll('.kiosk-pad button').forEach(button => button.addEventListener('click', () => {
+                const key = button.dataset.key;
+
+                if (!field) {
+                    return;
+                }
+
+                if (key === '⌫') {
+                    field.value = field.value.slice(0, -1);
+                } else if (key === '✓') {
+                    if (field.id === 'badge') {
+                        field = document.getElementById('pin');
+                        field.focus();
+                    } else {
+                        field.form.requestSubmit();
+                    }
+                } else {
+                    field.value += key;
+                }
+            }));
+        })();
+    </script>
+</body>
+</html>

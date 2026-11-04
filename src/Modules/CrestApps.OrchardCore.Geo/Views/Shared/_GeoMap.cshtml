@@ -1,0 +1,10 @@
+@model GeoSettings
+@{
+    var height = ViewData["MapHeight"] as string ?? "22rem";
+}
+<style asp-name="leaflet"></style>
+<script asp-name="crestapps-map" at="Foot"></script>
+<div id="@ViewData["MapId"]" class="border rounded mb-3" style="height: @height; z-index: 0;"
+     data-tile-url="@Model.TileUrl" data-attribution="@Model.TileAttribution"
+     data-latitude="@Model.DefaultLatitude.ToString(CultureInfo.InvariantCulture)" data-longitude="@Model.DefaultLongitude.ToString(CultureInfo.InvariantCulture)" data-zoom="@Model.DefaultZoom"
+     role="region" aria-label="@ViewData["MapLabel"]"></div>

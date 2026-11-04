@@ -11,7 +11,7 @@ using YesSql.Sql;
 namespace CrestApps.OrchardCore.Tests.Omnichannel.Messaging;
 
 /// <summary>
-/// Covers the indexes the inbox counts and the Messaging admin menu badge are answered from.
+/// Covers the indexes the inbox counts, the Messaging admin menu badge and the conversation lookups are answered from.
 /// </summary>
 /// <remarks>
 /// Every index the conversation table had led with <c>DocumentId</c>, so the badge's two counts after every admin page
@@ -24,7 +24,12 @@ public sealed class MessagingAttentionIndexMigrationTests
 
     private static readonly string[] _agentAttentionColumns = ["AssignedAgentId", "Status", "IsRead", "LastMessageUtc", "DocumentId"];
     private static readonly string[] _ownerAttentionColumns = ["OwnerType", "OwnerId", "Status", "IsRead", "AssignmentStatus", "AssignedAgentId", "DocumentId"];
+    private const string FirstResponseDueIndexName = "IDX_MessagingConversationIndex_FirstResponseDue";
+    private const string ContactIndexName = "IDX_MessagingConversationIndex_Contact";
+
     private static readonly string[] _activityColumns = ["LastActivityUtc", "DocumentId"];
+    private static readonly string[] _firstResponseDueColumns = ["Status", "FirstResponseDueUtc", "DocumentId"];
+    private static readonly string[] _contactColumns = ["Channel", "ContactAddress", "DocumentId"];
 
     [Fact]
     public async Task CreateAsync_CreatesTheAttentionIndexes()
@@ -33,10 +38,35 @@ public sealed class MessagingAttentionIndexMigrationTests
         {
             var version = await CreateMigration(store, schemaBuilder).CreateAsync();
 
-            Assert.Equal(6, version);
+            Assert.Equal(7, version);
             Assert.Equal(_agentAttentionColumns, await IndexColumnsAsync(schemaBuilder, MessagingMigrations.AgentAttentionIndexName));
             Assert.Equal(_ownerAttentionColumns, await IndexColumnsAsync(schemaBuilder, MessagingMigrations.OwnerAttentionIndexName));
             Assert.Equal(_activityColumns, await IndexColumnsAsync(schemaBuilder, MessagingMigrations.ActivityIndexName));
+            Assert.Equal(_firstResponseDueColumns, await IndexColumnsAsync(schemaBuilder, FirstResponseDueIndexName));
+            Assert.Equal(_contactColumns, await IndexColumnsAsync(schemaBuilder, ContactIndexName));
+        });
+    }
+
+    // The first-response deadline check runs on a timer and every earlier index led with DocumentId, so each run read
+    // the whole conversation table.
+    [Fact]
+    public async Task UpdateFrom5Async_OnAVersion5Table_AddsTheLookupIndexesOnce()
+    {
+        await WithSchemaAsync(async (store, schemaBuilder) =>
+        {
+            var migration = CreateMigration(store, schemaBuilder);
+            await migration.CreateAsync();
+
+            // What version 5 released: the same table without the two indexes.
+            await DropIndexAsync(schemaBuilder, FirstResponseDueIndexName);
+            await DropIndexAsync(schemaBuilder, ContactIndexName);
+
+            Assert.Equal(6, await migration.UpdateFrom5Async());
+            Assert.Equal(_firstResponseDueColumns, await IndexColumnsAsync(schemaBuilder, FirstResponseDueIndexName));
+            Assert.Equal(_contactColumns, await IndexColumnsAsync(schemaBuilder, ContactIndexName));
+
+            // A second instance activating the tenant at the same time finds them and records the version.
+            Assert.Equal(6, await migration.UpdateFrom5Async());
         });
     }
 

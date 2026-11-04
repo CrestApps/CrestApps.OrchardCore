@@ -1,0 +1,6 @@
+@model ShapeViewModel<AdherenceExceptionRow>
+
+@if (Model.Value.CanManage)
+{
+    <a asp-controller="AdherenceExceptions" asp-action="Delete" asp-route-id="@Model.Value.Exception.ItemId" class="btn btn-danger btn-sm" data-title="@T["Remove"]" data-message="@T["Remove this exception? The time it covers counts in the worker's adherence again once their day is saved again."]" data-url-af="RemoveUrl UnsafeUrl">@T["Remove"]</a>
+}

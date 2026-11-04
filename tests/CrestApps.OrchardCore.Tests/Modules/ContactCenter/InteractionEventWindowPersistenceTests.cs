@@ -96,6 +96,58 @@ public sealed class InteractionEventWindowPersistenceTests
         }
     }
 
+    /// <summary>
+    /// The opening state of each agent is found by walking that agent's events backwards to the newest one of the asked
+    /// types. Without the type in the index, every newer event of another type the walk passed was looked up in the table.
+    /// </summary>
+    [Fact]
+    public async Task UpgradeStep_AddsTheAggregateStateIndexOnce()
+    {
+        // Arrange
+        var databasePath = DatabasePath("aggregate-state-index");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            await using (var session = store.CreateSession())
+            {
+                var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
+                var migration = new InteractionEventIndexMigrations(store)
+                {
+                    SchemaBuilder = new SchemaBuilder(store.Configuration, transaction),
+                };
+
+                // Act
+                Assert.Equal(9, await migration.UpdateFrom8Async());
+
+                // A second instance activating the tenant at the same time finds the index and records the version.
+                Assert.Equal(9, await migration.UpdateFrom8Async());
+                await transaction.CommitAsync(TestContext.Current.CancellationToken);
+            }
+
+            await using var connection = new SqliteConnection($"Data Source={databasePath};Pooling=False");
+            await connection.OpenAsync(TestContext.Current.CancellationToken);
+            await using var command = connection.CreateCommand();
+            command.CommandText = "SELECT name FROM pragma_index_info((SELECT name FROM sqlite_master WHERE type = 'index' AND name LIKE '%IDX_InteractionEventIndex_AggregateState')) ORDER BY seqno";
+            var columns = new List<string>();
+
+            await using (var reader = await command.ExecuteReaderAsync(TestContext.Current.CancellationToken))
+            {
+                while (await reader.ReadAsync(TestContext.Current.CancellationToken))
+                {
+                    columns.Add(reader.GetString(0));
+                }
+            }
+
+            // Assert
+            Assert.Equal(["AggregateType", "AggregateId", "OccurredUtc", "EventType", "DocumentId"], columns);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
     [Fact]
     public async Task Window_ReturnsOnlyThePeriodsEventsForTheAgentsAndTypesAsked_OldestFirst()
     {

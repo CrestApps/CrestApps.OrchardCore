@@ -1,0 +1,10 @@
+@model ShapeViewModel<TimeSettingRow>
+
+@if (!Model.Value.Enabled)
+{
+    <span class="badge text-bg-secondary fw-normal">@T["Off"]</span>
+}
+@if (!string.IsNullOrEmpty(Model.Value.Detail))
+{
+    <span class="badge ta-badge fw-normal">@Model.Value.Detail</span>
+}

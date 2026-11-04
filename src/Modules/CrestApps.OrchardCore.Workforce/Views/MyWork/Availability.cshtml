@@ -1,0 +1,21 @@
+@model MyAvailabilityViewModel
+<zone Name="Title">
+    <breadcrumb name="MyWorkAvailability" title="@T["Availability"]">
+        <breadcrumb-item id="MyWork" action="Index" controller="MyWork" area="CrestApps.OrchardCore.Workforce">@T["My Work"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+<partial name="~/Areas/CrestApps.OrchardCore.Workforce/Views/Shared/_MyWorkAssets.cshtml" />
+
+<h2 class="h5 mb-3">@T["When I can work"]</h2>
+<div class="card">
+    <div class="card-body">
+        <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/availability")">
+            @Html.ValidationSummary()
+            <label for="Availability" class="form-label">@T["One line per day"]</label>
+            <textarea asp-for="Availability" class="form-control font-monospace" rows="7" placeholder="Monday 09:00-17:00&#10;Tuesday 08:00-12:00 preferred&#10;Saturday unavailable"></textarea>
+            <div class="form-text">@T["Write a day and the hours you can work, add preferred for the hours you'd like, or unavailable for a day you can't. Leave it empty if you can work any time. New schedules follow it; shifts already published don't change."]</div>
+            <button type="submit" class="btn btn-success mt-3">@T["Save"]</button>
+        </form>
+    </div>
+</div>
+

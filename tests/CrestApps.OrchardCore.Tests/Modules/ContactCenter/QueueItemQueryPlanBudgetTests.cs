@@ -78,9 +78,13 @@ public sealed class QueueItemQueryPlanBudgetTests
                 plan,
                 line => line.Contains("IDX_QueueItemIndex_Retention", StringComparison.OrdinalIgnoreCase));
 
+            // Each of these indexes leads with the queue and the status, in either order, so any of them answers the
+            // count by seeking both.
             Assert.True(
-                plan.Any(line => line.Contains("IDX_QueueItemIndex_WaitingByQueue", StringComparison.OrdinalIgnoreCase)),
-                $"The workspace poll must seek IDX_QueueItemIndex_WaitingByQueue. Plan:{Environment.NewLine}{rendered}");
+                plan.Any(line => line.Contains("IDX_QueueItemIndex_WaitingByQueue", StringComparison.OrdinalIgnoreCase)
+                    || line.Contains("IDX_QueueItemIndex_Head", StringComparison.OrdinalIgnoreCase)
+                    || line.Contains("IDX_QueueItemIndex_StatusQueue", StringComparison.OrdinalIgnoreCase)),
+                $"The workspace poll must seek an index led by the queue and the status. Plan:{Environment.NewLine}{rendered}");
 
             // Both columns must be seek constraints, not just the leading one. Filtering the status per row
             // still seeks the index by queue, but it then has to walk every item the queue has ever held to
@@ -224,6 +228,193 @@ public sealed class QueueItemQueryPlanBudgetTests
         {
             TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
         }
+    }
+
+    [Fact]
+    public async Task WaitingQueueIds_IsAnsweredFromTheStatusAndQueueIndexAlone()
+    {
+        // Routing lists the queues with waiting items on every pass. Reading the index rows for it read every
+        // column of every waiting item; the statement reads only the queue, which this index carries.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var (store, databasePath) = await CreateSeededStoreAsync("queue-waiting-ids", cancellationToken);
+
+        try
+        {
+            var plan = await ExplainSqlAsync(store, QueueItemQueries.BuildWaitingQueueIdsSql(store.Configuration), [], cancellationToken);
+            var rendered = string.Join(Environment.NewLine, plan);
+
+            Assert.True(
+                plan.Any(line => line.Contains("COVERING INDEX IDX_QueueItemIndex_StatusQueue", StringComparison.OrdinalIgnoreCase)),
+                $"The waiting queues must be read from IDX_QueueItemIndex_StatusQueue alone. Plan:{Environment.NewLine}{rendered}");
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task NextWaiting_SortsTheQueueFromTheHeadIndex()
+    {
+        // The head of a queue is read on every routing pass, ordered by priority and enqueue time. Seeking an index
+        // that holds neither looked up every waiting item of the queue to sort it, which is what the production
+        // database spent most of its reads on. The statement measured is the one the store sends.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var directory = Path.Combine(AppContext.BaseDirectory, "QueryPlanData");
+        Directory.CreateDirectory(directory);
+
+        var databasePath = Path.Combine(directory, $"queue-head-{Guid.NewGuid():N}.db");
+        var connectionFactory = new RecordingConnectionFactory($"Data Source={databasePath};Pooling=False");
+        var store = StoreFactory.Create(configuration =>
+        {
+            configuration.UseSqLite($"Data Source={databasePath};Pooling=False");
+            configuration.ConnectionFactory = connectionFactory;
+        });
+
+        try
+        {
+            await SeedAsync(store, cancellationToken);
+
+            connectionFactory.Clear();
+
+            await using (var session = store.CreateSession())
+            {
+                await new QueueItemStore(session).FindNextWaitingAsync("queue-0001", cancellationToken);
+            }
+
+            var tableName = QueueItemQueryPlanFixture.TableName(store.Configuration);
+            var sql = Assert.Single(connectionFactory.Statements, statement =>
+                statement.Contains(tableName, StringComparison.OrdinalIgnoreCase)
+                && statement.TrimStart().StartsWith("select", StringComparison.OrdinalIgnoreCase));
+
+            var plan = await ExplainSqlAsync(store, sql, ["@p0", "@p1"], cancellationToken);
+            var rendered = string.Join(Environment.NewLine, plan);
+
+            Assert.True(
+                plan.Any(line => line.Contains("IDX_QueueItemIndex_Head", StringComparison.OrdinalIgnoreCase)
+                    && line.Contains("QueueId=?", StringComparison.OrdinalIgnoreCase)
+                    && line.Contains("Status=?", StringComparison.OrdinalIgnoreCase)),
+                $"The head of the queue must be read through IDX_QueueItemIndex_Head. Plan:{Environment.NewLine}{rendered}");
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task WaitingQueueIds_ListsEveryQueueWithAWaitingItemAndNoOther()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var directory = Path.Combine(AppContext.BaseDirectory, "QueryPlanData");
+        Directory.CreateDirectory(directory);
+
+        var databasePath = Path.Combine(directory, $"queue-waiting-agreement-{Guid.NewGuid():N}.db");
+        var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
+
+        try
+        {
+            store.RegisterIndexes([new QueueItemIndexProvider()], ContactCenterStorage.CollectionName);
+            await store.InitializeAsync(cancellationToken);
+            await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, cancellationToken);
+
+            await using (var migrationSession = store.CreateSession())
+            {
+                var migrationTransaction = await migrationSession.BeginTransactionAsync(cancellationToken);
+                await QueueItemQueryPlanFixture.MigrateAsync(store, store.Configuration, migrationTransaction);
+                await migrationTransaction.CommitAsync(cancellationToken);
+            }
+
+            await using var session = store.CreateSession();
+            var queueItemStore = new QueueItemStore(session);
+
+            await queueItemStore.CreateAsync(NewQueueItem("queue-a", 1, QueueItemStatus.Waiting), cancellationToken);
+            await queueItemStore.CreateAsync(NewQueueItem("queue-a", 2, QueueItemStatus.Waiting), cancellationToken);
+            await queueItemStore.CreateAsync(NewQueueItem("queue-b", 3, QueueItemStatus.Waiting), cancellationToken);
+            await queueItemStore.CreateAsync(NewQueueItem("queue-c", 4, QueueItemStatus.Completed), cancellationToken);
+
+            // Not saved yet: the read flushes the session first, as the rest of the store's reads do.
+            var queueIds = await queueItemStore.GetWaitingQueueIdsAsync(cancellationToken);
+
+            Assert.Equal(["queue-a", "queue-b"], queueIds.Order(StringComparer.Ordinal));
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    private static async Task<(IStore Store, string DatabasePath)> CreateSeededStoreAsync(string name, CancellationToken cancellationToken)
+    {
+        var directory = Path.Combine(AppContext.BaseDirectory, "QueryPlanData");
+        Directory.CreateDirectory(directory);
+
+        var databasePath = Path.Combine(directory, $"{name}-{Guid.NewGuid():N}.db");
+        var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
+
+        await SeedAsync(store, cancellationToken);
+
+        return (store, databasePath);
+    }
+
+    private static async Task SeedAsync(IStore store, CancellationToken cancellationToken)
+    {
+        await store.InitializeAsync(cancellationToken);
+        await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, cancellationToken);
+
+        await using var seedSession = store.CreateSession();
+        var seedTransaction = await seedSession.BeginTransactionAsync(cancellationToken);
+        await QueueItemQueryPlanFixture.MigrateAsync(store, store.Configuration, seedTransaction);
+        await QueueItemQueryPlanFixture.SeedAsync(store.Configuration, seedTransaction, cancellationToken);
+
+        await using (var analyze = seedTransaction.Connection.CreateCommand())
+        {
+            analyze.Transaction = seedTransaction;
+            analyze.CommandText = "ANALYZE;";
+            await analyze.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        await seedTransaction.CommitAsync(cancellationToken);
+    }
+
+    private static async Task<IReadOnlyList<string>> ExplainSqlAsync(
+        IStore store,
+        string sql,
+        IReadOnlyCollection<string> parameterNames,
+        CancellationToken cancellationToken)
+    {
+        await using var session = store.CreateSession();
+        var transaction = await session.BeginTransactionAsync(cancellationToken);
+
+        await using var command = transaction.Connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "EXPLAIN QUERY PLAN " + sql;
+
+        // The plan depends on which columns are compared, not on the values, so each parameter is bound to a
+        // value of the column's kind.
+        foreach (var name in parameterNames)
+        {
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = name;
+            parameter.Value = name == "@p0" ? "queue-0001" : 0;
+            command.Parameters.Add(parameter);
+        }
+
+        var lines = new List<string>();
+
+        await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+        {
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                lines.Add(reader.GetString(reader.FieldCount - 1));
+            }
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+
+        Assert.NotEmpty(lines);
+
+        return lines;
     }
 
     private static QueueItem NewQueueItem(string queueId, int sequence, QueueItemStatus status)

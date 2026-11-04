@@ -8,6 +8,8 @@ technical_manual:
   - ai/realtime-voice
 ---
 
+<YouTube video="use-case-ai-answers-customers" title="Video recap of this use case" />
+
 ## Who it's for and what you get
 
 For **managers** and **AI content managers** who want an AI agent on the front line: answering your numbers around the clock, or working through a list of contacts.

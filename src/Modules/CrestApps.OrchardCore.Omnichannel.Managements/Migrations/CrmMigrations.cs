@@ -20,17 +20,18 @@ using OrchardCore.Title.Models;
 using YesSql;
 using YesSql.Services;
 using YesSql.Sql;
+using YesSql.Sql.Schema;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 
 /// <summary>
-/// Creates the CRM parts with their content fields, the <c>Account</c> and <c>LeadSource</c> content types, the lead
-/// and opportunity indexes, and seeds the lead statuses and opportunity stages.
+/// Creates the CRM parts with their content fields, the <c>LeadSource</c> content type, the lead and opportunity
+/// indexes, and seeds the lead statuses and opportunity stages. The <c>Account</c> type comes from the Accounts
+/// feature, which the CRM depends on.
 /// </summary>
 /// <remarks>
-/// The migration never alters a content type that already exists, so an administrator's changes to the
-/// <c>Account</c> type survive every upgrade, and it creates no contact, lead or opportunity type: those are the
-/// tenant's to name.
+/// The migration never alters a content type that already exists, and it creates no contact, lead or opportunity
+/// type: those are the tenant's to name.
 /// </remarks>
 public sealed class CrmMigrations : OmnichannelIndexMigration
 {
@@ -65,46 +66,10 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
             .WithDisplayName("Lead")
             .WithDescription("Marks a contact type as a lead type: its records are called and texted like contacts but kept apart from them until they are converted. Attach it together with the Omnichannel Contact part."));
 
-        await _contentDefinitionManager.AlterPartDefinitionAsync(OmnichannelConstants.ContentParts.Account, part => part
-            .Attachable()
-            .WithDisplayName("Account")
-            .WithDescription("Marks a content type as an account, the company or household that contacts and opportunities belong to."));
-
         await _contentDefinitionManager.AlterPartDefinitionAsync(OmnichannelConstants.ContentParts.Opportunity, part => part
             .Attachable()
             .WithDisplayName("Opportunity")
             .WithDescription("Marks a content type as an opportunity, a deal in progress with a stage, an amount and a close date. Attach it to one content type per kind of deal."));
-
-        if (await _contentDefinitionManager.GetTypeDefinitionAsync(OmnichannelConstants.ContentTypes.Account) is null)
-        {
-            var definitions = await _contentDefinitionManager.ListTypeDefinitionsAsync();
-            var containedContentTypes = definitions
-                .Where(Core.Services.OmnichannelRecordKinds.IsAccountChild)
-                .Select(definition => definition.Name)
-                .ToArray();
-
-            await _contentDefinitionManager.AlterTypeDefinitionAsync(OmnichannelConstants.ContentTypes.Account, type => type
-                .WithDisplayName("Account")
-                .Creatable()
-                .Listable()
-                .Securable()
-                .WithPart<TitlePart>(part => part
-                    .WithPosition("1"))
-                .WithPart(OmnichannelConstants.ContentParts.Account, part => part
-                    .WithPosition("2")
-                    .WithSettings(new Core.Models.AccountPartSettings
-                    {
-                        OfferedContentTypes = containedContentTypes,
-                    }))
-                .WithPart(OmnichannelConstants.ContentParts.List, part => part
-                    .WithPosition("3")
-                    .WithSettings(new ListPartSettings
-                    {
-                        PageSize = 20,
-                        ShowHeader = true,
-                        ContainedContentTypes = containedContentTypes,
-                    })));
-        }
 
         await CreateLeadSourceTypeAsync();
         await AddLeadFieldsAsync();
@@ -112,18 +77,12 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
 
         // A tenant can hold one of these tables from an earlier install although its migration was never recorded.
         // Creating it again failed this step on every start ("There is already an object named ..."), so only a
-        // missing table is created, and a table that is already there is brought up to date as UpdateFrom1Async does.
+        // missing table is created, and a table that is already there is given every column it lacks.
         var existingTableFound = false;
 
         if (await IndexTableExistsAsync<LeadIndex>(null))
         {
             existingTableFound = true;
-
-            await EnsureColumnExistsAsync<LeadIndex>(
-                null,
-                "SourceId",
-                table => table.AddColumn<string>("SourceId", column => column.WithLength(26)),
-                "add the 'SourceId' column to the existing lead index");
         }
         else
         {
@@ -133,16 +92,15 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
         if (await IndexTableExistsAsync<OpportunityIndex>(null))
         {
             existingTableFound = true;
-
-            await EnsureColumnExistsAsync<OpportunityIndex>(
-                null,
-                "SourceId",
-                table => table.AddColumn<string>("SourceId", column => column.WithLength(26)),
-                "add the 'SourceId' column to the existing opportunity index");
         }
         else
         {
             await CreateOpportunityIndexAsync(SchemaBuilder);
+        }
+
+        if (existingTableFound)
+        {
+            await EnsureIndexColumnsAsync();
         }
 
         if (existingTableFound)
@@ -161,7 +119,7 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
             .GetRequiredService<CrmCatalogSeeder>()
             .SeedAsync());
 
-        return 6;
+        return 7;
     }
 
     /// <summary>
@@ -259,6 +217,52 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
         }
 
         return 6;
+    }
+
+    /// <summary>
+    /// Adds the lead and opportunity index columns that a table from an earlier install is missing. Such a table was
+    /// kept by the create step, which only added <c>SourceId</c> to it, so a tenant could lack a column every query of
+    /// the index names: the Opportunities list failed with "Invalid column name 'IsClosed'". The leads and opportunities
+    /// are indexed again when a column was added, so the new column holds their values rather than its default.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom6Async()
+    {
+        if (await EnsureIndexColumnsAsync())
+        {
+            if (Logger.IsEnabled(LogLevel.Warning))
+            {
+                Logger.LogWarning("Added the columns the CRM index tables were missing; existing leads and opportunities will be indexed again.");
+            }
+
+            ShellScope.AddDeferredTask(MoveValuesIntoFieldsAsync);
+        }
+
+        return 7;
+    }
+
+    // Gives an existing lead or opportunity index table every column this version maps. Returns whether any was added.
+    private async Task<bool> EnsureIndexColumnsAsync()
+    {
+        var added = false;
+
+        if (await IndexTableExistsAsync<LeadIndex>(null))
+        {
+            foreach (var (name, addColumn) in _leadIndexColumns)
+            {
+                added |= await EnsureColumnExistsAsync<LeadIndex>(null, name, addColumn, $"add the '{name}' column to the lead index");
+            }
+        }
+
+        if (await IndexTableExistsAsync<OpportunityIndex>(null))
+        {
+            foreach (var (name, addColumn) in _opportunityIndexColumns)
+            {
+                added |= await EnsureColumnExistsAsync<OpportunityIndex>(null, name, addColumn, $"add the '{name}' column to the opportunity index");
+            }
+        }
+
+        return added;
     }
 
     // The imports already made are recorded on their leads by LeadImportBackfillBackgroundTask, after activation:
@@ -608,6 +612,46 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
     private const string LeadCountIndexName = "IDX_LeadIndex_ContentType_Converted";
 
     private static readonly string[] _leadCountIndexColumns = ["ContentType", "IsConverted", "Latest", "Published"];
+
+    // The columns CreateLeadIndexAsync and CreateOpportunityIndexAsync create, for a table that was already there.
+    private static readonly (string Name, Action<IAlterTableCommand> AddColumn)[] _leadIndexColumns =
+    [
+        ("ContentItemId", table => table.AddColumn<string>("ContentItemId", column => column.WithLength(26))),
+        ("ContentType", table => table.AddColumn<string>("ContentType", column => column.WithLength(255))),
+        ("Published", table => table.AddColumn<bool>("Published", column => column.NotNull().WithDefault(false))),
+        ("Latest", table => table.AddColumn<bool>("Latest", column => column.NotNull().WithDefault(false))),
+        ("StatusId", table => table.AddColumn<string>("StatusId", column => column.WithLength(50))),
+        ("IsClosed", table => table.AddColumn<bool>("IsClosed", column => column.NotNull().WithDefault(false))),
+        ("IsConverted", table => table.AddColumn<bool>("IsConverted", column => column.NotNull().WithDefault(false))),
+        ("SourceId", table => table.AddColumn<string>("SourceId", column => column.WithLength(26))),
+        ("ListName", table => table.AddColumn<string>("ListName", column => column.WithLength(255))),
+        ("Rating", table => table.AddColumn<string>("Rating", column => column.WithLength(20))),
+        ("OwnerId", table => table.AddColumn<string>("OwnerId", column => column.WithLength(50))),
+        ("ConvertedContactItemId", table => table.AddColumn<string>("ConvertedContactItemId", column => column.WithLength(26))),
+        ("ConvertedUtc", table => table.AddColumn<DateTime>("ConvertedUtc", column => column.Nullable())),
+        ("CreatedUtc", table => table.AddColumn<DateTime>("CreatedUtc", column => column.Nullable())),
+    ];
+
+    private static readonly (string Name, Action<IAlterTableCommand> AddColumn)[] _opportunityIndexColumns =
+    [
+        ("ContentItemId", table => table.AddColumn<string>("ContentItemId", column => column.WithLength(26))),
+        ("ContentType", table => table.AddColumn<string>("ContentType", column => column.WithLength(255))),
+        ("Published", table => table.AddColumn<bool>("Published", column => column.NotNull().WithDefault(false))),
+        ("Latest", table => table.AddColumn<bool>("Latest", column => column.NotNull().WithDefault(false))),
+        ("StageId", table => table.AddColumn<string>("StageId", column => column.WithLength(50))),
+        ("IsClosed", table => table.AddColumn<bool>("IsClosed", column => column.NotNull().WithDefault(false))),
+        ("IsWon", table => table.AddColumn<bool>("IsWon", column => column.NotNull().WithDefault(false))),
+        ("Probability", table => table.AddColumn<int>("Probability", column => column.Nullable())),
+        ("Amount", table => table.AddColumn<decimal>("Amount", column => column.Nullable())),
+        ("CloseDate", table => table.AddColumn<DateTime>("CloseDate", column => column.Nullable())),
+        ("OwnerId", table => table.AddColumn<string>("OwnerId", column => column.WithLength(50))),
+        ("AccountContentItemId", table => table.AddColumn<string>("AccountContentItemId", column => column.WithLength(26))),
+        ("CampaignId", table => table.AddColumn<string>("CampaignId", column => column.WithLength(50))),
+        ("PrimaryContactItemId", table => table.AddColumn<string>("PrimaryContactItemId", column => column.WithLength(26))),
+        ("SourceId", table => table.AddColumn<string>("SourceId", column => column.WithLength(26))),
+        ("ConvertedFromLeadItemId", table => table.AddColumn<string>("ConvertedFromLeadItemId", column => column.WithLength(26))),
+        ("CreatedUtc", table => table.AddColumn<DateTime>("CreatedUtc", column => column.Nullable())),
+    ];
 
     internal static async Task CreateLeadImportIndexAsync(ISchemaBuilder schemaBuilder)
     {

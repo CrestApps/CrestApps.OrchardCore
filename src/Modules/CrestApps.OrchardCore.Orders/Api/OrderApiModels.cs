@@ -35,7 +35,7 @@ public sealed record ApiOrderSummary(
 /// <param name="LocationId">The inventory location it's sold from.</param>
 /// <param name="Register">The register a point-of-sale order was rung up on.</param>
 /// <param name="Culture">The culture the buyer shopped in, such as de-DE; the order's emails are written in it.</param>
-/// <param name="CompanyId">The company the order was placed for, when its buyer buys for one.</param>
+/// <param name="AccountId">The account the order was placed for, when its buyer buys for a business account.</param>
 /// <param name="PurchaseOrderNumber">The buyer's purchase order number.</param>
 public sealed record ApiOrder(
     string Id,
@@ -49,7 +49,7 @@ public sealed record ApiOrder(
     string Register,
     string Currency,
     string Culture,
-    string CompanyId,
+    string AccountId,
     string PurchaseOrderNumber,
     ApiOrderQuote Quote,
     ApiOrderApproval Approval,
@@ -256,7 +256,7 @@ internal static class OrderApiMapper
             order.RegisterName,
             currency,
             order.Culture,
-            order.CompanyId,
+            order.AccountId,
             order.PurchaseOrderNumber,
             order.Quote is { } quote
                 ? new ApiOrderQuote(ToCamel(quote.Status.ToString()), quote.Message, quote.RequestedUtc, quote.SentUtc, quote.ExpiresUtc, quote.RespondedUtc)

@@ -55,12 +55,14 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<InventoryMigrations>()
             .AddIndexProvider<StockItemIndexProvider>()
             .AddIndexProvider<StockMovementIndexProvider>()
-            .AddIndexProvider<StockReservationIndexProvider>();
+            .AddIndexProvider<StockReservationIndexProvider>()
+            .AddIndexProvider<StockLocationIndexProvider>();
 
         services.AddScoped<IStockItemStore, StockItemStore>();
         services.AddScoped<IStockMovementStore, StockMovementStore>();
         services.AddScoped<IInventoryService, DefaultInventoryService>();
 
+        services.AddScoped<StockLocationStore>();
         services.AddScoped<InventoryLocationService>();
         services.AddScoped<IInventoryLocationService>(serviceProvider => serviceProvider.GetRequiredService<InventoryLocationService>());
         services.AddScoped<IFulfillmentLocationProvider>(serviceProvider => serviceProvider.GetRequiredService<InventoryLocationService>());

@@ -1,0 +1,16 @@
+@model CrestApps.OrchardCore.Workforce.Services.LaborRuleViolation
+<li class="mb-1">
+    @switch (Model.Enforcement)
+    {
+        case LaborRuleEnforcement.Block:
+            <span class="badge text-bg-danger fw-normal me-1">@T["Blocks"]</span>
+            break;
+        case LaborRuleEnforcement.RequireOverride:
+            <span class="badge text-bg-warning fw-normal me-1">@T["Needs an override"]</span>
+            break;
+        default:
+            <span class="badge text-bg-secondary fw-normal me-1">@T["Warning"]</span>
+            break;
+    }
+    <span class="text-muted small me-1">@Model.RuleName:</span>@Model.Message
+</li>

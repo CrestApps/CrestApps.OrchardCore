@@ -9,6 +9,8 @@
         (Key: "Manage", Users: nameof(Model.ManageUsers), Roles: nameof(Model.ManageRoles), Selected: Model.ManageRoles, Label: T["Manage"], Hint: T["Change the calendar and who it is shared with."]),
     };
 }
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 
 <p class="hint">@T["Each level includes the ones above it. The calendar's owner and calendar administrators always manage it."]</p>
 
@@ -35,7 +37,7 @@
                     })
                 </div>
                 <div class="col-md-6">
-                    <select name="@(prefix + level.Roles)" class="form-select" multiple size="3" aria-label="@T["Roles"]">
+                    <select name="@(prefix + level.Roles)" class="selectpicker show-tick" multiple aria-label="@T["Roles"]" data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3">
                         @foreach (var role in Model.RoleOptions)
                         {
                             <option value="@role.Value" selected="@level.Selected.Contains(role.Value, StringComparer.OrdinalIgnoreCase)">@role.Text</option>

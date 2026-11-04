@@ -17,6 +17,8 @@
         [AIApiKeys.Scopes.Recordings] = T["Recordings and links to them."].Value,
     };
 }
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 
 <div class="ocat-wrapper" asp-validation-class-for="Name">
     <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
@@ -81,7 +83,7 @@
     <div class="ocat-wrapper" asp-validation-class-for="Roles">
         <label asp-for="Roles" class="ocat-label ocat-label-required">@T["Roles"]</label>
         <div class="ocat-end">
-            <select asp-for="Roles" asp-items="Model.AvailableRoles" class="form-select" multiple size="5"></select>
+            <select asp-for="Roles" asp-items="Model.AvailableRoles" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3"></select>
             <span asp-validation-for="Roles" class="text-danger"></span>
             <span class="hint">@T["The key acts with these roles' permissions, as a user with them would."]</span>
         </div>
@@ -101,7 +103,7 @@
     <div class="ocat-wrapper" asp-validation-class-for="AllowedProfileIds">
         <label asp-for="AllowedProfileIds" class="ocat-label ocat-label-required">@T["Profiles"]</label>
         <div class="ocat-end">
-            <select asp-for="AllowedProfileIds" asp-items="Model.AvailableProfiles" class="form-select" multiple size="5"></select>
+            <select asp-for="AllowedProfileIds" asp-items="Model.AvailableProfiles" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3"></select>
             <span asp-validation-for="AllowedProfileIds" class="text-danger"></span>
             <span class="hint">@T["The key may chat with these profiles through the chat completion endpoint, and nothing else."]</span>
         </div>

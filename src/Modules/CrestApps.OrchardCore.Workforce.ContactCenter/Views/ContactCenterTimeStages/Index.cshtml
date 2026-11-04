@@ -1,0 +1,60 @@
+@model ContactCenterTimeStagesViewModel
+
+<zone Name="Title"><breadcrumb name="WorkforceContactCenterTimeStages" title="@T["Contact Center Stages"]" /></zone>
+
+<p class="hint">@T["While agents are signed in, each of their states is kept in Time Tracker in the stage chosen here, and counts toward that stage's categories. For a worker on the time clock, these stages take the place of their clocked work. A state with no stage isn't tracked."]</p>
+
+<form asp-action="Index" method="post">
+    <div class="card mb-3">
+        <div class="card-header">@T["Agent states"]</div>
+        <div class="card-body">
+            @for (var i = 0; i < Model.States.Count; i++)
+            {
+                <div class="ocat-wrapper">
+                    <label for="state-@i" class="ocat-label">@Model.States[i].Label</label>
+                    <div class="ocat-end">
+                        <input type="hidden" asp-for="States[i].Key" />
+                        <select id="state-@i" asp-for="States[i].StageId" class="form-select" style="max-width: 24rem">
+                            <option value="">@T["Not tracked"]</option>
+                            @foreach (var option in Model.StageOptions)
+                            {
+                                <option value="@option.Value" selected="@(option.Value == Model.States[i].StageId)">@option.Text</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Reasons"]</div>
+        <div class="card-body">
+            @if (Model.Reasons.Count == 0)
+            {
+                <p class="hint mb-0">@T["There are no reasons yet. Add them under Interaction Center to give a break, such as Lunch, a stage of its own."]</p>
+            }
+            @for (var i = 0; i < Model.Reasons.Count; i++)
+            {
+                <div class="ocat-wrapper">
+                    <label for="reason-@i" class="ocat-label">@Model.Reasons[i].Label</label>
+                    <div class="ocat-end">
+                        <input type="hidden" asp-for="Reasons[i].Key" />
+                        <select id="reason-@i" asp-for="Reasons[i].StageId" class="form-select" style="max-width: 24rem">
+                            <option value="">@T["As its state"]</option>
+                            @foreach (var option in Model.StageOptions)
+                            {
+                                <option value="@option.Value" selected="@(option.Value == Model.Reasons[i].StageId)">@option.Text</option>
+                            }
+                        </select>
+                        <span class="hint">@Model.Reasons[i].Hint</span>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+    </div>
+</form>

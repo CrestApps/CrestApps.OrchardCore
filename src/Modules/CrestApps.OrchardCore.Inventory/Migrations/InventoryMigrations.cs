@@ -1,9 +1,17 @@
 using CrestApps.OrchardCore.Inventory.Core;
 using CrestApps.OrchardCore.Inventory.Core.Indexes;
+using CrestApps.OrchardCore.Inventory.Core.Models;
+using CrestApps.OrchardCore.Inventory.Core.Services;
 using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
+using OrchardCore.Entities;
+using OrchardCore.Environment.Shell.Scope;
+using OrchardCore.Modules;
+using OrchardCore.Settings;
+using Microsoft.Extensions.DependencyInjection;
+using YesSql;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Inventory.Migrations;
@@ -80,8 +88,9 @@ internal sealed class InventoryMigrations : DataMigration
             .WithDescription("Counts how many units of a product, or each of its variants, are on hand."));
 
         await CreateReportIndexAsync();
+        await CreateStockLocationsAsync();
 
-        return 2;
+        return 3;
     }
 
     /// <summary>
@@ -94,6 +103,57 @@ internal sealed class InventoryMigrations : DataMigration
         await CreateReportIndexAsync();
 
         return 2;
+    }
+
+    /// <summary>
+    /// Adds the stock location store and the references of stock movements, and moves the locations kept in the
+    /// settings into the store with their ids, once the migration has run.
+    /// </summary>
+    /// <returns>The migration version.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await CreateStockLocationsAsync();
+
+        ShellScope.AddDeferredTask(async scope =>
+        {
+            var siteService = scope.ServiceProvider.GetRequiredService<ISiteService>();
+            var site = await siteService.LoadSiteSettingsAsync();
+            var settings = site.GetOrCreate<InventorySettings>();
+
+            await StockLocationImporter.ImportAsync(settings.Locations ?? [], scope.ServiceProvider.GetRequiredService<StockLocationStore>(), scope.ServiceProvider.GetRequiredService<IClock>().UtcNow);
+            await scope.ServiceProvider.GetRequiredService<ISession>().SaveChangesAsync();
+
+            settings.Locations = [];
+            site.Put(settings);
+            await siteService.UpdateSiteSettingsAsync(site);
+        });
+
+        return 3;
+    }
+
+    private async Task CreateStockLocationsAsync()
+    {
+        await SchemaBuilder.CreateMapIndexTableAsync<StockLocationIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("Name", column => column.Nullable().WithLength(255))
+            .Column<string>("OwnerKind", column => column.Nullable().WithLength(64))
+            .Column<string>("OwnerId", column => column.Nullable().WithLength(26)),
+            collection: InventoryConstants.CollectionName
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<StockLocationIndex>(table =>
+        {
+            table.CreateIndex("IDX_StockLocationIndex_ItemId", "ItemId");
+            table.CreateIndex("IDX_StockLocationIndex_Owner", "OwnerKind", "OwnerId");
+        }, collection: InventoryConstants.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<StockMovementIndex>(table =>
+        {
+            table.AddColumn<string>("ReferenceType", column => column.Nullable().WithLength(64));
+            table.AddColumn<string>("ReferenceId", column => column.Nullable().WithLength(64));
+        }, collection: InventoryConstants.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<StockMovementIndex>(table => table.CreateIndex("IDX_StockMovementIndex_Reference", "ReferenceType", "ReferenceId"), collection: InventoryConstants.CollectionName);
     }
 
     private Task<bool> CreateReportIndexAsync()

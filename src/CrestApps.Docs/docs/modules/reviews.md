@@ -11,6 +11,8 @@ user_manual: user-manual/commerce/reviews
 | **Category** | Commerce |
 | **Depends on** | Commerce, Products, Orders, `OrchardCore.Contents` |
 
+<YouTube video="reviews" title="Narrated video overview of Product reviews" />
+
 The **Product Reviews** feature lets buyers rate and review the products they bought. The store approves each review under **Commerce > Reviews**; approved reviews show on the product's page with its stars, and the product's average rating goes into its listing search record, where listings filter and sort by it.
 
 ## Model

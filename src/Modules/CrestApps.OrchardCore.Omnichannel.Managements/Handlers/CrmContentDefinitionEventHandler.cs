@@ -7,8 +7,8 @@ using OrchardCore.Environment.Shell.Scope;
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 
 /// <summary>
-/// Brings the account lists up to date when a content type gains or loses a CRM part. The work is deferred to the
-/// end of the request because the definition events are raised while the definition is still being saved.
+/// Brings the opportunity's primary contact field up to date when a content type gains or loses a CRM part. The work
+/// is deferred to the end of the request because the definition events are raised while the definition is still being saved.
 /// </summary>
 internal sealed class CrmContentDefinitionEventHandler : IContentDefinitionEventHandler
 {
@@ -83,9 +83,7 @@ internal sealed class CrmContentDefinitionEventHandler : IContentDefinitionEvent
     {
         if (partName is OmnichannelConstants.ContentParts.OmnichannelContact
             or OmnichannelConstants.ContentParts.Lead
-            or OmnichannelConstants.ContentParts.Account
-            or OmnichannelConstants.ContentParts.Opportunity
-            or OmnichannelConstants.ContentParts.List)
+            or OmnichannelConstants.ContentParts.Opportunity)
         {
             Schedule();
         }
@@ -101,7 +99,7 @@ internal sealed class CrmContentDefinitionEventHandler : IContentDefinitionEvent
         _scheduled = true;
 
         ShellScope.AddDeferredTask(scope => scope.ServiceProvider
-            .GetRequiredService<CrmAccountListSynchronizer>()
+            .GetRequiredService<OpportunityContactFieldSynchronizer>()
             .SynchronizeAsync());
     }
 }

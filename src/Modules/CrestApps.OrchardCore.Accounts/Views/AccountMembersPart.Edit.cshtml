@@ -1,0 +1,33 @@
+@using CrestApps.OrchardCore.Accounts.Models
+@using CrestApps.OrchardCore.Accounts.ViewModels
+
+@model AccountMembersPartViewModel
+
+<div class="card mb-3">
+    <div class="card-body">
+        <span asp-validation-for="Members" class="text-danger"></span>
+        <div class="row g-2 small text-body-secondary d-none d-md-flex mb-1">
+            <div class="col-md-8">@T["User name or email"]</div>
+            <div class="col-md-4">@T["Role"]</div>
+        </div>
+        @for (var i = 0; i < Model.Members.Count; i++)
+        {
+            <div class="row g-2 mb-2 align-items-center">
+                <div class="col-md-8">
+                    <input asp-for="Members[i].User" class="form-control" placeholder="@T["User name or email"]" aria-label="@T["User name or email"]" />
+                    @if (!string.IsNullOrEmpty(Model.Members[i].ContactContentItemId))
+                    {
+                        <a class="small" asp-action="Display" asp-controller="Admin" asp-route-area="OrchardCore.Contents" asp-route-contentItemId="@Model.Members[i].ContactContentItemId">@T["Contact"]</a>
+                    }
+                </div>
+                <div class="col-md-4">
+                    <select asp-for="Members[i].Role" class="form-select" aria-label="@T["Role"]">
+                        <option value="@AccountMemberRole.Member">@T["Member"]</option>
+                        <option value="@AccountMemberRole.Admin">@T["Admin"]</option>
+                    </select>
+                </div>
+            </div>
+        }
+        <span class="hint">@T["The users who sign in for the account, by the user name or email they sign in with. A user is a member of one account only. An admin also manages the account for the others, such as approving their orders. A member whose email is one of the account's contacts is linked to that contact. Save to add more rows; clear a row to remove a member."]</span>
+    </div>
+</div>

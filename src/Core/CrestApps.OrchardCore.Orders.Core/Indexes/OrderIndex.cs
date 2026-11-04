@@ -33,7 +33,7 @@ public sealed class OrderIndex : CatalogItemIndex
 
     public string ShiftId { get; set; }
 
-    public string CompanyId { get; set; }
+    public string AccountId { get; set; }
 
     public string PurchaseOrderNumber { get; set; }
 }
@@ -63,7 +63,7 @@ public sealed class OrderIndexProvider : IndexProvider<Order>
                 Channel = order.Channel,
                 LocationId = order.LocationId,
                 ShiftId = order.ShiftId,
-                CompanyId = order.CompanyId,
+                AccountId = order.AccountId,
                 PurchaseOrderNumber = string.IsNullOrWhiteSpace(order.PurchaseOrderNumber) ? null : order.PurchaseOrderNumber.Trim().ToUpperInvariant(),
             });
     }

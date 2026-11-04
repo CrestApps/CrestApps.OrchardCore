@@ -1,0 +1,22 @@
+@model ShapeViewModel<ShiftTemplate>
+@{
+    var template = Model.Value;
+    var end = template.Start.AddMinutes(template.LengthMinutes);
+}
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Hours"]"><i class="fa-regular fa-clock text-secondary me-1" aria-hidden="true"></i>@template.Start.ToString("HH:mm")&ndash;@end.ToString("HH:mm")@(end <= template.Start ? T[" (next day)"] : null)</span>
+@if (template.Segments.Count > 0)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Breaks and activities"]"><i class="fa-solid fa-mug-hot text-secondary me-1" aria-hidden="true"></i>@template.Segments.Count</span>
+}
+@if (template.TeamIds.Count > 0)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Used by some teams only"]"><i class="fa-solid fa-people-group text-secondary me-1" aria-hidden="true"></i>@T.Plural(template.TeamIds.Count, "1 team", "{0} teams", template.TeamIds.Count)</span>
+}
+@if (template.RequiredSkillIds.Count > 0)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Skills needed"]"><i class="fa-solid fa-award text-secondary me-1" aria-hidden="true"></i>@T.Plural(template.RequiredSkillIds.Count, "1 skill", "{0} skills", template.RequiredSkillIds.Count)</span>
+}
+@if (!template.Enabled)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-ban text-warning me-1" aria-hidden="true"></i>@T["Disabled"]</span>
+}

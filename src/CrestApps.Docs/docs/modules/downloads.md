@@ -11,6 +11,8 @@ user_manual: user-manual/commerce/digital-downloads
 | **Category** | Commerce |
 | **Depends on** | Commerce, Products, Orders, `OrchardCore.Contents` |
 
+<YouTube video="downloads" title="Narrated video overview of Digital downloads" />
+
 The **Digital Downloads** feature delivers digital products. A product carries its files in the **Digital files** part; a paid order gives its buyer an entitlement to each file; the buyer downloads through a link that works for a number of downloads and days, on their order page and in the confirmation email; canceling or fully refunding the order takes the files back.
 
 ## Private file store

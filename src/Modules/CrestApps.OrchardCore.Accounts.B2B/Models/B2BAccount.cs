@@ -1,0 +1,248 @@
+using CrestApps.OrchardCore.Accounts.Models;
+using OrchardCore.ContentManagement;
+
+namespace CrestApps.OrchardCore.Accounts.B2B.Models;
+
+/// <summary>
+/// Lets an account buy from the store as a business: the terms it buys on, the prices it pays, and the most each of its
+/// buyers may order. The account's name is its title, its buyers are its members, kept by the Account Members feature,
+/// and the places it ships to are its locations, kept by the Account Locations feature.
+/// </summary>
+public sealed class B2BAccountPart : ContentPart
+{
+    /// <summary>
+    /// Gets or sets whether the account buys as a business. While it is off, its buyers shop as themselves.
+    /// </summary>
+    public bool Enabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets its tax or VAT number, printed on its invoices.
+    /// </summary>
+    public string TaxId { get; set; }
+
+    /// <summary>
+    /// Gets or sets where its invoices are sent, besides to the buyer.
+    /// </summary>
+    public string BillingEmail { get; set; }
+
+    /// <summary>
+    /// Gets or sets the most an order each buyer places may come to before an account admin has to approve it, for the
+    /// buyers that have a limit.
+    /// </summary>
+    public List<BuyerOrderLimit> OrderLimits { get; set; } = [];
+
+    public AccountTerms Terms { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the price list its buyers pay, or none for the store's prices.
+    /// </summary>
+    public string PriceListId { get; set; }
+
+    /// <summary>
+    /// Gets or sets how much its buyers may order in a calendar month, in the store's currency; orders beyond it need
+    /// an account admin's approval. None is no budget.
+    /// </summary>
+    public decimal? MonthlyBudget { get; set; }
+
+    /// <summary>
+    /// Gets or sets how the account's procurement system shops the store by OCI punchout, or none.
+    /// </summary>
+    public AccountPunchout Punchout { get; set; }
+}
+
+/// <summary>
+/// The most an order one buyer places may come to before an account admin has to approve it.
+/// </summary>
+public sealed class BuyerOrderLimit
+{
+    /// <summary>
+    /// Gets or sets the buyer's user id: one of the account's members.
+    /// </summary>
+    public string UserId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the limit, in the store's currency.
+    /// </summary>
+    public decimal Limit { get; set; }
+}
+
+/// <summary>
+/// An account that buys as a business: the account content item with its <see cref="B2BAccountPart"/>, its members and
+/// its locations, read together.
+/// </summary>
+public sealed class B2BAccount
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="B2BAccount"/> class.
+    /// </summary>
+    /// <param name="contentItem">The account content item.</param>
+    public B2BAccount(ContentItem contentItem)
+    {
+        ArgumentNullException.ThrowIfNull(contentItem);
+
+        ContentItem = contentItem;
+        Part = contentItem.TryGet<B2BAccountPart>(out var part) ? part : new B2BAccountPart();
+
+        var limits = (Part.OrderLimits ?? [])
+            .Where(limit => !string.IsNullOrEmpty(limit?.UserId))
+            .GroupBy(limit => limit.UserId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First().Limit, StringComparer.Ordinal);
+
+        Buyers = [.. ((contentItem.TryGet<AccountMembersPart>(out var members) ? members.Members : null) ?? [])
+            .Where(member => member is not null)
+            .Select(member => new AccountBuyer
+            {
+                UserId = member.UserId,
+                UserName = member.UserName,
+                Email = member.Email,
+                Role = member.Role,
+                OrderLimit = member.UserId is { } userId && limits.TryGetValue(userId, out var limit) && limit > 0m ? limit : null,
+                ContactContentItemId = member.ContactContentItemId,
+            })];
+
+        Locations = [.. ((contentItem.TryGet<AccountLocationsPart>(out var locations) ? locations.Locations : null) ?? [])
+            .Where(location => location is not null)];
+    }
+
+    /// <summary>
+    /// Gets the account content item.
+    /// </summary>
+    public ContentItem ContentItem { get; }
+
+    /// <summary>
+    /// Gets the account's business settings.
+    /// </summary>
+    public B2BAccountPart Part { get; }
+
+    /// <summary>
+    /// Gets the account's content item id, which orders, invoices and punchout links refer to it by.
+    /// </summary>
+    public string AccountId
+        => ContentItem.ContentItemId;
+
+    /// <summary>
+    /// Gets the account's name.
+    /// </summary>
+    public string Name
+        => ContentItem.DisplayText;
+
+    /// <summary>
+    /// Gets whether the account buys as a business: its part is on and the account is published.
+    /// </summary>
+    public bool IsEnabled
+        => Part.Enabled && ContentItem.Published;
+
+    public string TaxId
+        => Part.TaxId;
+
+    public string BillingEmail
+        => Part.BillingEmail;
+
+    /// <summary>
+    /// Gets the people who buy for the account: its members, each with their order limit.
+    /// </summary>
+    public IReadOnlyList<AccountBuyer> Buyers { get; }
+
+    /// <summary>
+    /// Gets the places the account has orders shipped to: its locations.
+    /// </summary>
+    public IReadOnlyList<AccountLocation> Locations { get; }
+
+    public AccountTerms Terms
+        => Part.Terms ?? new AccountTerms();
+
+    public string PriceListId
+        => Part.PriceListId;
+
+    public decimal? MonthlyBudget
+        => Part.MonthlyBudget;
+
+    public AccountPunchout Punchout
+        => Part.Punchout;
+
+    /// <summary>
+    /// Returns the buyer a user is, or <see langword="null"/>.
+    /// </summary>
+    public AccountBuyer FindBuyer(string userId)
+        => string.IsNullOrEmpty(userId) ? null : Buyers.FirstOrDefault(buyer => string.Equals(buyer.UserId, userId, StringComparison.Ordinal));
+}
+
+/// <summary>
+/// Someone who buys for an account: one of its members, a buyer or an admin who also approves orders, with the most an
+/// order of theirs may come to. It is read from the account's members and its <see cref="B2BAccountPart"/>, never
+/// stored.
+/// </summary>
+public sealed class AccountBuyer
+{
+    public string UserId { get; set; }
+
+    public string UserName { get; set; }
+
+    public string Email { get; set; }
+
+    /// <summary>
+    /// Gets or sets the member's role. An admin sees all of the account's orders, and approves orders over a buyer's
+    /// limit or the account's budget.
+    /// </summary>
+    public AccountMemberRole Role { get; set; }
+
+    /// <summary>
+    /// Gets or sets the most an order the buyer places may come to before an account admin has to approve it, or none.
+    /// </summary>
+    public decimal? OrderLimit { get; set; }
+
+    /// <summary>
+    /// Gets or sets the account's contact this buyer is, matched by email, or none.
+    /// </summary>
+    public string ContactContentItemId { get; set; }
+}
+
+/// <summary>
+/// An account's OCI punchout: its procurement system opens the store with the key, as the punchout buyer.
+/// </summary>
+public sealed class AccountPunchout
+{
+    public bool Enabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets the user the procurement system shops as: one of the account's buyers.
+    /// </summary>
+    public string UserId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the SHA-256 hash of the key, as hex. The key itself is shown once, when it's made.
+    /// </summary>
+    public string KeyHash { get; set; }
+
+    public DateTime? KeyCreatedUtc { get; set; }
+}
+
+/// <summary>
+/// How an account pays: on account, with a deposit paid at checkout and the rest invoiced, due in its net days.
+/// </summary>
+public sealed class AccountTerms
+{
+    /// <summary>
+    /// Gets or sets the days the invoice for what's owed is due in, such as 30; none means the account pays at checkout
+    /// like anyone else.
+    /// </summary>
+    public int? NetDays { get; set; }
+
+    /// <summary>
+    /// Gets or sets the part of an order, from 0 to 100 percent, paid at checkout before the rest is invoiced.
+    /// </summary>
+    public decimal DepositPercent { get; set; }
+
+    /// <summary>
+    /// Gets or sets the most the account may owe at once, in the store's currency, or none for no limit.
+    /// </summary>
+    public decimal? CreditLimit { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether its buyers have to give a purchase order number at checkout.
+    /// </summary>
+    public bool RequirePurchaseOrder { get; set; }
+
+    public bool OffersTerms
+        => NetDays is >= 0;
+}

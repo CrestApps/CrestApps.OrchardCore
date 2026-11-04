@@ -16,6 +16,8 @@ This page covers three screens: setting up the plans you sell, the administrator
 
 This video walks through plans, signing up, agreements, the settings and memberships:
 
+<YouTube video="subscriptions" title="Video overview of subscriptions and memberships" />
+
 | | |
 | --- | --- |
 | **Menu** | Design > Content Definition > Content Types (to define a plan type), and Content > Content Items (to create plans) |
@@ -36,6 +38,8 @@ A plan type is a content type whose items are plans. You create it once, then cr
 6. Click **Save**.
 
 ### Create a plan
+
+<YouTube video="subscriptions" title="Video of a plan type and a plan's billing fields" start={98} end={163} />
 
 1. Open **Content > Content Items** and create a new item of your plan type, for example *Membership Plan*.
 2. Enter the **Title**, the **Price** on the **Product** part, and the billing terms on the **Subscription** part.
@@ -66,6 +70,8 @@ On the plan's card on your site, the buyer picks one under **Choose your plan** 
 
 ### Show your plans on your site
 
+<YouTube video="subscriptions" title="Video of signing up to a plan from the Plans page" start={163} end={194} />
+
 Plans are products, so you show them to visitors with a [product listing](product-listings.md), like any other product. Each plan shows its price with its billing period, such as *$10 / month*, and its **Sign up** button.
 
 1. Make sure the **Product Listing** feature is on.
@@ -80,11 +86,15 @@ The **Commerce starter** recipe sets all of this up, with a **Plans** page at */
 
 ### Give subscribers access
 
+<YouTube video="subscriptions-lifecycle" title="Plans and the roles they give" start={88} end={110} />
+
 Add the **Subscription Entitlements** part to a plan type, then on each plan tick the roles under **Member access**. A subscriber holds these roles for as long as their subscription is current. They keep them through the period they have paid for, even after cancelling, and lose them once it lapses. Because roles control what people can see and do across the site, this is how you make content or features members-only.
 
 What a plan grants is copied onto each subscription when it is bought, so changing a plan later does not change what existing subscribers were sold.
 
 ### Subscription settings
+
+<YouTube video="subscriptions" title="Video of the subscription settings" start={234} end={254} />
 
 The site-wide settings are under **Settings > Subscriptions**, with the **Manage subscriptions settings** permission.
 
@@ -99,6 +109,9 @@ This video shows a visitor signing up to a plan, then the Agreements screen:
 <YouTube video="commerce" title="Narrated video of a visitor signing up to a plan, and the Agreements screen" start={160} end={232} />
 
 ## Manage subscriptions
+
+<YouTube video="subscriptions-lifecycle" title="Managing a subscription" start={110} end={154} />
+<YouTube video="subscriptions" title="Video of the Agreements list and a subscription" start={194} end={234} />
 
 | | |
 | --- | --- |
@@ -159,6 +172,8 @@ Each action is written to the subscription's **History**.
 
 ## Subscription statuses
 
+<YouTube video="subscriptions-lifecycle" title="The subscription statuses" start={51} end={88} />
+
 | Status | What it means |
 | --- | --- |
 | **Active** | Paid and current. |
@@ -170,6 +185,8 @@ Each action is written to the subscription's **History**.
 | **Incomplete** | The subscription was created, but its first payment never went through, so nothing is owed to the subscriber yet. |
 
 ## My Plans (for subscribers)
+
+<YouTube video="subscriptions-lifecycle" title="My Plans for subscribers" start={154} end={174} />
 
 | | |
 | --- | --- |

@@ -1,0 +1,156 @@
+@model TimeEntryEditViewModel
+
+@{
+    var isNew = string.IsNullOrEmpty(Model.Id);
+    var keeper = Model.ExternalClock;
+}
+
+<zone Name="Title"><breadcrumb name="TimeTrackerEntriesEdit" title="@(isNew ? T["Add Time"] : keeper is not null ? T["{0}'s Time", Model.UserName] : T["Change {0}'s Time", Model.UserName])" /></zone>
+
+@if (keeper is not null)
+{
+    <div class="alert alert-info">
+        @T["This time comes from {0}. Correct it there; the change shows here when it is saved.", keeper.Name]
+        @if (!string.IsNullOrEmpty(keeper.ManageUrl ?? keeper.Url))
+        {
+            <a href="@Url.Content(keeper.ManageUrl ?? keeper.Url)" class="alert-link ms-1">@T["Open it"]</a>
+        }
+    </div>
+}
+
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <fieldset disabled="@(keeper is not null)">
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Whose and what"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper" asp-validation-class-for="UserId">
+                <label asp-for="UserId" class="ocat-label">@T["Person"]</label>
+                <div class="ocat-end">
+                    @if (isNew)
+                    {
+                        @await Component.InvokeAsync("UserPicker", new
+                        {
+                            name = Html.NameFor(m => m.UserId).ToString(),
+                            selectedValues = string.IsNullOrEmpty(Model.UserId) ? Array.Empty<string>() : new[] { Model.UserId },
+                            valueType = "userId",
+                            multiple = false,
+                            buttonText = T["Choose a person"].Value,
+                            searchPlaceholder = T["Search people"].Value,
+                            smallButton = false,
+                        })
+                    }
+                    else
+                    {
+                        <input type="text" class="form-control" value="@Model.UserName" readonly />
+                        <input type="hidden" asp-for="UserId" />
+                    }
+                    <span asp-validation-for="UserId" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="ocat-wrapper" asp-validation-class-for="StageId">
+                <label asp-for="StageId" class="ocat-label">@T["Stage"]</label>
+                <div class="ocat-end">
+                    <select asp-for="StageId" asp-items="Model.StageOptions" class="form-select">
+                        <option value="">@T["Choose a stage"]</option>
+                    </select>
+                    <span asp-validation-for="StageId" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">@T["When ({0})", Model.TimeZoneId]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper" asp-validation-class-for="Start">
+                <label asp-for="Start" class="ocat-label">@T["Start"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Start" asp-format="{0:yyyy-MM-ddTHH:mm:ss}" type="datetime-local" step="1" class="form-control" />
+                    <span asp-validation-for="Start" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="ocat-wrapper" asp-validation-class-for="End">
+                <label asp-for="End" class="ocat-label">@T["End"]</label>
+                <div class="ocat-end">
+                    <input asp-for="End" asp-format="{0:yyyy-MM-ddTHH:mm:ss}" type="datetime-local" step="1" class="form-control" />
+                    <span asp-validation-for="End" class="text-danger"></span>
+                    @if (Model.IsOpen)
+                    {
+                        <span class="hint">@T["Leave it empty to keep the person in this stage now."]</span>
+                    }
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Note" class="ocat-label">@T["Note"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Note" class="form-control" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (keeper is null)
+    {
+    <div class="card mb-3">
+        <div class="card-header">@T["Why"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper" asp-validation-class-for="Reason">
+                <label asp-for="Reason" class="ocat-label">@T["Reason"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Reason" class="form-control" placeholder="@T["Such as: forgot to clock out"]" />
+                    <span asp-validation-for="Reason" class="text-danger"></span>
+                    <span class="hint">@T["Kept with the entry and, when the Audit Trail is on, recorded there."]</span>
+                </div>
+            </div>
+            @if (Model.Changes.Count > 0)
+            {
+                <div class="ocat-wrapper">
+                    <span class="ocat-label">@T["Changed before"]</span>
+                    <div class="ocat-end">
+                        <ul class="list-unstyled small mb-0">
+                            @foreach (var change in Model.Changes.AsEnumerable().Reverse())
+                            {
+                                <li>@TimeTrackerTimeZone.Format(change.Utc, Model.TimeZoneId) · @change.By: @change.Reason <span class="text-muted">(@T["was {0}", change.Before])</span></li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    }
+    </fieldset>
+
+    <div class="mb-3">
+        @if (keeper is null)
+        {
+            <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+        }
+        <a asp-action="Index" class="btn btn-secondary">@(keeper is null ? T["Cancel"] : T["Back"])</a>
+    </div>
+</form>
+
+@if (!isNew && keeper is null)
+{
+    <div class="card mb-3 border-danger">
+        <div class="card-header">@T["Remove this time"]</div>
+        <div class="card-body">
+            <form asp-action="Delete" asp-route-id="@Model.Id" method="post">
+                <div class="ocat-wrapper">
+                    <label for="delete-reason" class="ocat-label">@T["Reason"]</label>
+                    <div class="ocat-end">
+                        <input id="delete-reason" name="reason" class="form-control" required />
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <div class="ocat-end-offset">
+                        <button type="submit" class="btn btn-danger">@T["Remove"]</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+}

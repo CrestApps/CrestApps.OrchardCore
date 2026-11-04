@@ -62,7 +62,9 @@ internal sealed class CallRecordingIndexMigrations : DataMigration
 
         await CreateReportIndexAsync();
 
-        return 5;
+        await CreateLookupIndexesAsync();
+
+        return 6;
     }
 
     /// <summary>
@@ -129,6 +131,20 @@ internal sealed class CallRecordingIndexMigrations : DataMigration
         return 5;
     }
 
+    /// <summary>
+    /// Adds the indexes a recording is found by from the provider's recording id, and the stored recordings are listed
+    /// by from a start time. The provider id was carried only by indexes led by another column, and the playable
+    /// recordings index carries the agent before the start time, so a list of every agent's recordings since a time,
+    /// and each recording webhook, read the whole table.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom5Async()
+    {
+        await CreateLookupIndexesAsync();
+
+        return 6;
+    }
+
     private Task<bool> CreateReportIndexAsync()
     {
         return IndexTableIndexCreation.CreateIfMissingAsync<CallRecordingIndex>(
@@ -136,5 +152,21 @@ internal sealed class CallRecordingIndexMigrations : DataMigration
             "IDX_CallRecordingIndex_Report",
             ContactCenterStorage.CollectionName,
             "StartedUtc", "Id");
+    }
+
+    private async Task CreateLookupIndexesAsync()
+    {
+        await IndexTableIndexCreation.CreateIfMissingAsync<CallRecordingIndex>(
+            SchemaBuilder,
+            "IDX_CallRecordingIndex_ProviderRecording",
+            ContactCenterStorage.CollectionName,
+            "ProviderRecordingId", "DocumentId");
+
+        // The erased flag is tested as "not erased", a range, so it follows the start time the list seeks and sorts by.
+        await IndexTableIndexCreation.CreateIfMissingAsync<CallRecordingIndex>(
+            SchemaBuilder,
+            "IDX_CallRecordingIndex_Stored",
+            ContactCenterStorage.CollectionName,
+            "IsStored", "StartedUtc", "IsErased", "DocumentId");
     }
 }

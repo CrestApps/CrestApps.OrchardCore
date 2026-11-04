@@ -19,9 +19,14 @@ When a lead qualifies, you **convert** it. Conversion creates a contact, or merg
 
 <AskYourAdmin />
 
+<YouTube video="omnichannel-crm-setup" title="Video overview of setting up the Omnichannel CRM" />
+<YouTube video="omnichannel-leads" title="Video overview of working and converting leads" />
+
 If you never turn the feature on, or never use accounts, contacts work exactly as before.
 
 ## Turn it on (once)
+
+<YouTube video="omnichannel-crm-setup" title="Video of running the Omnichannel CRM starter recipe" start={92} end={129} />
 
 
 The quickest way is the **Omnichannel CRM starter** recipe:
@@ -48,6 +53,8 @@ To use your own types instead, turn on **Omnichannel CRM** under **Tools > Featu
 A type with the Omnichannel Contact part and no Lead part is a contact type, as before.
 
 ## Work with leads
+
+<YouTube video="omnichannel-leads" title="Video of the leads list and adding a lead" start={46} end={113} />
 
 
 **Interaction Center > Leads** lists your open leads. Click **New** followed by the lead type's name to add one. Besides the name and contact methods, a lead has:
@@ -78,6 +85,8 @@ The `phone:` terms from [Contacts](contacts.md) work here too.
 
 ### Call and text leads
 
+<YouTube video="omnichannel-leads" title="Video of calling and texting a lead" start={157} end={182} />
+
 
 Everything you do with a contact works on a lead: **Add Activity**, **List Activities**, calls, texts and automated AI conversations.
 
@@ -92,6 +101,8 @@ Everything you do with a contact works on a lead: **Add Activity**, **List Activ
 - **Inbound calls and texts.** When a number belongs to both a contact and a lead, the contact wins. A converted lead never matches.
 
 ## Convert a lead
+
+<YouTube video="omnichannel-leads" title="Video of converting a lead" start={182} end={241} />
 
 
 1. Open the lead and click **Convert Lead**.
@@ -114,6 +125,8 @@ What conversion does:
 You cannot convert a lead while a call or message with it is in progress.
 
 ### Let the AI convert leads
+
+<YouTube video="omnichannel-leads" title="Video of the automatic ways to convert a lead" start={241} end={293} />
 
 
 An **Automatic** activity load of a lead type shows an **AI lead conversion** card. Tick **Allow AI to convert the lead**, and when an automated text or call ends, the AI decides from the conversation whether the lead qualified. If it did, the lead is converted before the disposition's follow-up actions run, so those work on the new contact.
@@ -143,7 +156,9 @@ Every subject action also has a **Set lead status** field. When the activity bel
 
 ## Accounts
 
-An account is the company or household your contacts and opportunities belong to. Open **Interaction Center > Accounts** to list them.
+<YouTube video="omnichannel-accounts-opportunities" title="Video of the account page, its contacts and its activities" start={48} end={78} />
+
+An account is the company or household your contacts and opportunities belong to. Open **Interaction Center > Accounts** to list them. Accounts are shared with the rest of the site, so the same account can also place orders or own equipment; see [Accounts](accounts.md).
 
 - **Add a contact or opportunity to an account** with the **Account** picker on its editor, or create it from the account's page.
 - **See everything in an account.** The account's page lists its contacts and opportunities. **List Activities** shows the activities of every contact in the account.
@@ -151,18 +166,28 @@ An account is the company or household your contacts and opportunities belong to
 
 Every contact and opportunity type can join an account without extra setup. Leads never join an account; they get one when they are converted.
 
+<YouTube video="omnichannel-accounts-opportunities" title="Video of putting a contact and an opportunity in an account with the Account picker" start={78} end={103} />
+
 If an account's page says *Please specify at least one contained content type*, open **Design > Content Definition > Content Types > Account**, edit its **List** part, tick **Contact** and **Sales Opportunity** (and any other contact or opportunity type you use) as the contained content types, and save. The page then lists the account's contacts and opportunities.
 
 ## Opportunities
 
 **Interaction Center > Opportunities** lists your open opportunities. Each one has a **Stage**, **Probability** and **Campaign**, plus the **Amount**, **Close date**, **Primary contact**, **Opportunity owner** and **Lead source** fields, and can belong to an account. The fields are standard content fields of the **Opportunity** part; edit them under **Design > Content Definition > Content Parts > Opportunity**. The **Primary contact** picker lists your contact types. An opportunity created by conversion takes the lead's owner and source. The stage decides whether the opportunity is open, won or lost. A new opportunity starts with its stage's probability, and a closed stage always sets it.
+<YouTube video="omnichannel-accounts-opportunities" title="Video of the opportunities list and its search terms" start={103} end={130} />
+
 **Interaction Center > Opportunities** lists your open opportunities. Each one has a **Stage**, **Probability** and **Campaign**, plus the **Amount**, **Close date**, **Primary contact**, **Opportunity owner** and **Lead source** fields, and can belong to an account. The fields are standard content fields of the **Opportunity** part; edit them under **Content Definition > Content Parts > Opportunity**. The **Primary contact** picker lists your contact types. An opportunity created by conversion takes the lead's owner and source. The stage decides whether the opportunity is open, won or lost. A new opportunity starts with its stage's probability, and a closed stage always sets it.
 
 Use `stage:`, `closed:`, `won:` and `account:` on the Opportunities list, for example `closed:false`.
 
+<YouTube video="omnichannel-accounts-opportunities" title="Video of adding an opportunity with its stage, amount and primary contact" start={130} end={164} />
+
 To delete an account, use **Actions > Delete** on its row and confirm. Its contacts and opportunities stay, now without an account:
 
+<YouTube video="omnichannel-accounts-opportunities" title="Video of deleting an account while its contacts and opportunities stay" start={164} end={185} />
+
 ## Lead sources
+
+<YouTube video="omnichannel-crm-setup" title="Video of adding a lead source" start={201} end={231} />
 
 
 Lead sources are ordinary content items of the **Lead Source** type. Open **Interaction Center > Management > Lead Sources** to add, rename or remove one. You need the usual content permissions for the **Lead Source** type.
@@ -170,6 +195,8 @@ Lead sources are ordinary content items of the **Lead Source** type. Open **Inte
 The **Lead source** fields of leads and opportunities are content pickers of this type. Activity loads and imports pick from the published lead sources too. Unpublishing or deleting a source removes it from the list, and leads that already have it show *(Unknown source)* in the conversion report.
 
 ## Lead statuses and opportunity stages
+
+<YouTube video="omnichannel-crm-setup" title="Video of the lead statuses and opportunity stages" start={129} end={201} />
 
 
 Manage both lists under **Interaction Center > Management**. Unlike lead sources, these lists are part of the CRM itself, because their settings decide how leads and opportunities behave.
@@ -183,6 +210,8 @@ Manage both lists under **Interaction Center > Management**. Unlike lead sources
 The name of a status or stage cannot be changed after you create it.
 
 ## Import and export leads
+
+<YouTube video="omnichannel-leads" title="Video of the lead import screen and its options" start={113} end={157} />
 
 
 Import and export leads the same way as [contacts](contacts.md), through Bulk Import and Bulk Export. This needs the Content Transfer feature.
@@ -208,6 +237,8 @@ When you export a lead type, **Leave out converted leads** is on by default, bec
 
 ## Automate with workflows
 
+<YouTube video="omnichannel-workflows" title="Video of the Lead Converted event and the Convert Lead task" start={268} end={294} />
+
 With the **Workflows** feature on, the CRM adds two activities under **Omnichannel CRM** in the workflow editor (see [Contact Center Workflows](workflows.md) for how to build a workflow):
 
 | Activity | What it does |
@@ -217,7 +248,11 @@ With the **Workflows** feature on, the CRM adds two activities under **Omnichann
 
 ## Reports
 
+<YouTube video="omnichannel-accounts-opportunities" title="Video of the three CRM reports" start={185} end={223} />
+
 Three reports appear under **Reports > CRM & Campaigns**. Each one is filtered by date range only, and needs the **View Omnichannel reports** permission. See [Reports](reports.md) for how to run and export a report.
+
+<YouTube video="omnichannel-reports" title="Video of the lead funnel, lead conversion and opportunity pipeline reports" start={288} end={322} />
 
 | Report | Shows |
 | --- | --- |

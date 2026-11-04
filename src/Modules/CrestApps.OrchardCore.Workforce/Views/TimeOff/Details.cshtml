@@ -1,0 +1,151 @@
+@model TimeOffRequestDetailsViewModel
+@{
+    var request = Model.Request;
+    var unit = Model.Type?.Unit ?? TimeOffUnit.Hours;
+    var title = new Microsoft.AspNetCore.Html.HtmlContentBuilder().Append((Model.Worker?.DisplayName ?? T["A former worker"].Value) + ": " + (Model.Type?.Name ?? string.Empty));
+}
+
+<zone Name="Title">
+    <breadcrumb name="WorkforceTimeOffDetails" title="@title">
+        <breadcrumb-item id="WorkforceTimeOff" action="Index" controller="TimeOff" area="CrestApps.OrchardCore.Workforce">@T["Time Off"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 gy-2 align-items-center">
+            <div class="col">
+                <strong class="me-2"><partial name="_TimeOffDates" model="request" /></strong>
+                <partial name="_TimeOffStatus" model="request.Status" />
+                <span class="badge ta-badge fw-normal"><i class="fa-solid fa-hourglass text-secondary me-1" aria-hidden="true"></i><partial name="_TimeOffAmount" model="(request.Amount, unit)" /></span>
+                @if (!string.IsNullOrEmpty(Model.TeamName))
+                {
+                    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-people-group text-secondary me-1" aria-hidden="true"></i>@Model.TeamName</span>
+                }
+                @if (request.AutoApproved && request.Status == TimeOffRequestStatus.Approved)
+                {
+                    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-bolt text-secondary me-1" aria-hidden="true"></i>@T["Approved by the allotment"]</span>
+                }
+            </div>
+            @if (Model.Worker is not null)
+            {
+                <div class="col-auto"><a asp-action="Worker" asp-route-workerId="@Model.Worker.ItemId" class="btn btn-outline-secondary btn-sm">@T["{0}'s time off", Model.Worker.DisplayName]</a></div>
+            }
+        </div>
+        @if (!string.IsNullOrEmpty(request.Reason))
+        {
+            <p class="mb-0 mt-2 small"><span class="text-muted">@T["Reason:"]</span> @request.Reason</p>
+        }
+        <p class="mb-0 mt-1 small text-muted">
+            @T["Submitted {0} by {1}.", CrestApps.OrchardCore.Calendars.Core.CalendarTime.ToLocal(request.SubmittedUtc, request.TimeZoneId).ToString("g"), Model.SubmittedByName ?? T["someone"].Value]
+            @if (request.DecidedUtc.HasValue && !request.IsOpen)
+            {
+                @T[" Decided {0} by {1}.", CrestApps.OrchardCore.Calendars.Core.CalendarTime.ToLocal(request.DecidedUtc.Value, request.TimeZoneId).ToString("g"), Model.DecidedByName ?? T["someone"].Value]
+            }
+            @if (!string.IsNullOrEmpty(request.DecisionNote))
+            {
+                <span>@T[" Note: {0}", request.DecisionNote]</span>
+            }
+        </p>
+    </div>
+</div>
+
+@if (request.IsOpen || request.Status == TimeOffRequestStatus.Approved)
+{
+    <div class="card text-bg-theme mb-3">
+        <div class="card-body">
+            <h5 class="card-title">@(request.IsOpen ? T["Decide"] : T["Plans changed?"])</h5>
+            <form method="post" class="no-multisubmit d-flex flex-wrap gap-2 align-items-center">
+                <input type="text" name="note" class="form-control" style="max-width: 24rem" placeholder="@T["Note to the worker (optional)"]" aria-label="@T["Note"]" />
+                @if (request.IsOpen)
+                {
+                    <button type="submit" formaction="@Url.Action("Approve", new { id = request.ItemId })" class="btn btn-success">@T["Approve"]</button>
+                    <button type="submit" formaction="@Url.Action("Decline", new { id = request.ItemId })" class="btn btn-outline-danger">@T["Decline"]</button>
+                    <button type="submit" formaction="@Url.Action("Cancel", new { id = request.ItemId })" class="btn btn-outline-secondary">@T["Withdraw"]</button>
+                }
+                else
+                {
+                    <button type="submit" formaction="@Url.Action("Cancel", new { id = request.ItemId })" class="btn btn-outline-danger">@T["Cancel the time off"]</button>
+                }
+            </form>
+            <span class="hint">@(request.IsOpen
+                ? T["Approving puts the time off on the team calendar and takes it from the balance, even when the allotment is full."]
+                : T["Canceling gives the balance back, takes the time off off the calendar and gives the place to the first request waiting for it. Shifts already taken off the schedule are not put back."])</span>
+        </div>
+    </div>
+}
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card text-bg-theme h-100">
+            <div class="card-body">
+                <h5 class="card-title">@T["Days"]</h5>
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        @foreach (var day in request.Days)
+                        {
+                            <tr class="@(day.Amount == 0 ? "text-muted" : null)"><td>@day.Date.ToString("ddd d MMM yyyy")</td><td class="text-end"><partial name="_TimeOffAmount" model="(day.Amount, unit)" /></td></tr>
+                        }
+                    </tbody>
+                </table>
+                @if (Model.Balance is not null)
+                {
+                    <p class="mt-3 mb-0">
+                        @if (request.IsOpen)
+                        {
+                            @T["'{0}' available on the first day once this is taken:", Model.Balance.Policy.Name]
+                            <strong><partial name="_TimeOffAmount" model="(Model.Balance.Available, unit)" /></strong>
+                        }
+                        else
+                        {
+                            @T["'{0}' balance on the first day:", Model.Balance.Policy.Name]
+                            <strong><partial name="_TimeOffAmount" model="(Model.Balance.Current + Model.Balance.ProjectedAccrual, unit)" /></strong>
+                            @if (request.Status == TimeOffRequestStatus.Approved)
+                            {
+                                <span class="text-muted">@T["(this time off taken)"]</span>
+                            }
+                        }
+                    </p>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card text-bg-theme mb-3">
+            <div class="card-body">
+                <h5 class="card-title">@T["Shifts on these days"]</h5>
+                @if (Model.Shifts.Count == 0)
+                {
+                    <p class="mb-0 text-muted">@T["No published shifts."]</p>
+                }
+                else
+                {
+                    <ul class="list-unstyled mb-0">
+                        @foreach (var shift in Model.Shifts)
+                        {
+                            <li>@shift.Start.ToString("ddd d MMM HH:mm")&ndash;@shift.End.ToString("HH:mm") @if (shift.Flagged) {<span class="badge text-bg-warning fw-normal ms-1">@T["Needs cover"]</span>}</li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+        <div class="card text-bg-theme">
+            <div class="card-body">
+                <h5 class="card-title">@T["Others off then"]</h5>
+                @if (Model.OthersOff.Count == 0)
+                {
+                    <p class="mb-0 text-muted">@T["Nobody else on the team has time off or a request on these days."]</p>
+                }
+                else
+                {
+                    <ul class="list-unstyled mb-0">
+                        @foreach (var other in Model.OthersOff)
+                        {
+                            <li class="mb-1"><a asp-action="Details" asp-route-id="@other.Request.ItemId">@other.WorkerName</a> <span class="text-muted">@other.Type?.Name, <partial name="_TimeOffDates" model="other.Request" /></span> <partial name="_TimeOffStatus" model="other.Request.Status" /></li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+</div>

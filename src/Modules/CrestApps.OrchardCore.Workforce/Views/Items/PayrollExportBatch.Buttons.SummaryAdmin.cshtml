@@ -1,0 +1,3 @@
+@model ShapeViewModel<PayrollExportBatch>
+
+<a asp-controller="PayrollExport" asp-action="Download" asp-route-id="@Model.Value.ItemId" class="btn btn-primary btn-sm"><i class="fa-solid fa-download me-1" aria-hidden="true"></i>@T["Download"]</a>

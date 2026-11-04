@@ -62,6 +62,7 @@ public sealed partial class HubCancellationConventionTests
                 "ContactCenterHub.cs",
                 "ContactCenterRealTimeNotifier.cs",
                 "ContactCenterRealTimeNotifierTests.cs",
+                "DispatchHub.cs",
                 "DistributedTestHub.cs",
                 "MessagingHub.cs",
                 "MessagingHubPresenceTests.cs",

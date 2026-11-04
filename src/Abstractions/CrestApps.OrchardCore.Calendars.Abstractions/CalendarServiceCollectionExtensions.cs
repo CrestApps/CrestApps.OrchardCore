@@ -57,4 +57,21 @@ public static class CalendarServiceCollectionExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// Registers a contributor that grants users access to calendars for reasons the calendar itself doesn't record, such
+    /// as belonging to the team a module keeps the calendar for.
+    /// </summary>
+    /// <typeparam name="TContributor">The contributor's type.</typeparam>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection.</returns>
+    public static IServiceCollection AddCalendarAccessContributor<TContributor>(this IServiceCollection services)
+        where TContributor : class, ICalendarAccessContributor
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.AddScoped<ICalendarAccessContributor, TContributor>();
+
+        return services;
+    }
 }

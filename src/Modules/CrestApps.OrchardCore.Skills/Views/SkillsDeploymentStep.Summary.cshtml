@@ -1,0 +1,5 @@
+@using CrestApps.OrchardCore.Skills.Deployments
+@model ShapeViewModel<SkillsDeploymentStep>
+
+<h5>@T["Skills and certifications"]</h5>
+<span class="hint">@T["Every skill and certification"]@(Model.Value.IncludeAssignments ? T[", with the skills people hold"] : null)@(Model.Value.IncludeCertificationRecords ? T[", with their certificates"] : null)</span>

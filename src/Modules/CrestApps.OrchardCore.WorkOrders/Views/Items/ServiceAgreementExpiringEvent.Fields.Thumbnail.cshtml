@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.WorkOrders.Agreements
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<ServiceAgreementExpiringEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-file-signature" aria-hidden="true"></i>
+    @T["Service Agreement Expiring"]
+</h4>
+<p>@T["Starts when a service agreement comes within its notice of its end date, once. The input has AgreementId, Number, Name and EndDate."]</p>

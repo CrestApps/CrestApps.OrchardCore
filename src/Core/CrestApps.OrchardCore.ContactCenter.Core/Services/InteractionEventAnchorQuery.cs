@@ -14,10 +14,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <remarks>
 /// <para>
 /// The statement is one seek per aggregate, joined with <c>UNION ALL</c>, so a batch costs one round trip instead of one
-/// per agent, and each seek stops at the first matching row walking the aggregate index backwards. A grouped
-/// <c>MAX(OccurredUtc)</c> per aggregate would also be one statement, but no index ends in the event type and the time
-/// under the aggregate, so with the event-type filter every engine reads each agent's whole history to find the
-/// maximum: the cost would grow with the age of the log instead of with the number of agents.
+/// per agent, and each seek stops at the first matching row walking <c>IDX_InteractionEventIndex_AggregateState</c>
+/// backwards. That index carries the event type after the time, so the rows of other types the walk passes are tested in
+/// the index rather than looked up in the table. A grouped <c>MAX(OccurredUtc)</c> per aggregate would also be one
+/// statement, but with the event-type filter every engine would read each agent's whole history to find the maximum:
+/// the cost would grow with the age of the log instead of with the number of agents.
 /// </para>
 /// <para>
 /// Every part of the statement is portable: the per-aggregate limit is written by the dialect (<c>TOP</c> on SQL

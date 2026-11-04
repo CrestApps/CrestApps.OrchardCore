@@ -1,0 +1,11 @@
+@model ShapeViewModel<LaborRuleOverrideRowViewModel>
+@{
+    var item = Model.Value.Override;
+}
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["The reason given"]"><i class="fa-solid fa-comment text-secondary me-1" aria-hidden="true"></i>@item.Reason</span>
+<span class="badge ta-badge fw-normal"><i class="fa-solid fa-user-pen text-secondary me-1" aria-hidden="true"></i>@item.Actor</span>
+<span class="badge ta-badge fw-normal"><i class="fa-regular fa-clock text-secondary me-1" aria-hidden="true"></i>@CrestApps.OrchardCore.Calendars.Core.CalendarTime.ToLocal(item.CreatedUtc, Model.Value.TimeZoneId).ToString("g")</span>
+@if (!string.IsNullOrEmpty(Model.Value.RuleSetName))
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-scale-balanced text-secondary me-1" aria-hidden="true"></i>@Model.Value.RuleSetName</span>
+}

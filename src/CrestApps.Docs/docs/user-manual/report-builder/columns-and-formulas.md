@@ -158,6 +158,10 @@ The colors also appear when the report is exported to Excel or PDF, and in repor
 
 ## Calculated fields
 
+<YouTube video="report-builder-formulas" title="Video overview of Report Builder formulas" />
+
+<YouTube video="report-builder-formulas" title="Video of adding a calculated field" start={49} end={95} />
+
 A calculated field works out a new value with a formula, like a spreadsheet.
 
 1. Under **Calculated fields** in the **Data** pane, click **New**.
@@ -186,6 +190,8 @@ The new field appears under **Calculated fields**. Drag it onto **Columns**, **F
 
 ### Common formulas
 
+<YouTube video="report-builder-formulas" title="Video of a label, a fallback and a date formula" start={95} end={143} />
+
 The examples use an *Order* content type with a *Total* field, and a *Customer* content type with *FirstName*, *LastName* and *Email* fields. Use your own fields.
 
 | What you want | Formula |
@@ -206,6 +212,8 @@ The examples use an *Order* content type with a *Total* field, and a *Customer* 
 | The share of large orders in each group | `SUM(IF([Order.Order.Total] >= 1000, 1, 0)) / COUNT()` |
 
 ### Formulas that work once per group
+
+<YouTube video="report-builder-formulas" title="Video of a formula that works once per group" start={143} end={180} />
 
 A formula that uses an aggregate function (**SUM**, **AVG**, **MIN**, **MAX**, **COUNT**, **COUNTD**, **MEDIAN**) is worked out once per group, so it can divide one total by another. Inside such a formula, every field must be inside an aggregate function. **COUNT()** with nothing between the parentheses counts the rows of the group.
 

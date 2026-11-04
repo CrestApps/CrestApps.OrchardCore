@@ -1,0 +1,13 @@
+@model ShapeViewModel<ShiftTradeRowViewModel>
+@{
+    var row = Model.Value;
+}
+@if (!string.IsNullOrEmpty(row.TeamName))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Team"]"><i class="fa-solid fa-people-group text-secondary me-1" aria-hidden="true"></i>@row.TeamName</span>
+}
+<partial name="_ShiftTradeStatus" model="row.Trade.Status" />
+@if (!string.IsNullOrEmpty(row.AcceptedByName) && string.IsNullOrEmpty(row.Trade.TargetWorkerId))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Picked up by"]"><i class="fa-solid fa-hand text-secondary me-1" aria-hidden="true"></i>@row.AcceptedByName</span>
+}

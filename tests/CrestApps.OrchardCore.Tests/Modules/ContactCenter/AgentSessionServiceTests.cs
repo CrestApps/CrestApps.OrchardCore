@@ -154,6 +154,46 @@ public sealed class AgentSessionServiceTests
     }
 
     [Fact]
+    public async Task DisconnectAsync_WhenASharedQueryIsCanceled_RetriesAndRemovesConnection()
+    {
+        // Arrange
+        // Live, the agent bar's GetSnapshot and the disconnect read the same session at the same moment. YesSql ran
+        // the read once for both, the closing connection canceled GetSnapshot, and the disconnect failed with it,
+        // leaving the gone connection in the list.
+        var existing = new AgentSession { ItemId = "s1", UserId = "u1", ConnectionIds = ["c1"], IsOnline = true };
+        var sessionManager = new Mock<IAgentSessionManager>();
+        sessionManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        var scopeExecutor = new FlakyScopeExecutor(sessionManager.Object, new TaskCanceledException(), failuresBeforeSuccess: 1);
+        var service = CreateService(sessionManager, new Mock<IAgentProfileManager>(), scopeExecutor: scopeExecutor);
+
+        // Act
+        var session = await service.DisconnectAsync("u1", "c1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(session);
+        Assert.Empty(session.ConnectionIds);
+        Assert.False(session.IsOnline);
+        Assert.Equal(2, scopeExecutor.InvocationCount);
+    }
+
+    [Fact]
+    public async Task DisconnectAsync_WhenTheCallerCancels_DoesNotRetry()
+    {
+        // Arrange
+        var existing = new AgentSession { ItemId = "s1", UserId = "u1", ConnectionIds = ["c1"], IsOnline = true };
+        var sessionManager = new Mock<IAgentSessionManager>();
+        sessionManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        var scopeExecutor = new FlakyScopeExecutor(sessionManager.Object, new TaskCanceledException(), failuresBeforeSuccess: int.MaxValue);
+        var service = CreateService(sessionManager, new Mock<IAgentProfileManager>(), scopeExecutor: scopeExecutor);
+        using var canceled = new CancellationTokenSource();
+        await canceled.CancelAsync();
+
+        // Act & Assert
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.DisconnectAsync("u1", "c1", canceled.Token));
+        Assert.Equal(1, scopeExecutor.InvocationCount);
+    }
+
+    [Fact]
     public async Task ConnectAsync_WhenAnotherConnectionCommitsFirst_RetriesInsteadOfFailingTheConnection()
     {
         // Arrange

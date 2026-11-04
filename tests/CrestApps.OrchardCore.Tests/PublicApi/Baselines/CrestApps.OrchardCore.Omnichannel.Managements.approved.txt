@@ -27,6 +27,7 @@
     " pulling in the full Omnichannel management screens.", EnabledByDependencyOnly=true, Id="CrestApps.OrchardCore.Omnichannel.ChannelEndpoints", Name="Omnichannel Channel Endpoints")]
 [assembly: OrchardCore.Modules.Manifest.Feature(Category="Contact Center", Dependencies=new string[] {
         "CrestApps.OrchardCore.Omnichannel.Managements",
+        "CrestApps.OrchardCore.Accounts",
         "OrchardCore.ContentFields",
         "OrchardCore.Lists",
         "OrchardCore.Title"}, Description="Adds leads, accounts and opportunities to the omnichannel CRM: lead records that " +
@@ -161,7 +162,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements
     public sealed class CrmStartup : OrchardCore.Modules.StartupBase
     {
         public CrmStartup(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.CrmStartup> stringLocalizer) { }
-        public override void Configure(Microsoft.AspNetCore.Builder.IApplicationBuilder app, Microsoft.AspNetCore.Routing.IEndpointRouteBuilder routes, System.IServiceProvider serviceProvider) { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Crm")]
@@ -811,13 +811,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Endpoints.Api
 }
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers
 {
-    public sealed class AccountContentImportHandler : CrestApps.OrchardCore.ContentTransfer.Handlers.ContentImportHandlerBase, CrestApps.OrchardCore.ContentTransfer.IContentImportHandler
-    {
-        public AccountContentImportHandler(YesSql.ISession session, OrchardCore.ContentManagement.IContentManager contentManager, CrestApps.OrchardCore.Omnichannel.Managements.Services.OmnichannelContentTypeProvider contentTypeProvider, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Handlers.AccountContentImportHandler> stringLocalizer) { }
-        public System.Threading.Tasks.Task ExportAsync(CrestApps.OrchardCore.ContentTransfer.ContentExportContext context) { }
-        public System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContentTransfer.ImportColumn> GetColumns(CrestApps.OrchardCore.ContentTransfer.ImportContentContext context) { }
-        public System.Threading.Tasks.Task ImportAsync(CrestApps.OrchardCore.ContentTransfer.ContentImportContext context) { }
-    }
     public sealed class BulkManageActivityFilterHandler : CrestApps.OrchardCore.Omnichannel.Core.Services.IBulkManageActivityFilterHandler
     {
         public BulkManageActivityFilterHandler() { }
@@ -895,6 +888,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations
         public System.Threading.Tasks.Task<int> UpdateFrom3Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom4Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom5Async() { }
+        public System.Threading.Tasks.Task<int> UpdateFrom6Async() { }
     }
     public sealed class OmnichannelContactsMigrations : CrestApps.OrchardCore.Omnichannel.Managements.Migrations.OmnichannelIndexMigration
     {
@@ -921,7 +915,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations
         protected Microsoft.Extensions.Logging.ILogger Logger { get; }
         protected YesSql.IStore Store { get; }
         protected System.Threading.Tasks.Task ApplyIsolatedSchemaChangeAsync(System.Func<YesSql.Sql.ISchemaBuilder, System.Threading.Tasks.Task> schemaChange, string operation) { }
-        protected System.Threading.Tasks.Task EnsureColumnExistsAsync<TIndex>(string collection, string columnName, System.Action<YesSql.Sql.Schema.IAlterTableCommand> addColumn, string operation) { }
+        protected System.Threading.Tasks.Task<bool> EnsureColumnExistsAsync<TIndex>(string collection, string columnName, System.Action<YesSql.Sql.Schema.IAlterTableCommand> addColumn, string operation) { }
         protected System.Threading.Tasks.Task<bool> IndexTableExistsAsync<TIndex>(string collection) { }
         protected System.Threading.Tasks.Task<System.Exception> TryApplyIsolatedAsync(System.Func<YesSql.Sql.ISchemaBuilder, System.Threading.Tasks.Task> work) { }
     }
@@ -1431,13 +1425,60 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Tools
 }
 namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
 {
-    public class AccountPickerViewModel
+    public class AccountActivitiesTabViewModel
     {
-        public AccountPickerViewModel() { }
+        public AccountActivitiesTabViewModel() { }
         public string AccountContentItemId { get; set; }
-        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
-        public string AccountDisplayText { get; set; }
-        public bool Rendered { get; set; }
+        public int CompletedCount { get; set; }
+        public System.DateTime? LastCompletedUtc { get; set; }
+        public System.DateTime? NextScheduledUtc { get; set; }
+        public int ScheduledCount { get; set; }
+    }
+    public sealed class AccountContactRow : System.IEquatable<CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.AccountContactRow>
+    {
+        public AccountContactRow(OrchardCore.ContentManagement.ContentItem Contact, string Email, string Phone) { }
+        public OrchardCore.ContentManagement.ContentItem Contact { get; init; }
+        public string Email { get; init; }
+        public string Phone { get; init; }
+    }
+    public class AccountContactsTabViewModel
+    {
+        public AccountContactsTabViewModel() { }
+        public OrchardCore.ContentManagement.ContentItem Account { get; set; }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.AccountContactRow> Contacts { get; set; }
+        public int Count { get; set; }
+        public System.Collections.Generic.IReadOnlyList<OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition> CreatableTypes { get; set; }
+    }
+    public sealed class AccountLeadRow : System.IEquatable<CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.AccountLeadRow>
+    {
+        public AccountLeadRow(OrchardCore.ContentManagement.ContentItem Lead, string ContactContentItemId, System.DateTime? ConvertedUtc) { }
+        public string ContactContentItemId { get; init; }
+        public System.DateTime? ConvertedUtc { get; init; }
+        public OrchardCore.ContentManagement.ContentItem Lead { get; init; }
+    }
+    public class AccountLeadsTabViewModel
+    {
+        public AccountLeadsTabViewModel() { }
+        public int Count { get; set; }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.AccountLeadRow> Leads { get; set; }
+    }
+    public class AccountOpportunitiesTabViewModel
+    {
+        public AccountOpportunitiesTabViewModel() { }
+        public OrchardCore.ContentManagement.ContentItem Account { get; set; }
+        public int Count { get; set; }
+        public System.Collections.Generic.IReadOnlyList<OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition> CreatableTypes { get; set; }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.AccountOpportunityRow> Opportunities { get; set; }
+    }
+    public sealed class AccountOpportunityRow : System.IEquatable<CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.AccountOpportunityRow>
+    {
+        public AccountOpportunityRow(OrchardCore.ContentManagement.ContentItem Opportunity, string Stage, decimal? Amount, System.DateTime? CloseDate, bool IsClosed, bool IsWon) { }
+        public decimal? Amount { get; init; }
+        public System.DateTime? CloseDate { get; init; }
+        public bool IsClosed { get; init; }
+        public bool IsWon { get; init; }
+        public OrchardCore.ContentManagement.ContentItem Opportunity { get; init; }
+        public string Stage { get; init; }
     }
     public class ActivityHandlerViewModel
     {
@@ -1653,8 +1694,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> UrgencyLevels { get; set; }
         public string UserId { get; set; }
-        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
-        public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Users { get; set; }
     }
     public class EditSubjectActionViewModel
     {

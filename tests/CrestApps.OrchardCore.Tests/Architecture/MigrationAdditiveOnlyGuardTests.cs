@@ -694,6 +694,26 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "SQLite refuses to drop a column an index refers to, so this index over the queue column comes down before the column is widened to hold a campaign's virtual queue id and is recreated over the same columns in the same step.",
             "CreateIndex"),
         new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Workforce/Migrations/WorkforceTeamsMove.cs",
+            "WorkforceTeamsMove",
+            "DropLegacyIndexTableAsync",
+            "DropTableAsync",
+            "Workforce_TeamIndex",
+            MigrationContractJustification.NeverReleased,
+            "3.0.0",
+            "Workforce_TeamIndex",
+            "The index of the team documents Workforce kept in its own collection before teams had their own module. Workforce is new in 3.0.0, so no stable release created the table. It is dropped in the same step that saves every one of those teams again in the Teams collection with the same id, where the Teams module's own index serves them."),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Workforce/Migrations/WorkforceTeamsMove.cs",
+            "WorkforceTeamsMove",
+            "DeleteLegacyDocumentsAsync",
+            "raw SQL",
+            "delete",
+            MigrationContractJustification.ReviewedAdditive,
+            "3.0.0",
+            null,
+            "A row-level move, not a schema change: it removes the old team documents from the Workforce collection only after each has been saved again in the Teams collection with the same id in this same step, and touches only rows of the old team type. No table, column or index is removed by this statement, and every team keeps exactly one document."),
+        new MigrationContractEntry(
             "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/DocumentTypeColumnWidening.cs",
             "DocumentTypeColumnWidening",
             "WidenOnPostgreSqlAsync",
@@ -777,13 +797,13 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Migrations/OmnichannelIndexMigration.cs",
             "OmnichannelIndexMigration",
             "ColumnExistsAsync",
-            "a900532ad0f3373d",
+            "ebed85504e2049b6",
             "Read-only column existence probe. Both branches only read metadata to test whether a column is present: SQLite runs 'PRAGMA table_info' and every other dialect runs a parameterized 'SELECT COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS'. Neither statement can create, alter, or drop any object."),
         new ReviewedDynamicSqlEntry(
             "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Migrations/OmnichannelIndexMigration.cs",
             "OmnichannelIndexMigration",
             "TableExistsAsync",
-            "a900532ad0f3373d",
+            "ebed85504e2049b6",
             "Read-only table existence probe. Both branches only read metadata to test whether a table is present: SQLite runs a parameterized 'SELECT COUNT(1) FROM sqlite_master' and every other dialect runs a parameterized 'SELECT COUNT(1) FROM INFORMATION_SCHEMA.TABLES'. Neither statement can create, alter, or drop any object."),
     ];
 

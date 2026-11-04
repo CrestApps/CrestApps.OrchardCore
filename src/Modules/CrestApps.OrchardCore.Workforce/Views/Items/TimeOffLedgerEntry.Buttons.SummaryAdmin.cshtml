@@ -1,0 +1,5 @@
+@model ShapeViewModel<TimeOffLedgerRowViewModel>
+@if (Model.Value.Entry.Kind is TimeOffLedgerKind.Taken or TimeOffLedgerKind.Reversal && !string.IsNullOrEmpty(Model.Value.Entry.SourceRef))
+{
+    <a asp-controller="TimeOff" asp-action="Details" asp-route-id="@Model.Value.Entry.SourceRef" class="btn btn-outline-secondary btn-sm">@T["Request"]</a>
+}

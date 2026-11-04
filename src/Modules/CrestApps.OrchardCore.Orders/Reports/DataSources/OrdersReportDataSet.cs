@@ -97,8 +97,8 @@ public sealed class OrdersReportDataSet : IndexedReportDataSet<Order, OrderIndex
         AddField("IsGuest", S["Guest"], DataFieldType.Boolean, record => string.IsNullOrEmpty(record.UserId), customer);
         AddField(nameof(Order.CustomerName), S["Customer name"], DataFieldType.Text, record => record.CustomerName, customer);
         AddField(nameof(Order.CustomerEmail), S["Customer email"], DataFieldType.Text, record => record.CustomerEmail, customer);
-        AddField(nameof(Order.CompanyId), S["Company ID"], DataFieldType.Text, record => record.CompanyId, customer)
-            .Identifier(CommerceReportDataSets.Reference(CommerceReportDataSets.CompanySource.Name, CommerceReportDataSets.CompanySource.Companies));
+        AddField(nameof(Order.AccountId), S["Account ID"], DataFieldType.Text, record => record.AccountId, customer)
+            .Identifier(CommerceReportDataSets.Reference(CommerceReportDataSets.B2BAccountSource.Name, CommerceReportDataSets.B2BAccountSource.B2BAccounts));
 
         AddField("BillingCountry", S["Billing country"], DataFieldType.Text, record => record.BillingAddress?.Country, addresses);
         AddField("BillingRegion", S["Billing region"], DataFieldType.Text, record => record.BillingAddress?.Region, addresses);
@@ -145,7 +145,7 @@ public sealed class OrdersReportDataSet : IndexedReportDataSet<Order, OrderIndex
             [CommerceReportDataSets.ItemIdField] = index => index.ItemId,
             [nameof(Order.CustomerId)] = index => index.CustomerId,
             [nameof(Order.UserId)] = index => index.UserId,
-            [nameof(Order.CompanyId)] = index => index.CompanyId,
+            [nameof(Order.AccountId)] = index => index.AccountId,
             [nameof(Order.CartId)] = index => index.CartId,
             [nameof(Order.CheckoutSessionId)] = index => index.CheckoutSessionId,
             [nameof(Order.LocationId)] = index => index.LocationId,

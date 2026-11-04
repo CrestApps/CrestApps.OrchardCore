@@ -1,0 +1,4 @@
+@model ShapeViewModel<WorkOrderRow>
+
+<a asp-controller="WorkOrders" asp-action="Details" asp-route-id="@Model.Value.WorkOrder.ItemId" class="btn btn-secondary btn-sm">@T["View"]</a>
+<a asp-controller="WorkOrders" asp-action="Edit" asp-route-id="@Model.Value.WorkOrder.ItemId" class="btn btn-primary btn-sm">@T["Edit"]</a>

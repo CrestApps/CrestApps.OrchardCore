@@ -1,0 +1,56 @@
+@using System.Globalization
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+@using Microsoft.AspNetCore.Mvc.Localization
+@using OrchardCore.ContentTypes
+@using OrchardCore.Localization.Data
+
+@model AccountOpportunitiesTabViewModel
+
+@inject IDataLocalizer D
+
+<div class="card mb-3">
+    <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <span>@T.Plural(Model.Count, "1 opportunity", "{0} opportunities")</span>
+        @foreach (var type in Model.CreatableTypes)
+        {
+            <a class="btn btn-sm btn-secondary" asp-action="Create" asp-controller="Admin" asp-area="OrchardCore.Contents" asp-route-id="@type.Name" asp-route-ListPart.ContainerId="@Model.Account.ContentItemId" asp-route-ListPart.ContainerContentType="@Model.Account.ContentType" asp-route-ListPart.ContentType="@type.Name" asp-route-returnUrl="@(FullRequestPath + "#account-opportunities")">
+                @T["New {0}", D[type.DisplayName, DataLocalizationContext.ContentType]]
+            </a>
+        }
+    </div>
+    @if (Model.Opportunities.Count == 0)
+    {
+        <div class="card-body text-body-secondary">@T["The account has no opportunities yet."]</div>
+    }
+    else
+    {
+        <ul class="list-group list-group-flush">
+            @foreach (var row in Model.Opportunities)
+            {
+                <li class="list-group-item d-flex flex-wrap align-items-center gap-3">
+                    <a class="fw-semibold" asp-action="Display" asp-controller="Admin" asp-area="OrchardCore.Contents" asp-route-contentItemId="@row.Opportunity.ContentItemId">@row.Opportunity.DisplayText</a>
+                    @if (!string.IsNullOrEmpty(row.Stage))
+                    {
+                        <span class="badge ta-badge fw-normal">@row.Stage</span>
+                    }
+                    @if (row.IsClosed)
+                    {
+                        <span class="badge @(row.IsWon ? "text-bg-success" : "text-bg-secondary") fw-normal">@(row.IsWon ? T["Won"] : T["Lost"])</span>
+                    }
+                    @if (row.Amount is { } amount)
+                    {
+                        <span class="text-body-secondary">@amount.ToString("N2", CultureInfo.CurrentCulture)</span>
+                    }
+                    @if (row.CloseDate is { } closeDate)
+                    {
+                        <span class="text-body-secondary">@T["Closes {0}", closeDate.ToString("d", CultureInfo.CurrentCulture)]</span>
+                    }
+                </li>
+            }
+        </ul>
+        @if (Model.Count > Model.Opportunities.Count)
+        {
+            <div class="card-footer small text-body-secondary">@T["Showing {0} of {1}. The Records tab lists them all.", Model.Opportunities.Count, Model.Count]</div>
+        }
+    }
+</div>

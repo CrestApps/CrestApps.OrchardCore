@@ -19,6 +19,8 @@ user_manual:
   - user-manual/reports
 ---
 
+<YouTube video="omnichannel-contacts" title="Video overview of omnichannel contacts" />
+
 | | |
 | --- | --- |
 | **Feature Name** | Omnichannel Management |
@@ -374,6 +376,8 @@ Phone filters in **Load Activities**, **Manage Activities**, and Content Admin s
 
 The named terms are registered by `OmnichannelContactPhoneContentsAdminListFilterProvider`, an `IContentsAdminListFilterProvider`. When the content list is scoped exclusively to contact content types — the **Interaction Center > Contacts** menu item, or any Content Admin URL whose `contentTypeId` lists only types that attach `OmnichannelContactPart` — the provider also overrides the default text term. An entry written like a phone number (digits, spaces, `-`, `(`, `)`, `.` and an optional leading `+`, with at least three digits) matches the **Display Text** *or* a primary Cell or Home number that **begins with** the digits; an entry with letters in it matches the Display Text only. A national entry is compared with the national digits and, when it begins with `1`, also with the E.164 value, so `1702555` finds `+17025550104`. The number is compared in a subquery on `OmnichannelContactIndex` (`DocumentId IN (SELECT DocumentId ...)`), which seeks its phone number indexes, instead of joining the contact index to the list; the `phone:` term still matches any part of the number. On any other content list the search box behaves exactly as the framework default and matches Display Text only. On those contact-scoped lists a **Phone** card also appears in the Content Admin **Filters** popover.
 
+On the same contact-scoped lists, the free words of a search are read as one phrase: `John Smith` matches a record whose Display Text contains `John Smith`, and `702 555 0104` is compared with phone numbers as one number. The framework joins free words with `or` and matches each word through its own join of the content item index, which no index can answer, so on a large tenant a name search read every record of the list. Named terms such as `converted:false` are kept as typed, and a search that uses the search syntax itself (quotes, parentheses, `AND`, `OR`, `NOT` or a leading `-`) is parsed as typed. `OmnichannelContactListFilterParser` replaces the `IContentsAdminListFilterParser` to do this and builds its parser from the same filter providers.
+
 ## Bulk Activity Management
 
 The **Manage Activities** page provides a centralized interface for managing active omnichannel inventory across manual, automated, and dialer-oriented activities. It targets editable work states such as **Not started**, `Scheduled`, `Pending`, `AwaitingAgentResponse`, `Failed`, and `Cancelled`. Historical activities without a subject content type remain manageable and are represented by the generic **Activity** type instead of failing the page or completion action. The filters, page size and bulk actions are described in [Managing activities in bulk](../user-manual/bulk-activities.md).
@@ -418,6 +422,7 @@ The bulk actions apply either to the activities selected on the current page or 
 ## Reports
 
 
+<YouTube video="omnichannel-reports" title="Video overview of the omnichannel reports: which report answers which question" />
 When the **Reports** feature (`CrestApps.OrchardCore.Reports`) is enabled, Omnichannel Management contributes 26 reports to the admin **Reports** area, and the Omnichannel CRM feature adds three more (**Lead funnel**, **Lead conversion by source and list** and **Opportunity pipeline**), 29 in all. They are grouped by category: **Operations**, **Queue & Routing**, **Agent Performance**, **CRM & Campaigns**, **Compliance & Audit**, and **Technical & IT**. They include activity summary, campaign performance, disposition breakdown, dialer call detail, AI handoff and containment, backlog and aging, source, channel, kind, assignment, urgency, attempt and address performance, customer and contact type workload, scheduled completion, per-user productivity, completion time, overdue workload and creation, and campaign source, channel, disposition, and attempt mixes. The user manual lists each one under [Omnichannel reports](../user-manual/reports.md#omnichannel-reports).
 
 Every Omnichannel activity report can be narrowed by **Campaign group**, **Campaign**, **Channel**, **Source**, **Status**, and **Disposition**, which takes several dispositions at once; the three CRM reports (lead funnel, lead conversion and opportunity pipeline) take the date range only. The filters are read into an `OmnichannelReportCriteria` (`DispositionIds` is the set picked, or `null` for every disposition) and applied by the shared activity filter, so every report that goes through it honors them. The **Source** filter offers *Automatic*, *Callback*, *Dialer*, *Inbound* and *Manual*; *Dialer* matches every dialer mode (`PreviewDial`, `PowerDial`, `ProgressiveDial` and `PredictiveDial`), which the report rows show as stored. Reports export to CSV, to Excel (`.xlsx`) when the **Reports (OpenXml)** feature is enabled, and to PDF when **Reports (PDF)** is enabled. Viewing them requires the **View Omnichannel reports** permission, which **Manage activities** implies and which administrators and supervisors have by default. See [Reports](../user-manual/reports.md) in the user manual.
@@ -427,6 +432,7 @@ Every Omnichannel activity report can be narrowed by **Campaign group**, **Campa
 ### Report Builder data sets
 
 
+<YouTube video="omnichannel-reports" title="Video of the omnichannel and messaging data sets in the Report Builder" start={322} end={373} />
 The **Omnichannel Activities** feature also exposes the Omnichannel records to the Report Builder and to Orchard Core data pipelines as the `Omnichannel` data source, registered when Data Pipelines Core (`OrchardCore.DataPipelines.Core`) is enabled. Every data set needs **View Omnichannel reports** (`ViewOmnichannelReports`); a principal without it, or no principal, sees no data set and reads no row.
 
 | Data set (technical name) | One row per | Main date | Fields |

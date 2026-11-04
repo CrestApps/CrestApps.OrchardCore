@@ -1,0 +1,3 @@
+@model ShapeViewModel<TerritoryRow>
+
+<a asp-controller="Territories" asp-action="Edit" asp-route-id="@Model.Value.Territory.ItemId">@Model.Value.Territory.Name</a>

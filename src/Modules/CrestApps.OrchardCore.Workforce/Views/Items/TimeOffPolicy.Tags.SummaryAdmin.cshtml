@@ -1,0 +1,40 @@
+@model ShapeViewModel<TimeOffPolicy>
+
+@{
+    var policy = Model.Value;
+}
+@switch (policy.AccrualMethod)
+{
+    case TimeOffAccrualMethod.PerPeriod:
+        <span class="badge ta-badge fw-normal"><i class="fa-solid fa-calendar-plus text-secondary me-1" aria-hidden="true"></i>@T["{0} each period", policy.Rate.ToString("0.##")]</span>
+        break;
+    case TimeOffAccrualMethod.PerHourWorked:
+        <span class="badge ta-badge fw-normal"><i class="fa-solid fa-calendar-plus text-secondary me-1" aria-hidden="true"></i>@T["{0} per hour worked", policy.Rate.ToString("0.####")]</span>
+        break;
+    case TimeOffAccrualMethod.AnnualLumpSum:
+        <span class="badge ta-badge fw-normal"><i class="fa-solid fa-calendar-plus text-secondary me-1" aria-hidden="true"></i>@T["{0} a year", policy.Rate.ToString("0.##")]</span>
+        break;
+    default:
+        <span class="badge ta-badge fw-normal">@T["No accrual"]</span>
+        break;
+}
+@{
+    var teams = policy.Assignments.Count(assignment => !string.IsNullOrEmpty(assignment.TeamId));
+    var workers = policy.Assignments.Count(assignment => !string.IsNullOrEmpty(assignment.WorkerId));
+}
+@if (teams > 0)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-people-group text-secondary me-1" aria-hidden="true"></i>@T.Plural(teams, "1 team", "{0} teams", teams)</span>
+}
+@if (workers > 0)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-user text-secondary me-1" aria-hidden="true"></i>@T.Plural(workers, "1 worker", "{0} workers", workers)</span>
+}
+@if (teams + workers == 0)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-triangle-exclamation text-warning me-1" aria-hidden="true"></i>@T["Assigned to nobody"]</span>
+}
+@if (!Model.Value.Enabled)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Not in use"]</span>
+}

@@ -96,6 +96,8 @@ An item that cannot be bought online is never sold, whatever a visitor tries: no
 
 ### Offer several prices
 
+<YouTube video="product-variants-and-prices" title="Offering several prices" start={194} end={235} />
+
 The **Product prices** part adds a **Prices** section to the item: the ways the item can be bought. A buyer picks one at checkout. A price that recurs makes the item something people can subscribe to; see [Subscriptions](subscriptions.md).
 
 1. Fill in the first price. A new item starts with one empty price, marked **Default**.
@@ -121,6 +123,8 @@ The **Product prices** part adds a **Prices** section to the item: the ways the 
 If the item cannot be saved, a message under the price says why, for example *A recurring price needs a billing interval.* or *Only one price can be the default.*
 
 ### Sell a product in variants
+
+<YouTube video="product-variants-and-prices" title="Selling a product in variants" start={119} end={164} />
 
 A product that comes in versions, such as a shirt in three sizes and two colors, is one item with **variants**: one per combination of its options, each with its own SKU, price and image. Buyers choose a variant before adding the product to their cart, and the cart and the order record the variant they chose.
 
@@ -181,11 +185,15 @@ With the **Grouped Products** feature, a product can show several products on on
 
 ## Sell a bundle or kit
 
+<YouTube video="product-bundles-and-recommendations" title="Sell a bundle or kit" start={82} end={145} />
+
 With the **Product Bundles** feature, a product can be a bundle of other products, such as a starter kit of two caps and a tee, sold at its own price. Under **Bundle** on the product's editor, choose each product in it under **Made of** and how many each bundle holds. The bundle's page lists what's in it.
 
 Its stock is what its parts in stock can make: with 4 caps left and 2 in each kit, it shows *Only 2 left*. Selling a bundle takes each part from stock, and canceling or refunding the order puts them back. Don't count the bundle's own stock. A part can't be sold in variants or be a bundle itself.
 
 ## Import and export products
+
+<YouTube video="product-import-and-feeds" title="Import and export products" start={133} end={169} />
 
 Products import and export like any other content, with the **Content Transfer** feature (**Content > Bulk Import** and **Bulk Export**), in a CSV file or, with its OpenXml feature, an Excel workbook.
 

@@ -19,9 +19,13 @@ Phone number verification asks an outside service whether a contact's phone numb
 
 <AskYourAdmin />
 
+<YouTube video="phone-number-verification" title="Video overview of Phone Number Verification: providers, status icons, the queue and the report" />
+
 ![Phone Number Verifications settings, General tab](/img/docs/phone-number-verifications-settings.png)
 
 ## When numbers are checked
+
+<YouTube video="phone-number-verification" title="Video of when numbers are checked" start={58} end={103} />
 
 - **When a contact is saved with a new or changed phone number.** The number is marked as not yet verified right away, and the check runs just after the save. The site checks the contact's preferred number: cell first, then home, office, work and other.
 - **When a check is due again.** A verified number is checked again after the **Revalidation interval**. A background task looks for due numbers every five minutes.
@@ -30,6 +34,8 @@ Phone number verification asks an outside service whether a contact's phone numb
 The services charge per check, so a number is only checked when it is new, changed, due again or retried. If no provider is set up yet, new numbers wait and are checked once a provider is available.
 
 ## Set up a provider
+
+<YouTube video="phone-number-verification" title="Video of setting up a provider and the general settings" start={103} end={203} />
 
 Your administrator first turns on the feature for the service your company has an account with. Then:
 
@@ -74,6 +80,8 @@ After you save an API key, secret or token, the box stays empty and a green note
 
 ## What the status icons mean
 
+<YouTube video="phone-number-verification" title="Video of the status icons" start={203} end={250} />
+
 Wherever a phone field shows a checked number, an icon shows the result. Point at it to see the details and the date of the check.
 
 | Icon | Meaning |
@@ -89,6 +97,8 @@ On a contact type that has the **Phone Number Verification** part, the item also
 
 ## Work the verification queue
 
+<YouTube video="phone-number-verification" title="Video of working the verification queue" start={250} end={330} />
+
 Open **Tools > Phone Verifications Queue** to see every number that has verification data.
 
 - Click a tile (**All**, **Verified**, **Invalid**, **Failed**, **Pending** or **Needs attention**) to show only those records. The tiles never overlap and always add up to the total.
@@ -101,6 +111,8 @@ Open **Tools > Phone Verifications Queue** to see every number that has verifica
 Retries need the **Verify phone numbers** permission. They are queued, not instant: the records show **Pending** right away and are checked shortly after, spaced out by the **Request delay**.
 
 ## Read the report
+
+<YouTube video="phone-number-verification" title="Video of reading the report" start={330} end={368} />
 
 Open **Reports > General > Phone Number Verifications**.
 

@@ -1,0 +1,13 @@
+@model ShapeViewModel<PredictabilityPayRowViewModel>
+@{
+    var entry = Model.Value.Entry;
+    var start = CrestApps.OrchardCore.Calendars.Core.CalendarTime.ToLocal(entry.ShiftStartUtc, Model.Value.TimeZoneId);
+}
+<strong>@(Model.Value.WorkerName ?? T["A former worker"].Value)</strong>
+<span class="ms-1">@(entry.ChangeKind switch
+{
+    ScheduleChangeKind.Added => T["Shift added"],
+    ScheduleChangeKind.Moved => T["Shift moved"],
+    _ => T["Shift removed"],
+})</span>
+<span class="ms-1 text-muted">@start.ToString("ddd d MMM HH:mm")</span>

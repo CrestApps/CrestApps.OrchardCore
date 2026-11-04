@@ -1,0 +1,13 @@
+@model ShapeViewModel<CoverageRequirement>
+@{
+    var requirement = Model.Value;
+}
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Rows"]"><i class="fa-solid fa-table-list text-secondary me-1" aria-hidden="true"></i>@T.Plural(requirement.Rows.Count, "1 row", "{0} rows", requirement.Rows.Count)</span>
+@if (requirement.EffectiveFrom.HasValue || requirement.EffectiveTo.HasValue)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Applies"]"><i class="fa-regular fa-calendar text-secondary me-1" aria-hidden="true"></i>@(requirement.EffectiveFrom?.ToString("d") ?? "…")&ndash;@(requirement.EffectiveTo?.ToString("d") ?? "…")</span>
+}
+@if (!string.IsNullOrEmpty(requirement.SkillId))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["For one skill"]"><i class="fa-solid fa-award text-secondary me-1" aria-hidden="true"></i>@T["Skill"]</span>
+}

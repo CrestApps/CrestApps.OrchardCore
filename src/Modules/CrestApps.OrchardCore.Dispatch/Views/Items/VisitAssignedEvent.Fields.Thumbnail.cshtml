@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Dispatch.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<VisitAssignedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-truck-fast" aria-hidden="true"></i>
+    @T["Visit Assigned"]
+</h4>
+<p>@T["Starts when a visit is scheduled, reassigned or moved. The input has VisitId, Number, WorkOrderId, WorkOrderNumber, Status, LeadWorkerId, WorkerIds, StartUtc, EndUtc, the arrival window and PreviousStatus."]</p>

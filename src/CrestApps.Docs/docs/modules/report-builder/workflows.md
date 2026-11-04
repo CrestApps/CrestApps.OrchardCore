@@ -6,6 +6,8 @@ user_manual:
   - user-manual/report-builder/workflows
 ---
 
+<YouTube video="report-builder-workflows" title="Video overview of Report Builder workflows" />
+
 When the `OrchardCore.Workflows` feature is on, the Report Builder adds workflow events raised when a designed report is run, exported or published, and tasks that run, export, email and share reports. The same moments are available to code through `IReportEventHandler`, without Workflows.
 
 ## Registration

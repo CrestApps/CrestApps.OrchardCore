@@ -1,0 +1,14 @@
+@model ShapeViewModel<Skill>
+
+@if (!string.IsNullOrEmpty(Model.Value.Category))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Category"]"><i class="fa-solid fa-folder text-secondary me-1" aria-hidden="true"></i>@Model.Value.Category</span>
+}
+@if (!string.IsNullOrEmpty(Model.Value.RequiredCertificationId))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Needs a valid certificate"]"><i class="fa-solid fa-certificate text-secondary me-1" aria-hidden="true"></i>@T["Certified"]</span>
+}
+@if (!Model.Value.Enabled)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-ban text-warning me-1" aria-hidden="true"></i>@T["Disabled"]</span>
+}

@@ -1,0 +1,7 @@
+@model ShapeViewModel<LaborRuleOverrideRowViewModel>
+@{
+    var item = Model.Value.Override;
+}
+<strong>@Model.Value.RuleName</strong>
+<span class="ms-1">@(Model.Value.WorkerName ?? T["A former worker"].Value)</span>
+<div class="small text-muted">@item.Message</div>

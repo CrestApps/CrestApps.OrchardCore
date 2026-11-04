@@ -1,0 +1,55 @@
+{
+  "TitlePart": [
+    {
+      "contentPart": [
+        "AccountPart"
+      ],
+      "displayType": "DetailAdmin",
+      "place": "-"
+    }
+  ],
+  "ListPartHeaderAdmin": [
+    {
+      "contentPart": [
+        "AccountPart"
+      ],
+      "place": "-"
+    }
+  ],
+  "ListPartNavigationAdmin": [
+    {
+      "contentPart": [
+        "AccountPart"
+      ],
+      "displayType": "DetailAdmin",
+      "place": "Header:5"
+    }
+  ],
+  "ListPartDetailAdminSearchPanel": [
+    {
+      "contentPart": [
+        "AccountPart"
+      ],
+      "displayType": "DetailAdmin",
+      "place": "Content:3#Records;100"
+    }
+  ],
+  "ListPartDetailAdmin": [
+    {
+      "contentPart": [
+        "AccountPart"
+      ],
+      "displayType": "DetailAdmin",
+      "place": "Content:10#Records;100"
+    }
+  ],
+  "ListPart": [
+    {
+      "contentPart": [
+        "AccountPart"
+      ],
+      "displayType": "DetailAdmin",
+      "place": "Content:10#Records;100"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+@using CrestApps.OrchardCore.WorkOrders.Recipes
+@model WorkOrdersDeploymentStepViewModel
+
+<h5>@T["Work order settings"]</h5>
+<p class="hint">@T["Work order types, checklists, service levels and sub-statuses, and service agreements when asked."]</p>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="IncludeAgreements" class="form-check-input" />
+            <label asp-for="IncludeAgreements" class="form-check-label">@T["Include the agreements"]</label>
+        </div>
+    </div>
+</div>

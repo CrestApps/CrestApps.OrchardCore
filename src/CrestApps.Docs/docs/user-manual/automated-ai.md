@@ -23,6 +23,8 @@ An **automatic** activity load creates activities that an **AI profile** works b
 | **Permission** | Manage activity batches |
 | **Features** | **SMS Omnichannel Automation** for texts; **Telnyx AI Voice Agent** (which turns on **Automated Voice**) for calls. Both turn on the AI features they need; an AI provider connection must also be set up. |
 
+<YouTube video="omnichannel-automated-sms" title="Video overview of automated SMS: the AI profile, the automatic load, opt-outs and the text entry point" />
+
 <AskYourAdmin />
 
 ## Before you start
@@ -149,6 +151,8 @@ To find it, open the contact from **Interaction Center > Contacts**, click **Lis
 If the AI's live voice connection drops in the middle of a call, the platform first tries to reconnect, up to two times, and the AI carries on with the conversation so far. If that does not work, the caller is handed to a live agent when the subject allows it. Otherwise the caller hears a short apology and the call ends. The activity then takes the disposition the subject's **Try Again** action is wired to, so the contact is called again, and its notes say the conversation was cut short. A subject with no **Try Again** action keeps the disposition the AI picked.
 
 ### Live agent handoff
+
+<YouTube video="omnichannel-ai-handoff" title="Video overview of live agent handoff from an AI conversation" />
 
 If the subject allows **live agent handoff**, the AI can pass the customer to the handoff queue when they ask for a person, look like a qualified lead, or are frustrated. SMS conversations appear in the [Messaging workspace](messaging.md); calls ring an agent in the queue.
 

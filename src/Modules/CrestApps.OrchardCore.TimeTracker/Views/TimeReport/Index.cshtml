@@ -1,0 +1,94 @@
+@model TimeReportViewModel
+
+<zone Name="Title"><breadcrumb name="TimeTrackerReport" title="@T["Hours by Category"]" /></zone>
+
+<form asp-action="Index" method="get">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2 gy-2 align-items-center">
+                <div class="col-12 col-md">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></span>
+                        <input asp-for="Q" class="form-control" placeholder="@T["Search by user name"]" aria-label="@T["Search people"]" />
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <label asp-for="From" class="visually-hidden">@T["From"]</label>
+                    <input asp-for="From" type="date" class="form-control form-control-sm" />
+                </div>
+                <div class="col-auto">
+                    <label asp-for="To" class="visually-hidden">@T["To"]</label>
+                    <input asp-for="To" type="date" class="form-control form-control-sm" />
+                </div>
+                <div class="col-auto">
+                    <div class="form-check mb-0">
+                        <input asp-for="ByDay" class="form-check-input" />
+                        <label asp-for="ByDay" class="form-check-label small">@T["A row per day"]</label>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-sm btn-primary">@T["Show"]</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Hours by category ({0})", Model.TimeZoneId]</div>
+    <div class="card-body">
+        @if (Model.Rows.Count == 0)
+        {
+            <p class="text-muted mb-0">@T["No time in these days."]</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">@T["Person"]</th>
+                            @if (Model.ByDay)
+                            {
+                                <th scope="col">@T["Day"]</th>
+                            }
+                            @foreach (var category in Model.Categories)
+                            {
+                                <th scope="col" class="text-end">@category.Name</th>
+                            }
+                            <th scope="col" class="text-end">@T["Total"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.Rows)
+                        {
+                            <tr>
+                                <td>@row.UserName</td>
+                                @if (Model.ByDay)
+                                {
+                                    <td>@row.Date?.ToString("ddd d MMM", CultureInfo.CurrentCulture)</td>
+                                }
+                                @foreach (var category in Model.Categories)
+                                {
+                                    <td class="text-end">@TimeTrackerTimeZone.Hours(row.MinutesByCategory.GetValueOrDefault(category.ItemId))</td>
+                                }
+                                <td class="text-end fw-semibold">@TimeTrackerTimeZone.Hours(row.TotalMinutes)</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr class="fw-semibold">
+                            <td colspan="@(Model.ByDay ? 2 : 1)">@T["Everyone"]</td>
+                            @foreach (var category in Model.Categories)
+                            {
+                                <td class="text-end">@TimeTrackerTimeZone.Hours(Model.Rows.Sum(row => row.MinutesByCategory.GetValueOrDefault(category.ItemId)))</td>
+                            }
+                            <td class="text-end">@TimeTrackerTimeZone.Hours(Model.Rows.Sum(row => row.TotalMinutes))</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <p class="hint mt-2 mb-0">@T["A stage counts toward each of its categories; a category's factor counts its minutes more or less. Hours are hours:minutes."]</p>
+        }
+    </div>
+</div>

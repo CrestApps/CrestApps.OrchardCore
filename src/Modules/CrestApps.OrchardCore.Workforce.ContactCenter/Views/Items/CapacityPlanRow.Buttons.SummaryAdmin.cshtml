@@ -1,0 +1,5 @@
+@model ShapeViewModel<CapacityPlanRow>
+
+<a asp-controller="CapacityPlans" asp-action="Details" asp-route-id="@Model.Value.Plan.ItemId" class="btn btn-secondary btn-sm">@T["View"]</a>
+<a asp-controller="CapacityPlans" asp-action="Edit" asp-route-id="@Model.Value.Plan.ItemId" class="btn btn-primary btn-sm">@T["Edit"]</a>
+<a asp-controller="CapacityPlans" asp-action="Delete" asp-route-id="@Model.Value.Plan.ItemId" class="btn btn-danger btn-sm" data-title="@T["Delete"]" data-message="@T["Delete this capacity plan?"]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
