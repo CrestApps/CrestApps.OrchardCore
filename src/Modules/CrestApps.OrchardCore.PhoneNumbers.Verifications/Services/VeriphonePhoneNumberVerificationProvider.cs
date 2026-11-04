@@ -155,7 +155,7 @@ public sealed class VeriphonePhoneNumberVerificationProvider : IPhoneNumberVerif
             LineType = lineType,
             CountryCode = parsed.CountryCode,
             CountryName = parsed.Country,
-            CountryPrefix = NormalizeCountryPrefix(parsed.CountryPrefix),
+            CountryPrefix = PhoneCountryCodes.NormalizeCallingCode(parsed.CountryPrefix),
             Region = parsed.PhoneRegion,
             Carrier = parsed.Carrier,
             VerificationProvider = PhoneNumberVerificationsConstants.Providers.Veriphone,
@@ -240,20 +240,6 @@ public sealed class VeriphonePhoneNumberVerificationProvider : IPhoneNumberVerif
         builder.Query = query.ToString();
 
         return builder.Uri;
-    }
-
-    private static string NormalizeCountryPrefix(string countryPrefix)
-    {
-        if (string.IsNullOrWhiteSpace(countryPrefix))
-        {
-            return null;
-        }
-
-        var trimmed = countryPrefix.Trim();
-
-        return trimmed.StartsWith('+')
-            ? trimmed
-            : "+" + trimmed;
     }
 
     private static PhoneNumberLineType MapLineType(string type)

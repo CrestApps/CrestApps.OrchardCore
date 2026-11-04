@@ -146,7 +146,7 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
 
         _ = GetColumns(context);
         var usesContactMethodsBag = UsesContactMethodsBag(context.ContentItem.ContentType);
-        var countryCode = NormalizeCountryCode(context.Entry?.GetOrCreate<OmnichannelContactImportOptionsPart>()?.SelectedCountryCode);
+        var countryCode = PhoneCountryCodes.NormalizeRegionCode(context.Entry?.GetOrCreate<OmnichannelContactImportOptionsPart>()?.SelectedCountryCode);
         string email = null;
         string cellPhone = null;
         string homePhone = null;
@@ -502,11 +502,6 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
 
         return null;
     }
-
-    private static string NormalizeCountryCode(string countryCode)
-        => string.IsNullOrWhiteSpace(countryCode)
-            ? null
-            : countryCode.Trim().ToUpperInvariant();
 
     private static string GetFormattingRegionCode(string phoneNumber, string countryCode)
         => PhoneNumber.IsE164(phoneNumber?.Trim())

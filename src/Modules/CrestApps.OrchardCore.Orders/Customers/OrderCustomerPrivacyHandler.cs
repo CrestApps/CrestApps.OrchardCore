@@ -18,7 +18,7 @@ public sealed class OrderCustomerPrivacyHandler : ICustomerPrivacyHandler
     private const int MaxOrders = 10_000;
     private const int PageSize = 100;
 
-    private static readonly JsonSerializerOptions _options = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions _options = JsonSerializerOptions.Web;
 
     private readonly IOrderStore _orderStore;
     private readonly OrderAnonymizer _anonymizer;

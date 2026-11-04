@@ -21,21 +21,5 @@ public static class AccountRecordKinds
     /// <param name="definition">The content type definition.</param>
     /// <param name="partName">The technical name of the part definition.</param>
     public static bool HasPart(ContentTypeDefinition definition, string partName)
-    {
-        if (definition?.Parts is null)
-        {
-            return false;
-        }
-
-        foreach (var part in definition.Parts)
-        {
-            if (string.Equals(part.PartDefinition?.Name, partName, StringComparison.Ordinal) ||
-                string.Equals(part.Name, partName, StringComparison.Ordinal))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
+        => ContentTypeDefinitionPartExtensions.HasPart(definition, partName);
 }

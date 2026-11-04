@@ -15,6 +15,7 @@
 		<PackageReference Include="Microsoft.Extensions.Compliance.Abstractions" />
 		<PackageReference Include="NuGet.Versioning" />
 		<PackageReference Include="OrchardCore.Abstractions" />
+		<PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
 		<PackageReference Include="OrchardCore.Indexing.Abstractions" />
 		<PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
 	</ItemGroup>

@@ -24,7 +24,7 @@ public sealed class WhereIsMyTechnicianTool : AIFunction
 
     private const int MinimumDigits = 7;
 
-    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions _jsonOptions = JsonSerializerOptions.Web;
 
     private static readonly JsonElement _schema = JsonSerializer.Deserialize<JsonElement>("""
         {

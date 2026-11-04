@@ -22,7 +22,7 @@ namespace CrestApps.OrchardCore.Asterisk.Services;
 /// </summary>
 internal sealed class AsteriskAriClient : IAsteriskAriClient
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions JsonOptions = JsonSerializerOptions.Web;
 
     private readonly ISiteService _siteService;
     private readonly IDataProtectionProvider _dataProtectionProvider;

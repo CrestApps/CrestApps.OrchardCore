@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </summary>
 public sealed class DistributedCacheAgentPreDialLegStore : IAgentPreDialLegStore
 {
-    private static readonly JsonSerializerOptions _serializerOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions _serializerOptions = JsonSerializerOptions.Web;
 
     private readonly IDistributedCache _cache;
     private readonly IClock _clock;

@@ -17,7 +17,7 @@ namespace CrestApps.OrchardCore.Calendars.Controllers;
 /// </summary>
 public sealed class CalendarController : Controller
 {
-    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions _jsonOptions = JsonSerializerOptions.Web;
 
     private readonly IAuthorizationService _authorizationService;
     private readonly ICalendarAccessService _accessService;

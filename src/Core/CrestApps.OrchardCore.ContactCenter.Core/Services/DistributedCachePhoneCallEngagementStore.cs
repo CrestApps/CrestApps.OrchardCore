@@ -13,7 +13,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </summary>
 public sealed class DistributedCachePhoneCallEngagementStore : IPhoneCallEngagementStore
 {
-    private static readonly JsonSerializerOptions _serializerOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions _serializerOptions = JsonSerializerOptions.Web;
 
     private static readonly DistributedCacheEntryOptions _entryOptions = new()
     {

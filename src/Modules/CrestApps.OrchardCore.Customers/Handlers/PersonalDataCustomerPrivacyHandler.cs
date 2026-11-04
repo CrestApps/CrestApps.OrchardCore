@@ -23,7 +23,7 @@ public sealed class PersonalDataCustomerPrivacyHandler : ICustomerPrivacyHandler
     /// </summary>
     public const string ExportKey = "personalData";
 
-    private static readonly JsonSerializerOptions _options = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions _options = JsonSerializerOptions.Web;
 
     private readonly IPersonalDataService _personalDataService;
 

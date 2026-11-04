@@ -16,7 +16,7 @@ namespace CrestApps.OrchardCore.Geo.Core.Services;
 /// </summary>
 public sealed class DefaultGeoService : IGeoService
 {
-    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions _jsonOptions = JsonSerializerOptions.Web;
 
     private readonly IEnumerable<IGeocodingProvider> _geocoders;
     private readonly IEnumerable<ITravelTimeProvider> _travelProviders;

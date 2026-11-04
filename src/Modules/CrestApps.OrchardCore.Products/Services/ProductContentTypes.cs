@@ -53,7 +53,7 @@ public sealed class ProductContentTypes : IContentDefinitionEventHandler
 
     private static string[] Select(IEnumerable<ContentTypeDefinition> definitions, string partName)
         => definitions
-            .Where(definition => definition.Parts.Any(part => part.PartDefinition.Name == partName))
+            .Where(definition => definition.HasPart(partName))
             .Select(definition => definition.Name)
             .Order(StringComparer.OrdinalIgnoreCase)
             .ToArray();

@@ -95,7 +95,7 @@ public sealed class CouponItemLookup
 
     private async Task<string[]> GetProductTypesAsync()
         => [.. (await _contentDefinitionManager.ListTypeDefinitionsAsync())
-            .Where(type => type.Parts.Any(part => part.PartDefinition.Name == nameof(ProductPart)))
+            .Where(type => type.HasPart(nameof(ProductPart)))
             .Select(type => type.Name)];
 
     private async Task<List<CouponItem>> GetTermsAsync()

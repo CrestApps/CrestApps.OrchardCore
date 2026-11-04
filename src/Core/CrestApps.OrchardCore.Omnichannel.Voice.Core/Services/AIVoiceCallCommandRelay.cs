@@ -27,7 +27,7 @@ public sealed class AIVoiceCallCommandRelay : IAIVoiceCallCommandRelay, IDisposa
     /// </summary>
     public const string ReplyChannelPrefix = "CrestApps:AIVoiceCallCommands:Replies:";
 
-    private static readonly JsonSerializerOptions _serializerOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions _serializerOptions = JsonSerializerOptions.Web;
 
     private readonly IAIVoiceCallMessageBus _bus;
     private readonly ILogger _logger;

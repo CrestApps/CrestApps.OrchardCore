@@ -2,10 +2,11 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using CrestApps.OrchardCore.Carts.Core.Models;
 using CrestApps.OrchardCore.Accounts.B2B.Models;
+using CrestApps.OrchardCore.Carts.Core.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
+using static CrestApps.OrchardCore.StringTruncation;
 
 namespace CrestApps.OrchardCore.Accounts.B2B.Services;
 
@@ -147,9 +148,6 @@ public sealed class PunchoutService
 
     private static void Add(List<KeyValuePair<string, string>> fields, string name, int number, string value)
         => fields.Add(new($"NEW_ITEM-{name}[{number}]", value ?? string.Empty));
-
-    private static string Truncate(string value, int length)
-        => value is null || value.Length <= length ? value : value[..length];
 
     // OCI names the frame to send the cart back to: _top, _parent or _self, never a script.
     private static string SafeTarget(string target)
