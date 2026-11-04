@@ -48,7 +48,7 @@ using CrestApps.OrchardCore.AI.Workflows.Tools;
 using CrestApps.OrchardCore.AI.Filters;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Core.Migrations;
-using CrestApps.OrchardCore.Core.Http;
+using CrestApps.OrchardCore.Webhooks.Core;
 using CrestApps.OrchardCore.Core.Services;
 using Fluid;
 using Microsoft.AspNetCore.Builder;
@@ -339,7 +339,8 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddActivity<SendSignedWebhookTask, SendSignedWebhookTaskDisplayDriver>();
         services.AddActivity<AIGuardrailTriggeredEvent, AIGuardrailTriggeredEventDisplayDriver>();
         services.AddScoped<IAIGuardrailHandler, WorkflowAIGuardrailHandler>();
-        services.AddEgressGuardedHttpClient(SendSignedWebhookTask.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(15));
+        // The task posts through the Webhooks building block: one signer, one egress-guarded client.
+        services.AddWebhookSender();
     }
 }
 

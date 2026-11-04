@@ -18,6 +18,7 @@ using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Commerce.Webhooks;
+using CrestApps.OrchardCore.Webhooks;
 using CrestApps.OrchardCore.Customers.Api;
 using CrestApps.OrchardCore.PersonalData.Core;
 using Microsoft.AspNetCore.Builder;
@@ -239,6 +240,6 @@ public sealed class WebhooksStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ICustomerHandler, CustomerWebhookHandler>();
-        services.AddCommerceWebhookEvent(CommerceWebhookEvents.CustomerCreated, "Customer created", "Customers");
+        services.AddWebhookEvent(CommerceWebhookEvents.CustomerCreated, "Customer created", "Customers");
     }
 }

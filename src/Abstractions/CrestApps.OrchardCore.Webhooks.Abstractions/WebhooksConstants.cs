@@ -11,6 +11,11 @@ public static class WebhooksConstants
     public static class Feature
     {
         /// <summary>
+        /// Outbound webhooks: subscriptions, the delivery outbox and their administration.
+        /// </summary>
+        public const string Webhooks = "CrestApps.OrchardCore.Webhooks";
+
+        /// <summary>
         /// The durable provider webhook inbox. The ID keeps the value it was first released with, so tenants that
         /// enabled it keep it.
         /// </summary>

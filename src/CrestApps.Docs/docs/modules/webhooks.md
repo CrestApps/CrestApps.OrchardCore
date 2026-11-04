@@ -1,19 +1,75 @@
 ---
 sidebar_label: Webhooks
 title: Webhooks
-description: The webhooks building block. The provider webhook inbox durably accepts authenticated callbacks from providers, de-duplicates redeliveries and processes them from storage with retries.
+description: The webhooks building block, both ways. Outbound, modules declare and publish events that are signed, queued in a delivery outbox and retried through the egress guard. Inbound, the provider webhook inbox durably accepts authenticated callbacks, de-duplicates redeliveries and processes them from storage with retries.
 ---
 
 | | |
 | --- | --- |
-| **Features** | Provider Webhook Inbox (`CrestApps.OrchardCore.ContactCenter.ProviderInbox`, dependency only) |
+| **Features** | Webhooks (`CrestApps.OrchardCore.Webhooks`), Provider Webhook Inbox (`CrestApps.OrchardCore.ContactCenter.ProviderInbox`, dependency only) |
 | **Core** | `CrestApps.OrchardCore.Webhooks.Core` |
 | **Abstractions** | `CrestApps.OrchardCore.Webhooks.Abstractions` |
 | **Category** | Webhooks |
+| **Admin** | Configuration > Webhooks (permission **Manage webhooks**, `ManageCommerceWebhooks`) |
 | **Depends on** | Nothing |
 
-The Webhooks module owns webhooks in both directions. This page covers the inbound side: callbacks that providers
-(Twilio, Telnyx, Azure Event Grid, Stripe) send to the site.
+The Webhooks module owns webhooks in both directions: [outbound events](#outbound-webhooks) the site posts to other
+systems, and [inbound callbacks](#provider-webhook-inbox) that providers (Twilio, Telnyx, Azure Event Grid, Stripe) send
+to the site.
+
+## Outbound webhooks
+
+The **Webhooks** feature is the one outbound webhooks system of the solution. Commerce (orders, customers, stock,
+shipments) and AI (conversations, alerts) both publish through it; neither keeps subscriptions, signing or retries of
+its own.
+
+| Piece | Contract | Implementation |
+| --- | --- | --- |
+| Declare events | `IWebhookEventProvider`, or `services.AddWebhookEvent(name, displayName, group, samplePayload)` | Gathered by `IWebhookEventCatalog` |
+| Publish | `IWebhookPublisher.PublishAsync(eventName, payload[, eventId])` | `WebhookPublisher` queues one `WebhookDelivery` per subscription that takes the event, and sends them once the request's work is saved |
+| Sign | `IWebhookSigner` | `HmacSha256WebhookSigner`: `v1=` and the hex HMAC-SHA256 of `{timestamp}.{body}` |
+| Send once | `IWebhookSender` | `WebhookSender`: one signed POST through the egress-guarded `CrestApps.Webhooks` client |
+| Retry | the delivery outbox | `WebhookDispatcher` and the **Webhook deliveries** background task: 1 min, 5 min, 30 min, 2 h, 6 h, 12 h, 24 h, then failed; a host the egress guard refuses fails at once |
+
+The publisher sends only events an enabled feature declares, so a subscription to every event (`*`) never receives
+events of a feature that is off. An event is published from a startup gated on the feature that raises it:
+
+```csharp
+[RequireFeatures(WebhooksConstants.Feature.Webhooks)]
+public sealed class WebhooksStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddWebhookEvent("invoice.sent", "Invoice sent", "Invoices", new { invoiceId = "inv_1" });
+        services.AddScoped<IInvoiceHandler, InvoiceWebhookHandler>();
+    }
+}
+
+// InvoiceWebhookHandler takes IWebhookPublisher in its constructor.
+await _publisher.PublishAsync("invoice.sent", new { invoice = ToApi(invoice) }, cancellationToken);
+```
+
+A feature that posts to a URL of its own instead of to subscriptions, such as the AI **Send Signed Webhook** workflow
+task, calls `services.AddWebhookSender()` and sends through `IWebhookSender`, so it signs and guards egress the same way.
+
+The body, the headers and how a receiver checks the signature are described on the
+[Commerce Webhooks](commerce-webhooks.md#receiving) page; they are the same for every event.
+
+### Compatibility
+
+The Webhooks feature took over the subscriptions, deliveries and admin of Commerce Webhooks, and the subscriptions of
+AI Webhooks:
+
+- `WebhookSubscription` and `WebhookDelivery` keep the YesSql type names and the `Webhooks` collection Commerce Webhooks
+  stored them under, the secrets keep their data protection purpose, and the schema migration keeps its type name, so
+  nothing is rewritten on upgrade.
+- The `CrestApps.OrchardCore.Commerce.Webhooks` and `CrestApps.OrchardCore.AI.Webhooks` feature IDs are unchanged; both
+  now depend on `CrestApps.OrchardCore.Webhooks`.
+- The admin moved from **Commerce > Webhooks** (`/Admin/commerce/webhooks`) to **Configuration > Webhooks**
+  (`/Admin/webhooks`). The permission keeps its name, `ManageCommerceWebhooks`, so the roles that had it keep it.
+- The AI webhook subscriptions and their pending deliveries are moved into the Webhooks feature once (the
+  `AIWebhookIndexMigrations` step 2), with their ids and secrets; the old rows are settled, not deleted, and purged after
+  30 days. The old **Artificial Intelligence > Webhooks** page and its **Manage AI webhooks** permission are gone.
 
 ## Provider webhook inbox
 

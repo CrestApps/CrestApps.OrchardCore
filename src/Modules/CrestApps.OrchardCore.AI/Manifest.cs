@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Prompting;
+using CrestApps.OrchardCore.Webhooks;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -106,10 +107,11 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = AIConstants.Feature.Webhooks,
     Name = "AI Webhooks",
-    Description = "Posts signed AI events (a conversation starting, ending, analyzed, transferred or scored, an alert triggering or resolving) to outside addresses, with retries and a delivery log.",
+    Description = "Offers AI events (a conversation starting, ending, analyzed, transferred or scored, an alert triggering or resolving) to the Webhooks feature, which posts them, signed, to the addresses you subscribe, with retries and a delivery log.",
     Category = "Artificial Intelligence",
     Dependencies =
     [
         AIConstants.Feature.Area,
+        WebhooksConstants.Feature.Webhooks,
     ]
 )]

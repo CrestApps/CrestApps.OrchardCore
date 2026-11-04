@@ -99,14 +99,16 @@ public sealed class AIContactMemoryAndWebhookTests
     }
 
     [Fact]
-    public void Webhook_SignsLikeTheCommerceWebhooks()
+    public void Webhook_SignsWithTheSharedWebhookSigner()
     {
         // HMAC-SHA256("secret", "1700000000.{}"), checked against an independent implementation.
+        var signer = new CrestApps.OrchardCore.Webhooks.Core.Services.HmacSha256WebhookSigner();
+
         Assert.Equal(
             "v1=" + Convert.ToHexStringLower(System.Security.Cryptography.HMACSHA256.HashData("secret"u8.ToArray(), "1700000000.{}"u8.ToArray())),
-            SendSignedWebhookTask.Sign("secret", 1700000000, "{}"));
-        Assert.StartsWith("v1=", SendSignedWebhookTask.Sign("secret", 1, "{}"));
-        Assert.NotEqual(SendSignedWebhookTask.Sign("secret", 1, "{}"), SendSignedWebhookTask.Sign("secret", 2, "{}"));
+            signer.Sign("secret", 1700000000, "{}"));
+        Assert.StartsWith("v1=", signer.Sign("secret", 1, "{}"));
+        Assert.NotEqual(signer.Sign("secret", 1, "{}"), signer.Sign("secret", 2, "{}"));
     }
 
     [Theory]

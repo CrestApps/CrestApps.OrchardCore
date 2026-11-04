@@ -74,7 +74,7 @@ For example, start a workflow with **AI Conversation Evaluated**, tick **Only co
 
 ## Webhook subscriptions
 
-With the **AI Webhooks** feature on, **Artificial Intelligence > Webhooks** sends AI events to another system without a workflow. Click **Add webhook**, enter the **URL** (HTTPS) and a **Signing secret**, and tick the events to send:
+With the **AI Webhooks** feature on, AI events are offered to the webhooks under **Configuration > Webhooks**, next to the commerce events, and are sent to another system without a workflow. Click **Add webhook**, enter the **URL** (HTTPS), and tick the events to send under **AI**; the webhook's page shows the **Signing secret** to copy into the receiver. Webhooks you had added under **Artificial Intelligence > Webhooks** were moved there, with the same secret:
 
 | Event | Sent when |
 | --- | --- |
@@ -86,9 +86,9 @@ With the **AI Webhooks** feature on, **Artificial Intelligence > Webhooks** send
 | `alert.triggered` | An AI alert rule crosses its threshold. |
 | `alert.resolved` | An AI alert rule is back within its threshold. |
 
-The body is JSON: `{ "id": "...", "event": "conversation.ended", "createdUtc": "...", "data": { ... } }`, signed with the same headers as the **Send Signed Webhook** task below. Events are queued and sent within a minute, so a slow receiver never holds up a conversation.
+The body is JSON: `{ "id": "...", "event": "conversation.ended", "createdUtc": "...", "data": { ... } }`, signed with the same headers as the **Send Signed Webhook** task below. Events are sent once the conversation's work is saved, so a slow receiver never holds up a conversation.
 
-Click **Deliveries** to see what was sent: each event with its body, the receiver's answer and the number of attempts. A delivery that fails with a timeout, 429 or a 5xx answer is tried again after 1, 5 and 30 minutes, then 2 and 12 hours; any other refusal is not retried. **Send again** queues a delivery once more, and **Send a test event** sends `webhook.test` to check the receiver.
+Click **Deliveries** to see what was sent: each event, the receiver's answer and the number of attempts. A delivery that isn't answered with a 2xx status is tried again after 1, 5 and 30 minutes, then 2, 6, 12 and 24 hours; an address on the site's own network is refused at once. **Send again** sends a delivery once more, and **Send a test event** sends `webhook.ping` to check the receiver.
 
 ## Calendars
 

@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Commerce.Webhooks;
+using CrestApps.OrchardCore.Webhooks;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Inventory.Handlers;
@@ -263,8 +264,8 @@ public sealed class WebhooksStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IStockLevelHandler, StockWebhookHandler>();
-        services.AddCommerceWebhookEvent(CommerceWebhookEvents.StockChanged, "Stock changed", "Stock");
-        services.AddCommerceWebhookEvent(CommerceWebhookEvents.StockLow, "Stock running low", "Stock");
-        services.AddCommerceWebhookEvent(CommerceWebhookEvents.StockSoldOut, "Stock sold out", "Stock");
+        services.AddWebhookEvent(CommerceWebhookEvents.StockChanged, "Stock changed", "Stock");
+        services.AddWebhookEvent(CommerceWebhookEvents.StockLow, "Stock running low", "Stock");
+        services.AddWebhookEvent(CommerceWebhookEvents.StockSoldOut, "Stock sold out", "Stock");
     }
 }

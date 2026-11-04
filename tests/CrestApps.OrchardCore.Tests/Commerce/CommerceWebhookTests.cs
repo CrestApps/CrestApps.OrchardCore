@@ -3,10 +3,10 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using CrestApps.OrchardCore.Commerce.Api;
-using CrestApps.OrchardCore.Commerce.Webhooks;
-using CrestApps.OrchardCore.Commerce.Webhooks.Controllers;
-using CrestApps.OrchardCore.Commerce.Webhooks.Models;
-using CrestApps.OrchardCore.Commerce.Webhooks.Services;
+using CrestApps.OrchardCore.Webhooks;
+using CrestApps.OrchardCore.Webhooks.Controllers;
+using CrestApps.OrchardCore.Webhooks.Core.Models;
+using CrestApps.OrchardCore.Webhooks.Core.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 
@@ -24,12 +24,15 @@ public sealed class CommerceWebhookTests
         const string secret = "whsec_test";
         const string body = """{"id":"evt_1","event":"order.paid"}""";
 
-        var signature = WebhookDispatcher.Sign(secret, 1_760_000_000, body);
+        var signer = new HmacSha256WebhookSigner();
+        var signature = signer.Sign(secret, 1_760_000_000, body);
         var expected = "v1=" + Convert.ToHexStringLower(HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes("1760000000." + body)));
 
         Assert.Equal(expected, signature);
-        Assert.NotEqual(signature, WebhookDispatcher.Sign(secret, 1_760_000_001, body));
-        Assert.NotEqual(signature, WebhookDispatcher.Sign("whsec_other", 1_760_000_000, body));
+        Assert.NotEqual(signature, signer.Sign(secret, 1_760_000_001, body));
+        Assert.NotEqual(signature, signer.Sign("whsec_other", 1_760_000_000, body));
+        Assert.True(signer.Verify(secret, 1_760_000_000, body, signature));
+        Assert.False(signer.Verify(secret, 1_760_000_000, body + " ", signature));
     }
 
     [Fact]
@@ -39,7 +42,7 @@ public sealed class CommerceWebhookTests
 
         Assert.Equal(TimeSpan.FromMinutes(1), delays[0]);
         Assert.True(delays.TakeWhile(delay => delay.HasValue).Zip(delays.Skip(1).TakeWhile(delay => delay.HasValue)).All(pair => pair.First < pair.Second));
-        Assert.Null(delays[WebhookDispatcher.Backoff.Length]);
+        Assert.Null(delays[WebhookDispatcher.Backoff.Count]);
     }
 
     [Theory]
@@ -50,8 +53,8 @@ public sealed class CommerceWebhookTests
         var subscription = new WebhookSubscription { Events = ["order.paid", "shipment.shipped"] };
 
         Assert.Equal(takes, subscription.Takes(eventName));
-        Assert.True(new WebhookSubscription { Events = [WebhookConstants.AllEvents] }.Takes(eventName));
-        Assert.False(new WebhookSubscription { Events = [WebhookConstants.AllEvents], IsEnabled = false }.Takes(eventName));
+        Assert.True(new WebhookSubscription { Events = [WebhookEvents.All] }.Takes(eventName));
+        Assert.False(new WebhookSubscription { Events = [WebhookEvents.All], IsEnabled = false }.Takes(eventName));
     }
 
     [Theory]
