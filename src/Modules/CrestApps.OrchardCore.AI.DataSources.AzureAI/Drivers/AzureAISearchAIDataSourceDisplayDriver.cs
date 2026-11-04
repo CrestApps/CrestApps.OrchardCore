@@ -1,6 +1,7 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.DataSources.AzureAI.ViewModels;
+using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -45,7 +46,7 @@ internal sealed class AzureAISearchAIDataSourceDisplayDriver : DisplayDriver<AID
             model.AuthenticationType = metadata.GetAuthenticationType();
             model.IndexName = metadata.IndexName;
             model.IdentityClientId = metadata.IdentityClientId;
-            model.HasApiKey = !string.IsNullOrWhiteSpace(metadata.ApiKey);
+            model.HasApiKey = ProtectedSettingExtensions.HasSecret(metadata.ApiKey);
         }).Location("Content:11");
     }
 
@@ -93,8 +94,6 @@ internal sealed class AzureAISearchAIDataSourceDisplayDriver : DisplayDriver<AID
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ApiKey), S["Azure AI Search API key is required."]);
         }
 
-        var protector = _dataProtectionProvider.CreateProtector(AIDataSourceProtectionConstants.SourceSecretPurpose);
-
         dataSource.Put(new AzureAISearchSourceMetadata
         {
             Endpoint = model.Endpoint?.Trim(),
@@ -104,9 +103,7 @@ internal sealed class AzureAISearchAIDataSourceDisplayDriver : DisplayDriver<AID
                 ? null
                 : model.IdentityClientId?.Trim(),
             ApiKey = string.Equals(authenticationType, AzureAISearchSourceMetadata.ApiKeyAuthenticationType, StringComparison.OrdinalIgnoreCase)
-                ? string.IsNullOrWhiteSpace(model.ApiKey)
-                    ? existingMetadata.ApiKey
-                    : protector.Protect(model.ApiKey)
+                ? _dataProtectionProvider.ApplySecret(AIDataSourceProtectionConstants.SourceSecretPurpose, existingMetadata.ApiKey, model.ApiKey)
                 : null,
         });
 

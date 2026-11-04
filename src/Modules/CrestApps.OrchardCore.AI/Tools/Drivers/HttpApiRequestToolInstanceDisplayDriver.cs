@@ -3,6 +3,7 @@ using CrestApps.Core;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.Core.AI.Tooling.Instances;
 using CrestApps.OrchardCore.AI.ViewModels;
+using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -103,8 +104,6 @@ internal sealed class HttpApiRequestToolInstanceDisplayDriver : DisplayDriver<AI
         }
 
         var existing = instance.GetOrCreate<HttpApiRequestToolSettings>();
-        var protector = _dataProtectionProvider.CreateProtector(HttpApiRequestToolConstants.DataProtectionPurpose);
-
         var settings = new HttpApiRequestToolSettings
         {
             BaseUrl = model.BaseUrl?.Trim(),
@@ -123,7 +122,7 @@ internal sealed class HttpApiRequestToolInstanceDisplayDriver : DisplayDriver<AI
                 settings.ApiKeyHeaderName = string.IsNullOrWhiteSpace(model.ApiKeyHeaderName)
                     ? "X-Api-Key"
                     : model.ApiKeyHeaderName.Trim();
-                settings.ApiKey = ProtectOrReuse(model.ApiKey, existing.ApiKey, protector);
+                settings.ApiKey = ApplySecret(existing.ApiKey, model.ApiKey);
 
                 if (string.IsNullOrEmpty(settings.ApiKey))
                 {
@@ -132,7 +131,7 @@ internal sealed class HttpApiRequestToolInstanceDisplayDriver : DisplayDriver<AI
 
                 break;
             case HttpApiRequestAuthenticationType.Bearer:
-                settings.BearerToken = ProtectOrReuse(model.BearerToken, existing.BearerToken, protector);
+                settings.BearerToken = ApplySecret(existing.BearerToken, model.BearerToken);
 
                 if (string.IsNullOrEmpty(settings.BearerToken))
                 {
@@ -142,7 +141,7 @@ internal sealed class HttpApiRequestToolInstanceDisplayDriver : DisplayDriver<AI
                 break;
             case HttpApiRequestAuthenticationType.Basic:
                 settings.Username = model.Username?.Trim();
-                settings.Password = ProtectOrReuse(model.Password, existing.Password, protector);
+                settings.Password = ApplySecret(existing.Password, model.Password);
 
                 if (string.IsNullOrEmpty(settings.Username))
                 {
@@ -158,9 +157,9 @@ internal sealed class HttpApiRequestToolInstanceDisplayDriver : DisplayDriver<AI
             case HttpApiRequestAuthenticationType.OAuth2:
                 settings.TokenEndpoint = model.TokenEndpoint?.Trim();
                 settings.ClientId = model.ClientId?.Trim();
-                settings.ClientSecret = ProtectOrReuse(model.ClientSecret, existing.ClientSecret, protector);
+                settings.ClientSecret = ApplySecret(existing.ClientSecret, model.ClientSecret);
                 settings.Username = model.Username?.Trim();
-                settings.Password = ProtectOrReuse(model.Password, existing.Password, protector);
+                settings.Password = ApplySecret(existing.Password, model.Password);
                 settings.Scope = model.Scope?.Trim();
 
                 if (string.IsNullOrEmpty(settings.TokenEndpoint))
@@ -184,8 +183,8 @@ internal sealed class HttpApiRequestToolInstanceDisplayDriver : DisplayDriver<AI
     private static bool IsHttpApiRequestSource(AIToolInstance instance)
         => string.Equals(instance.Source, HttpApiRequestToolConstants.SourceName, StringComparison.OrdinalIgnoreCase);
 
-    private static string ProtectOrReuse(string newValue, string existingValue, IDataProtector protector)
-        => string.IsNullOrWhiteSpace(newValue) ? existingValue : protector.Protect(newValue.Trim());
+    private string ApplySecret(string existingValue, string postedValue)
+        => _dataProtectionProvider.ApplySecret(HttpApiRequestToolConstants.DataProtectionPurpose, existingValue, postedValue);
 
     private static string SerializeHeaders(Dictionary<string, string> headers)
     {

@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Models;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.ViewModels;
+using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -55,9 +56,9 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
             model.Username = metadata.Username;
             model.ApiKeyId = metadata.ApiKeyId;
             model.CertificateFingerprint = metadata.CertificateFingerprint;
-            model.HasPassword = !string.IsNullOrWhiteSpace(metadata.Password);
-            model.HasApiKey = !string.IsNullOrWhiteSpace(metadata.ApiKey);
-            model.HasBase64ApiKey = !string.IsNullOrWhiteSpace(metadata.Base64ApiKey);
+            model.HasPassword = ProtectedSettingExtensions.HasSecret(metadata.Password);
+            model.HasApiKey = ProtectedSettingExtensions.HasSecret(metadata.ApiKey);
+            model.HasBase64ApiKey = ProtectedSettingExtensions.HasSecret(metadata.Base64ApiKey);
             model.HasDefaultConnection = _options.HasConnection;
             model.UseDefaultConnection = _options.HasConnection && !HasStoredConnection(metadata);
         }).Location("Content:11");
@@ -161,8 +162,6 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.AuthenticationType), S["Elastic Cloud connections require an authentication type and matching credentials."]);
         }
 
-        var protector = _dataProtectionProvider.CreateProtector(AIDataSourceProtectionConstants.SourceSecretPurpose);
-
         dataSource.Put(new ElasticsearchSourceMetadata
         {
             EnvironmentType = environmentType,
@@ -178,20 +177,14 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
                 ? model.Username?.Trim()
                 : null,
             Password = string.Equals(authenticationType, ElasticsearchSourceMetadata.BasicAuthenticationType, StringComparison.OrdinalIgnoreCase)
-                ? string.IsNullOrWhiteSpace(model.Password)
-                    ? existingMetadata.Password
-                    : protector.Protect(model.Password)
+                ? _dataProtectionProvider.ApplySecret(AIDataSourceProtectionConstants.SourceSecretPurpose, existingMetadata.Password, model.Password)
                 : null,
             ApiKey = string.Equals(authenticationType, ElasticsearchSourceMetadata.ApiKeyAuthenticationType, StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(authenticationType, ElasticsearchSourceMetadata.KeyIdAndKeyAuthenticationType, StringComparison.OrdinalIgnoreCase)
-                ? string.IsNullOrWhiteSpace(model.ApiKey)
-                    ? existingMetadata.ApiKey
-                    : protector.Protect(model.ApiKey)
+                ? _dataProtectionProvider.ApplySecret(AIDataSourceProtectionConstants.SourceSecretPurpose, existingMetadata.ApiKey, model.ApiKey)
                 : null,
             Base64ApiKey = string.Equals(authenticationType, ElasticsearchSourceMetadata.Base64ApiKeyAuthenticationType, StringComparison.OrdinalIgnoreCase)
-                ? string.IsNullOrWhiteSpace(model.Base64ApiKey)
-                    ? existingMetadata.Base64ApiKey
-                    : protector.Protect(model.Base64ApiKey)
+                ? _dataProtectionProvider.ApplySecret(AIDataSourceProtectionConstants.SourceSecretPurpose, existingMetadata.Base64ApiKey, model.Base64ApiKey)
                 : null,
             ApiKeyId = string.Equals(authenticationType, ElasticsearchSourceMetadata.KeyIdAndKeyAuthenticationType, StringComparison.OrdinalIgnoreCase)
                 ? model.ApiKeyId?.Trim()

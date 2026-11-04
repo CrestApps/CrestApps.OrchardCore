@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.AI.Core.Webhooks;
 using CrestApps.OrchardCore.AI.ViewModels;
+using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
@@ -66,7 +67,7 @@ public sealed class AIWebhookSubscriptionDisplayDriver : DisplayDriver<AIWebhook
             model.Url = subscription.Url;
             model.Enabled = subscription.Enabled;
             model.Events = subscription.Events?.ToArray() ?? [];
-            model.HasSecret = !string.IsNullOrEmpty(subscription.ProtectedSecret);
+            model.HasSecret = ProtectedSettingExtensions.HasSecret(subscription.ProtectedSecret);
         }).Location("Content:1");
     }
 
@@ -104,10 +105,7 @@ public sealed class AIWebhookSubscriptionDisplayDriver : DisplayDriver<AIWebhook
         subscription.Events = events;
 
         // An empty secret keeps the one saved: it is never shown again.
-        if (!string.IsNullOrWhiteSpace(model.Secret))
-        {
-            subscription.ProtectedSecret = _dataProtectionProvider.CreateProtector(AIWebhookPublisher.ProtectorPurpose).Protect(model.Secret.Trim());
-        }
+        subscription.ProtectedSecret = _dataProtectionProvider.ApplySecret(AIWebhookPublisher.ProtectorPurpose, subscription.ProtectedSecret, model.Secret);
 
         return Edit(subscription, context);
     }

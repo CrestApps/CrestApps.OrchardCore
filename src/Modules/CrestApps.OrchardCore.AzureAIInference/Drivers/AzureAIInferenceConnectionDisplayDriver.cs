@@ -5,6 +5,7 @@ using CrestApps.Core.Azure.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AzureAIInference.Models;
 using CrestApps.OrchardCore.AzureAIInference.ViewModels;
+using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -52,7 +53,7 @@ internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AI
             ];
 
             model.AuthenticationType = metadata.AuthenticationType;
-            model.HasApiKey = !string.IsNullOrEmpty(metadata.ApiKey);
+            model.HasApiKey = ProtectedSettingExtensions.HasSecret(metadata.ApiKey);
             model.IdentityId = metadata.IdentityId;
         }).Location("Content:5");
     }
@@ -86,12 +87,7 @@ internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AI
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ApiKey), S["API key is required field."]);
         }
 
-        if (hasNewKey)
-        {
-            var protector = _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
-
-            metadata.ApiKey = protector.Protect(model.ApiKey);
-        }
+        metadata.ApiKey = _dataProtectionProvider.ApplySecret(AIConstants.ConnectionProtectorName, metadata.ApiKey, model.ApiKey);
 
         metadata.AuthenticationType = model.AuthenticationType;
 

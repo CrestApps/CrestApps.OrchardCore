@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.DataSources.PostgreSQL.Models;
 using CrestApps.OrchardCore.AI.DataSources.PostgreSQL.ViewModels;
+using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -48,7 +49,7 @@ internal sealed class PostgreSQLAIDataSourceDisplayDriver : DisplayDriver<AIData
         {
             var metadata = dataSource.GetOrCreate<PostgreSQLSourceMetadata>();
             model.TableName = metadata.TableName;
-            model.HasConnectionString = !string.IsNullOrWhiteSpace(metadata.ConnectionString);
+            model.HasConnectionString = ProtectedSettingExtensions.HasSecret(metadata.ConnectionString);
             model.HasDefaultConnectionString = HasDefaultConnectionString;
             model.UseDefaultConnectionString = HasDefaultConnectionString && !model.HasConnectionString;
         }).Location("Content:11");
@@ -83,16 +84,7 @@ internal sealed class PostgreSQLAIDataSourceDisplayDriver : DisplayDriver<AIData
 
         if (!useDefaultConnectionString)
         {
-            if (string.IsNullOrWhiteSpace(model.ConnectionString))
-            {
-                connectionString = existingMetadata.ConnectionString;
-            }
-            else
-            {
-                var protector = _dataProtectionProvider.CreateProtector(AIDataSourceProtectionConstants.SourceSecretPurpose);
-
-                connectionString = protector.Protect(model.ConnectionString.Trim());
-            }
+            connectionString = _dataProtectionProvider.ApplySecret(AIDataSourceProtectionConstants.SourceSecretPurpose, existingMetadata.ConnectionString, model.ConnectionString);
 
             if (string.IsNullOrWhiteSpace(connectionString))
             {
