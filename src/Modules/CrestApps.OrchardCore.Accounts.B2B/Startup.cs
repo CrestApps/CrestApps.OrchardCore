@@ -12,6 +12,8 @@ using CrestApps.OrchardCore.Accounts.B2B.Navigation;
 using CrestApps.OrchardCore.Accounts.B2B.Deployments;
 using CrestApps.OrchardCore.Accounts.B2B.Recipes;
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Shipping;
+using CrestApps.OrchardCore.Shipping.Services;
 using OrchardCore.Deployment;
 using CrestApps.OrchardCore.Accounts.B2B.Services;
 using CrestApps.OrchardCore.Orders.Core.Services;
@@ -71,6 +73,16 @@ public sealed class Startup : StartupBase
         services.AddNavigationProvider<BusinessAccountMenu>();
         services.AddDisplayDriver<PriceList, PriceListDisplayDriver>();
     }
+}
+
+/// <summary>
+/// Offers an account's locations as shipping addresses at checkout.
+/// </summary>
+[RequireFeatures(ShippingConstants.Features.Shipping)]
+public sealed class ShippingStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddScoped<IShippingAddressSource, AccountLocationsShippingAddressSource>();
 }
 
 [RequireFeatures(CheckoutConstants.Features.Api)]

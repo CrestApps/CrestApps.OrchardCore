@@ -415,6 +415,13 @@ The widget has these options: the **first window** (7 days) and **second window*
 
 Orders adds the recipes **Automation: thank-you email** (on) and **Automation: canceled order alert** (added off), and Inventory adds **Automation: low stock alert** (added off). Each turns on Workflows and Email and adds a `WorkflowType` with stable ids: `OrderPaidEvent`, `OrderCanceledEvent` or `LowStockEvent` leading to an `EmailTask` in Liquid over `Workflow.Input`.
 
+## The account page
+
+With [Accounts](accounts.md) on, an account's page gets an **Orders** tab: the latest 25 orders placed for the account
+(`OrderQuery.AccountId`), with their status, buyer, date and total, linked to each order. It needs `ManageOrders`. An
+order is placed for an account when one of its members buys for it as a business, through
+[Accounts B2B](accounts-b2b.md).
+
 ## Wishlists
 
 The **Wishlists** feature (`CrestApps.OrchardCore.Carts.Wishlists`) keeps a `Wishlist` (`WishlistIndex` by `UserId`, collection `Carts`) of a signed-in user's saved products, newest first, up to 100.

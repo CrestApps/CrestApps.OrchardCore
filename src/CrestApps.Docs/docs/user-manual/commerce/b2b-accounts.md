@@ -30,7 +30,7 @@ When a buyer's email is the email of one of the account's contacts, the buyer is
 
 ## The account's page
 
-Open the account with **View**. With business buying on, its page shows its payment terms, what it owes, its buyers, and its latest orders, under the contacts it holds.
+Open the account with **View**. With business buying on, its page has a **Business buying** section with its payment terms, what it owes and its buyers, an **Invoices** section with the invoices for what it bought on its terms, and an **Orders** section with its orders. See [the account's page](../accounts.md#the-accounts-page).
 
 ## Payment terms
 
@@ -49,7 +49,7 @@ The invoice is the transaction *on account*, with its purchase order number, due
 
 ## Locations
 
-The account's **Locations** are the places it has orders shipped to; its buyers pick one at checkout. See [an account's locations](../accounts.md#an-accounts-locations).
+The account's **Locations** are the places it has orders shipped to. At checkout, its buyers see them under **Ship to**, marked with the account's name, next to their own saved addresses; a buyer who has no address of their own starts with the account's first location. See [an account's locations](../accounts.md#an-accounts-locations).
 
 ## Price lists
 

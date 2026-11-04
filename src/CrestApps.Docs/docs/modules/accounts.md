@@ -104,8 +104,34 @@ editor may view. The route is named `CrestApps.Accounts.Search`
 
 ## The account page
 
-An account's page is Orchard Core's content display page (**View** on its row), which renders the account with the
-`DetailAdmin` display type. Modules add cards to it with a content display driver:
+An account is the umbrella over everything that belongs to it. Its page is Orchard Core's content display page
+(**View** on its row, `DetailAdmin`), with its title, breadcrumb and toolbar (**Edit**, **New**, **List Activities**),
+and below them the account's sections: a list down the left, and the chosen section on the right. On a phone the list
+is a dropdown. Each feature adds its own section, or a card in one, with a content display driver placed through
+`AccountPageTabs`:
+
+| Tab | `AccountPageTabs` | Added by |
+| --- | --- | --- |
+| **Overview** | `Overview` (0) | Account Members (the members and their roles) and Account Locations (the addresses). |
+| **Contacts** | `Contacts` (10) | The [CRM](../omnichannel/crm.md#the-account-page): the account's contacts, with their email and phone, and a **New** button per contact type. |
+| **Opportunities** | `Opportunities` (20) | The CRM: open deals first, with their stage, amount and close date. |
+| **Leads** | `Leads` (30) | The CRM: the leads converted into the account's contacts. A lead never sits in an account itself. |
+| **Activities** | `Activities` (40) | The CRM: the scheduled and completed activities of the account's contacts, with **List Activities**. |
+| **Orders** | `Orders` (50) | [Orders](carts-and-orders.md#the-account-page): the latest orders placed for the account (`Order.AccountId`). |
+| **Business** | `Business` (60) | [Accounts B2B](accounts-b2b.md#the-account-page): its terms, what it owes and its buyers. |
+| **Invoices** | `Invoices` (70) | Accounts B2B: the invoices for what it bought on its terms. |
+| **Service** | `Service` (80) | Reserved for field service: work orders, assets and service agreements. |
+| **Records** | `Records` (100) | Accounts: Orchard Core's list of every record the account holds, with the buttons that add one. |
+
+A section shows only when the feature that adds it is on and the user may see what it shows; each one checks its own
+permissions. `AccountPageTabs.Location(tab, position)` returns the placement, such as `Content:1#Orders;50`: an
+ordinary Orchard Core tab placement, so every module's sections come out in the same order. A tab name the class
+doesn't know goes after **Service**, under its own name.
+
+The `ContentZone__AccountPage` alternate of the page's `Content` zone, added by `AccountPageShapeTableProvider`, draws
+those tabs as the side list instead of Orchard Core's tab strip, so the page stays tidy however many modules add one.
+The chosen section is kept in the address's hash (`#account-contacts`), so a link, or a record's editor returning to the
+account, opens that section.
 
 ```csharp
 internal sealed class AccountWorkOrdersDisplayDriver : ContentDisplayDriver
@@ -121,12 +147,22 @@ internal sealed class AccountWorkOrdersDisplayDriver : ContentDisplayDriver
         }
 
         return Initialize<AccountWorkOrdersViewModel>("AccountWorkOrders", model => model.AccountId = contentItem.ContentItemId)
-            .Location(OrchardCoreConstants.DisplayType.DetailAdmin, "Content:20");
+            .Location(OrchardCoreConstants.DisplayType.DetailAdmin, AccountPageTabs.Location(AccountPageTabs.Service));
     }
 }
 ```
 
-The list part's records come first. Cards from other modules go at `Content:20` and after.
+The module's `placement.json` (`contentPart: AccountPart`) moves the `ListPart`'s list to the **Records** section,
+puts its toolbar in the page's header, and hides the title card the page heading already shows.
+
+The account's editor is laid out the same way: its title first, then a **Members**, a **Locations** and a **Business**
+tab, placed with `AccountPageTabs.EditorLocation(tab)`.
+
+### Records that refer to an account by id
+
+Records kept outside the content store name the account by its content item id: `Order.AccountId`, and a
+transaction's parent reference (`ParentReferenceType` `AccountsConstants.ReferenceTypes.Account`, `ParentReferenceId`
+the account's id), which is indexed and read with `ITransactionStore.GetByParentReferenceAsync`.
 
 ## Account members
 
@@ -207,8 +243,60 @@ The CRM does this and lists accounts under **Interaction Center > Accounts**.
 
 ## Recipes and deployment
 
-Accounts are content items, so Orchard Core's `ContentDefinition` and `Content` steps import and export them, with
-every part another module adds. A recipe enables the feature with the `feature` step:
+The **Accounts** deployment step (`AccountsDeploymentStep`, under **Content**) exports every account, with all the parts
+on it, such as its members, locations and business buying, as an `Accounts` recipe step. With **Also export the records
+the accounts hold** on (`IncludeRecords`, the default), it also exports the content items in the accounts' lists, such
+as their contacts and opportunities.
+
+```json
+{
+  "name": "Accounts",
+  "Accounts": [
+    {
+      "ContentItemId": "4xf4a7cq978mj04mg6nfygm3dd",
+      "ContentItemVersionId": "4v7cfa9x3jhpc8w7m6d0x4w1qe",
+      "ContentType": "Account",
+      "DisplayText": "Northwind Traders",
+      "Latest": true,
+      "Published": true,
+      "TitlePart": { "Title": "Northwind Traders" },
+      "AccountPart": {},
+      "AccountLocationsPart": {
+        "Locations": [
+          {
+            "LocationId": "hq",
+            "Name": "Head office",
+            "Address": { "Country": "US", "AddressLine1": "1 Main Street", "City": "Reno", "Region": "NV", "PostalCode": "89501" }
+          }
+        ]
+      }
+    }
+  ],
+  "Records": [
+    {
+      "ContentItemId": "4c2k1m9qz8a7b6c5d4e3f2g1h0",
+      "ContentItemVersionId": "4c2k1m9qz8a7b6c5d4e3f2g1hv",
+      "ContentType": "Contact",
+      "DisplayText": "Ada Lovelace",
+      "Latest": true,
+      "Published": true,
+      "ContainedPart": { "ListContentItemId": "4xf4a7cq978mj04mg6nfygm3dd", "ListContentType": "Account" }
+    }
+  ]
+}
+```
+
+The `Accounts` step imports them as Orchard Core's `Content` step does: an item with an existing `ContentItemId` is
+updated, so running the same recipe twice changes nothing. Accounts are imported before their records, so each record
+lands in its account. An item in `Accounts` without `AccountPart`, or an item without a `ContentItemId` or
+`ContentType`, is reported as a recipe error and skipped. With CrestApps Recipes on, `AccountsRecipeStepSchema` and
+`AccountsDeploymentStepSchema` describe both steps, so recipes are checked and written with help.
+
+Accounts are still ordinary content items, so Orchard Core's `Content` step and **All Content** deployment step move
+them too. B2B price lists have their own `PriceLists` step (see [Accounts B2B](accounts-b2b.md#recipes-and-deployment)),
+and orders and invoices move with the Orders and Transactions modules.
+
+A recipe enables the features with the `feature` step:
 
 ```json
 {

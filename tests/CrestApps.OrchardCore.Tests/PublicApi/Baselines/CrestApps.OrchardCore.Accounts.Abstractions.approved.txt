@@ -1,5 +1,23 @@
 namespace CrestApps.OrchardCore.Accounts
 {
+    public static class AccountPageTabs
+    {
+        public const string Activities = "Activities";
+        public const string Business = "Business";
+        public const string Contacts = "Contacts";
+        public const string Invoices = "Invoices";
+        public const string Leads = "Leads";
+        public const string Locations = "Locations";
+        public const string Members = "Members";
+        public const string Opportunities = "Opportunities";
+        public const string Orders = "Orders";
+        public const string Overview = "Overview";
+        public const string Records = "Records";
+        public const string Service = "Service";
+        public static string EditorLocation(string tab, string position = "1") { }
+        public static int GetPosition(string tab) { }
+        public static string Location(string tab, string position = "1") { }
+    }
     public sealed class AccountsAdminMenuOptions
     {
         public AccountsAdminMenuOptions() { }
@@ -18,6 +36,10 @@ namespace CrestApps.OrchardCore.Accounts
             public const string Members = "AccountMembersPart";
         }
         public static class ContentTypes
+        {
+            public const string Account = "Account";
+        }
+        public static class ReferenceTypes
         {
             public const string Account = "Account";
         }

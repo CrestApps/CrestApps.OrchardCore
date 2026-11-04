@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Accounts.Deployments;
 using CrestApps.OrchardCore.Accounts.Drivers;
 using CrestApps.OrchardCore.Accounts.Endpoints;
 using CrestApps.OrchardCore.Accounts.Handlers;
@@ -5,8 +6,10 @@ using CrestApps.OrchardCore.Accounts.Indexes;
 using CrestApps.OrchardCore.Accounts.Migrations;
 using CrestApps.OrchardCore.Accounts.Models;
 using CrestApps.OrchardCore.Accounts.Navigation;
+using CrestApps.OrchardCore.Accounts.Recipes;
 using CrestApps.OrchardCore.Accounts.Services;
 using CrestApps.OrchardCore.ContentTransfer;
+using CrestApps.OrchardCore.Recipes.Core;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,8 +18,12 @@ using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentTypes.Events;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Deployment;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Recipes;
 using OrchardCore.Recipes.Services;
 using OrchardCore.Security.Permissions;
 
@@ -39,6 +46,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IContentDisplayDriver, AccountPickerDisplayDriver>();
         services.AddDataMigration<AccountMigrations>();
         services.AddNavigationProvider<AccountsAdminMenu>();
+        services.AddShapeTableProvider<AccountPageShapeTableProvider>();
     }
 
     /// <inheritdoc/>
@@ -85,7 +93,7 @@ public sealed class LocationsStartup : StartupBase
 }
 
 /// <summary>
-/// Keeps the account lists up to date after a recipe defines content types.
+/// Keeps the account lists up to date after a recipe defines content types, and registers the Accounts recipe step.
 /// </summary>
 [RequireFeatures("OrchardCore.Recipes.Core")]
 public sealed class RecipesStartup : StartupBase
@@ -94,6 +102,36 @@ public sealed class RecipesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IRecipeStepHandler, AccountsRecipeStepHandler>();
+        services.AddRecipeExecutionStep<AccountsStep>();
+    }
+}
+
+/// <summary>
+/// Registers the Accounts deployment step.
+/// </summary>
+[RequireFeatures("OrchardCore.Deployment")]
+public sealed class DeploymentStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<AccountsDeploymentSource, AccountsDeploymentStep>();
+        services.AddDisplayDriver<DeploymentStep, AccountsDeploymentStepDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Describes the Accounts recipe and deployment steps to CrestApps Recipes, so they can be checked and written with
+/// help.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+public sealed class RecipesSchemaStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, AccountsRecipeStepSchema>();
+        services.AddDeploymentStepSchema<AccountsDeploymentStepSchema>();
     }
 }
 

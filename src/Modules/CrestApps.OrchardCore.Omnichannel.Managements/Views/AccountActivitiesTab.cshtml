@@ -1,0 +1,32 @@
+@using CrestApps.OrchardCore.Omnichannel.Core
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model AccountActivitiesTabViewModel
+
+<div class="card mb-3">
+    <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <span>@T["Activities"]</span>
+        <a class="btn btn-sm btn-secondary" asp-action="Account" asp-controller="Activities" asp-area="@OmnichannelConstants.Features.Managements" asp-route-contentItemId="@Model.AccountContentItemId">@T["List Activities"]</a>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-sm-6">
+                <div class="small text-body-secondary">@T["Scheduled"]</div>
+                <div class="fs-5">@Model.ScheduledCount</div>
+                @if (Model.NextScheduledUtc is { } next)
+                {
+                    <div class="small text-body-secondary">@T["Next"] @await DisplayAsync(await New.DateTime(Utc: next, Format: "g"))</div>
+                }
+            </div>
+            <div class="col-sm-6">
+                <div class="small text-body-secondary">@T["Completed"]</div>
+                <div class="fs-5">@Model.CompletedCount</div>
+                @if (Model.LastCompletedUtc is { } last)
+                {
+                    <div class="small text-body-secondary">@T["Last"] @await DisplayAsync(await New.DateTime(Utc: last, Format: "g"))</div>
+                }
+            </div>
+        </div>
+        <span class="hint">@T["The calls, messages and tasks with the account's contacts."]</span>
+    </div>
+</div>

@@ -33,11 +33,29 @@ You can also create the contact from the account's page. It is then already in t
 
 ## The account's page
 
-The account's page lists the records it holds, such as its contacts. Other features add their own sections below, for
-example the account's opportunities or its orders.
+The account's page brings together everything that belongs to the account. Its sections are listed down the left;
+click one to see it on the right. On a phone, pick the section from the list at the top. Which sections you see
+depends on the features your site uses and what you're allowed to see:
 
-If the page says *Please specify at least one contained content type*, no type has been set up to sit in accounts yet.
-Turning on a feature that uses accounts, such as the CRM, sets this up for you.
+| Section | What it shows |
+| --- | --- |
+| **Overview** | The people who sign in for the account and its locations. |
+| **Contacts** | Its contacts, with their email and phone. **New** adds a contact to the account. |
+| **Opportunities** | Its deals, open ones first, with their stage, amount and close date. |
+| **Leads** | The leads that became its contacts. |
+| **Activities** | How many calls, messages and tasks with its contacts are scheduled and done. **List Activities** shows them all. |
+| **Orders** | The orders placed for it. |
+| **Business buying** | When it buys as a business: its payment terms, what it owes and its buyers. |
+| **Invoices** | The invoices for what it bought on its terms, and what is still owed on each. |
+| **All records** | Everything the account holds. |
+
+**Edit Account**, **New** (to add a record to the account) and **List Activities** are at the top of every section.
+The address in your browser names the section you're on, so you can bookmark it or send it to a colleague.
+
+If **All records** says *Please specify at least one contained content type*, no type has been set up to sit in
+accounts yet. Turning on a feature that uses accounts, such as the CRM, sets this up for you.
+
+The account's editor has tabs too: the account's name first, then **Members**, **Locations** and **Business**.
 
 ## The people who sign in for an account
 
@@ -55,6 +73,14 @@ With **Account Locations** on, an account's editor has a **Locations** card for 
 its head office or its warehouses. Give each a name and its address, in the same address form as the rest of the site:
 choose the country first and the form asks for what that country's addresses need. Save to add another; clear a
 location's fields to remove it.
+
+## Moving accounts to another site
+
+To copy accounts to another site, add the **Accounts** step to a deployment plan under **Configuration > Import/Export >
+Deployment Plans**. Leave **Also export the records the accounts hold** ticked to bring their contacts and
+opportunities too. Every account comes with its members, locations and business buying settings. Import the file on the
+other site as you would any deployment package. Importing the same file again updates the accounts instead of copying
+them.
 
 ## Deleting an account
 

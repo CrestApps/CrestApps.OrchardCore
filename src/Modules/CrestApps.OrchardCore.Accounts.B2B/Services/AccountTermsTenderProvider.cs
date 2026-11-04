@@ -129,6 +129,11 @@ public sealed class AccountTermsTenderProvider : ICheckoutTenderProvider
         transaction.ReferenceType = session.ReferenceType;
         transaction.ReferenceId = session.ReferenceId;
         transaction.ReferenceVersionId = session.ReferenceVersionId;
+
+        // The invoice belongs to the account, whichever of its buyers placed the order, so the account's page finds it
+        // and what the account owes stays the same when a buyer leaves.
+        transaction.ParentReferenceType = AccountsConstants.ReferenceTypes.Account;
+        transaction.ParentReferenceId = account.AccountId;
         transaction.CheckoutSessionId = session.SessionId;
         transaction.ObligationId = ObligationId;
         transaction.Currency = currency;
