@@ -21,7 +21,8 @@ public sealed class DuplicatePatternRatchetTests
         new(
             "new BlobFileStore",
             @"\bnew\s+BlobFileStore\s*\(",
-            "Register tenant file storage through the shared tenant file store helper instead of another .Azure module."),
+            "Register tenant file storage with services.AddTenantFileStore<TStore>(...) from CrestApps.OrchardCore.FileStorage.Core instead of another .Azure module.",
+            ExemptDirectory: "src/Core/CrestApps.OrchardCore.FileStorage.Core/"),
         new(
             "DeploymentSerializer class",
             @"\bclass\s+\w*DeploymentSerializer\b",
@@ -52,14 +53,6 @@ public sealed class DuplicatePatternRatchetTests
     /// </summary>
     private static readonly Dictionary<string, Dictionary<string, int>> _knownCopies = new(StringComparer.Ordinal)
     {
-        ["new BlobFileStore"] = new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["src/Modules/CrestApps.OrchardCore.AI.Documents.Azure/Startup.cs"] = 1,
-            ["src/Modules/CrestApps.OrchardCore.ContentTransfer.Azure/Startup.cs"] = 1,
-            ["src/Modules/CrestApps.OrchardCore.DncRegistry.Azure/Startup.cs"] = 1,
-            ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging.Azure/Startup.cs"] = 1,
-            ["src/Modules/CrestApps.OrchardCore.Telephony.Azure/Startup.cs"] = 1,
-        },
         ["GetTimeZones() in a select list"] = new(StringComparer.OrdinalIgnoreCase)
         {
             ["src/Modules/CrestApps.OrchardCore.ContactCenter/Drivers/BusinessHoursCalendarDisplayDriver.cs"] = 1,

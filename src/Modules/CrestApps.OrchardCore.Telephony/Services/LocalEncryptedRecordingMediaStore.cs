@@ -1,5 +1,4 @@
-using System.Security.Cryptography;
-using System.Text;
+using CrestApps.OrchardCore.Core.FileStorage;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.DataProtection;
 using OrchardCore.FileStorage;
@@ -16,10 +15,7 @@ namespace CrestApps.OrchardCore.Telephony.Services;
 /// </summary>
 public sealed class LocalEncryptedRecordingMediaStore : IRecordingMediaStore, ISupportsTenantMediaPurge
 {
-    private const string ProtectedFileExtension = ".protected";
-
-    private readonly IFileStore _fileStore;
-    private readonly IDataProtector _protector;
+    private readonly EncryptedFileStore _store;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LocalEncryptedRecordingMediaStore"/> class.
@@ -30,8 +26,7 @@ public sealed class LocalEncryptedRecordingMediaStore : IRecordingMediaStore, IS
         IFileStore fileStore,
         IDataProtectionProvider dataProtectionProvider)
     {
-        _fileStore = fileStore;
-        _protector = dataProtectionProvider.CreateProtector(TelephonyConstants.RecordingMediaProtectorPurpose);
+        _store = new EncryptedFileStore(fileStore, dataProtectionProvider, TelephonyConstants.RecordingMediaProtectorPurpose);
     }
 
     /// <inheritdoc/>
@@ -41,12 +36,10 @@ public sealed class LocalEncryptedRecordingMediaStore : IRecordingMediaStore, IS
         ArgumentException.ThrowIfNullOrEmpty(request.StorageKey);
         ArgumentNullException.ThrowIfNull(request.Content);
 
-        var path = ResolvePath(request.StorageKey);
-
         // The plaintext recording is encrypted a fixed chunk at a time as the file store reads the wrapping
         // stream, so a large recording is never materialized in memory as a whole plaintext or ciphertext copy.
-        await using var encryptingStream = RecordingMediaCryptoFormat.CreateEncryptingReadStream(request.Content, _protector, cancellationToken);
-        await _fileStore.CreateFileFromStreamAsync(path, encryptingStream, overwrite: true);
+        await using var encryptingStream = RecordingMediaCryptoFormat.CreateEncryptingReadStream(request.Content, _store.Protector, cancellationToken);
+        await _store.WriteCiphertextAsync(request.StorageKey, encryptingStream);
 
         return request.StorageKey;
     }
@@ -54,26 +47,19 @@ public sealed class LocalEncryptedRecordingMediaStore : IRecordingMediaStore, IS
     /// <inheritdoc/>
     public async Task<Stream> OpenReadAsync(string storageReference, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrEmpty(storageReference))
-        {
-            return null;
-        }
-
-        var path = ResolvePath(storageReference);
-
-        if (await _fileStore.GetFileInfoAsync(path) is null)
-        {
-            return null;
-        }
-
         // The returned stream decrypts a fixed chunk at a time and takes ownership of the underlying file
         // stream, so reading back a recording never buffers the whole plaintext in memory. Both the file system and
         // blob stores return seekable streams, so the decrypting stream seeks too and decrypts only the frames read.
-        var fileStream = await _fileStore.GetFileStreamAsync(path);
+        var fileStream = await _store.OpenCiphertextAsync(storageReference);
+
+        if (fileStream is null)
+        {
+            return null;
+        }
 
         try
         {
-            return await RecordingMediaCryptoFormat.OpenDecryptingReadStreamAsync(fileStream, _protector, cancellationToken);
+            return await RecordingMediaCryptoFormat.OpenDecryptingReadStreamAsync(fileStream, _store.Protector, cancellationToken);
         }
         catch
         {
@@ -84,52 +70,10 @@ public sealed class LocalEncryptedRecordingMediaStore : IRecordingMediaStore, IS
     }
 
     /// <inheritdoc/>
-    public async Task<bool> DeleteAsync(string storageReference, CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrEmpty(storageReference))
-        {
-            return false;
-        }
-
-        var path = ResolvePath(storageReference);
-
-        if (await _fileStore.GetFileInfoAsync(path) is null)
-        {
-            return true;
-        }
-
-        return await _fileStore.TryDeleteFileAsync(path);
-    }
+    public Task<bool> DeleteAsync(string storageReference, CancellationToken cancellationToken = default)
+        => _store.DeleteAsync(storageReference);
 
     /// <inheritdoc/>
-    public async Task<bool> TryPurgeAllAsync(CancellationToken cancellationToken = default)
-    {
-        var purged = true;
-
-        await foreach (var entry in _fileStore.GetDirectoryContentAsync(includeSubDirectories: false).WithCancellation(cancellationToken))
-        {
-            if (entry.IsDirectory)
-            {
-                continue;
-            }
-
-            if (!await _fileStore.TryDeleteFileAsync(entry.Path))
-            {
-                purged = false;
-            }
-        }
-
-        return purged;
-    }
-
-    private static string ResolvePath(string storageKey)
-    {
-        // Derive a deterministic, collision-resistant, filesystem-safe file name from the opaque storage key.
-        // Hashing the full key (rather than sanitizing characters) guarantees two distinct keys can never map
-        // to the same file, so a read or delete addressed by the key can never return or remove another
-        // recording's media.
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(storageKey));
-
-        return Convert.ToHexStringLower(hash) + ProtectedFileExtension;
-    }
+    public Task<bool> TryPurgeAllAsync(CancellationToken cancellationToken = default)
+        => _store.TryPurgeAllAsync(cancellationToken);
 }

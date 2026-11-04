@@ -1,5 +1,4 @@
-using System.Security.Cryptography;
-using System.Text;
+using CrestApps.OrchardCore.Core.FileStorage;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using Microsoft.AspNetCore.DataProtection;
 using OrchardCore.FileStorage;
@@ -23,10 +22,7 @@ public sealed class LocalEncryptedMessagingAttachmentStore : IMessagingAttachmen
     /// </summary>
     public const string FolderName = "MessagingAttachments";
 
-    private const string ProtectedFileExtension = ".protected";
-
-    private readonly IFileStore _fileStore;
-    private readonly IDataProtector _protector;
+    private readonly EncryptedFileStore _store;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LocalEncryptedMessagingAttachmentStore"/> class.
@@ -35,73 +31,27 @@ public sealed class LocalEncryptedMessagingAttachmentStore : IMessagingAttachmen
     /// <param name="dataProtectionProvider">The data protection provider the pictures are encrypted with.</param>
     public LocalEncryptedMessagingAttachmentStore(IFileStore fileStore, IDataProtectionProvider dataProtectionProvider)
     {
-        _fileStore = fileStore;
-        _protector = dataProtectionProvider.CreateProtector(ProtectorPurpose);
+        _store = new EncryptedFileStore(fileStore, dataProtectionProvider, ProtectorPurpose);
     }
 
     /// <inheritdoc/>
-    public async Task StoreAsync(string attachmentId, ReadOnlyMemory<byte> content, CancellationToken cancellationToken = default)
+    public Task StoreAsync(string attachmentId, ReadOnlyMemory<byte> content, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(attachmentId);
 
-        var protectedBytes = _protector.Protect(content.ToArray());
-
-        using var stream = new MemoryStream(protectedBytes, writable: false);
-
-        await _fileStore.CreateFileFromStreamAsync(ResolvePath(attachmentId), stream, overwrite: true);
+        return _store.WriteAsync(attachmentId, content);
     }
 
     /// <inheritdoc/>
-    public async Task<byte[]> ReadAsync(string attachmentId, CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrEmpty(attachmentId))
-        {
-            return null;
-        }
-
-        var path = ResolvePath(attachmentId);
-
-        if (await _fileStore.GetFileInfoAsync(path) is null)
-        {
-            return null;
-        }
-
-        await using var stream = await _fileStore.GetFileStreamAsync(path);
-        using var buffer = new MemoryStream();
-
-        await stream.CopyToAsync(buffer, cancellationToken);
-
-        try
-        {
-            return _protector.Unprotect(buffer.ToArray());
-        }
-        catch (CryptographicException)
-        {
-            // A file written under keys this tenant no longer holds is as good as gone.
-            return null;
-        }
-    }
+    public Task<byte[]> ReadAsync(string attachmentId, CancellationToken cancellationToken = default)
+        => string.IsNullOrEmpty(attachmentId) ? Task.FromResult<byte[]>(null) : _store.ReadAsync(attachmentId, cancellationToken);
 
     /// <inheritdoc/>
-    public async Task<bool> DeleteAsync(string attachmentId, CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrEmpty(attachmentId))
-        {
-            return false;
-        }
-
-        var path = ResolvePath(attachmentId);
-
-        if (await _fileStore.GetFileInfoAsync(path) is null)
-        {
-            return true;
-        }
-
-        return await _fileStore.TryDeleteFileAsync(path);
-    }
+    public Task<bool> DeleteAsync(string attachmentId, CancellationToken cancellationToken = default)
+        => _store.DeleteAsync(attachmentId);
 
     // The key is hashed into the file name, so no key can name a path outside the folder and two keys never share a
     // file.
     internal static string ResolvePath(string attachmentId)
-        => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(attachmentId))) + ProtectedFileExtension;
+        => EncryptedFileStore.ResolvePath(attachmentId);
 }

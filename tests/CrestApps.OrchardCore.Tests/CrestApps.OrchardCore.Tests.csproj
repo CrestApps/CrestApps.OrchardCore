@@ -79,6 +79,7 @@
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Documents/CrestApps.OrchardCore.AI.Documents.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Documents.AzureAI/CrestApps.OrchardCore.AI.Documents.AzureAI.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Documents.Azure/CrestApps.OrchardCore.AI.Documents.Azure.csproj" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.FileStorage.Core/CrestApps.OrchardCore.FileStorage.Core.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Documents.OpenXml/CrestApps.OrchardCore.AI.Documents.OpenXml.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Documents.Pdf/CrestApps.OrchardCore.AI.Documents.Pdf.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Memory/CrestApps.OrchardCore.AI.Memory.csproj" />

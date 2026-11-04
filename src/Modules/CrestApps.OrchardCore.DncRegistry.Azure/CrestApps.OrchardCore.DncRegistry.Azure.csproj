@@ -20,12 +20,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="OrchardCore.FileStorage.AzureBlob" />
-    <PackageReference Include="OrchardCore.Media.Azure" />
     <PackageReference Include="OrchardCore.Module.Targets" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.FileStorage.Core/CrestApps.OrchardCore.FileStorage.Core.csproj" />
     <ProjectReference Include="../CrestApps.OrchardCore.DncRegistry/CrestApps.OrchardCore.DncRegistry.csproj" PrivateAssets="none" />
   </ItemGroup>
 

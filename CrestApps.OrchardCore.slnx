@@ -73,6 +73,7 @@
     <Project Path="src/Core/CrestApps.OrchardCore.Geo.Core/CrestApps.OrchardCore.Geo.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Workforce.Core/CrestApps.OrchardCore.Workforce.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Dispatch.Core/CrestApps.OrchardCore.Dispatch.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.FileStorage.Core/CrestApps.OrchardCore.FileStorage.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.TimeTracker.Core/CrestApps.OrchardCore.TimeTracker.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.WorkOrders.Core/CrestApps.OrchardCore.WorkOrders.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Customers.Core/CrestApps.OrchardCore.Customers.Core.csproj" />
