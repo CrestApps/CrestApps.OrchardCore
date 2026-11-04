@@ -21,6 +21,7 @@
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Addresses.Abstractions/CrestApps.OrchardCore.Addresses.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Checkout.Abstractions/CrestApps.OrchardCore.Checkout.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions.csproj" />
+    <Project Path="src/Abstractions/CrestApps.OrchardCore.ContentFields.Abstractions/CrestApps.OrchardCore.ContentFields.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Calendars.Abstractions/CrestApps.OrchardCore.Calendars.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Scheduling.Abstractions/CrestApps.OrchardCore.Scheduling.Abstractions.csproj" />

@@ -1,9 +1,18 @@
 namespace CrestApps.OrchardCore.ContentFields.Settings;
 
+/// <summary>
+/// Stores the settings for an <see cref="Fields.AddressField"/>.
+/// </summary>
 public sealed class AddressFieldSettings
 {
+    /// <summary>
+    /// Gets or sets the hint text displayed below the field.
+    /// </summary>
     public string Hint { get; set; }
 
+    /// <summary>
+    /// Gets or sets whether an address must be entered.
+    /// </summary>
     public bool Required { get; set; }
 
     /// <summary>
@@ -11,8 +20,14 @@ public sealed class AddressFieldSettings
     /// </summary>
     public bool ShowName { get; set; } = true;
 
+    /// <summary>
+    /// Gets or sets whether the editor asks for a company name.
+    /// </summary>
     public bool ShowCompany { get; set; } = true;
 
+    /// <summary>
+    /// Gets or sets whether the editor asks for a phone number.
+    /// </summary>
     public bool ShowPhone { get; set; }
 
     /// <summary>

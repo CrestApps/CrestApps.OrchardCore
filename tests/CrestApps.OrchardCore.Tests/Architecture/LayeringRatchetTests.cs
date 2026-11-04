@@ -27,8 +27,6 @@ public sealed class LayeringRatchetTests
     /// </summary>
     private static readonly HashSet<string> _knownProjectViolations = new(StringComparer.Ordinal)
     {
-        // Only for PhoneField (audit D19).
-        "CrestApps.OrchardCore.Omnichannel.Core -> CrestApps.OrchardCore.ContentFields",
     };
 
     /// <summary>
@@ -51,9 +49,7 @@ public sealed class LayeringRatchetTests
         "CrestApps.OrchardCore.AI.WebMcp -> CrestApps.OrchardCore.AI",
         "CrestApps.OrchardCore.ContactCenter -> CrestApps.OrchardCore.Telephony",
         "CrestApps.OrchardCore.Dispatch -> CrestApps.OrchardCore.Workforce",
-        "CrestApps.OrchardCore.Omnichannel.Managements -> CrestApps.OrchardCore.ContentFields",
         "CrestApps.OrchardCore.Omnichannel.Managements -> CrestApps.OrchardCore.DncRegistry",
-        "CrestApps.OrchardCore.PhoneNumbers.Verifications -> CrestApps.OrchardCore.ContentFields",
         "CrestApps.OrchardCore.PointOfSale -> CrestApps.OrchardCore.Orders",
         "CrestApps.OrchardCore.Workforce.ContactCenter -> CrestApps.OrchardCore.Workforce",
     };

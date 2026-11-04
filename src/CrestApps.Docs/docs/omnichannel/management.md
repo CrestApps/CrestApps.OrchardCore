@@ -95,7 +95,7 @@ Do not rename or replace the `ContactMethods` bag in custom definitions. Instead
 
 The management feature depends on `OrchardCore.Flows` so the enforced `ContactMethods` bag renders with the standard Orchard bag editor when you edit a contact content item. The bag is injected during Orchard's content-type definition build pipeline, so content types that attach `OmnichannelContactPart` always materialize with the named `ContactMethods` bag even when the stored type definition does not yet include it.
 
-If you use the built-in `PhoneNumberInfoPart`, the `Number` field is a `PhoneField` (from `CrestApps.OrchardCore.ContentFields`) that stores the phone number in E.164 format alongside the ISO country code, so the correct country flag is always displayed when the field is edited again.
+If you use the built-in `PhoneNumberInfoPart`, the `Number` field is a `PhoneField` (the CrestApps Content Fields module's field, whose class is in `CrestApps.OrchardCore.ContentFields.Abstractions`) that stores the phone number in E.164 format alongside the ISO country code, so the correct country flag is always displayed when the field is edited again.
 
 `OmnichannelContactPart` has these part settings (`OmnichannelContactPartSettings`), edited in the content-type editor:
 
