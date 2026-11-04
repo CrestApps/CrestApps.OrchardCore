@@ -4,6 +4,7 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars.Core;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Scheduling.Models;
 using CrestApps.OrchardCore.Scheduling.Services;
 using Microsoft.Extensions.Localization;
@@ -754,30 +755,14 @@ public sealed class DefaultAppointmentService : IAppointmentService
     }
 
     // Every key is taken in ordinal order, resources and customers alike, so two requests never wait on each other in a circle.
-    private async Task<List<ILocker>> LockAsync(IEnumerable<string> keys)
+    private Task<ILocker> LockAsync(IEnumerable<string> keys)
     {
-        var lockers = new List<ILocker>();
-
-        foreach (var key in keys.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
-        {
-            var (locker, locked) = await _distributedLock.TryAcquireLockAsync(key, _lockTimeout, _lockExpiration);
-
-            if (!locked)
-            {
-                await ReleaseAsync(lockers);
-
-                return null;
-            }
-
-            lockers.Add(locker);
-        }
-
-        return lockers;
+        return _distributedLock.LockAllAsync(keys, _lockTimeout, _lockExpiration);
     }
 
-    private static async Task ReleaseAsync(IEnumerable<ILocker> lockers)
+    private static async Task ReleaseAsync(ILocker locker)
     {
-        foreach (var locker in lockers ?? [])
+        if (locker is not null)
         {
             await locker.DisposeAsync();
         }

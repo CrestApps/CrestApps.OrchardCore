@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Dispatch.Core.Indexes;
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
 using CrestApps.OrchardCore.Numbering;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.WorkOrders.Core;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
@@ -682,30 +683,14 @@ public sealed class DefaultDispatchService : IDispatchService
         }
     }
 
-    private async Task<List<ILocker>> LockAsync(IEnumerable<string> keys)
+    private Task<ILocker> LockAsync(IEnumerable<string> keys)
     {
-        var lockers = new List<ILocker>();
-
-        foreach (var key in keys.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
-        {
-            var (locker, locked) = await _distributedLock.TryAcquireLockAsync(key, _lockTimeout, _lockExpiration);
-
-            if (!locked)
-            {
-                await ReleaseAsync(lockers);
-
-                return null;
-            }
-
-            lockers.Add(locker);
-        }
-
-        return lockers;
+        return _distributedLock.LockAllAsync(keys, _lockTimeout, _lockExpiration);
     }
 
-    private static async Task ReleaseAsync(IEnumerable<ILocker> lockers)
+    private static async Task ReleaseAsync(ILocker locker)
     {
-        foreach (var locker in lockers ?? [])
+        if (locker is not null)
         {
             await locker.DisposeAsync();
         }
