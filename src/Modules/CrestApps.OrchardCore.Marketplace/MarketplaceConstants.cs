@@ -20,4 +20,12 @@ public static class MarketplaceConstants
     public const string CollectionName = "Marketplace";
 
     public const string SettingsGroupId = "marketplace";
+
+    public static class Recipes
+    {
+        /// <summary>
+        /// The recipe step that adds or updates vendors.
+        /// </summary>
+        public const string Vendors = "Vendors";
+    }
 }

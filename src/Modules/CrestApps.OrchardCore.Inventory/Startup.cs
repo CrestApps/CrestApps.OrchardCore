@@ -28,6 +28,10 @@ using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Transfer;
 using CrestApps.OrchardCore.Inventory.Api;
+using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Deployments;
+using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -66,6 +70,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IInventoryService, DefaultInventoryService>();
 
         services.AddScoped<StockLocationStore>();
+        services.AddScoped<ICatalog<StockLocation>>(serviceProvider => serviceProvider.GetRequiredService<StockLocationStore>());
         services.AddScoped<InventoryLocationService>();
         services.AddScoped<IInventoryLocationService>(serviceProvider => serviceProvider.GetRequiredService<InventoryLocationService>());
         services.AddScoped<IFulfillmentLocationProvider>(serviceProvider => serviceProvider.GetRequiredService<InventoryLocationService>());
@@ -183,6 +188,8 @@ public sealed class RecipesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddRecipeExecutionStep<StockStep>();
+        services.AddRecipeExecutionStep<StockLocationsStep>();
+        services.AddScoped<IRecipeStep, StockLocationsRecipeStepSchema>();
     }
 }
 
@@ -192,6 +199,8 @@ public sealed class DeploymentStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDeployment<StockDeploymentSource, StockDeploymentStep, StockDeploymentStepDisplayDriver>();
+        services.AddDeployment<StockLocationsDeploymentSource, StockLocationsDeploymentStep, SummaryDeploymentStepDisplayDriver<StockLocationsDeploymentStep>>();
+        services.AddDeploymentStepSchema<StockLocationsDeploymentStepSchema>();
     }
 }
 

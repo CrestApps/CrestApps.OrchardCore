@@ -57,6 +57,19 @@ The store's Stripe account must have Connect turned on in the Stripe dashboard. 
 
 **Commerce > Vendors** (`ManageMarketplace`) lists vendors on the admin list. A vendor's page shows what it has earned (held, ready and paid out), its sales and payouts, **Release now** for an order, and **Pay out what's ready**. The storefront account's **Vendor** page (`account/vendor`, the `VendorDashboard` shape) shows the same to the people who run the vendor, with **Set up payouts** for Stripe.
 
+## Recipes and deployment
+
+The `Vendors` recipe step (`VendorsStep`) creates or updates vendors. A vendor is matched by its `ItemId`, then by its name, so running a recipe twice changes nothing. Its users are named by `UserNames`, which must exist on the site; their ids on the site are stored with the vendor. A vendor needs a name and a commission from 0 to 100 percent or none. The **Vendors** deployment step (`VendorsDeploymentStep`, *Commerce*) writes every vendor. A vendor's Stripe Connect account belongs to the site it was made on, so its account id, onboarding key and payout status are never exported or imported: an imported vendor sets up payouts again. Earnings and payouts stay on the site.
+
+```json
+{
+  "name": "Vendors",
+  "Vendors": [
+    { "ItemId": "4vd00000000000000000000001", "Name": "Acme Crafts", "Email": "sales@acme.test", "UserNames": [ "acme" ], "CommissionPercent": 12.5, "Status": "Active", "Country": "US" }
+  ]
+}
+```
+
 ## Report Builder data source
 
 With **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) on, which the Report Builder needs, the Marketplace feature adds the **Marketplace** data source (`Marketplace`) to the Report Builder and to Orchard Core data pipelines. Its data sets need **Manage the marketplace** (`ManageMarketplace`), the permission of **Commerce > Vendors**. The Stripe Connect feature adds no data set. A vendor's Stripe account, the key used to make it, the provider's reference for a transfer and its error messages are never exposed.

@@ -1,22 +1,29 @@
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Marketplace.BackgroundTasks;
+using CrestApps.OrchardCore.Marketplace.Deployments;
 using CrestApps.OrchardCore.Marketplace.Drivers;
 using CrestApps.OrchardCore.Marketplace.Handlers;
 using CrestApps.OrchardCore.Marketplace.Indexes;
 using CrestApps.OrchardCore.Marketplace.Migrations;
 using CrestApps.OrchardCore.Marketplace.Models;
 using CrestApps.OrchardCore.Marketplace.Navigation;
+using CrestApps.OrchardCore.Marketplace.Recipes;
 using CrestApps.OrchardCore.Marketplace.Services;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
 
@@ -49,6 +56,11 @@ public sealed class Startup : StartupBase
         services.AddPermissionProvider<MarketplacePermissionProvider>();
         services.AddNavigationProvider<MarketplaceAdminMenu>();
         services.AddNavigationProvider<MarketplaceAccountMenu>();
+
+        services.AddRecipeExecutionStep<VendorsStep>();
+        services.AddScoped<IRecipeStep, VendorsRecipeStepSchema>();
+        services.AddDeployment<VendorsDeploymentSource, VendorsDeploymentStep, SummaryDeploymentStepDisplayDriver<VendorsDeploymentStep>>();
+        services.AddDeploymentStepSchema<VendorsDeploymentStepSchema>();
     }
 }
 
