@@ -49,6 +49,8 @@ public sealed class Startup : StartupBase
     {
         services.AddUserCacheService();
         services.TryAddBasicDisplayNameProvider();
+        services.AddUserSearchService();
+        services.AddPermissionProvider<UserSearchPermissionProvider>();
         services.AddDisplayDriver<UserMenu, DisplayNameUserMenuDisplayDriver>();
         // services.AddShapeTableProvider<NavbarShapeTableProvider>();
     }

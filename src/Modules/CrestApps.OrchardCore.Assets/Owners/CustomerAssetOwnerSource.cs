@@ -1,23 +1,19 @@
 using CrestApps.OrchardCore.Assets.Models;
 using CrestApps.OrchardCore.Assets.Services;
-using OrchardCore.Users.Indexes;
-using OrchardCore.Users.Models;
-using YesSql;
-using YesSql.Services;
-using ISession = YesSql.ISession;
+using CrestApps.OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.Assets.Owners;
 
 /// <summary>
-/// Customers are users: finds them by user name or email.
+/// Customers are users: finds them by user name or email through the shared <see cref="IUserSearchService"/>.
 /// </summary>
 internal sealed class CustomerAssetOwnerSource : IAssetOwnerSource
 {
-    private readonly ISession _session;
+    private readonly IUserSearchService _userSearchService;
 
-    public CustomerAssetOwnerSource(ISession session)
+    public CustomerAssetOwnerSource(IUserSearchService userSearchService)
     {
-        _session = session;
+        _userSearchService = userSearchService;
     }
 
     public AssetOwnerKind Kind
@@ -25,13 +21,14 @@ internal sealed class CustomerAssetOwnerSource : IAssetOwnerSource
 
     public async Task<IReadOnlyList<AssetOwnerOption>> SearchAsync(string query, int count, CancellationToken cancellationToken = default)
     {
-        var normalized = query?.Trim().ToUpperInvariant();
+        var users = await _userSearchService.SearchAsync(new UserSearchQuery
+        {
+            Text = query,
+            MatchEmail = true,
+            MaxResults = count,
+        }, cancellationToken);
 
-        var users = string.IsNullOrEmpty(normalized)
-            ? _session.Query<User, UserIndex>(index => index.IsEnabled)
-            : _session.Query<User, UserIndex>(index => index.IsEnabled && (index.NormalizedUserName.Contains(normalized) || index.NormalizedEmail.Contains(normalized)));
-
-        return [.. (await users.OrderBy(index => index.NormalizedUserName).Take(count).ListAsync(cancellationToken)).Select(ToOption)];
+        return [.. users.Select(ToOption)];
     }
 
     public async Task<IReadOnlyDictionary<string, string>> GetNamesAsync(IReadOnlyCollection<string> ids, CancellationToken cancellationToken = default)
@@ -41,11 +38,11 @@ internal sealed class CustomerAssetOwnerSource : IAssetOwnerSource
             return new Dictionary<string, string>();
         }
 
-        var users = await _session.Query<User, UserIndex>(index => index.UserId.IsIn(ids)).ListAsync(cancellationToken);
+        var users = await _userSearchService.GetAsync(ids, cancellationToken);
 
         return users.Select(ToOption).ToDictionary(option => option.Id, option => option.Name, StringComparer.Ordinal);
     }
 
-    private static AssetOwnerOption ToOption(User user)
+    private static AssetOwnerOption ToOption(UserSearchResult user)
         => new(user.UserId, string.IsNullOrEmpty(user.Email) ? user.UserName : $"{user.UserName} ({user.Email})");
 }

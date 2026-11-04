@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Assets.Owners;
 using CrestApps.OrchardCore.Assets.Services;
 using CrestApps.OrchardCore.Assets.ViewModels;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Users.Core;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -62,6 +63,7 @@ public sealed class CustomerOwnersStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddUserSearchService();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAssetOwnerSource, CustomerAssetOwnerSource>());
     }
 }

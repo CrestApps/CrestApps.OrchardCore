@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Reports.Designer.Migrations;
 using CrestApps.OrchardCore.Reports.Designer.Recipes;
 using CrestApps.OrchardCore.Reports.Designer.Services;
 using CrestApps.OrchardCore.Reports.Designer.ViewModels;
+using CrestApps.OrchardCore.Users.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -48,6 +49,7 @@ public sealed class DesignerStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddCatalogs();
+        services.AddUserSearchService();
 
         services.Configure<ReportQueryLimits>(_shellConfiguration.GetSection("CrestApps:Reports:Builder:Limits"));
         services.Configure<ReportDesignVersionOptions>(_shellConfiguration.GetSection("CrestApps:Reports:Builder:Versions"));

@@ -34,6 +34,19 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Adds the shared <see cref="IUserSearchService"/> behind the user pickers, and the basic display name provider
+    /// when no other one is registered. Call it from every feature that searches users; it adds each service once.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    public static IServiceCollection AddUserSearchService(this IServiceCollection services)
+    {
+        services.TryAddBasicDisplayNameProvider();
+        services.TryAddScoped<IUserSearchService, DefaultUserSearchService>();
+
+        return services;
+    }
+
+    /// <summary>
     /// Adds the user cache service.
     /// </summary>
     /// <param name="services">The services.</param>

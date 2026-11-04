@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Calendars.Migrations;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Navigation;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Users.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -39,6 +40,7 @@ public sealed class Startup : StartupBase
 
         services.AddCalendarsCore();
         services.AddScoped<CalendarEventEditor>();
+        services.AddUserSearchService();
         services.AddScoped<CalendarUserLookup>();
         services.AddDisplayDriver<CalendarCategory, CalendarCategoryDisplayDriver>();
         // The handler reaches these lazily: the access service authorizes, so a direct dependency would be a cycle.

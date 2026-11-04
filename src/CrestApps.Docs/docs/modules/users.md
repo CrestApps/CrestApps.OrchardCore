@@ -51,6 +51,10 @@ Parameters:
 
 The picker is backed by the shared user-search endpoint (`Admin/api/crestapps/users/search`, which returns the top 50 enabled matches) and renders through the shared **`ItemSelector`** component, so the **CrestApps Resources** feature must be enabled wherever the picker is used.
 
+The endpoint answers only users who hold the **Search users in user pickers** permission (`SearchUsers`, `UserSearchPermissions.SearchUsers` in `CrestApps.OrchardCore.Users.Abstractions`). `AccessAdminPanel` implies it, so every role that can open the admin panel keeps its pickers, while a signed-in storefront customer gets `403 Forbidden`. An access that a handler grants only for one request, such as the worker access to the **My Work** pages, does not include it.
+
+Modules that look up users for their own pickers use the same search through `IUserSearchService` (`CrestApps.OrchardCore.Users.Abstractions`): `SearchAsync(UserSearchQuery)` finds enabled users by user name (and e-mail when `MatchEmail` is set), optionally in some roles, ordered by user name; `GetAsync(userIds)` resolves the users behind stored ids. Register it with `services.AddUserSearchService()` from `CrestApps.OrchardCore.Users.Core`; the service does not authorize, so the endpoint that exposes it checks `SearchUsers` or its own permission first. Calendars, Assets and the report designer use it.
+
 For example, the [Messaging Workspace](../omnichannel/messaging-workspace) uses `UserPicker` to choose the agent an SMS number routes inbound messages to.
 
 ## User Display Name
