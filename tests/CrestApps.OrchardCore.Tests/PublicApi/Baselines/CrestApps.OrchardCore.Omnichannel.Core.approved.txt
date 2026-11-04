@@ -129,6 +129,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
             public const string NumberNotInService = "number_not_in_service";
             public static bool IsHandoff(string terminalReasonCode) { }
         }
+        public static class WebhookInboxHandlers
+        {
+            public const string SmsReceived = "sms-inbound";
+        }
     }
     public static class StringExtensions
     {
@@ -1581,7 +1585,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     {
         CrestApps.OrchardCore.Omnichannel.Core.Services.IAutomatedConversationGeneration Begin(string sessionId, System.Threading.CancellationToken hostToken);
         bool IsGenerating(string sessionId);
-        bool TryClaimInboundMessage(string providerMessageId);
     }
     public interface IAutomatedConversationGeneration : System.IDisposable
     {
@@ -1764,7 +1767,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         public InMemoryAutomatedConversationGate() { }
         public CrestApps.OrchardCore.Omnichannel.Core.Services.IAutomatedConversationGeneration Begin(string sessionId, System.Threading.CancellationToken hostToken) { }
         public bool IsGenerating(string sessionId) { }
-        public bool TryClaimInboundMessage(string providerMessageId) { }
     }
     public static class LeadAIConversion
     {
@@ -1949,4 +1951,4 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectDirection direction, System.Threading.CancellationToken cancellationToken = default) { }
         public bool IsConfigured(CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings flowSettings) { }
     }
-}
+}

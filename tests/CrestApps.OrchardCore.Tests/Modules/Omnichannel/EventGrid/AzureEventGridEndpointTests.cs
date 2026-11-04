@@ -1,6 +1,8 @@
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -12,22 +14,17 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Environment.Shell;
-using OrchardCore.Environment.Shell.Builders;
-using OrchardCore.Environment.Shell.Scope;
-using OrchardCore.Modules;
-using YesSql;
+using Startup = CrestApps.OrchardCore.Omnichannel.EventGrid.Startup;
 using YesSqlSession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.EventGrid;
 
 /// <summary>
-/// The Azure Event Grid webhook. The endpoint is an internal minimal-API handler, so these tests reach its handler and
-/// its background inbound-SMS step by reflection and drive them with the same shell-scope doubles the Telephony hub
-/// tests use. Each test names the bug it guards.
+/// The Azure Event Grid webhook. The endpoint is an internal minimal-API handler, so these tests reach its handler by
+/// reflection. Each test names the bug it guards.
 /// </summary>
 public sealed class AzureEventGridEndpointTests
 {
@@ -79,7 +76,7 @@ public sealed class AzureEventGridEndpointTests
     // Bug: an ACS text arrived on the "Unknown" channel under its raw event type. It must reach the handlers as the SMS
     // received event, keyed by the provider's message id, with the provider's receive time.
     [Fact]
-    public async Task HandleAsync_SmsReceived_RaisesTheSmsReceivedEventWithTheProviderReceiveTime()
+    public async Task HandleAsync_SmsReceivedWithoutAnSmsFeature_RaisesTheSmsReceivedEventWithTheProviderReceiveTime()
     {
         // Arrange
         using var harness = new Harness();
@@ -88,10 +85,10 @@ public sealed class AzureEventGridEndpointTests
 
         // Act
         var result = await harness.HandleAsync(context);
-        var handled = await harness.WaitForHandledAsync();
 
         // Assert
         Assert.IsType<Ok>(result);
+        var handled = Assert.Single(harness.Handled);
         Assert.Equal("msg-1", handled.Id);
         Assert.Equal(OmnichannelConstants.Events.SmsReceived, handled.EventType);
         Assert.Equal(OmnichannelConstants.Channels.Sms, handled.Message.Channel);
@@ -114,81 +111,121 @@ public sealed class AzureEventGridEndpointTests
 
         // Act
         await harness.HandleAsync(context);
-        var handled = await harness.WaitForHandledAsync();
 
         // Assert
+        var handled = Assert.Single(harness.Handled);
         Assert.Equal(_nowUtc, handled.Message.CreatedUtc);
+    }
+
+    // Bug: an inbound text was processed in a discarded background task, so a restart lost it, and redeliveries were
+    // recognised only by an in-memory claim that another node never saw. With an SMS feature on, the text is committed
+    // to the durable provider webhook inbox, keyed on the provider's message id, before Event Grid is answered.
+    [Fact]
+    public async Task HandleAsync_SmsReceived_IsStoredInTheInboxBeforeEventGridIsAnswered()
+    {
+        // Arrange
+        using var harness = new Harness();
+        ProviderWebhookInboxDelivery accepted = null;
+        harness.Inbox
+            .Setup(inbox => inbox.AcceptAsync(It.IsAny<ProviderWebhookInboxDelivery>(), It.IsAny<CancellationToken>()))
+            .Callback((ProviderWebhookInboxDelivery delivery, CancellationToken _) => accepted = delivery)
+            .ReturnsAsync(new ProviderWebhookInboxAcceptanceResult
+            {
+                Status = ProviderWebhookInboxAcceptanceStatus.Accepted,
+                MessageId = "inbox-1",
+            });
+
+        var context = harness.CreateRequestWithInbox(SmsReceivedEvent("msg-1", _nowUtc.AddMinutes(-3)));
+
+        // Act
+        var result = await harness.HandleAsync(context);
+
+        // Assert
+        Assert.IsType<Ok>(result);
+        Assert.NotNull(accepted);
+        Assert.Equal("msg-1", accepted.DeliveryId);
+        Assert.Equal(OmnichannelConstants.WebhookInboxHandlers.SmsReceived, accepted.HandlerName);
+
+        var message = JsonSerializer.Deserialize<OmnichannelMessage>(accepted.Payload);
+        Assert.Equal("msg-1", message.ProviderMessageId);
+        Assert.Equal("Is my appointment still on?", message.Content);
+
+        // The text is processed from the inbox, not inline and not by this request's session.
+        Assert.Empty(harness.Handled);
+        harness.Session.Verify(
+            session => session.SaveAsync(It.IsAny<object>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     // Event Grid delivers at least once. Bug: a redelivered text was stored and answered again.
     [Fact]
-    public async Task ProcessInboundSmsAsync_TheSameMessageIdDeliveredTwice_IsProcessedOnce()
+    public async Task HandleAsync_ARedeliveredText_IsAcknowledgedAndNotProcessedAgain()
     {
         // Arrange
         using var harness = new Harness();
+        harness.Inbox
+            .Setup(inbox => inbox.AcceptAsync(It.IsAny<ProviderWebhookInboxDelivery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProviderWebhookInboxAcceptanceResult
+            {
+                Status = ProviderWebhookInboxAcceptanceStatus.Duplicate,
+                MessageId = "inbox-1",
+            });
+
+        var context = harness.CreateRequestWithInbox(SmsReceivedEvent("msg-1", _nowUtc.AddMinutes(-3)));
 
         // Act
-        await harness.ProcessInboundSmsAsync("msg-1");
-        await harness.ProcessInboundSmsAsync("msg-1");
+        var result = await harness.HandleAsync(context);
 
         // Assert
-        Assert.Single(harness.Handled);
-        harness.Session.Verify(
-            session => session.SaveAsync(It.IsAny<object>(), It.IsAny<bool>(), OmnichannelConstants.CollectionName, It.IsAny<CancellationToken>()),
-            Times.Once);
+        Assert.IsType<Ok>(result);
+        Assert.Empty(harness.Handled);
+        harness.Inbox.Verify(inbox => inbox.DispatchAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         Assert.Contains(harness.Logger.At(LogLevel.Information), message => message.Contains("Ignoring a duplicate Event Grid SMS delivery"));
     }
 
-    // Bug: a concurrency conflict while storing an inbound text lost it, because Event Grid had already been answered
-    // and never redelivers. The text is retried in a fresh scope, and the retry must not mistake its own claim on the
-    // message id for a duplicate delivery.
+    // Bug: a text that could not be stored was lost, because Event Grid had already been answered. Now it is not
+    // answered with success, so Event Grid delivers it again.
     [Fact]
-    public async Task ProcessInboundSmsAsync_AConcurrencyConflictOnTheFirstTwoAttempts_IsRetriedAndProcessedOnce()
+    public async Task HandleAsync_WhenTheInboxCannotStoreTheText_AsksEventGridToDeliverItAgain()
     {
         // Arrange
-        using var harness = new Harness(saveFailure: attempt => attempt <= 2 ? new ConcurrencyException(new Document()) : null);
+        using var harness = new Harness();
+        harness.Inbox
+            .Setup(inbox => inbox.AcceptAsync(It.IsAny<ProviderWebhookInboxDelivery>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("database is gone"));
+
+        var context = harness.CreateRequestWithInbox(SmsReceivedEvent("msg-1", _nowUtc.AddMinutes(-3)));
 
         // Act
-        await harness.ProcessInboundSmsAsync("msg-1");
+        var result = await harness.HandleAsync(context);
 
         // Assert
-        Assert.Single(harness.Handled);
-        Assert.Equal(3, harness.SaveAttempts);
-        Assert.Equal(2, harness.Logger.At(LogLevel.Warning).Count(message => message.Contains("after a concurrency conflict")));
-        Assert.Empty(harness.Logger.At(LogLevel.Error));
+        var status = Assert.IsAssignableFrom<IStatusCodeHttpResult>(result);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, status.StatusCode);
+        Assert.Empty(harness.Handled);
+        Assert.Single(harness.Logger.At(LogLevel.Error), message => message.Contains("could not be stored"));
     }
 
     [Fact]
-    public async Task ProcessInboundSmsAsync_AConcurrencyConflictOnEveryAttempt_GivesUpAfterThreeAndLogsAnError()
+    public async Task HandleAsync_WhenTheInboxIsBusy_AsksEventGridToDeliverItAgain()
     {
         // Arrange
-        using var harness = new Harness(saveFailure: _ => new ConcurrencyException(new Document()));
+        using var harness = new Harness();
+        harness.Inbox
+            .Setup(inbox => inbox.AcceptAsync(It.IsAny<ProviderWebhookInboxDelivery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProviderWebhookInboxAcceptanceResult
+            {
+                Status = ProviderWebhookInboxAcceptanceStatus.Busy,
+            });
+
+        var context = harness.CreateRequestWithInbox(SmsReceivedEvent("msg-1", _nowUtc.AddMinutes(-3)));
 
         // Act
-        await harness.ProcessInboundSmsAsync("msg-1");
+        var result = await harness.HandleAsync(context);
 
         // Assert
-        Assert.Empty(harness.Handled);
-        Assert.Equal(3, harness.SaveAttempts);
-        Assert.Equal(2, harness.Logger.At(LogLevel.Warning).Count());
-        Assert.Single(harness.Logger.At(LogLevel.Error), message => message.Contains("Failed to process the inbound Event Grid SMS"));
-    }
-
-    // Only a concurrency conflict is worth retrying; any other failure is recorded once so the lost text is visible.
-    [Fact]
-    public async Task ProcessInboundSmsAsync_ANonConcurrencyFailure_IsNotRetriedAndLogsAnError()
-    {
-        // Arrange
-        using var harness = new Harness(saveFailure: _ => new InvalidOperationException("database is gone"));
-
-        // Act
-        await harness.ProcessInboundSmsAsync("msg-1");
-
-        // Assert
-        Assert.Empty(harness.Handled);
-        Assert.Equal(1, harness.SaveAttempts);
-        Assert.Empty(harness.Logger.At(LogLevel.Warning));
-        Assert.Single(harness.Logger.At(LogLevel.Error));
+        var status = Assert.IsAssignableFrom<IStatusCodeHttpResult>(result);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, status.StatusCode);
     }
 
     private static string ValidationEvent(string validationCode)
@@ -236,63 +273,82 @@ public sealed class AzureEventGridEndpointTests
 
     private sealed class Harness : IDisposable
     {
-        private readonly ServiceProvider _services;
-        private readonly ShellContext _shellContext;
         private readonly ShellSettings _shellSettings = new() { Name = "TenantA" };
         private readonly Mock<IShellHost> _shellHost = new();
-        private readonly TaskCompletionSource<OmnichannelEvent> _firstHandled = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private readonly Func<int, Exception> _saveFailure;
-        private int _saveAttempts;
+        private readonly RecordingHandler _handler;
+        private readonly List<ServiceProvider> _requestServices = [];
 
-        public Harness(Func<int, Exception> saveFailure = null)
+        public Harness()
         {
-            _saveFailure = saveFailure;
+            _handler = new RecordingHandler(this);
 
             Session
                 .Setup(session => session.SaveAsync(It.IsAny<object>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .Returns(() =>
-                {
-                    var attempt = Interlocked.Increment(ref _saveAttempts);
-                    var failure = _saveFailure?.Invoke(attempt);
-
-                    return failure is null ? Task.CompletedTask : Task.FromException(failure);
-                });
-
-            // The gate ships with Omnichannel management as a tenant singleton; the scoped logger is separate from the
-            // endpoint's own logger, whose entries the tests count.
-            _services = new ServiceCollection()
-                .AddSingleton(Session.Object)
-                .AddSingleton<IOmnichannelEventHandler>(new RecordingHandler(this))
-                .AddSingleton<IAutomatedConversationGate, InMemoryAutomatedConversationGate>()
-                .AddSingleton<ILogger<Startup>>(NullLogger<Startup>.Instance)
-                .BuildServiceProvider();
-
-            _shellContext = new ShellContext
-            {
-                Settings = _shellSettings,
-                ServiceProvider = _services,
-                IsActivated = true,
-            };
-
-            _shellHost
-                .Setup(host => host.GetScopeAsync(It.IsAny<ShellSettings>()))
-                .ReturnsAsync(() => new ShellScope(_shellContext));
+                .Returns(Task.CompletedTask);
         }
 
         public Mock<YesSqlSession> Session { get; } = new();
+
+        public Mock<IProviderWebhookInbox> Inbox { get; } = new();
 
         public RecordingLogger<Startup> Logger { get; } = new();
 
         public List<OmnichannelEvent> Handled { get; } = [];
 
-        public int SaveAttempts => Volatile.Read(ref _saveAttempts);
-
         public static DefaultHttpContext CreateRequest(string body)
+            => CreateRequest(body, new ServiceCollection().AddLogging().BuildServiceProvider());
+
+        /// <summary>
+        /// Creates a request on a tenant with an SMS feature on, which brings the provider webhook inbox and its
+        /// inbound SMS handler.
+        /// </summary>
+        public DefaultHttpContext CreateRequestWithInbox(string body)
+        {
+            var handler = new Mock<IProviderWebhookInboxHandler>();
+            handler.SetupGet(service => service.TechnicalName).Returns(OmnichannelConstants.WebhookInboxHandlers.SmsReceived);
+
+            var services = new ServiceCollection()
+                .AddLogging()
+                .AddSingleton(Inbox.Object)
+                .AddSingleton(handler.Object)
+                .BuildServiceProvider();
+
+            _requestServices.Add(services);
+
+            return CreateRequest(body, services);
+        }
+
+        public Task<IResult> HandleAsync(HttpContext context)
+        {
+            var method = _endpointType.GetMethod("HandleAsync", BindingFlags.NonPublic | BindingFlags.Static);
+
+            return (Task<IResult>)method.Invoke(null,
+            [
+                context,
+                new IOmnichannelEventHandler[] { _handler },
+                Session.Object,
+                new StubClock(_nowUtc),
+                Options.Create(new EventGridOptions { EventGridSasKey = SasKey }),
+                _shellHost.Object,
+                _shellSettings,
+                Logger,
+            ]);
+        }
+
+        public void Dispose()
+        {
+            foreach (var services in _requestServices)
+            {
+                services.Dispose();
+            }
+        }
+
+        private static DefaultHttpContext CreateRequest(string body, IServiceProvider services)
         {
             var bytes = Encoding.UTF8.GetBytes(body);
             var context = new DefaultHttpContext
             {
-                RequestServices = new ServiceCollection().AddLogging().BuildServiceProvider(),
+                RequestServices = services,
             };
 
             context.Request.Method = HttpMethods.Post;
@@ -304,59 +360,6 @@ public sealed class AzureEventGridEndpointTests
 
             return context;
         }
-
-        public Task<IResult> HandleAsync(HttpContext context)
-        {
-            var method = _endpointType.GetMethod("HandleAsync", BindingFlags.NonPublic | BindingFlags.Static);
-
-            return (Task<IResult>)method.Invoke(null,
-            [
-                context,
-                Array.Empty<IOmnichannelEventHandler>(),
-                Session.Object,
-                new StubClock(_nowUtc),
-                Options.Create(new EventGridOptions { EventGridSasKey = SasKey }),
-                _shellHost.Object,
-                _shellSettings,
-                Logger,
-            ]);
-        }
-
-        public Task ProcessInboundSmsAsync(string providerMessageId)
-        {
-            var method = _endpointType.GetMethod("ProcessInboundSmsAsync", BindingFlags.NonPublic | BindingFlags.Static);
-
-            Func<OmnichannelEvent> createEvent = () => new OmnichannelEvent
-            {
-                Id = providerMessageId,
-                EventType = OmnichannelConstants.Events.SmsReceived,
-                Message = new OmnichannelMessage
-                {
-                    Channel = OmnichannelConstants.Channels.Sms,
-                    CustomerAddress = "+15550001111",
-                    ServiceAddress = "+18880002222",
-                    Content = "hi",
-                    IsInbound = true,
-                    ProviderMessageId = providerMessageId,
-                },
-            };
-
-            return (Task)method.Invoke(null,
-            [
-                _shellHost.Object,
-                _shellSettings,
-                createEvent,
-                OmnichannelConstants.Channels.Sms,
-                providerMessageId,
-                Logger,
-            ]);
-        }
-
-        public async Task<OmnichannelEvent> WaitForHandledAsync()
-            => await _firstHandled.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
-
-        public void Dispose()
-            => _services.Dispose();
 
         private sealed class RecordingHandler : IOmnichannelEventHandler
         {
@@ -373,8 +376,6 @@ public sealed class AzureEventGridEndpointTests
                 {
                     _harness.Handled.Add(omnichannelEvent);
                 }
-
-                _harness._firstHandled.TrySetResult(omnichannelEvent);
 
                 return Task.CompletedTask;
             }

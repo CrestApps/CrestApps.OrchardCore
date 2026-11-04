@@ -1,9 +1,11 @@
-﻿using CrestApps.OrchardCore.ContactCenter.Core.Models;
+﻿using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Twilio;
 using CrestApps.OrchardCore.Omnichannel.Sms.BackgroundTasks;
 using CrestApps.OrchardCore.Omnichannel.Sms.Drivers;
@@ -37,6 +39,11 @@ public sealed class Startup : StartupBase
 
         services.AddContactMethods();
         services.AddScoped<IOmnichannelEventHandler, SmsOmnichannelEventHandler>();
+
+        // Every SMS webhook commits an inbound text to the durable provider webhook inbox and this handler processes it
+        // from there. The SMS Messaging Channel registers the same handler, so TryAddEnumerable keeps one: two handlers
+        // with one technical name would stop the inbox from starting.
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProviderWebhookInboxHandler, SmsInboundInboxHandler>());
 
         // Asked before any text goes out, so a stop said on any record that holds the number is honoured here too.
         services.TryAddScoped<IContactOptOutResolver, ContactOptOutResolver>();

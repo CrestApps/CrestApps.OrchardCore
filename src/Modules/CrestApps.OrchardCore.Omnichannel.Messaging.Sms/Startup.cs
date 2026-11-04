@@ -66,7 +66,7 @@ public sealed class Startup : StartupBase
 
         // Inbound SMS is committed to the durable provider webhook inbox before it is processed, keyed on the
         // provider's own message id, so a redelivered text is absorbed rather than stored and answered twice.
-        services.AddScoped<IProviderWebhookInboxHandler, SmsInboundInboxHandler>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProviderWebhookInboxHandler, SmsInboundInboxHandler>());
 
         // The carrier keywords a contact can text (STOP, START, HELP) and the replies they are owed.
         services.Configure<SmsKeywordReplySettings>(_shellConfiguration.GetSection("CrestApps:Omnichannel:Messaging:Sms:KeywordReplies"));

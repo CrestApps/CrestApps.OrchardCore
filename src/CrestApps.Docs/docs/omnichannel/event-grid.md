@@ -134,7 +134,7 @@ For an Azure Communication Services inbound text, the event data maps onto the i
 | `messageId` | Provider message id (the Event Grid event id when `messageId` is missing) |
 | `receivedTimestamp` | Created time (the server time when the timestamp is missing or ahead of the server clock) |
 
-The endpoint answers Event Grid at once and processes the text in the background, because an automated reply can take longer than the 30 seconds Event Grid waits for a response. Event Grid delivers at least once, so a redelivery of the same `messageId` is ignored rather than stored and answered a second time.
+When an SMS feature is on ([SMS Omnichannel Automation](sms.md) or the [SMS Messaging Channel](messaging-workspace.md#setting-up-sms)), the endpoint commits the text to the durable provider webhook inbox, keyed on the `messageId`, before it answers Event Grid, and starts processing it as soon as the response is sent, because an automated reply can take longer than the 30 seconds Event Grid waits for a response. A text whose processing does not complete is finished from storage by the **Contact Center Provider Webhook Inbox Dispatch** background task, so a restart does not lose it. Event Grid delivers at least once, so a redelivery of the same `messageId` is recognized on every node and is not stored or answered a second time. When the text cannot be stored, the endpoint answers `503 Service Unavailable` and Event Grid delivers the batch again. With no SMS feature on, nothing composes a reply, so the text is stored and passed to the event handlers inline, like any other event.
 
 A text without a `from` or `to` number cannot be matched to a channel endpoint. It is stored with its raw event type, like an unmapped event, and a warning is logged.
 
@@ -157,8 +157,8 @@ The endpoint logs one line for each event it receives, with the event type and t
 
 - **Information:** the event was mapped to the `SMS` channel and the `SmsReceived` event, with the provider message id and the message length.
 - **Information:** the event is a delivery report, with its status, and it is stored but not routed.
-- **Information:** a redelivery of a text that was already processed was ignored.
-- **Warning:** storing an inbound text hit a concurrency conflict and is retried (up to three attempts in total). An **Error** is logged only when every attempt fails, or on any other failure.
+- **Information:** a redelivery of a text that was already stored was ignored.
+- **Error:** an inbound text could not be stored in the provider webhook inbox; Event Grid is asked to deliver it again.
 - **Warning:** a recognized event could not be mapped, and why.
 - **Debug:** the event type has no mapping.
 

@@ -19,7 +19,7 @@ public sealed class SmsInboundInboxHandler : IProviderWebhookInboxHandler
     /// <summary>
     /// The stable handler technical name persisted with normalized inbound SMS payloads.
     /// </summary>
-    public const string HandlerTechnicalName = "sms-inbound";
+    public const string HandlerTechnicalName = OmnichannelConstants.WebhookInboxHandlers.SmsReceived;
 
     private readonly IEnumerable<IOmnichannelEventHandler> _eventHandlers;
     private readonly ISession _session;

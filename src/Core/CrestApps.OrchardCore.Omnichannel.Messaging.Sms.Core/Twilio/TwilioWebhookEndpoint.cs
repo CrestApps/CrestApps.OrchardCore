@@ -1,7 +1,11 @@
+using System.Text.Json;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Core.Http;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
@@ -14,14 +18,14 @@ using OrchardCore.Modules;
 using OrchardCore.Settings;
 using OrchardCore.Sms.Models;
 using OrchardCore.Sms.Services;
-using YesSqlSession = YesSql.ISession;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Twilio;
 
 /// <summary>
 /// The Twilio inbound-SMS webhook. Twilio POSTs an <c>application/x-www-form-urlencoded</c> body signed with an
 /// <c>X-Twilio-Signature</c> HMAC over the request URL and parameters; this endpoint verifies that signature,
-/// then raises an inbound <see cref="OmnichannelEvent"/> so the SMS is routed like any other channel event.
+/// then commits the text to the durable provider webhook inbox, which raises the inbound SMS event from storage.
 /// </summary>
 internal static class TwilioWebhookEndpoint
 {
@@ -97,7 +101,6 @@ internal static class TwilioWebhookEndpoint
         var to = form["To"].ToString();
         var body = form["Body"].ToString();
         var messageSid = form["MessageSid"].ToString();
-        var channel = "SMS";
 
         if (logger.IsEnabled(LogLevel.Information))
         {
@@ -111,99 +114,121 @@ internal static class TwilioWebhookEndpoint
             CustomerAddress = from,
             ServiceAddress = to,
             Content = body,
-            Channel = channel,
+            Channel = OmnichannelConstants.Channels.Sms,
             CreatedUtc = clock.UtcNow,
             IsInbound = true,
             MediaReferences = ReadMediaUrls(form),
+
+            // Twilio's MessageSid stays the same on every redelivery, so it is the idempotency key of the durable inbox.
+            ProviderMessageId = messageSid,
         };
 
-        var omnichannelEvent = new OmnichannelEvent()
+        return await AcceptInboundAsync(context, omnichannelMessage, shellHost, shellSettings, logger);
+    }
+
+    /// <summary>
+    /// Commits an authenticated inbound text to the durable provider webhook inbox, keyed on Twilio's MessageSid,
+    /// before Twilio is answered, and then starts processing it once the response is sent.
+    /// </summary>
+    /// <remarks>
+    /// Generating the automated reply (a humanized settle pause, the AI completion and a "typing" delay) takes tens
+    /// of seconds, well past Twilio's ~15s delivery timeout, so the text is not processed inline. It is not processed
+    /// in a discarded background task either: that lost the text on a restart and relied on an in-memory claim to
+    /// recognise a redelivery, which another node never saw. The inbox stores the delivery before the answer, absorbs
+    /// a redelivery of the same MessageSid on any node, and retries processing from storage when it fails part-way.
+    /// </remarks>
+    /// <param name="context">The current request.</param>
+    /// <param name="message">The parsed inbound text, with its provider message id set.</param>
+    /// <param name="shellHost">The shell host used to process the text after the response.</param>
+    /// <param name="shellSettings">The current tenant's settings.</param>
+    /// <param name="logger">The logger.</param>
+    internal static async Task<IResult> AcceptInboundAsync(
+        HttpContext context,
+        OmnichannelMessage message,
+        IShellHost shellHost,
+        ShellSettings shellSettings,
+        ILogger logger)
+    {
+        if (string.IsNullOrEmpty(message.ProviderMessageId))
         {
-            Id = messageSid,
-            EventType = OmnichannelConstants.Events.SmsReceived,
-            Subject = $"SMS from {from}",
-            Data = BinaryData.FromString(body),
-            Message = omnichannelMessage,
-        };
+            logger.LogWarning("Rejected a Twilio inbound-SMS webhook that carried no MessageSid.");
 
-        // Twilio's MessageSid travels with the message, so a redelivery is recognisable downstream: the inbound
-        // processor's per-thread lock and the unique index on the number pair mean a retry appends to the one
-        // thread rather than creating a second, and the messaging workspace skips a MessageSid it already recorded.
-        // Routing this endpoint through the durable provider webhook inbox (as the Telnyx SMS webhook does) would
-        // additionally retry processing that fails part-way, but that inbox contract lives in Contact Center, and
-        // this module is deliberately free of a Contact Center reference.
-        omnichannelMessage.ProviderMessageId = messageSid;
+            return TypedResults.BadRequest();
+        }
 
-        // Generating the automated reply — a humanized settle pause, the AI completion and a "typing" delay — takes
-        // tens of seconds. Running it inline would hold this webhook open well past Twilio's ~15s delivery timeout, so
-        // Twilio would mark the delivery failed and RETRY it; the retries then race the original (and each other) for
-        // the same conversation, producing SQLite "database is locked" and optimistic-concurrency failures and, to the
-        // customer, mistimed or duplicate replies. Instead, acknowledge immediately and process the event in a fresh
-        // shell scope off the request thread. The audit-record save is done there too, so THIS request performs no
-        // database writes and cannot itself stall on write contention and return a 500 that Twilio would then retry.
-        // The per-conversation lock and the single-active-generation registry in the handler still guarantee one
-        // consolidated reply when several messages arrive close together.
-        var backgroundScope = await shellHost.GetScopeAsync(shellSettings);
+        var inbox = context.RequestServices.GetService<IProviderWebhookInbox>();
 
-        _ = backgroundScope.UsingAsync(async scope =>
+        if (inbox is null)
         {
-            var scopedSession = scope.ServiceProvider.GetRequiredService<YesSqlSession>();
-            var scopedHandlers = scope.ServiceProvider.GetServices<IOmnichannelEventHandler>();
-            var scopedLogger = scope.ServiceProvider.GetRequiredService<ILogger<TwilioSmsWebhook>>();
+            // Every feature that maps this route depends on the provider webhook inbox, so this is a broken
+            // registration. Asking Twilio to send the text again is better than dropping it.
+            logger.LogError("The provider webhook inbox is not registered, so the inbound Twilio SMS {MessageSid} could not be stored.", message.ProviderMessageId.SanitizeLogValue());
 
-            // Tag every log line produced while this inbound message is processed with its identifiers, so a single
-            // customer's exchange can be followed end to end even when many conversations are interleaved in the log.
-            using var logScope = scopedLogger.BeginScope(new Dictionary<string, object>
+            return TypedResults.StatusCode(StatusCodes.Status503ServiceUnavailable);
+        }
+
+        ProviderWebhookInboxAcceptanceResult acceptance;
+
+        try
+        {
+            acceptance = await inbox.AcceptAsync(
+                new ProviderWebhookInboxDelivery
+                {
+                    ProviderName = TwilioSmsProvider.TechnicalName,
+                    DeliveryId = message.ProviderMessageId,
+                    HandlerName = SmsInboundInboxHandler.HandlerTechnicalName,
+                    Payload = JsonSerializer.Serialize(message),
+                },
+                context.RequestAborted);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // Nothing was stored, so nothing picks this up later: this is the one case where Twilio must redeliver.
+            logger.LogError(exception, "The inbound Twilio SMS {MessageSid} could not be stored in the provider webhook inbox.", message.ProviderMessageId.SanitizeLogValue());
+
+            return TypedResults.StatusCode(StatusCodes.Status503ServiceUnavailable);
+        }
+
+        if (acceptance.Status == ProviderWebhookInboxAcceptanceStatus.Duplicate)
+        {
+            if (logger.IsEnabled(LogLevel.Information))
             {
-                ["MessageSid"] = messageSid.SanitizeLogValue(),
-                ["Channel"] = channel,
-            });
-
-            try
-            {
-                // Twilio guarantees at-least-once delivery and retries on a slow or failed ack, so the same
-                // MessageSid can arrive more than once. Claim it exactly once here — before the message is stored
-                // or any handler runs — so a redelivery is neither recorded a second time nor answered again. The
-                // gate is the single-active-reply owner for the conversation, which is the right place for this.
-                // The gate ships with SMS automation. A tenant that only runs the messaging workspace has none, and
-                // there the workspace's inbound pipeline recognises a redelivered MessageSid and records it once.
-                var conversationGate = scope.ServiceProvider.GetService<IAutomatedConversationGate>();
-
-                if (conversationGate is null && scopedLogger.IsEnabled(LogLevel.Debug))
-                {
-                    scopedLogger.LogDebug("No automated conversation gate is registered, so the inbound Twilio SMS {MessageSid} is handed to the event handlers without a redelivery claim.", messageSid.SanitizeLogValue());
-                }
-
-                if (conversationGate is not null && !conversationGate.TryClaimInboundMessage(messageSid))
-                {
-                    if (scopedLogger.IsEnabled(LogLevel.Information))
-                    {
-                        scopedLogger.LogInformation("Ignoring a duplicate inbound Twilio SMS delivery for MessageSid {MessageSid}.", messageSid.SanitizeLogValue());
-                    }
-
-                    return;
-                }
-
-                await scopedSession.SaveAsync(omnichannelMessage, collection: OmnichannelConstants.CollectionName);
-
-                // Which features receive the text decides where it shows up (the workspace, automation or both), so
-                // the handler count separates "the webhook never fired" from "nothing was enabled to take it".
-                if (scopedLogger.IsEnabled(LogLevel.Debug))
-                {
-                    scopedLogger.LogDebug("Handing the inbound Twilio SMS {MessageSid} to {HandlerCount} Omnichannel event handler(s).", messageSid.SanitizeLogValue(), scopedHandlers.Count());
-                }
-
-                await scopedHandlers.InvokeAsync((handler, evt) => handler.HandleAsync(evt), omnichannelEvent, scopedLogger);
+                logger.LogInformation("Ignoring a duplicate inbound Twilio SMS delivery for MessageSid {MessageSid}.", message.ProviderMessageId.SanitizeLogValue());
             }
-            catch (Exception ex)
-            {
-                scopedLogger.LogError(ex, "Failed to process inbound SMS event {MessageSid} in the background.", messageSid.SanitizeLogValue());
-            }
-        });
 
-        // Return empty 200 OK to Twilio immediately.
+            return TypedResults.Ok();
+        }
+
+        if (acceptance.Status != ProviderWebhookInboxAcceptanceStatus.Accepted)
+        {
+            // Busy: the delivery was not stored, so Twilio has to send it again.
+            return TypedResults.StatusCode(StatusCodes.Status503ServiceUnavailable);
+        }
+
+        var messageId = acceptance.MessageId;
+
+        AfterResponseWork.Schedule(
+            context,
+            shellHost,
+            shellSettings,
+            scope => DispatchAsync(scope, messageId),
+            logger);
 
         return TypedResults.Ok();
+    }
+
+    private static async Task DispatchAsync(ShellScope scope, string messageId)
+    {
+        var inbox = scope.ServiceProvider.GetRequiredService<IProviderWebhookInbox>();
+
+        try
+        {
+            await inbox.DispatchAsync(messageId);
+        }
+        catch (ConcurrencyException)
+        {
+            // Another node claimed the same delivery. The inbox retries it from storage.
+        }
     }
 
     // A picture message (MMS) lists its media as NumMedia plus MediaUrl0..MediaUrlN-1. The messaging workspace copies
