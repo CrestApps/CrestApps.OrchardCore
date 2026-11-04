@@ -70,7 +70,6 @@ public sealed class DuplicatePatternRatchetTests
             ["src/Core/CrestApps.OrchardCore.AI.Core/Conversations/AIConversationTurnNotifier.cs"] = 1,
             ["src/Core/CrestApps.OrchardCore.Core/Services/GuestSessionTokenManager.cs"] = 1,
             ["src/Core/CrestApps.OrchardCore.DataConnectors.Core/Http/DataConnectorHttpClient.cs"] = 1,
-            ["src/Core/CrestApps.OrchardCore.Omnichannel.Core/Services/InMemoryAutomatedConversationGate.cs"] = 1,
             ["src/Core/CrestApps.OrchardCore.Omnichannel.Voice.Core/Services/AIVoiceSessionMeter.cs"] = 1,
             ["src/Core/CrestApps.OrchardCore.Omnichannel.Voice.Core/Services/RealtimeVoiceConversationRunner.BargeIn.cs"] = 1,
             ["src/Core/CrestApps.OrchardCore.Omnichannel.Voice.Core/Services/RealtimeVoiceConversationRunner.cs"] = 7,
@@ -109,9 +108,6 @@ public sealed class DuplicatePatternRatchetTests
         },
         ["private FixedTimeEquals"] = new(StringComparer.OrdinalIgnoreCase)
         {
-            ["src/Modules/CrestApps.OrchardCore.AI.A2A/Handlers/A2AApiKeyAuthenticationHandler.cs"] = 1,
-            ["src/Modules/CrestApps.OrchardCore.AI.Mcp/Handlers/McpApiKeyAuthenticationHandler.cs"] = 1,
-            ["src/Modules/CrestApps.OrchardCore.Omnichannel.EventGrid/Endpoints/AzureEventGridEndpoint.cs"] = 1,
             ["src/Modules/CrestApps.OrchardCore.TenantHierarchy/Controllers/DelegatedEntryController.cs"] = 1,
         },
     };
