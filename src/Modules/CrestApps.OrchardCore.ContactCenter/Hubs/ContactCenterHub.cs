@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.SignalR.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Security.Permissions;
@@ -29,6 +30,7 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
     private readonly IContactCenterFeatureWorkManager _workManager;
     private readonly ContactCenterHubConnectionRegistry _connectionRegistry;
     private readonly string _tenantName;
+    private readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterHub"/> class.
@@ -38,18 +40,21 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
     /// <param name="workManager">The feature work manager.</param>
     /// <param name="connectionRegistry">The tenant-local hub connection registry.</param>
     /// <param name="shellSettings">The current Orchard shell settings.</param>
+    /// <param name="stringLocalizer">The localizer for the errors shown to agents.</param>
     public ContactCenterHub(
         ILogger<ContactCenterHub> logger,
         IContactCenterScopeExecutor scopeExecutor,
         IContactCenterFeatureWorkManager workManager,
         ContactCenterHubConnectionRegistry connectionRegistry,
-        ShellSettings shellSettings)
+        ShellSettings shellSettings,
+        IStringLocalizer<ContactCenterHub> stringLocalizer)
     {
         _logger = logger;
         _scopeExecutor = scopeExecutor;
         _workManager = workManager;
         _connectionRegistry = connectionRegistry;
         _tenantName = shellSettings.Name;
+        S = stringLocalizer;
     }
 
     /// <summary>
@@ -380,7 +385,7 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
 
             if (normalizedQueueIds.Count == 0 && normalizedCampaignIds.Count == 0)
             {
-                throw new HubException("Select at least one queue or campaign before signing in.");
+                throw new HubException(S["Select at least one queue or campaign before signing in."].Value);
             }
 
             try
@@ -448,7 +453,7 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
 
             if (normalizedQueueIds.Count == 0 && normalizedCampaignIds.Count == 0)
             {
-                throw new HubException("Use sign out to leave the final queue or campaign.");
+                throw new HubException(S["Use sign out to leave the final queue or campaign."].Value);
             }
 
             AgentProfile profile;
@@ -468,7 +473,7 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
 
             if (profile is null)
             {
-                throw new HubException("Sign in before changing queue or campaign memberships.");
+                throw new HubException(S["Sign in before changing queue or campaign memberships."].Value);
             }
 
             snapshot = await services.SessionService.BuildSnapshotAsync(userId, HubConnectionWork.MustComplete);
@@ -589,7 +594,7 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
 
         if (string.IsNullOrEmpty(userId))
         {
-            throw new HubException("The current connection is not associated with an authenticated Contact Center user.");
+            throw new HubException(S["The current connection is not associated with an authenticated Contact Center user."].Value);
         }
 
         return userId;
@@ -601,7 +606,7 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
     {
         if (!await AuthorizeAsync(services, permission))
         {
-            throw new HubException($"The current user is not authorized for '{permission.Name}'.");
+            throw new HubException(S["The current user is not authorized for '{0}'.", permission.Name].Value);
         }
     }
 
