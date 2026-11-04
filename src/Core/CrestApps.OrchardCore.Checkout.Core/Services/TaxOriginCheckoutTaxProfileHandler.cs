@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Commerce.Stores;
 using CrestApps.OrchardCore.Taxation.Models;
 using OrchardCore.Settings;
 
@@ -20,6 +21,8 @@ public sealed class TaxOriginCheckoutTaxProfileHandler : ICheckoutTaxProfileHand
     {
         ArgumentNullException.ThrowIfNull(profile);
 
-        profile.Origin ??= (await _siteService.GetSettingsAsync<TaxOriginSettings>()).Origin;
+        // The tax origin settings, or the store's address when they're empty.
+        profile.Origin ??= (await _siteService.GetSettingsAsync<TaxOriginSettings>()).Origin
+            ?? (await _siteService.GetStoreProfileAsync()).Address;
     }
 }

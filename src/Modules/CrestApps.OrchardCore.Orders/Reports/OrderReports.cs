@@ -1,4 +1,5 @@
 using System.Globalization;
+using CrestApps.OrchardCore.Commerce.Stores;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Models;
@@ -447,7 +448,8 @@ public sealed class OrderVatOssReport : OrderReportBase, IReport
     {
         var (from, to) = GetPeriod(context);
         var orders = await ReadPaidAsync(from, to, cancellationToken);
-        var origin = (await _siteService.GetSettingsAsync<CrestApps.OrchardCore.Taxation.Models.TaxOriginSettings>()).Origin?.Country;
+        var origin = (await _siteService.GetSettingsAsync<CrestApps.OrchardCore.Taxation.Models.TaxOriginSettings>()).Origin?.Country
+            ?? (await _siteService.GetStoreProfileAsync()).Address?.Country;
         var document = new ReportDocument { Title = DisplayName.Value };
         var rows = OrderVatOss.Summarize(orders, origin);
 

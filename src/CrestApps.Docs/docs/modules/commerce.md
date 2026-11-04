@@ -252,6 +252,27 @@ Commerce is a composition shell, not a domain:
 - It owns none of the order, payment, tax, receipt or report data models. Those belong to their domain modules.
 - Reusable domain commands live in their owning module; Commerce only composes them.
 
+## Store profile
+
+| | |
+| --- | --- |
+| **Feature Name** | Store Profile |
+| **Feature ID** | `CrestApps.OrchardCore.Commerce.StoreProfile` (`CommerceConstants.Features.StoreProfile`) |
+| **Category** | Commerce |
+| **Depends on** | Commerce, Addresses |
+
+**Settings > Commerce > Store** (`Admin/Settings/store-profile`, the **Manage the store profile** permission, granted to administrators and store managers; module `CrestApps.OrchardCore.Commerce.StoreProfile`) keeps who the store is in one place: its name (the site's name when empty), logo, tax ID, e-mail, phone (kept in E.164 form when it parses) and address (the Addresses module's editor, laid out for the address's country). The settings are `StoreProfileSettings` (Commerce.Abstractions, namespace `CrestApps.OrchardCore.Commerce.Stores`), exported by the **Store profile** deployment step and imported by Orchard Core's Settings recipe step. The online store recipe enables the feature.
+
+Other settings fall back to the profile when they're empty, and keep winning when they're set:
+
+| Setting | Falls back to |
+| --- | --- |
+| Receipts: business name, logo, address, contact e-mail and phone | The profile's name, logo, address (on one line, as its country writes it), e-mail and phone |
+| Shipping: ship-from address (carrier rates and labels) | The profile's address |
+| Taxation: tax origin (checkout taxes and the VAT OSS report) | The profile's address |
+
+The fallback reads the settings themselves (`ISiteService.GetStoreProfileAsync()`), so it works whether or not the Store Profile feature is on. `IStoreLocationService` (Commerce.Core, registered with `services.AddStoreLocations()`) returns the profile (`GetProfileAsync`, with the name falling back to the site's name), the store's address (`GetAddressAsync`, `GetAddressTextAsync`) and every place the store works from (`ListLocationsAsync`): its own address as `store`, then the `NamedAddress`es (Addresses.Abstractions) each `IStoreLocationSource` adds. Inventory stock locations, Shipping pickup locations and point of sale registers keep their own location records for now; each can add its places with an `IStoreLocationSource`.
+
 ## Theming the storefront
 
 Every storefront page renders through a named shape, so a theme changes any of them with a Razor (`.cshtml`) or Liquid (`.liquid`) template of that name in its `Views` folder, or from the admin with Orchard Core's **Templates** feature, without replacing a controller view. The controller views are thin frames: the breadcrumb, the page heading and, on account pages, the account menu, around the page's shape. A test fails the build when a storefront controller renders a page outside a shape.

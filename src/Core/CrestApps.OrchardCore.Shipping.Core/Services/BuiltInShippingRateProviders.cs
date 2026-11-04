@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Commerce.Stores;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Shipping.Models;
 using Microsoft.Extensions.Caching.Memory;
@@ -185,14 +186,17 @@ public sealed class CarrierShippingRateProvider : IShippingRateProvider
         var shipping = await _siteService.GetSettingsAsync<ShippingSettings>();
         var carrier = await _carriers.GetDefaultAsync();
 
-        if (carrier is null || shipping.ShipFrom is null || context.Request.Destination is null)
+        // The shipping settings' ship-from address, or the store's address when it's empty.
+        var shipFrom = shipping.ShipFrom ?? (await _siteService.GetStoreProfileAsync()).Address;
+
+        if (carrier is null || shipFrom is null || context.Request.Destination is null)
         {
             return Fallback(context, settings);
         }
 
         var request = new CarrierShipmentRequest
         {
-            From = shipping.ShipFrom,
+            From = shipFrom,
             To = context.Request.Destination,
             Parcel = new CarrierParcel
             {

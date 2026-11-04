@@ -60,6 +60,7 @@
         "CrestApps.OrchardCore.Customers",
         "CrestApps.OrchardCore.Transactions",
         "CrestApps.OrchardCore.Receipts",
+        "CrestApps.OrchardCore.Commerce.StoreProfile",
         "CrestApps.OrchardCore.Inventory",
         "CrestApps.OrchardCore.Shipping",
         "CrestApps.OrchardCore.Taxation",

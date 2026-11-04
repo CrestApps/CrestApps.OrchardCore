@@ -30,10 +30,13 @@ public sealed class ProjectReferenceRulesTests
     ];
 
     // Neutral contracts that share a forbidden prefix: the API's shared shapes (money, paging, problems, idempotency)
-    // depend only on abstractions, so the foundation and reusable modules may map their endpoints with them.
+    // depend only on abstractions, so the foundation and reusable modules may map their endpoints with them; the
+    // commerce building blocks (e-mail templates, store profile and places) depend only on abstractions too.
     private static readonly string[] _neutralReferences =
     [
         "CrestApps.OrchardCore.Commerce.Api.Core",
+        "CrestApps.OrchardCore.Commerce.Abstractions",
+        "CrestApps.OrchardCore.Commerce.Core",
     ];
 
     // Reusable, purchase-agnostic modules that other commerce modules build on. Like the foundation
