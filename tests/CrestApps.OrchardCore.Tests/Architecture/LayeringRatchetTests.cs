@@ -47,6 +47,14 @@ public sealed class LayeringRatchetTests
         "CrestApps.OrchardCore.AI.Mcp -> CrestApps.OrchardCore.AI",
         "CrestApps.OrchardCore.AI.Memory.AzureAI -> CrestApps.OrchardCore.AI.Memory",
         "CrestApps.OrchardCore.AI.WebMcp -> CrestApps.OrchardCore.AI",
+
+        // These existed when the ratchet was set but were not seen until every module was built for the scan.
+        "CrestApps.OrchardCore.AI.Memory.Elasticsearch -> CrestApps.OrchardCore.AI.Memory",
+
+        // The local file stores the Azure storage modules fall back to; the tenant file store (audit P2) replaces them.
+        "CrestApps.OrchardCore.DncRegistry.Azure -> CrestApps.OrchardCore.DncRegistry",
+        "CrestApps.OrchardCore.Omnichannel.Messaging.Azure -> CrestApps.OrchardCore.Omnichannel.Messaging",
+        "CrestApps.OrchardCore.Telephony.Azure -> CrestApps.OrchardCore.Telephony",
     };
 
     private static readonly Lazy<List<ModuleUse>> _moduleUses = new(ReadModuleUses);
@@ -106,6 +114,24 @@ public sealed class LayeringRatchetTests
     }
 
     [Fact]
+    public void EveryModuleAssembly_IsBuiltForTheScan()
+    {
+        // Arrange
+        var modules = ModuleNames();
+
+        // Act
+        var missing = modules
+            .Where(module => FindModuleAssembly(module) is null)
+            .ToList();
+
+        // Assert
+        Assert.True(missing.Count == 0, BuildMessage(
+            "These modules were not built, so their use of other modules cannot be checked. The test project builds every " +
+            "module it does not reference (see _LayeringModuleProject in its project file); build it again, or the solution:",
+            missing));
+    }
+
+    [Fact]
     public void EveryKnownModuleUse_StillOccurs()
     {
         // Arrange
@@ -116,8 +142,8 @@ public sealed class LayeringRatchetTests
         var read = ReadableModuleAssemblies();
 
         // Act
-        // A module that is not built in this run cannot be checked, so only a module whose assembly was read can prove
-        // that an entry is stale.
+        // Only a module whose assembly was read can prove that an entry is stale; EveryModuleAssembly_IsBuiltForTheScan
+        // fails when one is missing.
         var stale = _knownModuleUses
             .Where(reference => read.Contains(reference[..reference.IndexOf(" -> ", StringComparison.Ordinal)]) && !actual.Contains(reference))
             .ToList();
@@ -251,7 +277,7 @@ public sealed class LayeringRatchetTests
     }
 
     // The test project copies the modules it references next to itself; a module it does not reference is read from its
-    // own build output, when it was built in the same configuration.
+    // own build output. The test project builds those too, in the same configuration, without referencing them.
     private static string FindModuleAssembly(string module)
     {
         var baseDirectory = AppContext.BaseDirectory;

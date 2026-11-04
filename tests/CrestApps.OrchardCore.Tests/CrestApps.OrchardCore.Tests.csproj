@@ -192,4 +192,14 @@
     <Folder Include="Modules\SignalR\" />
   </ItemGroup>
 
+  <!--
+    LayeringRatchetTests reads every module assembly. Build the modules this project does not reference too, without
+    referencing them, so each one is in its own bin folder whenever the tests are built, here and in CI.
+  -->
+  <ItemGroup>
+    <_LayeringModuleProject Include="../../src/Modules/**/*.csproj" Exclude="../../src/Modules/**/bin/**;../../src/Modules/**/obj/**" />
+    <_LayeringModuleProject Remove="@(ProjectReference)" MatchOnMetadata="Filename" />
+    <ProjectReference Include="@(_LayeringModuleProject)" ReferenceOutputAssembly="false" Private="false" SkipGetTargetFrameworkProperties="true" />
+  </ItemGroup>
+
 </Project>
