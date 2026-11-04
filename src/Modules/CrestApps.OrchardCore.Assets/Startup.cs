@@ -6,10 +6,11 @@ using CrestApps.OrchardCore.Assets.Fleet;
 using CrestApps.OrchardCore.Assets.Migrations;
 using CrestApps.OrchardCore.Assets.Navigation;
 using CrestApps.OrchardCore.Assets.Owners;
-using CrestApps.OrchardCore.Assets.Services;
 using CrestApps.OrchardCore.Assets.ViewModels;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.Users.Core;
+using CrestApps.OrchardCore.Users.Core.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -55,7 +56,7 @@ public sealed class Startup : StartupBase
 }
 
 /// <summary>
-/// Lets users, the customers of the store, own assets.
+/// Lets users, the customers of the store, own assets: users are a party source (owner kind Customer, party kind User).
 /// </summary>
 [RequireFeatures("OrchardCore.Users")]
 public sealed class CustomerOwnersStartup : StartupBase
@@ -64,7 +65,7 @@ public sealed class CustomerOwnersStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddUserSearchService();
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAssetOwnerSource, CustomerAssetOwnerSource>());
+        services.AddPartySource<UserPartySource>();
     }
 }
 
@@ -78,7 +79,7 @@ public sealed class ContactOwnersStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.TryAddScoped<IOmnichannelContactTypeProvider, ContentDefinitionOmnichannelContactTypeProvider>();
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAssetOwnerSource, ContactAssetOwnerSource>());
+        services.AddPartySource<ContactPartySource>();
         services.AddScoped<IContentDisplayDriver, ContactAssetsDisplayDriver>();
     }
 }
@@ -112,7 +113,7 @@ public sealed class FleetInventoryStartup : StartupBase
 }
 
 /// <summary>
-/// Lets accounts, the organizations of the Accounts module, own assets, and shows an account's assets on its page.
+/// Shows an account's assets on its page. Accounts own assets through the party source the Accounts module registers.
 /// </summary>
 [RequireFeatures(AccountsConstants.Feature)]
 public sealed class AccountOwnersStartup : StartupBase
@@ -120,7 +121,6 @@ public sealed class AccountOwnersStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAssetOwnerSource, AccountAssetOwnerSource>());
         services.AddScoped<IContentDisplayDriver, AccountAssetsDisplayDriver>();
     }
 }

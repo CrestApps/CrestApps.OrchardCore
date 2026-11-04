@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Accounts;
 using CrestApps.OrchardCore.BusinessHours.Core;
 using CrestApps.OrchardCore.Geo.Services;
+using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.WorkOrders.BackgroundTasks;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
@@ -33,6 +34,7 @@ public sealed class Startup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddPartyDirectory();
         services.AddScoped<Integrations.WorkOrderCustomers>();
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(WorkOrdersConstants.CollectionName));
         services.AddWorkOrdersCore();

@@ -38,4 +38,11 @@ namespace CrestApps.OrchardCore.Accounts.Services
         public System.Threading.Tasks.Task<OrchardCore.ContentManagement.ContentItem> FindAccountAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<string> FindOtherAccountIdAsync(string userId, string exceptAccountId, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class AccountPartySource : CrestApps.OrchardCore.Parties.Services.IPartySource
+    {
+        public AccountPartySource(YesSql.ISession session, CrestApps.OrchardCore.Accounts.Services.IAccountContentTypeProvider accountTypes) { }
+        public string Kind { get; }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<string, string>> GetNamesAsync(System.Collections.Generic.IReadOnlyCollection<string> ids, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Parties.Models.PartyOption>> SearchAsync(string query, int count, System.Threading.CancellationToken cancellationToken = default) { }
+    }
 }

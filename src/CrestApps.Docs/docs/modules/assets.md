@@ -29,13 +29,13 @@ All live in the `Assets` YesSql collection.
 
 ## Owners
 
-An asset is owned by the business, or by a customer, an account (of the Accounts module) or a CRM contact, picked in the editor by name. Each kind of owner comes from an `IAssetOwnerSource` (`Kind`, `SearchAsync`, `GetNamesAsync`), and only the kinds with a source can be chosen:
+An asset is owned by the business, or by a customer, an account (of the Accounts module) or a CRM contact, picked in the editor by name. Each kind of owner is read from the shared [parties](./parties.md): an `IPartySource` (`Kind`, `SearchAsync`, `GetNamesAsync`) of the party kind the owner kind maps to (`AssetOwners.ToPartyKind`), and only the kinds with a source can be chosen. The stored `OwnerKind` and `OwnerId` are unchanged; `asset.ToParty()` reads them as a `PartyRef`:
 
-| Kind | Source | Comes with |
+| Owner kind | Party kind and source | Comes with |
 | --- | --- | --- |
-| Customer | Users, by user name or email | `OrchardCore.Users` |
-| Account | The account types of `IAccountContentTypeProvider`, by display text; the editor's picker uses the Accounts search | Accounts (`CrestApps.OrchardCore.Accounts`) |
-| Contact | Content items with the Omnichannel Contact part, by display text | Omnichannel Management |
+| Customer | `User` (the owner id is a user id): `UserPartySource`, by user name or email | `OrchardCore.Users` (registered by Assets) or the CrestApps Users module |
+| Account | `Account`: `AccountPartySource`, the account types of `IAccountContentTypeProvider`, by display text; the editor's picker uses the Accounts search | Accounts (`CrestApps.OrchardCore.Accounts`) |
+| Contact | `Contact`: content items with the Omnichannel Contact part, by display text (registered by Assets) | Omnichannel Management |
 
 `AssetOwnerDirectory` names owners for the list, the asset's page and the editor; an owner it can't find shows its id. The editor's pickers search `Admin/api/crestapps/assets/owners/search?kind=&query=` (View assets), which returns up to 50 `{ value, text }` items. The asset list filters by owner with `ownerKind` and `ownerId`, and its **Add asset** keeps that owner.
 

@@ -15,6 +15,7 @@ using CrestApps.OrchardCore.Customers.Navigation;
 using CrestApps.OrchardCore.Customers.Recipes;
 using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Orders.Core;
+using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Commerce.Webhooks;
 using CrestApps.OrchardCore.Customers.Api;
@@ -47,6 +48,9 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<ICustomerStore, CustomerStore>();
         services.AddScoped<ICustomerService, DefaultCustomerService>();
+
+        // Customers are parties: pickers and lists in any module find and name them by their customer record id.
+        services.AddPartySource<CustomerPartySource>();
 
         // A guest's history joins their account once the account's email is verified.
         services.AddScoped<ICustomerMergeService, DefaultCustomerMergeService>();

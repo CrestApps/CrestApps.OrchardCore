@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Users.Core;
 using CrestApps.OrchardCore.Users.Core.Handlers;
@@ -50,6 +51,7 @@ public sealed class Startup : StartupBase
         services.AddUserCacheService();
         services.TryAddBasicDisplayNameProvider();
         services.AddUserSearchService();
+        services.AddPartySource<UserPartySource>();
         services.AddPermissionProvider<UserSearchPermissionProvider>();
         services.AddDisplayDriver<UserMenu, DisplayNameUserMenuDisplayDriver>();
         // services.AddShapeTableProvider<NavbarShapeTableProvider>();

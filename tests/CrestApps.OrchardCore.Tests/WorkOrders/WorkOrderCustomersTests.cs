@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Accounts.Services;
+using CrestApps.OrchardCore.Parties.Services;
 using CrestApps.OrchardCore.WorkOrders.Integrations;
 using Moq;
 using OrchardCore.ContentManagement;
@@ -32,7 +33,7 @@ public sealed class WorkOrderCustomersTests
 
         members.Setup(service => service.FindAccountAsync("user-1", It.IsAny<CancellationToken>())).ReturnsAsync(new ContentItem { ContentItemId = "account-1", ContentType = "Account" });
 
-        var customers = new WorkOrderCustomers([], null, [members.Object]);
+        var customers = new WorkOrderCustomers(new PartyDirectory([]), null, [members.Object]);
 
         Assert.Equal("account-1", await customers.AccountOfAsync(null, "user-1", TestContext.Current.CancellationToken));
         Assert.Null(await customers.AccountOfAsync(null, "user-2", TestContext.Current.CancellationToken));
@@ -42,7 +43,7 @@ public sealed class WorkOrderCustomersTests
     [Fact]
     public async Task WithoutAccountMembers_ACustomerGivesNoAccount()
     {
-        var customers = new WorkOrderCustomers([], null, []);
+        var customers = new WorkOrderCustomers(new PartyDirectory([]), null, []);
 
         Assert.Null(await customers.AccountOfAsync(null, "user-1", TestContext.Current.CancellationToken));
         Assert.Null(await customers.AccountAddressAsync(null, TestContext.Current.CancellationToken));

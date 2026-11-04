@@ -558,6 +558,7 @@ const sidebars = {
                 'modules/signalr',
                 'modules/accounts',
                 'modules/addresses',
+                'modules/parties',
                 'modules/personal-data',
                 'modules/tenant-hierarchy',
                 'modules/websockets',

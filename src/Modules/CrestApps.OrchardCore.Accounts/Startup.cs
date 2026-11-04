@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Accounts.Navigation;
 using CrestApps.OrchardCore.Accounts.Recipes;
 using CrestApps.OrchardCore.Accounts.Services;
 using CrestApps.OrchardCore.ContentTransfer;
+using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.Recipes.Core;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -41,6 +42,9 @@ public sealed class Startup : StartupBase
             .AddHandler<AccountPartHandler>();
 
         services.AddScoped<IAccountContentTypeProvider, AccountContentTypeProvider>();
+
+        // Accounts are parties: pickers and lists in any module (asset owners, work orders) find and name them.
+        services.AddPartySource<AccountPartySource>();
         services.AddScoped<AccountListSynchronizer>();
         services.AddScoped<IContentDefinitionEventHandler, AccountsContentDefinitionEventHandler>();
         services.AddScoped<IContentDisplayDriver, AccountPickerDisplayDriver>();
