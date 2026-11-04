@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Outreach</RootNamespace>
+    <Title>CrestApps OrchardCore Outreach Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Public contracts for the outreach engine, the one bulk-send engine: audience sources that page recipients with a
+      cursor, channel senders (e-mail, SMS and others), template renderers, recipient policies for opt-outs and
+      consent, run observers, and the outreach run record.
+    </Description>
+    <PackageTags>$(PackageTags) Outreach BulkSend Campaigns Broadcasts Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CrestApps.Core.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+</Project>

@@ -562,6 +562,7 @@ const sidebars = {
                 'modules/personal-data',
                 'modules/tenant-hierarchy',
                 'modules/webhooks',
+                'modules/outreach',
                 'modules/websockets',
                 'modules/time-zones',
                 'modules/users',
