@@ -33,6 +33,7 @@
     <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.Navigation.Core" />
     <PackageReference Include="OrchardCore.Recipes.Abstractions" />
+    <PackageReference Include="OrchardCore.Deployment.Abstractions" />
     <PackageReference Include="OrchardCore.ResourceManagement" />
     <PackageReference Include="OrchardCore.Settings" />
     <PackageReference Include="OrchardCore.Users.Core" />
@@ -50,6 +51,7 @@
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Orders.Core\CrestApps.OrchardCore.Orders.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Customers.Core\CrestApps.OrchardCore.Customers.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.PersonalData.Core\CrestApps.OrchardCore.PersonalData.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Recipes.Core\CrestApps.OrchardCore.Recipes.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Reports.Core\CrestApps.OrchardCore.Reports.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
   </ItemGroup>

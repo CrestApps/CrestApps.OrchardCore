@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Taxation.Deployments.Drivers;
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Taxation.Deployments.Sources;
 using CrestApps.OrchardCore.Taxation.Deployments.Steps;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,10 +17,10 @@ public sealed class ConfigurationDeploymentStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddDeployment<TaxCategoryDeploymentSource, TaxCategoryDeploymentStep, TaxationDeploymentStepDisplayDriver<TaxCategoryDeploymentStep>>();
-        services.AddDeployment<TaxTypeDeploymentSource, TaxTypeDeploymentStep, TaxationDeploymentStepDisplayDriver<TaxTypeDeploymentStep>>();
-        services.AddDeployment<TaxJurisdictionDeploymentSource, TaxJurisdictionDeploymentStep, TaxationDeploymentStepDisplayDriver<TaxJurisdictionDeploymentStep>>();
-        services.AddDeployment<TaxRuleDeploymentSource, TaxRuleDeploymentStep, TaxationDeploymentStepDisplayDriver<TaxRuleDeploymentStep>>();
-        services.AddDeployment<TaxTableDeploymentSource, TaxTableDeploymentStep, TaxationDeploymentStepDisplayDriver<TaxTableDeploymentStep>>();
+        services.AddDeployment<TaxCategoryDeploymentSource, TaxCategoryDeploymentStep, SummaryDeploymentStepDisplayDriver<TaxCategoryDeploymentStep>>();
+        services.AddDeployment<TaxTypeDeploymentSource, TaxTypeDeploymentStep, SummaryDeploymentStepDisplayDriver<TaxTypeDeploymentStep>>();
+        services.AddDeployment<TaxJurisdictionDeploymentSource, TaxJurisdictionDeploymentStep, SummaryDeploymentStepDisplayDriver<TaxJurisdictionDeploymentStep>>();
+        services.AddDeployment<TaxRuleDeploymentSource, TaxRuleDeploymentStep, SummaryDeploymentStepDisplayDriver<TaxRuleDeploymentStep>>();
+        services.AddDeployment<TaxTableDeploymentSource, TaxTableDeploymentStep, SummaryDeploymentStepDisplayDriver<TaxTableDeploymentStep>>();
     }
 }

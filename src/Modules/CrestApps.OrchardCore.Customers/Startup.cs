@@ -4,8 +4,12 @@ using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Customers.BackgroundTasks;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Customers.Core.Indexes;
+using CrestApps.OrchardCore.Customers.Deployments;
+using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Customers.Drivers;
@@ -28,6 +32,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -68,8 +73,11 @@ public sealed class Startup : StartupBase
         services.AddScoped<IShippingAddressBook, CustomerShippingAddressBook>();
         services.AddScoped<CustomerAccountPages>();
 
-        // Sample stores add their customers through a recipe. Customers are personal data, so there is no export step.
+        // Sample stores add their customers through a recipe. Customers are personal data: the deployment step exports
+        // them only when an administrator adds it to a plan, and leaves out the customers who have a user account.
         services.AddRecipeExecutionStep<CustomersStep>();
+        services.AddDeployment<CustomersDeploymentSource, CustomersDeploymentStep, SummaryDeploymentStepDisplayDriver<CustomersDeploymentStep>>();
+        services.AddDeploymentStepSchema<CustomersDeploymentStepSchema>();
 
         // Access and erasure requests, and the retention windows for guests' personal data.
         services.AddScoped<ICustomerPrivacyService, DefaultCustomerPrivacyService>();
@@ -150,6 +158,10 @@ public sealed class StoreCreditStartup : StartupBase
         services.AddDisplayDriver<CheckoutFlow, StoreCreditCheckoutFlowDisplayDriver>();
         services.AddDisplayDriver<Customer, CustomerStoreCreditDisplayDriver>();
         services.AddNavigationProvider<StoreCreditAccountMenu>();
+        services.AddRecipeExecutionStep<StoreCreditAccountsStep>();
+        services.AddScoped<IRecipeStep, StoreCreditAccountsRecipeStepSchema>();
+        services.AddDeployment<StoreCreditAccountsDeploymentSource, StoreCreditAccountsDeploymentStep, SummaryDeploymentStepDisplayDriver<StoreCreditAccountsDeploymentStep>>();
+        services.AddDeploymentStepSchema<StoreCreditAccountsDeploymentStepSchema>();
     }
 }
 
@@ -175,6 +187,10 @@ public sealed class LoyaltyStartup : StartupBase
         services.AddSiteSettingsPermission(CustomersConstants.LoyaltySettingsGroupId, CustomerPermissions.ManageCustomers);
         services.AddNavigationProvider<LoyaltyAccountMenu>();
         services.AddNavigationProvider<LoyaltySettingsAdminMenu>();
+        services.AddRecipeExecutionStep<LoyaltyAccountsStep>();
+        services.AddScoped<IRecipeStep, LoyaltyAccountsRecipeStepSchema>();
+        services.AddDeployment<LoyaltyAccountsDeploymentSource, LoyaltyAccountsDeploymentStep, SummaryDeploymentStepDisplayDriver<LoyaltyAccountsDeploymentStep>>();
+        services.AddDeploymentStepSchema<LoyaltyAccountsDeploymentStepSchema>();
     }
 }
 
@@ -197,6 +213,10 @@ public sealed class ReferralsStartup : StartupBase
         services.AddSiteSettingsPermission(CustomersConstants.ReferralSettingsGroupId, CustomerPermissions.ManageCustomers);
         services.AddNavigationProvider<ReferralAccountMenu>();
         services.AddNavigationProvider<ReferralSettingsAdminMenu>();
+        services.AddRecipeExecutionStep<ReferralProfilesStep>();
+        services.AddScoped<IRecipeStep, ReferralProfilesRecipeStepSchema>();
+        services.AddDeployment<ReferralProfilesDeploymentSource, ReferralProfilesDeploymentStep, SummaryDeploymentStepDisplayDriver<ReferralProfilesDeploymentStep>>();
+        services.AddDeploymentStepSchema<ReferralProfilesDeploymentStepSchema>();
     }
 }
 

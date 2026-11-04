@@ -40,7 +40,7 @@ public sealed class WebhookSubscriptionsRecipeTests
 
         // Assert
         var step = Assert.Single(result.Steps);
-        Assert.Equal(nameof(WebhookSubscriptionsDeploymentStep), step["name"]?.GetValue<string>());
+        Assert.Equal("WebhookSubscriptions", step["name"]?.GetValue<string>());
         var entry = Assert.Single(step[WebhookSubscriptionsStep.EntriesName]!.AsArray())!.AsObject();
         Assert.Equal("s1", entry["ItemId"]!.GetValue<string>());
         Assert.Equal("https://erp.example.com/hooks", entry["Url"]!.GetValue<string>());

@@ -33,6 +33,21 @@ public static class CustomersConstants
         /// The recipe step that adds or updates guest and business customers.
         /// </summary>
         public const string Customers = "Customers";
+
+        /// <summary>
+        /// The recipe step that adds or updates customers' store credit.
+        /// </summary>
+        public const string StoreCreditAccounts = "StoreCreditAccounts";
+
+        /// <summary>
+        /// The recipe step that adds or updates customers' loyalty points.
+        /// </summary>
+        public const string LoyaltyAccounts = "LoyaltyAccounts";
+
+        /// <summary>
+        /// The recipe step that adds or updates customers' referral codes.
+        /// </summary>
+        public const string ReferralProfiles = "ReferralProfiles";
     }
 
     public static class Features

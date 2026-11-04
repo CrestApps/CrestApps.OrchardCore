@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Webhooks.Recipes;
 using OrchardCore.Deployment;
 using OrchardCore.Localization;
 
@@ -13,7 +14,7 @@ public sealed class WebhookSubscriptionsDeploymentStep : DeploymentStep
     private static readonly LocalizationSource _title = LocalizationSource.Create<WebhookSubscriptionsDeploymentStep>("Webhook subscriptions");
 
     /// <inheritdoc/>
-    public override string Name => nameof(WebhookSubscriptionsDeploymentStep);
+    public override string Name => WebhookSubscriptionsStep.Name;
 
     /// <inheritdoc/>
     [System.Text.Json.Serialization.JsonIgnore]
