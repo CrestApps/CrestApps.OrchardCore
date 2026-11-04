@@ -11,7 +11,14 @@ public sealed class SkillAssignmentIndex : CatalogItemIndex
     /// <summary>
     /// Gets or sets what kind of record holds the skill.
     /// </summary>
-    public SkillSubjectKind SubjectKind { get; set; }
+    public int SubjectKind { get; set; }
+
+    /// <summary>
+    /// Gets or sets the kind of record that holds it, by name: one of the <see cref="SkillSubjectKind"/> constants or a
+    /// kind another module adds. Queries use this column; <see cref="SubjectKind"/> keeps the number older rows were
+    /// written with.
+    /// </summary>
+    public string SubjectKindName { get; set; }
 
     /// <summary>
     /// Gets or sets the user id or worker id that holds the skill.

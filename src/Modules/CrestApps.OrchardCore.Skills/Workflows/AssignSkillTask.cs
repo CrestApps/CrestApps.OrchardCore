@@ -90,9 +90,7 @@ public sealed class AssignSkillTask : TaskActivity<AssignSkillTask>
     /// <inheritdoc />
     public override async Task<ActivityExecutionResult> ExecuteAsync(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
     {
-        var kind = Enum.TryParse<SkillSubjectKind>(await EvaluateAsync(SubjectKind, workflowContext), ignoreCase: true, out var parsed)
-            ? parsed
-            : SkillSubjectKind.User;
+        var kind = SkillSubjectKind.Parse(await EvaluateAsync(SubjectKind, workflowContext));
         var subject = new SkillSubject(kind, await EvaluateAsync(SubjectId, workflowContext));
         var skillText = await EvaluateAsync(Skill, workflowContext);
         var skill = string.IsNullOrEmpty(skillText)

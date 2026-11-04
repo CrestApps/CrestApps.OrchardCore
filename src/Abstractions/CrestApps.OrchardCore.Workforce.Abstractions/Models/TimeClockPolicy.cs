@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.Core;
 using CrestApps.Core.Models;
 
@@ -68,7 +69,8 @@ public sealed class TimeClockPolicy : CatalogItem, INameAwareModel, IModifiedUtc
     /// <summary>
     /// Gets or sets where workers may punch from; empty for anywhere.
     /// </summary>
-    public IList<TimePunchSource> AllowedSources { get; set; } = [];
+    [JsonConverter(typeof(TimePunchSourceListJsonConverter))]
+    public IList<string> AllowedSources { get; set; } = [];
 
     /// <summary>
     /// Gets or sets whether workers must punch at the work site, within <see cref="GeofenceRadiusMeters"/> of their
@@ -152,7 +154,7 @@ public sealed class TimeClockPolicy : CatalogItem, INameAwareModel, IModifiedUtc
     /// </summary>
     /// <param name="source">The source.</param>
     /// <returns><see langword="true"/> when allowed.</returns>
-    public bool Allows(TimePunchSource source)
+    public bool Allows(string source)
     {
         return source == TimePunchSource.Manager || AllowedSources.Count == 0 || AllowedSources.Contains(source);
     }

@@ -38,6 +38,7 @@ internal sealed class DefaultTimeClockService : ITimeClockService
     private readonly TimeOffLocks _locks;
     private readonly IWorkforceEvents _events;
     private readonly IEnumerable<ITimePunchObserver> _observers;
+    private readonly IEnumerable<ITimePunchSourceProvider> _sourceProviders;
     private readonly ILogger _logger;
     private readonly ISession _session;
     private readonly IClock _clock;
@@ -57,6 +58,7 @@ internal sealed class DefaultTimeClockService : ITimeClockService
         TimeOffLocks locks,
         IWorkforceEvents events,
         IEnumerable<ITimePunchObserver> observers,
+        IEnumerable<ITimePunchSourceProvider> sourceProviders,
         ISession session,
         IClock clock,
         ILogger<DefaultTimeClockService> logger,
@@ -74,6 +76,7 @@ internal sealed class DefaultTimeClockService : ITimeClockService
         _locks = locks;
         _events = events;
         _observers = observers;
+        _sourceProviders = sourceProviders;
         _session = session;
         _clock = clock;
         _logger = logger;
@@ -676,16 +679,18 @@ internal sealed class DefaultTimeClockService : ITimeClockService
         return value.Length > length ? value[..length] : value;
     }
 
-    private string SourceName(TimePunchSource source)
+    private string SourceName(string source)
     {
         return source switch
         {
             TimePunchSource.Web => S["the browser"],
             TimePunchSource.Mobile => S["the My Work app"],
             TimePunchSource.Kiosk => S["a kiosk"],
-            TimePunchSource.ContactCenter => S["the contact center"],
             TimePunchSource.Api => S["the API"],
-            _ => S["a manager"],
+            TimePunchSource.Manager => S["a manager"],
+            _ => _sourceProviders
+                .SelectMany(provider => provider.GetSources())
+                .FirstOrDefault(descriptor => string.Equals(descriptor.Name, source, StringComparison.Ordinal))?.Phrase.Value ?? source,
         };
     }
 

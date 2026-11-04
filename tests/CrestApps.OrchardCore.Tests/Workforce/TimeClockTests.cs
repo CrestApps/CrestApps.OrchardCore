@@ -65,7 +65,7 @@ public sealed class TimeClockTests
     public async Task APunchSentTwiceWithItsKey_CountsOnce_SoContactCenterAgentsNeverPunchTwice()
     {
         await using var kit = await TimeClockKit.CreateAsync();
-        var team = await kit.AddTeamAsync("Agents", policy => policy.AllowedSources = [TimePunchSource.ContactCenter]);
+        var team = await kit.AddTeamAsync("Agents", policy => policy.AllowedSources = ["ContactCenter"]);
         var ana = await PlanningKit.AddMemberAsync(kit.Harness, "Ana", team);
 
         async Task<TimePunch> SignInOrOut(TimePunchKind kind, string eventId, int hour)
@@ -74,7 +74,7 @@ public sealed class TimeClockTests
 
             var result = await kit.PunchAsync(ana, kind, request =>
             {
-                request.Source = TimePunchSource.ContactCenter;
+                request.Source = "ContactCenter";
                 request.IdempotencyKey = eventId;
             });
 

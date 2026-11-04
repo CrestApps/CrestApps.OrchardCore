@@ -66,7 +66,7 @@ public interface ISkillAssignmentService
     /// <param name="kind">The kind of people to look at.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The assignments that count that day.</returns>
-    Task<IReadOnlyList<SkillAssignment>> FindHoldersAsync(string skillId, int minimumProficiency, DateOnly date, SkillSubjectKind kind, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<SkillAssignment>> FindHoldersAsync(string skillId, int minimumProficiency, DateOnly date, string kind, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets whether a person holds a skill at a proficiency or above on a day, honoring the certification the skill requires.

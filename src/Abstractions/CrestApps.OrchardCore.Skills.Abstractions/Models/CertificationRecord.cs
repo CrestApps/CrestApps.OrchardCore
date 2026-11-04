@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.Core.Models;
 
 namespace CrestApps.OrchardCore.Skills.Models;
@@ -10,7 +11,8 @@ public sealed class CertificationRecord : CatalogItem
     /// <summary>
     /// Gets or sets what kind of record holds the certificate.
     /// </summary>
-    public SkillSubjectKind SubjectKind { get; set; }
+    [JsonConverter(typeof(SkillSubjectKindJsonConverter))]
+    public string SubjectKind { get; set; }
 
     /// <summary>
     /// Gets or sets the user id or worker id that holds the certificate.

@@ -146,9 +146,7 @@ internal sealed class SkillsRecipeStep : NamedRecipeStepHandler
 
     private static SkillSubject ReadSubject(JsonNode node)
     {
-        var kind = Enum.TryParse<SkillSubjectKind>(node["subjectKind"]?.GetValue<string>(), ignoreCase: true, out var parsed)
-            ? parsed
-            : SkillSubjectKind.User;
+        var kind = SkillSubjectKind.Parse(node["subjectKind"]?.GetValue<string>());
 
         return new SkillSubject(kind, node["subjectId"]?.GetValue<string>());
     }

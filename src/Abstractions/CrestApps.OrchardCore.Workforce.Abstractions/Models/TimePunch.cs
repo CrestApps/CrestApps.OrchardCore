@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.Core.Models;
 
 namespace CrestApps.OrchardCore.Workforce.Models;
@@ -31,7 +32,8 @@ public sealed class TimePunch : CatalogItem
     /// <summary>
     /// Gets or sets where the punch came from.
     /// </summary>
-    public TimePunchSource Source { get; set; }
+    [JsonConverter(typeof(TimePunchSourceJsonConverter))]
+    public string Source { get; set; }
 
     /// <summary>
     /// Gets or sets the device or kiosk that sent it.

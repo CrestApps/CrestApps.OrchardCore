@@ -24,7 +24,7 @@ internal sealed class CertificationRecordStore : DocumentCatalog<CertificationRe
         var id = subject.Id;
 
         var records = await Session.Query<CertificationRecord, CertificationRecordIndex>(
-            index => index.SubjectKind == kind && index.SubjectId == id,
+            index => index.SubjectKindName == kind && index.SubjectId == id,
             collection: CollectionName)
             .OrderByDescending(index => index.ExpiresOn)
             .ListAsync(cancellationToken);
@@ -32,11 +32,11 @@ internal sealed class CertificationRecordStore : DocumentCatalog<CertificationRe
         return records.ToArray();
     }
 
-    public async Task<IReadOnlyList<string>> ListValidSubjectIdsAsync(string certificationId, SkillSubjectKind kind, int dateKey, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<string>> ListValidSubjectIdsAsync(string certificationId, string kind, int dateKey, CancellationToken cancellationToken = default)
     {
         var rows = await Session.QueryIndex<CertificationRecordIndex>(
             index => index.CertificationId == certificationId
-                && index.SubjectKind == kind
+                && index.SubjectKindName == kind
                 && index.Status == CertificationStatus.Valid
                 && (index.IssuedOn == null || index.IssuedOn <= dateKey)
                 && (index.ExpiresOn == null || index.ExpiresOn >= dateKey),
@@ -91,7 +91,7 @@ internal sealed class CertificationRecordStore : DocumentCatalog<CertificationRe
             var kind = query.Subject.Kind;
             var id = query.Subject.Id;
 
-            results = results.Where(index => index.SubjectKind == kind && index.SubjectId == id);
+            results = results.Where(index => index.SubjectKindName == kind && index.SubjectId == id);
         }
 
         var count = await results.CountAsync(cancellationToken);

@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Workforce.ContactCenter;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -32,7 +33,7 @@ public sealed class SignInPunchHandlerTests
 
         var status = await StatusAsync(kit, ana);
         Assert.Equal(TimeClockState.Working, status.State);
-        Assert.Equal(TimePunchSource.ContactCenter, status.LastPunch.Source);
+        Assert.Equal(WorkforceContactCenterConstants.PunchSource, status.LastPunch.Source);
         Assert.Equal(signIn.OccurredUtc, status.SinceUtc);
 
         var signOut = StateChange("e2", ana.UserId, TimeClockKit.Local(_monday, 17), AgentPresenceStatus.Available, AgentPresenceStatus.Offline, AgentStateChangeSources.SignOut);

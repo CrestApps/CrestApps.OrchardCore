@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Security.Claims;
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Calendars.Core;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
@@ -406,7 +407,7 @@ internal static class WorkforceApiEndpoints
             WorkerId = worker.ItemId,
             Kind = input.Kind,
             Utc = input.Utc,
-            Source = input.Source is TimePunchSource.ContactCenter or TimePunchSource.Kiosk or TimePunchSource.Manager ? input.Source.Value : TimePunchSource.Api,
+            Source = input.Source is TimePunchSource.Kiosk or TimePunchSource.Manager || IsAdditionalSource(services, input.Source) ? input.Source : TimePunchSource.Api,
             Latitude = input.Latitude,
             Longitude = input.Longitude,
             ActivityCodeId = input.ActivityCodeId,
@@ -534,6 +535,12 @@ internal static class WorkforceApiEndpoints
         return value.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture);
     }
 
+    // A source another module adds, such as the contact center's sign-in, may be named by the system that punches for it.
+    private static bool IsAdditionalSource(IServiceProvider services, string source)
+        => !string.IsNullOrEmpty(source) && services.GetServices<ITimePunchSourceProvider>()
+            .SelectMany(provider => provider.GetSources())
+            .Any(descriptor => string.Equals(descriptor.Name, source, StringComparison.Ordinal));
+
     private static IResult Problem(params IEnumerable<string> errors)
     {
         return Results.ValidationProblem(new Dictionary<string, string[]> { [string.Empty] = [.. errors] });
@@ -627,7 +634,8 @@ public sealed class WorkforcePunchInput
     /// <summary>
     /// Gets or sets where it came from, for <c>POST punches</c>: Api (the default), ContactCenter, Kiosk or Manager.
     /// </summary>
-    public TimePunchSource? Source { get; set; }
+    [JsonConverter(typeof(TimePunchSourceJsonConverter))]
+    public string Source { get; set; }
 
     /// <summary>
     /// Gets or sets the latitude.

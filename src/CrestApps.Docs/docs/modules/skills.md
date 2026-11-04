@@ -30,8 +30,8 @@ Every record is a YesSql document in the `Skills` collection: `Skill`, `SkillAss
 | --- | --- |
 | `SkillIndex` | ItemId, Name, NormalizedName, Category, Enabled |
 | `CertificationIndex` | ItemId, Name, NormalizedName, Enabled |
-| `SkillAssignmentIndex` | ItemId, SubjectKind, SubjectId, SkillId, Proficiency, EffectiveFrom, EffectiveTo |
-| `CertificationRecordIndex` | ItemId, SubjectKind, SubjectId, SubjectName, CertificationId, Number, Status, IssuedOn, ExpiresOn |
+| `SkillAssignmentIndex` | ItemId, SubjectKindName, SubjectId, SkillId, Proficiency, EffectiveFrom, EffectiveTo (and the legacy number column `SubjectKind`) |
+| `CertificationRecordIndex` | ItemId, SubjectKindName, SubjectId, SubjectName, CertificationId, Number, Status, IssuedOn, ExpiresOn (and the legacy number column `SubjectKind`) |
 
 Names are unique without regard to case or surrounding spaces (`NormalizedName`). A person holds each skill at most once.
 
@@ -44,7 +44,7 @@ Names are unique without regard to case or surrounding spaces (`NormalizedName`)
 | `ISkillAssignmentService` | `GetAssignmentsAsync` (every assignment of a person), `GetEffectiveAsync` (the ones that count on a day: inside their dates, the skill enabled, and the required certification valid that day, including skills held under another subject that names the same person), `SetAsync` (replace a person's set), `AssignAsync`, `RemoveAsync`, `FindHoldersAsync` (who holds a skill at a proficiency on a day) and `HoldsAsync`. |
 | `ICertificationRecordService` | `SaveAsync` (works out the expiry date from the certification's validity when a record has an issue date and no expiry date, and refuses a valid record without its copy when the certification requires one), `VerifyAsync`, `RevokeAsync`, `DeleteAsync`, `GetForSubjectAsync`, `IsValidOnAsync` and `PageAsync`. |
 
-A person is a `SkillSubject`: `SkillSubject.User(userId)` or `SkillSubject.Worker(workerId)`.
+A person is a `SkillSubject`: `SkillSubject.User(userId)` or `SkillSubject.Worker(workerId)`. The kind is an open string: `SkillSubjectKind.User` and `SkillSubjectKind.Worker` are the well-known kinds, and a module adds its own with `new SkillSubject("MyKind", id)` (and an `ISkillSubjectLinkProvider` that links it to the user or worker it names) without changing Skills. Records saved while the kind was a number are still read (`SkillSubjectKindJsonConverter` reads `0` as `User` and `1` as `Worker`), and the Skills migration adds the `SubjectKindName` index column and fills it in from the number, so nothing is dropped.
 
 ```csharp
 var subject = SkillSubject.User(userId);

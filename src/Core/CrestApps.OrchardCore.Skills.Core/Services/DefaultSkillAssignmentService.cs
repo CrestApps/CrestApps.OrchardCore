@@ -281,7 +281,7 @@ internal sealed class DefaultSkillAssignmentService : ISkillAssignmentService
         return true;
     }
 
-    public async Task<IReadOnlyList<SkillAssignment>> FindHoldersAsync(string skillId, int minimumProficiency, DateOnly date, SkillSubjectKind kind, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<SkillAssignment>> FindHoldersAsync(string skillId, int minimumProficiency, DateOnly date, string kind, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(skillId);
 

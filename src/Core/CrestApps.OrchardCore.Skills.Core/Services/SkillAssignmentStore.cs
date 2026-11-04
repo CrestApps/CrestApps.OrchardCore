@@ -22,18 +22,18 @@ internal sealed class SkillAssignmentStore : DocumentCatalog<SkillAssignment, Sk
         var id = subject.Id;
 
         var assignments = await Session.Query<SkillAssignment, SkillAssignmentIndex>(
-            index => index.SubjectKind == kind && index.SubjectId == id,
+            index => index.SubjectKindName == kind && index.SubjectId == id,
             collection: CollectionName)
             .ListAsync(cancellationToken);
 
         return assignments.ToArray();
     }
 
-    public async Task<IReadOnlyList<SkillAssignment>> ListHoldersAsync(string skillId, int minimumProficiency, int dateKey, SkillSubjectKind kind, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<SkillAssignment>> ListHoldersAsync(string skillId, int minimumProficiency, int dateKey, string kind, CancellationToken cancellationToken = default)
     {
         var assignments = await Session.Query<SkillAssignment, SkillAssignmentIndex>(
             index => index.SkillId == skillId
-                && index.SubjectKind == kind
+                && index.SubjectKindName == kind
                 && index.Proficiency >= minimumProficiency
                 && (index.EffectiveFrom == null || index.EffectiveFrom <= dateKey)
                 && (index.EffectiveTo == null || index.EffectiveTo >= dateKey),

@@ -65,6 +65,7 @@ public sealed class SignInPunchesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IContactCenterEventHandler, SignInPunchHandler>();
+        services.AddScoped<ITimePunchSourceProvider, ContactCenterTimePunchSourceProvider>();
     }
 }
 
