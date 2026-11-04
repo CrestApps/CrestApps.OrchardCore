@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CrestApps.Core;
+using CrestApps.OrchardCore.Addresses;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Customers.Core.Models;
@@ -84,7 +85,7 @@ public sealed class ShippingCheckoutHandler : CheckoutHandlerBase
 
         var customer = await customers.GetOrCreateForUserAsync(session.OwnerId);
 
-        if (customer is null || (customer.Addresses?.Count ?? 0) >= MaxAddresses || (customer.Addresses ?? []).Any(entry => IsSameAddress(entry.Address, step.Address)))
+        if (customer is null || (customer.Addresses?.Count ?? 0) >= MaxAddresses || (customer.Addresses ?? []).Any(entry => AddressComparison.IsSameAddress(entry.Address, step.Address)))
         {
             return;
         }
@@ -110,16 +111,4 @@ public sealed class ShippingCheckoutHandler : CheckoutHandlerBase
     internal static bool IsOrder(ICheckoutFlowSession session)
         => session is CheckoutSession checkoutSession &&
             string.Equals(checkoutSession.ReferenceType, CheckoutReferenceTypes.Order, StringComparison.Ordinal);
-
-    private static bool IsSameAddress(Addresses.Models.Address left, Addresses.Models.Address right)
-        => left is not null && right is not null &&
-            Same(left.AddressLine1, right.AddressLine1) &&
-            Same(left.AddressLine2, right.AddressLine2) &&
-            Same(left.City, right.City) &&
-            Same(left.Region, right.Region) &&
-            Same(left.PostalCode, right.PostalCode) &&
-            Same(left.Country, right.Country);
-
-    private static bool Same(string left, string right)
-        => string.Equals(left?.Trim() ?? string.Empty, right?.Trim() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
 }
