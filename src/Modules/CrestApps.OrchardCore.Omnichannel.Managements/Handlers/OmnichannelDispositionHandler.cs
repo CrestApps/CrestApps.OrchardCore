@@ -3,8 +3,8 @@ using System.Security.Claims;
 using System.Text.Json.Nodes;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Omnichannel.Managements.Deployments;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
@@ -71,7 +71,7 @@ internal sealed class OmnichannelDispositionHandler : CatalogEntryHandlerBase<Om
 
     private static Task PopulateAsync(OmnichannelDisposition disposition, JsonNode data)
     {
-        OmnichannelDeploymentSerializer.Populate(disposition, data);
+        CatalogDeploymentSerializer.Populate(disposition, data);
 
         var name = data[nameof(OmnichannelDisposition.Name)]?.GetValue<string>()?.Trim();
 

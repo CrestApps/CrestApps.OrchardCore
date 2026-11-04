@@ -1,9 +1,9 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using CrestApps.OrchardCore.ContactCenter.Deployments;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.DisplayManagement.Handlers;
@@ -18,7 +18,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Drivers;
 /// </summary>
 internal sealed class ContactCenterEntryPointVoiceDisplayDriver : DisplayDriver<ContactCenterEntryPoint>
 {
-    private static readonly JsonSerializerOptions _ivrDisplayOptions = new(ContactCenterDeploymentSerializer.Options)
+    private static readonly JsonSerializerOptions _ivrDisplayOptions = new(CatalogDeploymentSerializer.Options)
     {
         WriteIndented = true,
     };

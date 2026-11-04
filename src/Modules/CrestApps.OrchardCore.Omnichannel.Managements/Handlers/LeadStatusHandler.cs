@@ -3,8 +3,8 @@ using System.Security.Claims;
 using System.Text.Json.Nodes;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Omnichannel.Managements.Deployments;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
@@ -77,7 +77,7 @@ internal sealed class LeadStatusHandler : CatalogEntryHandlerBase<LeadStatus>
 
     private static Task PopulateAsync(LeadStatus model, JsonNode data)
     {
-        OmnichannelDeploymentSerializer.Populate(model, data);
+        CatalogDeploymentSerializer.Populate(model, data);
 
         var name = data[nameof(LeadStatus.Name)]?.GetValue<string>()?.Trim();
 

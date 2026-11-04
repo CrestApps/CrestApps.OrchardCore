@@ -1,7 +1,7 @@
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Deployments;
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Core.Validation;
 using Microsoft.AspNetCore.Authorization;
@@ -473,7 +473,7 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
 
     private async Task<TModel> NewCloneAsync(TModel source)
     {
-        var clone = await _manager.NewAsync(ContactCenterDeploymentSerializer.Export(source));
+        var clone = await _manager.NewAsync(CatalogDeploymentSerializer.Export(source));
 
         InitializeClone(clone, source);
 

@@ -67,11 +67,6 @@ public sealed class DuplicatePatternRatchetTests
             ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging.Azure/Startup.cs"] = 1,
             ["src/Modules/CrestApps.OrchardCore.Telephony.Azure/Startup.cs"] = 1,
         },
-        ["DeploymentSerializer class"] = new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["src/Modules/CrestApps.OrchardCore.ContactCenter/Deployments/ContactCenterDeploymentSerializer.cs"] = 1,
-            ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Deployments/OmnichannelDeploymentSerializer.cs"] = 1,
-        },
         ["GetTimeZones() in a select list"] = new(StringComparer.OrdinalIgnoreCase)
         {
             ["src/Modules/CrestApps.OrchardCore.Calendars/Services/CalendarSelectLists.cs"] = 1,

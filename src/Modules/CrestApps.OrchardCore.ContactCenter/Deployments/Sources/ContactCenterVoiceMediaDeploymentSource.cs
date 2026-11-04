@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.ContactCenter.Deployments.Steps;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Core.Deployments;
 using OrchardCore.Deployment;
 
 namespace CrestApps.OrchardCore.ContactCenter.Deployments.Sources;
@@ -30,7 +31,7 @@ internal sealed class ContactCenterVoiceMediaDeploymentSource : DeploymentSource
 
         foreach (var entry in entries)
         {
-            data.Add(ContactCenterDeploymentSerializer.Export(entry));
+            data.Add(CatalogDeploymentSerializer.Export(entry));
         }
 
         result.Steps.Add(new JsonObject

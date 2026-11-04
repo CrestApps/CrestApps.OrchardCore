@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Deployments;
+using CrestApps.OrchardCore.Core.Deployments;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -33,9 +33,9 @@ public sealed class VoiceMediaItemDeploymentRoundTripTests
         };
 
         // Act
-        var json = ContactCenterDeploymentSerializer.Export(source);
+        var json = CatalogDeploymentSerializer.Export(source);
         var imported = new VoiceMediaItem();
-        ContactCenterDeploymentSerializer.Populate(imported, json);
+        CatalogDeploymentSerializer.Populate(imported, json);
 
         // Assert
         Assert.Equal("Hold music", imported.Name);
@@ -63,7 +63,7 @@ public sealed class VoiceMediaItemDeploymentRoundTripTests
 
         // Act
         var imported = new VoiceMediaItem();
-        ContactCenterDeploymentSerializer.Populate(imported, json);
+        CatalogDeploymentSerializer.Populate(imported, json);
         VoiceMediaItemCompatibility.FoldLegacyReference(imported);
 
         // Assert

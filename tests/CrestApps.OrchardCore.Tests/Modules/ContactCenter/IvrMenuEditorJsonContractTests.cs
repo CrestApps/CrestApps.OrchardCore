@@ -2,8 +2,8 @@ using System.Globalization;
 using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Deployments;
 using CrestApps.OrchardCore.ContactCenter.ModelBinders;
+using CrestApps.OrchardCore.Core.Deployments;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Localization;
@@ -22,7 +22,7 @@ public sealed class IvrMenuEditorJsonContractTests
     private const string FieldName = "IvrFlowJson";
 
     // The options the entry point driver shows the menu with.
-    private static readonly JsonSerializerOptions _displayOptions = new(ContactCenterDeploymentSerializer.Options)
+    private static readonly JsonSerializerOptions _displayOptions = new(CatalogDeploymentSerializer.Options)
     {
         WriteIndented = true,
     };

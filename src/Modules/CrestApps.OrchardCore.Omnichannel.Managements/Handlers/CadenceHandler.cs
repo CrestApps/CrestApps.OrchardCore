@@ -2,8 +2,8 @@ using System.ComponentModel.DataAnnotations;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Omnichannel.Managements.Deployments;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
 
@@ -37,7 +37,7 @@ internal sealed class CadenceHandler : CatalogEntryHandlerBase<Cadence>
     {
         // A recipe or deployment plan hands the entry's JSON to the manager; the editor hands none, so this only
         // binds values when an import supplies them.
-        OmnichannelDeploymentSerializer.Populate(context.Model, context.Data);
+        CatalogDeploymentSerializer.Populate(context.Model, context.Data);
 
         if (context.Model.CreatedUtc == default)
         {
@@ -50,7 +50,7 @@ internal sealed class CadenceHandler : CatalogEntryHandlerBase<Cadence>
     /// <inheritdoc/>
     public override Task UpdatingAsync(UpdatingContext<Cadence> context, CancellationToken cancellationToken = default)
     {
-        OmnichannelDeploymentSerializer.Populate(context.Model, context.Data);
+        CatalogDeploymentSerializer.Populate(context.Model, context.Data);
 
         context.Model.ModifiedUtc = _clock.UtcNow;
 
