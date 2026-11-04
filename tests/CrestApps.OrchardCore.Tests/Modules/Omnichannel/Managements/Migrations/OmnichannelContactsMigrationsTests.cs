@@ -8,6 +8,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.ContentManagement.Records;
 using OrchardCore.Data;
 using YesSql;
 using YesSql.Provider.Sqlite;
@@ -29,7 +30,8 @@ namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements.Migrations
 /// </remarks>
 public sealed class OmnichannelContactsMigrationsTests
 {
-    private const int FinalVersion = 13;
+    private const int FinalVersion = 14;
+    private const string ContentItemListIndexName = "IDX_ContentItemIndex_ContentType_Latest";
     private const string LegacyPhoneIndexTableName = "OmnichannelContactPhoneIndex";
 
     private static readonly TimeSpan _runLimit = TimeSpan.FromSeconds(10);
@@ -137,6 +139,7 @@ public sealed class OmnichannelContactsMigrationsTests
     [InlineData(7)]
     [InlineData(8)]
     [InlineData(12)]
+    [InlineData(13)]
     public async Task UpgradeOverACurrentSchema_SkipsEveryChangeThatAlreadyExistsWithoutPoisoningTheTransaction(int startingVersion)
     {
         var databasePath = DatabasePath("contacts-already-current");
@@ -167,6 +170,37 @@ public sealed class OmnichannelContactsMigrationsTests
             await transaction.CommitAsync(TestContext.Current.CancellationToken);
             Assert.True(await CommittedContactExistsAsync(databasePath, store, "contact-1"));
             Assert.True(await CommittedContactExistsAsync(databasePath, store, "contact-2"));
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task UpgradeFromVersion13_AddsTheContentItemListIndexOnce()
+    {
+        var databasePath = DatabasePath("contacts-content-item-index");
+        var store = await CreateStoreAsync(databasePath);
+        var connections = new CountingConnectionAccessor(databasePath);
+
+        try
+        {
+            await using var session = store.CreateSession();
+            var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
+            var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
+            var migration = CreateMigration(store, connections);
+            migration.SchemaBuilder = schemaBuilder;
+
+            Assert.Equal(FinalVersion, await migration.UpdateFrom13Async());
+
+            // A second run, as when two instances activate the tenant at once, finds the index and leaves it alone.
+            Assert.Equal(FinalVersion, await migration.UpdateFrom13Async());
+            await transaction.CommitAsync(TestContext.Current.CancellationToken);
+
+            var schema = await CaptureCommittedSchemaAsync(databasePath, ContentItemTableName(store));
+            Assert.Contains(ContentItemListIndexName + " ", schema);
+            Assert.Equal(0, connections.Created);
         }
         finally
         {
@@ -339,6 +373,10 @@ public sealed class OmnichannelContactsMigrationsTests
         => store.Configuration.TablePrefix +
             store.Configuration.TableNameConvention.GetIndexTable(typeof(OmnichannelContactIndex), null);
 
+    private static string ContentItemTableName(IStore store)
+        => store.Configuration.TablePrefix +
+            store.Configuration.TableNameConvention.GetIndexTable(typeof(ContentItemIndex), null);
+
     private static string PhoneNumberTableName(IStore store)
         => store.Configuration.TablePrefix +
             store.Configuration.TableNameConvention.GetIndexTable(typeof(OmnichannelContactPhoneNumberIndex), null);
@@ -360,6 +398,23 @@ public sealed class OmnichannelContactsMigrationsTests
     {
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
         await store.InitializeAsync(TestContext.Current.CancellationToken);
+
+        // Orchard Core's content item index exists before this feature's migrations run; it carries the columns the
+        // list index covers.
+        await using (var session = store.CreateSession())
+        {
+            var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
+            var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
+
+            await schemaBuilder.CreateMapIndexTableAsync<ContentItemIndex>(table => table
+                .Column<string>("ContentType", column => column.WithLength(ContentItemIndex.MaxContentTypeSize))
+                .Column<string>("DisplayText", column => column.Nullable().WithLength(ContentItemIndex.MaxDisplayTextSize))
+                .Column<DateTime>("ModifiedUtc", column => column.Nullable())
+                .Column<bool>("Published")
+                .Column<bool>("Latest"));
+
+            await transaction.CommitAsync(TestContext.Current.CancellationToken);
+        }
 
         return store;
     }

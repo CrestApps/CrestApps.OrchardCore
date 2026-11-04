@@ -94,9 +94,11 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
                 table.CreateIndex(name, columns));
         }
 
+        await CreateContentItemListIndexAsync();
+
         ScheduleContactDefinitionRepair();
 
-        return 13;
+        return 14;
     }
 
     /// <summary>
@@ -287,6 +289,35 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
 
         return 13;
     }
+
+    /// <summary>
+    /// Adds the content item index that the contact and lead lists read, so a search by name no longer reads every
+    /// content item of the tenant.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom13Async()
+    {
+        await CreateContentItemListIndexAsync();
+
+        return 14;
+    }
+
+    // Every index Orchard Core puts on the content item index starts with DocumentId, so a list of one content type
+    // could not seek to its rows: a search by name, which matches anywhere in the display text, read every content
+    // item of the tenant and outlived the command timeout on a large one. This index starts with the type and the
+    // latest flag the list always filters by, holds its rows in the list's default order (modified, newest first),
+    // and carries the display text and the published flag, so the list finds its page from the index alone.
+    private Task<bool> CreateContentItemListIndexAsync()
+        => IndexTableIndexCreation.CreateIfMissingAsync<ContentItemIndex>(
+            SchemaBuilder,
+            "IDX_ContentItemIndex_ContentType_Latest",
+            collection: null,
+            "ContentType",
+            "Latest",
+            "ModifiedUtc",
+            "DisplayText",
+            "Published",
+            "DocumentId");
 
     internal static Task CreatePhoneNumberIndexTableAsync(ISchemaBuilder schemaBuilder)
         => schemaBuilder.CreateMapIndexTableAsync<OmnichannelContactPhoneNumberIndex>(table => table
