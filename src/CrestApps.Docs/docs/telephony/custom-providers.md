@@ -141,6 +141,8 @@ Providers that can attach an external media stream to an active call may impleme
 
 Provider modules should reference `CrestApps.OrchardCore.ContactCenter.Abstractions` only. Do not reference the Contact Center Core or module assemblies to ingest events, route inbound calls, reconcile provider state, or participate in the durable webhook inbox; use the stable provider-facing contracts above.
 
+Channel modules use the same project for the agent directory and entry points: `IAgentProfileReader` names the agent profile a user is, `IAgentQueueMembershipReader` reads queue membership, and `services.AddEntryPointChannel(...)` (with `EntryPointChannelOptions` and `EntryPointAIAgentOptions`) offers a channel to inbound entry points. The SMS workspace module is built on these and no longer references `ContactCenter.Core`.
+
 Installing a provider package does not implicitly install the Contact Center module. Hosts that enable a provider's Contact Center adapter must also install the Contact Center module package; the adapter feature's manifest dependency then enables the required Contact Center Voice feature for that tenant.
 
 `IContactCenterVoiceMediaProviderResolver` returns a media provider only when:

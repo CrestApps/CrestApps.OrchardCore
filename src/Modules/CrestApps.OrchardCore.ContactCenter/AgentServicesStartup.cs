@@ -41,6 +41,9 @@ public sealed class AgentServicesStartup : StartupBase
         // (the SMS Portal) does not need the Work Distribution feature to resolve who serves what.
         services.TryAddScoped<IAgentQueueMembershipReader, AgentQueueMembershipReader>();
 
+        // The agent a user is, for channel modules that must not use the agent profile itself.
+        services.TryAddScoped<IAgentProfileReader, AgentProfileReader>();
+
         services
             .AddIndexProvider<AgentProfileIndexProvider>()
             .AddDataMigration<AgentProfileIndexMigrations>();

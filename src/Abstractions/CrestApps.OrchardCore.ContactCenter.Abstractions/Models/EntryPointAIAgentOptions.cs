@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
+namespace CrestApps.OrchardCore.ContactCenter.Models;
 
 /// <summary>
 /// Holds the entry point channels whose traffic an AI agent can answer, registered by the features that let it: texts

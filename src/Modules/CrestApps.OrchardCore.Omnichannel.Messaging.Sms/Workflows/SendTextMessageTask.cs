@@ -1,5 +1,5 @@
 using CrestApps.Core.Support;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using Microsoft.AspNetCore.Identity;
@@ -21,7 +21,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Workflows;
 public sealed class SendTextMessageTask : TaskActivity<SendTextMessageTask>
 {
     private readonly IMessagingConversationService _conversationService;
-    private readonly IAgentProfileManager _agentProfileManager;
+    private readonly IAgentProfileReader _agentProfileReader;
     private readonly UserManager<IUser> _userManager;
     private readonly IWorkflowExpressionEvaluator _expressionEvaluator;
     private readonly ILogger _logger;
@@ -39,14 +39,14 @@ public sealed class SendTextMessageTask : TaskActivity<SendTextMessageTask>
     /// <param name="stringLocalizer">The string localizer.</param>
     public SendTextMessageTask(
         IMessagingConversationService conversationService,
-        IAgentProfileManager agentProfileManager,
+        IAgentProfileReader agentProfileReader,
         UserManager<IUser> userManager,
         IWorkflowExpressionEvaluator expressionEvaluator,
         ILogger<SendTextMessageTask> logger,
         IStringLocalizer<SendTextMessageTask> stringLocalizer)
     {
         _conversationService = conversationService;
-        _agentProfileManager = agentProfileManager;
+        _agentProfileReader = agentProfileReader;
         _userManager = userManager;
         _expressionEvaluator = expressionEvaluator;
         _logger = logger;
@@ -159,8 +159,6 @@ public sealed class SendTextMessageTask : TaskActivity<SendTextMessageTask>
             return null;
         }
 
-        var profile = await _agentProfileManager.FindByUserIdAsync(await _userManager.GetUserIdAsync(user));
-
-        return profile?.ItemId;
+        return await _agentProfileReader.FindAgentIdByUserIdAsync(await _userManager.GetUserIdAsync(user));
     }
 }

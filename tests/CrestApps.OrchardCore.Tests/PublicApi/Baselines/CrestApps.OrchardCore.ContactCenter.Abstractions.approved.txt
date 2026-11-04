@@ -900,6 +900,23 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         ComplianceScreeningUnavailable = 8,
         NumberNotInService = 9,
     }
+    public sealed class EntryPointAIAgentOptions
+    {
+        public EntryPointAIAgentOptions() { }
+        public System.Collections.Generic.HashSet<string> Channels { get; }
+    }
+    public sealed class EntryPointChannel
+    {
+        public EntryPointChannel() { }
+        public Microsoft.Extensions.Localization.LocalizedString Description { get; set; }
+        public Microsoft.Extensions.Localization.LocalizedString DisplayName { get; set; }
+        public string Name { get; set; }
+    }
+    public sealed class EntryPointChannelOptions
+    {
+        public EntryPointChannelOptions() { }
+        public System.Collections.Generic.Dictionary<string, CrestApps.OrchardCore.ContactCenter.Models.EntryPointChannel> Channels { get; }
+    }
     public enum EntryPointClosedAction
     {
         HoldInQueue = 0,
@@ -1171,6 +1188,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Services
         public string InteractionId { get; set; }
         public string ProviderLegId { get; set; }
         public string ProviderName { get; set; }
+    }
+    public interface IAgentProfileReader
+    {
+        System.Threading.Tasks.Task<string> FindAgentIdByUserIdAsync(string userId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IAgentQueueMembershipReader
     {

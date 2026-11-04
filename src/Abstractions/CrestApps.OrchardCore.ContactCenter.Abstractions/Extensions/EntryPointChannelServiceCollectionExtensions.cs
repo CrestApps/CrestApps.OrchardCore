@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Models;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
