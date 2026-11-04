@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Stripe.Core;
-using CrestApps.OrchardCore.Users.Core;
+using CrestApps.OrchardCore.Users;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(

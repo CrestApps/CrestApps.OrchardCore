@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.Resources;
 using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Users;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -23,8 +25,8 @@ using OrchardCore.Modules.Manifest;
 
         // The extension editor picks its user with the searchable user picker (CrestApps Users), which renders through
         // the item selector (CrestApps Resources), rather than loading every user into a list.
-        "CrestApps.OrchardCore.Users",
-        "CrestApps.OrchardCore.Resources",
+        UsersConstants.Feature.Area,
+        ResourcesConstants.Feature.Area,
     ]
 )]
 
@@ -37,7 +39,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         TelephonyConstants.Feature.Area,
-        "CrestApps.OrchardCore.Resources",
+        ResourcesConstants.Feature.Area,
     ]
 )]
 

@@ -3,7 +3,7 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Skills;
 using CrestApps.OrchardCore.Telephony;
-using CrestApps.OrchardCore.Users.Core;
+using CrestApps.OrchardCore.Users;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(

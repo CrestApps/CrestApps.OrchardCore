@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Accounts;
 using CrestApps.OrchardCore.Addresses;
+using CrestApps.OrchardCore.Resources;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -17,7 +18,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Content Management",
     Dependencies =
     [
-        "CrestApps.OrchardCore.Resources",
+        ResourcesConstants.Feature.Area,
         "OrchardCore.Contents",
         "OrchardCore.ContentTypes",
         "OrchardCore.Lists",

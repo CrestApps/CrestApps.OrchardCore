@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Products.Core;
+using CrestApps.OrchardCore.Resources;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -40,7 +41,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         ProductConstants.Feature.Listing,
-        "CrestApps.OrchardCore.Resources",
+        ResourcesConstants.Feature.Area,
     ]
 )]
 
@@ -52,7 +53,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         ProductConstants.Feature.Listing,
-        "CrestApps.OrchardCore.Resources",
+        ResourcesConstants.Feature.Area,
     ]
 )]
 
@@ -64,7 +65,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         ProductConstants.Feature.Listing,
-        "CrestApps.OrchardCore.Resources",
+        ResourcesConstants.Feature.Area,
     ]
 )]
 

@@ -2,7 +2,7 @@ using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Receipts.Core;
 using CrestApps.OrchardCore.Transactions;
-using CrestApps.OrchardCore.Users.Core;
+using CrestApps.OrchardCore.Users;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(

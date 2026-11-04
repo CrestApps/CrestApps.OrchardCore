@@ -32,6 +32,7 @@
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.TenantHierarchy.Abstractions/CrestApps.OrchardCore.TenantHierarchy.Abstractions.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.TenantHierarchy.Core/CrestApps.OrchardCore.TenantHierarchy.Core.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Users.Abstractions/CrestApps.OrchardCore.Users.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

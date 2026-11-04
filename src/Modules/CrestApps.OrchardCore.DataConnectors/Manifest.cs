@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.DataConnectors;
+using CrestApps.OrchardCore.Resources;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -17,7 +18,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         "OrchardCore.DataPipelines.Core",
-        "CrestApps.OrchardCore.Resources",
+        ResourcesConstants.Feature.Area,
     ]
 )]
 

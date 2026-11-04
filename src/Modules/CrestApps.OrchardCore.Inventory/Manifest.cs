@@ -2,6 +2,7 @@ using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Inventory.Core;
 using CrestApps.OrchardCore.Products.Core;
+using CrestApps.OrchardCore.Resources;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -44,7 +45,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         InventoryConstants.Features.Inventory,
-        "CrestApps.OrchardCore.Resources",
+        ResourcesConstants.Feature.Area,
     ]
 )]
 

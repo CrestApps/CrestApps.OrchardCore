@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Resources;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -18,7 +19,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Reporting",
     Dependencies =
     [
-        "CrestApps.OrchardCore.Resources",
+        ResourcesConstants.Feature.Area,
         "OrchardCore.Users",
     ]
 )]

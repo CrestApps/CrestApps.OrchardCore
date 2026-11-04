@@ -1,5 +1,5 @@
+using CrestApps.OrchardCore.Users;
 using CrestApps.OrchardCore;
-using CrestApps.OrchardCore.Users.Core;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(

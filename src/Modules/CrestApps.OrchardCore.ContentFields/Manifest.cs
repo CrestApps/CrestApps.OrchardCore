@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Addresses;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
+using CrestApps.OrchardCore.Resources;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -20,7 +21,7 @@ using OrchardCore.Modules.Manifest;
     Description = "Adds custom Orchard Core content fields maintained by CrestApps.",
     Dependencies =
     [
-        "CrestApps.OrchardCore.Resources",
+        ResourcesConstants.Feature.Area,
         PhoneNumberVerificationsConstants.Features.PhoneNumbers,
         "OrchardCore.ContentFields",
         "OrchardCore.ContentTypes",

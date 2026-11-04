@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Carts.Core;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Orders.Core;
+using CrestApps.OrchardCore.Resources;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -24,7 +25,7 @@ using OrchardCore.Modules.Manifest;
         CheckoutConstants.Features.Area,
 
         // The item selector the coupon editor picks products and categories with.
-        "CrestApps.OrchardCore.Resources",
+        ResourcesConstants.Feature.Area,
     ]
 )]
 

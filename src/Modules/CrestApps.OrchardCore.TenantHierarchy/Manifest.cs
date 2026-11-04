@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.Resources;
 using CrestApps.OrchardCore.TenantHierarchy;
+using CrestApps.OrchardCore.Users;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -20,7 +22,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         "OrchardCore.Tenants",
-        "CrestApps.OrchardCore.Resources",
+        ResourcesConstants.Feature.Area,
     ]
 )]
 
@@ -33,10 +35,10 @@ using OrchardCore.Modules.Manifest;
     [
         "OrchardCore.Users",
         "OrchardCore.Roles",
-        "CrestApps.OrchardCore.Resources",
+        ResourcesConstants.Feature.Area,
 
         // The user picker of the access rules.
-        "CrestApps.OrchardCore.Users",
+        UsersConstants.Feature.Area,
 
         // The activity of the child tenants is recorded in the audit trail.
         "OrchardCore.AuditTrail",
