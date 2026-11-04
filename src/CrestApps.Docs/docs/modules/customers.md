@@ -185,7 +185,40 @@ The `Customers` recipe step adds or updates guest and business customers, for sa
 }
 ```
 
-A customer is matched by `ItemId`, then by the email of a guest, so running a recipe again updates rather than duplicates. Customers with an account are made from their user, and erased or merged customers are left alone. Customers are personal data, so there is no deployment step that exports them. The **Product listing: online store sample** recipe uses this step for its two sample customers.
+A customer is matched by `ItemId`, then by the email of a guest, so running a recipe again updates rather than duplicates. Customers with an account are made from their user, and erased or merged customers are left alone. The **Product listing: online store sample** recipe uses this step for its two sample customers.
+
+The **Customers** deployment step (`CustomersDeploymentStep`) writes the guest and business customers in the shape this step reads. Customers are personal data: an administrator must add the step to a plan, and it leaves out customers who have a user account and customers who were erased or merged.
+
+Store credit, loyalty points and referral codes have their own steps, each with a deployment step that writes every record, so you can move them after the customers. Each record is matched by `ItemId`, then by its customer (and currency, for store credit), and is carried with its balance or points and its activity. Only the database document id of the exporting site is left out.
+
+| Feature | Recipe step | Array | Matched by | Deployment step |
+| --- | --- | --- | --- | --- |
+| Store credit | `StoreCreditAccounts` | `Accounts` | `ItemId`, then `CustomerId` and `Currency` | **Store credit** |
+| Loyalty | `LoyaltyAccounts` | `Accounts` | `ItemId`, then `CustomerId` | **Loyalty points** |
+| Referrals | `ReferralProfiles` | `Profiles` | `ItemId`, then `CustomerId`; a `Code` another customer uses is refused | **Referral codes** |
+
+```json
+{
+  "steps": [
+    {
+      "name": "StoreCreditAccounts",
+      "Accounts": [
+        { "ItemId": "4cr00000000000000000000001", "CustomerId": "4cs00000000000000000000001", "Currency": "USD", "Balance": 25, "Activity": [] }
+      ]
+    },
+    {
+      "name": "LoyaltyAccounts",
+      "Accounts": [ { "CustomerId": "4cs00000000000000000000001", "Points": 1200, "Activity": [] } ]
+    },
+    {
+      "name": "ReferralProfiles",
+      "Profiles": [ { "CustomerId": "4cs00000000000000000000001", "Code": "ANA10", "Referrals": [] } ]
+    }
+  ]
+}
+```
+
+A record names its customer by id, so import the customers first. A customer with a user account is made from the user on each site, with that site's own id, so the step imports such a customer's store credit, points or code under the id it carries, and they show only where a customer has that id.
 
 ## API
 
