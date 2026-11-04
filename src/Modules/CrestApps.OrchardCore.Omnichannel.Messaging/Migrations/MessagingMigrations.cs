@@ -164,8 +164,9 @@ internal sealed class MessagingMigrations : DataMigration
         await CreateReportIndexAsync();
         await CreateAttentionIndexesAsync();
         await CreateActivityIndexAsync();
+        await CreateLookupIndexesAsync();
 
-        return 5;
+        return 6;
     }
 
     private async Task CreateAddressesUniqueIndexAsync()
@@ -267,6 +268,34 @@ internal sealed class MessagingMigrations : DataMigration
         await CreateActivityIndexAsync();
 
         return 5;
+    }
+
+    /// <summary>
+    /// Adds the indexes the first-response deadline check and the lookup of a contact's conversations by channel seek.
+    /// Both were carried only by indexes led by <c>DocumentId</c>, so the deadline check, which runs on a timer, read the
+    /// whole table each time, and so did each lookup of a contact's threads on a channel.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom5Async()
+    {
+        await CreateLookupIndexesAsync();
+
+        return 6;
+    }
+
+    private async Task CreateLookupIndexesAsync()
+    {
+        await IndexTableIndexCreation.CreateIfMissingAsync<MessagingConversationIndex>(
+            SchemaBuilder,
+            "IDX_MessagingConversationIndex_FirstResponseDue",
+            MessagingStorage.CollectionName,
+            "Status", "FirstResponseDueUtc", "DocumentId");
+
+        await IndexTableIndexCreation.CreateIfMissingAsync<MessagingConversationIndex>(
+            SchemaBuilder,
+            "IDX_MessagingConversationIndex_Contact",
+            MessagingStorage.CollectionName,
+            "Channel", "ContactAddress", "DocumentId");
     }
 
     private Task<bool> CreateActivityIndexAsync()

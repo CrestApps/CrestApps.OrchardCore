@@ -283,6 +283,25 @@ internal sealed class InteractionEventIndexMigrations : DataMigration
         return 8;
     }
 
+    /// <summary>
+    /// Adds the index the state an agent was in when a report's period opened is found through: the newest event of
+    /// some types for one aggregate before an instant. The aggregate index orders an aggregate's events by time but does
+    /// not carry the event type, so walking it backwards looked up every newer event of another type in the table
+    /// before reaching a match, and a report over agents with long histories ran into the command timeout. This index
+    /// carries the type after the time, so the walk tests it from the index alone.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom8Async()
+    {
+        await IndexTableIndexCreation.CreateIfMissingAsync<InteractionEventIndex>(
+            SchemaBuilder,
+            "IDX_InteractionEventIndex_AggregateState",
+            ContactCenterStorage.CollectionName,
+            "AggregateType", "AggregateId", "OccurredUtc", "EventType", "DocumentId");
+
+        return 9;
+    }
+
     private Task<bool> CreateReportIndexAsync()
     {
         return IndexTableIndexCreation.CreateIfMissingAsync<InteractionEventIndex>(

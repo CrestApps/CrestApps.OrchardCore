@@ -44,6 +44,16 @@ public sealed class ContactCenterCallPathLookupIndexMigrationTests
             ("IDX_QueueItemIndex_StatusQueue", "Status, QueueId, DocumentId"));
 
     [Fact]
+    public Task CallRecordingIndex_HasTheProviderRecordingAndStoredIndexes()
+        => AssertLookupIndexesAsync<CallRecordingIndex, CallRecordingIndexMigrations>(
+            store => new CallRecordingIndexMigrations(),
+            m => m.CreateAsync(),
+            m => m.UpdateFrom5Async(),
+            expectedVersion: 6,
+            ("IDX_CallRecordingIndex_ProviderRecording", "ProviderRecordingId, DocumentId"),
+            ("IDX_CallRecordingIndex_Stored", "IsStored, StartedUtc, IsErased, DocumentId"));
+
+    [Fact]
     public Task InteractionIndex_HasTheProviderAndCorrelationLookupIndexes()
         => AssertLookupIndexesAsync<InteractionIndex, InteractionIndexMigrations>(
             store => new InteractionIndexMigrations(store),

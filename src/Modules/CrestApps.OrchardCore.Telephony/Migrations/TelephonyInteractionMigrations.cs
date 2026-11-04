@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Telephony.Indexes;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -57,7 +58,9 @@ public sealed class TelephonyInteractionMigrations : DataMigration
                 "DocumentId")
         );
 
-        return 3;
+        await CreateProviderCallIndexAsync();
+
+        return 4;
     }
 
     // Adds the voicemail columns to an existing telephony interaction index so a call sent to voicemail can be
@@ -93,4 +96,20 @@ public sealed class TelephonyInteractionMigrations : DataMigration
 
         return 3;
     }
+
+    // Adds the index a call is found by from the provider's call id, which every call webhook reads. The call id was
+    // carried only by the index led by the user, so each webhook read the whole table.
+    public async Task<int> UpdateFrom3Async()
+    {
+        await CreateProviderCallIndexAsync();
+
+        return 4;
+    }
+
+    private Task<bool> CreateProviderCallIndexAsync()
+        => IndexTableIndexCreation.CreateIfMissingAsync<TelephonyInteractionIndex>(
+            SchemaBuilder,
+            "IDX_TelephonyInteractionIndex_ProviderCall",
+            collection: null,
+            "CallId", "ProviderName", "DocumentId");
 }

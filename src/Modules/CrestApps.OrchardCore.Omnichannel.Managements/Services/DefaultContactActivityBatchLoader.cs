@@ -16,6 +16,7 @@ using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
 using YesSql;
 using YesSql.Services;
+using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 
@@ -953,6 +954,46 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         Dictionary<string, long> knownDocumentIds,
         CancellationToken cancellationToken)
     {
+        var leadIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // A load of one file starts from the file's leads. Reading every lead of the type first and intersecting with the
+        // file read the whole lead index on every such load, which outlived the command timeout on a large tenant. A file
+        // can hold more leads than a database accepts as query parameters, so its leads are read in chunks.
+        if (!string.IsNullOrWhiteSpace(filter.ImportEntryId))
+        {
+            var importedDocumentIds = await ReadImportedLeadDocumentIdsAsync(session, batch, filter.ImportEntryId.Trim(), cancellationToken);
+
+            foreach (var chunk in importedDocumentIds.Chunk(_idLookupChunkSize))
+            {
+                AddLeads(await BuildLeadQuery(session, batch, filter).Where(index => index.DocumentId.IsIn(chunk)).ListAsync(cancellationToken));
+            }
+
+            return leadIds;
+        }
+
+        AddLeads(await BuildLeadQuery(session, batch, filter).ListAsync(cancellationToken));
+
+        return leadIds;
+
+        void AddLeads(IEnumerable<LeadIndex> leads)
+        {
+            foreach (var lead in leads)
+            {
+                leadIds.Add(lead.ContentItemId);
+
+                // The lead index is read for this content type and version only, so its row is the record's row.
+                knownDocumentIds[lead.ContentItemId] = lead.DocumentId;
+
+                if (lead.IsConverted)
+                {
+                    convertedIds.Add(lead.ContentItemId);
+                }
+            }
+        }
+    }
+
+    private static IQueryIndex<LeadIndex> BuildLeadQuery(ISession session, OmnichannelActivityBatch batch, LeadBatchFilter filter)
+    {
         var query = batch.OnlyPublishedLeads
             ? session.QueryIndex<LeadIndex>(index => index.Published && index.ContentType == batch.ContactContentType)
             : session.QueryIndex<LeadIndex>(index => index.Latest && index.ContentType == batch.ContactContentType);
@@ -990,41 +1031,42 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
             query = query.Where(index => index.Rating.IsIn(ratings));
         }
 
-        var leads = await query.ListAsync(cancellationToken);
-        var leadIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        return query;
+    }
 
-        foreach (var lead in leads)
-        {
-            leadIds.Add(lead.ContentItemId);
+    // Reads only the document of each lead the file imported. Reading the index rows themselves read every column of
+    // every row, so the database looked each one up in the table; the document column is in the import index.
+    private static async Task<long[]> ReadImportedLeadDocumentIdsAsync(
+        ISession session,
+        OmnichannelActivityBatch batch,
+        string entryId,
+        CancellationToken cancellationToken)
+    {
+        var configuration = session.Store.Configuration;
+        var dialect = configuration.SqlDialect;
+        var version = dialect.QuoteForColumnName(batch.OnlyPublishedLeads ? nameof(LeadImportIndex.Published) : nameof(LeadImportIndex.Latest));
 
-            // The lead index is read for this content type and version only, so its row is the record's row.
-            knownDocumentIds[lead.ContentItemId] = lead.DocumentId;
+        var builder = new SqlBuilder(configuration.TablePrefix, dialect);
+        builder.Select();
+        builder.Distinct();
+        builder.Selector(dialect.QuoteForColumnName("DocumentId"));
+        builder.Table(configuration.TableNameConvention.GetIndexTable(typeof(LeadImportIndex), null), alias: null, configuration.Schema);
+        builder.WhereAnd($"{dialect.QuoteForColumnName(nameof(LeadImportIndex.EntryId))} = @EntryId");
+        builder.WhereAnd($"{dialect.QuoteForColumnName(nameof(LeadImportIndex.ContentType))} = @ContentType");
+        builder.WhereAnd($"{version} = @Version");
 
-            if (lead.IsConverted)
-            {
-                convertedIds.Add(lead.ContentItemId);
-            }
-        }
+        // Read on the session's own connection and outside a transaction, as the session's own queries read: this is the
+        // load's read-only session, and a transaction begun on it would be held for the whole load and, on SQLite, lock
+        // out the writes the load makes on its other session.
+        var connection = await session.CreateConnectionAsync(cancellationToken);
 
-        // A file can hold more leads than a database accepts as query parameters, so the leads of the import are read
-        // on their own and the two sets are intersected here.
-        if (!string.IsNullOrWhiteSpace(filter.ImportEntryId) && leadIds.Count > 0)
-        {
-            var entryId = filter.ImportEntryId.Trim();
-            var contentType = batch.ContactContentType;
+        var documentIds = await connection.QueryAsync<long>(
+            new CommandDefinition(
+                builder.ToSqlString(),
+                new { EntryId = entryId, ContentType = batch.ContactContentType, Version = true },
+                cancellationToken: cancellationToken));
 
-            var importQuery = batch.OnlyPublishedLeads
-                ? session.QueryIndex<LeadImportIndex>(index => index.Published && index.EntryId == entryId && index.ContentType == contentType)
-                : session.QueryIndex<LeadImportIndex>(index => index.Latest && index.EntryId == entryId && index.ContentType == contentType);
-
-            var importedIds = (await importQuery.ListAsync(cancellationToken))
-                .Select(index => index.ContentItemId)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-            leadIds.IntersectWith(importedIds);
-        }
-
-        return leadIds;
+        return [.. documentIds];
     }
 
     /// <summary>

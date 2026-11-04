@@ -94,11 +94,9 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
                 table.CreateIndex(name, columns));
         }
 
-        await CreateContentItemListIndexAsync();
-
         ScheduleContactDefinitionRepair();
 
-        return 14;
+        return 13;
     }
 
     /// <summary>
@@ -288,48 +286,6 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
         }
 
         return 13;
-    }
-
-    /// <summary>
-    /// Adds the content item indexes that the contact and lead lists read, so a search by name, or the list of a
-    /// user who may view only their own records, no longer reads every content item of the tenant.
-    /// </summary>
-    /// <returns>The migration version number.</returns>
-    public async Task<int> UpdateFrom13Async()
-    {
-        await CreateContentItemListIndexAsync();
-
-        return 14;
-    }
-
-    // Every index Orchard Core puts on the content item index starts with DocumentId, so a list of one content type
-    // could not seek to its rows: a search by name, which matches anywhere in the display text, read every content
-    // item of the tenant and outlived the command timeout on a large one. This index starts with the type and the
-    // latest flag the list always filters by, holds its rows in the list's default order (modified, newest first),
-    // and carries the display text and the published flag, so the list finds its page from the index alone. A user
-    // who may view only their own records gets the list filtered by owner as well, which the second index seeks.
-    private async Task CreateContentItemListIndexAsync()
-    {
-        await IndexTableIndexCreation.CreateIfMissingAsync<ContentItemIndex>(
-            SchemaBuilder,
-            "IDX_ContentItemIndex_ContentType_Latest",
-            collection: null,
-            "ContentType",
-            "Latest",
-            "ModifiedUtc",
-            "DisplayText",
-            "Published",
-            "DocumentId");
-
-        await IndexTableIndexCreation.CreateIfMissingAsync<ContentItemIndex>(
-            SchemaBuilder,
-            "IDX_ContentItemIndex_ContentType_Owner",
-            collection: null,
-            "ContentType",
-            "Owner",
-            "Latest",
-            "ModifiedUtc",
-            "DocumentId");
     }
 
     internal static Task CreatePhoneNumberIndexTableAsync(ISchemaBuilder schemaBuilder)
