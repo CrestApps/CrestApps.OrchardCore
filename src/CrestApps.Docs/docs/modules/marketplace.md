@@ -25,7 +25,7 @@ Vendors, earnings and payouts live in the `Marketplace` collection:
 - **`VendorEarning`** (`IVendorEarningStore`): one per vendor line of a paid order, or per refund. It holds `Gross`, `Commission` and `Net`, its kind (Sale or Refund), its `VendorEarningStatus` (Held, Available or PaidOut), `HoldUntilUtc`, `AwaitsFulfillment` for goods, and the payout that paid it.
 - **`VendorPayout`** (`IVendorPayoutStore`): an amount sent to a vendor for one order's earnings, with its status and the provider's reference.
 
-`MarketplaceSettings` (**Settings > Commerce > Marketplace**, `ManageMarketplace`) holds the commission (10%), the days a sale is held (7), whether goods wait for fulfillment, whether payouts run by themselves, and the country a vendor's Stripe account is made in.
+`MarketplaceSettings` (**Settings > Commerce > Marketplace**, `ManageMarketplace`) holds the commission (10%), the days a sale is held (7), whether goods wait for fulfillment, whether payouts run by themselves, the payout provider when more than one is enabled, and the country a vendor's Stripe account is made in.
 
 ## The ledger
 
@@ -40,7 +40,7 @@ Vendors, earnings and payouts live in the `Marketplace` collection:
 - **`RecordSaleAsync`** writes a held earning for each vendor line of a paid order. Recording an order twice writes nothing more.
 - **`RecordRefundAsync`** writes a negative earning for the vendor's share, keyed by the refund, so it isn't taken twice.
 - **`ReleaseDueAsync`** makes earnings available once their hold has ended and, for goods, their order is fulfilled. **`ReleaseOrderAsync`** releases an order's earnings early, such as when a service is delivered or a milestone is reached.
-- **`PayOutAsync`** pays a vendor what's available, one payout per order, through the `IVendorPayoutProvider`. It refuses a suspended vendor or one whose payouts aren't set up. **`PayOutAllAsync`** pays every vendor.
+- **`PayOutAsync`** pays a vendor what's available, one payout per order, through the `IVendorPayoutProvider` named by `MarketplaceSettings.PayoutProvider`, or the only one enabled when none is named; with several enabled and none named it pays nothing. It refuses a suspended vendor or one whose payouts aren't set up. Each payout's idempotency key comes from the vendor, the order and the earnings it pays (`MarketplaceLedger.GetPayoutKey`), so a payout retried after its transfer went through but its save failed gets the same transfer back instead of paying twice; a payout the provider refused bumps the earnings' `RefusedPayouts`, so the next try is a new request. **`PayOutAllAsync`** pays every vendor.
 
 `MarketplaceOrderEventHandler` records sales when an order is paid and refunds when it's refunded. `MarketplaceBackgroundTask` releases what's due every hour, and pays out when automatic payouts are on.
 

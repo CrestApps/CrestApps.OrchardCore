@@ -85,13 +85,19 @@ internal sealed class MarketplaceSettingsDisplayDriver : SiteDisplayDriver<Marke
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IEnumerable<IVendorPayoutProvider> _payoutProviders;
 
     internal readonly IStringLocalizer S;
 
-    public MarketplaceSettingsDisplayDriver(IHttpContextAccessor httpContextAccessor, IAuthorizationService authorizationService, IStringLocalizer<MarketplaceSettingsDisplayDriver> stringLocalizer)
+    public MarketplaceSettingsDisplayDriver(
+        IHttpContextAccessor httpContextAccessor,
+        IAuthorizationService authorizationService,
+        IEnumerable<IVendorPayoutProvider> payoutProviders,
+        IStringLocalizer<MarketplaceSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
+        _payoutProviders = payoutProviders;
         S = stringLocalizer;
     }
 
@@ -106,6 +112,8 @@ internal sealed class MarketplaceSettingsDisplayDriver : SiteDisplayDriver<Marke
             model.ReleaseOnFulfillment = settings.ReleaseOnFulfillment;
             model.AutomaticPayouts = settings.AutomaticPayouts;
             model.DefaultCountry = settings.DefaultCountry;
+            model.PayoutProvider = settings.PayoutProvider;
+            model.PayoutProviders = [.. _payoutProviders.Select(provider => provider.Name)];
         }).Location("Content:1")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, MarketplacePermissions.ManageMarketplace))
         .OnGroup(SettingsGroupId);
@@ -133,6 +141,9 @@ internal sealed class MarketplaceSettingsDisplayDriver : SiteDisplayDriver<Marke
         settings.HoldDays = Math.Clamp(model.HoldDays, 0, 365);
         settings.ReleaseOnFulfillment = model.ReleaseOnFulfillment;
         settings.AutomaticPayouts = model.AutomaticPayouts;
+        settings.PayoutProvider = _payoutProviders.Any(provider => string.Equals(provider.Name, model.PayoutProvider, StringComparison.OrdinalIgnoreCase))
+            ? model.PayoutProvider
+            : null;
         settings.DefaultCountry = CountryCodeUtility.IsCountryCode(model.DefaultCountry) ? CountryCodeUtility.Normalize(model.DefaultCountry) : settings.DefaultCountry;
 
         return Edit(site, settings, context);

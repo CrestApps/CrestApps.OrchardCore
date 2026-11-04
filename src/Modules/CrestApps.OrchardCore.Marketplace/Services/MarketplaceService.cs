@@ -15,6 +15,11 @@ namespace CrestApps.OrchardCore.Marketplace.Services;
 public interface IVendorPayoutProvider
 {
     /// <summary>
+    /// Gets the provider's unique name, which <see cref="MarketplaceSettings.PayoutProvider"/> chooses it by.
+    /// </summary>
+    string Name { get; }
+
+    /// <summary>
     /// Sends <paramref name="amount"/> to the vendor for an order, from that order's payment when it can. Returns the
     /// provider's reference for the transfer, or the reason it failed.
     /// </summary>
@@ -236,10 +241,13 @@ public sealed class MarketplaceService
         ArgumentNullException.ThrowIfNull(vendor);
 
         var failures = new List<string>();
+        var settings = await _siteService.GetSettingsAsync<MarketplaceSettings>();
 
-        if (_payoutProviders.FirstOrDefault() is not { } provider)
+        if (SelectPayoutProvider(_payoutProviders, settings.PayoutProvider) is not { } provider)
         {
-            return (0m, ["No payout provider is enabled, such as Marketplace payouts with Stripe Connect."]);
+            return (0m, [_payoutProviders.Any()
+                ? "Choose the payout provider in the marketplace settings: more than one is enabled, or the one chosen is not."
+                : "No payout provider is enabled, such as Marketplace payouts with Stripe Connect."]);
         }
 
         if (vendor.Status != VendorStatus.Active || !vendor.PayoutsEnabled)
@@ -270,10 +278,15 @@ public sealed class MarketplaceService
                 Amount = amount,
                 Currency = group.Key.Currency,
                 EarningIds = [.. group.Select(earning => earning.ItemId)],
+                Provider = provider.Name,
                 CreatedUtc = now,
             };
 
-            var (transferId, failure) = await provider.PayAsync(vendor, order, amount, group.Key.Currency, payout.ItemId, cancellationToken);
+            // Stable for the same vendor, order and earnings, so a retry after a transfer went through but its save
+            // failed is answered with the same transfer instead of paying the vendor twice.
+            payout.IdempotencyKey = MarketplaceLedger.GetPayoutKey(vendor.ItemId, group.Key.OrderId, payout.EarningIds, group.Max(earning => earning.RefusedPayouts));
+
+            var (transferId, failure) = await provider.PayAsync(vendor, order, amount, group.Key.Currency, payout.IdempotencyKey, cancellationToken);
 
             payout.TransferId = transferId;
             payout.Failure = failure;
@@ -283,6 +296,14 @@ public sealed class MarketplaceService
 
             if (failure is not null)
             {
+                // The provider keeps its answer for a key, so the next try of these earnings needs a new key.
+                foreach (var earning in group)
+                {
+                    earning.RefusedPayouts++;
+
+                    await _earnings.UpdateAsync(earning, cancellationToken);
+                }
+
                 failures.Add(failure);
                 _logger.LogWarning("Order '{OrderNumber}' couldn't be paid out to vendor '{VendorId}': {Failure}", payout.OrderNumber, vendor.ItemId, failure);
 
@@ -332,6 +353,26 @@ public sealed class MarketplaceService
                 group.Where(earning => earning.Status == VendorEarningStatus.Held).Sum(earning => earning.Net),
                 group.Where(earning => earning.Status == VendorEarningStatus.Available).Sum(earning => earning.Net),
                 group.Where(earning => earning.Status == VendorEarningStatus.PaidOut).Sum(earning => earning.Net)))];
+
+    /// <summary>
+    /// Returns the payout provider named <paramref name="name"/>, or the only one enabled when no name is given;
+    /// <see langword="null"/> when none matches or several are enabled and none is named.
+    /// </summary>
+    /// <param name="providers">The enabled payout providers.</param>
+    /// <param name="name">The name chosen in the settings, if any.</param>
+    public static IVendorPayoutProvider SelectPayoutProvider(IEnumerable<IVendorPayoutProvider> providers, string name)
+    {
+        ArgumentNullException.ThrowIfNull(providers);
+
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            return providers.FirstOrDefault(provider => string.Equals(provider.Name, name, StringComparison.OrdinalIgnoreCase));
+        }
+
+        var enabled = providers.Take(2).ToList();
+
+        return enabled.Count == 1 ? enabled[0] : null;
+    }
 
     private async Task ReleaseAsync(VendorEarning earning, DateTime now, CancellationToken cancellationToken)
     {

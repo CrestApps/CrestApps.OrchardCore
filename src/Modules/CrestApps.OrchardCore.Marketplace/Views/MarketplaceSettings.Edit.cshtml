@@ -37,6 +37,23 @@
     </div>
 </div>
 
+@if (Model.PayoutProviders.Count > 1)
+{
+    <div class="ocat-limited-wrapper">
+        <label asp-for="PayoutProvider" class="ocat-label">@T["Payout provider"]</label>
+        <div class="ocat-limited">
+            <select asp-for="PayoutProvider" class="form-select">
+                <option value="">@T["Choose a provider"]</option>
+                @foreach (var provider in Model.PayoutProviders)
+                {
+                    <option value="@provider">@provider</option>
+                }
+            </select>
+            <span class="hint">@T["More than one payout provider is enabled. Vendors are paid only through the one chosen here."]</span>
+        </div>
+    </div>
+}
+
 <div class="ocat-limited-wrapper">
     <label asp-for="DefaultCountry" class="ocat-label">@T["Vendors' country"]</label>
     <div class="ocat-limited">
