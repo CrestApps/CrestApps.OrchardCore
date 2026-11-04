@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Core.Controllers;
 using CrestApps.OrchardCore.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -25,7 +26,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 /// </summary>
 [Admin]
 [Feature(ContactCenterConstants.Feature.EntryPoints)]
-public sealed class EntryPointsController : ContactCenterCatalogController<ContactCenterEntryPoint>
+public sealed class EntryPointsController : CatalogAdminController<ContactCenterEntryPoint>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="EntryPointsController"/> class.

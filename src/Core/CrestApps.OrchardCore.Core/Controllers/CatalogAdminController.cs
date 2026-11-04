@@ -18,35 +18,44 @@ using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
 using QueryContext = CrestApps.Core.Models.QueryContext;
 
-namespace CrestApps.OrchardCore.ContactCenter.Controllers;
+namespace CrestApps.OrchardCore.Core.Controllers;
 
 /// <summary>
-/// Provides the shared list/create/edit/delete orchestration for a Contact Center catalog entry type.
-/// Concrete controllers supply only the routing shell, the managing permission, and the localized labels,
-/// so every catalog admin section enforces the same authorization, validation, and notification flow.
+/// The admin controller a catalog section starts from: it lists the entries on <c>&lt;admin-list&gt;</c>, and creates,
+/// edits, copies and deletes them with the same authorization, validation and notification flow everywhere.
 /// </summary>
+/// <remarks>
+/// A concrete controller supplies the routes (one public action per page, each calling the matching protected method
+/// here), the managing permission and its labels. It changes the flow only through the virtual hooks, such as
+/// <see cref="ValidateEntryAsync"/> for a rule the editor adds, <see cref="OnSavedAsync"/> for work after a save, and
+/// <see cref="CanDeleteAsync"/> to refuse a delete.
+/// </remarks>
 /// <typeparam name="TModel">The catalog entry type administered by the controller.</typeparam>
-public abstract class ContactCenterCatalogController<TModel> : Controller
-    where TModel : CatalogItem, INameAwareModel, new()
+public abstract class CatalogAdminController<TModel> : Controller
+    where TModel : CatalogItem, new()
 {
     private const string _optionsSearch = "Options.Search";
     private const string _indexAction = "Index";
     private const string _editAction = "Edit";
 
-    // Every Contact Center catalog indexes its name in a 255-character column.
+    // Catalogs index the name in a 255-character column.
     private const int _maxNameLength = 255;
 
-    private readonly ICatalogManager<TModel> _manager;
-    private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<TModel> _displayManager;
-    private readonly INotifier _notifier;
-
-    private protected readonly IHtmlLocalizer H;
-    private protected readonly IStringLocalizer S;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ContactCenterCatalogController{TModel}"/> class.
+    /// The localizer for the HTML messages, resolved for the concrete controller.
+    /// </summary>
+    protected readonly IHtmlLocalizer H;
+
+    /// <summary>
+    /// The localizer for the text messages, resolved for the concrete controller.
+    /// </summary>
+    protected readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CatalogAdminController{TModel}"/> class.
     /// </summary>
     /// <param name="manager">The catalog manager that owns the entry type.</param>
     /// <param name="authorizationService">The authorization service.</param>
@@ -55,7 +64,7 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
     /// <param name="notifier">The notifier.</param>
     /// <param name="htmlLocalizer">The HTML localizer resolved for the concrete controller.</param>
     /// <param name="stringLocalizer">The string localizer resolved for the concrete controller.</param>
-    protected ContactCenterCatalogController(
+    protected CatalogAdminController(
         ICatalogManager<TModel> manager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
@@ -64,14 +73,29 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
         IHtmlLocalizer htmlLocalizer,
         IStringLocalizer stringLocalizer)
     {
-        _manager = manager;
-        _authorizationService = authorizationService;
+        Manager = manager;
+        AuthorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
         _displayManager = displayManager;
-        _notifier = notifier;
+        Notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
+
+    /// <summary>
+    /// Gets the catalog manager that owns the entry type.
+    /// </summary>
+    protected ICatalogManager<TModel> Manager { get; }
+
+    /// <summary>
+    /// Gets the authorization service.
+    /// </summary>
+    protected IAuthorizationService AuthorizationService { get; }
+
+    /// <summary>
+    /// Gets the notifier, so a concrete controller can add its own messages to the shared flow.
+    /// </summary>
+    protected INotifier Notifier { get; }
 
     /// <summary>
     /// Gets the permission that guards every action on the catalog section.
@@ -110,13 +134,36 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
         => H["A copy has been created successfully. Review it before putting it to use."];
 
     /// <summary>
-    /// Gets the notifier, so a concrete controller can add its own messages to the shared flow.
+    /// Gets the editor prefix the entry's rules report their failures against.
     /// </summary>
-    private protected INotifier Notifier
-        => _notifier;
+    protected virtual string ValidationPrefix
+        => typeof(TModel).Name;
 
     /// <summary>
-    /// Lists the catalog entries.
+    /// Gets the name an entry is shown by: its <see cref="INameAwareModel.Name"/> or
+    /// <see cref="IDisplayTextAwareModel.DisplayText"/>.
+    /// </summary>
+    /// <param name="entry">The entry.</param>
+    /// <returns>The entry's name.</returns>
+    protected virtual string GetName(TModel entry)
+        => entry switch
+        {
+            INameAwareModel named => named.Name,
+            IDisplayTextAwareModel titled => titled.DisplayText,
+            _ => entry?.ItemId,
+        };
+
+    /// <summary>
+    /// Sets the name of an entry, for a copy. The name contracts are read-only, so each catalog renames a copy through
+    /// its own model. A catalog that offers no copy leaves it as it is.
+    /// </summary>
+    /// <param name="entry">The entry to rename.</param>
+    /// <param name="name">The new name.</param>
+    protected virtual void SetName(TModel entry, string name)
+        => throw new NotSupportedException($"{GetType().Name} does not copy entries.");
+
+    /// <summary>
+    /// Lists the catalog entries a page at a time, filtered by the search the list submitted.
     /// </summary>
     /// <param name="options">The catalog entry options.</param>
     /// <param name="pagerParameters">The pager parameters.</param>
@@ -129,13 +176,13 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
         IOptions<PagerOptions> pagerOptions,
         IShapeFactory shapeFactory)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, ManagePermission))
+        if (!await AuthorizeAsync())
         {
             return Forbid();
         }
 
         var pager = new Pager(pagerParameters, pagerOptions.Value);
-        var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext
+        var result = await Manager.PageAsync(pager.Page, pager.PageSize, new QueryContext
         {
             Name = options.Search,
         });
@@ -149,22 +196,33 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
 
         var pagerShape = await shapeFactory.PagerAsync(pager, result.Count, routeData);
 
-        var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<TModel>>
-        {
-            Models = result.Entries.Select(model => new CatalogEntryViewModel<TModel> { Model = model }).ToList(),
-            Options = options,
-            Pager = pagerShape,
+        options.BulkActions ??= [];
 
-            // The admin-list tag builds a row per entry, in the layout (List or Grid) the site or the user picked.
-            List = new AdminListContext<TModel>
-            {
-                Source = result.Entries,
-                Pager = pagerShape,
-            },
-        };
-
-        return View(viewModel);
+        return View(ListViewModel(result.Entries, options, pagerShape));
     }
+
+    /// <summary>
+    /// Lists every catalog entry on one page, in the order <see cref="OrderAll"/> gives, so the list's search filters
+    /// the rows in the browser.
+    /// </summary>
+    /// <returns>The list view.</returns>
+    protected async Task<IActionResult> IndexAllAsync()
+    {
+        if (!await AuthorizeAsync())
+        {
+            return Forbid();
+        }
+
+        return View(ListViewModel(OrderAll(await Manager.GetAllAsync()).ToList(), options: null, pager: null));
+    }
+
+    /// <summary>
+    /// Orders the entries <see cref="IndexAllAsync"/> lists.
+    /// </summary>
+    /// <param name="entries">The stored entries.</param>
+    /// <returns>The entries in the order they are listed.</returns>
+    protected virtual IEnumerable<TModel> OrderAll(IEnumerable<TModel> entries)
+        => entries.OrderBy(GetName, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Applies the list filter.
@@ -174,7 +232,7 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
     /// <returns>A redirect to the filtered list.</returns>
     protected async Task<IActionResult> IndexFilterPostAsync(ListCatalogEntryViewModel model, PagerParameters pagerParameters)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, ManagePermission))
+        if (!await AuthorizeAsync())
         {
             return Forbid();
         }
@@ -205,13 +263,6 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
     }
 
     /// <summary>
-    /// Sets the name of an entry. The name contract is read-only, so each catalog renames a copy through its own model.
-    /// </summary>
-    /// <param name="entry">The entry to rename.</param>
-    /// <param name="name">The new name.</param>
-    protected abstract void SetName(TModel entry, string name);
-
-    /// <summary>
     /// Gets the name proposed for a copy of an entry.
     /// </summary>
     /// <param name="sourceName">The name of the entry being cloned.</param>
@@ -236,13 +287,40 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
         => Task.CompletedTask;
 
     /// <summary>
+    /// Checks a bound entry against the rules only the editor adds, once the entry's own rules have passed. A failed
+    /// rule is added to <see cref="ControllerBase.ModelState"/>.
+    /// </summary>
+    /// <param name="model">The bound entry.</param>
+    /// <param name="isNew">Whether the entry is being created.</param>
+    /// <returns>A task that completes when the rules have run.</returns>
+    protected virtual Task ValidateEntryAsync(TModel model, bool isNew)
+        => Task.CompletedTask;
+
+    /// <summary>
+    /// Runs after an entry is created or updated through the editor, before the success notification.
+    /// </summary>
+    /// <param name="model">The saved entry.</param>
+    /// <param name="isNew">Whether the entry was created.</param>
+    /// <returns>A task that completes when the work is done.</returns>
+    protected virtual Task OnSavedAsync(TModel model, bool isNew)
+        => Task.CompletedTask;
+
+    /// <summary>
+    /// Decides whether an entry may be deleted. A controller that refuses tells the operator why.
+    /// </summary>
+    /// <param name="model">The entry to delete.</param>
+    /// <returns><see langword="true"/> to delete the entry; otherwise, <see langword="false"/>.</returns>
+    protected virtual Task<bool> CanDeleteAsync(TModel model)
+        => Task.FromResult(true);
+
+    /// <summary>
     /// Displays the create form.
     /// </summary>
     /// <param name="cloneId">The identifier of an entry whose configuration the new entry starts from, if any.</param>
     /// <returns>The create view.</returns>
     protected async Task<IActionResult> CreateAsync(string cloneId = null)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, ManagePermission))
+        if (!await AuthorizeAsync())
         {
             return Forbid();
         }
@@ -270,7 +348,7 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
     /// <returns>A redirect to the list or the form when invalid.</returns>
     protected async Task<IActionResult> CreatePostAsync(string cloneId = null)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, ManagePermission))
+        if (!await AuthorizeAsync())
         {
             return Forbid();
         }
@@ -288,12 +366,13 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
             Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
-        var isValid = await CatalogEntryValidation.ValidateAsync(_manager, model, _updateModelAccessor.ModelUpdater, typeof(TModel).Name);
+        var rulesPassed = await CatalogEntryValidation.ValidateAsync(Manager, model, _updateModelAccessor.ModelUpdater, ValidationPrefix);
 
-        if (isValid && ModelState.IsValid)
+        if (await IsValidAsync(model, rulesPassed, isNew: true))
         {
-            await _manager.CreateAsync(model);
-            await _notifier.SuccessAsync(CreatedNotification);
+            await Manager.CreateAsync(model);
+            await OnSavedAsync(model, isNew: true);
+            await Notifier.SuccessAsync(CreatedNotification);
 
             return RedirectToAction(_indexAction);
         }
@@ -308,12 +387,12 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
     /// <returns>The edit view.</returns>
     protected async Task<IActionResult> EditAsync(string id)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, ManagePermission))
+        if (!await AuthorizeAsync())
         {
             return Forbid();
         }
 
-        var model = await _manager.FindByIdAsync(id);
+        var model = await FindAsync(id);
 
         if (model is null)
         {
@@ -322,7 +401,7 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
 
         var viewModel = new EditCatalogEntryViewModel
         {
-            DisplayName = model.Name,
+            DisplayName = GetName(model),
             Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 
@@ -336,12 +415,12 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
     /// <returns>A redirect to the list or the form when invalid.</returns>
     protected async Task<IActionResult> EditPostAsync(string id)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, ManagePermission))
+        if (!await AuthorizeAsync())
         {
             return Forbid();
         }
 
-        var model = await _manager.FindByIdAsync(id);
+        var model = await FindAsync(id);
 
         if (model is null)
         {
@@ -350,16 +429,17 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
 
         var viewModel = new EditCatalogEntryViewModel
         {
-            DisplayName = model.Name,
+            DisplayName = GetName(model),
             Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 
-        var isValid = await CatalogEntryValidation.ValidateAsync(_manager, model, _updateModelAccessor.ModelUpdater, typeof(TModel).Name);
+        var rulesPassed = await CatalogEntryValidation.ValidateAsync(Manager, model, _updateModelAccessor.ModelUpdater, ValidationPrefix);
 
-        if (isValid && ModelState.IsValid)
+        if (await IsValidAsync(model, rulesPassed, isNew: false))
         {
-            await _manager.UpdateAsync(model);
-            await _notifier.SuccessAsync(UpdatedNotification);
+            await Manager.UpdateAsync(model);
+            await OnSavedAsync(model, isNew: false);
+            await Notifier.SuccessAsync(UpdatedNotification);
 
             return RedirectToAction(_indexAction);
         }
@@ -368,23 +448,54 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
     }
 
     /// <summary>
-    /// Deletes an entry.
+    /// Deletes an entry. A missing entry is not an error: the list is shown again.
     /// </summary>
     /// <param name="id">The entry identifier.</param>
     /// <returns>A redirect to the list.</returns>
     protected async Task<IActionResult> DeleteAsync(string id)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, ManagePermission))
+        if (!await AuthorizeAsync())
         {
             return Forbid();
         }
 
-        var model = await _manager.FindByIdAsync(id);
+        var model = await FindAsync(id);
 
-        if (model is not null)
+        if (model is not null && await CanDeleteAsync(model) && await Manager.DeleteAsync(model))
         {
-            await _manager.DeleteAsync(model);
-            await _notifier.SuccessAsync(DeletedNotification);
+            await Notifier.SuccessAsync(DeletedNotification);
+        }
+
+        return RedirectToAction(_indexAction);
+    }
+
+    /// <summary>
+    /// Deletes the entries checked on the list, skipping those <see cref="CanDeleteAsync"/> refuses.
+    /// </summary>
+    /// <param name="itemIds">The identifiers of the checked entries.</param>
+    /// <returns>A redirect to the list.</returns>
+    protected async Task<IActionResult> BulkDeleteAsync(IEnumerable<string> itemIds)
+    {
+        if (!await AuthorizeAsync())
+        {
+            return Forbid();
+        }
+
+        var deleted = 0;
+
+        foreach (var id in itemIds?.Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal) ?? [])
+        {
+            var model = await FindAsync(id);
+
+            if (model is not null && await CanDeleteAsync(model) && await Manager.DeleteAsync(model))
+            {
+                deleted++;
+            }
+        }
+
+        if (deleted > 0)
+        {
+            await Notifier.SuccessAsync(H["{0} entries have been deleted successfully.", deleted]);
         }
 
         return RedirectToAction(_indexAction);
@@ -403,7 +514,7 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
     /// <returns>A redirect to the copy's editor, or to the list when the copy cannot be stored.</returns>
     protected async Task<IActionResult> ClonePostAsync(string id)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, ManagePermission))
+        if (!await AuthorizeAsync())
         {
             return Forbid();
         }
@@ -413,7 +524,7 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
             return NotFound();
         }
 
-        var source = await _manager.FindByIdAsync(id);
+        var source = await FindAsync(id);
 
         if (source is null)
         {
@@ -421,11 +532,11 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
         }
 
         var clone = await NewCloneAsync(source);
-        SetName(clone, await GetUniqueCloneNameAsync(source.Name));
+        SetName(clone, await GetUniqueCloneNameAsync(GetName(source)));
 
         var updater = _updateModelAccessor.ModelUpdater;
 
-        if (!await CatalogEntryValidation.ValidateAsync(_manager, clone, updater, typeof(TModel).Name))
+        if (!await CatalogEntryValidation.ValidateAsync(Manager, clone, updater, ValidationPrefix))
         {
             // There is no form to show the reasons on, so they travel with the notification instead.
             var reasons = string.Join(" ", updater.ModelState.Values
@@ -434,19 +545,61 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
                 .Where(message => !string.IsNullOrWhiteSpace(message))
                 .Distinct(StringComparer.Ordinal));
 
-            await _notifier.ErrorAsync(H["The copy could not be created. {0}", reasons]);
+            await Notifier.ErrorAsync(H["The copy could not be created. {0}", reasons]);
 
             return RedirectToAction(_indexAction);
         }
 
-        await _manager.CreateAsync(clone);
-        await _notifier.SuccessAsync(ClonedNotification);
+        await Manager.CreateAsync(clone);
+        await Notifier.SuccessAsync(ClonedNotification);
         await OnClonedAsync(clone, source);
 
         return RedirectToAction(_editAction, new RouteValueDictionary
         {
             { "id", clone.ItemId },
         });
+    }
+
+    /// <summary>
+    /// Checks whether the current user holds <see cref="ManagePermission"/>.
+    /// </summary>
+    /// <returns><see langword="true"/> when the user may manage the catalog.</returns>
+    protected async Task<bool> AuthorizeAsync()
+        => await AuthorizationService.AuthorizeAsync(User, ManagePermission);
+
+    private async Task<TModel> FindAsync(string id)
+        => string.IsNullOrEmpty(id) ? null : await Manager.FindByIdAsync(id);
+
+    // The entry's own rules run first, in the action, so the editor-only rules only add to a model that passed them.
+    private async Task<bool> IsValidAsync(TModel model, bool rulesPassed, bool isNew)
+    {
+        if (!rulesPassed || !ModelState.IsValid)
+        {
+            return false;
+        }
+
+        await ValidateEntryAsync(model, isNew);
+
+        return ModelState.IsValid;
+    }
+
+    private static ListCatalogEntryViewModel<CatalogEntryViewModel<TModel>> ListViewModel(IEnumerable<TModel> entries, CatalogEntryOptions options, object pager)
+    {
+        var source = entries as IReadOnlyList<TModel> ?? entries.ToList();
+
+        return new ListCatalogEntryViewModel<CatalogEntryViewModel<TModel>>
+        {
+            Models = source.Select(model => new CatalogEntryViewModel<TModel> { Model = model }).ToList(),
+            Options = options,
+            Pager = pager,
+
+            // The admin-list tag builds a row per entry, in the layout (List or Grid) the site or the user picked.
+            List = new AdminListContext<TModel>
+            {
+                Source = source,
+                Pager = pager as IShape,
+            },
+        };
     }
 
     // A clone is built the way a deployment plan would recreate its source: every configured member is carried and
@@ -456,12 +609,12 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
     {
         if (string.IsNullOrEmpty(cloneId))
         {
-            var model = await _manager.NewAsync();
+            var model = await Manager.NewAsync();
 
             return await InitializeNewAsync(model) ? model : null;
         }
 
-        var source = await _manager.FindByIdAsync(cloneId);
+        var source = await FindAsync(cloneId);
 
         if (source is null)
         {
@@ -473,7 +626,7 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
 
     private async Task<TModel> NewCloneAsync(TModel source)
     {
-        var clone = await _manager.NewAsync(CatalogDeploymentSerializer.Export(source));
+        var clone = await Manager.NewAsync(CatalogDeploymentSerializer.Export(source));
 
         InitializeClone(clone, source);
 
@@ -483,8 +636,8 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
     // Names are compared without regard to case, the way an operator reads the list.
     private async Task<string> GetUniqueCloneNameAsync(string sourceName)
     {
-        var takenNames = (await _manager.GetAllAsync())
-            .Select(entry => entry.Name)
+        var takenNames = (await Manager.GetAllAsync())
+            .Select(GetName)
             .Where(name => !string.IsNullOrEmpty(name))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 

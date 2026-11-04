@@ -1,6 +1,5 @@
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.Core.Models;
-using CrestApps.OrchardCore.Core.Validation;
+using CrestApps.OrchardCore.Core.Controllers;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
@@ -12,6 +11,7 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers;
 
@@ -19,26 +19,17 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers;
 /// Provides the administration screens for lead status entries.
 /// </summary>
 [Admin]
-public sealed class LeadStatusesController : Controller
+public sealed class LeadStatusesController : CatalogAdminController<LeadStatus>
 {
     private const string _nameFieldName = "Name";
 
     private readonly INamedCatalogManager<LeadStatus> _manager;
-    private readonly INamedCatalog<LeadStatus> _catalog;
-    private readonly IAuthorizationService _authorizationService;
-    private readonly IUpdateModelAccessor _updateModelAccessor;
-    private readonly IDisplayManager<LeadStatus> _displayManager;
-    private readonly INotifier _notifier;
     private readonly LeadStatusFlagService _flagService;
-
-    internal readonly IHtmlLocalizer H;
-    internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LeadStatusesController"/> class.
     /// </summary>
     /// <param name="manager">The manager.</param>
-    /// <param name="catalog">The named catalog.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="displayManager">The display manager.</param>
@@ -48,7 +39,6 @@ public sealed class LeadStatusesController : Controller
     /// <param name="stringLocalizer">The string localizer.</param>
     public LeadStatusesController(
         INamedCatalogManager<LeadStatus> manager,
-        INamedCatalog<LeadStatus> catalog,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<LeadStatus> displayManager,
@@ -56,223 +46,124 @@ public sealed class LeadStatusesController : Controller
         LeadStatusFlagService flagService,
         IHtmlLocalizer<LeadStatusesController> htmlLocalizer,
         IStringLocalizer<LeadStatusesController> stringLocalizer)
+        : base(manager, authorizationService, updateModelAccessor, displayManager, notifier, htmlLocalizer, stringLocalizer)
     {
         _manager = manager;
-        _catalog = catalog;
-        _authorizationService = authorizationService;
-        _updateModelAccessor = updateModelAccessor;
-        _displayManager = displayManager;
-        _notifier = notifier;
         _flagService = flagService;
-        H = htmlLocalizer;
-        S = stringLocalizer;
+    }
+
+    /// <inheritdoc/>
+    protected override Permission ManagePermission
+        => OmnichannelConstants.Permissions.ManageLeadStatuses;
+
+    /// <inheritdoc/>
+    protected override LocalizedString CreateDisplayName
+        => S["Lead Status"];
+
+    /// <inheritdoc/>
+    protected override LocalizedString NewDisplayName
+        => S["New Lead Status"];
+
+    /// <inheritdoc/>
+    protected override LocalizedHtmlString CreatedNotification
+        => H["The lead status has been created successfully."];
+
+    /// <inheritdoc/>
+    protected override LocalizedHtmlString UpdatedNotification
+        => H["The lead status has been updated successfully."];
+
+    /// <inheritdoc/>
+    protected override LocalizedHtmlString DeletedNotification
+        => H["The lead status has been deleted successfully."];
+
+    /// <inheritdoc/>
+    protected override IEnumerable<LeadStatus> OrderAll(IEnumerable<LeadStatus> entries)
+        => entries
+            .OrderBy(entry => entry.Order)
+            .ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase);
+
+    /// <inheritdoc/>
+    protected override async Task ValidateEntryAsync(LeadStatus model, bool isNew)
+    {
+        var existing = await _manager.FindByNameAsync(model.Name);
+
+        if (existing is not null && !string.Equals(existing.ItemId, model.ItemId, StringComparison.OrdinalIgnoreCase))
+        {
+            ModelState.AddModelError(_nameFieldName, S["A lead status with the same name already exists."]);
+        }
+    }
+
+    /// <inheritdoc/>
+    protected override Task OnSavedAsync(LeadStatus model, bool isNew)
+        => _flagService.EnforceAsync(model);
+
+    /// <inheritdoc/>
+    protected override async Task<bool> CanDeleteAsync(LeadStatus model)
+    {
+        if (!model.IsConverted)
+        {
+            return true;
+        }
+
+        await Notifier.ErrorAsync(H["The converted status cannot be deleted, because converting a lead needs it. Mark another status as the converted status first."]);
+
+        return false;
     }
 
     /// <summary>
     /// Lists every lead status in order.
     /// </summary>
+    /// <returns>The list view.</returns>
     [Admin("omnichannel/lead-statuses", "LeadStatusesIndex")]
-    public async Task<IActionResult> Index()
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageLeadStatuses))
-        {
-            return Forbid();
-        }
-
-        var entries = (await _manager.GetAllAsync())
-            .OrderBy(entry => entry.Order)
-            .ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase);
-
-        // The admin-list tag builds a row per entry, in the layout (List or Grid) the site or the user picked.
-        // Every entry is listed on one page, so the search filters the rows in the browser.
-        var viewModel = new ListCatalogEntryViewModel
-        {
-            List = new AdminListContext<LeadStatus>
-            {
-                Source = entries.ToList(),
-            },
-        };
-
-        return View(viewModel);
-    }
+    public Task<IActionResult> Index()
+        => IndexAllAsync();
 
     /// <summary>
     /// Shows the editor for a new lead status.
     /// </summary>
+    /// <returns>The create view.</returns>
     [Admin("omnichannel/lead-statuses/create", "LeadStatusesCreate")]
-    public async Task<ActionResult> Create()
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageLeadStatuses))
-        {
-            return Forbid();
-        }
-
-        var model = await _manager.NewAsync();
-
-        var viewModel = new EditCatalogEntryViewModel
-        {
-            DisplayName = S["Lead Status"],
-            Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
-        };
-
-        return View(viewModel);
-    }
+    public Task<IActionResult> Create()
+        => CreateAsync();
 
     /// <summary>
     /// Creates a new lead status.
     /// </summary>
+    /// <returns>A redirect to the list or the form when invalid.</returns>
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("omnichannel/lead-statuses/create", "LeadStatusesCreate")]
-    public async Task<ActionResult> CreatePost()
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageLeadStatuses))
-        {
-            return Forbid();
-        }
-
-        var model = await _manager.NewAsync();
-
-        var viewModel = new EditCatalogEntryViewModel
-        {
-            DisplayName = S["New Lead Status"],
-            Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
-        };
-
-        var isValid = await CatalogEntryValidation.ValidateAsync(_manager, model, _updateModelAccessor.ModelUpdater, nameof(LeadStatus));
-
-        if (isValid && ModelState.IsValid)
-        {
-            if (await _catalog.FindByNameAsync(model.Name) is not null)
-            {
-                ModelState.AddModelError(_nameFieldName, S["A lead status with the same name already exists."]);
-            }
-
-            if (ModelState.IsValid)
-            {
-                await _manager.CreateAsync(model);
-                await _flagService.EnforceAsync(model);
-                await _notifier.SuccessAsync(H["The lead status has been created successfully."]);
-
-                return RedirectToAction(nameof(Index));
-            }
-        }
-
-        return View(viewModel);
-    }
+    public Task<IActionResult> CreatePost()
+        => CreatePostAsync();
 
     /// <summary>
     /// Shows the editor of a lead status.
     /// </summary>
     /// <param name="id">The lead status id.</param>
+    /// <returns>The edit view.</returns>
     [Admin("omnichannel/lead-statuses/edit/{id}", "LeadStatusesEdit")]
-    public async Task<ActionResult> Edit(string id)
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageLeadStatuses))
-        {
-            return Forbid();
-        }
-
-        var model = await _manager.FindByIdAsync(id);
-
-        if (model == null)
-        {
-            return NotFound();
-        }
-
-        var viewModel = new EditCatalogEntryViewModel
-        {
-            DisplayName = model.Name,
-            Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
-        };
-
-        return View(viewModel);
-    }
+    public Task<IActionResult> Edit(string id)
+        => EditAsync(id);
 
     /// <summary>
     /// Updates a lead status.
     /// </summary>
     /// <param name="id">The lead status id.</param>
+    /// <returns>A redirect to the list or the form when invalid.</returns>
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("omnichannel/lead-statuses/edit/{id}", "LeadStatusesEdit")]
-    public async Task<ActionResult> EditPost(string id)
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageLeadStatuses))
-        {
-            return Forbid();
-        }
-
-        var model = await _manager.FindByIdAsync(id);
-
-        if (model == null)
-        {
-            return NotFound();
-        }
-
-        var viewModel = new EditCatalogEntryViewModel
-        {
-            DisplayName = model.Name,
-            Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
-        };
-
-        var isValid = await CatalogEntryValidation.ValidateAsync(_manager, model, _updateModelAccessor.ModelUpdater, nameof(LeadStatus));
-
-        if (isValid && ModelState.IsValid)
-        {
-            var existing = await _catalog.FindByNameAsync(model.Name);
-
-            if (existing != null && !string.Equals(existing.ItemId, model.ItemId, StringComparison.OrdinalIgnoreCase))
-            {
-                ModelState.AddModelError(_nameFieldName, S["A lead status with the same name already exists."]);
-            }
-
-            if (ModelState.IsValid)
-            {
-                await _manager.UpdateAsync(model);
-                await _flagService.EnforceAsync(model);
-                await _notifier.SuccessAsync(H["The lead status has been updated successfully."]);
-
-                return RedirectToAction(nameof(Index));
-            }
-        }
-
-        return View(viewModel);
-    }
+    public Task<IActionResult> EditPost(string id)
+        => EditPostAsync(id);
 
     /// <summary>
     /// Deletes a lead status.
     /// </summary>
     /// <param name="id">The lead status id.</param>
+    /// <returns>A redirect to the list.</returns>
     [HttpPost]
     [ActionName("Delete")]
     [Admin("omnichannel/lead-statuses/delete/{id}", "LeadStatusesDelete")]
-    public async Task<ActionResult> DeletePost(string id)
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageLeadStatuses))
-        {
-            return Forbid();
-        }
-
-        var model = await _manager.FindByIdAsync(id);
-
-        if (model == null)
-        {
-            return NotFound();
-        }
-
-        if (model.IsConverted)
-        {
-            await _notifier.ErrorAsync(H["The converted status cannot be deleted, because converting a lead needs it. Mark another status as the converted status first."]);
-
-            return RedirectToAction(nameof(Index));
-        }
-
-        if (await _manager.DeleteAsync(model))
-        {
-            await _notifier.SuccessAsync(H["The lead status has been deleted successfully."]);
-        }
-
-        return RedirectToAction(nameof(Index));
-    }
+    public Task<IActionResult> DeletePost(string id)
+        => DeleteAsync(id);
 }

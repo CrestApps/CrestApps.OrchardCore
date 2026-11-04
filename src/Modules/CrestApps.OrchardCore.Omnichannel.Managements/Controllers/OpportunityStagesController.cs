@@ -1,6 +1,5 @@
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.Core.Models;
-using CrestApps.OrchardCore.Core.Validation;
+using CrestApps.OrchardCore.Core.Controllers;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -11,6 +10,7 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers;
 
@@ -18,25 +18,16 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers;
 /// Provides the administration screens for opportunity stage entries.
 /// </summary>
 [Admin]
-public sealed class OpportunityStagesController : Controller
+public sealed class OpportunityStagesController : CatalogAdminController<OpportunityStage>
 {
     private const string _nameFieldName = "Name";
 
     private readonly INamedCatalogManager<OpportunityStage> _manager;
-    private readonly INamedCatalog<OpportunityStage> _catalog;
-    private readonly IAuthorizationService _authorizationService;
-    private readonly IUpdateModelAccessor _updateModelAccessor;
-    private readonly IDisplayManager<OpportunityStage> _displayManager;
-    private readonly INotifier _notifier;
-
-    internal readonly IHtmlLocalizer H;
-    internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OpportunityStagesController"/> class.
     /// </summary>
     /// <param name="manager">The manager.</param>
-    /// <param name="catalog">The named catalog.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="displayManager">The display manager.</param>
@@ -45,220 +36,112 @@ public sealed class OpportunityStagesController : Controller
     /// <param name="stringLocalizer">The string localizer.</param>
     public OpportunityStagesController(
         INamedCatalogManager<OpportunityStage> manager,
-        INamedCatalog<OpportunityStage> catalog,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<OpportunityStage> displayManager,
         INotifier notifier,
         IHtmlLocalizer<OpportunityStagesController> htmlLocalizer,
         IStringLocalizer<OpportunityStagesController> stringLocalizer)
+        : base(manager, authorizationService, updateModelAccessor, displayManager, notifier, htmlLocalizer, stringLocalizer)
     {
         _manager = manager;
-        _catalog = catalog;
-        _authorizationService = authorizationService;
-        _updateModelAccessor = updateModelAccessor;
-        _displayManager = displayManager;
-        _notifier = notifier;
-        H = htmlLocalizer;
-        S = stringLocalizer;
+    }
+
+    /// <inheritdoc/>
+    protected override Permission ManagePermission
+        => OmnichannelConstants.Permissions.ManageOpportunityStages;
+
+    /// <inheritdoc/>
+    protected override LocalizedString CreateDisplayName
+        => S["Opportunity Stage"];
+
+    /// <inheritdoc/>
+    protected override LocalizedString NewDisplayName
+        => S["New Opportunity Stage"];
+
+    /// <inheritdoc/>
+    protected override LocalizedHtmlString CreatedNotification
+        => H["The opportunity stage has been created successfully."];
+
+    /// <inheritdoc/>
+    protected override LocalizedHtmlString UpdatedNotification
+        => H["The opportunity stage has been updated successfully."];
+
+    /// <inheritdoc/>
+    protected override LocalizedHtmlString DeletedNotification
+        => H["The opportunity stage has been deleted successfully."];
+
+    /// <inheritdoc/>
+    protected override IEnumerable<OpportunityStage> OrderAll(IEnumerable<OpportunityStage> entries)
+        => entries
+            .OrderBy(entry => entry.Order)
+            .ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase);
+
+    /// <inheritdoc/>
+    protected override async Task ValidateEntryAsync(OpportunityStage model, bool isNew)
+    {
+        var existing = await _manager.FindByNameAsync(model.Name);
+
+        if (existing is not null && !string.Equals(existing.ItemId, model.ItemId, StringComparison.OrdinalIgnoreCase))
+        {
+            ModelState.AddModelError(_nameFieldName, S["A opportunity stage with the same name already exists."]);
+        }
     }
 
     /// <summary>
     /// Lists every opportunity stage in order.
     /// </summary>
+    /// <returns>The list view.</returns>
     [Admin("omnichannel/opportunity-stages", "OpportunityStagesIndex")]
-    public async Task<IActionResult> Index()
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageOpportunityStages))
-        {
-            return Forbid();
-        }
-
-        var entries = (await _manager.GetAllAsync())
-            .OrderBy(entry => entry.Order)
-            .ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase);
-
-        // The admin-list tag builds a row per entry, in the layout (List or Grid) the site or the user picked.
-        // Every entry is listed on one page, so the search filters the rows in the browser.
-        var viewModel = new ListCatalogEntryViewModel
-        {
-            List = new AdminListContext<OpportunityStage>
-            {
-                Source = entries.ToList(),
-            },
-        };
-
-        return View(viewModel);
-    }
+    public Task<IActionResult> Index()
+        => IndexAllAsync();
 
     /// <summary>
     /// Shows the editor for a new opportunity stage.
     /// </summary>
+    /// <returns>The create view.</returns>
     [Admin("omnichannel/opportunity-stages/create", "OpportunityStagesCreate")]
-    public async Task<ActionResult> Create()
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageOpportunityStages))
-        {
-            return Forbid();
-        }
-
-        var model = await _manager.NewAsync();
-
-        var viewModel = new EditCatalogEntryViewModel
-        {
-            DisplayName = S["Opportunity Stage"],
-            Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
-        };
-
-        return View(viewModel);
-    }
+    public Task<IActionResult> Create()
+        => CreateAsync();
 
     /// <summary>
     /// Creates a new opportunity stage.
     /// </summary>
+    /// <returns>A redirect to the list or the form when invalid.</returns>
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("omnichannel/opportunity-stages/create", "OpportunityStagesCreate")]
-    public async Task<ActionResult> CreatePost()
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageOpportunityStages))
-        {
-            return Forbid();
-        }
-
-        var model = await _manager.NewAsync();
-
-        var viewModel = new EditCatalogEntryViewModel
-        {
-            DisplayName = S["New Opportunity Stage"],
-            Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
-        };
-
-        var isValid = await CatalogEntryValidation.ValidateAsync(_manager, model, _updateModelAccessor.ModelUpdater, nameof(OpportunityStage));
-
-        if (isValid && ModelState.IsValid)
-        {
-            if (await _catalog.FindByNameAsync(model.Name) is not null)
-            {
-                ModelState.AddModelError(_nameFieldName, S["A opportunity stage with the same name already exists."]);
-            }
-
-            if (ModelState.IsValid)
-            {
-                await _manager.CreateAsync(model);
-                await _notifier.SuccessAsync(H["The opportunity stage has been created successfully."]);
-
-                return RedirectToAction(nameof(Index));
-            }
-        }
-
-        return View(viewModel);
-    }
+    public Task<IActionResult> CreatePost()
+        => CreatePostAsync();
 
     /// <summary>
-    /// Shows the editor of a opportunity stage.
+    /// Shows the editor of an opportunity stage.
     /// </summary>
     /// <param name="id">The opportunity stage id.</param>
+    /// <returns>The edit view.</returns>
     [Admin("omnichannel/opportunity-stages/edit/{id}", "OpportunityStagesEdit")]
-    public async Task<ActionResult> Edit(string id)
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageOpportunityStages))
-        {
-            return Forbid();
-        }
-
-        var model = await _manager.FindByIdAsync(id);
-
-        if (model == null)
-        {
-            return NotFound();
-        }
-
-        var viewModel = new EditCatalogEntryViewModel
-        {
-            DisplayName = model.Name,
-            Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
-        };
-
-        return View(viewModel);
-    }
+    public Task<IActionResult> Edit(string id)
+        => EditAsync(id);
 
     /// <summary>
-    /// Updates a opportunity stage.
+    /// Updates an opportunity stage.
     /// </summary>
     /// <param name="id">The opportunity stage id.</param>
+    /// <returns>A redirect to the list or the form when invalid.</returns>
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("omnichannel/opportunity-stages/edit/{id}", "OpportunityStagesEdit")]
-    public async Task<ActionResult> EditPost(string id)
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageOpportunityStages))
-        {
-            return Forbid();
-        }
-
-        var model = await _manager.FindByIdAsync(id);
-
-        if (model == null)
-        {
-            return NotFound();
-        }
-
-        var viewModel = new EditCatalogEntryViewModel
-        {
-            DisplayName = model.Name,
-            Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
-        };
-
-        var isValid = await CatalogEntryValidation.ValidateAsync(_manager, model, _updateModelAccessor.ModelUpdater, nameof(OpportunityStage));
-
-        if (isValid && ModelState.IsValid)
-        {
-            var existing = await _catalog.FindByNameAsync(model.Name);
-
-            if (existing != null && !string.Equals(existing.ItemId, model.ItemId, StringComparison.OrdinalIgnoreCase))
-            {
-                ModelState.AddModelError(_nameFieldName, S["A opportunity stage with the same name already exists."]);
-            }
-
-            if (ModelState.IsValid)
-            {
-                await _manager.UpdateAsync(model);
-                await _notifier.SuccessAsync(H["The opportunity stage has been updated successfully."]);
-
-                return RedirectToAction(nameof(Index));
-            }
-        }
-
-        return View(viewModel);
-    }
+    public Task<IActionResult> EditPost(string id)
+        => EditPostAsync(id);
 
     /// <summary>
-    /// Deletes a opportunity stage.
+    /// Deletes an opportunity stage.
     /// </summary>
     /// <param name="id">The opportunity stage id.</param>
+    /// <returns>A redirect to the list.</returns>
     [HttpPost]
     [ActionName("Delete")]
     [Admin("omnichannel/opportunity-stages/delete/{id}", "OpportunityStagesDelete")]
-    public async Task<ActionResult> DeletePost(string id)
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageOpportunityStages))
-        {
-            return Forbid();
-        }
-
-        var model = await _manager.FindByIdAsync(id);
-
-        if (model == null)
-        {
-            return NotFound();
-        }
-
-        if (await _manager.DeleteAsync(model))
-        {
-            await _notifier.SuccessAsync(H["The opportunity stage has been deleted successfully."]);
-        }
-
-        return RedirectToAction(nameof(Index));
-    }
+    public Task<IActionResult> DeletePost(string id)
+        => DeleteAsync(id);
 }

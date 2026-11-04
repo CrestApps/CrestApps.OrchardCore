@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Core.Controllers;
 using CrestApps.OrchardCore.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,7 +24,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 /// </summary>
 [Admin]
 [Feature(ContactCenterConstants.Feature.Agents)]
-public sealed class AgentStateReasonCodesController : ContactCenterCatalogController<AgentStateReasonCode>
+public sealed class AgentStateReasonCodesController : CatalogAdminController<AgentStateReasonCode>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="AgentStateReasonCodesController"/> class.

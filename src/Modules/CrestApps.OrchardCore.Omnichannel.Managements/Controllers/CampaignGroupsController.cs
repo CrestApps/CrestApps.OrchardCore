@@ -1,12 +1,11 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Controllers;
 using CrestApps.OrchardCore.Core.Models;
-using CrestApps.OrchardCore.Core.Validation;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -15,27 +14,16 @@ using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
-using QueryContext = CrestApps.Core.Models.QueryContext;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers;
 
 /// <summary>
-/// Provides endpoints for managing campaign groups.
+/// Provides the administration screens for campaign groups.
 /// </summary>
 [Admin]
-public sealed class CampaignGroupsController : Controller
+public sealed class CampaignGroupsController : CatalogAdminController<OmnichannelCampaignGroup>
 {
-    private const string _optionsSearch = "Options.Search";
-
-    private readonly ICatalogManager<OmnichannelCampaignGroup> _manager;
-    private readonly IAuthorizationService _authorizationService;
-    private readonly IUpdateModelAccessor _updateModelAccessor;
-    private readonly IDisplayManager<OmnichannelCampaignGroup> _displayDriver;
-    private readonly INotifier _notifier;
-
-    internal readonly IHtmlLocalizer H;
-    internal readonly IStringLocalizer S;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="CampaignGroupsController"/> class.
     /// </summary>
@@ -44,7 +32,7 @@ public sealed class CampaignGroupsController : Controller
     /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="displayManager">The display manager.</param>
     /// <param name="notifier">The notifier.</param>
-    /// <param name="htmlLocalizer">The HTML localizer.</param>
+    /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public CampaignGroupsController(
         ICatalogManager<OmnichannelCampaignGroup> manager,
@@ -54,213 +42,98 @@ public sealed class CampaignGroupsController : Controller
         INotifier notifier,
         IHtmlLocalizer<CampaignGroupsController> htmlLocalizer,
         IStringLocalizer<CampaignGroupsController> stringLocalizer)
+        : base(manager, authorizationService, updateModelAccessor, displayManager, notifier, htmlLocalizer, stringLocalizer)
     {
-        _manager = manager;
-        _authorizationService = authorizationService;
-        _updateModelAccessor = updateModelAccessor;
-        _displayDriver = displayManager;
-        _notifier = notifier;
-        H = htmlLocalizer;
-        S = stringLocalizer;
     }
 
+    /// <inheritdoc/>
+    protected override Permission ManagePermission
+        => OmnichannelConstants.Permissions.ManageCampaignGroups;
+
+    /// <inheritdoc/>
+    protected override LocalizedString CreateDisplayName
+        => S["Campaign group"];
+
+    /// <inheritdoc/>
+    protected override LocalizedString NewDisplayName
+        => S["New campaign group"];
+
+    /// <inheritdoc/>
+    protected override LocalizedHtmlString CreatedNotification
+        => H["A new campaign group has been created successfully."];
+
+    /// <inheritdoc/>
+    protected override LocalizedHtmlString UpdatedNotification
+        => H["The campaign group has been updated successfully."];
+
+    /// <inheritdoc/>
+    protected override LocalizedHtmlString DeletedNotification
+        => H["The campaign group has been deleted successfully."];
+
     /// <summary>
-    /// Lists campaign groups.
+    /// Lists the campaign groups.
     /// </summary>
-    /// <param name="options">The catalog options.</param>
+    /// <param name="options">The options.</param>
     /// <param name="pagerParameters">The pager parameters.</param>
     /// <param name="pagerOptions">The pager options.</param>
     /// <param name="shapeFactory">The shape factory.</param>
-    /// <returns>The campaign-group list view.</returns>
+    /// <returns>The list view.</returns>
     [Admin("omnichannel/campaign-groups", "OmnichannelCampaignGroupsIndex")]
-    public async Task<IActionResult> Index(
+    public Task<IActionResult> Index(
         CatalogEntryOptions options,
         PagerParameters pagerParameters,
         [FromServices] IOptions<PagerOptions> pagerOptions,
         [FromServices] IShapeFactory shapeFactory)
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageCampaignGroups))
-        {
-            return Forbid();
-        }
-
-        var pager = new Pager(pagerParameters, pagerOptions.Value);
-        var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext
-        {
-            Name = options.Search,
-        });
-        var routeData = new RouteData();
-
-        if (!string.IsNullOrEmpty(options.Search))
-        {
-            routeData.Values.TryAdd(_optionsSearch, options.Search);
-        }
-
-        var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<OmnichannelCampaignGroup>>
-        {
-            Options = options,
-            Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-        };
-
-        // The admin-list tag builds a row per record, in the layout (List or Grid) the site or the user picked.
-        viewModel.List = new AdminListContext<OmnichannelCampaignGroup>
-        {
-            Source = result.Entries,
-            Pager = (IShape)viewModel.Pager,
-        };
-
-        viewModel.Options.BulkActions = [];
-
-        return View(viewModel);
-    }
+        => IndexAsync(options, pagerParameters, pagerOptions, shapeFactory);
 
     /// <summary>
-    /// Applies the campaign-group list filter.
+    /// Applies the list filter.
     /// </summary>
-    /// <param name="model">The list model.</param>
+    /// <param name="model">The model.</param>
     /// <param name="pagerParameters">The pager parameters.</param>
     /// <returns>A redirect to the filtered list.</returns>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("omnichannel/campaign-groups", "OmnichannelCampaignGroupsIndex")]
-    public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model, PagerParameters pagerParameters)
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageCampaignGroups))
-        {
-            return Forbid();
-        }
-
-        return RedirectToAction(nameof(Index), new RouteValueDictionary
-        {
-            { _optionsSearch, model.Options?.Search },
-            { "pageSize", pagerParameters.PageSize },
-        });
-    }
+    public Task<IActionResult> IndexFilterPost(ListCatalogEntryViewModel model, PagerParameters pagerParameters)
+        => IndexFilterPostAsync(model, pagerParameters);
 
     /// <summary>
-    /// Displays the campaign-group creation form.
+    /// Shows the editor for a new campaign group.
     /// </summary>
-    /// <returns>The editor view.</returns>
+    /// <returns>The create view.</returns>
     [Admin("omnichannel/campaign-groups/create", "OmnichannelCampaignGroupsCreate")]
-    public async Task<ActionResult> Create()
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageCampaignGroups))
-        {
-            return Forbid();
-        }
-
-        var model = await _manager.NewAsync();
-        var viewModel = new EditCatalogEntryViewModel
-        {
-            DisplayName = S["Campaign group"],
-            Editor = await _displayDriver.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
-        };
-
-        return View(viewModel);
-    }
+    public Task<IActionResult> Create()
+        => CreateAsync();
 
     /// <summary>
-    /// Creates a campaign group.
+    /// Creates a new campaign group.
     /// </summary>
-    /// <returns>A redirect when successful; otherwise, the editor view.</returns>
+    /// <returns>A redirect to the list or the form when invalid.</returns>
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("omnichannel/campaign-groups/create", "OmnichannelCampaignGroupsCreate")]
-    public async Task<ActionResult> CreatePost()
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageCampaignGroups))
-        {
-            return Forbid();
-        }
-
-        var model = await _manager.NewAsync();
-        var viewModel = new EditCatalogEntryViewModel
-        {
-            DisplayName = S["New campaign group"],
-            Editor = await _displayDriver.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
-        };
-
-        var isValid = await CatalogEntryValidation.ValidateAsync(_manager, model, _updateModelAccessor.ModelUpdater, nameof(OmnichannelCampaignGroup));
-
-        if (isValid && ModelState.IsValid)
-        {
-            await _manager.CreateAsync(model);
-            await _notifier.SuccessAsync(H["A new campaign group has been created successfully."]);
-
-            return RedirectToAction(nameof(Index));
-        }
-
-        return View(viewModel);
-    }
+    public Task<IActionResult> CreatePost()
+        => CreatePostAsync();
 
     /// <summary>
-    /// Displays the campaign-group editor.
+    /// Shows the editor of a campaign group.
     /// </summary>
-    /// <param name="id">The campaign-group identifier.</param>
-    /// <returns>The editor view.</returns>
+    /// <param name="id">The campaign group id.</param>
+    /// <returns>The edit view.</returns>
     [Admin("omnichannel/campaign-groups/edit/{id}", "OmnichannelCampaignGroupsEdit")]
-    public async Task<ActionResult> Edit(string id)
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageCampaignGroups))
-        {
-            return Forbid();
-        }
-
-        var model = await _manager.FindByIdAsync(id);
-
-        if (model is null)
-        {
-            return NotFound();
-        }
-
-        var viewModel = new EditCatalogEntryViewModel
-        {
-            DisplayName = model.DisplayText,
-            Editor = await _displayDriver.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
-        };
-
-        return View(viewModel);
-    }
+    public Task<IActionResult> Edit(string id)
+        => EditAsync(id);
 
     /// <summary>
     /// Updates a campaign group.
     /// </summary>
-    /// <param name="id">The campaign-group identifier.</param>
-    /// <returns>A redirect when successful; otherwise, the editor view.</returns>
+    /// <param name="id">The campaign group id.</param>
+    /// <returns>A redirect to the list or the form when invalid.</returns>
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("omnichannel/campaign-groups/edit/{id}", "OmnichannelCampaignGroupsEdit")]
-    public async Task<ActionResult> EditPost(string id)
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageCampaignGroups))
-        {
-            return Forbid();
-        }
-
-        var model = await _manager.FindByIdAsync(id);
-
-        if (model is null)
-        {
-            return NotFound();
-        }
-
-        var viewModel = new EditCatalogEntryViewModel
-        {
-            DisplayName = model.DisplayText,
-            Editor = await _displayDriver.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
-        };
-
-        var isValid = await CatalogEntryValidation.ValidateAsync(_manager, model, _updateModelAccessor.ModelUpdater, nameof(OmnichannelCampaignGroup));
-
-        if (isValid && ModelState.IsValid)
-        {
-            await _manager.UpdateAsync(model);
-            await _notifier.SuccessAsync(H["The campaign group has been updated successfully."]);
-
-            return RedirectToAction(nameof(Index));
-        }
-
-        return View(viewModel);
-    }
+    public Task<IActionResult> EditPost(string id)
+        => EditPostAsync(id);
 }
