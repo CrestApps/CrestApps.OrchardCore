@@ -6,7 +6,7 @@ using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
 
-namespace CrestApps.OrchardCore.Customers.Services;
+namespace CrestApps.OrchardCore.Orders.Customers;
 
 /// <summary>
 /// Removes who an order was for, the guest contact of the transactions paying for it, and the buyer's details from the

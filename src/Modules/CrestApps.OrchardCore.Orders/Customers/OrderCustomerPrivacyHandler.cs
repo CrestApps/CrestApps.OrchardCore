@@ -2,13 +2,12 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Customers.Core.Services;
-using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CrestApps.OrchardCore.Customers.Handlers;
+namespace CrestApps.OrchardCore.Orders.Customers;
 
 /// <summary>
 /// Erases the personal details of a customer's orders with the customer, and adds the orders and the transactions

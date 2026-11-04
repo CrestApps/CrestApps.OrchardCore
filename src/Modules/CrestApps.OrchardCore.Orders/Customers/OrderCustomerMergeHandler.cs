@@ -5,7 +5,7 @@ using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CrestApps.OrchardCore.Customers.Handlers;
+namespace CrestApps.OrchardCore.Orders.Customers;
 
 /// <summary>
 /// Moves a merged guest's orders to the account's customer, and the transactions paying for them to the account, so

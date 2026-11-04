@@ -101,9 +101,6 @@ public sealed class OrdersStartup : StartupBase
 
         // Who is buying, a business or a person, and whether they are exempt, reaches checkout tax.
         services.AddScoped<ICheckoutTaxProfileHandler, CustomerCheckoutTaxProfileHandler>();
-        services.AddScoped<ICustomerMergeHandler, OrderCustomerMergeHandler>();
-        services.AddScoped<OrderAnonymizer>();
-        services.AddScoped<ICustomerPrivacyHandler, OrderCustomerPrivacyHandler>();
         services.AddScoped<CustomerContactStepService>();
         services.AddDisplayDriver<CheckoutFlow, CustomerContactCheckoutFlowDisplayDriver>();
         services.AddSiteDisplayDriver<CustomerCheckoutSettingsDisplayDriver>();

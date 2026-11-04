@@ -7,6 +7,10 @@ using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Customers.Core;
+using CrestApps.OrchardCore.Customers.Core.Services;
+using CrestApps.OrchardCore.Customers.Services;
+using CrestApps.OrchardCore.Orders.Customers;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Handlers;
 using CrestApps.OrchardCore.Orders.Core.Indexes;
@@ -147,6 +151,22 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Adds the Orders tab to an account's page.
 /// </summary>
+/// <summary>
+/// Takes orders into the Customers privacy and retention actions: erasing or exporting a customer covers their orders,
+/// merging a guest moves their orders, and guest orders are anonymized when the retention window runs out.
+/// </summary>
+[RequireFeatures(CustomersConstants.Features.Customers)]
+public sealed class CustomersStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<OrderAnonymizer>();
+        services.AddScoped<ICustomerMergeHandler, OrderCustomerMergeHandler>();
+        services.AddScoped<ICustomerPrivacyHandler, OrderCustomerPrivacyHandler>();
+        services.AddScoped<IGuestRetentionHandler, OrderGuestRetentionHandler>();
+    }
+}
+
 [RequireFeatures(AccountsConstants.Feature)]
 public sealed class AccountsStartup : StartupBase
 {

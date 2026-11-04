@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Indexes;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Orders.Customers;
 using CrestApps.OrchardCore.Orders.Migrations;
 using CrestApps.OrchardCore.PersonalData;
 using CrestApps.OrchardCore.Tests.Checkout.Fakes;
@@ -270,15 +271,13 @@ public sealed class CustomerPrivacyTests
             AnOrder("new-guest", customerId: "g1", created: _now.AddMonths(-2)),
         ]);
 
-        var anonymized = await CustomerRetentionBackgroundTask.AnonymizeGuestOrdersAsync(
-            new CustomerPrivacySettings { GuestOrderMonths = 12 }, _now, CreateAnonymizer(), TestContext.Current.CancellationToken);
+        var anonymized = await CustomerRetentionBackgroundTask.AnonymizeGuestRecordsAsync(new CustomerPrivacySettings { GuestOrderMonths = 12 }, _now, [new OrderGuestRetentionHandler(CreateAnonymizer())], TestContext.Current.CancellationToken);
 
         Assert.Equal(2, anonymized);
         Assert.Equal(["old-canceled", "old-guest"], _orders.Orders.Where(order => order.AnonymizedUtc is not null).Select(order => order.ItemId).Order());
 
         // Already anonymized orders are not visited again.
-        Assert.Equal(0, await CustomerRetentionBackgroundTask.AnonymizeGuestOrdersAsync(
-            new CustomerPrivacySettings { GuestOrderMonths = 12 }, _now, CreateAnonymizer(), TestContext.Current.CancellationToken));
+        Assert.Equal(0, await CustomerRetentionBackgroundTask.AnonymizeGuestRecordsAsync(new CustomerPrivacySettings { GuestOrderMonths = 12 }, _now, [new OrderGuestRetentionHandler(CreateAnonymizer())], TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -318,8 +317,7 @@ public sealed class CustomerPrivacyTests
         _sessions.Seed(ASession("s-first-try", "old-guest"));
         _sessions.Seed(ASession("s-paid", "old-guest"));
 
-        var anonymized = await CustomerRetentionBackgroundTask.AnonymizeGuestOrdersAsync(
-            new CustomerPrivacySettings { GuestOrderMonths = 12 }, _now, CreateAnonymizerWithCheckout(), TestContext.Current.CancellationToken);
+        var anonymized = await CustomerRetentionBackgroundTask.AnonymizeGuestRecordsAsync(new CustomerPrivacySettings { GuestOrderMonths = 12 }, _now, [new OrderGuestRetentionHandler(CreateAnonymizerWithCheckout())], TestContext.Current.CancellationToken);
 
         Assert.Equal(1, anonymized);
         AssertAnonymized(await _sessions.GetAsync("s-first-try", TestContext.Current.CancellationToken));
