@@ -72,7 +72,7 @@ internal static class TwilioWebhookEndpoint
 
         if (string.IsNullOrEmpty(authToken))
         {
-            logger.LogWarning("Twillio provider is missing the AuthToken.");
+            logger.LogWarning("The Twilio provider is missing its AuthToken.");
 
             return TypedResults.BadRequest();
         }
@@ -271,7 +271,7 @@ internal static class TwilioWebhookEndpoint
             ? context.Request.Form.ToDictionary(entry => entry.Key, entry => entry.Value.ToString())
             : [];
 
-        var validator = new TwillioRequestValidator(authToken);
+        var validator = new TwilioRequestValidator(authToken);
 
         var isValid = validator.Validate(GetExternalRequestUrl(context, siteBaseUrl), form, twilioSignature.ToString());
 

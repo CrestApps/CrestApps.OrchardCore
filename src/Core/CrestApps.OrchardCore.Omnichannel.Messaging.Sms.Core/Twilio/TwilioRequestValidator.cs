@@ -4,7 +4,7 @@ using System.Text;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Twilio;
 
-internal sealed class TwillioRequestValidator
+internal sealed class TwilioRequestValidator
 {
     private readonly byte[] _secret;
 
@@ -12,7 +12,7 @@ internal sealed class TwillioRequestValidator
     /// Create a new RequestValidator
     /// </summary>
     /// <param name="secret">Signing secret</param>
-    public TwillioRequestValidator(string secret)
+    public TwilioRequestValidator(string secret)
     {
         ArgumentException.ThrowIfNullOrEmpty(secret);
 
