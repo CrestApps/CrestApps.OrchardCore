@@ -69,7 +69,7 @@ internal static class AzureEventGridEndpoint
         // Check SAS key
         if (!string.IsNullOrEmpty(eventGridOptions.EventGridSasKey) &&
             context.Request.Headers.TryGetValue("aeg-sas-key", out var headerKey) &&
-            FixedTimeEquals(headerKey.ToString(), eventGridOptions.EventGridSasKey))
+            CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(headerKey.ToString()), Encoding.UTF8.GetBytes(eventGridOptions.EventGridSasKey)))
         {
             isAuthorized = true;
         }
@@ -429,14 +429,6 @@ internal static class AzureEventGridEndpoint
         !string.IsNullOrWhiteSpace(options.AADIssuer) &&
         !string.IsNullOrWhiteSpace(options.AADAudience) &&
         !string.IsNullOrWhiteSpace(options.AADMetadataAddress);
-
-    private static bool FixedTimeEquals(string a, string b)
-    {
-        var aBytes = Encoding.UTF8.GetBytes(a);
-        var bBytes = Encoding.UTF8.GetBytes(b);
-
-        return CryptographicOperations.FixedTimeEquals(aBytes, bBytes);
-    }
 
     private static bool TryGetBearerToken(string authorizationHeader, out string token)
     {
