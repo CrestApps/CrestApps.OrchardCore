@@ -115,7 +115,7 @@ public sealed class TwilioSmsStartup : StartupBase
 /// <summary>
 /// Registers the workflow task that sends a text from a chosen number, into the customer's conversation.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class WorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

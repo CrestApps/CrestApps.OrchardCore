@@ -12,6 +12,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         ProductConstants.Feature.Listing,
-        "OrchardCore.Elasticsearch",
+        OrchardCoreFeatureIds.Elasticsearch,
     ]
 )]

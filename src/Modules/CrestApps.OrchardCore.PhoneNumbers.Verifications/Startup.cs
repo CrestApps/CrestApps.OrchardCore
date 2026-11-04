@@ -73,7 +73,7 @@ public sealed class ReportsStartup : StartupBase
 /// <summary>
 /// Exposes the phone number verification records as a data source of Orchard Core, for reports and data pipelines.
 /// </summary>
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class DataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

@@ -126,7 +126,7 @@ public sealed class Startup : StartupBase
     }
 }
 
-[RequireFeatures("CrestApps.OrchardCore.AI")]
+[RequireFeatures(AIConstants.Feature.Area)]
 public sealed class AISubjectFlowStartup : StartupBase
 {
     internal readonly IStringLocalizer S;

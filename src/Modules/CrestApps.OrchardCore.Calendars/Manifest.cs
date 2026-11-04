@@ -17,8 +17,8 @@ using OrchardCore.Modules.Manifest;
     Category = "Calendar",
     Dependencies =
     [
-        "OrchardCore.Users",
-        "OrchardCore.Roles",
+        OrchardCoreFeatureIds.Users,
+        OrchardCoreFeatureIds.Roles,
         ResourcesConstants.Feature.Area,
     ]
 )]
@@ -64,7 +64,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         CalendarsConstants.Features.Calendars,
-        "OrchardCore.Email",
+        OrchardCoreFeatureIds.Email,
     ]
 )]
 

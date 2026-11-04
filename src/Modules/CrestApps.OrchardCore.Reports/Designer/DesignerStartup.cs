@@ -102,7 +102,7 @@ public sealed class DesignerStartup : StartupBase
 /// Registers the recipe step that imports designed reports and views.
 /// </summary>
 [Feature(ReportsConstants.BuilderFeature)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class DesignerRecipesStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -116,7 +116,7 @@ public sealed class DesignerRecipesStartup : StartupBase
 /// Registers the deployment step that exports designed reports and views.
 /// </summary>
 [Feature(ReportsConstants.BuilderFeature)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class DesignerDeploymentStartup : StartupBase
 {
     /// <inheritdoc/>

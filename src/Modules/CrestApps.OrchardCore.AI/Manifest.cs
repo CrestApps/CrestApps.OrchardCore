@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Prompting;
+using CrestApps.OrchardCore.Resources;
 using CrestApps.OrchardCore.Webhooks;
 using OrchardCore.Modules.Manifest;
 
@@ -19,7 +20,7 @@ using OrchardCore.Modules.Manifest;
     EnabledByDependencyOnly = true,
     Dependencies =
     [
-        "CrestApps.OrchardCore.Resources",
+        ResourcesConstants.Feature.Area,
     ]
 )]
 
@@ -31,8 +32,8 @@ using OrchardCore.Modules.Manifest;
     EnabledByDependencyOnly = true,
     Dependencies =
     [
-        "OrchardCore.Liquid",
-        "CrestApps.OrchardCore.Resources",
+        OrchardCoreFeatureIds.Liquid,
+        ResourcesConstants.Feature.Area,
         AIPromptingConstants.Feature.Area,
         AIConstants.Feature.Area,
     ]

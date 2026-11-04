@@ -26,9 +26,9 @@ using OrchardCore.Modules.Manifest;
         UsersConstants.Feature.Area,
         "CrestApps.OrchardCore.ContentFields",
         PhoneNumberVerificationsConstants.Features.PhoneNumbers,
-        "OrchardCore.Contents",
-        "OrchardCore.Flows",
-        "OrchardCore.Users",
+        OrchardCoreFeatureIds.Contents,
+        OrchardCoreFeatureIds.Flows,
+        OrchardCoreFeatureIds.Users,
         TimeZonesConstants.Features.Area,
         UsersConstants.Feature.Area,
     ]
@@ -44,7 +44,7 @@ using OrchardCore.Modules.Manifest;
     [
         OmnichannelConstants.Features.Activities,
         ResourcesConstants.Feature.Area,
-        "OrchardCore.Resources",
+        OrchardCoreFeatureIds.Resources,
     ]
 )]
 
@@ -58,8 +58,8 @@ using OrchardCore.Modules.Manifest;
         OmnichannelConstants.Features.Activities,
         OmnichannelConstants.Features.ChannelEndpoints,
         ResourcesConstants.Feature.Area,
-        "OrchardCore.Resources",
-        "OrchardCore.ContentTypes",
+        OrchardCoreFeatureIds.Resources,
+        OrchardCoreFeatureIds.ContentTypes,
     ]
 )]
 
@@ -74,8 +74,8 @@ using OrchardCore.Modules.Manifest;
 
         // Accounts are the Accounts feature's content type; the CRM puts contacts and opportunities in them.
         AccountsConstants.Feature,
-        "OrchardCore.ContentFields",
-        "OrchardCore.Lists",
-        "OrchardCore.Title",
+        OrchardCoreFeatureIds.ContentFields,
+        OrchardCoreFeatureIds.Lists,
+        OrchardCoreFeatureIds.Title,
     ]
 )]

@@ -50,7 +50,7 @@ public sealed class PortalStartup : StartupBase
 /// Sends the portal's notifications by email when the Email feature is on.
 /// </summary>
 [Feature(WorkforceConstants.Features.Portal)]
-[RequireFeatures("OrchardCore.Email")]
+[RequireFeatures(OrchardCoreFeatureIds.Email)]
 public sealed class PortalEmailStartup : StartupBase
 {
     /// <inheritdoc />

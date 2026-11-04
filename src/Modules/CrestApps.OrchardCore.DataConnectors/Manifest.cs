@@ -17,7 +17,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Data",
     Dependencies =
     [
-        "OrchardCore.DataPipelines.Core",
+        OrchardCoreFeatureIds.DataPipelinesCore,
         ResourcesConstants.Feature.Area,
     ]
 )]
@@ -52,6 +52,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         DataConnectorConstants.Features.Area,
-        "OrchardCore.Media",
+        OrchardCoreFeatureIds.Media,
     ]
 )]

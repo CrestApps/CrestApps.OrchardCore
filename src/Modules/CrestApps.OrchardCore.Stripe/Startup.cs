@@ -140,7 +140,7 @@ public sealed class Startup : StartupBase
 /// secrets: the standard step would copy the encrypted values, which no other environment can decrypt, and its import
 /// replaces the stored settings whole, which would erase the destination's credentials.
 /// </remarks>
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class DeploymentStartup : StartupBase
 {
     /// <summary>
@@ -156,7 +156,7 @@ public sealed class DeploymentStartup : StartupBase
 /// <summary>
 /// Registers the recipe step that imports the Stripe settings and protects the secrets it carries.
 /// </summary>
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class RecipesStartup : StartupBase
 {
     /// <summary>
@@ -200,7 +200,7 @@ public sealed class CheckoutStartup : StartupBase
 /// Registers the Stripe workflow events and the payment-event bridge that raises them, so operators can
 /// react to Stripe payment lifecycle events and connection failures with custom workflows.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class StripeWorkflowsStartup : StartupBase
 {
     /// <summary>

@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.Subscriptions;
 /// data sets of the subscriptions and the lines they bill. The installment plans feature registers the data sets of
 /// its own records, so a data set is listed only while its feature is on.
 /// </summary>
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class DataSourcesStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -29,7 +29,7 @@ public sealed class DataSourcesStartup : StartupBase
 /// so it registers the data source too; a data source registered twice is listed once.
 /// </summary>
 [Feature(SubscriptionConstants.Features.Installments)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class InstallmentPlansDataSourcesStartup : StartupBase
 {
     /// <inheritdoc/>

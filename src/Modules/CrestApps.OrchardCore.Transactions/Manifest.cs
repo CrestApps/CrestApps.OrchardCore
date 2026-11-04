@@ -34,7 +34,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         TransactionsConstants.Features.Area,
-        "OrchardCore.Notifications",
+        OrchardCoreFeatureIds.Notifications,
     ]
 )]
 
@@ -47,6 +47,6 @@ using OrchardCore.Modules.Manifest;
     [
         TransactionsConstants.Features.Area,
         ReceiptsConstants.Feature.Area,
-        "OrchardCore.Notifications",
+        OrchardCoreFeatureIds.Notifications,
     ]
 )]

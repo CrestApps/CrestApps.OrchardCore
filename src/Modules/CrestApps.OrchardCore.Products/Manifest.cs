@@ -77,9 +77,9 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         ProductConstants.Feature.ModuleId,
-        "OrchardCore.Contents",
-        "OrchardCore.Title",
-        "OrchardCore.Autoroute",
+        OrchardCoreFeatureIds.Contents,
+        OrchardCoreFeatureIds.Title,
+        OrchardCoreFeatureIds.Autoroute,
     ]
 )]
 

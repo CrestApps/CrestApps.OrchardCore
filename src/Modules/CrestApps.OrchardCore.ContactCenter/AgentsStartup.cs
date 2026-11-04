@@ -113,7 +113,7 @@ public sealed class AgentsStartup : StartupBase
 /// Registers the deployment steps that export the agent configuration owned by the agents feature.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Agents)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class AgentsDeploymentStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -127,7 +127,7 @@ public sealed class AgentsDeploymentStartup : StartupBase
 /// Registers the recipe steps that import the agent configuration owned by the agents feature.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Agents)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class AgentsRecipesStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -142,7 +142,7 @@ public sealed class AgentsRecipesStartup : StartupBase
 /// Agents feature are enabled so the required presence service is always resolvable.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Agents)]
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class ContactCenterAvailabilityWorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

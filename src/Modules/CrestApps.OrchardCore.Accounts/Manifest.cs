@@ -19,10 +19,10 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         ResourcesConstants.Feature.Area,
-        "OrchardCore.Contents",
-        "OrchardCore.ContentTypes",
-        "OrchardCore.Lists",
-        "OrchardCore.Title",
+        OrchardCoreFeatureIds.Contents,
+        OrchardCoreFeatureIds.ContentTypes,
+        OrchardCoreFeatureIds.Lists,
+        OrchardCoreFeatureIds.Title,
     ]
 )]
 
@@ -34,7 +34,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         AccountsConstants.Feature,
-        "OrchardCore.Users",
+        OrchardCoreFeatureIds.Users,
     ]
 )]
 

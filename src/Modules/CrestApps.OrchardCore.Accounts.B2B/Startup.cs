@@ -100,7 +100,7 @@ public sealed class ApiStartup : StartupBase
 /// <summary>
 /// Registers the price list recipe step.
 /// </summary>
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class RecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -110,7 +110,7 @@ public sealed class RecipesStartup : StartupBase
 /// <summary>
 /// Registers the price list deployment step.
 /// </summary>
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class DeploymentStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -124,7 +124,7 @@ public sealed class DeploymentStartup : StartupBase
 /// Describes the price list recipe and deployment steps to CrestApps Recipes, so they can be checked and written with
 /// help.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class RecipesSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

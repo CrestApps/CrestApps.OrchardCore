@@ -22,7 +22,7 @@ namespace CrestApps.OrchardCore.Telephony;
 /// provider are the phone system's operational record, not its configuration, and are deliberately left out.
 /// </remarks>
 [Feature(TelephonyConstants.Feature.Area)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class ConfigurationDeploymentStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -40,7 +40,7 @@ public sealed class ConfigurationDeploymentStartup : StartupBase
 /// Registers the recipe step that imports internal extensions.
 /// </summary>
 [Feature(TelephonyConstants.Feature.Area)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class ConfigurationRecipesStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -54,7 +54,7 @@ public sealed class ConfigurationRecipesStartup : StartupBase
 /// Registers the deployment step that exports the soft phone widget settings.
 /// </summary>
 [Feature(TelephonyConstants.Feature.SoftPhone)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class SoftPhoneWidgetDeploymentStartup : StartupBase
 {
     /// <inheritdoc/>

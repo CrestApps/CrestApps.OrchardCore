@@ -152,7 +152,7 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Sets coupons from a recipe.
 /// </summary>
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class CouponRecipesStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -163,7 +163,7 @@ public sealed class CouponRecipesStartup : StartupBase
 /// <summary>
 /// Exports coupons in a deployment plan.
 /// </summary>
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class CouponDeploymentStartup : StartupBase
 {
     /// <inheritdoc/>

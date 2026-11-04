@@ -57,6 +57,10 @@ public static class AIConstants
 
         public const string ChatAdminWidget = "CrestApps.OrchardCore.AI.Chat.AdminWidget";
 
+        public const string ChatCopilot = "CrestApps.OrchardCore.AI.Chat.Copilot";
+
+        public const string ChatClaude = "CrestApps.OrchardCore.AI.Chat.Claude";
+
         public const string ChatSessionDocuments = "CrestApps.OrchardCore.AI.Documents.ChatSessions";
 
         public const string ChatAnalytics = "CrestApps.OrchardCore.AI.Chat.Analytics";

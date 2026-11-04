@@ -226,6 +226,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         ContactCenterConstants.Feature.Queues,
-        "OrchardCore.SignalR",
+        OrchardCoreFeatureIds.SignalR,
     ]
 )]

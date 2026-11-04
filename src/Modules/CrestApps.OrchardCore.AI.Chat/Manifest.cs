@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.Resources;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -16,10 +17,10 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        "OrchardCore.Liquid",
-        "CrestApps.OrchardCore.Resources",
+        OrchardCoreFeatureIds.Liquid,
+        ResourcesConstants.Feature.Area,
         AIConstants.Feature.ChatCore,
-        "OrchardCore.SignalR",
+        OrchardCoreFeatureIds.SignalR,
         AIConstants.Feature.Area,
     ]
 )]

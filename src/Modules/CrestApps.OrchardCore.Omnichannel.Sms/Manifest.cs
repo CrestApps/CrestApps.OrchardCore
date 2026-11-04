@@ -21,7 +21,7 @@ using OrchardCore.Modules.Manifest;
         AIConstants.Feature.Area,
         AIConstants.Feature.ChatCore,
         OmnichannelConstants.Features.Managements,
-        "OrchardCore.Sms",
+        OrchardCoreFeatureIds.Sms,
 
         // Every SMS webhook commits an inbound text to the durable provider webhook inbox before it is answered, so the
         // text survives a restart and a redelivery is absorbed on any node.

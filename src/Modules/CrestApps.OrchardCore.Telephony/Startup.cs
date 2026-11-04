@@ -262,7 +262,7 @@ public sealed class SoftPhoneExtensionStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Contents")]
+[RequireFeatures(OrchardCoreFeatureIds.Contents)]
 public sealed class ContentsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

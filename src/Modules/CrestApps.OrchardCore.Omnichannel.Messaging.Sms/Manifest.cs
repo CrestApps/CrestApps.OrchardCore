@@ -1,7 +1,7 @@
 using CrestApps.OrchardCore;
-using CrestApps.OrchardCore.Webhooks;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging;
+using CrestApps.OrchardCore.Webhooks;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -22,6 +22,6 @@ using OrchardCore.Modules.Manifest;
     [
         MessagingConstants.Feature.Workspace,
         WebhooksConstants.Feature.ProviderInbox,
-        "OrchardCore.Sms",
+        OrchardCoreFeatureIds.Sms,
     ]
 )]

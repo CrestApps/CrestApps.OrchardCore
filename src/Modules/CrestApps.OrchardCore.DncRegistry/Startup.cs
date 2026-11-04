@@ -122,7 +122,7 @@ public sealed class LocalDncRegistryStartup : StartupBase
 /// pipelines. Only the local registry stores records, so the data source is listed only while it is on.
 /// </summary>
 [Feature(DncRegistryConstants.Features.Local)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class LocalDncDataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

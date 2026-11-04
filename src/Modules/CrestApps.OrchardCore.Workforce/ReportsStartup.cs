@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Workforce;
 /// <summary>
 /// Adds the Workforce report data source.
 /// </summary>
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class ReportsStartup : StartupBase
 {
     /// <inheritdoc />
@@ -23,7 +23,7 @@ public sealed class ReportsStartup : StartupBase
 /// Adds the schedule changes data set to the Workforce report data source.
 /// </summary>
 [Feature(WorkforceConstants.Features.ShiftPlanning)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class ShiftPlanningReportsStartup : StartupBase
 {
     /// <inheritdoc />
@@ -37,7 +37,7 @@ public sealed class ShiftPlanningReportsStartup : StartupBase
 /// Adds the time-off data set to the Workforce report data source.
 /// </summary>
 [Feature(WorkforceConstants.Features.TimeOff)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class TimeOffReportsStartup : StartupBase
 {
     /// <inheritdoc />
@@ -51,7 +51,7 @@ public sealed class TimeOffReportsStartup : StartupBase
 /// Adds the predictability pay data set to the Workforce report data source.
 /// </summary>
 [Feature(WorkforceConstants.Features.LaborRules)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class LaborRulesReportsStartup : StartupBase
 {
     /// <inheritdoc />
@@ -65,7 +65,7 @@ public sealed class LaborRulesReportsStartup : StartupBase
 /// Adds the time clock's data sets to the Workforce report data source.
 /// </summary>
 [Feature(WorkforceConstants.Features.TimeClock)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class TimeClockReportsStartup : StartupBase
 {
     /// <inheritdoc />

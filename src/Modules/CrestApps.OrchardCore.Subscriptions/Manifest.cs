@@ -21,9 +21,9 @@ using OrchardCore.Modules.Manifest;
     Category = "Subscriptions",
     Dependencies =
     [
-        "OrchardCore.Contents",
-        "OrchardCore.ContentTypes",
-        "OrchardCore.Title",
+        OrchardCoreFeatureIds.Contents,
+        OrchardCoreFeatureIds.ContentTypes,
+        OrchardCoreFeatureIds.Title,
         UsersConstants.Feature.Area,
         ProductConstants.Feature.ModuleId,
 
@@ -45,7 +45,7 @@ using OrchardCore.Modules.Manifest;
         SubscriptionConstants.Features.Area,
 
         // Tenants brings the setup services that create a site.
-        "OrchardCore.Tenants",
+        OrchardCoreFeatureIds.Tenants,
     ]
 )]
 
@@ -64,6 +64,6 @@ using OrchardCore.Modules.Manifest;
         CheckoutConstants.Features.Area,
 
         // A plan belongs to a customer account, and a new customer can be created with the plan.
-        "OrchardCore.Users",
+        OrchardCoreFeatureIds.Users,
     ]
 )]

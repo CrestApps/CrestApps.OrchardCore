@@ -161,7 +161,7 @@ public sealed class CrmStartup : StartupBase
 /// Registers the deployment steps that export the CRM catalogs.
 /// </summary>
 [Feature(OmnichannelConstants.Features.Crm)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class CrmDeploymentStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -178,7 +178,7 @@ public sealed class CrmDeploymentStartup : StartupBase
 /// Registers the recipe steps that import the CRM catalogs.
 /// </summary>
 [Feature(OmnichannelConstants.Features.Crm)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class CrmRecipesStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -233,7 +233,7 @@ public sealed class CrmReportsStartup : StartupBase
 /// Registers the Lead Converted workflow event and the Convert Lead workflow task, when Orchard Core Workflows is on.
 /// </summary>
 [Feature(OmnichannelConstants.Features.Crm)]
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class CrmWorkflowsStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -249,7 +249,7 @@ public sealed class CrmWorkflowsStartup : StartupBase
 /// Registers the Create AI Activity workflow task, which starts an AI call or text from a workflow.
 /// </summary>
 [Feature(OmnichannelConstants.Features.Activities)]
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class AIActivityWorkflowsStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -265,7 +265,7 @@ public sealed class AIActivityWorkflowsStartup : StartupBase
 /// Registers the Update Contact workflow task, which sets fields on a contact or lead without validating the record.
 /// </summary>
 [Feature(OmnichannelConstants.Features.Activities)]
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class ContactWorkflowsStartup : StartupBase
 {
     /// <inheritdoc/>

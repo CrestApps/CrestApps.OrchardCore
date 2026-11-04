@@ -31,7 +31,7 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Registers recipe schema contributors for the Roles feature.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class RecipesSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

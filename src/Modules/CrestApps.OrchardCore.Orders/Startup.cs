@@ -202,7 +202,7 @@ public sealed class ReportsStartup : StartupBase
 /// <summary>
 /// Starts workflows when orders are paid, canceled and refunded.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class WorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

@@ -23,7 +23,7 @@ using OrchardCore.Modules.Manifest;
         OmnichannelConstants.Features.ChannelEndpoints,
         ContactCenterConstants.Feature.AgentServices,
         ContactCenterConstants.Feature.EntryPoints,
-        "OrchardCore.SignalR",
+        OrchardCoreFeatureIds.SignalR,
     ]
 )]
 

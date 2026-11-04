@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.Taxation;
 /// <summary>
 /// Registers the deployment steps that export taxation configuration.
 /// </summary>
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class ConfigurationDeploymentStartup : StartupBase
 {
     /// <inheritdoc/>

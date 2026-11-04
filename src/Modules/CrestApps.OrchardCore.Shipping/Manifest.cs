@@ -25,7 +25,7 @@ using OrchardCore.Modules.Manifest;
         ProductConstants.Feature.ModuleId,
         OrderConstants.Features.Orders,
         AddressConstants.Feature.ModuleId,
-        "OrchardCore.Contents",
+        OrchardCoreFeatureIds.Contents,
     ]
 )]
 

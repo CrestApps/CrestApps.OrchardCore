@@ -10,7 +10,7 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
-    Id = "CrestApps.OrchardCore.AI.Chat.Copilot",
+    Id = AIConstants.Feature.ChatCopilot,
     Name = "AI Copilot Orchestrator",
     Description = "Provides a GitHub Copilot SDK-based orchestrator for AI chat sessions.",
     Category = "Artificial Intelligence - Orchestrators",

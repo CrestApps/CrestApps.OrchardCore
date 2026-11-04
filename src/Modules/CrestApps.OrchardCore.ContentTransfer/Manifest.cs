@@ -11,7 +11,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Content Management",
     Dependencies =
     [
-        "OrchardCore.Resources",
+        OrchardCoreFeatureIds.Resources,
         ResourcesConstants.Feature.Area,
     ]
 )]

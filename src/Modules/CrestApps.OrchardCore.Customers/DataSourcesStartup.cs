@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.Customers;
 /// data set of the customers. The store credit, loyalty points and referrals features register the data sets of their
 /// own records, so a data set is listed only while its feature is on.
 /// </summary>
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class DataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -26,7 +26,7 @@ public sealed class DataSourcesStartup : StartupBase
 /// Registers the data sets of the store credit feature.
 /// </summary>
 [Feature(CustomersConstants.Features.StoreCredit)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class StoreCreditDataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -41,7 +41,7 @@ public sealed class StoreCreditDataSourcesStartup : StartupBase
 /// Registers the data sets of the loyalty points feature.
 /// </summary>
 [Feature(CustomersConstants.Features.Loyalty)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class LoyaltyDataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -56,7 +56,7 @@ public sealed class LoyaltyDataSourcesStartup : StartupBase
 /// Registers the data sets of the referrals feature.
 /// </summary>
 [Feature(CustomersConstants.Features.Referrals)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class ReferralsDataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

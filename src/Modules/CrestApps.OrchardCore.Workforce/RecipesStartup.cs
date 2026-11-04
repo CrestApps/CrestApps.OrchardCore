@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.Workforce;
 /// <summary>
 /// Imports the Workforce recipe step.
 /// </summary>
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class RecipesStartup : StartupBase
 {
     /// <inheritdoc />
@@ -24,7 +24,7 @@ public sealed class RecipesStartup : StartupBase
 /// <summary>
 /// Exports the workforce setup with a deployment step.
 /// </summary>
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class DeploymentStartup : StartupBase
 {
     /// <inheritdoc />
@@ -38,7 +38,7 @@ public sealed class DeploymentStartup : StartupBase
 /// <summary>
 /// Describes the Workforce recipe and deployment steps to CrestApps Recipes.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class RecipesSchemaStartup : StartupBase
 {
     /// <inheritdoc />
@@ -54,7 +54,7 @@ public sealed class RecipesSchemaStartup : StartupBase
 /// Imports the ShiftPlanning settings with its recipe step.
 /// </summary>
 [Feature(WorkforceConstants.Features.ShiftPlanning)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class ShiftPlanningRecipesStartup : StartupBase
 {
     /// <inheritdoc />
@@ -68,7 +68,7 @@ public sealed class ShiftPlanningRecipesStartup : StartupBase
 /// Describes the ShiftPlanning recipe step to CrestApps Recipes.
 /// </summary>
 [Feature(WorkforceConstants.Features.ShiftPlanning)]
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class ShiftPlanningRecipesSchemaStartup : StartupBase
 {
     /// <inheritdoc />
@@ -82,7 +82,7 @@ public sealed class ShiftPlanningRecipesSchemaStartup : StartupBase
 /// Imports the TimeOff settings with its recipe step.
 /// </summary>
 [Feature(WorkforceConstants.Features.TimeOff)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class TimeOffRecipesStartup : StartupBase
 {
     /// <inheritdoc />
@@ -96,7 +96,7 @@ public sealed class TimeOffRecipesStartup : StartupBase
 /// Describes the TimeOff recipe step to CrestApps Recipes.
 /// </summary>
 [Feature(WorkforceConstants.Features.TimeOff)]
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class TimeOffRecipesSchemaStartup : StartupBase
 {
     /// <inheritdoc />
@@ -110,7 +110,7 @@ public sealed class TimeOffRecipesSchemaStartup : StartupBase
 /// Imports the TimeClock settings with its recipe step.
 /// </summary>
 [Feature(WorkforceConstants.Features.TimeClock)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class TimeClockRecipesStartup : StartupBase
 {
     /// <inheritdoc />
@@ -124,7 +124,7 @@ public sealed class TimeClockRecipesStartup : StartupBase
 /// Describes the TimeClock recipe step to CrestApps Recipes.
 /// </summary>
 [Feature(WorkforceConstants.Features.TimeClock)]
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class TimeClockRecipesSchemaStartup : StartupBase
 {
     /// <inheritdoc />

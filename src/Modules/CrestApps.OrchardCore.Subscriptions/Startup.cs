@@ -125,7 +125,7 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Registers subscription settings that depend on the Orchard Core roles feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Roles")]
+[RequireFeatures(OrchardCoreFeatureIds.Roles)]
 public sealed class RolesStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -198,7 +198,7 @@ public sealed class ReportsStartup : StartupBase
 /// that differ from site to site. Raising a workflow event lets the site owner build the one they want
 /// instead of picking from settings that could never cover every case.
 /// </remarks>
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class SubscriptionWorkflowsStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -264,7 +264,7 @@ public sealed class TenantProvisioningStartup : StartupBase
 /// Registers feature profile selection for the sites a subscription provisions.
 /// </summary>
 [Feature(SubscriptionConstants.Features.Tenants)]
-[RequireFeatures("OrchardCore.Tenants.FeatureProfiles")]
+[RequireFeatures(OrchardCoreFeatureIds.TenantsFeatureProfiles)]
 public sealed class FeatureProfileTenantProvisioningStartup : StartupBase
 {
     /// <inheritdoc/>

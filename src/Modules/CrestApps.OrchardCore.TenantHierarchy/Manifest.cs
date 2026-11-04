@@ -21,7 +21,7 @@ using OrchardCore.Modules.Manifest;
     DefaultTenantOnly = true,
     Dependencies =
     [
-        "OrchardCore.Tenants",
+        OrchardCoreFeatureIds.Tenants,
         ResourcesConstants.Feature.Area,
     ]
 )]
@@ -33,15 +33,15 @@ using OrchardCore.Modules.Manifest;
     Description = "Lets a parent tenant create, manage and enter its own child tenants. The platform turns it on when it makes a tenant a parent.",
     Dependencies =
     [
-        "OrchardCore.Users",
-        "OrchardCore.Roles",
+        OrchardCoreFeatureIds.Users,
+        OrchardCoreFeatureIds.Roles,
         ResourcesConstants.Feature.Area,
 
         // The user picker of the access rules.
         UsersConstants.Feature.Area,
 
         // The activity of the child tenants is recorded in the audit trail.
-        "OrchardCore.AuditTrail",
+        OrchardCoreFeatureIds.AuditTrail,
     ]
 )]
 
@@ -52,7 +52,7 @@ using OrchardCore.Modules.Manifest;
     Description = "Lets the users of the parent tenant enter this tenant. It is always on in a child tenant.",
     Dependencies =
     [
-        "OrchardCore.Users",
-        "OrchardCore.Roles",
+        OrchardCoreFeatureIds.Users,
+        OrchardCoreFeatureIds.Roles,
     ]
 )]

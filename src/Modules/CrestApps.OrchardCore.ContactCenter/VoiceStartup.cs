@@ -281,7 +281,7 @@ public sealed class VoiceSoftPhoneStartup : StartupBase
 /// pays for them.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Voice)]
-[RequireFeatures("OrchardCore.HealthChecks")]
+[RequireFeatures(OrchardCoreFeatureIds.HealthChecks)]
 public sealed class VoiceHealthChecksStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

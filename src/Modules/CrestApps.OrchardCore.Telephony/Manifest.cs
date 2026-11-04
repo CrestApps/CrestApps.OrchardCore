@@ -20,8 +20,8 @@ using OrchardCore.Modules.Manifest;
     Category = "Telephony",
     Dependencies =
     [
-        "OrchardCore.Users",
-        "OrchardCore.SignalR",
+        OrchardCoreFeatureIds.Users,
+        OrchardCoreFeatureIds.SignalR,
 
         // The extension editor picks its user with the searchable user picker (CrestApps Users), which renders through
         // the item selector (CrestApps Resources), rather than loading every user into a list.
@@ -51,7 +51,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         TelephonyConstants.Feature.SoftPhoneCore,
-        "OrchardCore.Widgets",
+        OrchardCoreFeatureIds.Widgets,
     ]
 )]
 

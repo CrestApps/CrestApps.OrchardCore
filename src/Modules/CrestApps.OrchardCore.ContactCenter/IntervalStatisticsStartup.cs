@@ -63,7 +63,7 @@ public sealed class IntervalStatisticsStartup : StartupBase
 /// Registers the data sets of the interval statistics: queue intervals and agent intervals.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.IntervalStatistics)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class IntervalStatisticsDataSourcesStartup : StartupBase
 {
     /// <inheritdoc/>

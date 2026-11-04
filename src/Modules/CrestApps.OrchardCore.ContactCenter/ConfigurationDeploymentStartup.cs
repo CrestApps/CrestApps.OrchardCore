@@ -18,7 +18,7 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// Settings are exported through the standard site settings step, so they are imported by the built-in
 /// <c>Settings</c> recipe step and need no import code of their own.
 /// </remarks>
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class ContactCenterConfigurationDeploymentStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -34,7 +34,7 @@ public sealed class ContactCenterConfigurationDeploymentStartup : StartupBase
 /// <summary>
 /// Registers the recipe step that imports the voice media library.
 /// </summary>
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class ContactCenterConfigurationRecipesStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -48,7 +48,7 @@ public sealed class ContactCenterConfigurationRecipesStartup : StartupBase
 /// Registers the deployment step that exports the call recording and monitoring settings.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Recording)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class RecordingDeploymentStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -64,7 +64,7 @@ public sealed class RecordingDeploymentStartup : StartupBase
 /// Registers the deployment step that exports the secure payment capture settings.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.SecureCapture)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class SecureCaptureDeploymentStartup : StartupBase
 {
     /// <inheritdoc/>

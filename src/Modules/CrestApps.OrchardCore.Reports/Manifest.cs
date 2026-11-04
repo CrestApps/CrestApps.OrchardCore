@@ -20,7 +20,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         ResourcesConstants.Feature.Area,
-        "OrchardCore.Users",
+        OrchardCoreFeatureIds.Users,
     ]
 )]
 
@@ -32,7 +32,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         ReportsConstants.Feature,
-        "OrchardCore.Email",
+        OrchardCoreFeatureIds.Email,
     ]
 )]
 
@@ -44,6 +44,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         ReportsConstants.Feature,
-        "OrchardCore.DataPipelines.Core",
+        OrchardCoreFeatureIds.DataPipelinesCore,
     ]
 )]

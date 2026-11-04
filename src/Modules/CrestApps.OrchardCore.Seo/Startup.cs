@@ -67,7 +67,7 @@ public sealed class Startup : StartupBase
 /// Uses the SEO meta data editors set with Orchard Core's SEO module, and merges the JSON-LD they type there into
 /// the page's single JSON-LD script, when that module is enabled.
 /// </summary>
-[RequireFeatures("OrchardCore.Seo")]
+[RequireFeatures(OrchardCoreFeatureIds.Seo)]
 public sealed class SeoStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -82,7 +82,7 @@ public sealed class SeoStartup : StartupBase
 /// <summary>
 /// Tells search engines how to search the site when Orchard Core's Search feature is enabled.
 /// </summary>
-[RequireFeatures("OrchardCore.Search")]
+[RequireFeatures(OrchardCoreFeatureIds.Search)]
 public sealed class SearchStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

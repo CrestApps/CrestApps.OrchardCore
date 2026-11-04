@@ -99,7 +99,7 @@ public sealed class Startup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class RecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -108,7 +108,7 @@ public sealed class RecipesStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class DeploymentStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -308,7 +308,7 @@ public sealed class ListingStartup : StartupBase
 /// product search records. A provider module adds the index type and the search for its server.
 /// </summary>
 [Feature(ProductConstants.Feature.Listing)]
-[RequireFeatures("OrchardCore.Indexing")]
+[RequireFeatures(OrchardCoreFeatureIds.Indexing)]
 public sealed class ListingIndexingStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -321,7 +321,7 @@ public sealed class ListingIndexingStartup : StartupBase
 }
 
 [Feature(ProductConstants.Feature.Listing)]
-[RequireFeatures("OrchardCore.Seo")]
+[RequireFeatures(OrchardCoreFeatureIds.Seo)]
 public sealed class ListingSeoStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

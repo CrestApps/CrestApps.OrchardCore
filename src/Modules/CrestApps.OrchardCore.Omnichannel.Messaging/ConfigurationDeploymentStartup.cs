@@ -19,7 +19,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging;
 /// travels with the endpoint's own step.
 /// </remarks>
 [Feature(MessagingConstants.Feature.Workspace)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class ConfigurationDeploymentStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -34,7 +34,7 @@ public sealed class ConfigurationDeploymentStartup : StartupBase
 /// Registers the recipe step that imports the messaging workspace's canned-response templates.
 /// </summary>
 [Feature(MessagingConstants.Feature.Workspace)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class ConfigurationRecipesStartup : StartupBase
 {
     /// <inheritdoc/>

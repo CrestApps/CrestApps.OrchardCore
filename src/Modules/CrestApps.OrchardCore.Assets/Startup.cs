@@ -7,6 +7,8 @@ using CrestApps.OrchardCore.Assets.Migrations;
 using CrestApps.OrchardCore.Assets.Navigation;
 using CrestApps.OrchardCore.Assets.Owners;
 using CrestApps.OrchardCore.Assets.ViewModels;
+using CrestApps.OrchardCore.Inventory.Core;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.Users.Core;
@@ -58,7 +60,7 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Lets users, the customers of the store, own assets: users are a party source (owner kind Customer, party kind User).
 /// </summary>
-[RequireFeatures("OrchardCore.Users")]
+[RequireFeatures(OrchardCoreFeatureIds.Users)]
 public sealed class CustomerOwnersStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -72,7 +74,7 @@ public sealed class CustomerOwnersStartup : StartupBase
 /// <summary>
 /// Lets CRM contacts own assets, and lists them on contact and account pages.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Omnichannel.Managements")]
+[RequireFeatures(OmnichannelConstants.Features.Managements)]
 public sealed class ContactOwnersStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -102,7 +104,7 @@ public sealed class FleetStartup : StartupBase
 /// Registers van stock: an Inventory location for each asset that carries stock.
 /// </summary>
 [Feature(AssetsConstants.Features.Fleet)]
-[RequireFeatures("CrestApps.OrchardCore.Inventory")]
+[RequireFeatures(InventoryConstants.Features.Inventory)]
 public sealed class FleetInventoryStartup : StartupBase
 {
     /// <inheritdoc/>

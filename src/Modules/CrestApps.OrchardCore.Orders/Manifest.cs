@@ -37,7 +37,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         OrderConstants.Features.Orders,
-        "OrchardCore.Title",
+        OrchardCoreFeatureIds.Title,
     ]
 )]
 

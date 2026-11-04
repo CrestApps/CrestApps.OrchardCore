@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Taxation;
 /// <summary>
 /// Registers the recipe steps that import taxation configuration.
 /// </summary>
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class ConfigurationRecipesStartup : StartupBase
 {
     /// <inheritdoc/>

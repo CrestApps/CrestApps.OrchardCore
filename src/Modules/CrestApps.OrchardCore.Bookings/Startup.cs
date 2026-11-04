@@ -77,7 +77,7 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Adds dates to booking products from a recipe, such as a sample tour's departures.
 /// </summary>
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class RecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

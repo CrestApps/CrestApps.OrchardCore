@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.AI;
 /// Registers the schema of the AI Personas deployment step, so a recipe that creates deployment plans can describe it.
 /// </summary>
 [Feature(AIConstants.Feature.Personas)]
-[RequireFeatures("OrchardCore.Deployment", CrestAppsRecipesConstants.Feature.Area)]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment, CrestAppsRecipesConstants.Feature.Area)]
 public sealed class PersonasDeploymentSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

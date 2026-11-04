@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.Recipes.Core;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -13,6 +14,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         AIConstants.Feature.Area,
-        "CrestApps.OrchardCore.Recipes",
+        CrestAppsRecipesConstants.Feature.Area,
     ]
 )]

@@ -156,7 +156,7 @@ public sealed class ListingStartup : StartupBase
 /// <summary>
 /// Notifies the chosen roles when a product runs low or sells out.
 /// </summary>
-[RequireFeatures("OrchardCore.Notifications")]
+[RequireFeatures(OrchardCoreFeatureIds.Notifications)]
 public sealed class NotificationsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -165,7 +165,7 @@ public sealed class NotificationsStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class WorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -175,7 +175,7 @@ public sealed class WorkflowsStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class RecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -184,7 +184,7 @@ public sealed class RecipesStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class DeploymentStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

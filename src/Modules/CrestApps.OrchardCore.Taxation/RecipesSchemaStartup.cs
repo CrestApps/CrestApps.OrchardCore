@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Taxation;
 /// <summary>
 /// Registers recipe schema contributors for the taxation feature.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class RecipesSchemaStartup : StartupBase
 {
     /// <inheritdoc/>

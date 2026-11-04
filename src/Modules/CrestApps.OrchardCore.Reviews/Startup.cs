@@ -76,7 +76,7 @@ public sealed class ReportsStartup : StartupBase
 /// <summary>
 /// Asks buyers to review what they bought, by email, when the store has email and customer records.
 /// </summary>
-[RequireFeatures("OrchardCore.Email", CustomersConstants.Features.Customers)]
+[RequireFeatures(OrchardCoreFeatureIds.Email, CustomersConstants.Features.Customers)]
 public sealed class ReviewRequestsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

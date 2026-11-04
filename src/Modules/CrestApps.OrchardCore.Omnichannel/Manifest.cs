@@ -25,7 +25,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         OmnichannelConstants.Features.Area,
-        "OrchardCore.Email.Azure",
-        "OrchardCore.Sms.Azure",
+        OrchardCoreFeatureIds.EmailAzure,
+        OrchardCoreFeatureIds.SmsAzure,
     ]
 )]

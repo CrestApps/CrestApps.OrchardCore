@@ -35,8 +35,8 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         AddressConstants.Feature.ModuleId,
-        "OrchardCore.Contents",
-        "OrchardCore.ContentFields",
-        "OrchardCore.Title",
+        OrchardCoreFeatureIds.Contents,
+        OrchardCoreFeatureIds.ContentFields,
+        OrchardCoreFeatureIds.Title,
     ]
 )]

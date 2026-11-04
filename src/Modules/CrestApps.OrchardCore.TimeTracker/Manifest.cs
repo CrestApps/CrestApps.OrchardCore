@@ -17,7 +17,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Workforce",
     Dependencies =
     [
-        "OrchardCore.Users",
+        OrchardCoreFeatureIds.Users,
         UsersConstants.Feature.Area,
     ]
 )]

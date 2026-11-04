@@ -23,8 +23,8 @@ using OrchardCore.Modules.Manifest;
     [
         ResourcesConstants.Feature.Area,
         PhoneNumberVerificationsConstants.Features.PhoneNumbers,
-        "OrchardCore.ContentFields",
-        "OrchardCore.ContentTypes",
+        OrchardCoreFeatureIds.ContentFields,
+        OrchardCoreFeatureIds.ContentTypes,
     ]
 )]
 
@@ -36,7 +36,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         AddressConstants.Feature.ModuleId,
-        "OrchardCore.ContentFields",
-        "OrchardCore.ContentTypes",
+        OrchardCoreFeatureIds.ContentFields,
+        OrchardCoreFeatureIds.ContentTypes,
     ]
 )]

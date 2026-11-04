@@ -153,7 +153,7 @@ public sealed class ChatSessionDocumentsStartup : StartupBase
 /// Registers the document knowledgebase display driver for the AI Completion using Direct Config
 /// workflow activity so uploaded documents contribute retrieval context during completion.
 /// </summary>
-[RequireFeatures(ChatInteractionsConstants.Feature.ChatInteractions, "OrchardCore.Workflows")]
+[RequireFeatures(ChatInteractionsConstants.Feature.ChatInteractions, OrchardCoreFeatureIds.Workflows)]
 public sealed class ChatInteractionsWorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

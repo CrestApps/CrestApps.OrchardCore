@@ -50,7 +50,7 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Adds roles for a store's staff from the setup guide.
 /// </summary>
-[RequireFeatures("OrchardCore.Roles")]
+[RequireFeatures(OrchardCoreFeatureIds.Roles)]
 public sealed class StaffRolesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

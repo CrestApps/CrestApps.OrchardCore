@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Scheduling.Deployments;
 using CrestApps.OrchardCore.Scheduling.Recipes;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,7 +11,7 @@ namespace CrestApps.OrchardCore.Scheduling;
 /// <summary>
 /// Imports the Scheduling recipe step.
 /// </summary>
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class RecipesStartup : StartupBase
 {
     /// <inheritdoc />
@@ -23,7 +24,7 @@ public sealed class RecipesStartup : StartupBase
 /// <summary>
 /// Exports the scheduling setup with a deployment step.
 /// </summary>
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class DeploymentStartup : StartupBase
 {
     /// <inheritdoc />
@@ -36,7 +37,7 @@ public sealed class DeploymentStartup : StartupBase
 /// <summary>
 /// Describes the Scheduling recipe and deployment steps to CrestApps Recipes.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class RecipesSchemaStartup : StartupBase
 {
     /// <inheritdoc />

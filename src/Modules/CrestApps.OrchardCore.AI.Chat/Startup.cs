@@ -120,7 +120,7 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Widgets feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Widgets")]
+[RequireFeatures(OrchardCoreFeatureIds.Widgets)]
 public sealed class WidgetsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -196,7 +196,7 @@ public sealed class UsageAnalyticsStartup : StartupBase
 /// <summary>
 /// Exposes AI chat sessions as a data source of Orchard Core, for reports and data pipelines.
 /// </summary>
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class DataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -213,7 +213,7 @@ public sealed class DataSourcesStartup : StartupBase
 /// usage records, so their data sets are listed only while it is on.
 /// </summary>
 [Feature(AIConstants.Feature.ChatAnalytics)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class ChatAnalyticsDataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -229,7 +229,7 @@ public sealed class ChatAnalyticsDataSourcesStartup : StartupBase
 /// <summary>
 /// Registers recipe schema contributors for the AI Chat widget feature.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Recipes", "OrchardCore.Widgets")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area, OrchardCoreFeatureIds.Widgets)]
 public sealed class RecipesSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

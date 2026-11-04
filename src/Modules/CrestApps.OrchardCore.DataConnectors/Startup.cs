@@ -114,7 +114,7 @@ public sealed class FilesStartup : StartupBase
 /// <summary>
 /// Registers the recipe steps that import connections and data sets.
 /// </summary>
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class RecipesStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -128,7 +128,7 @@ public sealed class RecipesStartup : StartupBase
 /// <summary>
 /// Registers the deployment steps that export connections and data sets.
 /// </summary>
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class DeploymentStartup : StartupBase
 {
     /// <inheritdoc/>

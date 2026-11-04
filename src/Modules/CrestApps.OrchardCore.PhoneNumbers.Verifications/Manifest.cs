@@ -19,7 +19,7 @@ using OrchardCore.Modules.Manifest;
     Description = "Provides a provider-agnostic framework for verifying phone numbers, storing results on contact content items, and background revalidation.",
     Dependencies =
     [
-        "OrchardCore.Contents",
+        OrchardCoreFeatureIds.Contents,
         ResourcesConstants.Feature.Area,
         PhoneNumberVerificationsConstants.Features.PhoneNumbers,
     ]

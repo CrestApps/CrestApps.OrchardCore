@@ -13,6 +13,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         AIConstants.Feature.Area,
-        "OrchardCore.Indexing",
+        OrchardCoreFeatureIds.Indexing,
     ]
 )]

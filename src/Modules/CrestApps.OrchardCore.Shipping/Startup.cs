@@ -94,7 +94,7 @@ public sealed class Startup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class WorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -107,7 +107,7 @@ public sealed class WorkflowsStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class RecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -116,7 +116,7 @@ public sealed class RecipesStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class DeploymentStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

@@ -50,7 +50,7 @@ public sealed class Startup : StartupBase
 /// Holds each visitor to a number of address suggestion calls a minute, across both endpoints, when Orchard Core's
 /// Rate Limits feature is on: each call is one the store pays its provider for.
 /// </summary>
-[RequireFeatures("OrchardCore.RateLimits")]
+[RequireFeatures(OrchardCoreFeatureIds.RateLimits)]
 public sealed class RateLimitsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

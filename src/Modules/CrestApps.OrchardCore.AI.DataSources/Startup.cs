@@ -94,7 +94,7 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Registers services and configuration for the DataSourcesContents feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Contents")]
+[RequireFeatures(OrchardCoreFeatureIds.Contents)]
 public sealed class DataSourcesContentsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -106,7 +106,7 @@ public sealed class DataSourcesContentsStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the DataSourcesRecipes feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class DataSourcesRecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -118,7 +118,7 @@ public sealed class DataSourcesRecipesStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the DataSourcesOCDeployment feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class DataSourcesOCDeploymentStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -130,7 +130,7 @@ public sealed class DataSourcesOCDeploymentStartup : StartupBase
 /// <summary>
 /// Contributes the data source configuration to the AI completion with config workflow activity.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI.Chat.Interactions", "OrchardCore.Workflows")]
+[RequireFeatures("CrestApps.OrchardCore.AI.Chat.Interactions", OrchardCoreFeatureIds.Workflows)]
 public sealed class ChatInteractionsWorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

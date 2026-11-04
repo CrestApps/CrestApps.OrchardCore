@@ -21,7 +21,7 @@ using OrchardCore.Modules.Manifest;
     [
         CommerceConstants.Features.Area,
         ProductConstants.Feature.ModuleId,
-        "OrchardCore.Contents",
+        OrchardCoreFeatureIds.Contents,
     ]
 )]
 
@@ -33,7 +33,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         InventoryConstants.Features.Inventory,
-        "OrchardCore.Email",
+        OrchardCoreFeatureIds.Email,
     ]
 )]
 

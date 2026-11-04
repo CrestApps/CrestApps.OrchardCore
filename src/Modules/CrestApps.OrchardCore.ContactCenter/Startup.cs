@@ -313,7 +313,7 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Registers the editors for the Contact Center configuration deployment steps when Orchard Deployment is enabled.
 /// </summary>
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class ContactCenterDeploymentAdminStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -335,7 +335,7 @@ public sealed class ContactCenterDeploymentAdminStartup : StartupBase
 /// handler that triggers it for every published domain event. Available whenever the base Contact
 /// Center feature and Orchard Core Workflows are both enabled, so no separate feature is required.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class ContactCenterWorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -373,7 +373,7 @@ public sealed class ContactCenterAgentNumbersStartup : StartupBase
 /// <summary>
 /// Registers the workflow task that finds the numbers an agent calls and texts from.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows", OmnichannelConstants.Features.ChannelEndpoints)]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows, OmnichannelConstants.Features.ChannelEndpoints)]
 public sealed class ContactCenterAgentNumbersWorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -391,7 +391,7 @@ public sealed class ContactCenterAgentNumbersWorkflowsStartup : StartupBase
 /// mirrors how the Voice feature owns the provider-ingress check: a check must never be registered by a feature
 /// whose dependency closure cannot construct it.
 /// </remarks>
-[RequireFeatures("OrchardCore.Redis", "OrchardCore.HealthChecks")]
+[RequireFeatures(OrchardCoreFeatureIds.Redis, OrchardCoreFeatureIds.HealthChecks)]
 public sealed class ContactCenterRedisHealthCheckStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -410,7 +410,7 @@ public sealed class ContactCenterRedisHealthCheckStartup : StartupBase
 /// that only exists once <c>OrchardCore.HealthChecks</c> has registered it; mapping them unconditionally threw
 /// at pipeline build time when health checks were not enabled.
 /// </summary>
-[RequireFeatures("OrchardCore.HealthChecks")]
+[RequireFeatures(OrchardCoreFeatureIds.HealthChecks)]
 public sealed class ContactCenterHealthChecksStartup : StartupBase
 {
     private readonly IShellConfiguration _shellConfiguration;

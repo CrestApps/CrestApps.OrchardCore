@@ -12,7 +12,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         AIConstants.Feature.DataSources,
-        "OrchardCore.Indexing",
-        "OrchardCore.AzureAI",
+        OrchardCoreFeatureIds.Indexing,
+        OrchardCoreFeatureIds.AzureAI,
     ]
 )]

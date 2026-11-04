@@ -78,7 +78,7 @@ public sealed class BusinessHoursStartup : StartupBase
 /// Registers the deployment step that exports business-hours calendars.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.BusinessHours)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class BusinessHoursDeploymentStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -92,7 +92,7 @@ public sealed class BusinessHoursDeploymentStartup : StartupBase
 /// Registers the recipe step that imports business-hours calendars.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.BusinessHours)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class BusinessHoursRecipesStartup : StartupBase
 {
     /// <inheritdoc/>

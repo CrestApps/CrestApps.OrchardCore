@@ -52,7 +52,7 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Recipes feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class RecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -109,7 +109,7 @@ public sealed class A2AHostStartup : StartupBase
 /// <summary>
 /// Contributes the A2A connections field to the AI completion with config workflow activity.
 /// </summary>
-[RequireFeatures(A2AConstants.Feature.Area, "CrestApps.OrchardCore.AI.Chat.Interactions", "OrchardCore.Workflows")]
+[RequireFeatures(A2AConstants.Feature.Area, "CrestApps.OrchardCore.AI.Chat.Interactions", OrchardCoreFeatureIds.Workflows)]
 public sealed class ChatInteractionsWorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
