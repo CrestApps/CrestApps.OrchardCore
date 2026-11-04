@@ -1,18 +1,19 @@
 using System.Data.Common;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
 using Dapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Data;
-using OrchardCore.Security;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Security.Services;
+using OrchardCore.Security;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Migrations;
@@ -70,7 +71,7 @@ internal static class LegacySmsPortalImport
             await MessagingEntryPointMigrations.MoveRoutingToEntryPointsAsync(serviceProvider);
             // A role granted a portal permission is granted the workspace permissions that replaced it, so nobody who
             // could work the SMS inbox is locked out of the workspace the day it is enabled.
-            await MessagingRolePermissions.GrantAsync(serviceProvider, _permissionRenames, logger);
+            await RolePermissionMigrations.GrantAsync(serviceProvider, _permissionRenames, logger);
         }
         catch (Exception ex)
         {

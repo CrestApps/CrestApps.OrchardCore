@@ -5,14 +5,14 @@ using OrchardCore.Security;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Security.Services;
 
-namespace CrestApps.OrchardCore.Omnichannel.Messaging.Migrations;
+namespace CrestApps.OrchardCore.Core.Security;
 
 /// <summary>
-/// Carries the roles of a running tenant over when a messaging permission is replaced or split. Orchard Core applies a
+/// Carries the roles of a running tenant over when a permission is replaced, renamed or split. Orchard Core applies a
 /// role's default permissions only when a feature is first enabled or the role is created, so without this a role that
-/// could work the inbox yesterday would be locked out of it today.
+/// could open a screen yesterday would be locked out of it today. Call it from a deferred task in a data migration.
 /// </summary>
-internal static class MessagingRolePermissions
+public static class RolePermissionMigrations
 {
     /// <summary>
     /// Grants every role that holds one of the keys the permissions listed against it.
@@ -66,7 +66,7 @@ internal static class MessagingRolePermissions
 
             if (logger.IsEnabled(LogLevel.Information))
             {
-                logger.LogInformation("Granted the role {Role} the messaging permissions {Permissions}.", editable.RoleName, string.Join(", ", additions));
+                logger.LogInformation("Granted the role {Role} the permissions {Permissions}.", editable.RoleName, string.Join(", ", additions));
             }
         }
     }

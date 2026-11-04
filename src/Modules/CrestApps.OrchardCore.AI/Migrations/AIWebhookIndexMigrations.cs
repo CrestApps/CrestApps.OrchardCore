@@ -1,8 +1,12 @@
 using CrestApps.Core.Data.YesSql;
 using CrestApps.OrchardCore.AI.Core.Webhooks;
 using CrestApps.OrchardCore.AI.Services;
+using CrestApps.OrchardCore.Core.Security;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Data.Migration;
+using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.AI.Migrations;
 
@@ -12,6 +16,12 @@ namespace CrestApps.OrchardCore.AI.Migrations;
 /// </summary>
 internal sealed class AIWebhookIndexMigrations : DataMigration
 {
+    // The AI-only permission the Webhooks building block replaced, and the permission that opens the Webhooks page.
+    private static readonly Dictionary<string, string[]> _permissionCarryOver = new(StringComparer.Ordinal)
+    {
+        ["ManageAIWebhooks"] = ["ManageCommerceWebhooks"],
+    };
+
     private readonly YesSqlStoreOptions _options;
     private readonly AIWebhookImporter _importer;
 
@@ -34,7 +44,7 @@ internal sealed class AIWebhookIndexMigrations : DataMigration
     {
         await AIWebhookIndexSchema.CreateAsync(SchemaBuilder, _options);
 
-        return 2;
+        return 3;
     }
 
     /// <summary>
@@ -47,5 +57,21 @@ internal sealed class AIWebhookIndexMigrations : DataMigration
         await _importer.ImportAsync();
 
         return 2;
+    }
+
+    /// <summary>
+    /// AI webhooks are managed on the shared Webhooks page now, which the Manage webhooks permission opens. Every role
+    /// that could manage AI webhooks is granted it, so nobody loses the screen.
+    /// </summary>
+    /// <returns>The migration version.</returns>
+    public static int UpdateFrom2()
+    {
+        // The roles are documents; they are written once this step's own transaction has committed.
+        ShellScope.AddDeferredTask(scope => RolePermissionMigrations.GrantAsync(
+            scope.ServiceProvider,
+            _permissionCarryOver,
+            scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger<AIWebhookIndexMigrations>()));
+
+        return 3;
     }
 }
