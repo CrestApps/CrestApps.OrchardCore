@@ -286,6 +286,7 @@ public abstract class OmnichannelIndexMigration : DataMigration
         }
         catch (NotSupportedException)
         {
+            // SQL Server has no release statement; the savepoint ends with the transaction.
         }
     }
 

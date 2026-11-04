@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using Azure;
 using Azure.Search.Documents;
 using Azure.Search.Documents.Models;
 using CrestApps.Core.Infrastructure.Indexing;
@@ -151,8 +152,9 @@ internal sealed class OrchardCoreAzureAISearchDataSourceDocumentReader : IDataSo
             {
                 document = (await searchClient.GetDocumentAsync<SearchDocument>(id, cancellationToken: cancellationToken)).Value;
             }
-            catch
+            catch (RequestFailedException ex) when (ex.Status == 404)
             {
+                // The document was removed from the index after it was listed, so there is nothing to read.
             }
 
             if (document != null)

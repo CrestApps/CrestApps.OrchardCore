@@ -145,6 +145,7 @@ internal sealed class AzureAISearchAIDataSourceSourceHandler : IAIDataSourceSour
             }
             catch (RequestFailedException ex) when (ex.Status == 404)
             {
+                // The document was removed from the index after it was listed, so there is nothing to read.
             }
 
             if (document != null)
