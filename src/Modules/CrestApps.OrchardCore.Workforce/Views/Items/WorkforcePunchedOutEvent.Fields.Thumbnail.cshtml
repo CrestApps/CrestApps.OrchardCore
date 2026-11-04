@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Workforce.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<WorkforcePunchedOutEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+    @T["Punched Out"]
+</h4>
+<p>@T["Starts when a worker clocks out."]</p>

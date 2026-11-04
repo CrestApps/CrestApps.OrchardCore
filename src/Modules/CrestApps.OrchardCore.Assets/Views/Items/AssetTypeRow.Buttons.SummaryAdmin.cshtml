@@ -1,0 +1,5 @@
+@model ShapeViewModel<AssetTypeRow>
+
+<a asp-controller="Assets" asp-action="Edit" asp-route-assetTypeId="@Model.Value.Type.ItemId" class="btn btn-secondary btn-sm">@T["Add asset"]</a>
+<a asp-controller="AssetTypes" asp-action="Edit" asp-route-id="@Model.Value.Type.ItemId" class="btn btn-primary btn-sm">@T["Edit"]</a>
+<a asp-controller="AssetTypes" asp-action="Delete" asp-route-id="@Model.Value.Type.ItemId" class="btn btn-danger btn-sm" data-title="@T["Delete"]" data-message="@T["Delete this asset type? Only a type no asset uses can be deleted."]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>

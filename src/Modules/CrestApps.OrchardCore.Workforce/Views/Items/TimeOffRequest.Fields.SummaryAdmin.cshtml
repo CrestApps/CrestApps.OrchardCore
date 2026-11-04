@@ -1,0 +1,7 @@
+@model ShapeViewModel<TimeOffRequestRowViewModel>
+@{
+    var request = Model.Value.Request;
+}
+<a asp-controller="TimeOff" asp-action="Details" asp-route-id="@request.ItemId"><strong>@(Model.Value.WorkerName ?? T["A former worker"].Value)</strong></a>
+<span class="ms-1">@Model.Value.Type?.Name</span>
+<span class="ms-1 text-muted"><partial name="_TimeOffDates" model="request" /></span>

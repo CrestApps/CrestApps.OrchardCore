@@ -1,0 +1,43 @@
+@model CrestApps.OrchardCore.WorkOrders.Integrations.ContactWorkOrdersViewModel
+
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+            <h2 class="h6 mb-0 me-auto">@T["Work orders"] <span class="badge text-bg-secondary fw-normal">@Model.Count</span></h2>
+            @if (Model.Types.Count > 0)
+            {
+                <div class="dropdown">
+                    <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">@T["New work order"]</button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        @foreach (var type in Model.Types)
+                        {
+                            <li><a class="dropdown-item" asp-area="CrestApps.OrchardCore.WorkOrders" asp-controller="WorkOrders" asp-action="New" asp-route-typeId="@type.ItemId" asp-route-contactId="@Model.ContactId" asp-route-contactName="@Model.ContactName" asp-route-accountId="@Model.AccountId">@type.Name</a></li>
+                        }
+                    </ul>
+                </div>
+            }
+        </div>
+        @if (Model.WorkOrders.Count == 0)
+        {
+            <p class="small text-muted mb-0">@(Model.IsAccount ? T["No work orders for this account yet."] : T["No work orders for this contact yet."])</p>
+        }
+        else
+        {
+            <div class="list-group list-group-flush">
+                @foreach (var workOrder in Model.WorkOrders)
+                {
+                    <a class="list-group-item list-group-item-action d-flex flex-wrap gap-2 align-items-center px-0" asp-area="CrestApps.OrchardCore.WorkOrders" asp-controller="WorkOrders" asp-action="Details" asp-route-id="@workOrder.ItemId">
+                        <span class="fw-semibold">@workOrder.Number</span>
+                        <span class="me-auto">@workOrder.Summary</span>
+                        <span class="badge text-bg-light border">@workOrder.Status.Text()</span>
+                        <span class="small text-muted">@await DisplayAsync(await New.DateTime(Utc: workOrder.CreatedUtc, Format: "d"))</span>
+                    </a>
+                }
+            </div>
+            @if (Model.Count > Model.WorkOrders.Count)
+            {
+                <p class="small text-muted mt-2 mb-0">@T["The latest {0} of {1}.", Model.WorkOrders.Count, Model.Count]</p>
+            }
+        }
+    </div>
+</div>

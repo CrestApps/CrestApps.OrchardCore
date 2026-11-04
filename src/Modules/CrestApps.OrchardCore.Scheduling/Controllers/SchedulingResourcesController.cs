@@ -125,7 +125,7 @@ public sealed class SchedulingResourcesController : Controller
             // A new resource starts in the site's time zone rather than the first one in the list.
             TimeZoneId = resource.TimeZoneId ?? (await siteService.GetSiteSettingsAsync()).TimeZoneId,
             AvailabilityMode = resource.AvailabilityMode.ToString(),
-            ShiftCalendarId = resource.ShiftCalendarId,
+            ShiftCalendarIds = (resource.ShiftCalendarIds ?? []).Append(resource.ShiftCalendarId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray(),
             WorkingHours = SchedulingFormat.WriteHours(resource.WorkingHours),
             DateOverrides = SchedulingFormat.WriteOverrides(resource.DateOverrides),
             Enabled = resource.Enabled,
@@ -190,7 +190,8 @@ public sealed class SchedulingResourcesController : Controller
         resource.CalendarId = string.IsNullOrWhiteSpace(model.CalendarId) ? null : model.CalendarId;
         resource.TimeZoneId = CalendarTime.NormalizeZoneId(model.TimeZoneId) ?? resource.TimeZoneId ?? "UTC";
         resource.AvailabilityMode = Enum.TryParse<SchedulingAvailabilityMode>(model.AvailabilityMode, out var mode) ? mode : SchedulingAvailabilityMode.WorkingHours;
-        resource.ShiftCalendarId = string.IsNullOrWhiteSpace(model.ShiftCalendarId) ? null : model.ShiftCalendarId;
+        resource.ShiftCalendarIds = (model.ShiftCalendarIds ?? []).Where(id => !string.IsNullOrWhiteSpace(id)).Distinct(StringComparer.Ordinal).ToList();
+        resource.ShiftCalendarId = null;
         resource.WorkingHours = hours;
         resource.DateOverrides = overrides;
         resource.Enabled = model.Enabled;
@@ -254,6 +255,7 @@ public sealed class SchedulingResourcesController : Controller
         var calendars = await _calendarService.ListAsync(new CalendarListQuery { Enabled = true, Limit = 500 });
 
         model.CalendarOptions = calendars.Select(calendar => new SelectListItem($"{calendar.Name} ({calendar.Type})", calendar.ItemId, calendar.ItemId == model.CalendarId)).ToList();
+        model.ShiftCalendarOptions = calendars.Select(calendar => new SelectListItem($"{calendar.Name} ({calendar.Type})", calendar.ItemId, model.ShiftCalendarIds?.Contains(calendar.ItemId) == true)).ToList();
         model.KindOptions =
         [
             new SelectListItem(S["Staff member"], nameof(SchedulingResourceKind.Staff)),

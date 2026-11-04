@@ -1,0 +1,104 @@
+@model FieldServiceKpisViewModel
+@{
+    var result = Model.Result;
+    string Percent(double? value) => value is { } share ? share.ToString("P0", CultureInfo.CurrentCulture) : "–";
+    string Number(double? value, string format = "0.#") => value is { } number ? number.ToString(format, CultureInfo.CurrentCulture) : "–";
+    var travelShare = result.TravelMinutes + result.OnSiteMinutes == 0 ? (double?)null : (double)result.TravelMinutes / (result.TravelMinutes + result.OnSiteMinutes);
+}
+
+<zone Name="Title"><breadcrumb name="FieldServiceKpis" title="@T["Field Service KPIs"]" /></zone>
+
+<form asp-action="Index" method="get">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2 gy-2 align-items-center">
+                <div class="col-12 col-md text-muted small">@T["Visits that started, and work orders made, in these days ({0}).", Model.TimeZoneId]</div>
+                <div class="col-auto">
+                    <label asp-for="From" class="visually-hidden">@T["From"]</label>
+                    <input asp-for="From" type="date" class="form-control form-control-sm" />
+                </div>
+                <div class="col-auto">
+                    <label asp-for="To" class="visually-hidden">@T["To"]</label>
+                    <input asp-for="To" type="date" class="form-control form-control-sm" />
+                </div>
+                <div class="col-auto">
+                    <div class="input-group input-group-sm">
+                        <label asp-for="RepeatDays" class="input-group-text">@T["Repeat within"]</label>
+                        <input asp-for="RepeatDays" type="number" min="1" max="365" class="form-control" style="width: 5rem" />
+                        <span class="input-group-text">@T["days"]</span>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-sm btn-primary">@T["Show"]</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@if (result.Truncated)
+{
+    <div class="alert alert-warning">@T["There are more than {0} visits or work orders in these days, so only the first {0} are counted. Choose fewer days.", 5000]</div>
+}
+
+<div class="row g-3 mb-3">
+    @{
+        var tiles = new[]
+        {
+            (T["First-time fix"], Percent(result.FirstTimeFixRate), T["Finished visits done without a return visit, of {0}.", result.FinishedVisits]),
+            (T["On-time arrival"], Percent(result.OnTimeArrivalRate), T["Technicians on site by the end of the arrival window."]),
+            (T["Jobs per technician a day"], Number(result.JobsPerTechnicianDay, "0.##"), T["Completed visits per technician, on the days they did any."]),
+            (T["Return visits"], Percent(result.ReturnVisitRate), T["Finished visits that couldn't be finished and needed another."]),
+            (T["Travel"], Percent(travelShare), T["{0} hours on the road against {1} hours on site.", Number(result.TravelMinutes / 60d), Number(result.OnSiteMinutes / 60d)]),
+            (T["Answered in time"], Percent(result.ResponseCompliance), T["Work orders answered by their response time, of {0} made.", result.WorkOrders]),
+            (T["Resolved in time"], Percent(result.ResolutionCompliance), T["Completed work orders resolved by their resolution time."]),
+            (T["Time to repair"], result.MeanHoursToRepair is { } hours ? string.Format(CultureInfo.CurrentCulture, T["{0} h"].Value, Number(hours)) : "–", T["The mean time from making a work order to completing it."]),
+            (T["Revenue per work order"], result.RevenuePerWorkOrder is { } revenue ? revenue.ToString("N2", CultureInfo.CurrentCulture) + " " + result.RevenueCurrency : "–", T["What the completed work orders billed on average."]),
+            (T["Repeat work"], Percent(result.RepeatWorkRate), T["Completed work orders with another work order on the same asset within {0} days.", result.RepeatDays]),
+        };
+    }
+    @foreach (var (title, value, hint) in tiles)
+    {
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="text-muted small">@title</div>
+                    <div class="fs-3 fw-semibold">@value</div>
+                    <div class="small text-muted">@hint</div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@if (result.PartsByLocation.Count > 0)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h2 class="h6">@T["Parts used by stock location"]</h2>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">@T["Stock location"]</th>
+                            <th scope="col" class="text-end">@T["Units"]</th>
+                            <th scope="col" class="text-end">@T["Work orders"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var parts in result.PartsByLocation)
+                        {
+                            <tr>
+                                <td>@parts.Name</td>
+                                <td class="text-end">@parts.Quantity.ToString("0.##", CultureInfo.CurrentCulture)</td>
+                                <td class="text-end">@parts.WorkOrders</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+<p class="text-muted small">@T["Build your own charts and tables from the Field Service data source in the Report Builder: one row per work order, visit, asset, meter reading or asset serviced."]</p>

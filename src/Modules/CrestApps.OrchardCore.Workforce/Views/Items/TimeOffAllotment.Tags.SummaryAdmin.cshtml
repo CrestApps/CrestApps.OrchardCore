@@ -1,0 +1,17 @@
+@model ShapeViewModel<TimeOffAllotment>
+
+@{
+    var allotment = Model.Value;
+    var days = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday };
+    var weekdays = string.Join(" ", days.Select(day => System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(day) + " " + ((int)day < allotment.WeekdaySlots.Count ? allotment.WeekdaySlots[(int)day] : 0)));
+}
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["People who may be off each day"]"><i class="fa-solid fa-user-clock text-secondary me-1" aria-hidden="true"></i>@weekdays</span>
+@if (allotment.AutoApprove)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-bolt text-secondary me-1" aria-hidden="true"></i>@T["Approves on its own"]</span>
+}
+<span class="badge ta-badge fw-normal">@(allotment.WhenFull == TimeOffAllotmentFullAction.Waitlist ? T["Waitlist when full"] : T["A manager decides when full"])</span>
+@if (!Model.Value.Enabled)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Not in use"]</span>
+}

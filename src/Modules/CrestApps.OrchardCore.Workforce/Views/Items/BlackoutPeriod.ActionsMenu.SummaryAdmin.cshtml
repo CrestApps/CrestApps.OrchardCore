@@ -1,0 +1,3 @@
+@model ShapeViewModel<BlackoutPeriod>
+
+<a asp-controller="BlackoutDates" asp-action="Delete" asp-route-id="@Model.Value.ItemId" class="dropdown-item text-danger" data-title="@T["Delete"]" data-message="@T["Delete these blackout dates? Time off can then be requested on them."]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>

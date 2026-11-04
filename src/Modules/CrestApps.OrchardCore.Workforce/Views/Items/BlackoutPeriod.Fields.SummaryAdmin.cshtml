@@ -1,0 +1,4 @@
+@model ShapeViewModel<BlackoutPeriod>
+
+<a asp-controller="BlackoutDates" asp-action="Edit" asp-route-id="@Model.Value.ItemId">@Model.Value.Name</a>
+<span class="ms-1 text-muted">@Model.Value.StartDate.ToString("d MMM yyyy") &ndash; @Model.Value.EndDate.ToString("d MMM yyyy")</span>

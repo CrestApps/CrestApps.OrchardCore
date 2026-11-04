@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Workforce.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<WorkforceTimeOffWaitlistPromotedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-arrow-up-wide-short" aria-hidden="true"></i>
+    @T["Time Off Waitlist Promoted"]
+</h4>
+<p>@T["Starts when a waitlisted time-off request gets a place."]</p>

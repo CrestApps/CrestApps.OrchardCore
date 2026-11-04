@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.WorkOrders.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<WorkOrderCompletedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Work Order Completed"])
+    </h4>
+</header>

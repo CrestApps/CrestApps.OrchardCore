@@ -1,0 +1,27 @@
+@model ForecastingListViewModel
+
+<zone Name="Title"><breadcrumb name="WorkforceForecasts" title="@T["Forecasts"]" /></zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2">
+            <div class="col">
+                <p class="mb-0 text-muted small">@T["Forecasts of each planning group\u0027s work, staffed every 15 minutes. The active forecast of a group is its team\u0027s coverage."]</p>
+            </div>
+            <div class="col-auto"><a asp-action="Create" class="btn btn-secondary create">@T["Make a forecast"]</a></div>
+        </div>
+    </div>
+</div>
+<form asp-action="Index" method="get" id="forecasts-filter"></form>
+@{
+    Model.List.ToolbarActions = await New.ForecastsFilter(ViewModel: Model, FormId: "forecasts-filter");
+}
+
+<admin-list name="WorkforceForecasts" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> Make a forecast from a planning group."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Forecast"]" />
+        <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

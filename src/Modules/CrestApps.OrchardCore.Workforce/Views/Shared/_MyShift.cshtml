@@ -1,0 +1,24 @@
+@model MyShiftViewModel
+<div class="card mb-2 @(Model.IsTimeOff ? "my-work-time-off" : "my-work-shift")">
+    <div class="card-body py-2">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            @if (Model.IsTimeOff)
+            {
+                <strong>@Model.Title</strong>
+                <span class="text-muted">@(Model.AllDay ? T["All day"].Value : $"{Model.Start:HH:mm}-{Model.End:HH:mm}")</span>
+            }
+            else
+            {
+                <strong>@Model.Start.ToString("HH:mm")&ndash;@Model.End.ToString("HH:mm")</strong>
+                @if (!string.IsNullOrEmpty(Model.TeamName))
+                {
+                    <span class="badge text-bg-light fw-normal"><i class="fa-solid fa-people-group me-1" aria-hidden="true"></i>@Model.TeamName</span>
+                }
+            }
+        </div>
+        @if (!string.IsNullOrEmpty(Model.Segments))
+        {
+            <div class="small text-muted">@Model.Segments</div>
+        }
+    </div>
+</div>

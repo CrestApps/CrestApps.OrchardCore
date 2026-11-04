@@ -311,10 +311,33 @@ public sealed class SchedulingTests
         Assert.Empty(occurrences);
     }
 
-    private static Task<CalendarTestHarness> CreateAsync()
+    [Fact]
+    public async Task ASlotFilter_HidesTimes_AndTheyCantBeBooked()
+    {
+        // Arrange: a filter that allows only 10:00.
+        await using var harness = await CreateAsync(services => services.AddScoped<IAppointmentSlotFilter>(_ => new OnlyAtFilter(Utc(_day.AddHours(10)))));
+        var (resource, _) = await AddResourceAsync(harness, "Field team");
+        var type = await AddTypeAsync(harness, [resource.ItemId]);
+
+        // Act
+        var slots = await harness.RunAsync(services => services.GetRequiredService<ISchedulingAvailabilityService>().FindSlotsAsync(type, Utc(_day), Utc(_day.AddDays(1))), commit: false);
+        var refused = await BookAsync(harness, type, Utc(_day.AddHours(9)));
+        var booked = await BookAsync(harness, type, Utc(_day.AddHours(10)));
+
+        // Assert
+        Assert.Equal([Utc(_day.AddHours(10))], slots.Select(slot => slot.StartUtc));
+        Assert.False(refused.Succeeded);
+        Assert.True(booked.Succeeded, string.Join(" ", booked.Errors));
+    }
+
+    private static Task<CalendarTestHarness> CreateAsync(Action<IServiceCollection> configure = null)
     {
         return CalendarTestHarness.CreateAsync(
-            services => services.AddSchedulingCore(),
+            services =>
+            {
+                services.AddSchedulingCore();
+                configure?.Invoke(services);
+            },
             SchedulingIndexSchema.CreateAsync,
             [new SchedulingResourceIndexProvider(), new AppointmentTypeIndexProvider(), new AppointmentIndexProvider(), new WaitlistEntryIndexProvider()],
             [SchedulingConstants.CollectionName]);
@@ -397,4 +420,17 @@ public sealed class SchedulingTests
     {
         return CrestApps.OrchardCore.Calendars.Core.CalendarTime.ToUtc(local, "America/New_York");
     }
+}
+
+internal sealed class OnlyAtFilter : IAppointmentSlotFilter
+{
+    private readonly DateTime _startUtc;
+
+    public OnlyAtFilter(DateTime startUtc)
+    {
+        _startUtc = startUtc;
+    }
+
+    public Task<IReadOnlyList<AppointmentSlot>> FilterAsync(AppointmentSlotFilterContext context, IReadOnlyList<AppointmentSlot> slots, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<AppointmentSlot>>([.. slots.Where(slot => slot.StartUtc == _startUtc)]);
 }

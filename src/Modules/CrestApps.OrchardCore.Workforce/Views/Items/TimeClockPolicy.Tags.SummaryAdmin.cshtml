@@ -1,0 +1,29 @@
+@model ShapeViewModel<TimeClockPolicy>
+
+@{
+    var policy = Model.Value;
+}
+@if (policy.RoundingMinutes > 0)
+{
+    <span class="badge ta-badge fw-normal">@T["Rounds to {0} min", policy.RoundingMinutes]</span>
+}
+@if (policy.WeeklyOvertimeHours.HasValue)
+{
+    <span class="badge ta-badge fw-normal">@T["Overtime after {0} h a week", policy.WeeklyOvertimeHours.Value.ToString("0.##")]</span>
+}
+@if (policy.DailyOvertimeHours.HasValue)
+{
+    <span class="badge ta-badge fw-normal">@T["Overtime after {0} h a day", policy.DailyOvertimeHours.Value.ToString("0.##")]</span>
+}
+@if (policy.RequireGeofence)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-location-dot text-secondary me-1" aria-hidden="true"></i>@T["At the site"]</span>
+}
+@if (policy.AttendancePoints.Any(rule => rule.Points > 0))
+{
+    <span class="badge ta-badge fw-normal">@T["Attendance points"]</span>
+}
+@if (!policy.Enabled)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Not in use"]</span>
+}

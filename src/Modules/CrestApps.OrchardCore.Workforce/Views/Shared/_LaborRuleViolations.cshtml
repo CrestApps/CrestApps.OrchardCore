@@ -1,0 +1,26 @@
+@model IEnumerable<CrestApps.OrchardCore.Workforce.Services.LaborRuleViolation>
+@{
+    var ordered = Model
+        .OrderBy(item => item.Enforcement == LaborRuleEnforcement.Block ? 0 : item.Enforcement == LaborRuleEnforcement.RequireOverride ? 1 : 2)
+        .ThenBy(item => item.Date)
+        .ToList();
+    const int shown = 5;
+}
+<ul class="list-unstyled mb-0">
+    @foreach (var violation in ordered.Take(shown))
+    {
+        <partial name="_LaborRuleViolation" model="violation" />
+    }
+</ul>
+@if (ordered.Count > shown)
+{
+    <details class="mt-1">
+        <summary class="small">@T.Plural(ordered.Count - shown, "1 more", "{0} more", ordered.Count - shown)</summary>
+        <ul class="list-unstyled mb-0 mt-1">
+            @foreach (var violation in ordered.Skip(shown))
+            {
+                <partial name="_LaborRuleViolation" model="violation" />
+            }
+        </ul>
+    </details>
+}

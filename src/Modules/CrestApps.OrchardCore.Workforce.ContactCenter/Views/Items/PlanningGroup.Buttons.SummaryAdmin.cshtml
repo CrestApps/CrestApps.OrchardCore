@@ -1,0 +1,5 @@
+@model ShapeViewModel<PlanningGroup>
+
+<a asp-controller="Forecasts" asp-action="Create" asp-route-planningGroupId="@Model.Value.ItemId" class="btn btn-secondary btn-sm">@T["Forecast"]</a>
+<a asp-controller="PlanningGroups" asp-action="Edit" asp-route-id="@Model.Value.ItemId" class="btn btn-primary btn-sm">@T["Edit"]</a>
+<a asp-controller="PlanningGroups" asp-action="Delete" asp-route-id="@Model.Value.ItemId" class="btn btn-danger btn-sm" data-title="@T["Delete"]" data-message="@T["Delete this planning group? Its forecasts stay, and its team's forecast coverage stays until you change it."]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>

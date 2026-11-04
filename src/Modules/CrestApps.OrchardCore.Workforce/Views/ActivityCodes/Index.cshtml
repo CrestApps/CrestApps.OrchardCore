@@ -1,0 +1,24 @@
+@model WorkforceListViewModel
+
+<zone Name="Title"><breadcrumb name="ActivityCodes" title="@T["Activity Codes"]" /></zone>
+
+<form asp-action="Index" method="get">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                </div>
+                <div class="col-auto"><a asp-action="Edit" class="btn btn-secondary create">@T["Add activity code"]</a></div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<admin-list name="ActivityCodes" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> There are no activity codes."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Activity"]" />
+        <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

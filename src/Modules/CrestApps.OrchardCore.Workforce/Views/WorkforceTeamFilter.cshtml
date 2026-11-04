@@ -1,0 +1,19 @@
+@{
+    var filters = (WorkforceListViewModel)Model.ViewModel;
+    var formId = (string)Model.FormId;
+    var allowAll = Model.AllowAll is bool all ? all : true;
+}
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+<div class="btn-group filter">
+    <select name="teamId" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Team"]" data-dropdown-align-right="auto" aria-label="@T["Team"]" onchange="this.form.submit()">
+        @if (allowAll)
+        {
+            <option value="">@T["All teams"]</option>
+        }
+        @foreach (var option in filters.TeamOptions)
+        {
+            <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+        }
+    </select>
+</div>

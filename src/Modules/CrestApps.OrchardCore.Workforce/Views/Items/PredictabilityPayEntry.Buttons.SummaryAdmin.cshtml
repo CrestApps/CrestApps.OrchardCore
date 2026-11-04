@@ -1,0 +1,13 @@
+@model ShapeViewModel<PredictabilityPayRowViewModel>
+@if (Model.Value.CanDecide)
+{
+    <div class="d-flex gap-1 align-items-center">
+        <form method="post" asp-controller="PredictabilityPay" asp-action="Approve" asp-route-id="@Model.Value.Entry.ItemId" class="no-multisubmit">
+            <button type="submit" class="btn btn-success btn-sm">@T["Approve"]</button>
+        </form>
+        <form method="post" asp-controller="PredictabilityPay" asp-action="Waive" asp-route-id="@Model.Value.Entry.ItemId" class="no-multisubmit d-flex gap-1">
+            <input type="text" name="reason" class="form-control form-control-sm" style="width: 11rem" placeholder="@T["Why it isn't owed"]" aria-label="@T["Why it isn't owed"]" required />
+            <button type="submit" class="btn btn-outline-secondary btn-sm">@T["Waive"]</button>
+        </form>
+    </div>
+}

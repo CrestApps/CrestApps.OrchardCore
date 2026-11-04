@@ -1,0 +1,118 @@
+@model CapacityPlanEditViewModel
+
+<zone Name="Title"><breadcrumb name="WorkforceCapacityPlansEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["Add a Capacity Plan"] : T["Edit {0}", Model.Name])" /></zone>
+
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="no-multisubmit">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <input type="hidden" asp-for="Id" />
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Details"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Name" class="form-control" required />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="PlanningGroupId" class="ocat-label">@T["Planning group"]</label>
+                <div class="ocat-end">
+                    <select asp-for="PlanningGroupId" asp-items="Model.PlanningGroupOptions" class="form-select" required>
+                        <option value="">@T["Choose a planning group"]</option>
+                    </select>
+                    <span class="hint">@T["Its shrinkage and highest occupancy turn the work into agents."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="StartDate" class="ocat-label">@T["First week"]</label>
+                <div class="ocat-end">
+                    <input asp-for="StartDate" type="date" class="form-control" required style="max-width: 12rem" />
+                    <span class="hint">@T["The plan starts on its Monday."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Weeks" class="ocat-label">@T["Weeks"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Weeks" type="number" min="1" max="78" class="form-control" style="max-width: 12rem" />
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Work"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="WeeklyWorkloadHours" class="ocat-label">@T["Handle hours a week"]</label>
+                <div class="ocat-end">
+                    <input asp-for="WeeklyWorkloadHours" type="number" min="0" step="any" class="form-control" style="max-width: 12rem" />
+                    <span class="hint">@T["Leave empty to use the average of the last four weeks."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="GrowthPercentPerYear" class="ocat-label">@T["Growth a year %"]</label>
+                <div class="ocat-end">
+                    <input asp-for="GrowthPercentPerYear" type="number" step="any" class="form-control" style="max-width: 12rem" />
+                    <span class="hint">@T["Negative when the work shrinks."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Agents"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="CurrentFte" class="ocat-label">@T["Agents today (full-time)"]</label>
+                <div class="ocat-end">
+                    <input asp-for="CurrentFte" type="number" min="0" step="any" class="form-control" style="max-width: 12rem" />
+                    <span class="hint">@T["Leave empty to count the team's workers."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="HoursPerFte" class="ocat-label">@T["Hours of a full-time agent"]</label>
+                <div class="ocat-end">
+                    <input asp-for="HoursPerFte" type="number" min="1" max="80" step="any" class="form-control" style="max-width: 12rem" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="AttritionPercentPerMonth" class="ocat-label">@T["Attrition a month %"]</label>
+                <div class="ocat-end">
+                    <input asp-for="AttritionPercentPerMonth" type="number" min="0" max="99" step="any" class="form-control" style="max-width: 12rem" />
+                    <span class="hint">@T["The share of agents who leave each month."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Hiring classes"]</div>
+        <div class="card-body">
+            <p class="hint">@T["New agents answer nothing while they train, then reach full productivity evenly over their ramp-up. Leave a row empty to skip it."]</p>
+            <div class="table-responsive mb-3">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th scope="col">@T["First day"]</th>
+                            <th scope="col">@T["Agents"]</th>
+                            <th scope="col">@T["Training weeks"]</th>
+                            <th scope="col">@T["Ramp-up weeks"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (var i = 0; i < Model.HiringClasses.Count; i++)
+                        {
+                            <tr>
+                                <td><input asp-for="HiringClasses[i].StartDate" type="date" class="form-control form-control-sm" aria-label="@T["First day"]" style="max-width: 12rem" /></td>
+                                <td><input asp-for="HiringClasses[i].Size" type="number" min="0" step="any" class="form-control form-control-sm" aria-label="@T["Agents"]" style="max-width: 12rem" /></td>
+                                <td><input asp-for="HiringClasses[i].TrainingWeeks" type="number" min="0" class="form-control form-control-sm" aria-label="@T["Training weeks"]" style="max-width: 12rem" /></td>
+                                <td><input asp-for="HiringClasses[i].RampWeeks" type="number" min="0" class="form-control form-control-sm" aria-label="@T["Ramp-up weeks"]" style="max-width: 12rem" /></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+        <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+    </div>
+</form>

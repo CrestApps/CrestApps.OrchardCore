@@ -1,0 +1,17 @@
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+@using CrestApps.OrchardCore.WorkOrders.Agreements.ViewModels
+@{
+    var filter = (ServiceAgreementsListViewModel)Model.ViewModel;
+    var formId = (string)Model.FormId;
+}
+
+<div class="btn-group filter">
+    <select id="agreements-status" name="status" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Status"]" data-dropdown-align-right="auto" aria-label="@T["Status"]" onchange="this.form.submit()">
+        <option value="">@T["Every status"]</option>
+        @foreach (var status in Enum.GetValues<ServiceAgreementStatus>())
+        {
+            <option value="@status" selected="@(filter.Status == status.ToString())">@status</option>
+        }
+    </select>
+</div>

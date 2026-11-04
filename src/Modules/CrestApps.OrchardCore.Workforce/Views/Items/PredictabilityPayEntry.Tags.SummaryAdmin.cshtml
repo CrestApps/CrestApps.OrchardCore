@@ -1,0 +1,29 @@
+@model ShapeViewModel<PredictabilityPayRowViewModel>
+@{
+    var entry = Model.Value.Entry;
+}
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Premium owed"]"><i class="fa-solid fa-coins text-secondary me-1" aria-hidden="true"></i>@(entry.Hours == 1 ? T["1 hour"] : T["{0} hours", entry.Hours.ToString("0.##")])</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["How long before the shift the change came"]"><i class="fa-regular fa-clock text-secondary me-1" aria-hidden="true"></i>@(entry.NoticeHours >= 48 ? T["{0} days' notice", (entry.NoticeHours / 24).ToString("0.#")] : T["{0} hours' notice", entry.NoticeHours.ToString("0.#")])</span>
+@if (!string.IsNullOrEmpty(Model.Value.TeamName))
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-people-group text-secondary me-1" aria-hidden="true"></i>@Model.Value.TeamName</span>
+}
+@switch (entry.Status)
+{
+    case PredictabilityPayStatus.Approved:
+        <span class="badge ta-badge fw-normal"><i class="fa-solid fa-circle-check text-success me-1" aria-hidden="true"></i>@T["Approved"]</span>
+        break;
+    case PredictabilityPayStatus.Waived:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@entry.Note"><i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Waived"]</span>
+        break;
+    case PredictabilityPayStatus.Exported:
+        <span class="badge ta-badge fw-normal"><i class="fa-solid fa-file-export text-secondary me-1" aria-hidden="true"></i>@T["Exported"]</span>
+        break;
+    default:
+        <span class="badge ta-badge fw-normal"><i class="fa-solid fa-hourglass-half text-warning me-1" aria-hidden="true"></i>@T["To decide"]</span>
+        break;
+}
+@if (entry.Status == PredictabilityPayStatus.Waived && !string.IsNullOrEmpty(entry.Note))
+{
+    <span class="text-muted small">@entry.Note</span>
+}

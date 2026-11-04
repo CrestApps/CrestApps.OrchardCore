@@ -1,0 +1,3 @@
+@model ShapeViewModel<VisitRow>
+
+<a asp-controller="Visits" asp-action="Details" asp-route-id="@Model.Value.Visit.ItemId"><span class="text-muted">@Model.Value.Visit.Number</span> @Model.Value.Visit.WorkOrderNumber @Model.Value.Visit.Summary</a>

@@ -1,0 +1,25 @@
+@model WorkforceListViewModel
+
+<zone Name="Title"><breadcrumb name="WorkforceTimeOffTypes" title="@T["Time-Off Types"]" /></zone>
+
+<form asp-action="Index" method="get">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <p class="mb-0 text-muted small">@T["The kinds of time off workers can request, such as vacation or sick time, and what each counts in."]</p>
+                </div>
+                <div class="col-auto"><a asp-action="Edit" class="btn btn-secondary create">@T["Add time-off type"]</a></div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<admin-list name="WorkforceTimeOffTypes" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> There are no time-off types."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Type"]" />
+        <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

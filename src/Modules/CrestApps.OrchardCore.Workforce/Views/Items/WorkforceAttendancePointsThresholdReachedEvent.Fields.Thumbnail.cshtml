@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Workforce.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<WorkforceAttendancePointsThresholdReachedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-gauge-high" aria-hidden="true"></i>
+    @T["Attendance Points Threshold Reached"]
+</h4>
+<p>@T["Starts when a worker's attendance points reach their policy's threshold."]</p>

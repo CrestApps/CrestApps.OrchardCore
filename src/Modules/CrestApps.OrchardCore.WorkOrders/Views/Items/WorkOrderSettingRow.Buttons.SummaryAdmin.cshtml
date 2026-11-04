@@ -1,0 +1,8 @@
+@model ShapeViewModel<WorkOrderSettingRow>
+
+@if (Model.Value.Kind == WorkOrderSettingsController.Types)
+{
+    <a asp-controller="WorkOrders" asp-action="New" asp-route-typeId="@Model.Value.Id" class="btn btn-secondary btn-sm">@T["Add work order"]</a>
+}
+<a asp-controller="WorkOrderSettings" asp-action="@Model.Value.EditAction" asp-route-id="@Model.Value.Id" class="btn btn-primary btn-sm">@T["Edit"]</a>
+<a asp-controller="WorkOrderSettings" asp-action="Delete" asp-route-kind="@Model.Value.Kind" asp-route-id="@Model.Value.Id" class="btn btn-danger btn-sm" data-title="@T["Delete"]" data-message="@T["Delete {0}? Only a record nothing uses can be deleted.", Model.Value.Name]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>

@@ -1,0 +1,3 @@
+@model ShapeViewModel<PayCode>
+
+<a asp-controller="PayCodes" asp-action="Delete" asp-route-id="@Model.Value.ItemId" class="dropdown-item text-danger" data-title="@T["Delete"]" data-message="@T["Delete this pay code? Timesheets that pay hours under it keep them, but new hours go to another code of the same kind, or to regular."]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>

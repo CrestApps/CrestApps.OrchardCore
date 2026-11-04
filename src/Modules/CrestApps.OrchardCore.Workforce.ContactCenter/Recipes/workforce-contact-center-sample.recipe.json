@@ -1,0 +1,93 @@
+{
+  "name": "WorkforceContactCenterSample",
+  "displayName": "Workforce for Contact Center sample",
+  "description": "Sets up contact center workforce management: a Customer Care team, a Support queue, a Support voice planning group answered 80% within 20 seconds, a holiday and a promotion, a capacity plan for the year with two hiring classes, and adherence rules for work and breaks. Give agents the team under Contact Center > Agents, then make a forecast under Workforce > Forecasting.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "workforce"
+  ],
+  "tags": [
+    "workforce",
+    "contact center",
+    "forecasting",
+    "adherence",
+    "sample"
+  ],
+  "steps": [
+    {
+      "name": "feature",
+      "enable": [
+        "CrestApps.OrchardCore.ContactCenter.Queues",
+        "CrestApps.OrchardCore.Workforce.ContactCenter",
+        "CrestApps.OrchardCore.Workforce.Forecasting",
+        "CrestApps.OrchardCore.Workforce.Intraday",
+        "CrestApps.OrchardCore.Workforce.Adherence"
+      ]
+    },
+    {
+      "name": "Workforce",
+      "Teams": [
+        { "name": "Customer Care", "kind": "Team", "timeZoneId": "America/New_York", "description": "Agents who answer the Support queue." }
+      ]
+    },
+    {
+      "name": "ContactCenterQueue",
+      "Queues": [
+        { "ItemId": "4wfm0cc0q00000000000000001", "Name": "Support" }
+      ]
+    },
+    {
+      "name": "WorkforceForecasting",
+      "PlanningGroups": [
+        {
+          "name": "Support voice",
+          "queueNames": [ "Support" ],
+          "teamName": "Customer Care",
+          "serviceLevelPercent": 80,
+          "serviceLevelSeconds": 20,
+          "maxOccupancyPercent": 85,
+          "shrinkagePercent": 32,
+          "historyWeeks": 8
+        }
+      ],
+      "ForecastEvents": [
+        { "name": "New Year's Day", "kind": "Holiday", "startDate": "2027-01-01", "endDate": "2027-01-01", "volumeMultiplier": 0.3, "recursYearly": true },
+        { "name": "Spring promotion", "kind": "Promotion", "startDate": "2027-03-15", "endDate": "2027-03-19", "volumeMultiplier": 1.25, "planningGroupNames": [ "Support voice" ] }
+      ],
+      "CapacityPlans": [
+        {
+          "name": "Support voice 2027",
+          "planningGroupName": "Support voice",
+          "startDate": "2027-01-04",
+          "weeks": 52,
+          "weeklyWorkloadHours": 600,
+          "growthPercentPerYear": 8,
+          "hoursPerFte": 37.5,
+          "currentFte": 30,
+          "attritionPercentPerMonth": 2.5,
+          "hiringClasses": [
+            { "startDate": "2027-02-01", "size": 4, "trainingWeeks": 4, "rampWeeks": 4 },
+            { "startDate": "2027-07-05", "size": 5, "trainingWeeks": 4, "rampWeeks": 4 }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "WorkforceAdherence",
+      "RuleSets": [
+        {
+          "name": "Customer Care",
+          "teamNames": [ "Customer Care" ],
+          "rules": [
+            { "kind": "Work", "allowedStatuses": [ "Available", "Reserved", "Busy", "WrapUp" ], "startGraceMinutes": 2, "endGraceMinutes": 2, "minimumOutMinutes": 1, "alertAfterMinutes": 5 },
+            { "kind": "Break", "allowedStatuses": [ "Break", "Away", "Offline" ], "startGraceMinutes": 2, "endGraceMinutes": 3, "minimumOutMinutes": 1, "alertAfterMinutes": 10 },
+            { "kind": "Meal", "allowedStatuses": [ "Break", "Away", "Offline" ], "startGraceMinutes": 2, "endGraceMinutes": 3, "minimumOutMinutes": 1, "alertAfterMinutes": 10 }
+          ]
+        }
+      ]
+    }
+  ]
+}

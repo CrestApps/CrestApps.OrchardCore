@@ -1,0 +1,25 @@
+@model CertificationRecordRowViewModel
+
+@{
+    var record = Model.Record;
+    var statusText = record.Status switch
+    {
+        CertificationStatus.Valid => T["Valid"],
+        CertificationStatus.Expired => T["Expired"],
+        CertificationStatus.Revoked => T["Withdrawn"],
+        _ => T["Pending check"],
+    };
+    var statusIcon = record.Status switch
+    {
+        CertificationStatus.Valid => "fa-circle-check text-success",
+        CertificationStatus.Expired => "fa-clock text-danger",
+        CertificationStatus.Revoked => "fa-ban text-danger",
+        _ => "fa-hourglass-half text-warning",
+    };
+}
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid @statusIcon me-1" aria-hidden="true"></i>@statusText</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Valid until"]"><i class="fa-solid fa-calendar-day text-secondary me-1" aria-hidden="true"></i>@(record.ExpiresOn?.ToString("d") ?? T["Never expires"].Value)</span>
+@if (record.SubjectKind == SkillSubjectKind.Worker)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Held by"]"><i class="fa-solid fa-helmet-safety text-secondary me-1" aria-hidden="true"></i>@T["Worker"]</span>
+}

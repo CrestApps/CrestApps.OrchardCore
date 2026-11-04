@@ -1,0 +1,122 @@
+@model FieldViewModel
+@{
+
+    var texts = new Dictionary<string, string>
+    {
+        ["today"] = T["Today"].Value,
+        ["tomorrow"] = T["Tomorrow"].Value,
+        ["noVisits"] = string.Format(CultureInfo.CurrentCulture, T["You have no visits today or in the next {0} days."].Value, Model.OfflineDays),
+        ["back"] = T["All visits"].Value,
+        ["arrival"] = T["Arrive {0} to {1}"].Value,
+        ["directions"] = T["Directions"].Value,
+        ["call"] = T["Call"].Value,
+        ["text"] = T["Text"].Value,
+        ["access"] = T["Access"].Value,
+        ["lead"] = T["You lead this visit."].Value,
+        ["status.Unscheduled"] = T["Unscheduled"].Value,
+        ["status.Scheduled"] = T["Scheduled"].Value,
+        ["status.Dispatched"] = T["Dispatched"].Value,
+        ["status.EnRoute"] = T["En route"].Value,
+        ["status.OnSite"] = T["On site"].Value,
+        ["status.Paused"] = T["Paused"].Value,
+        ["status.Completed"] = T["Completed"].Value,
+        ["status.Incomplete"] = T["Couldn't finish"].Value,
+        ["status.Canceled"] = T["Canceled"].Value,
+        ["action.EnRoute"] = T["On my way"].Value,
+        ["action.OnSite"] = T["Arrived"].Value,
+        ["action.Paused"] = T["Pause"].Value,
+        ["action.Completed"] = T["Finish the visit"].Value,
+        ["action.Incomplete"] = T["Can't finish"].Value,
+        ["reason"] = T["Why can't the visit be finished?"].Value,
+        ["reasonRequired"] = T["Say why."].Value,
+        ["save"] = T["Save"].Value,
+        ["cancel"] = T["Cancel"].Value,
+        ["checklists"] = T["Checklists"].Value,
+        ["required"] = T["Required"].Value,
+        ["yes"] = T["Yes"].Value,
+        ["no"] = T["No"].Value,
+        ["pass"] = T["Pass"].Value,
+        ["fail"] = T["Fail"].Value,
+        ["na"] = T["N/A"].Value,
+        ["usePhotos"] = T["Add it under Photos."].Value,
+        ["useSignature"] = T["Add it under Signature."].Value,
+        ["parts"] = T["Parts used"].Value,
+        ["used"] = T["{0} of {1} used"].Value,
+        ["quantity"] = T["How many"].Value,
+        ["from"] = T["From"].Value,
+        ["use"] = T["Use"].Value,
+        ["noParts"] = T["No parts on this job."].Value,
+        ["notes"] = T["Notes"].Value,
+        ["addNote"] = T["Add the note"].Value,
+        ["notePlaceholder"] = T["What did you do or find?"].Value,
+        ["equipment"] = T["Equipment"].Value,
+        ["serial"] = T["Serial {0}"].Value,
+        ["history"] = T["Earlier work on it"].Value,
+        ["noHistory"] = T["No earlier work orders on this equipment."].Value,
+        ["completedOn"] = T["completed {0}"].Value,
+        ["openSince"] = T["open since {0}"].Value,
+        ["freeAt"] = T["{0} ({1} free)"].Value,
+        ["followUp"] = T["Follow-up"].Value,
+        ["followUpHint"] = T["Needs another visit, such as for a part to order? Ask for a follow-up work order for the same customer, place and equipment."].Value,
+        ["followUpPlaceholder"] = T["What the follow-up is for"].Value,
+        ["askFollowUp"] = T["Ask for a follow-up"].Value,
+        ["followUpAsked"] = T["Follow-up asked for: {0}"].Value,
+        ["photos"] = T["Photos"].Value,
+        ["photoCount"] = T["{0} on the work order"].Value,
+        ["takePhoto"] = T["Take or choose a photo"].Value,
+        ["needsPhotos"] = T["{0} needed to finish."].Value,
+        ["signature"] = T["Customer signature"].Value,
+        ["signerName"] = T["Name of who signs"].Value,
+        ["signHere"] = T["Sign in the box."].Value,
+        ["clear"] = T["Clear"].Value,
+        ["saveSignature"] = T["Save the signature"].Value,
+        ["signedBy"] = T["Signed by {0}"].Value,
+        ["needsSignature"] = T["The customer must sign before you finish."].Value,
+        ["synced"] = T["All changes sent"].Value,
+        ["pending"] = T["{0} changes waiting"].Value,
+        ["pendingOne"] = T["1 change waiting"].Value,
+        ["offline"] = T["Offline"].Value,
+        ["offlinePending"] = T["Offline: {0} changes waiting"].Value,
+        ["offlinePendingOne"] = T["Offline: 1 change waiting"].Value,
+        ["syncing"] = T["Sending"].Value,
+        ["updated"] = T["Updated {0}"].Value,
+        ["notKept"] = T["Not kept: {0}"].Value,
+        ["dismiss"] = T["Dismiss"].Value,
+        ["loadFailed"] = T["Your visits can't be loaded. Connect to the internet and open this page again."].Value,
+        ["consentTitle"] = T["Share your location while you work?"].Value,
+        ["consentText"] = T["Your position is sent every {0} seconds only while you're on the way to, at, or between your visits of the day, never off shift. Dispatch sees it on the board and customers get a better arrival time. Positions are kept for {1} days. You can stop at any time."].Value,
+        ["allow"] = T["Share my location"].Value,
+        ["notNow"] = T["Not now"].Value,
+        ["sharingOn"] = T["Location sharing is on while you work."].Value,
+        ["sharingOff"] = T["Location sharing is off."].Value,
+        ["start"] = T["Share my location"].Value,
+        ["stop"] = T["Stop sharing"].Value,
+        ["blocked"] = T["This device blocks location for My Work; allow it in the browser's settings."].Value,
+        ["workOrder"] = T["Work order {0}"].Value,
+    };
+}
+@* Registered before the head, which writes the page's styles. *@
+<style asp-name="CrestApps.OrchardCore.Dispatch.Field"></style>
+<script asp-name="CrestApps.OrchardCore.Dispatch.Field" at="Foot"></script>
+<zone Name="Title">
+    <breadcrumb name="MyWorkField" title="@T["Field"]">
+        <breadcrumb-item id="MyWork" action="Index" controller="MyWork" area="CrestApps.OrchardCore.Workforce">@T["My Work"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+<partial name="~/Areas/CrestApps.OrchardCore.Workforce/Views/Shared/_MyWorkAssets.cshtml" />
+
+<div id="field-app"
+     data-worker-id="@Model.WorkerId"
+     data-api-url="@Url.Content("~/my-work/field/api")"
+     data-retention-days="@Model.RetentionDays"
+     data-texts="@System.Text.Json.JsonSerializer.Serialize(texts)">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <span class="me-auto"></span>
+        <span class="badge text-bg-secondary fw-normal" role="status" aria-live="polite" data-field-sync>@T["Loading"]</span>
+    </div>
+    <div data-field-notices aria-live="polite"></div>
+    <div data-field-location></div>
+    <div data-field-view>
+        <noscript><div class="alert alert-warning">@T["The Field page needs JavaScript."]</div></noscript>
+    </div>
+</div>

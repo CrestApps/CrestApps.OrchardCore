@@ -1,0 +1,11 @@
+@model ShapeViewModel<TimesheetRowViewModel>
+@{
+    var id = Model.Value.Timesheet.ItemId;
+}
+@if (Model.Value.Timesheet.Status is not (TimesheetStatus.Approved or TimesheetStatus.Locked))
+{
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" value="@id" name="itemIds" id="itemIds-@id" aria-label="@T["Select"]">
+        <label class="form-check-label" for="itemIds-@id">&nbsp;</label>
+    </div>
+}

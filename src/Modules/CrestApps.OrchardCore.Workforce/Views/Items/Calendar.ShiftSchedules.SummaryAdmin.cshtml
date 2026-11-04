@@ -1,0 +1,3 @@
+@model OrchardCore.DisplayManagement.Views.ShapeViewModel<CrestApps.OrchardCore.Calendars.Models.Calendar>
+
+<a asp-area="CrestApps.OrchardCore.Workforce" asp-controller="Schedules" asp-action="Index" asp-route-teamId="@Model.Value.SourceId" class="dropdown-item">@T["Shift schedules"]</a>

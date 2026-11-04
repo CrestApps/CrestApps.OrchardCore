@@ -1,0 +1,11 @@
+@model CertificationRecordRowViewModel
+
+@if (Model.Record.Status != CertificationStatus.Valid)
+{
+    <a asp-controller="CertificationRecords" asp-action="Verify" asp-route-id="@Model.Record.ItemId" class="dropdown-item" data-title="@T["Mark as checked"]" data-message="@T["Mark this certificate as checked and valid?"]" data-url-af="RemoveUrl UnsafeUrl">@T["Mark as checked"]</a>
+}
+@if (Model.Record.Status == CertificationStatus.Valid)
+{
+    <a asp-controller="CertificationRecords" asp-action="Revoke" asp-route-id="@Model.Record.ItemId" class="dropdown-item text-danger" data-title="@T["Withdraw"]" data-message="@T["Withdraw this certificate? It no longer counts."]" data-url-af="RemoveUrl UnsafeUrl">@T["Withdraw"]</a>
+}
+<a asp-controller="CertificationRecords" asp-action="Delete" asp-route-id="@Model.Record.ItemId" class="dropdown-item text-danger" data-title="@T["Delete"]" data-message="@T["Delete this certificate?"]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>

@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.WorkOrders.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<WorkOrderStatusChangedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i>
+    @T["Work Order Status Changed"]
+</h4>
+<p>@T["Starts when a work order's status changes. The input has PreviousStatus."]</p>
