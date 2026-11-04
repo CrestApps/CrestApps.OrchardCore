@@ -55,6 +55,22 @@ task, calls `services.AddWebhookSender()` and sends through `IWebhookSender`, so
 The body, the headers and how a receiver checks the signature are described on the
 [Commerce Webhooks](commerce-webhooks.md#receiving) page; they are the same for every event.
 
+### Recipes and deployment
+
+Subscriptions travel with the **Webhook subscriptions** deployment step and the `WebhookSubscriptions` recipe step. A
+subscription is matched by its `ItemId`, so running a recipe twice changes nothing. The protected secret is never
+exported, because it is protected with the site's own keys: a recipe may carry a plain `Secret`, and a new subscription
+without one gets a new secret.
+
+```json
+{
+  "name": "WebhookSubscriptions",
+  "Subscriptions": [
+    { "ItemId": "4k5y9m2x7q1c8w3n0p6r5t2v9z", "Name": "ERP", "Url": "https://erp.example.com/hooks", "Events": [ "order.paid", "order.refunded" ], "IsEnabled": true }
+  ]
+}
+```
+
 ### Compatibility
 
 The Webhooks feature took over the subscriptions, deliveries and admin of Commerce Webhooks, and the subscriptions of

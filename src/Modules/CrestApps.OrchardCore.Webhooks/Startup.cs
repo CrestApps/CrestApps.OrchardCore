@@ -3,16 +3,20 @@ using CrestApps.OrchardCore.Webhooks.BackgroundTasks;
 using CrestApps.OrchardCore.Webhooks.Core;
 using CrestApps.OrchardCore.Webhooks.Core.Indexes;
 using CrestApps.OrchardCore.Webhooks.Core.Models;
+using CrestApps.OrchardCore.Webhooks.Deployments;
 using CrestApps.OrchardCore.Webhooks.Drivers;
 using CrestApps.OrchardCore.Webhooks.Navigation;
+using CrestApps.OrchardCore.Webhooks.Recipes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Webhooks;
@@ -41,4 +45,28 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<WebhookSubscription, WebhookSubscriptionDisplayDriver>();
         services.AddDisplayDriver<WebhookDelivery, WebhookDeliveryDisplayDriver>();
     }
+}
+
+/// <summary>
+/// Registers the <c>WebhookSubscriptions</c> recipe step.
+/// </summary>
+[Feature(WebhooksConstants.Feature.Webhooks)]
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class RecipesStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddRecipeExecutionStep<WebhookSubscriptionsStep>();
+}
+
+/// <summary>
+/// Registers the webhook subscriptions deployment step.
+/// </summary>
+[Feature(WebhooksConstants.Feature.Webhooks)]
+[RequireFeatures("OrchardCore.Deployment")]
+public sealed class DeploymentStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddDeployment<WebhookSubscriptionsDeploymentSource, WebhookSubscriptionsDeploymentStep>();
 }
