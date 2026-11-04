@@ -19,6 +19,7 @@ using CrestApps.OrchardCore.ContactCenter.Workflows.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony.Core.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -275,11 +276,14 @@ public sealed class Startup : StartupBase
         // contends with a CRM edit of the same activity row. The work state itself is a Contact Center document;
         // the base feature composes Omnichannel Management so its CRM activity projection and administration
         // surfaces are available together.
+        services.TryAddScoped(sp => new Lazy<IAuthorizationService>(sp.GetRequiredService<IAuthorizationService>));
+
         services
             .AddScoped<IContactCenterWorkStateStore, ContactCenterWorkStateStore>()
             .AddScoped<IContactCenterRetentionPolicy, ContactCenterWorkStateRetentionPolicy>()
             .AddScoped<IContactCenterWorkStateManager, ContactCenterWorkStateManager>()
             .AddScoped<IContactCenterWorkStateService, ContactCenterWorkStateService>()
+            .AddScoped<IAuthorizationHandler, ContactCenterActivityOwnershipAuthorizationHandler>()
             .AddIndexProvider<ContactCenterWorkStateIndexProvider>()
             .AddDataMigration<ContactCenterWorkStateIndexMigrations>();
 

@@ -34,9 +34,11 @@ The routing transaction commits without touching the CRM activity at all.
 
 `OmnichannelActivity` keeps `AssignmentStatus`, `ReservationId`, `ReservedById`, `ReservedByUsername`, `ReservedUtc`, `ReservationExpiresUtc`, `AssignedToId`, `AssignedToUsername`, `AssignedToUtc`, and `Attempts`, but only as a **read model**. They are reconciled by `ContactCenterWorkStateActivityProjection` after the routing transaction has committed, in its own scope, with a bounded retry on conflict.
 
-They were retained rather than deleted because they are load-bearing outside routing. `OmnichannelActivityAuthorizationHandler` decides activity ownership from `AssignedToId`, and the CRM activity list, bulk-manage filters, and enterprise reports query the same columns through `OmnichannelActivityIndex`. Deleting them would either remove CRM function or invert the layering by making the CRM query a Contact Center store.
+They were retained rather than deleted because they are load-bearing outside routing. `OmnichannelActivityAuthorizationHandler` decides activity ownership from `AssignedToId` (and `ReservedById`), and the CRM activity list, bulk-manage filters, and enterprise reports query the same columns through `OmnichannelActivityIndex`. Deleting them would either remove CRM function or invert the layering by making the CRM query a Contact Center store.
 
 Because the read model is reconciled after the fact, it can lag. That leads to one rule.
+
+Lag matters most for an agent who is handed a record: a preview offer opens the activity screen as soon as it reaches the agent, which can be before the activity shows them as its owner. So `ContactCenterActivityOwnershipAuthorizationHandler` grants **Complete activity** to a user with **Complete own activity** from the work state's `ReservedById` and `AssignedToId`, alongside the Omnichannel handler that grants it from the activity.
 
 ## Which one to read
 
