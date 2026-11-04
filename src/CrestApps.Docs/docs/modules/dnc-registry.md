@@ -176,6 +176,25 @@ var registered = await registry.GetRegisteredNumbersAsync(phoneNumbers, context)
 
 When no `CountryCode` is specified (or the context is `null`), the local registry checks against all uploaded lists regardless of country.
 
+### Recipes and deployment
+
+The **Local DNC lists** deployment step (Do Not Call category) exports every list whose import completed, with its phone numbers. Phone numbers are personal data: add the step to a plan only to move them to a site you trust. Lists that are still importing, paused, failed or being deleted are left out.
+
+The `LocalDncLists` recipe step queues each list for import as if its numbers were uploaded in a file, so the background import checks, normalizes and stores them the same way. A list whose name and country already exist is skipped, so running a recipe twice adds nothing.
+
+```json
+{
+  "steps": [
+    {
+      "name": "LocalDncLists",
+      "Lists": [
+        { "Name": "Opted out", "CountryCode": "US", "PhoneNumbers": [ "+12025550101", "+12025550102" ] }
+      ]
+    }
+  ]
+}
+```
+
 ## Report Builder data source
 
 The local lists and the numbers imported into them are also a data source of Orchard Core, so the [Report Builder](report-builder/index.md) and Orchard Core's data pipelines can read them, for example to follow the imports of each list or to find the contacts whose phone number is on a list.

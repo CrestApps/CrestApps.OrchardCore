@@ -1111,6 +1111,36 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
         }
     }
 
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<string>> GetPhoneNumbersAsync(string listId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(listId);
+
+        var numbers = new List<string>();
+        var lastId = 0L;
+
+        while (true)
+        {
+            var page = (await _session.QueryIndex<LocalDncEntryIndex>(
+                i => i.ListId == listId && i.Id > lastId, collection: DncRegistryConstants.CollectionName)
+                .OrderBy(i => i.Id)
+                .Take(ExistingNumbersPageSize)
+                .ListAsync(cancellationToken))
+                .ToList();
+
+            numbers.AddRange(page.Select(entry => entry.PhoneNumber));
+
+            if (page.Count < ExistingNumbersPageSize)
+            {
+                break;
+            }
+
+            lastId = page[^1].Id;
+        }
+
+        return numbers;
+    }
+
     private void AddRowError(LocalDncList list, int rowIndex, string errorMessage)
     {
         list.ErrorMessages ??= [];
