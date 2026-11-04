@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.Dispatch.Core.Services;
 using CrestApps.OrchardCore.Geo.Services;
-using CrestApps.OrchardCore.Workforce.Services;
+using CrestApps.OrchardCore.Teams.Services;
 using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.Dispatch.Services;

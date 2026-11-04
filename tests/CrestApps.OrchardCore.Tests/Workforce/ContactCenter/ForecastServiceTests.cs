@@ -2,6 +2,7 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Calendars.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.IntervalStatistics;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Indexes;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Models;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Services;
@@ -179,7 +180,7 @@ public sealed class ForecastServiceTests
     {
         public Calendars.CalendarTestHarness Harness { get; set; }
 
-        public WorkforceTeam Team { get; set; }
+        public Team Team { get; set; }
 
         public PlanningGroup Group { get; set; }
 

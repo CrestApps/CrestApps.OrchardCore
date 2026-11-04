@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\CrestApps.OrchardCore.Calendars.Abstractions\CrestApps.OrchardCore.Calendars.Abstractions.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Skills.Abstractions\CrestApps.OrchardCore.Skills.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Teams.Abstractions\CrestApps.OrchardCore.Teams.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

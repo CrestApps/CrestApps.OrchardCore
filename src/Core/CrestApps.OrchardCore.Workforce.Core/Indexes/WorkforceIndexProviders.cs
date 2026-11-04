@@ -16,7 +16,6 @@ public static class WorkforceIndexProviders
         return
         [
             new WorkerIndexProvider(),
-            new TeamIndexProvider(),
             new ActivityCodeIndexProvider(),
         ];
     }

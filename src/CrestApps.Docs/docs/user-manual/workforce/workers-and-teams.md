@@ -12,35 +12,34 @@ Every team gets a **Workforce calendar** that holds its published shifts and app
 
 | | |
 | --- | --- |
-| **Menu** | Workforce > Workers, Workforce > Teams, Workforce > Activity Codes |
+| **Menu** | Workforce > Workers, Teams, Workforce > Activity Codes |
 | **Permission** | View workers, Manage workers, Manage workforce teams, Manage activity codes, View sensitive worker details, Manage the whole workforce |
-| **Feature** | Workforce (it needs Calendars and Skills) |
+| **Feature** | Workforce (it needs Calendars, Skills and Teams) |
 
 <AskYourAdmin />
 
 ## Build the team tree
 
-Open **Workforce > Teams** and choose **Add team**. Start at the top, such as your organization or a region, then add the teams under it. From a team's **Actions** menu, **Add a team under it** starts a new team with that team as its parent.
+Teams are kept by the **Teams** feature, so every feature uses the same tree. Open **Teams** to add them; see [Teams](./teams.md) for the fields every team has. Workforce adds the **Workforce** card to the team editor, and **Workers**, **Add a worker** and **Calendar** to each team's **Actions** menu.
+
+### The Workforce card
 
 | Field | What it does |
 | --- | --- |
-| **Name** | The team's name. |
-| **Kind** | **Organization**, **Region**, **Site**, **Department**, **Team** or **Crew**. A crew is a team sent out as one unit for field work. |
-| **Part of** | The team it belongs to, or **Nothing (top level)**. A team can't be placed under itself or under one of its own teams. |
-| **Description** | What the team does. |
-| **Time zone** | Where the team works. Its days start and end at midnight in this time zone. |
 | **Address** | Where the team works, for a site. |
-| **Role that can read the calendar** | Optional. Users in this role can read the team's Workforce calendar, as the team's members can. |
+| **Site coordinates**, **Time clock policy** | Shown when the Time Clock is on. See [Time Clock](./time-clock.md). |
 | **Open shifts go to**, **Shift trades** | Shown when Shift Planning is on. See [Team settings](./shift-planning.md#team-settings). |
-| **In use** | Untick to stop using a team without deleting it. |
+| **Shifts under approved time off** | Shown when Shift Planning and Time Off are on. |
 
-A team that still has teams under it, or current members, can't be deleted. Move them first. Deleting a team keeps its calendar.
+The team's **Linked role** on the **Team** card is the role whose users can read the team's Workforce calendar, as the team's members can.
+
+A team that still has teams under it, or current workers, can't be deleted. Move them first. Deleting a team keeps its calendar.
 
 ## Who can see what
 
 - People with **Manage the whole workforce** see every team and every worker.
 - Anyone else sees the workers of the teams where they are a **Manager** or a **Scheduler**, and of the teams under those. They can only add workers to those teams.
-- On a team's Workforce calendar, its managers and schedulers (and those of the teams above it) can make changes; its members, and the users in its **Role that can read the calendar**, can read it.
+- On a team's Workforce calendar, its managers and schedulers (and those of the teams above it) can make changes; its members, and the users in its **Linked role**, can read it.
 
 ## Add a worker
 

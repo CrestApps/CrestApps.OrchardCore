@@ -1,5 +1,6 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.IntervalStatistics;
+using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Indexes;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Models;
@@ -175,7 +176,7 @@ public sealed class IntradayTests
     {
         public Calendars.CalendarTestHarness Harness { get; set; }
 
-        public WorkforceTeam Team { get; set; }
+        public Team Team { get; set; }
 
         public WorkerProfile Ana { get; set; }
 

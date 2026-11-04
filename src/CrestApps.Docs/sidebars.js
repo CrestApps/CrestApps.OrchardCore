@@ -170,6 +170,7 @@ const sidebars = {
             label: 'Workforce',
             className: icon('users'),
             items: [
+                'user-manual/workforce/teams',
                 'user-manual/workforce/workers-and-teams',
                 'user-manual/workforce/shift-planning',
                 'user-manual/workforce/time-off',
@@ -456,6 +457,7 @@ const sidebars = {
                 'modules/workforce',
                 'modules/workforce-contact-center',
                 'modules/skills',
+                'modules/teams',
             ],
         },
         {

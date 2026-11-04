@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Dispatch.Core.Services;
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
 using CrestApps.OrchardCore.Skills.Models;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Tests.Workforce;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
@@ -397,7 +398,7 @@ public sealed class DispatchTests
     // Approved time off shows as a TimeOff event on the team's calendar.
     private static async Task AddTimeOffAsync(DispatchKit kit, WorkerProfile worker)
     {
-        var calendarId = await kit.Harness.RunAsync(async services => (await services.GetRequiredService<CrestApps.OrchardCore.Workforce.Services.ITeamManager>().FindByIdAsync(kit.Team.ItemId)).CalendarId, commit: false);
+        var calendarId = await kit.Harness.RunAsync(async services => (await services.GetRequiredService<CrestApps.OrchardCore.Teams.Services.ITeamManager>().FindByIdAsync(kit.Team.ItemId)).GetWorkforceSettings().CalendarId, commit: false);
         var created = await kit.Harness.RunAsync(async services =>
         {
             var calendars = services.GetRequiredService<CrestApps.OrchardCore.Calendars.Services.ICalendarService>();

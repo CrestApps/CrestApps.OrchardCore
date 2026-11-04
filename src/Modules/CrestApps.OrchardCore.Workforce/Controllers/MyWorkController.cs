@@ -2,6 +2,8 @@ using System.Globalization;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars.Core;
 using CrestApps.OrchardCore.Calendars.Models;
+using CrestApps.OrchardCore.Teams.Models;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Portal;
@@ -972,7 +974,7 @@ public sealed class MyWorkController : Controller
     private async Task<List<MyShiftViewModel>> MyShiftsAsync(WorkerProfile worker, DateTime fromUtc, DateTime toUtc)
     {
         var codes = (await _activityCodeManager.GetAllAsync(HttpContext.RequestAborted)).ToDictionary(code => code.ItemId, StringComparer.Ordinal);
-        var teams = new Dictionary<string, WorkforceTeam>(StringComparer.Ordinal);
+        var teams = new Dictionary<string, Team>(StringComparer.Ordinal);
         var items = new List<MyShiftViewModel>();
 
         foreach (var shift in await _shiftService.ListWorkerShiftsAsync(worker.ItemId, fromUtc, toUtc, HttpContext.RequestAborted))

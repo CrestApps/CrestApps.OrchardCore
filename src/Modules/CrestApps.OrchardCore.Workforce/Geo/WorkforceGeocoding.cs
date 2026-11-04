@@ -2,6 +2,8 @@ using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Geo.Models;
 using CrestApps.OrchardCore.Geo.Services;
+using CrestApps.OrchardCore.Teams.Models;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 
@@ -34,7 +36,7 @@ public static class WorkforceGeocodeTargets
 /// <summary>
 /// Asks for a team's location to be geocoded when it has an address and no coordinates.
 /// </summary>
-internal sealed class TeamLocationGeocodeHandler : CatalogEntryHandlerBase<WorkforceTeam>
+internal sealed class TeamLocationGeocodeHandler : CatalogEntryHandlerBase<Team>
 {
     private readonly Lazy<IGeocodeQueue> _queue;
 
@@ -48,16 +50,16 @@ internal sealed class TeamLocationGeocodeHandler : CatalogEntryHandlerBase<Workf
     }
 
     /// <inheritdoc/>
-    public override Task CreatedAsync(CreatedContext<WorkforceTeam> context, CancellationToken cancellationToken = default)
+    public override Task CreatedAsync(CreatedContext<Team> context, CancellationToken cancellationToken = default)
         => EnqueueAsync(context.Model, cancellationToken);
 
     /// <inheritdoc/>
-    public override Task UpdatedAsync(UpdatedContext<WorkforceTeam> context, CancellationToken cancellationToken = default)
+    public override Task UpdatedAsync(UpdatedContext<Team> context, CancellationToken cancellationToken = default)
         => EnqueueAsync(context.Model, cancellationToken);
 
-    private Task EnqueueAsync(WorkforceTeam team, CancellationToken cancellationToken)
-        => WorkforceGeocodeTargets.NeedsGeocoding(team.Location)
-            ? _queue.Value.EnqueueAsync(WorkforceGeocodeTargets.TeamLocation, team.ItemId, new GeocodeQuery { Text = team.Location.Address }, cancellationToken)
+    private Task EnqueueAsync(Team team, CancellationToken cancellationToken)
+        => team.GetWorkforceSettings().Location is var location && WorkforceGeocodeTargets.NeedsGeocoding(location)
+            ? _queue.Value.EnqueueAsync(WorkforceGeocodeTargets.TeamLocation, team.ItemId, new GeocodeQuery { Text = location.Address }, cancellationToken)
             : Task.CompletedTask;
 }
 
@@ -115,13 +117,15 @@ internal sealed class TeamLocationGeocodeTarget : IGeocodeTarget
     {
         var team = await _teamManager.FindByIdAsync(targetId, cancellationToken);
 
-        if (team?.Location is null || string.IsNullOrWhiteSpace(team.Location.Address))
+        var location = team?.GetWorkforceSettings().Location;
+
+        if (location is null || string.IsNullOrWhiteSpace(location.Address))
         {
             return false;
         }
 
-        team.Location.Latitude = candidate.Point.Latitude;
-        team.Location.Longitude = candidate.Point.Longitude;
+        location.Latitude = candidate.Point.Latitude;
+        location.Longitude = candidate.Point.Longitude;
         await _teamManager.UpdateAsync(team, null, cancellationToken);
 
         return true;

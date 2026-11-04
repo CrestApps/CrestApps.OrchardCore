@@ -7,6 +7,8 @@ using CrestApps.OrchardCore.Calendars.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.IntervalStatistics;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Teams.Models;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Indexes;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Models;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -37,7 +39,7 @@ public sealed class AdherenceService
     private readonly IWorkerTimeZoneService _timeZones;
     private readonly IClock _clock;
     private List<AdherenceRuleSet> _ruleSets;
-    private Dictionary<string, WorkforceTeam> _teams;
+    private Dictionary<string, Team> _teams;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AdherenceService"/> class.
@@ -557,7 +559,7 @@ public sealed class AdherenceService
         return await _timeZones.GetAsync(worker, TeamOf(worker), cancellationToken) ?? "UTC";
     }
 
-    private async Task<Dictionary<string, WorkforceTeam>> TeamsAsync(CancellationToken cancellationToken)
+    private async Task<Dictionary<string, Team>> TeamsAsync(CancellationToken cancellationToken)
     {
         return _teams ??= (await _teamManager.ListTreeAsync(cancellationToken)).ToDictionary(entry => entry.Team.ItemId, entry => entry.Team, StringComparer.Ordinal);
     }

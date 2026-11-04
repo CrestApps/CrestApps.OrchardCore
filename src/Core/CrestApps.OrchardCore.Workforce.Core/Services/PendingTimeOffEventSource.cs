@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Calendars.Core;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using Microsoft.Extensions.Localization;
 
@@ -51,7 +52,7 @@ internal sealed class PendingTimeOffEventSource : ICalendarEventSource
 
         var calendars = new HashSet<string>(query.CalendarIds, StringComparer.Ordinal);
         var teams = (await _teamStore.ListAsync(cancellationToken))
-            .Where(team => !string.IsNullOrEmpty(team.CalendarId) && calendars.Contains(team.CalendarId))
+            .Where(team => !string.IsNullOrEmpty(team.GetWorkforceSettings().CalendarId) && calendars.Contains(team.GetWorkforceSettings().CalendarId))
             .ToDictionary(team => team.ItemId, StringComparer.Ordinal);
 
         if (teams.Count == 0)
@@ -95,7 +96,7 @@ internal sealed class PendingTimeOffEventSource : ICalendarEventSource
             var calendarEvent = new CalendarEvent
             {
                 ItemId = "timeoff-" + request.ItemId,
-                CalendarId = teams[request.TeamId].CalendarId,
+                CalendarId = teams[request.TeamId].GetWorkforceSettings().CalendarId,
                 EventType = WorkforceConstants.EventTypes.TimeOff,
                 Title = request.Status == TimeOffRequestStatus.Waitlisted
                     ? S["Waitlisted: {0}: {1}", worker?.DisplayName, type?.Name]

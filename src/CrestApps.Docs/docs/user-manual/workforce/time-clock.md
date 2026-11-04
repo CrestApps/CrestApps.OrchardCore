@@ -30,7 +30,7 @@ Every punch of a worker who has a login also keeps their day in [Time Tracker](.
 1. Under **Workforce > Time Management > Pay Periods**, choose **Add pay periods**: how often workers are paid (every week, every two weeks, twice a month or every month), the first day of any one period for weekly and two-weekly pay, and the day the overtime week starts. The editor shows the next periods.
 2. Under **Workforce > Time Management > Pay Codes**, check the codes. Regular, overtime, double time, paid time off, predictability pay, holiday (time and a half), weekend (time and a half) and unpaid codes are added when the feature is turned on. Give a code a **payroll code** when your payroll system calls it something else.
 3. Under **Workforce > Time Management > Time Clock Policies**, choose **Add policy** (see below).
-4. Under **Workforce > Teams**, give the team its **time clock policy**. Sub-teams use their parent's. A team with no policy, and no parent with one, doesn't clock time.
+4. Under **Teams**, give the team its **time clock policy**. Sub-teams use their parent's. A team with no policy, and no parent with one, doesn't clock time.
 5. For kiosks, give each worker an **employee number** (their badge number) and a PIN under **Workers > Actions > Time clock**.
 
 ## Time clock policies
@@ -53,7 +53,7 @@ Every punch of a worker who has a login also keeps their day in [Time Tracker](.
 | **Weekend days** | Regular hours worked on these days are paid with the **Weekend** pay code instead of the regular one. |
 | **Attendance points** | The points each kind of exception earns, how many days they count, and the points at which the worker's line manager is told in My Work. |
 
-Site coordinates are set on the team, under **Workforce > Teams**, when the time clock is on.
+Site coordinates are set on the team's **Workforce** card, under **Teams**, when the time clock is on.
 
 :::info[Overtime comes from the policy]
 The time clock pays overtime from its policy's limits. The labor rules' Overtime rule warns when a schedule plans too many hours; keep the two in step.

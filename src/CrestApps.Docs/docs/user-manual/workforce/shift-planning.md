@@ -154,7 +154,7 @@ When the team's **Shift trades** setting needs a manager, an accepted trade wait
 
 ## Team settings
 
-When Shift Planning is on, a team's editor under **Workforce > Teams** has two more settings, and a third when [Time Off](./time-off.md) is on too. A team left at **As the parent team** takes its parent's setting; at the top, a manager approves both.
+When Shift Planning is on, a team's editor under **Teams** has two more settings on its **Workforce** card, and a third when [Time Off](./time-off.md) is on too. A team left at **As the parent team** takes its parent's setting; at the top, a manager approves both.
 
 | Field | What it does |
 | --- | --- |

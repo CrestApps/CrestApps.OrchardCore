@@ -6,6 +6,8 @@ using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
 using CrestApps.OrchardCore.Geo.Models;
 using CrestApps.OrchardCore.Geo.Services;
+using CrestApps.OrchardCore.Teams.Models;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -90,7 +92,7 @@ public sealed class DispatchResources
     private readonly IEnumerable<IGeoService> _geoServices;
     private readonly IDispatchSettingsProvider _settingsProvider;
     private readonly Dictionary<string, GeoPoint?> _places = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, WorkforceTeam> _teams = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Team> _teams = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DispatchResources"/> class.
@@ -162,7 +164,7 @@ public sealed class DispatchResources
             memberships.Insert(0, worker.PrimaryTeamId);
         }
 
-        var teams = new List<WorkforceTeam>();
+        var teams = new List<Team>();
 
         foreach (var teamId in memberships.Distinct(StringComparer.Ordinal))
         {
@@ -179,8 +181,8 @@ public sealed class DispatchResources
             Worker = worker,
             TimeZoneId = await TimeZoneOfAsync(worker, teams, cancellationToken),
             Home = GeoPoint.From(worker.HomeBase?.Latitude, worker.HomeBase?.Longitude)
-                ?? teams.Select(team => GeoPoint.From(team.Location?.Latitude, team.Location?.Longitude)).FirstOrDefault(point => point is not null),
-            CalendarId = teams.Select(team => team.CalendarId).FirstOrDefault(id => !string.IsNullOrEmpty(id)),
+                ?? teams.Select(team => GeoPoint.From(team.GetWorkforceSettings().Location?.Latitude, team.GetWorkforceSettings().Location?.Longitude)).FirstOrDefault(point => point is not null),
+            CalendarId = teams.Select(team => team.GetWorkforceSettings().CalendarId).FirstOrDefault(id => !string.IsNullOrEmpty(id)),
         };
 
         var shifts = await _shiftService.ListWorkerShiftsAsync(worker.ItemId, fromUtc, toUtc, cancellationToken);
@@ -197,7 +199,7 @@ public sealed class DispatchResources
             }
         }
 
-        var calendarIds = teams.Select(team => team.CalendarId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
+        var calendarIds = teams.Select(team => team.GetWorkforceSettings().CalendarId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
 
         if (calendarIds.Length > 0)
         {
@@ -231,7 +233,7 @@ public sealed class DispatchResources
     /// <summary>
     /// Gives a worker's time zone: their own, their team's or a parent team's, or the one dispatch shows.
     /// </summary>
-    private async Task<string> TimeZoneOfAsync(WorkerProfile worker, List<WorkforceTeam> teams, CancellationToken cancellationToken)
+    private async Task<string> TimeZoneOfAsync(WorkerProfile worker, List<Team> teams, CancellationToken cancellationToken)
     {
         if (Valid(worker.TimeZoneId))
         {
@@ -339,7 +341,7 @@ public sealed class DispatchResources
     /// <param name="teamId">The team.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The team, or <see langword="null"/>.</returns>
-    public async Task<WorkforceTeam> FindTeamAsync(string teamId, CancellationToken cancellationToken = default)
+    public async Task<Team> FindTeamAsync(string teamId, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(teamId))
         {

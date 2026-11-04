@@ -1,8 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Services;
-using CrestApps.OrchardCore.Workforce.Models;
-using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 

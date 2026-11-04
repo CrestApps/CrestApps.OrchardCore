@@ -53,20 +53,6 @@ public static class WorkforceIndexSchema
             table.CreateIndex("IDX_WorkerTeamMembershipIndex_Worker", "WorkerId");
         }, collection: collection);
 
-        await schemaBuilder.CreateMapIndexTableAsync<TeamIndex>(table => table
-            .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<string>("Name", column => column.Nullable().WithLength(255))
-            .Column<TeamKind>("Kind")
-            .Column<string>("ParentId", column => column.Nullable().WithLength(26))
-            .Column<bool>("Enabled"),
-            collection: collection);
-
-        await schemaBuilder.AlterIndexTableAsync<TeamIndex>(table =>
-        {
-            table.CreateIndex("IDX_TeamIndex_ItemId", "ItemId");
-            table.CreateIndex("IDX_TeamIndex_Parent", "ParentId");
-        }, collection: collection);
-
         await schemaBuilder.CreateMapIndexTableAsync<ActivityCodeIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("Name", column => column.Nullable().WithLength(255))

@@ -11,6 +11,8 @@ using CrestApps.OrchardCore.Geo.Core.Indexes;
 using CrestApps.OrchardCore.Geo.Core.Services;
 using CrestApps.OrchardCore.Geo.Models;
 using CrestApps.OrchardCore.Geo.Services;
+using CrestApps.OrchardCore.Teams.Models;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Tests.Workforce;
 using CrestApps.OrchardCore.WorkOrders;
@@ -55,7 +57,7 @@ internal sealed class DispatchKit : IAsyncDisposable
 
     public MemoryFieldFileStore Files { get; } = new();
 
-    public WorkforceTeam Team { get; private set; }
+    public Team Team { get; private set; }
 
     public WorkOrderType Type { get; private set; }
 
@@ -164,7 +166,7 @@ internal sealed class DispatchKit : IAsyncDisposable
             [WorkOrdersConstants.CollectionName, DispatchConstants.CollectionName, GeoConstants.CollectionName, CrestApps.OrchardCore.Assets.AssetsConstants.CollectionName]);
 
         kit.Team = await WorkforceTests.AddTeamAsync(kit.Harness, "Field", TeamKind.Team);
-        kit.Team = await PlanningKit.UpdateTeamAsync(kit.Harness, kit.Team, team => team.Location = new WorkforceLocation { Latitude = Depot.Latitude, Longitude = Depot.Longitude });
+        kit.Team = await PlanningKit.UpdateTeamAsync(kit.Harness, kit.Team, team => team.GetWorkforceSettings().Location = new WorkforceLocation { Latitude = Depot.Latitude, Longitude = Depot.Longitude });
         kit.Type = await kit.Harness.RunAsync(async services =>
         {
             var types = services.GetRequiredService<WorkOrderSettingManager<WorkOrderType>>();
@@ -260,7 +262,7 @@ internal sealed class DispatchKit : IAsyncDisposable
 
     public async Task<IReadOnlyList<CalendarEvent>> JobEventsAsync()
     {
-        var calendarId = await Harness.RunAsync(async services => (await services.GetRequiredService<CrestApps.OrchardCore.Workforce.Services.ITeamManager>().FindByIdAsync(Team.ItemId)).CalendarId, commit: false);
+        var calendarId = await Harness.RunAsync(async services => (await services.GetRequiredService<CrestApps.OrchardCore.Teams.Services.ITeamManager>().FindByIdAsync(Team.ItemId)).GetWorkforceSettings().CalendarId, commit: false);
         var occurrences = await Harness.GetOccurrencesAsync(new CrestApps.OrchardCore.Calendars.Services.CalendarOccurrenceQuery
         {
             CalendarIds = [calendarId],

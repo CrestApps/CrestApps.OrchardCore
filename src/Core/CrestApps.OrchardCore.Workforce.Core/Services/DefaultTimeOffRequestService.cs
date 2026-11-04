@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Localization;
@@ -406,7 +407,7 @@ internal sealed class DefaultTimeOffRequestService : ITimeOffRequestService
 
         foreach (var allotment in allotments)
         {
-            var subtree = await TeamTree.GetSubtreeIdsAsync(teams, allotment.TeamId);
+            var subtree = TeamTree.GetSubtreeIds(teams, allotment.TeamId);
 
             waiting.AddRange(await _requestStore.ListForTeamsAsync(subtree.ToArray(), [TimeOffRequestStatus.Waitlisted], freed.StartDate, freed.EndDate, cancellationToken));
         }

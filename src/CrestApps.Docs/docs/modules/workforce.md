@@ -12,13 +12,13 @@ user_manual:
   - user-manual/workforce/my-work-portal
 ---
 
-The **Workforce** module is the base of workforce management. It keeps the people who work and how they are organized, and gives every team a Workforce calendar on the shared [Calendars](./calendars.md) module, where shifts and approved time off are published. It uses the shared [Skills](./skills.md) catalog for workers' skills and certificates.
+The **Workforce** module is the base of workforce management. It keeps the people who work and how they are organized, and gives every team a Workforce calendar on the shared [Calendars](./calendars.md) module, where shifts and approved time off are published. It uses the shared [Skills](./skills.md) catalog for workers' skills and certificates, and the shared [Teams](./teams.md) hierarchy for how they are organized.
 
 The admin screens are described in the User Manual: [Workers and Teams](../user-manual/workforce/workers-and-teams.md) and [Shift Planning](../user-manual/workforce/shift-planning.md), [Time Off](../user-manual/workforce/time-off.md), [Labor Rules](../user-manual/workforce/labor-rules.md), [Time Clock](../user-manual/workforce/time-clock.md) and [My Work Portal](../user-manual/workforce/my-work-portal.md).
 
 | Feature ID | Name | Depends on |
 | --- | --- | --- |
-| `CrestApps.OrchardCore.Workforce` | Workforce | `CrestApps.OrchardCore.Calendars`, `CrestApps.OrchardCore.Skills` |
+| `CrestApps.OrchardCore.Workforce` | Workforce | `CrestApps.OrchardCore.Calendars`, `CrestApps.OrchardCore.Skills`, `CrestApps.OrchardCore.Teams` |
 | `CrestApps.OrchardCore.Workforce.ShiftPlanning` | Workforce Shift Planning | `CrestApps.OrchardCore.Workforce` |
 | `CrestApps.OrchardCore.Workforce.TimeOff` | Workforce Time Off | `CrestApps.OrchardCore.Workforce` |
 | `CrestApps.OrchardCore.Workforce.LaborRules` | Workforce Labor Rules | `CrestApps.OrchardCore.Workforce.ShiftPlanning` |
@@ -33,11 +33,11 @@ Projects: `CrestApps.OrchardCore.Workforce.Abstractions` (models and contracts),
 | Record | What it holds |
 | --- | --- |
 | `WorkerProfile` | A person who works: name, an optional `UserId`, contact details, employee number (unique), HR id, employment type and status, hire, seniority and termination dates, date of birth (sensitive), line manager, `TeamMemberships` (team, role `Member`/`Lead`/`Scheduler`/`Manager`, effective dates), time zone, home base, contracted, fewest and most hours, and weekly `Availability` windows (`Available`, `Preferred`, `Unavailable`). Other modules add their data to its `Properties` bag. |
-| `WorkforceTeam` | A part of the organization: name, kind (`Organization`, `Region`, `Site`, `Department`, `Team`, `Crew`), parent, description, linked role, time zone, location, its calendar id, and the crew lead for a crew. The hierarchy can't contain a loop. |
+| `WorkforceTeamSettings` | What Workforce keeps on a shared [`Team`](./teams.md) (in its `Properties`, read with `team.GetWorkforceSettings()` and changed with `team.AlterWorkforceSettings(...)`): the site location, the team's calendar id, the crew lead for a crew, and the open shift claim, shift trade approval, time off shift handling and time clock policies, each `null` to use the parent team's. The team itself (name, kind, parent, linked role, time zone) belongs to the Teams module. |
 | `ActivityCode` | What a worker does during a segment of a shift: name, short code, kind, color, and whether it is paid, counts as work and counts toward coverage. The usual nine codes are seeded by the module's migration. |
 | `ShiftData` and `ShiftSegment` | What Workforce keeps on a published Shift event, in its `Properties`: the worker, team, schedule, template, a stable shift key, the published version, and the segments (activity, kind, start and end in UTC). |
 
-Every record is a YesSql document in the `Workforce` collection, with `WorkerIndex`, `WorkerTeamMembershipIndex` (one row per membership, with its dates as `yyyyMMdd` numbers), `TeamIndex` and `ActivityCodeIndex`.
+Every record is a YesSql document in the `Workforce` collection, with `WorkerIndex`, `WorkerTeamMembershipIndex` (one row per membership, with its dates as `yyyyMMdd` numbers) and `ActivityCodeIndex`. Teams are in the `Teams` collection; a site that kept them in the `Workforce` collection has them moved by the Workforce migration (see [Upgrading from Workforce teams](./teams.md#upgrading-from-workforce-teams)).
 
 ## Workers and user accounts
 
@@ -45,7 +45,7 @@ A worker is linked to a user by `UserId`. `WorkerAccounts` (in Core) makes or ch
 
 ## The Workforce calendar type
 
-The module registers the `Workforce` calendar type with `ManagedByCode()` and creates one calendar per team when the team is created (`Source` = `Workforce`, `SourceId` = the team id). The calendar follows the team's name, time zone and whether it is in use.
+The module registers the `Workforce` calendar type with `ManagedByCode()` and creates one calendar per team when the team is saved (`WorkforceTeamCatalogHandler`, an `ICatalogEntryHandler<Team>`; `Source` = `Workforce`, `SourceId` = the team id). The calendar follows the team's name, time zone and whether it is in use. `WorkforceTeamDeletionGuard`, an `ITeamDeletionGuard`, keeps a team with current workers from being deleted.
 
 | Event type | Busy or free | Notes |
 | --- | --- | --- |
@@ -61,7 +61,7 @@ The module registers the `Workforce` calendar type with `ManagedByCode()` and cr
 | Contract | What it does |
 | --- | --- |
 | `IWorkerManager` | `ICatalogManager<WorkerProfile>` plus `FindByUserIdAsync`, `FindByEmployeeNumberAsync`, `SearchAsync(WorkerQuery, skip, take)` (search, status, a team with its sub-teams, and a set of teams such as a manager's scope) and `ListByTeamAsync(teamId, date)` (members that day). Validation refuses a blank name, a duplicate employee number or user, an unknown team, a bad time zone, a membership that ends before it starts, and fewest hours above most hours. |
-| `ITeamManager` | `ICatalogManager<WorkforceTeam>` plus `ListTreeAsync` (each team followed by its sub-teams, with its depth), `GetSubtreeIdsAsync` and `GetAncestorsAsync`. |
+| `ITeamManager` | From the [Teams](./teams.md) module: `ICatalogManager<Team>` plus `ListTreeAsync` (each team followed by its sub-teams, with its depth), `GetSubtreeIdsAsync`, `GetAncestorsAsync` and `GetDeletionBlockersAsync`. |
 | `IActivityCodeManager` | `ICatalogManager<ActivityCode>` plus `GetEnabledAsync`. |
 | `IWorkforceScopeService` | `GetManagedScopeAsync(user)` returns `WorkforceScope.Everything` for **Manage the whole workforce**, otherwise the teams where the user's worker is a `Manager` or `Scheduler` today, with their sub-teams. `ManagesWorkerAsync(user, worker)` checks that a worker belongs, today, to a team in that scope. The scope is worked out once per request. |
 
@@ -253,7 +253,7 @@ The **Workforce My Work Portal** feature (`CrestApps.OrchardCore.Workforce.Porta
 
 ## Recipes and deployment
 
-The `Workforce` step imports activity codes (by id or name), teams (by id or name, with the parent by `parentName` in any order) and workers (by id, employee number or user, with each membership's team by `teamName`). Every record goes through its manager, so it is validated and each new team gets its calendar.
+The `Workforce` step imports activity codes (by id or name), teams (by id or name, with the parent by `parentName` in any order, and their Workforce settings such as `location`, `openShiftClaimPolicy` and `timeClockPolicyId` beside their own fields) and workers (by id, employee number or user, with each membership's team by `teamName`). Every record goes through its manager, so it is validated and each new team gets its calendar.
 
 ```json
 {
@@ -310,7 +310,7 @@ The **Workforce API** feature maps `api/workforce/v1` with the API authenticatio
 | Permission | Allows |
 | --- | --- |
 | `ManageAllWorkforce` (Manage the whole workforce) | Every team and worker, regardless of who manages them. Implies the others. |
-| `ManageWorkforceTeams` (Manage workforce teams) | The team list and editor. |
+| `ManageWorkforceTeams` (Manage workforce teams) | The team list and editor of the [Teams](./teams.md) module (it grants `ManageTeams`), and the **Get started** page. |
 | `ManageWorkers` (Manage workers) | Adding, changing and removing the workers in one's scope. |
 | `ViewWorkers` (View workers) | The worker list, limited to one's scope. |
 | `ViewSensitiveWorkerData` (View sensitive worker details) | Seeing and changing a worker's date of birth. |

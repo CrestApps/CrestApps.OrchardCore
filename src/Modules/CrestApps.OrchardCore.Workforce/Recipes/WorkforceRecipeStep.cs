@@ -4,6 +4,8 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Teams.Core;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Core;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -14,7 +16,7 @@ namespace CrestApps.OrchardCore.Workforce.Recipes;
 
 /// <summary>
 /// Imports the Workforce step: activity codes (by id or name), teams (by id or name, with the parent by
-/// <c>parentName</c> in any order) and workers (by id, employee number or user, with their teams by <c>teamName</c>).
+/// <c>parentName</c> in any order, and their Workforce settings) and workers (by id, employee number or user, with their teams by <c>teamName</c>).
 /// Every record goes through its manager, so it is validated and each team gets its calendar.
 /// </summary>
 internal sealed class WorkforceRecipeStep : NamedRecipeStepHandler
@@ -68,63 +70,22 @@ internal sealed class WorkforceRecipeStep : NamedRecipeStepHandler
 
     private async Task ImportTeamsAsync(RecipeExecutionContext context)
     {
-        var pending = Nodes(context, "Teams").ToList();
-        var teams = (await _teamManager.GetAllAsync()).ToList();
-
-        // A team can name a parent listed after it, so teams are placed in passes until no more can be.
-        while (pending.Count > 0)
+        // The generic team fields are imported as the Teams step does; the Workforce fields sit beside them.
+        await TeamRecipeImport.ImportAsync(_teamManager, Nodes(context, "Teams"), context.Errors, WorkforceConstants.RecipeStepName, (node, team) =>
         {
-            var placed = 0;
+            var incoming = Read<WorkforceTeamSettings>(context, node, "Teams") ?? new WorkforceTeamSettings();
 
-            foreach (var node in pending.ToList())
+            team.AlterWorkforceSettings(settings =>
             {
-                var parentName = node["parentName"]?.GetValue<string>();
-                var parent = string.IsNullOrWhiteSpace(parentName)
-                    ? null
-                    : teams.FirstOrDefault(team => WorkforceNames.Normalize(team.Name) == WorkforceNames.Normalize(parentName));
-
-                if (parent is null && !string.IsNullOrWhiteSpace(parentName))
-                {
-                    continue;
-                }
-
-                pending.Remove(node);
-                placed++;
-
-                var incoming = Read<WorkforceTeam>(context, node, "Teams");
-
-                if (incoming is null)
-                {
-                    continue;
-                }
-
-                if (parent is not null)
-                {
-                    incoming.ParentId = parent.ItemId;
-                }
-
-                var match = teams.FirstOrDefault(team => team.ItemId == incoming.ItemId)
-                    ?? teams.FirstOrDefault(team => WorkforceNames.Normalize(team.Name) == WorkforceNames.Normalize(incoming.Name));
-
                 // The calendar belongs to the site; an imported team keeps the one it has here.
-                incoming.CalendarId = match?.CalendarId;
-
-                if (await SaveAsync(context, _teamManager, incoming, match, "team") is { } saved && match is null)
-                {
-                    teams.Add(saved);
-                }
-            }
-
-            if (placed == 0)
-            {
-                foreach (var node in pending)
-                {
-                    context.Errors.Add($"The team '{node["name"]}' in the Workforce step names a parent team that doesn't exist: '{node["parentName"]}'.");
-                }
-
-                break;
-            }
-        }
+                settings.Location = incoming.Location;
+                settings.LeadWorkerId = incoming.LeadWorkerId;
+                settings.OpenShiftClaimPolicy = incoming.OpenShiftClaimPolicy;
+                settings.ShiftTradesNeedApproval = incoming.ShiftTradesNeedApproval;
+                settings.TimeOffShiftHandling = incoming.TimeOffShiftHandling;
+                settings.TimeClockPolicyId = incoming.TimeClockPolicyId;
+            });
+        });
     }
 
     private async Task ImportWorkersAsync(RecipeExecutionContext context)

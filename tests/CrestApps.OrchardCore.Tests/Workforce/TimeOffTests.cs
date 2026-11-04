@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Calendars.Models;
+using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -312,7 +313,7 @@ public sealed class TimeOffTests
         // Act
         var flagged = await harness.RunAsync(services => services.GetRequiredService<ITimeOffRequestService>().ApproveAsync(anaRequest.Value.ItemId, "manager"));
 
-        await PlanningKit.UpdateTeamAsync(harness, setup.Team, team => team.TimeOffShiftHandling = TimeOffShiftHandling.Remove);
+        await PlanningKit.UpdateTeamAsync(harness, setup.Team, team => team.GetWorkforceSettings().TimeOffShiftHandling = TimeOffShiftHandling.Remove);
 
         var removed = await harness.RunAsync(services => services.GetRequiredService<ITimeOffRequestService>().ApproveAsync(benRequest.Value.ItemId, "manager"));
         var after = await PlanningKit.ListShiftsAsync(harness, setup.Team);
@@ -435,5 +436,5 @@ public sealed class TimeOffTests
         return new Setup(team, ana, ben, cy, vacation, policy);
     }
 
-    private sealed record Setup(WorkforceTeam Team, WorkerProfile Ana, WorkerProfile Ben, WorkerProfile Cy, TimeOffType Vacation, TimeOffPolicy Policy);
+    private sealed record Setup(Team Team, WorkerProfile Ana, WorkerProfile Ben, WorkerProfile Cy, TimeOffType Vacation, TimeOffPolicy Policy);
 }

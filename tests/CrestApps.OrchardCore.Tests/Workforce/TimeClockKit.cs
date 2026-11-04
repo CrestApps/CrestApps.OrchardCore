@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Workforce.Core;
 using CrestApps.OrchardCore.Workforce.Core.Services;
@@ -71,7 +72,7 @@ internal sealed class TimeClockKit : IAsyncDisposable
         return kit;
     }
 
-    public async Task<WorkforceTeam> AddTeamAsync(string name, Action<TimeClockPolicy> configure = null)
+    public async Task<Team> AddTeamAsync(string name, Action<TimeClockPolicy> configure = null)
     {
         var team = await WorkforceTests.AddTeamAsync(Harness, name, TeamKind.Team);
 
@@ -95,7 +96,7 @@ internal sealed class TimeClockKit : IAsyncDisposable
             return policy;
         });
 
-        return await PlanningKit.UpdateTeamAsync(Harness, team, stored => stored.TimeClockPolicyId = Policy.ItemId);
+        return await PlanningKit.UpdateTeamAsync(Harness, team, stored => stored.GetWorkforceSettings().TimeClockPolicyId = Policy.ItemId);
     }
 
     public Task<PlanningResult<TimePunch>> PunchAsync(WorkerProfile worker, TimePunchKind kind, Action<TimePunchRequest> configure = null)

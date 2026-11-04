@@ -1,6 +1,8 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
+using CrestApps.OrchardCore.Teams.Core;
+using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Workforce.Core.Handlers;
 using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -19,10 +21,10 @@ public static class WorkforceCoreServiceCollectionExtensions
     private static readonly Type _source = typeof(WorkforceCoreServiceCollectionExtensions);
 
     /// <summary>
-    /// Registers the worker, team and activity code stores and managers, manager scoping, team calendars, calendar
-    /// access by team, the busy time of breaks inside shifts, shift templates, rotations, coverage, schedule planning and
-    /// publishing, the built-in schedule solver, open shifts, shift trades and the checks they run, and the Workforce
-    /// calendar type.
+    /// Registers the Teams services, the worker and activity code stores and managers, manager scoping, team calendars,
+    /// the check that keeps a team with workers from being deleted, calendar access by team, the busy time of breaks
+    /// inside shifts, shift templates, rotations, coverage, schedule planning and publishing, the built-in schedule
+    /// solver, open shifts, shift trades and the checks they run, and the Workforce calendar type.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <returns>The service collection.</returns>
@@ -30,14 +32,14 @@ public static class WorkforceCoreServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
+        services.AddTeamsCore();
         services.TryAddScoped<WorkerStore>();
-        services.TryAddScoped<TeamStore>();
         services.TryAddScoped<ActivityCodeStore>();
         services.TryAddScoped<IWorkerManager, WorkerManager>();
-        services.TryAddScoped<ITeamManager, TeamManager>();
         services.TryAddScoped<IActivityCodeManager, ActivityCodeManager>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<WorkerProfile>, WorkerCatalogHandler>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<WorkforceTeam>, TeamCatalogHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Team>, WorkforceTeamCatalogHandler>());
+        services.AddTeamDeletionGuard<WorkforceTeamDeletionGuard>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ActivityCode>, ActivityCodeCatalogHandler>());
         services.TryAddScoped<IWorkforceScopeService, DefaultWorkforceScopeService>();
         services.TryAddScoped<WorkforceCalendarService>();

@@ -1,4 +1,5 @@
 using CrestApps.Core;
+using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Core.Indexes;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -65,7 +66,7 @@ internal sealed class DefaultTimeOffAccrualService : ITimeOffAccrualService
             }
             else if (!string.IsNullOrEmpty(assignment.TeamId))
             {
-                teamIds.UnionWith(await TeamTree.GetSubtreeIdsAsync(teams, assignment.TeamId));
+                teamIds.UnionWith(TeamTree.GetSubtreeIds(teams, assignment.TeamId));
             }
         }
 

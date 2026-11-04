@@ -3,6 +3,8 @@ using CrestApps.OrchardCore.Geo.Core.Indexes;
 using CrestApps.OrchardCore.Geo.Core.Services;
 using CrestApps.OrchardCore.Geo.Models;
 using CrestApps.OrchardCore.Geo.Services;
+using CrestApps.OrchardCore.Teams.Models;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Tests.Workforce;
 using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.Geo;
@@ -53,7 +55,7 @@ public sealed class WorkforceGeocodingTests
             var teams = services.GetRequiredService<ITeamManager>();
             var stored = await teams.FindByIdAsync(team.ItemId);
 
-            stored.Location = new WorkforceLocation { Address = "1 City Hall Square, Boston" };
+            stored.GetWorkforceSettings().Location = new WorkforceLocation { Address = "1 City Hall Square, Boston" };
             await teams.UpdateAsync(stored);
         });
 
@@ -65,8 +67,8 @@ public sealed class WorkforceGeocodingTests
 
         var located = await harness.RunAsync(async services => await services.GetRequiredService<ITeamManager>().FindByIdAsync(team.ItemId), commit: false);
 
-        Assert.Equal(42.3603, located.Location.Latitude);
-        Assert.Equal(-71.0580, located.Location.Longitude);
+        Assert.Equal(42.3603, located.GetWorkforceSettings().Location.Latitude);
+        Assert.Equal(-71.0580, located.GetWorkforceSettings().Location.Longitude);
 
         // The coordinates are there now, so saving again asks for nothing more.
         Assert.Equal(0, await harness.RunAsync(services => services.GetRequiredService<IGeocodeQueue>().ProcessDueAsync()));

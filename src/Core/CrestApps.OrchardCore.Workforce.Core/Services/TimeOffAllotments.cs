@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Teams.Core.Services;
+using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 
 namespace CrestApps.OrchardCore.Workforce.Core.Services;
@@ -60,7 +62,7 @@ internal sealed class TimeOffAllotments
 
         foreach (var allotment in allotments)
         {
-            var subtree = await TeamTree.GetSubtreeIdsAsync(teams, allotment.TeamId);
+            var subtree = TeamTree.GetSubtreeIds(teams, allotment.TeamId);
             var holding = (await _requestStore.ListForTeamsAsync(subtree.ToArray(), _holding, from, to, cancellationToken))
                 .Where(request => request.ItemId != excludeRequestId && types.TryGetValue(request.TypeId ?? string.Empty, out var type) && allotment.Counts(type))
                 .ToArray();
@@ -102,7 +104,7 @@ internal sealed class TimeOffAllotments
             : (TimeOffRequestStatus.Pending, false);
     }
 
-    public static HashSet<string> Lineage(IEnumerable<WorkforceTeam> teams, string teamId)
+    public static HashSet<string> Lineage(IEnumerable<Team> teams, string teamId)
     {
         var parents = teams.ToDictionary(team => team.ItemId, team => team.ParentId, StringComparer.Ordinal);
         var lineage = new HashSet<string>(StringComparer.Ordinal);

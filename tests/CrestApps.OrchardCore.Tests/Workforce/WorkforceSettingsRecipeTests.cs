@@ -1,4 +1,6 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.Teams.Models;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Workforce.Core;
 using CrestApps.OrchardCore.Workforce.Deployments;
@@ -108,7 +110,7 @@ public sealed class WorkforceSettingsRecipeTests
             Assert.Equal(new TimeOnly(22, 0), codes.Single(code => code.Code == "NIGHT").WindowStart);
             Assert.Equal(calendar.ItemId, policy.PayPeriodCalendarId);
             Assert.Equal(5, policy.RoundingMinutes);
-            Assert.Equal(policy.ItemId, stored.TimeClockPolicyId);
+            Assert.Equal(policy.ItemId, stored.GetWorkforceSettings().TimeClockPolicyId);
         }, commit: false);
     }
 
@@ -198,7 +200,7 @@ public sealed class WorkforceSettingsRecipeTests
 
             Assert.Equal(type.ItemId, policy.TypeId);
             Assert.Equal([team.ItemId], policy.Assignments.Select(assignment => assignment.TeamId));
-            Assert.Equal(clock.ItemId, stored.TimeClockPolicyId);
+            Assert.Equal(clock.ItemId, stored.GetWorkforceSettings().TimeClockPolicyId);
         }, commit: false);
     }
 

@@ -1,3 +1,6 @@
+using CrestApps.OrchardCore.Teams;
+using CrestApps.OrchardCore.Teams.Services;
+using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using CrestApps.OrchardCore.Workforce.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -69,7 +72,7 @@ public sealed class WorkforceSetupController : Controller
             Status = S["Teams: {0}", teams.Count()],
             Done = teams.Any(),
             Action = S["Teams"],
-            Url = Url.Action("Index", "Teams"),
+            Url = Url.Action("Index", "Teams", new { area = TeamsConstants.Features.Teams }),
         });
         model.Steps.Add(new WorkforceSetupStep
         {
@@ -108,7 +111,7 @@ public sealed class WorkforceSetupController : Controller
         {
             var calendars = await services.GetRequiredService<IPayPeriodCalendarManager>().GetAllAsync(HttpContext.RequestAborted);
             var policies = await services.GetRequiredService<ITimeClockPolicyManager>().GetAllAsync(HttpContext.RequestAborted);
-            var clocked = teams.Count(team => !string.IsNullOrEmpty(team.TimeClockPolicyId));
+            var clocked = teams.Count(team => !string.IsNullOrEmpty(team.GetWorkforceSettings().TimeClockPolicyId));
 
             return (S["Pay periods: {0} · Policies: {1} · Teams with a policy: {2}", calendars.Count(), policies.Count(), clocked], calendars.Any() && policies.Any() && clocked > 0, S["Time Clock Policies"], Url.Action("Index", "TimeClockPolicies"));
         });

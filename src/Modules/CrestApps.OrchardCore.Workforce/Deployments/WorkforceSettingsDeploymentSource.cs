@@ -1,5 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.Teams.Services;
+using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Recipes;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -106,7 +108,7 @@ internal sealed class WorkforceSettingsDeploymentSource : DeploymentSourceBase<W
                     var node = Serialize(policy, "payPeriodCalendarId");
 
                     node["payPeriodsName"] = calendarNames.GetValueOrDefault(policy.PayPeriodCalendarId ?? string.Empty);
-                    node["teamNames"] = new JsonArray([.. allTeams.Where(team => team.TimeClockPolicyId == policy.ItemId).Select(team => (JsonNode)team.Name)]);
+                    node["teamNames"] = new JsonArray([.. allTeams.Where(team => team.GetWorkforceSettings().TimeClockPolicyId == policy.ItemId).Select(team => (JsonNode)team.Name)]);
 
                     return (JsonNode)node;
                 })]),

@@ -1,6 +1,9 @@
 using System.Security.Cryptography;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Teams.Core.Services;
+using CrestApps.OrchardCore.Teams.Models;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Localization;
@@ -83,12 +86,12 @@ internal sealed class DefaultTimeClockService : ITimeClockService
 
         foreach (var team in await LineageAsync(WorkerTimeZones.TeamOn(worker, date), cancellationToken))
         {
-            if (string.IsNullOrEmpty(team.TimeClockPolicyId))
+            if (string.IsNullOrEmpty(team.GetWorkforceSettings().TimeClockPolicyId))
             {
                 continue;
             }
 
-            var policy = await _policyStore.FindByIdAsync(team.TimeClockPolicyId, cancellationToken);
+            var policy = await _policyStore.FindByIdAsync(team.GetWorkforceSettings().TimeClockPolicyId, cancellationToken);
 
             return policy is { Enabled: true } ? policy : null;
         }
@@ -629,16 +632,16 @@ internal sealed class DefaultTimeClockService : ITimeClockService
     {
         foreach (var team in await LineageAsync(teamId, cancellationToken))
         {
-            if (team.Location is { Latitude: not null, Longitude: not null })
+            if (team.GetWorkforceSettings().Location is { Latitude: not null, Longitude: not null } location)
             {
-                return team.Location;
+                return location;
             }
         }
 
         return null;
     }
 
-    private async Task<IReadOnlyList<WorkforceTeam>> LineageAsync(string teamId, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<Team>> LineageAsync(string teamId, CancellationToken cancellationToken)
     {
         var team = string.IsNullOrEmpty(teamId) ? null : await _teamStore.FindByIdAsync(teamId, cancellationToken);
 

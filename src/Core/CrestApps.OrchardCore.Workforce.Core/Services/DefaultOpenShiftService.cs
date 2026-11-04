@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars.Core;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Localization;
@@ -413,7 +414,7 @@ internal sealed class DefaultOpenShiftService : IOpenShiftService
 
             await _calendarService.EnsureCalendarAsync(team, cancellationToken);
 
-            var calendar = await _calendars.FindByIdAsync(team.CalendarId, cancellationToken);
+            var calendar = await _calendars.FindByIdAsync(team.GetWorkforceSettings().CalendarId, cancellationToken);
             var period = string.IsNullOrEmpty(shift.PeriodId) ? null : await _periodStore.FindByIdAsync(shift.PeriodId, cancellationToken);
             var codes = (await _activityCodeStore.GetAllAsync(cancellationToken)).ToDictionary(code => code.ItemId, StringComparer.Ordinal);
             var data = ShiftEvents.ToShiftData(worker.ItemId, shift.TeamId, shift.PeriodId, shift.TemplateId, shift.ShiftKey, period?.PublishedVersion ?? 0, shift.Segments, codes, shift.TimeZoneId);

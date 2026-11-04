@@ -217,6 +217,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | Feature ID | Name | Docs |
 | --- | --- | --- |
 | `CrestApps.OrchardCore.Skills` | Skills | [Skills](./modules/skills) |
+| `CrestApps.OrchardCore.Teams` | Teams | [Teams](./modules/teams) |
 | `CrestApps.OrchardCore.Workforce` | Workforce | [Workforce](./modules/workforce) |
 | `CrestApps.OrchardCore.Workforce.ShiftPlanning` | Workforce Shift Planning | [Workforce](./modules/workforce#shift-planning) |
 | `CrestApps.OrchardCore.Workforce.ContactCenter` | Workforce for Contact Center | [Workforce for Contact Center](./modules/workforce-contact-center) |

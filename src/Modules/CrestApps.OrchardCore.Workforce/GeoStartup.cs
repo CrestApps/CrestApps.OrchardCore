@@ -1,6 +1,7 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Geo;
 using CrestApps.OrchardCore.Geo.Services;
+using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Workforce.Geo;
 using CrestApps.OrchardCore.Workforce.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,7 +39,7 @@ public static class WorkforceGeocodingServiceCollectionExtensions
         // The queue's targets need the team and worker managers, whose handlers need the queue: the handlers take it
         // lazily to break the cycle.
         services.TryAddScoped(sp => new Lazy<IGeocodeQueue>(sp.GetRequiredService<IGeocodeQueue>));
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<WorkforceTeam>, TeamLocationGeocodeHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Team>, TeamLocationGeocodeHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<WorkerProfile>, WorkerHomeBaseGeocodeHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IGeocodeTarget, TeamLocationGeocodeTarget>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IGeocodeTarget, WorkerHomeBaseGeocodeTarget>());

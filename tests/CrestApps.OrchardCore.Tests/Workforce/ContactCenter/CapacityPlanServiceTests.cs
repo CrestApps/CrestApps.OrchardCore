@@ -1,10 +1,10 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.IntervalStatistics;
+using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Indexes;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Models;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Services;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Services.Forecasting;
-using CrestApps.OrchardCore.Workforce.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 

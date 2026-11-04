@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars.Core;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Portal;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -429,7 +430,7 @@ public sealed class MyTeamController : Controller
         var worker = await _portal.GetWorkerAsync(User);
         var now = _clock.UtcNow;
         var codes = (await _activityCodeManager.GetAllAsync(HttpContext.RequestAborted)).ToDictionary(code => code.ItemId, StringComparer.Ordinal);
-        var teams = (await _teamManager.ListTreeAsync(HttpContext.RequestAborted)).Select(item => item.Team).Where(team => scope.Covers(team.ItemId) && !string.IsNullOrEmpty(team.CalendarId)).ToList();
+        var teams = (await _teamManager.ListTreeAsync(HttpContext.RequestAborted)).Select(item => item.Team).Where(team => scope.Covers(team.ItemId) && !string.IsNullOrEmpty(team.GetWorkforceSettings().CalendarId)).ToList();
         var siteZone = await PlanningOptions.TimeZoneOfAsync(null, _siteService);
         var model = new MyTeamNowViewModel
         {
@@ -439,7 +440,7 @@ public sealed class MyTeamController : Controller
 
         if (teams.Count > 0)
         {
-            var byCalendar = teams.ToDictionary(team => team.CalendarId, StringComparer.Ordinal);
+            var byCalendar = teams.ToDictionary(team => team.GetWorkforceSettings().CalendarId, StringComparer.Ordinal);
             var occurrences = await _queryService.GetOccurrencesAsync(new CalendarOccurrenceQuery
             {
                 CalendarIds = byCalendar.Keys.ToList(),

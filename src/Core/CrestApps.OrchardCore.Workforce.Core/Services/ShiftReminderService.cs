@@ -3,6 +3,7 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars.Core;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Caching.Distributed;
@@ -57,7 +58,7 @@ internal sealed class ShiftReminderService
     public async Task<int> SendDueAsync(CancellationToken cancellationToken = default)
     {
         var now = _clock.UtcNow;
-        var teams = (await _teamStore.ListAsync(cancellationToken)).Where(team => !string.IsNullOrEmpty(team.CalendarId)).ToList();
+        var teams = (await _teamStore.ListAsync(cancellationToken)).Where(team => !string.IsNullOrEmpty(team.GetWorkforceSettings().CalendarId)).ToList();
 
         if (teams.Count == 0)
         {
@@ -66,7 +67,7 @@ internal sealed class ShiftReminderService
 
         var occurrences = await _queryService.GetOccurrencesAsync(new CalendarOccurrenceQuery
         {
-            CalendarIds = [.. teams.Select(team => team.CalendarId).Distinct(StringComparer.Ordinal)],
+            CalendarIds = [.. teams.Select(team => team.GetWorkforceSettings().CalendarId).Distinct(StringComparer.Ordinal)],
             FromUtc = now,
             ToUtc = now.AddMinutes(MaxMinutes),
             EventTypes = [WorkforceConstants.EventTypes.Shift],

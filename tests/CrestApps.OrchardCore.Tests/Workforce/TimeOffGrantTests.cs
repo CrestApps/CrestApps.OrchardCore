@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -148,5 +149,5 @@ public sealed class TimeOffGrantTests
         return new Setup(team, ana, vacation, policy);
     }
 
-    private sealed record Setup(WorkforceTeam Team, WorkerProfile Ana, TimeOffType Vacation, TimeOffPolicy Policy);
+    private sealed record Setup(Team Team, WorkerProfile Ana, TimeOffType Vacation, TimeOffPolicy Policy);
 }

@@ -1,4 +1,5 @@
 using System.Globalization;
+using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.Core;
@@ -307,7 +308,7 @@ public sealed class LaborRuleTests
         await PlanningKit.AddDraftAsync(harness, period, setup.Worker.ItemId, _monday, new TimeOnly(8, 0), new TimeOnly(16, 0));
         await PlanningKit.AddDraftAsync(harness, period, null, _monday.AddDays(1), new TimeOnly(1, 0), new TimeOnly(9, 0));
         await PlanningKit.AddDraftAsync(harness, period, null, _monday.AddDays(2), new TimeOnly(8, 0), new TimeOnly(18, 0));
-        await PlanningKit.UpdateTeamAsync(harness, setup.Team, team => team.OpenShiftClaimPolicy = OpenShiftClaimPolicy.FirstCome);
+        await PlanningKit.UpdateTeamAsync(harness, setup.Team, team => team.GetWorkforceSettings().OpenShiftClaimPolicy = OpenShiftClaimPolicy.FirstCome);
         await PlanningKit.PublishAsync(harness, period);
 
         var open = (await harness.RunAsync(services => services.GetRequiredService<IOpenShiftService>().PageAsync(new OpenShiftQuery(), 0, 10), commit: false)).Items;
@@ -450,5 +451,5 @@ public sealed class LaborRuleTests
         };
     }
 
-    private sealed record Setup(WorkforceTeam Team, WorkerProfile Worker);
+    private sealed record Setup(Team Team, WorkerProfile Worker);
 }

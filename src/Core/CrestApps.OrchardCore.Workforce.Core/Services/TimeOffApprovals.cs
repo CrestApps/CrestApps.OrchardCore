@@ -1,6 +1,7 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Localization;
@@ -64,7 +65,7 @@ internal sealed class TimeOffApprovals
 
         await _calendarService.EnsureCalendarAsync(team, cancellationToken);
 
-        var calendar = await _calendars.FindByIdAsync(team.CalendarId, cancellationToken);
+        var calendar = await _calendars.FindByIdAsync(team.GetWorkforceSettings().CalendarId, cancellationToken);
         var calendarEvent = await _eventManager.NewAsync(calendar, WorkforceConstants.EventTypes.TimeOff, cancellationToken: cancellationToken);
 
         ShiftEvents.Assign(calendarEvent, worker);

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.AI;
@@ -106,7 +107,7 @@ public sealed class WorkforceAIToolTests
         Assert.NotNull(cara);
     }
 
-    private static async Task<(WorkforceTeam East, WorkforceTeam West)> PublishTwoTeamsAsync(CalendarTestHarness harness)
+    private static async Task<(Team East, Team West)> PublishTwoTeamsAsync(CalendarTestHarness harness)
     {
         var east = await WorkforceTests.AddTeamAsync(harness, "East", TeamKind.Team);
         var west = await WorkforceTests.AddTeamAsync(harness, "West", TeamKind.Team);

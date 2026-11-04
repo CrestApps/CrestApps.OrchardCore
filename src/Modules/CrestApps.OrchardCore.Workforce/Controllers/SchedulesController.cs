@@ -3,6 +3,8 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars.Core;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Teams.Models;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -230,7 +232,7 @@ public sealed class SchedulesController : Controller
         {
             Period = period,
             TeamName = team.Name,
-            CalendarId = team.CalendarId,
+            CalendarId = team.GetWorkforceSettings().CalendarId,
             Week = week,
             WeekCount = weekCount,
             Days = days,
@@ -824,7 +826,7 @@ public sealed class SchedulesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    private async Task<(SchedulePeriod Period, WorkforceTeam Team, IActionResult Denied)> AuthorizePeriodAsync(string id, global::OrchardCore.Security.Permissions.Permission permission = null)
+    private async Task<(SchedulePeriod Period, Team Team, IActionResult Denied)> AuthorizePeriodAsync(string id, global::OrchardCore.Security.Permissions.Permission permission = null)
     {
         if (!await _authorizationService.AuthorizeAsync(User, permission ?? WorkforcePermissions.ManageSchedules))
         {
@@ -873,7 +875,7 @@ public sealed class SchedulesController : Controller
             .FirstOrDefault(shift => shift.ItemId == id);
     }
 
-    private async Task<string> TimeZoneOfAsync(WorkforceTeam team)
+    private async Task<string> TimeZoneOfAsync(Team team)
     {
         if (!string.IsNullOrEmpty(team.TimeZoneId))
         {
@@ -888,7 +890,7 @@ public sealed class SchedulesController : Controller
     private static int WeekOf(SchedulePeriod period, DateOnly date)
         => Math.Max(0, (date.DayNumber - period.StartDate.DayNumber) / 7);
 
-    private async Task AddCoverageAsync(ScheduleBoardViewModel model, SchedulePeriod period, WorkforceTeam team)
+    private async Task AddCoverageAsync(ScheduleBoardViewModel model, SchedulePeriod period, Team team)
     {
         if (model.Days.Count == 0)
         {
@@ -946,7 +948,7 @@ public sealed class SchedulesController : Controller
         }
     }
 
-    private async Task PopulateShiftAsync(DraftShiftEditViewModel model, SchedulePeriod period, WorkforceTeam team, IEnumerable<ActivityCode> codes)
+    private async Task PopulateShiftAsync(DraftShiftEditViewModel model, SchedulePeriod period, Team team, IEnumerable<ActivityCode> codes)
     {
         var day = model.Date ?? period.StartDate;
         var workers = (await _workerManager.ListByTeamAsync(team.ItemId, day, HttpContext.RequestAborted)).ToList();
