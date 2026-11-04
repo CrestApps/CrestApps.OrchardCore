@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Calendars.Core.Recurrence;
+using CrestApps.OrchardCore.Calendars.Recurrence;
 using NodaTime;
 
 namespace CrestApps.OrchardCore.Tests.Calendars;

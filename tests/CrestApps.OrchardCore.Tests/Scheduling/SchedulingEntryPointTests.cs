@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Scheduling;
 using CrestApps.OrchardCore.Scheduling.AI;
 using CrestApps.OrchardCore.Scheduling.Api;

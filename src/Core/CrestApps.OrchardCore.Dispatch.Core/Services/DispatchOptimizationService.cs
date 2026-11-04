@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
 using CrestApps.OrchardCore.Geo.Models;
@@ -73,7 +73,7 @@ public sealed class DispatchOptimizationService : IDispatchOptimizationService
                 Id = worker.ItemId,
                 Name = worker.DisplayName,
                 Home = availability.Home,
-                Open = [.. availability.Open.Select(span => (span.Start, span.End))],
+                Open = [.. availability.Open.Select(span => (span.StartUtc, span.EndUtc))],
             });
         }
 

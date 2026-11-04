@@ -13,24 +13,9 @@ using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using YesSql;
+using CrestApps.OrchardCore.Calendars;
 
 namespace CrestApps.OrchardCore.Dispatch.Core.Services;
-
-/// <summary>
-/// A span of time, in UTC.
-/// </summary>
-/// <param name="Start">The start.</param>
-/// <param name="End">The end.</param>
-public readonly record struct TimeSpanUtc(DateTime Start, DateTime End)
-{
-    /// <summary>
-    /// Tells whether the span overlaps another.
-    /// </summary>
-    /// <param name="start">The other's start.</param>
-    /// <param name="end">The other's end.</param>
-    /// <returns>Whether they overlap.</returns>
-    public bool Overlaps(DateTime start, DateTime end) => Start < end && start < End;
-}
 
 /// <summary>
 /// When a worker can work over a period: their shifts without breaks and time off, and the visits they already have.
@@ -60,7 +45,7 @@ public sealed class WorkerAvailability
     /// <summary>
     /// Gets or sets the spans they are on shift and free of breaks and time off, earliest first.
     /// </summary>
-    public List<TimeSpanUtc> Open { get; set; } = [];
+    public List<TimeWindow> Open { get; set; } = [];
 
     /// <summary>
     /// Gets or sets whether any shift falls in the period.
@@ -70,7 +55,7 @@ public sealed class WorkerAvailability
     /// <summary>
     /// Gets or sets the time off in the period.
     /// </summary>
-    public List<TimeSpanUtc> TimeOff { get; set; } = [];
+    public List<TimeWindow> TimeOff { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the worker's other visits that keep them busy, earliest first.
@@ -186,16 +171,16 @@ public sealed class DispatchResources
         };
 
         var shifts = await _shiftService.ListWorkerShiftsAsync(worker.ItemId, fromUtc, toUtc, cancellationToken);
-        var blocked = new List<TimeSpanUtc>();
+        var blocked = new List<TimeWindow>();
 
         foreach (var shift in shifts)
         {
             availability.HasShift = true;
-            availability.Open.Add(new TimeSpanUtc(shift.StartUtc, shift.EndUtc));
+            availability.Open.Add(new TimeWindow(shift.StartUtc, shift.EndUtc));
 
             if (shift.TryGet<ShiftData>(out var data))
             {
-                blocked.AddRange(data.Segments.Where(segment => segment.Kind != ActivityKind.Work).Select(segment => new TimeSpanUtc(segment.StartUtc, segment.EndUtc)));
+                blocked.AddRange(data.Segments.Where(segment => segment.Kind != ActivityKind.Work).Select(segment => new TimeWindow(segment.StartUtc, segment.EndUtc)));
             }
         }
 
@@ -218,13 +203,13 @@ public sealed class DispatchResources
                     occurrence.Event.TryGet<TimeOffEventData>(out var data) &&
                     data.WorkerId == worker.ItemId)
                 {
-                    availability.TimeOff.Add(new TimeSpanUtc(occurrence.StartUtc, occurrence.EndUtc));
+                    availability.TimeOff.Add(new TimeWindow(occurrence.StartUtc, occurrence.EndUtc));
                 }
             }
         }
 
         blocked.AddRange(availability.TimeOff);
-        availability.Open = Subtract(availability.Open, blocked);
+        availability.Open = [.. TimeWindow.Subtract(availability.Open, blocked)];
         availability.Visits = (await ListWorkerVisitsAsync(worker.ItemId, fromUtc.AddHours(-12), toUtc.AddHours(12), ignoreVisitId, cancellationToken)).ToList();
 
         return availability;
@@ -261,7 +246,7 @@ public sealed class DispatchResources
         return Valid(zone) ? zone : "UTC";
     }
 
-    private static bool Valid(string zone) => !string.IsNullOrEmpty(zone) && Calendars.Core.CalendarTime.IsValidZone(zone);
+    private static bool Valid(string zone) => !string.IsNullOrEmpty(zone) && Calendars.CalendarTime.IsValidZone(zone);
 
     /// <summary>
     /// Lists a worker's visits that keep them busy and overlap a time.
@@ -355,42 +340,5 @@ public sealed class DispatchResources
         }
 
         return team;
-    }
-
-    /// <summary>
-    /// Takes some spans out of others.
-    /// </summary>
-    /// <param name="spans">The spans.</param>
-    /// <param name="holes">The spans to take out.</param>
-    /// <returns>What is left, earliest first.</returns>
-    public static List<TimeSpanUtc> Subtract(IEnumerable<TimeSpanUtc> spans, IEnumerable<TimeSpanUtc> holes)
-    {
-        var result = new List<TimeSpanUtc>();
-        var cuts = holes.OrderBy(hole => hole.Start).ToArray();
-
-        foreach (var span in spans.OrderBy(span => span.Start))
-        {
-            var start = span.Start;
-
-            foreach (var cut in cuts.Where(cut => cut.Overlaps(span.Start, span.End)))
-            {
-                if (cut.Start > start)
-                {
-                    result.Add(new TimeSpanUtc(start, cut.Start));
-                }
-
-                if (cut.End > start)
-                {
-                    start = cut.End;
-                }
-            }
-
-            if (start < span.End)
-            {
-                result.Add(new TimeSpanUtc(start, span.End));
-            }
-        }
-
-        return result;
     }
 }

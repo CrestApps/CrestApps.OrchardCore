@@ -27,7 +27,7 @@
                 }
                 @if (shift.ClaimPolicy == OpenShiftClaimPolicy.BySeniority && shift.ClaimDeadlineUtc.HasValue && open)
                 {
-                    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["The most senior eligible claimant gets it then"]"><i class="fa-solid fa-medal text-secondary me-1" aria-hidden="true"></i>@T["Awarded {0}", CrestApps.OrchardCore.Calendars.Core.CalendarTime.ToLocal(shift.ClaimDeadlineUtc.Value, shift.TimeZoneId).ToString("g")]</span>
+                    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["The most senior eligible claimant gets it then"]"><i class="fa-solid fa-medal text-secondary me-1" aria-hidden="true"></i>@T["Awarded {0}", CrestApps.OrchardCore.Calendars.CalendarTime.ToLocal(shift.ClaimDeadlineUtc.Value, shift.TimeZoneId).ToString("g")]</span>
                 }
                 @if (!string.IsNullOrEmpty(Model.FilledWorkerName))
                 {
@@ -109,7 +109,7 @@
                                     <span class="badge text-bg-warning fw-normal">@T["Waiting"]</span>
                                     break;
                             }
-                            <span class="text-muted small">@T["Claimed {0}", CrestApps.OrchardCore.Calendars.Core.CalendarTime.ToLocal(row.Claim.ClaimedUtc, shift.TimeZoneId).ToString("g")]</span>
+                            <span class="text-muted small">@T["Claimed {0}", CrestApps.OrchardCore.Calendars.CalendarTime.ToLocal(row.Claim.ClaimedUtc, shift.TimeZoneId).ToString("g")]</span>
                             @if (row.SeniorityDate.HasValue)
                             {
                                 <span class="text-muted small">@T["Seniority {0}", row.SeniorityDate.Value.ToString("d")]</span>

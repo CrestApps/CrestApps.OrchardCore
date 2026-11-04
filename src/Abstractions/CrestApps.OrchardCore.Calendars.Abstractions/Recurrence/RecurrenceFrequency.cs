@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Calendars.Core.Recurrence;
+namespace CrestApps.OrchardCore.Calendars.Recurrence;
 
 /// <summary>
 /// How often a recurrence rule repeats (RFC 5545 <c>FREQ</c>).

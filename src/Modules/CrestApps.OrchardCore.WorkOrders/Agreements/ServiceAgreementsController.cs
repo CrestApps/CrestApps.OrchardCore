@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Addresses.Models;
-using CrestApps.OrchardCore.Calendars.Core.Recurrence;
+using CrestApps.OrchardCore.Calendars.Recurrence;
 using CrestApps.OrchardCore.WorkOrders.Agreements.ViewModels;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;

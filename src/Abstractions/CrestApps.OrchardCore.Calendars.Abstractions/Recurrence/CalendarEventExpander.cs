@@ -1,7 +1,7 @@
 using CrestApps.OrchardCore.Calendars.Models;
 using NodaTime;
 
-namespace CrestApps.OrchardCore.Calendars.Core.Recurrence;
+namespace CrestApps.OrchardCore.Calendars.Recurrence;
 
 /// <summary>
 /// Works out an event's UTC times and expands a repeating event into occurrences.

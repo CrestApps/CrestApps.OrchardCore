@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text;
 using NodaTime;
 
-namespace CrestApps.OrchardCore.Calendars.Core.Recurrence;
+namespace CrestApps.OrchardCore.Calendars.Recurrence;
 
 /// <summary>
 /// An RFC 5545 recurrence rule (<c>RRULE</c>). Supports <c>FREQ</c> (DAILY, WEEKLY, MONTHLY, YEARLY), <c>INTERVAL</c>,

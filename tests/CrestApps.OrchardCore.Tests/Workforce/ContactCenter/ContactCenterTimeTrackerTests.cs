@@ -209,7 +209,7 @@ public sealed class ContactCenterTimeTrackerTests
 
         private static string Time(DateTime utc)
         {
-            var local = global::CrestApps.OrchardCore.Calendars.Core.CalendarTime.ToLocal(utc, "America/New_York");
+            var local = global::CrestApps.OrchardCore.Calendars.CalendarTime.ToLocal(utc, "America/New_York");
 
             return local.Second == 0 ? $"{local.Hour}:{local.Minute:00}" : $"{local.Hour}:{local.Minute:00}:{local.Second:00}";
         }

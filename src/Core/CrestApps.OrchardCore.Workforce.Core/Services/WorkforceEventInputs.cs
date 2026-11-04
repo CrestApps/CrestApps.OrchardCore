@@ -48,8 +48,8 @@ internal static class WorkforceEventInputs
             ["OpenShiftId"] = shift.ItemId,
             ["PeriodId"] = shift.PeriodId,
             ["Date"] = Day(shift.Date),
-            ["StartUtc"] = Calendars.Core.CalendarTime.ToUtc(shift.Start, shift.TimeZoneId),
-            ["EndUtc"] = Calendars.Core.CalendarTime.ToUtc(shift.End, shift.TimeZoneId),
+            ["StartUtc"] = Calendars.CalendarTime.ToUtc(shift.Start, shift.TimeZoneId),
+            ["EndUtc"] = Calendars.CalendarTime.ToUtc(shift.End, shift.TimeZoneId),
             ["ClaimPolicy"] = shift.ClaimPolicy.ToString(),
             ["ClaimDeadlineUtc"] = shift.ClaimDeadlineUtc,
         };

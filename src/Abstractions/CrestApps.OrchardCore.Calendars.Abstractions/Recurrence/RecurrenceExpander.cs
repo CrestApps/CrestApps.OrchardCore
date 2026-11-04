@@ -1,6 +1,6 @@
 using NodaTime;
 
-namespace CrestApps.OrchardCore.Calendars.Core.Recurrence;
+namespace CrestApps.OrchardCore.Calendars.Recurrence;
 
 /// <summary>
 /// Expands a <see cref="RecurrenceRule"/> into occurrence starts, in wall-clock time, in ascending order. The first occurrence is

@@ -1,6 +1,6 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Bookings.Models;
-using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Payments;
 
 namespace CrestApps.OrchardCore.Bookings.Services;

@@ -160,5 +160,5 @@ public sealed class TimeClockTimeTrackerTests
     private static Task<Dictionary<string, string>> StageNamesAsync(TimeClockKit kit)
         => kit.Harness.RunAsync(async services => (await services.GetRequiredService<global::CrestApps.OrchardCore.TimeTracker.Core.Services.TimeStageManager>().GetAllAsync()).ToDictionary(stage => stage.ItemId, stage => stage.Name), commit: false);
 
-    private static DateTime Local(DateTime utc) => global::CrestApps.OrchardCore.Calendars.Core.CalendarTime.ToLocal(utc, "America/New_York");
+    private static DateTime Local(DateTime utc) => global::CrestApps.OrchardCore.Calendars.CalendarTime.ToLocal(utc, "America/New_York");
 }

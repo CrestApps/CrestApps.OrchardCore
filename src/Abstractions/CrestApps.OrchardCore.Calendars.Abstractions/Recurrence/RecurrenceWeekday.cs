@@ -1,6 +1,6 @@
 using NodaTime;
 
-namespace CrestApps.OrchardCore.Calendars.Core.Recurrence;
+namespace CrestApps.OrchardCore.Calendars.Recurrence;
 
 /// <summary>
 /// A <c>BYDAY</c> entry: a day of the week, optionally with an ordinal such as the second Tuesday (<c>2TU</c>) or the last Friday

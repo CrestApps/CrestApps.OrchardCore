@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.WorkOrders.Services;
 
@@ -51,11 +51,11 @@ public sealed class SlaClock
         while (from - startUtc < _horizon)
         {
             var to = from.AddDays(7);
-            IReadOnlyList<(DateTime StartUtc, DateTime EndUtc)> open = null;
+            IReadOnlyList<TimeWindow> open = null;
 
             foreach (var provider in _providers)
             {
-                open = await provider.GetOpenAsync(policy.HoursCalendarId, policy.TimeZoneId, from, to, cancellationToken);
+                open = (await provider.GetOpenAsync(policy.HoursCalendarId, policy.TimeZoneId, from, to, cancellationToken))?.Select(window => new TimeWindow(window.StartUtc, window.EndUtc)).ToArray();
 
                 if (open is not null)
                 {
@@ -87,7 +87,7 @@ public sealed class SlaClock
     /// <param name="fromUtc">Where counting starts.</param>
     /// <param name="remaining">The time left; what the stretches don't cover is left in it.</param>
     /// <returns>When the time ran out, or <see langword="null"/> when the stretches weren't enough.</returns>
-    public static DateTime? Add(IEnumerable<(DateTime StartUtc, DateTime EndUtc)> open, DateTime fromUtc, ref TimeSpan remaining)
+    public static DateTime? Add(IEnumerable<TimeWindow> open, DateTime fromUtc, ref TimeSpan remaining)
     {
         ArgumentNullException.ThrowIfNull(open);
 
@@ -125,7 +125,7 @@ public sealed class SlaClock
     /// An opening or closing time that a daylight-saving change skips moves forward by the gap, and one that happens twice
     /// is the earlier of the two, as <see cref="CalendarTime"/> converts every wall-clock time.
     /// </remarks>
-    public static IEnumerable<(DateTime StartUtc, DateTime EndUtc)> OpenWeekly(WeeklyHours weekly, string timeZoneId, DateTime fromUtc, DateTime toUtc)
+    public static IEnumerable<TimeWindow> OpenWeekly(WeeklyHours weekly, string timeZoneId, DateTime fromUtc, DateTime toUtc)
     {
         ArgumentNullException.ThrowIfNull(weekly);
 
@@ -145,7 +145,7 @@ public sealed class SlaClock
 
             if (end > fromUtc && start < toUtc)
             {
-                yield return (start, end);
+                yield return new TimeWindow(start, end);
             }
         }
     }

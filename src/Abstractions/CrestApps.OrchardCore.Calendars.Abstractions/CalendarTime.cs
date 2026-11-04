@@ -1,7 +1,7 @@
 using NodaTime;
 using NodaTime.TimeZones;
 
-namespace CrestApps.OrchardCore.Calendars.Core;
+namespace CrestApps.OrchardCore.Calendars;
 
 /// <summary>
 /// Converts between wall-clock times in an IANA time zone and UTC, the way RFC 5545 asks: a wall-clock time that doesn't exist

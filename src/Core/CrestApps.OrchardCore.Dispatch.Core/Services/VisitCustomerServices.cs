@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Security.Cryptography;
-using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Dispatch.Core.Indexes;
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
@@ -428,7 +428,7 @@ public sealed class VisitRiskMonitor
 
                 var availability = await _resources.GetAvailabilityAsync(worker, visit.StartUtc.Value, visit.EndUtc.Value, visit.ItemId, cancellationToken);
 
-                if (availability.TimeOff.Any(span => span.Overlaps(visit.StartUtc.Value, visit.EndUtc.Value)))
+                if (availability.TimeOff.Any(span => span.Overlaps(new TimeWindow(visit.StartUtc.Value, visit.EndUtc.Value))))
                 {
                     return S["{0} is on time off then.", worker.DisplayName];
                 }

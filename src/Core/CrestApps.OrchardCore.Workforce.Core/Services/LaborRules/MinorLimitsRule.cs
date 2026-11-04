@@ -47,7 +47,7 @@ internal sealed class MinorLimitsRule : LaborRuleBase
 
         foreach (var shift in context.Candidates.Where(shift => Minor(shift.Date)))
         {
-            var end = Calendars.Core.CalendarTime.ToLocal(shift.EndUtc, context.TimeZoneId);
+            var end = Calendars.CalendarTime.ToLocal(shift.EndUtc, context.TimeZoneId);
 
             if (DateOnly.FromDateTime(end) > shift.Date || TimeOnly.FromDateTime(end) > latest)
             {
