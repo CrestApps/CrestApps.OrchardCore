@@ -9,7 +9,13 @@ using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using OrchardCore.Locking.Distributed;
 
 namespace CrestApps.OrchardCore.Tests.Workforce;
 
@@ -241,6 +247,76 @@ public sealed class PortalTests
     }
 
     [Fact]
+    public async Task Reminders_AreNotSentAgain_WhenTheCacheIsLost()
+    {
+        // Arrange: a restart, or a node with its own memory cache, loses whatever a cache remembered.
+        var channel = new RecordingChannel();
+        var clock = new MovableClock();
+        await using var harness = await CreateAsync(channel, clock: clock, cachePerRun: true);
+        var team = await WorkforceTests.AddTeamAsync(harness, "Front desk", TeamKind.Team);
+        var ana = await PlanningKit.AddMemberAsync(harness, "Ana", team);
+        var period = await PlanningKit.CreatePeriodAsync(harness, team);
+
+        await PlanningKit.AddDraftAsync(harness, period, ana.ItemId, _monday, new TimeOnly(9, 0), new TimeOnly(17, 0));
+        await PlanningKit.PublishAsync(harness, period);
+        channel.Titles.Clear();
+        clock.UtcNow = PlanningKit.Utc(_monday, new TimeOnly(8, 10));
+
+        // Act
+        var first = await harness.RunAsync(services => services.GetRequiredService<ShiftReminderService>().SendDueAsync());
+        var afterRestart = await harness.RunAsync(services => services.GetRequiredService<ShiftReminderService>().SendDueAsync());
+
+        // Assert
+        Assert.Equal((1, 0), (first, afterRestart));
+        Assert.Single(channel.Titles);
+    }
+
+    [Fact]
+    public async Task Reminders_TwoRunsAtOnce_SendOneReminder()
+    {
+        // Arrange: the first run is held while it sends, and a second run starts meanwhile, as on another node.
+        var channel = new RecordingChannel();
+        var clock = new MovableClock();
+        await using var harness = await CreateAsync(channel, clock: clock, distributedLock: new global::OrchardCore.Locking.LocalLock(NullLogger<global::OrchardCore.Locking.LocalLock>.Instance));
+        var team = await WorkforceTests.AddTeamAsync(harness, "Front desk", TeamKind.Team);
+        var ana = await PlanningKit.AddMemberAsync(harness, "Ana", team);
+        var period = await PlanningKit.CreatePeriodAsync(harness, team);
+
+        await PlanningKit.AddDraftAsync(harness, period, ana.ItemId, _monday, new TimeOnly(9, 0), new TimeOnly(17, 0));
+        await PlanningKit.PublishAsync(harness, period);
+        channel.Titles.Clear();
+        clock.UtcNow = PlanningKit.Utc(_monday, new TimeOnly(8, 10));
+
+        var sending = new TaskCompletionSource();
+        var release = new TaskCompletionSource();
+
+        channel.OnSend = async () =>
+        {
+            sending.TrySetResult();
+            await release.Task;
+        };
+
+        // Act
+        var firstRun = harness.RunAsync(services => services.GetRequiredService<ShiftReminderService>().SendDueAsync());
+
+        await sending.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+        var second = await harness.RunAsync(services => services.GetRequiredService<ShiftReminderService>().SendDueAsync());
+
+        release.SetResult();
+
+        var first = await firstRun;
+
+        channel.OnSend = null;
+
+        var third = await harness.RunAsync(services => services.GetRequiredService<ShiftReminderService>().SendDueAsync());
+
+        // Assert
+        Assert.Equal((1, 0, 0), (first, second, third));
+        Assert.Single(channel.Titles);
+    }
+
+    [Fact]
     public async Task QuietHours_KeepTheOtherChannelsQuiet_ButTheInboxStillGetsIt()
     {
         var channel = new RecordingChannel();
@@ -260,7 +336,7 @@ public sealed class PortalTests
         Assert.False(new WorkerPortalSettings { QuietStart = new TimeOnly(12, 0), QuietEnd = new TimeOnly(13, 0) }.IsQuiet(new TimeOnly(13, 0)));
     }
 
-    private static Task<CalendarTestHarness> CreateAsync(RecordingChannel channel = null, PushHandler handler = null, MovableClock clock = null)
+    private static Task<CalendarTestHarness> CreateAsync(RecordingChannel channel = null, PushHandler handler = null, MovableClock clock = null, IDistributedLock distributedLock = null, bool cachePerRun = false)
     {
         return WorkforceTests.CreateAsync(services =>
         {
@@ -269,7 +345,20 @@ public sealed class PortalTests
                 services.AddSingleton<global::OrchardCore.Modules.IClock>(clock);
             }
 
-            services.AddDistributedMemoryCache();
+            if (distributedLock is not null)
+            {
+                services.Replace(ServiceDescriptor.Singleton(distributedLock));
+            }
+
+            if (cachePerRun)
+            {
+                // Each run gets an empty cache, as after a restart or on a node with a memory cache of its own.
+                services.AddScoped<IDistributedCache>(_ => new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions())));
+            }
+            else
+            {
+                services.AddDistributedMemoryCache();
+            }
             services.AddWorkforceTimeOffCore();
             services.AddWorkforcePortalCore();
             services.AddSingleton<IDataProtectionProvider>(new EphemeralDataProtectionProvider());
@@ -355,11 +444,19 @@ public sealed class PortalTests
 
         public string DisplayName => "Recording";
 
-        public Task SendAsync(WorkerProfile worker, WorkforceNotification notification, CancellationToken cancellationToken = default)
-        {
-            Titles.Add(notification.Title);
+        public Func<Task> OnSend { get; set; }
 
-            return Task.CompletedTask;
+        public async Task SendAsync(WorkerProfile worker, WorkforceNotification notification, CancellationToken cancellationToken = default)
+        {
+            lock (Titles)
+            {
+                Titles.Add(notification.Title);
+            }
+
+            if (OnSend is { } onSend)
+            {
+                await onSend();
+            }
         }
     }
 

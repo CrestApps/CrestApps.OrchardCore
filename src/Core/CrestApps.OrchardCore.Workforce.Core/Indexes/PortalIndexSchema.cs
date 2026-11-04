@@ -52,5 +52,31 @@ public static class PortalIndexSchema
         {
             table.CreateIndex("IDX_WorkerFeedIndex_Token", "TokenHash");
         }, collection: collection);
+
+        await CreateShiftReminderLogAsync(schemaBuilder);
+    }
+
+    /// <summary>
+    /// Creates the index table of sent shift reminders in the <see cref="WorkforceConstants.CollectionName"/> collection.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static async Task CreateShiftReminderLogAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        const string collection = WorkforceConstants.CollectionName;
+
+        await schemaBuilder.CreateMapIndexTableAsync<ShiftReminderLogIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("Key", column => column.WithLength(100))
+            .Column<DateTime>("SentUtc"),
+            collection: collection);
+
+        await schemaBuilder.AlterIndexTableAsync<ShiftReminderLogIndex>(table =>
+        {
+            table.CreateIndex("IDX_ShiftReminderLogIndex_Key", "Key");
+            table.CreateIndex("IDX_ShiftReminderLogIndex_SentUtc", "SentUtc");
+        }, collection: collection);
     }
 }

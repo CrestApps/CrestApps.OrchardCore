@@ -97,6 +97,7 @@ public static class PortalIndexProviders
             new WorkforceInboxIndexProvider(),
             new WebPushSubscriptionIndexProvider(),
             new WorkerFeedIndexProvider(),
+            new ShiftReminderLogIndexProvider(),
         ];
     }
 }

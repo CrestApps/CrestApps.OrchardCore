@@ -31,7 +31,8 @@ public sealed class PortalStartup : StartupBase
         services.AddDataMigration<PortalMigrations>()
             .AddIndexProvider<WorkforceInboxIndexProvider>()
             .AddIndexProvider<WebPushSubscriptionIndexProvider>()
-            .AddIndexProvider<WorkerFeedIndexProvider>();
+            .AddIndexProvider<WorkerFeedIndexProvider>()
+            .AddIndexProvider<ShiftReminderLogIndexProvider>();
         services.AddScoped<MyWorkPortal>();
         services.Configure<TimeClockTimeTrackerOptions>(options =>
         {
