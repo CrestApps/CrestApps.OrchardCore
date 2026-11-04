@@ -164,7 +164,10 @@ public sealed class TimeClockTests
 
             var inTime = await kit.PunchAsync(ana, TimePunchKind.In);
 
-            Assert.Equal(["It's too early to clock in. You can clock in from 8:30 AM."], early.Errors);
+            // Formatted here rather than written out: ICU on Linux puts a narrow no-break space before "AM".
+            var opensAt = new DateTime(2026, 1, 1, 8, 30, 0).ToString("t", System.Globalization.CultureInfo.CurrentCulture);
+
+            Assert.Equal([$"It's too early to clock in. You can clock in from {opensAt}."], early.Errors);
             Assert.True(inTime.Succeeded);
         }
         finally

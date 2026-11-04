@@ -243,7 +243,10 @@ public sealed class PortalTests
             var again = await SendAsync();
 
             Assert.Equal((0, 1, 0), (early, due, again));
-            Assert.Equal(["Your shift starts at 9:00 AM"], channel.Titles);
+            // Formatted here rather than written out: ICU on Linux puts a narrow no-break space before "AM".
+            var startsAt = new DateTime(2026, 1, 1, 9, 0, 0).ToString("t", System.Globalization.CultureInfo.CurrentCulture);
+
+            Assert.Equal([$"Your shift starts at {startsAt}"], channel.Titles);
         }
         finally
         {
