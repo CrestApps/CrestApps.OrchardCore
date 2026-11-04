@@ -27,6 +27,7 @@ import {
     selectReceiveTrack,
 } from './soft-phone/level-probe.js';
 import { createHoldAudioController, findAudioSender } from './soft-phone/hold-audio.js';
+import { describeProviderError, getProviderErrorName, getProviderErrorText } from './soft-phone/provider-errors.js';
 import { connectedAtFor, durationMeta, formatCallStatus, formatElapsed } from './soft-phone/call-status.js';
 import {
     captureWithFallback,
@@ -2351,7 +2352,13 @@ import {
                 return;
             }
 
-            context.showError((error && (error.error || error.message)) || 'Telnyx WebRTC error.');
+            // The server never heard of these errors, so an agent's "Failed to send call data" left nothing in the
+            // log to explain it. Report the SDK's own words, then show the agent what they mean.
+            if (typeof context.reportDiagnostic === 'function') {
+                context.reportDiagnostic('error', 'provider-error', getProviderErrorText(error), getProviderErrorName(error));
+            }
+
+            context.showError(describeProviderError(error, context.strings));
         });
 
         // Signaling-health signals for the degraded-state UX (item 6). The SDK owns the socket reconnect
@@ -5445,6 +5452,7 @@ import {
                         remoteAudioElement: dom.remoteAudio,
                         setRemoteStream: setRemoteAudioStream,
                         showError: showError,
+                        strings: strings,
                         // Lets a client-originated provider (Telnyx) decide, per inbound leg, whether to answer
                         // automatically (the agent's own bridged leg) or ring an Answer/Decline prompt (a direct
                         // extension call from a colleague).
