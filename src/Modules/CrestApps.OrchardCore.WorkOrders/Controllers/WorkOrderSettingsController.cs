@@ -55,6 +55,7 @@ public sealed class WorkOrderSettingsController : Controller
     private readonly WorkOrderSettingManager<ServiceLevelPolicy> _policies;
     private readonly WorkOrderSettingManager<WorkOrderSubStatus> _subStatuses;
     private readonly WorkOrderLookups _lookups;
+    private readonly WorkOrderStore _workOrderStore;
     private readonly ISession _session;
     private readonly IClock _clock;
     private readonly ISiteService _siteService;
@@ -72,6 +73,7 @@ public sealed class WorkOrderSettingsController : Controller
     /// <param name="policies">The service level policies.</param>
     /// <param name="subStatuses">The sub-statuses.</param>
     /// <param name="lookups">The lookups.</param>
+    /// <param name="workOrderStore">The work order store.</param>
     /// <param name="session">The session.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="siteService">The site service.</param>
@@ -85,6 +87,7 @@ public sealed class WorkOrderSettingsController : Controller
         WorkOrderSettingManager<ServiceLevelPolicy> policies,
         WorkOrderSettingManager<WorkOrderSubStatus> subStatuses,
         WorkOrderLookups lookups,
+        WorkOrderStore workOrderStore,
         ISession session,
         IClock clock,
         ISiteService siteService,
@@ -98,6 +101,7 @@ public sealed class WorkOrderSettingsController : Controller
         _policies = policies;
         _subStatuses = subStatuses;
         _lookups = lookups;
+        _workOrderStore = workOrderStore;
         _session = session;
         _clock = clock;
         _siteService = siteService;
@@ -643,11 +647,12 @@ public sealed class WorkOrderSettingsController : Controller
     private async Task<List<WorkOrderSettingRow>> TypeRowsAsync()
     {
         var policies = (await _policies.GetAllAsync()).ToDictionary(policy => policy.ItemId, policy => policy.Name, StringComparer.Ordinal);
-        var counts = (await _session.QueryIndex<WorkOrderIndex>(collection: WorkOrdersConstants.CollectionName).ListAsync(HttpContext.RequestAborted))
-            .GroupBy(index => index.TypeId ?? string.Empty, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
+        var types = await _types.GetAllAsync();
 
-        return [.. (await _types.GetAllAsync()).OrderBy(type => type.Name, StringComparer.CurrentCultureIgnoreCase).Select(type => new WorkOrderSettingRow
+        // Counted in the database, type by type, instead of loading every work order's index row.
+        var counts = await _workOrderStore.CountByTypeAsync(types.Select(type => type.ItemId), HttpContext.RequestAborted);
+
+        return [.. types.OrderBy(type => type.Name, StringComparer.CurrentCultureIgnoreCase).Select(type => new WorkOrderSettingRow
         {
             Kind = Types,
             Id = type.ItemId,

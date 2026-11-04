@@ -29,6 +29,26 @@ public sealed class WorkOrderStore : DocumentCatalog<WorkOrder, WorkOrderIndex>
 
     /// <inheritdoc/>
     protected override bool CheckConcurrency => true;
+
+    /// <summary>
+    /// Counts the work orders of each type, in the database, without loading them.
+    /// </summary>
+    /// <param name="typeIds">The work order types.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The number of work orders of each type.</returns>
+    public async Task<IReadOnlyDictionary<string, int>> CountByTypeAsync(IEnumerable<string> typeIds, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(typeIds);
+
+        var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        foreach (var typeId in typeIds.Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal))
+        {
+            counts[typeId] = await Session.QueryIndex<WorkOrderIndex>(index => index.TypeId == typeId, collection: CollectionName).CountAsync(cancellationToken);
+        }
+
+        return counts;
+    }
 }
 
 /// <summary>
