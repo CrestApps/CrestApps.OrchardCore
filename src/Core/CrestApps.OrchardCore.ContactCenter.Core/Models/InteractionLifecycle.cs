@@ -1,5 +1,5 @@
-using System.Collections.Frozen;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.StateMachines;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 
@@ -16,34 +16,34 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 /// </summary>
 public static class InteractionLifecycle
 {
-    private static readonly FrozenDictionary<InteractionStatus, FrozenSet<InteractionStatus>> _transitions =
-        new Dictionary<InteractionStatus, FrozenSet<InteractionStatus>>
+    private static readonly TransitionTable<InteractionStatus> _transitions = new(
+        new Dictionary<InteractionStatus, InteractionStatus[]>
         {
             // A provider that answers immediately reports Connected without an intermediate alert, and a call
             // that is abandoned before it is offered anywhere settles straight from Created. Transferring is
             // admitted from Created because a queued interaction that has not been offered to anyone can still
             // be moved to a different queue, which is a transfer of the work rather than of a live conversation.
-            [InteractionStatus.Created] = FrozenSet.ToFrozenSet(
+            [InteractionStatus.Created] =
             [
                 InteractionStatus.Ringing,
                 InteractionStatus.Connected,
                 InteractionStatus.Transferring,
                 InteractionStatus.Ended,
                 InteractionStatus.Failed,
-            ]),
+            ],
             // Created and Ringing are reachable again from every unsettled status because an offer that is not
             // taken has to become offerable again: a reservation that expires returns the interaction to routing,
             // and a re-offer alerts the next agent. Neither edge leaves a settled status, so a conversation that
             // is over still cannot be handed to anyone.
-            [InteractionStatus.Ringing] = FrozenSet.ToFrozenSet(
+            [InteractionStatus.Ringing] =
             [
                 InteractionStatus.Created,
                 InteractionStatus.Connected,
                 InteractionStatus.Transferring,
                 InteractionStatus.Ended,
                 InteractionStatus.Failed,
-            ]),
-            [InteractionStatus.Connected] = FrozenSet.ToFrozenSet(
+            ],
+            [InteractionStatus.Connected] =
             [
                 InteractionStatus.Created,
                 InteractionStatus.Ringing,
@@ -52,8 +52,8 @@ public static class InteractionLifecycle
                 InteractionStatus.Conferenced,
                 InteractionStatus.Ended,
                 InteractionStatus.Failed,
-            ]),
-            [InteractionStatus.Held] = FrozenSet.ToFrozenSet(
+            ],
+            [InteractionStatus.Held] =
             [
                 InteractionStatus.Created,
                 InteractionStatus.Ringing,
@@ -62,8 +62,8 @@ public static class InteractionLifecycle
                 InteractionStatus.Conferenced,
                 InteractionStatus.Ended,
                 InteractionStatus.Failed,
-            ]),
-            [InteractionStatus.Transferring] = FrozenSet.ToFrozenSet(
+            ],
+            [InteractionStatus.Transferring] =
             [
                 InteractionStatus.Created,
                 InteractionStatus.Ringing,
@@ -72,8 +72,8 @@ public static class InteractionLifecycle
                 InteractionStatus.Conferenced,
                 InteractionStatus.Ended,
                 InteractionStatus.Failed,
-            ]),
-            [InteractionStatus.Conferenced] = FrozenSet.ToFrozenSet(
+            ],
+            [InteractionStatus.Conferenced] =
             [
                 InteractionStatus.Created,
                 InteractionStatus.Ringing,
@@ -82,13 +82,14 @@ public static class InteractionLifecycle
                 InteractionStatus.Transferring,
                 InteractionStatus.Ended,
                 InteractionStatus.Failed,
-            ]),
+            ],
 
             // Settled statuses are final. A provider that redelivers a hangup after the call is already ended
             // is answered by the same-status rule, not by an edge out of a settled state.
-            [InteractionStatus.Ended] = FrozenSet<InteractionStatus>.Empty,
-            [InteractionStatus.Failed] = FrozenSet<InteractionStatus>.Empty,
-        }.ToFrozenDictionary();
+            [InteractionStatus.Ended] = [],
+            [InteractionStatus.Failed] = [],
+        },
+        allowStaying: true);
 
     /// <summary>
     /// Determines whether an interaction in one status may move to another.
@@ -96,17 +97,11 @@ public static class InteractionLifecycle
     /// <param name="from">The status the interaction is in.</param>
     /// <param name="to">The status the interaction would move to.</param>
     /// <returns><see langword="true"/> when the transition is admitted; otherwise <see langword="false"/>.</returns>
+    // Re-applying the status an interaction already holds is not a transition. Provider streams redeliver, and
+    // refusing a redelivery that changes nothing would turn an at-least-once provider into an error, so the table
+    // admits staying.
     public static bool CanTransition(InteractionStatus from, InteractionStatus to)
-    {
-        // Re-applying the status an interaction already holds is not a transition. Provider streams redeliver,
-        // and refusing a redelivery that changes nothing would turn an at-least-once provider into an error.
-        if (from == to)
-        {
-            return true;
-        }
-
-        return _transitions.TryGetValue(from, out var allowed) && allowed.Contains(to);
-    }
+        => _transitions.CanMove(from, to);
 
     /// <summary>
     /// Determines whether an interaction status is settled, meaning its communication session has reached an
