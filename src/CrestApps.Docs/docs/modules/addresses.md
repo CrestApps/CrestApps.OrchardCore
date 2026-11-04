@@ -39,6 +39,14 @@ The Addresses module gives the platform one address structure that works for any
 | `County`, `District` | For tax: a county, and a special or tax district. |
 | `Phone` | A number for the courier. |
 
+## Contact info
+
+`ContactInfo` (also in Addresses.Abstractions) is how to reach a person or an organization: `Name`, `Email`, `Phone` (a `PhoneNumber` in E.164 form) and `Address`. New records that keep a contact snapshot keep a `ContactInfo` instead of declaring their own name, e-mail and phone fields. `ContactInfo.From(name, email, phone, address)` builds one from text, keeping the phone only when it's in E.164 form, and `CheckoutContactInfo.ToContactInfo()` gives the checkout's contact as one.
+
+The records that kept their own contact fields before `ContactInfo` existed (orders, returns, transactions, subscriptions, installment plans, appointments, bookings, donations, work order contacts, receipts and the checkout contact) keep them: their stored JSON names the fields, and their phones are text that isn't always in E.164 form, so moving them would need a data migration.
+
+A phone typed into a commerce form is kept in E.164 form when it parses, through `PhoneNumberNormalization.ToE164OrTrimmed(text, phoneNumberService, country)` (PhoneNumbers.Abstractions), so it matches CRM contacts, the do-not-call lists and caller ID. A number that doesn't parse is kept as it was typed, trimmed, and without the Phone Numbers feature every number is only trimmed. The customer record (read in the country of the customer's address), the order (read in the country of its billing or shipping address) and the checkout's contact step (read in the country of the billing address) normalize this way when they're saved.
+
 ## Address formats
 
 Every country writes an address differently: Germany puts the postal code before the city, the United Kingdom gives the post town and the postcode a line each, and Japan starts with the postal code and goes from the prefecture down. `CrestApps.OrchardCore.Addresses.Core` ships each country's rules and three services built on them, registered with `services.AddAddressesCore()`:
