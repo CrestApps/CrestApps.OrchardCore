@@ -1,9 +1,8 @@
 using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
 using System.Text.Json.Nodes;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
-using CrestApps.OrchardCore.Core.Deployments;
+using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -15,10 +14,8 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 
-internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBase<OmnichannelChannelEndpoint>
+internal sealed class OmnichannelChannelEndpointHandler : AuditedCatalogEntryHandlerBase<OmnichannelChannelEndpoint>
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IClock _clock;
     private readonly IPhoneNumberService _phoneNumberService;
     private readonly IEmailAddressValidator _emailAddressValidator;
     private readonly IEnumerable<IChannelEndpointAddressPolicy> _addressPolicies;
@@ -45,9 +42,8 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
         IEnumerable<IChannelEndpointAddressPolicy> addressPolicies,
         IOmnichannelChannelEndpointStore store,
         IStringLocalizer<OmnichannelCampaignHandler> stringLocalizer)
+        : base(httpContextAccessor, clock)
     {
-        _httpContextAccessor = httpContextAccessor;
-        _clock = clock;
         _phoneNumberService = phoneNumberService;
         _emailAddressValidator = emailAddressValidator;
         _addressPolicies = addressPolicies;
@@ -81,18 +77,18 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
         _rules = rules;
     }
 
+    /// <inheritdoc/>
     public override async Task InitializingAsync(InitializingContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
     {
-        await PopulateAsync(context.Model, context.Data);
+        await base.InitializingAsync(context, cancellationToken);
 
         Canonicalize(context.Model);
     }
 
+    /// <inheritdoc/>
     public override async Task UpdatingAsync(UpdatingContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
     {
-        context.Model.ModifiedUtc = _clock.UtcNow;
-
-        await PopulateAsync(context.Model, context.Data);
+        await base.UpdatingAsync(context, cancellationToken);
 
         Canonicalize(context.Model);
     }
@@ -257,24 +253,15 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
         }
     }
 
-    public override Task InitializedAsync(InitializedContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
+    /// <inheritdoc/>
+    protected override void Populate(OmnichannelChannelEndpoint enabpoint, JsonNode data)
     {
-        context.Model.CreatedUtc = _clock.UtcNow;
+        base.Populate(enabpoint, data);
 
-        var user = _httpContextAccessor.HttpContext?.User;
-
-        if (user != null)
+        if (data is null)
         {
-            context.Model.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            context.Model.Author = user.Identity.Name;
+            return;
         }
-
-        return Task.CompletedTask;
-    }
-
-    private Task PopulateAsync(OmnichannelChannelEndpoint enabpoint, JsonNode data)
-    {
-        CatalogDeploymentSerializer.Populate(enabpoint, data);
 
         var displayText = data[nameof(OmnichannelCampaign.DisplayText)]?.GetValue<string>()?.Trim();
 
@@ -316,8 +303,6 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
                 enabpoint.Properties[key] = value;
             }
         }
-
-        return Task.CompletedTask;
     }
 
     private string NormalizePhoneValue(string addressType, string value)

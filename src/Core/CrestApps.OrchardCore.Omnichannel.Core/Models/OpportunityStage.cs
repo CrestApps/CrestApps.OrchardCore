@@ -2,6 +2,7 @@ using System.Text.Json;
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
@@ -9,7 +10,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 /// A step an opportunity moves through, such as <c>Prospecting</c>, <c>Proposal</c> or <c>Closed Won</c>. Each
 /// opportunity type chooses the stages that apply to it in its <see cref="OpportunityPartSettings"/>.
 /// </summary>
-public sealed class OpportunityStage : CatalogItem, INameAwareModel, IModifiedUtcAwareModel, ICloneable<OpportunityStage>
+public sealed class OpportunityStage : CatalogItem, INameAwareModel, IAuditedModel, ICloneable<OpportunityStage>
 {
     /// <summary>
     /// Gets or sets the unique stage name. It is fixed once the stage is created.

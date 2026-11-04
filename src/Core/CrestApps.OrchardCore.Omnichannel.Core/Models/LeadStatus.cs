@@ -2,6 +2,7 @@ using System.Text.Json;
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
@@ -9,7 +10,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 /// A status a lead can be in, such as <c>Open - Not Contacted</c> or <c>Working - Contacted</c>. Exactly one status
 /// is the converted status, which a lead takes when it is converted and which cannot be chosen by hand.
 /// </summary>
-public sealed class LeadStatus : CatalogItem, INameAwareModel, IModifiedUtcAwareModel, ICloneable<LeadStatus>
+public sealed class LeadStatus : CatalogItem, INameAwareModel, IAuditedModel, ICloneable<LeadStatus>
 {
     /// <summary>
     /// Gets or sets the unique status name. It is fixed once the status is created.

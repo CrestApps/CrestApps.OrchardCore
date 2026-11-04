@@ -1,11 +1,12 @@
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.Customers.Models;
 
 /// <summary>
 /// A customer's referral link, and the friends who bought through it.
 /// </summary>
-public sealed class ReferralProfile : CatalogItem
+public sealed class ReferralProfile : CatalogItem, ITimestampedModel
 {
     public long Id { get; set; }
 

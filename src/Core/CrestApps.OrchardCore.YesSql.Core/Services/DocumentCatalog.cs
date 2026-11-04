@@ -5,6 +5,8 @@ using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Models;
+using OrchardCore.Modules;
 using YesSql;
 using YesSql.Services;
 
@@ -45,6 +47,26 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
     {
         Session = session;
     }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DocumentCatalog{T, TIndex}"/> class that stamps the created and
+    /// updated dates of a record that implements <see cref="ITimestampedModel"/> every time it is saved.
+    /// </summary>
+    /// <param name="session">The YesSql session for database access.</param>
+    /// <param name="clock">The clock the dates are read from.</param>
+    protected DocumentCatalog(ISession session, IClock clock)
+        : this(session)
+    {
+        ArgumentNullException.ThrowIfNull(clock);
+
+        Clock = clock;
+    }
+
+    /// <summary>
+    /// Gets the clock that stamps the created and updated dates of a saved record, or <see langword="null"/> when the
+    /// catalog does not stamp them.
+    /// </summary>
+    protected IClock Clock { get; }
 
     internal DocumentCatalog(
         ISession session,
@@ -214,6 +236,8 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
             record.ItemId = UniqueId.GenerateId();
         }
 
+        Stamp(record);
+
         await SavingAsync(record);
 
         await Session.SaveAsync(record, false, CollectionName, cancellationToken);
@@ -231,6 +255,8 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
             record.ItemId = UniqueId.GenerateId();
         }
 
+        Stamp(record);
+
         await SavingAsync(record);
 
         await Session.SaveAsync(
@@ -238,6 +264,23 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
             checkConcurrency: CheckConcurrency,
             collection: CollectionName,
             cancellationToken: cancellationToken);
+    }
+
+    private void Stamp(T record)
+    {
+        if (Clock is null || record is not ITimestampedModel timestamped)
+        {
+            return;
+        }
+
+        var now = Clock.UtcNow;
+
+        if (timestamped.CreatedUtc == default)
+        {
+            timestamped.CreatedUtc = now;
+        }
+
+        timestamped.UpdatedUtc = now;
     }
 
     private static Expression<Func<TIndex, object>> OrderKey(Expression<Func<TIndex, string>> name)

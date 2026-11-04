@@ -1,4 +1,5 @@
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.Numbering;
 using CrestApps.OrchardCore.Payments;
 
@@ -11,7 +12,7 @@ namespace CrestApps.OrchardCore.Orders.Core.Models;
 /// Its <see cref="Balance"/> only changes under the card's lock, through the checkout's tender ledger or an
 /// adjustment, and every change is written to <see cref="Activity"/>, so what's on the card can always be explained.
 /// </remarks>
-public sealed class GiftCard : CatalogItem
+public sealed class GiftCard : CatalogItem, ITimestampedModel
 {
     /// <summary>
     /// Gets or sets the YesSql document identifier.

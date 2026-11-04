@@ -20,7 +20,6 @@ public sealed class CouponStore : DocumentCatalog<Coupon, CouponIndex>, ICouponS
 {
     private const int CodeLength = 8;
 
-    private readonly IClock _clock;
 
     /// <summary>
     /// Enables document-version concurrency checks so two purchases redeeming the same coupon at once
@@ -34,10 +33,9 @@ public sealed class CouponStore : DocumentCatalog<Coupon, CouponIndex>, ICouponS
     /// <param name="session">The tenant YesSql session.</param>
     /// <param name="clock">The clock used for timestamps.</param>
     public CouponStore(ISession session, IClock clock)
-        : base(session)
+        : base(session, clock)
     {
         CollectionName = CheckoutConstants.CouponCollectionName;
-        _clock = clock;
     }
 
     /// <inheritdoc/>
@@ -159,7 +157,7 @@ public sealed class CouponStore : DocumentCatalog<Coupon, CouponIndex>, ICouponS
             }
         }
 
-        var now = _clock.UtcNow;
+        var now = Clock.UtcNow;
         var generated = new List<CouponCode>();
 
         foreach (var code in codes.Take(count))
@@ -217,19 +215,4 @@ public sealed class CouponStore : DocumentCatalog<Coupon, CouponIndex>, ICouponS
         => [.. await Session
             .Query<Coupon, CouponIndex>(x => x.IsAutomatic && x.IsEnabled, collection: CollectionName)
             .ListAsync(cancellationToken)];
-
-    /// <inheritdoc/>
-    protected override ValueTask SavingAsync(Coupon record)
-    {
-        var now = _clock.UtcNow;
-
-        if (record.CreatedUtc == default)
-        {
-            record.CreatedUtc = now;
-        }
-
-        record.UpdatedUtc = now;
-
-        return ValueTask.CompletedTask;
-    }
 }

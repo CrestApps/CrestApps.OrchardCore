@@ -1,5 +1,6 @@
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Customers.Models;
+using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Payments.Models;
 
@@ -15,7 +16,7 @@ namespace CrestApps.OrchardCore.Subscriptions.Models;
 /// session records how something was bought once; this records what the customer is entitled to from now on,
 /// and it outlives the checkout that created it.
 /// </remarks>
-public sealed class Subscription : CatalogItem
+public sealed class Subscription : CatalogItem, ITimestampedModel
 {
     /// <summary>
     /// Gets or sets the YesSql document identifier.

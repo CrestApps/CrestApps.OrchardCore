@@ -25,15 +25,12 @@ public interface IReferralStore : ICatalog<ReferralProfile>
 /// </summary>
 public sealed class ReferralStore : DocumentCatalog<ReferralProfile, ReferralProfileIndex>, IReferralStore
 {
-    private readonly IClock _clock;
-
     protected override bool CheckConcurrency => true;
 
     public ReferralStore(ISession session, IClock clock)
-        : base(session)
+        : base(session, clock)
     {
         CollectionName = CustomersConstants.CollectionName;
-        _clock = clock;
     }
 
     public Task<ReferralProfile> FindByCustomerAsync(string customerId, CancellationToken cancellationToken = default)
@@ -48,20 +45,6 @@ public sealed class ReferralStore : DocumentCatalog<ReferralProfile, ReferralPro
         return string.IsNullOrEmpty(code) || code.Length > 16
             ? Task.FromResult<ReferralProfile>(null)
             : Session.Query<ReferralProfile, ReferralProfileIndex>(index => index.Code == code, collection: CollectionName).FirstOrDefaultAsync(cancellationToken);
-    }
-
-    protected override ValueTask SavingAsync(ReferralProfile record)
-    {
-        var now = _clock.UtcNow;
-
-        if (record.CreatedUtc == default)
-        {
-            record.CreatedUtc = now;
-        }
-
-        record.UpdatedUtc = now;
-
-        return ValueTask.CompletedTask;
     }
 }
 

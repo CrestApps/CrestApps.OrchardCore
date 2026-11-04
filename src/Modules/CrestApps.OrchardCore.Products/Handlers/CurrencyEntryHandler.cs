@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
 using System.Text.Json.Nodes;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Products.Core;
 using CrestApps.OrchardCore.Products.Models;
 using CrestApps.OrchardCore.Products.Services;
@@ -12,11 +12,8 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Products.Handlers;
 
-internal sealed class CurrencyEntryHandler : CatalogEntryHandlerBase<CurrencyEntry>
+internal sealed class CurrencyEntryHandler : AuditedCatalogEntryHandlerBase<CurrencyEntry>
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IClock _clock;
-
     internal readonly IStringLocalizer S;
 
     /// <summary>
@@ -29,32 +26,9 @@ internal sealed class CurrencyEntryHandler : CatalogEntryHandlerBase<CurrencyEnt
         IHttpContextAccessor httpContextAccessor,
         IClock clock,
         IStringLocalizer<CurrencyEntryHandler> stringLocalizer)
+        : base(httpContextAccessor, clock)
     {
-        _httpContextAccessor = httpContextAccessor;
-        _clock = clock;
         S = stringLocalizer;
-    }
-
-    public override Task InitializingAsync(InitializingContext<CurrencyEntry> context, CancellationToken cancellationToken = default)
-    {
-        context.Model.CreatedUtc = _clock.UtcNow;
-
-        var user = _httpContextAccessor.HttpContext?.User;
-
-        if (user != null)
-        {
-            context.Model.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            context.Model.Author = user.Identity?.Name;
-        }
-
-        return PopulateAsync(context.Model, context.Data);
-    }
-
-    public override Task UpdatingAsync(UpdatingContext<CurrencyEntry> context, CancellationToken cancellationToken = default)
-    {
-        context.Model.ModifiedUtc = _clock.UtcNow;
-
-        return PopulateAsync(context.Model, context.Data);
     }
 
     public override Task ValidatingAsync(ValidatingContext<CurrencyEntry> context, CancellationToken cancellationToken = default)
@@ -86,8 +60,14 @@ internal sealed class CurrencyEntryHandler : CatalogEntryHandlerBase<CurrencyEnt
         return Task.CompletedTask;
     }
 
-    private static Task PopulateAsync(CurrencyEntry model, JsonNode data)
+    /// <inheritdoc/>
+    protected override void Populate(CurrencyEntry model, JsonNode data)
     {
+        if (data is null)
+        {
+            return;
+        }
+
         var name = CurrencyCodeUtility.Normalize(data[nameof(CurrencyEntry.Name)]?.GetValue<string>());
 
         if (!string.IsNullOrEmpty(name))
@@ -102,34 +82,5 @@ internal sealed class CurrencyEntryHandler : CatalogEntryHandlerBase<CurrencyEnt
             model.DisplayName = displayName;
         }
 
-        var ownerId = data[nameof(CurrencyEntry.OwnerId)]?.GetValue<string>()?.Trim();
-
-        if (!string.IsNullOrEmpty(ownerId))
-        {
-            model.OwnerId = ownerId;
-        }
-
-        var author = data[nameof(CurrencyEntry.Author)]?.GetValue<string>()?.Trim();
-
-        if (!string.IsNullOrEmpty(author))
-        {
-            model.Author = author;
-        }
-
-        var createdUtc = data[nameof(CurrencyEntry.CreatedUtc)]?.GetValue<DateTime?>();
-
-        if (createdUtc.HasValue)
-        {
-            model.CreatedUtc = createdUtc.Value;
-        }
-
-        var modifiedUtc = data[nameof(CurrencyEntry.ModifiedUtc)]?.GetValue<DateTime?>();
-
-        if (modifiedUtc.HasValue)
-        {
-            model.ModifiedUtc = modifiedUtc.Value;
-        }
-
-        return Task.CompletedTask;
     }
 }

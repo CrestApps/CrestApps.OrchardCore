@@ -1,9 +1,8 @@
 using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
 using System.Text.Json.Nodes;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
-using CrestApps.OrchardCore.Core.Deployments;
+using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
@@ -11,11 +10,8 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 
-internal sealed class OmnichannelCampaignHandler : CatalogEntryHandlerBase<OmnichannelCampaign>
+internal sealed class OmnichannelCampaignHandler : AuditedCatalogEntryHandlerBase<OmnichannelCampaign>
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IClock _clock;
-
     internal readonly IStringLocalizer S;
 
     /// <summary>
@@ -28,20 +24,9 @@ internal sealed class OmnichannelCampaignHandler : CatalogEntryHandlerBase<Omnic
         IHttpContextAccessor httpContextAccessor,
         IClock clock,
         IStringLocalizer<OmnichannelCampaignHandler> stringLocalizer)
+        : base(httpContextAccessor, clock)
     {
-        _httpContextAccessor = httpContextAccessor;
-        _clock = clock;
         S = stringLocalizer;
-    }
-
-    public override Task InitializingAsync(InitializingContext<OmnichannelCampaign> context, CancellationToken cancellationToken = default)
-        => PopulateAsync(context.Model, context.Data);
-
-    public override Task UpdatingAsync(UpdatingContext<OmnichannelCampaign> context, CancellationToken cancellationToken = default)
-    {
-        context.Model.ModifiedUtc = _clock.UtcNow;
-
-        return PopulateAsync(context.Model, context.Data);
     }
 
     public override Task ValidatingAsync(ValidatingContext<OmnichannelCampaign> context, CancellationToken cancellationToken = default)
@@ -54,24 +39,15 @@ internal sealed class OmnichannelCampaignHandler : CatalogEntryHandlerBase<Omnic
         return Task.CompletedTask;
     }
 
-    public override Task InitializedAsync(InitializedContext<OmnichannelCampaign> context, CancellationToken cancellationToken = default)
+    /// <inheritdoc/>
+    protected override void Populate(OmnichannelCampaign campaign, JsonNode data)
     {
-        context.Model.CreatedUtc = _clock.UtcNow;
+        base.Populate(campaign, data);
 
-        var user = _httpContextAccessor.HttpContext?.User;
-
-        if (user != null)
+        if (data is null)
         {
-            context.Model.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            context.Model.Author = user.Identity.Name;
+            return;
         }
-
-        return Task.CompletedTask;
-    }
-
-    private static Task PopulateAsync(OmnichannelCampaign campaign, JsonNode data)
-    {
-        CatalogDeploymentSerializer.Populate(campaign, data);
 
         var displayText = data[nameof(OmnichannelCampaign.DisplayText)]?.GetValue<string>()?.Trim();
 
@@ -91,7 +67,5 @@ internal sealed class OmnichannelCampaignHandler : CatalogEntryHandlerBase<Omnic
                 campaign.Properties[key] = value;
             }
         }
-
-        return Task.CompletedTask;
     }
 }

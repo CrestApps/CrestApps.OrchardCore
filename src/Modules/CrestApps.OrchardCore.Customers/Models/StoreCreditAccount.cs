@@ -1,4 +1,5 @@
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.Payments;
 
 namespace CrestApps.OrchardCore.Customers.Models;
@@ -11,7 +12,7 @@ namespace CrestApps.OrchardCore.Customers.Models;
 /// Its <see cref="Balance"/> only changes under the account's lock, through the checkout's tender ledger or a staff
 /// change, and every change is written to <see cref="Activity"/>.
 /// </remarks>
-public sealed class StoreCreditAccount : CatalogItem
+public sealed class StoreCreditAccount : CatalogItem, ITimestampedModel
 {
     public long Id { get; set; }
 

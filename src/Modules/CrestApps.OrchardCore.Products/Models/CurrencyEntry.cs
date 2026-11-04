@@ -1,13 +1,14 @@
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.Products.Models;
 
 /// <summary>
 /// Represents a managed currency that editors can reuse across products and subscriptions.
 /// </summary>
-public sealed class CurrencyEntry : CatalogItem, INameAwareModel, IModifiedUtcAwareModel, ICloneable<CurrencyEntry>
+public sealed class CurrencyEntry : CatalogItem, INameAwareModel, IAuditedModel, ICloneable<CurrencyEntry>
 {
     /// <summary>
     /// Gets or sets the ISO-4217 currency code.

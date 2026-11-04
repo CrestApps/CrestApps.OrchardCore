@@ -851,7 +851,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public const string Warm = "Warm";
         public static System.Collections.Generic.IReadOnlyList<string> All { get; }
     }
-    public sealed class LeadStatus : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.LeadStatus>, System.ICloneable
+    public sealed class LeadStatus : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.LeadStatus>, CrestApps.OrchardCore.Models.IAuditedModel, System.ICloneable
     {
         public LeadStatus() { }
         public string Author { get; set; }
@@ -1002,7 +1002,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public bool UseCallAmbience { get; set; }
         public bool TryResolveContact(OrchardCore.ContentManagement.ContentItem contact, string resolvedById, string resolvedByUsername, System.DateTime resolvedUtc) { }
     }
-    public sealed class OmnichannelActivityBatch : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IDisplayTextAwareModel, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch>, System.ICloneable
+    public sealed class OmnichannelActivityBatch : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IDisplayTextAwareModel, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch>, CrestApps.OrchardCore.Models.IAuditedModel, System.ICloneable
     {
         public OmnichannelActivityBatch() { }
         public string AIProfileId { get; set; }
@@ -1118,7 +1118,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public int ProcessorLeaseMilliseconds { get; set; }
         public int RetryDelayMinutes { get; set; }
     }
-    public sealed class OmnichannelCampaign : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IDisplayTextAwareModel, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign>, System.ICloneable
+    public sealed class OmnichannelCampaign : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IDisplayTextAwareModel, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign>, CrestApps.OrchardCore.Models.IAuditedModel, System.ICloneable
     {
         public OmnichannelCampaign() { }
         public bool AllowAIToUpdateContact { get; set; }
@@ -1146,7 +1146,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public float? TopP { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign Clone() { }
     }
-    public sealed class OmnichannelCampaignGroup : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IDisplayTextAwareModel, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaignGroup>, System.ICloneable
+    public sealed class OmnichannelCampaignGroup : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IDisplayTextAwareModel, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaignGroup>, CrestApps.OrchardCore.Models.IAuditedModel, System.ICloneable
     {
         public OmnichannelCampaignGroup() { }
         public string Author { get; set; }
@@ -1157,7 +1157,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string OwnerId { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaignGroup Clone() { }
     }
-    public sealed class OmnichannelChannelEndpoint : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IDisplayTextAwareModel, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint>, System.ICloneable
+    public sealed class OmnichannelChannelEndpoint : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IDisplayTextAwareModel, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint>, CrestApps.OrchardCore.Models.IAuditedModel, System.ICloneable
     {
         public OmnichannelChannelEndpoint() { }
         public string AddressType { get; set; }
@@ -1219,7 +1219,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public OmnichannelCrmOptions() { }
         public bool Enabled { get; set; }
     }
-    public sealed class OmnichannelDisposition : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition>, System.ICloneable
+    public sealed class OmnichannelDisposition : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition>, CrestApps.OrchardCore.Models.IAuditedModel, System.ICloneable
     {
         public OmnichannelDisposition() { }
         public string Author { get; set; }
@@ -1359,7 +1359,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public OpportunityPartSettings() { }
         public string[] StageIds { get; set; }
     }
-    public sealed class OpportunityStage : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.OpportunityStage>, System.ICloneable
+    public sealed class OpportunityStage : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.OpportunityStage>, CrestApps.OrchardCore.Models.IAuditedModel, System.ICloneable
     {
         public OpportunityStage() { }
         public string Author { get; set; }

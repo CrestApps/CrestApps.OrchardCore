@@ -1,4 +1,5 @@
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Taxation.Models;
 
@@ -11,7 +12,7 @@ namespace CrestApps.OrchardCore.Transactions.Models;
 /// <see cref="decimal"/> — the authoritative representation for durable financial records — and are only
 /// converted to a provider's integer minor units at the gateway boundary.
 /// </summary>
-public sealed class PaymentRefund : CatalogItem
+public sealed class PaymentRefund : CatalogItem, ITimestampedModel
 {
     /// <summary>
     /// The YesSql document identifier.

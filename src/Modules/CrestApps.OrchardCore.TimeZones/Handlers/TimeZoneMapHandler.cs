@@ -1,9 +1,9 @@
 using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
 using System.Text.Json.Nodes;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.TimeZones.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
@@ -11,10 +11,8 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.TimeZones.Handlers;
 
-internal sealed class TimeZoneMapHandler : CatalogEntryHandlerBase<TimeZoneMap>
+internal sealed class TimeZoneMapHandler : AuditedCatalogEntryHandlerBase<TimeZoneMap>
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IClock _clock;
     private readonly ICatalog<TimeZoneMap> _catalog;
 
     internal readonly IStringLocalizer S;
@@ -31,33 +29,10 @@ internal sealed class TimeZoneMapHandler : CatalogEntryHandlerBase<TimeZoneMap>
         IClock clock,
         ICatalog<TimeZoneMap> catalog,
         IStringLocalizer<TimeZoneMapHandler> stringLocalizer)
+        : base(httpContextAccessor, clock)
     {
-        _httpContextAccessor = httpContextAccessor;
-        _clock = clock;
         _catalog = catalog;
         S = stringLocalizer;
-    }
-
-    public override Task InitializingAsync(InitializingContext<TimeZoneMap> context, CancellationToken cancellationToken = default)
-    {
-        context.Model.CreatedUtc = _clock.UtcNow;
-
-        var user = _httpContextAccessor.HttpContext?.User;
-
-        if (user != null)
-        {
-            context.Model.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            context.Model.Author = user.Identity?.Name;
-        }
-
-        return PopulateAsync(context.Model, context.Data);
-    }
-
-    public override Task UpdatingAsync(UpdatingContext<TimeZoneMap> context, CancellationToken cancellationToken = default)
-    {
-        context.Model.ModifiedUtc = _clock.UtcNow;
-
-        return PopulateAsync(context.Model, context.Data);
     }
 
     public override async Task ValidatingAsync(ValidatingContext<TimeZoneMap> context, CancellationToken cancellationToken = default)
@@ -96,8 +71,14 @@ internal sealed class TimeZoneMapHandler : CatalogEntryHandlerBase<TimeZoneMap>
         }
     }
 
-    private static Task PopulateAsync(TimeZoneMap model, JsonNode data)
+    /// <inheritdoc/>
+    protected override void Populate(TimeZoneMap model, JsonNode data)
     {
+        if (data is null)
+        {
+            return;
+        }
+
         var name = data[nameof(TimeZoneMap.Name)]?.GetValue<string>()?.Trim();
 
         if (!string.IsNullOrEmpty(name))
@@ -112,35 +93,6 @@ internal sealed class TimeZoneMapHandler : CatalogEntryHandlerBase<TimeZoneMap>
             model.TimeZoneId = NormalizeTimeZoneId(timeZoneId) ?? timeZoneId;
         }
 
-        var ownerId = data[nameof(TimeZoneMap.OwnerId)]?.GetValue<string>()?.Trim();
-
-        if (!string.IsNullOrEmpty(ownerId))
-        {
-            model.OwnerId = ownerId;
-        }
-
-        var author = data[nameof(TimeZoneMap.Author)]?.GetValue<string>()?.Trim();
-
-        if (!string.IsNullOrEmpty(author))
-        {
-            model.Author = author;
-        }
-
-        var createdUtc = data[nameof(TimeZoneMap.CreatedUtc)]?.GetValue<DateTime?>();
-
-        if (createdUtc.HasValue)
-        {
-            model.CreatedUtc = createdUtc.Value;
-        }
-
-        var modifiedUtc = data[nameof(TimeZoneMap.ModifiedUtc)]?.GetValue<DateTime?>();
-
-        if (modifiedUtc.HasValue)
-        {
-            model.ModifiedUtc = modifiedUtc.Value;
-        }
-
-        return Task.CompletedTask;
     }
 
     private static string NormalizeTimeZoneId(string timeZoneId)
