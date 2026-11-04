@@ -12,6 +12,52 @@ CrestApps.OrchardCore is a collection of open-source modules for **Orchard Core 
 **Target Framework**: .NET 10.0 (net10.0)  
 **Architecture**: Modular, multi-tenant application framework
 
+## Building Blocks and Reuse (read before you build anything new)
+
+The solution is a set of building blocks. Each module owns one concept (an account, a team, an address, a phone number, a calendar, a skill, money, a report) and other modules compose those concepts into products, extending them through shapes, display drivers, parts, handlers and provider interfaces. The same concept is never built twice.
+
+Before you add a module, a record type, a settings page, a provider or a shared helper, read [`docs/engineering/building-blocks.md`](docs/engineering/building-blocks.md), the catalog of which building block owns which concept and how to extend it. [`docs/engineering/reusability-audit-2026-11.md`](docs/engineering/reusability-audit-2026-11.md) lists the duplicates that still exist and the plan to remove them: never copy a pattern that the audit lists as a duplicate, even though the code is in the repository.
+
+### The reuse ladder
+
+Take the first step that works, and say in the pull request which step you took:
+
+1. **Use** an existing building block: reference its `.Abstractions` project, depend on its feature (or gate the integration with `[RequireFeatures]`), and call its contracts.
+2. **Extend** it through its extension points: a display driver or shape on its record, a content part, a handler or observer, a provider interface, an `AddXxx` registration (`AddCalendarType`, `AddReport`, …) or its `Properties` bag.
+3. **Add the missing extension point to the owner** (an interface, a handler hook, a driver-based editor, an open "kind" value), then use it. Do not work around the owner.
+4. **Extract a new building block** when a second module needs a concept that only one module has. Move it into its own `X.Abstractions`/`X.Core`/module (or into the owner's Abstractions) and point both modules at it in the same plan. The second copy is the trigger; never wait for a third.
+5. **Keep it private** only when the concept is truly specific to one module, with a name that does not collide with a building block.
+
+### Reuse rules
+
+* Search before you build, by name and by meaning (for business hours, search "hours", "opening", "schedule", "availability", "holiday"). Check the catalog and `src/Targets/CrestApps.OrchardCore.Cms.Core.Targets`.
+* One concept, one owner. People are Users (`IDisplayNameProvider` for names), organizations are Accounts, groups are Teams, skills are Skills, addresses are Addresses, phones are PhoneNumbers, places and coordinates are Addresses + Geo, events and reminders are Calendars, reports are Reports, bulk import is ContentTransfer, external systems are DataConnectors, flows are Wizard, child tenants are TenantHierarchy, selling anything is Carts → Checkout → Orders.
+* Use the shared value types instead of re-declaring their fields: `Address` (never `AddressLine1`/`City` properties or a one-string address), `PhoneNumber` normalized through `IPhoneNumberService` (never a raw phone string), `GeoPoint` (never latitude/longitude pairs), `Money` with `CurrencyScale` (never a hard-coded 2-decimal rounding or another currency table), `CalendarTime` for every wall-clock conversion (never `TimeZoneInfo.ConvertTimeToUtc`), `RecurrenceRule` for repeats, a `UserId` resolved through `IDisplayNameProvider` (never a copied user name that goes stale).
+* Use the shared platform helpers instead of copying them: CrestApps.Core catalogs with `CatalogEntryHandlerBase<T>` and `AuditedCatalogEntryHandlerBase` for created/owner/author stamping; `NamedCatalogRecipeStep`, `NamedCatalogDeploymentSource` and `CatalogDeploymentSerializer`; `ProtectedSettingExtensions` for secrets; `SignedTokenService` for signed links; `SiteUrlGenerator`; `SanitizeLogValue()`; `BackgroundWorkPacer` and `DistributedLockExtensions`; `IFinancialDocumentNumberGenerator` for gap-free numbers; Orchard's `ITimeZoneSelectListProvider` for time-zone pickers; Reports (`IReport`, `IndexedReportDataSet`, `IReportExportFormat`) for analytics pages and CSV/Excel exports; the provider webhook inbox (`IProviderWebhookInbox`) for inbound provider webhooks; `IContactOptOutResolver` for every do-not-contact decision.
+* Make a building block extensible from day one: editors rendered through `IDisplayManager<TModel>` and display drivers (so other modules add fields with their own drivers), life-cycle handlers or observers, open string "kinds" instead of enums that list consumers, `AddXxx` registration helpers, and `Properties` for extension data.
+* A building block never names its consumers: no hard-coded tabs, enum values, feature IDs or types of the modules that build on it. Consumers register themselves.
+* When you extract or change a building block, migrate the existing copies in the same plan and update the catalog, so the solution never keeps two versions of a concept.
+
+### Layering and project references
+
+* `CrestApps.OrchardCore.X.Abstractions` holds contracts, shared records and value types, constants and feature IDs. It references only other `.Abstractions` projects and framework abstractions.
+* `CrestApps.OrchardCore.X.Core` holds implementations, stores and indexes, with no views, controllers, display drivers or endpoints. It never references a module project.
+* `CrestApps.OrchardCore.X` (the module) holds the manifest, startups, drivers, controllers, views, migrations, recipe and deployment steps and endpoints.
+* Reference another **module** project only to extend that module's own UI from a sub-module or provider of the same family (`AI.Documents.AzureAI` → `AI.Documents`, `OpenAI` → `AI`, `Accounts.B2B` → `Accounts`), or to use its tag helpers and view components in views (`Resources`). Never reference a module project to reach its services, models, stores or view models from another domain: move the type into that module's `.Abstractions` (or `.Core` for an implementation base) first. Reference another building block's `.Abstractions` for contracts and its `.Core` only to inherit an implementation base. Remove project references that nothing uses.
+* Put optional integrations (AI tools, reports, workflows, another domain) in a `[RequireFeatures]` startup in the consumer or in a bridge module (`Workforce.ContactCenter` is the pattern), so the building block works without them. Do not add a hard project reference to `AI.Core` only to register AI tools.
+* Domain types never go into the solution-wide `CrestApps.OrchardCore.Abstractions`; they go into their own domain's `.Abstractions`.
+* Feature IDs are constants in the owning `.Abstractions` project. Never repeat a feature ID as a string literal in `[RequireFeatures]`, manifests or recipes.
+* Channel and carrier modules (Messaging, SMS, Telnyx, Asterisk, future providers) reference `ContactCenter.Abstractions` only, never `ContactCenter.Core`, and carrier adapters hold no orchestration (queues, IVR, routing). See the layer boundary in the next section.
+
+### Reliability rules the audit added
+
+* Inbound provider webhooks are accepted through the durable, de-duplicated provider inbox. Never process them in a fire-and-forget task or de-duplicate them in memory.
+* Idempotency keys come from stable business IDs (vendor + order + earning), never from an ID generated on each attempt.
+* Document numbers (orders, returns, purchase orders, receipts) come from a locked sequence, never from `Random` or a max+1 query.
+* CSV output escapes quotes, commas, `\r` and `\n` and guards against formula injection.
+* Every endpoint checks a permission, not only that the caller is signed in.
+* Requests never authorize against a capped list (`Take(1000)`); query the record by ID.
+
 ## Contact Center module (active, multi-phase project)
 
 The **Contact Center** module set is a large, multi-phase orchestration layer built between the CRM (Omnichannel) and Telephony modules. The planning scaffolding (the multi-phase plan documents, their release-tracking ledgers, and the machine-readable governance ledgers that used to live under `.github/contact-center/`) has been retired now that the work has landed. Treat the shipped code and its tests as the source of truth for scope and boundaries before doing Contact Center work (anything under `src/**/CrestApps.OrchardCore.ContactCenter*`).
@@ -44,7 +90,7 @@ dotnet --version  # Should show 10.0.x
 
 ### Build Process
 
-**CRITICAL BUILD LIMITATION**: The .NET build requires access to Orchard Core 3.0 preview packages from `https://nuget.cloudsmith.io/orchardcore/preview/v3/index.json`. In environments with restricted network access (like CI runners or sandboxed environments), the build will fail with network connectivity errors.
+**CRITICAL BUILD LIMITATION**: The .NET build requires access to the Orchard Core 4.0 preview packages (`OrchardCoreVersion` in `Directory.Packages.props`) from `https://nuget.cloudsmith.io/orchardcore/preview/v3/index.json` and to the CrestApps.Core preview packages from `https://nuget.cloudsmith.io/crestapps/crestapps-core/v3/index.json`. In environments with restricted network access (like CI runners or sandboxed environments), the build will fail with network connectivity errors.
 
 #### Asset Build (Always Works)
 ```bash
@@ -222,7 +268,7 @@ Every admin create, edit, settings, import or other form page keeps its buttons 
 #### Quality Enforcement
 
 * Treat all warnings as errors and resolve every warning.
-* Continuously evolve and update `copilot-instructions.md` with newly established preferences and patterns.
+* Continuously evolve and update this `AGENTS.md` file (and `docs/engineering/building-blocks.md` for building blocks) with newly established preferences and patterns.
 * Use ASD-STE100 Simplified Technical English for all responses.
 
 ### Validation Scenarios
@@ -248,74 +294,41 @@ Every admin create, edit, settings, import or other form page keeps its buttons 
 ### Key Directories
 ```
 src/
-├── Abstractions/               # Shared interface/abstraction libraries
-│   ├── CrestApps.OrchardCore.Abstractions/         # Core abstractions
-│   ├── CrestApps.OrchardCore.AI.Abstractions/      # AI abstractions
-│   └── CrestApps.OrchardCore.Users.Abstractions/   # User abstractions
-├── Common/                     # Shared utility libraries
-│   └── CrestApps.Core.Support/                          # General support utilities
-├── Core/                       # Core service libraries (not Orchard modules)
-│   ├── CrestApps.Core.Azure.Core/                       # Azure utilities
-│   ├── CrestApps.OrchardCore.AI.Chat.Interactions.Core/  # Chat interaction core services
-│   ├── CrestApps.OrchardCore.AI.Core/              # AI core services
-│   ├── CrestApps.OrchardCore.AI.Mcp.Core/          # MCP core services
-│   ├── CrestApps.OrchardCore.Core/                 # General OrchardCore core
-│   ├── CrestApps.OrchardCore.Omnichannel.Core/     # Omnichannel core services
-│   ├── CrestApps.OrchardCore.OpenAI.Azure.Core/    # Azure OpenAI core
-│   ├── CrestApps.OrchardCore.OpenAI.Core/          # OpenAI core services
-│   ├── CrestApps.OrchardCore.Recipes.Core/         # Recipes core services
-│   ├── CrestApps.OrchardCore.Roles.Core/           # Roles core services
-│   ├── CrestApps.OrchardCore.Users.Core/           # Users core services
-│   └── CrestApps.OrchardCore.YesSql.Core/          # YesSql core utilities
-├── Modules/                    # All CrestApps Orchard Core modules
-│   ├── CrestApps.OrchardCore.AI/                   # AI base services and deployments
-│   ├── CrestApps.OrchardCore.AI.Agent/             # AI agents
-│   ├── CrestApps.OrchardCore.AI.Chat/              # AI chat interface and profiles
-│   ├── CrestApps.OrchardCore.AI.Chat.Copilot/      # GitHub Copilot-style AI chat
-│   ├── CrestApps.OrchardCore.AI.Chat.Interactions/ # Real-time AI chat interactions (SignalR hub)
-│   ├── CrestApps.OrchardCore.AI.Chat.Interactions.Documents/          # Document-based chat interactions
-│   ├── CrestApps.OrchardCore.AI.Chat.Interactions.Documents.AzureAI/  # Azure AI document interactions
-│   ├── CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Elasticsearch/ # Elasticsearch document interactions
-│   ├── CrestApps.OrchardCore.AI.Chat.Interactions.OpenXml/            # OpenXml document chat interactions
-│   ├── CrestApps.OrchardCore.AI.Chat.Interactions.Pdf/                # PDF document chat interactions
-│   ├── CrestApps.OrchardCore.AI.DataSources/                          # AI data source management
-│   ├── CrestApps.OrchardCore.AI.DataSources.AzureAI/                  # Azure AI Search data sources
-│   ├── CrestApps.OrchardCore.AI.DataSources.Elasticsearch/            # Elasticsearch data sources
-│   ├── CrestApps.OrchardCore.AI.Documents/                            # AI document indexing and management
-│   ├── CrestApps.OrchardCore.AI.Documents.AzureAI/                    # Azure AI document storage
-│   ├── CrestApps.OrchardCore.AI.Documents.Elasticsearch/              # Elasticsearch document storage
-│   ├── CrestApps.OrchardCore.AI.Documents.OpenXml/                    # OpenXml document parsing
-│   ├── CrestApps.OrchardCore.AI.Documents.Pdf/                        # PDF document parsing
-│   ├── CrestApps.OrchardCore.AI.Mcp/                                  # Model Context Protocol server
-│   ├── CrestApps.OrchardCore.AI.Mcp.Resources.Ftp/                    # MCP FTP resource handler
-│   ├── CrestApps.OrchardCore.AI.Mcp.Resources.Sftp/                   # MCP SFTP resource handler
-│   ├── CrestApps.OrchardCore.AzureAIInference/     # Azure AI Inference / GitHub Models provider
-│   ├── CrestApps.OrchardCore.ContentAccessControl/ # Content item access control
-│   ├── CrestApps.OrchardCore.Ollama/               # Ollama (local LLM) provider
-│   ├── CrestApps.OrchardCore.Omnichannel/          # Omnichannel communication base
-│   ├── CrestApps.OrchardCore.Omnichannel.EventGrid/ # Event Grid omnichannel integration
-│   ├── CrestApps.OrchardCore.Omnichannel.Managements/ # Omnichannel management UI
-│   ├── CrestApps.OrchardCore.Omnichannel.Sms/      # SMS omnichannel channel
-│   ├── CrestApps.OrchardCore.OpenAI/               # OpenAI provider
-│   ├── CrestApps.OrchardCore.OpenAI.Azure/         # Azure OpenAI provider
-│   ├── CrestApps.OrchardCore.Recipes/              # Recipe enhancements
-│   ├── CrestApps.OrchardCore.Resources/            # Shared frontend resources
-│   ├── CrestApps.OrchardCore.Roles/                # Enhanced roles management
-│   ├── CrestApps.OrchardCore.SignalR/              # SignalR integration
-│   └── CrestApps.OrchardCore.Users/               # Enhanced user management
-├── CrestApps.Docs/  # Docusaurus documentation site
-├── Startup/                    # Runnable applications
-│   ├── CrestApps.Aspire.AppHost/                        # .NET Aspire orchestration host
-│   ├── CrestApps.OrchardCore.Cms.Web/              # Main CMS web application
-│   └── CrestApps.OrchardCore.Samples.McpClient/    # MCP client sample application
-└── Targets/                    # MSBuild package bundle targets
-    └── CrestApps.OrchardCore.Cms.Core.Targets/
+├── Abstractions/   # CrestApps.OrchardCore.{X}.Abstractions: contracts, shared records, constants, feature IDs
+├── Core/           # CrestApps.OrchardCore.{X}.Core: implementations, stores, indexes (no UI); shared platform
+│                   #   libraries CrestApps.OrchardCore.Core and CrestApps.OrchardCore.YesSql.Core
+├── Modules/        # CrestApps.OrchardCore.{X}: about 120 Orchard Core modules (manifest, startups, drivers, views)
+├── Themes/         # CrestApps.OrchardCore.StorefrontTheme
+├── CrestApps.Docs/ # Docusaurus documentation site (User Manual and Technical Manual)
+├── Startup/        # Runnable hosts: Cms.Web (main app), Aspire.AppHost, Asterisk.Web (dev diagnostics),
+│                   #   Samples.McpClient, Samples.A2AClient
+└── Targets/        # CrestApps.OrchardCore.Cms.Core.Targets: references every module so Orchard Core discovers it
 
 tests/
-└── CrestApps.OrchardCore.Tests/    # Unit test project
+├── CrestApps.OrchardCore.Tests/                          # Unit tests (most modules)
+├── CrestApps.OrchardCore.Commerce.IntegrationTests/
+├── CrestApps.OrchardCore.ContactCenter.DistributedTests/ # Need Redis/PostgreSQL environment variables
+├── CrestApps.OrchardCore.ContactCenter.FeatureActivationTests/
+├── CrestApps.OrchardCore.TenantHierarchy.IntegrationTests/
+├── CrestApps.OrchardCore.Telephony.PlaywrightTests/
+├── CrestApps.OrchardCore.Benchmarks/
+└── js/                                                   # Vitest asset and view lint tests
 
-.github/workflows/              # CI/CD pipelines
+docs/engineering/   # Engineering plans and reviews, including building-blocks.md (the building-block catalog)
+.agents/skills/     # Repository development skills
+.github/workflows/  # CI/CD pipelines
 ```
+
+### Module Map
+
+Modules by product area (each `X` is `src/Modules/CrestApps.OrchardCore.X`; most have matching `.Abstractions` and `.Core` projects). The building blocks other modules reuse are in **bold**; see [`docs/engineering/building-blocks.md`](docs/engineering/building-blocks.md) for what each owns and how to extend it.
+
+- **Platform**: **Recipes**, **Resources**, **ContentFields**, ContentAccessControl, **ContentTransfer** (+ Azure, OpenXml), **Wizard**, **Users**, Roles, **TimeZones**, **TenantHierarchy**, **WebSockets**, SignalR (deprecated), **Seo**, NLWeb, **DataConnectors** (+ SqlServer), **Reports** (+ OpenXml, Pdf).
+- **People and places**: **Accounts**, Accounts.B2B, **Customers**, **Teams**, **Skills**, **Addresses**, **PhoneNumbers**, PhoneNumbers.Verifications, **Geo** (+ AzureMaps, GoogleMaps, Osrm).
+- **Time and work**: **Calendars**, **Scheduling**, **TimeTracker**, Workforce, Workforce.ContactCenter, WorkOrders, Dispatch, **Assets**, OrTools.
+- **CRM and communication**: **Omnichannel**, Omnichannel.Managements (CRM), Omnichannel.EventGrid, **Omnichannel.Messaging** (+ Azure, Sms), Omnichannel.Sms, Omnichannel.Voice, **DncRegistry** (+ Azure), ContactCenter, **Telephony** (+ Azure), Telnyx, Asterisk.
+- **AI**: **AI**, AI.A2A, AI.Agent, AI.Chat, AI.Chat.Claude, AI.Chat.Copilot, AI.Chat.Interactions, AI.DataSources (+ AzureAI, Elasticsearch, PostgreSQL), AI.Documents (+ Azure, AzureAI, Elasticsearch, OpenXml, Pdf), AI.FileSources (+ Ftp, Sftp), AI.Mcp (+ Resources.Ftp, Resources.Sftp), AI.Memory (+ AzureAI, Elasticsearch), AI.Prompting, AI.WebCrawlers, AI.WebMcp; providers OpenAI, OpenAI.Azure, AzureAIInference, Ollama, Cartesia, ElevenLabs.
+- **Commerce**: Commerce, Commerce.Webhooks, **Products** (+ AzureAI, Elasticsearch, Lucene), **Carts**, **Checkout**, **Orders**, **Transactions**, **Receipts**, Stripe, PayLater, **Subscriptions**, Memberships, Inventory, Shipping, **Taxation**, Markets, Marketing, Marketplace, Classifieds, PointOfSale, Fundraising, Downloads, Reviews, Bookings.
 
 ### Important Files
 - `CrestApps.OrchardCore.slnx` - Main solution file (Visual Studio XML format)
@@ -331,14 +344,15 @@ tests/
 ## Common Development Tasks
 
 ### Adding a New Module
-1. Create new folder in `src/Modules/CrestApps.OrchardCore.{ModuleName}/`
-2. Add module project file following existing patterns
-3. Include `Manifest.cs` with module definition
-4. Add module reference to appropriate target package
+1. **Reuse first** (see *Building Blocks and Reuse*): list every concept the module needs (people, organizations, groups, addresses, phones, places, hours, events, skills, money, numbers, reports, imports, webhooks, files, secrets) and map each one to its owner in [`docs/engineering/building-blocks.md`](docs/engineering/building-blocks.md). Build only what has no owner, extract a concept into a building block when another module already has it, and record the mapping in the plan and the pull request.
+2. Create the projects the layering rules need: `src/Abstractions/CrestApps.OrchardCore.{ModuleName}.Abstractions/` for contracts others consume, `src/Core/CrestApps.OrchardCore.{ModuleName}.Core/` for implementations, and `src/Modules/CrestApps.OrchardCore.{ModuleName}/` for the module. Reach other building blocks' services and models through their `.Abstractions` projects, not through their module projects (see *Layering and project references*).
+3. Add the module project file following existing patterns, and add every new project to `CrestApps.OrchardCore.slnx`.
+4. Include `Manifest.cs` with the module definition, with feature IDs as constants in the `.Abstractions` project and optional integrations as separate features or `[RequireFeatures]` startups.
 5. **Update Targets**: Add a reference to the new module in the targets project `src/Targets/CrestApps.OrchardCore.Cms.Core.Targets/CrestApps.OrchardCore.Cms.Core.Targets.targets` so it is discoverable by Orchard Core.
-6. **Work test-first**: add the failing test before the implementation and drive the module with TDD (see *Test-Driven Development*).
-7. **Document it**: add/refresh the module `README.md` and the relevant page under `src/CrestApps.Docs/docs` in the same change (see *Documentation expectations*).
-8. **Consider a development AI skill**: if the module introduces extension points others (or an AI agent) will build against, add a skill under `.agents/skills/` (see *AI Development Skills*).
+6. **Make it extensible and portable**: driver-based editors, life-cycle handlers, a recipe step and a deployment step for every record type, and `ConfigurationSchema.json` for every options class.
+7. **Work test-first**: add the failing test before the implementation and drive the module with TDD (see *Test-Driven Development*).
+8. **Document it**: add/refresh the module `README.md` and the relevant page under `src/CrestApps.Docs/docs` in the same change (see *Documentation expectations*). If the module adds or changes a building block, update `docs/engineering/building-blocks.md` too.
+9. **Consider a development AI skill**: if the module introduces extension points others (or an AI agent) will build against, add a skill under `.agents/skills/` (see *AI Development Skills*).
 
 ### Working with AI Modules
 - **Base AI Module**: `CrestApps.OrchardCore.AI` - start here for AI-related changes; manages deployments and provider connections
@@ -477,6 +491,7 @@ When a change affects public behavior, configuration, setup, or project guidance
 This project requires network access to:
 - `https://api.nuget.org/v3/index.json` (public NuGet)
 - `https://nuget.cloudsmith.io/orchardcore/preview/v3/index.json` (Orchard Core previews)
+- `https://nuget.cloudsmith.io/crestapps/crestapps-core/v3/index.json` (CrestApps.Core previews)
 
 If CloudSmith is inaccessible, only asset builds and code analysis are possible.
 
@@ -792,6 +807,10 @@ services.AddNavigationProvider<MyAdminMenu>();
 
 ## Anti-Patterns to Avoid
 
+- Don't re-model a concept that a building block owns: no address-line fields, raw phone strings, latitude/longitude pairs, second organization or "company" records, roles used as teams, extra business-hours, holiday, skill or currency tables, or copied user names (see `docs/engineering/building-blocks.md`)
+- Don't copy a helper, base class, serializer or view from another module; move it to the owning building block or the shared platform library and reuse it from both places
+- Don't reference another domain's module project to reach its services or models, and don't let a `.Core` library reference a module project
+- Don't make a building block name its consumers (hard-coded tabs, enum values or feature IDs of the modules built on it)
 - Don't use static mutable state
 - Don't create tight coupling between modules
 - Don't bypass Orchard Core's dependency injection

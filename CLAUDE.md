@@ -4,6 +4,12 @@
 - Never add `Co-authored-by: Claude` or any Claude-related co-author trailer to commits.
 - Commits must use only the configured human Git author.
 
+## Building Blocks and Reuse
+
+- The solution is a set of building blocks: each module owns one concept (Accounts, Teams, Addresses, PhoneNumbers, Geo, Calendars, Skills, Money, Reports...) and other modules compose and extend it through shapes, display drivers, parts, handlers and provider interfaces. Never build the same concept twice.
+- Before you add a module, a record type, a provider or a shared helper, read the "Building Blocks and Reuse" section of `AGENTS.md` and the catalog in `docs/engineering/building-blocks.md`, map every concept to its owner, and follow the reuse ladder: use, extend, add the missing extension point to the owner, extract a building block when a second module needs a concept, and only then keep it private.
+- Never copy a pattern that `docs/engineering/reusability-audit-2026-11.md` lists as a duplicate. Reach other building blocks' services and models through their `.Abstractions` projects, never through another domain's module project.
+
 ## Admin Index (CRUD List) Pages
 
 - Every admin page that lists records renders through Orchard Core's `<admin-list>` tag helper and `AdminList` shape, so it honors the List/Grid layout and Buttons/Menu row actions from **Configuration → Settings → Admin**. Never hand-write a `<ul class="list-group">`/`<table>` listing, toolbar, select-all, item count, empty state or pager.
