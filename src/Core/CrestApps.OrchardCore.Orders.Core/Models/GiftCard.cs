@@ -1,4 +1,5 @@
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Numbering;
 
 namespace CrestApps.OrchardCore.Orders.Core.Models;
 
@@ -160,14 +161,11 @@ public static class GiftCardCodes
     /// </summary>
     public const int Length = 16;
 
-    // No 0, O, 1 or I, which people misread on a card.
-    private static readonly char[] _alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".ToCharArray();
-
     /// <summary>
     /// Returns a new random code, in groups of four.
     /// </summary>
     public static string Generate()
-        => Format(new string(System.Security.Cryptography.RandomNumberGenerator.GetItems<char>(_alphabet, Length)));
+        => Format(ReadableCodes.Generate(Length));
 
     /// <summary>
     /// Returns a code in groups of four separated by dashes.

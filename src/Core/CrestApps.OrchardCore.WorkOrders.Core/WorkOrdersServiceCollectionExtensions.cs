@@ -30,6 +30,7 @@ public static class WorkOrdersServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<WorkOrderSubStatus>, WorkOrderSubStatusHandler>());
         services.TryAddScoped<SlaClock>();
         services.TryAddScoped<SlaMonitor>();
+        services.AddNumberSequence();
         services.TryAddScoped<WorkOrderService>();
 
         return services;

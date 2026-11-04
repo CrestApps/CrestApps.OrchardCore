@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Orders.Services;
 using CrestApps.OrchardCore.Tests.Customers;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Transactions;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
@@ -156,7 +157,7 @@ public sealed class OrderOperationsTests
     }
 
     private OrderService OrderService()
-        => new(_orders, [_handler], Clock(), NullLogger<OrderService>.Instance);
+        => new(_orders, [_handler], new InMemoryNumberSequence(), Clock(), NullLogger<OrderService>.Instance);
 
     private OrderOperationsService Operations(IServiceProvider services)
         => new(

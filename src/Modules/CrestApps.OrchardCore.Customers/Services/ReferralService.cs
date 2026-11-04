@@ -1,8 +1,8 @@
-using System.Security.Cryptography;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Customers.Indexes;
 using CrestApps.OrchardCore.Customers.Models;
+using CrestApps.OrchardCore.Numbering;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using OrchardCore;
 using OrchardCore.Modules;
@@ -75,9 +75,6 @@ public sealed class ReferralService
     /// </summary>
     public const string CookieName = "orchard-referral";
 
-    // No 0, O, 1 or I, which people misread when they share a link by hand.
-    private static readonly char[] _alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".ToCharArray();
-
     private readonly IReferralStore _store;
     private readonly ISession _session;
 
@@ -103,7 +100,7 @@ public sealed class ReferralService
 
         do
         {
-            code = new string(RandomNumberGenerator.GetItems<char>(_alphabet, 8));
+            code = ReadableCodes.Generate(8);
         }
         while (await _store.FindByCodeAsync(code, cancellationToken) is not null);
 

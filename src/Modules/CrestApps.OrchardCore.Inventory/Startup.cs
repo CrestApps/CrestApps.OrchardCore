@@ -233,6 +233,7 @@ public sealed class PurchaseOrdersStartup : StartupBase
     {
         services.AddDataMigration<PurchaseOrderMigrations>()
             .AddIndexProvider<PurchaseOrderIndexProvider>();
+        services.AddNumberSequence();
         services.AddScoped<IPurchaseOrderStore, PurchaseOrderStore>();
         services.AddScoped<PurchaseOrderReceiver>();
         services.AddDisplayDriver<PurchaseOrder, PurchaseOrderDisplayDriver>();

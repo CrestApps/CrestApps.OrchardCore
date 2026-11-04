@@ -30,6 +30,7 @@ public static class DispatchServiceCollectionExtensions
         services.TryAddScoped<DispatchResources>();
         services.TryAddScoped<SlotFitter>();
         services.TryAddScoped<VisitCalendarWriter>();
+        services.AddNumberSequence();
         services.TryAddScoped<IDispatchService, DefaultDispatchService>();
         services.TryAddScoped<IDispatchCandidateFinder, DefaultDispatchCandidateFinder>();
         services.TryAddScoped(sp => new Lazy<WorkOrderService>(sp.GetRequiredService<WorkOrderService>));

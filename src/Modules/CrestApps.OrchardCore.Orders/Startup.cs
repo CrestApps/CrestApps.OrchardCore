@@ -53,6 +53,7 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<OrderIndexProvider>();
 
         services.AddScoped<IOrderStore, OrderStore>();
+        services.AddNumberSequence();
         services.AddScoped<IOrderService, OrderService>();
         services.AddScoped<IStoreSetupStep, TestOrderSetupStep>();
 

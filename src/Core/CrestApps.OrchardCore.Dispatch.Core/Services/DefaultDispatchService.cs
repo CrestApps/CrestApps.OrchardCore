@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Calendars.Services;
 using CrestApps.OrchardCore.Dispatch.Core.Indexes;
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
+using CrestApps.OrchardCore.Numbering;
 using CrestApps.OrchardCore.WorkOrders.Core;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
@@ -31,6 +32,7 @@ public sealed class DefaultDispatchService : IDispatchService
     private readonly SlotFitter _fitter;
     private readonly VisitCalendarWriter _calendarWriter;
     private readonly IDistributedLock _distributedLock;
+    private readonly INumberSequence _numberSequence;
     private readonly IDispatchSettingsProvider _settingsProvider;
     private readonly Lazy<WorkOrderService> _workOrders;
     private readonly WorkOrderStore _workOrderStore;
@@ -53,6 +55,7 @@ public sealed class DefaultDispatchService : IDispatchService
         SlotFitter fitter,
         VisitCalendarWriter calendarWriter,
         IDistributedLock distributedLock,
+        INumberSequence numberSequence,
         IDispatchSettingsProvider settingsProvider,
         Lazy<WorkOrderService> workOrders,
         WorkOrderStore workOrderStore,
@@ -70,6 +73,7 @@ public sealed class DefaultDispatchService : IDispatchService
         _fitter = fitter;
         _calendarWriter = calendarWriter;
         _distributedLock = distributedLock;
+        _numberSequence = numberSequence;
         _settingsProvider = settingsProvider;
         _workOrders = workOrders;
         _workOrderStore = workOrderStore;
@@ -651,16 +655,17 @@ public sealed class DefaultDispatchService : IDispatchService
         }
     }
 
-    private async Task<string> NextNumberAsync(CancellationToken cancellationToken)
-    {
-        var numbers = await _session.QueryIndex<ServiceVisitIndex>(index => index.Number.StartsWith(DispatchConstants.VisitNumberPrefix), collection: DispatchConstants.CollectionName).ListAsync(cancellationToken);
-        var last = numbers
-            .Select(index => int.TryParse(index.Number.AsSpan(DispatchConstants.VisitNumberPrefix.Length), NumberStyles.None, CultureInfo.InvariantCulture, out var value) ? value : 0)
-            .DefaultIfEmpty(0)
-            .Max();
+    // A locked, gap-free sequence. A site that numbered its visits before the sequence carries on after its highest number.
+    private Task<string> NextNumberAsync(CancellationToken cancellationToken)
+        => _numberSequence.NextAsync(DispatchConstants.VisitNumberSeries, DispatchConstants.VisitNumberPrefix, 6, new NumberSequenceOptions
+        {
+            SeedAsync = async token =>
+            {
+                var numbers = await _session.QueryIndex<ServiceVisitIndex>(index => index.Number.StartsWith(DispatchConstants.VisitNumberPrefix), collection: DispatchConstants.CollectionName).ListAsync(token);
 
-        return DispatchConstants.VisitNumberPrefix + (last + 1).ToString("D6", CultureInfo.InvariantCulture);
-    }
+                return NumberSequenceExtensions.HighestNumber(numbers.Select(index => index.Number), DispatchConstants.VisitNumberPrefix);
+            },
+        }, cancellationToken);
 
     private async Task NotifyAsync(ServiceVisit visit, string eventName, IReadOnlyDictionary<string, object> detail, CancellationToken cancellationToken)
     {

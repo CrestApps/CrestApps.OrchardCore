@@ -1,6 +1,7 @@
-using System.Security.Cryptography;
+using System.Globalization;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Carts.Core.Models;
+using CrestApps.OrchardCore.Numbering;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -64,16 +65,28 @@ public interface IOrderService
 public sealed class OrderService : IOrderService
 {
     // Crockford's base 32, without the letters that read as digits.
-    private const string NumberAlphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+    /// <summary>
+    /// The number sequence series that order numbers come from.
+    /// </summary>
+    public const string OrderNumberSeries = "Orders.Order";
+
+    private const int OrderCodeLength = 6;
 
     private readonly IOrderStore _store;
     private readonly IEnumerable<IOrderEventHandler> _handlers;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly INumberSequence _numberSequence;
 
-    public OrderService(IOrderStore store, IEnumerable<IOrderEventHandler> handlers, IClock clock, ILogger<OrderService> logger)
+    public OrderService(
+        IOrderStore store,
+        IEnumerable<IOrderEventHandler> handlers,
+        INumberSequence numberSequence,
+        IClock clock,
+        ILogger<OrderService> logger)
     {
         _store = store;
+        _numberSequence = numberSequence;
         _handlers = handlers;
         _clock = clock;
         _logger = logger;
@@ -272,29 +285,22 @@ public sealed class OrderService : IOrderService
     }
 
     /// <summary>
-    /// A number a customer can read out on the phone: the date, then six random characters, such as
-    /// <c>261013-7F3K2Q</c>.
+    /// A number a customer can read out on the phone: the date, then six characters made from the order's place in a
+    /// locked sequence, such as <c>261013-7F3K2Q</c>. Two orders never get the same characters, and the characters do
+    /// not show how many orders the store takes.
     /// </summary>
-    internal static string FormatOrderNumber(DateTime utc, ReadOnlySpan<byte> random)
-    {
-        Span<char> suffix = stackalloc char[6];
-
-        for (var i = 0; i < suffix.Length; i++)
-        {
-            suffix[i] = NumberAlphabet[random[i] % NumberAlphabet.Length];
-        }
-
-        return $"{utc:yyMMdd}-{suffix}";
-    }
+    internal static string FormatOrderNumber(DateTime utc, long sequence)
+        => $"{utc.ToString("yyMMdd", CultureInfo.InvariantCulture)}-{ReadableCodes.FromNumber(sequence, OrderCodeLength)}";
 
     private async Task<string> NewOrderNumberAsync(DateTime now, CancellationToken cancellationToken)
     {
-        // A billion numbers a day makes a clash unlikely; checking makes it impossible in practice.
-        for (var attempt = 0; ; attempt++)
+        // Orders numbered before the sequence used random characters, so a new number is checked against them; on the
+        // rare clash the next number of the sequence is taken.
+        while (true)
         {
-            var number = FormatOrderNumber(now, RandomNumberGenerator.GetBytes(6));
+            var number = FormatOrderNumber(now, await _numberSequence.NextAsync(OrderNumberSeries, cancellationToken: cancellationToken));
 
-            if (attempt >= 4 || await _store.FindByNumberAsync(number, cancellationToken) is null)
+            if (await _store.FindByNumberAsync(number, cancellationToken) is null)
             {
                 return number;
             }
