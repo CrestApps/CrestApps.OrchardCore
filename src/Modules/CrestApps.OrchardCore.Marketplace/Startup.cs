@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Marketplace.BackgroundTasks;
 using CrestApps.OrchardCore.Marketplace.Drivers;
 using CrestApps.OrchardCore.Marketplace.Handlers;
@@ -32,6 +33,7 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<VendorEarningIndexProvider>()
             .AddIndexProvider<VendorPayoutIndexProvider>();
         services.AddScoped<IVendorStore, VendorStore>();
+        services.AddScoped<ICommercePersonalDataContributor, VendorPersonalDataContributor>();
         services.AddScoped<IVendorEarningStore, VendorEarningStore>();
         services.AddScoped<IVendorPayoutStore, VendorPayoutStore>();
         services.AddScoped<MarketplaceService>();

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Carts.Core.Models;
 using CrestApps.OrchardCore.Carts.Core.Services;
+using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Fundraising.Drivers;
 using CrestApps.OrchardCore.Fundraising.Handlers;
 using CrestApps.OrchardCore.Fundraising.Indexes;
@@ -31,6 +32,7 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<FundraisingMigrations>()
             .AddIndexProvider<DonationIndexProvider>();
         services.AddScoped<IDonationStore, DonationStore>();
+        services.AddScoped<ICommercePersonalDataContributor, DonationPersonalDataContributor>();
         services.AddCommerceEmailSender();
         services.AddScoped<DonationService>();
 

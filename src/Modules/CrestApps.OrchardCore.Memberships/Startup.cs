@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Carts.Core.Services;
+using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Memberships.BackgroundTasks;
 using CrestApps.OrchardCore.Memberships.Drivers;
 using CrestApps.OrchardCore.Memberships.Handlers;
@@ -32,6 +33,7 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<MembershipMigrations>()
             .AddIndexProvider<MembershipIndexProvider>();
         services.AddScoped<IMembershipStore, MembershipStore>();
+        services.AddScoped<ICommercePersonalDataContributor, MembershipPersonalDataContributor>();
         services.AddScoped<MembershipService>();
         services.AddRoleGrants();
         services.AddScoped<IRoleGrantSource, MembershipRoleGrantSource>();

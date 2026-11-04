@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Seo;
 using CrestApps.OrchardCore.Reviews.StructuredData;
 using CrestApps.OrchardCore.Customers.Core;
@@ -35,6 +36,7 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<ProductReviewIndexProvider>();
 
         services.AddScoped<ReviewService>();
+        services.AddScoped<ICommercePersonalDataContributor, ReviewPersonalDataContributor>();
         services.AddScoped<ReviewPhotoStore>();
         services.AddScoped<ProductRatingReader>();
         services.AddContentPart<ProductPart>()
