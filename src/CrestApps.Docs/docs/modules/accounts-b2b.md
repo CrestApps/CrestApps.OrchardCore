@@ -21,7 +21,7 @@ The feature's migration defines `B2BAccountPart` and adds it to the `Account` ty
 | `B2BAccountPart` | |
 | --- | --- |
 | `Enabled` | Whether the account buys as a business. While it is off, its buyers buy for themselves. |
-| `TaxId`, `BillingEmail` | The tax number prints on its invoices. |
+| `TaxId`, `BillingEmail` | The tax number prints on its invoices, and reaches checkout tax: `B2BCheckoutTaxProfileHandler` taxes a buyer who buys for the account as a business (`CustomerTaxType.B2B`), with this number as its tax and VAT number. A sale at a register is not taxed as the cashier's account. The exemption and certificates on the buyer's customer record still apply. |
 | `OrderLimits` | `BuyerOrderLimit`: `UserId`, `Limit` (store currency), for the buyers that have one. A limit for a user who is no longer a member is ignored. |
 | `Terms` | `AccountTerms`: `NetDays`, `DepositPercent`, `CreditLimit`, `RequirePurchaseOrder`. `OffersTerms` is true when `NetDays` is set. |
 | `PriceListId` | The `PriceList` its buyers pay, or none. |

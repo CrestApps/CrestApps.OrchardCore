@@ -66,6 +66,9 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICartActionProvider, PunchoutCartActionProvider>();
         services.AddScoped<ICheckoutPaymentGate, B2BApprovalPaymentGate>();
         services.AddScoped<ICheckoutHandler, B2BCheckoutHandler>();
+
+        // An account buyer is taxed as a business, with the account's tax or VAT number.
+        services.AddScoped<ICheckoutTaxProfileHandler, B2BCheckoutTaxProfileHandler>();
         services.AddDisplayDriver<CheckoutFlow, B2BCheckoutStepDisplayDriver>();
 
         services.AddPermissionProvider<B2BAccountsPermissionProvider>();
