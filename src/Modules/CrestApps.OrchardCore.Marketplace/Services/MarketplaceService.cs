@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Marketplace.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Products.Core.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
@@ -94,9 +95,9 @@ public sealed class MarketplaceService
                 continue;
             }
 
-            var gross = MarketplaceLedger.GetLineGross(line.LineTotal, order.Subtotal, order.DiscountTotal);
+            var gross = MarketplaceLedger.GetLineGross(line.LineTotal, order.Subtotal, order.DiscountTotal, order.Currency);
             var percent = vendor.CommissionPercent ?? settings.CommissionPercent;
-            var (commission, net) = MarketplaceLedger.Split(gross, percent);
+            var (commission, net) = MarketplaceLedger.Split(gross, percent, order.Currency);
 
             await _earnings.CreateAsync(new VendorEarning
             {
@@ -148,14 +149,14 @@ public sealed class MarketplaceService
 
         foreach (var sale in sales)
         {
-            var gross = MarketplaceLedger.GetRefundShare(sale.Gross, refund.Amount, paid);
+            var gross = MarketplaceLedger.GetRefundShare(sale.Gross, refund.Amount, paid, sale.Currency);
 
             if (gross <= 0m)
             {
                 continue;
             }
 
-            var (commission, net) = MarketplaceLedger.Split(-gross, sale.CommissionPercent);
+            var (commission, net) = MarketplaceLedger.Split(-gross, sale.CommissionPercent, sale.Currency);
 
             await _earnings.CreateAsync(new VendorEarning
             {
@@ -260,7 +261,7 @@ public sealed class MarketplaceService
 
         foreach (var group in (await _earnings.ListAvailableAsync(vendor.ItemId, cancellationToken)).GroupBy(earning => (earning.OrderId, earning.Currency)))
         {
-            var amount = Math.Round(group.Sum(earning => earning.Net), 2, MidpointRounding.AwayFromZero);
+            var amount = Money.Round(group.Sum(earning => earning.Net), group.Key.Currency);
 
             // A refund bigger than what's left of the order waits for later sales to make up for it.
             if (amount <= 0m)

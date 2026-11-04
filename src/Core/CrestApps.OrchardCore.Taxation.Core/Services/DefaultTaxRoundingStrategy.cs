@@ -1,4 +1,5 @@
 using System;
+using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Taxation.Core.Models;
 using CrestApps.OrchardCore.Taxation.Services;
 using Microsoft.Extensions.Options;
@@ -6,8 +7,9 @@ using Microsoft.Extensions.Options;
 namespace CrestApps.OrchardCore.Taxation.Core.Services;
 
 /// <summary>
-/// Default <see cref="ITaxRoundingStrategy"/> that rounds values using the configured number of decimal
-/// places and midpoint mode.
+/// Default <see cref="ITaxRoundingStrategy"/> that rounds values to the currency's precision from
+/// <see cref="CurrencyScale"/>, unless <see cref="TaxationOptions"/> sets a number of decimal places, and with the
+/// configured midpoint mode.
 /// </summary>
 public sealed class DefaultTaxRoundingStrategy : ITaxRoundingStrategy
 {
@@ -25,9 +27,9 @@ public sealed class DefaultTaxRoundingStrategy : ITaxRoundingStrategy
     /// <inheritdoc />
     public decimal Round(decimal value, string currency)
     {
-        var decimals = _options.DecimalPlaces;
+        var decimals = _options.DecimalPlaces ?? CurrencyScale.GetDecimalPlaces(currency);
 
-        if (!string.IsNullOrEmpty(currency) && _options.CurrencyDecimalPlaces.TryGetValue(currency, out var currencyDecimals))
+        if (!string.IsNullOrEmpty(currency) && _options.CurrencyDecimalPlaces?.TryGetValue(currency, out var currencyDecimals) == true)
         {
             decimals = currencyDecimals;
         }

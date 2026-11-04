@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Fundraising.Indexes;
 using CrestApps.OrchardCore.Fundraising.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.YesSql.Core.Services;
@@ -173,7 +174,7 @@ public sealed class DonationService
 
         foreach (var donation in donations)
         {
-            var share = paid <= 0m ? 0m : Math.Round(donation.Amount * Math.Min(1m, refund.Amount / paid), 2, MidpointRounding.AwayFromZero);
+            var share = paid <= 0m ? 0m : Money.Round(donation.Amount * Math.Min(1m, refund.Amount / paid), order.Currency);
 
             donation.Refunded = Math.Min(donation.Amount, donation.Refunded + share);
             await _donations.UpdateAsync(donation, cancellationToken);
@@ -193,7 +194,7 @@ public sealed class DonationService
         var currency = campaign.TryGet<ProductPart>(out var product) ? product.Currency : null;
         int? daysLeft = part?.EndsUtc is { } ends ? Math.Max(0, (int)Math.Ceiling((ends - _clock.UtcNow).TotalDays)) : null;
 
-        return new CampaignProgress(Math.Round(raised, 2, MidpointRounding.AwayFromZero), part?.Goal ?? 0m, donors, currency, daysLeft);
+        return new CampaignProgress(Money.Round(raised, currency), part?.Goal ?? 0m, donors, currency, daysLeft);
     }
 
     private Task<bool> SendReceiptAsync(Donation donation, FundraisingSettings settings, CancellationToken cancellationToken)

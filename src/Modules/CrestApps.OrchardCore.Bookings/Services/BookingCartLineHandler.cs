@@ -131,7 +131,7 @@ internal sealed class BookingCartLineHandler : ICartLineHandler
 
         var adjustment = occupancy is null ? 0m : await context.ConvertAsync(occupancy.PriceAdjustment, cancellationToken);
 
-        context.UnitPrice = BookingSchedule.GetUnitPrice(part, people, prices, adjustment);
+        context.UnitPrice = BookingSchedule.GetUnitPrice(part, people, prices, adjustment, context.Price?.Currency);
 
         // Only what's left on the fullest of its dates can be bought.
         var seats = BookingSchedule.GetSeatsPerUnit(part.Kind, people);

@@ -128,7 +128,7 @@ public sealed class OrderReturnService
                 Title = OrderLineText.Describe(line),
                 Sku = line.Sku,
                 Quantity = quantity,
-                UnitPrice = OrderReturnPolicy.UnitPriceOf(line),
+                UnitPrice = OrderReturnPolicy.UnitPriceOf(line, order.Currency),
                 Reason = reason.Trim(),
             });
         }

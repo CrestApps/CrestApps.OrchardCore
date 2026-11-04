@@ -392,7 +392,7 @@ Rounding is explicit and controlled by `TaxationOptions` (or `TaxCalculationCont
 | `Jurisdiction` | Amounts are aggregated per jurisdiction, then rounded. |
 | `Transaction` | The whole transaction is rounded once. |
 
-`TaxationOptions` also configures `DecimalPlaces`, `MidpointRounding`, and per-currency decimal overrides.
+`TaxationOptions` also configures `DecimalPlaces`, `MidpointRounding`, and per-currency decimal overrides. By default `DecimalPlaces` is empty and tax is rounded to each currency's precision from `CurrencyScale` (ISO 4217): no decimals for JPY, three for KWD, two for USD, the same precision the payment uses. Set `DecimalPlaces` only to force one precision for every currency; a per-currency override still wins.
 
 ## Extending the framework
 

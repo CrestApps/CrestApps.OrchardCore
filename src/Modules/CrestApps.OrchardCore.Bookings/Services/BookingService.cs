@@ -385,7 +385,7 @@ public sealed class BookingService
             refundable = orderTotal > 0m ? Money.Round(paid * Math.Min(1m, booking.Total / orderTotal), booking.Currency) : paid;
         }
 
-        return new BookingCancellationQuote(daysBefore, feePercent, refundable, BookingSchedule.GetRefund(booking.Total, refundable, feePercent));
+        return new BookingCancellationQuote(daysBefore, feePercent, refundable, BookingSchedule.GetRefund(booking.Total, refundable, feePercent, booking.Currency));
     }
 
     /// <summary>

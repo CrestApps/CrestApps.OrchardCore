@@ -1,6 +1,7 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Bookings.Models;
 using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Payments;
 
 namespace CrestApps.OrchardCore.Bookings.Services;
 
@@ -150,14 +151,19 @@ public static class BookingSchedule
 
     /// <summary>
     /// Returns what one unit costs: the price of each of its dates, for each person when the price is per person, and
-    /// the occupancy's adjustment once.
+    /// the occupancy's adjustment once, rounded to the currency's precision.
     /// </summary>
-    public static decimal GetUnitPrice(BookingPart part, int people, IEnumerable<decimal> datePrices, decimal adjustment)
+    /// <param name="part">The booking part.</param>
+    /// <param name="people">How many people a unit is for.</param>
+    /// <param name="datePrices">The price of each of the unit's dates.</param>
+    /// <param name="adjustment">The occupancy's adjustment.</param>
+    /// <param name="currency">The price's currency, or <see langword="null"/> for two decimals.</param>
+    public static decimal GetUnitPrice(BookingPart part, int people, IEnumerable<decimal> datePrices, decimal adjustment, string currency = null)
     {
         var prices = datePrices?.Sum() ?? 0m;
         var unit = (part?.PricePerPerson == true ? prices * Math.Max(1, people) : prices) + adjustment;
 
-        return Math.Max(0m, Math.Round(unit, 2, MidpointRounding.AwayFromZero));
+        return Math.Max(0m, Money.Round(unit, currency));
     }
 
     /// <summary>
@@ -192,13 +198,18 @@ public static class BookingSchedule
     }
 
     /// <summary>
-    /// Returns what's refunded when a booking is canceled: what was paid toward it, less the fee on its price.
+    /// Returns what's refunded when a booking is canceled: what was paid toward it, less the fee on its price, rounded
+    /// to the currency's precision.
     /// </summary>
-    public static decimal GetRefund(decimal price, decimal paid, decimal feePercent)
+    /// <param name="price">The booking's price.</param>
+    /// <param name="paid">What was paid toward it.</param>
+    /// <param name="feePercent">The cancellation fee, in percent of the price.</param>
+    /// <param name="currency">The booking's currency, or <see langword="null"/> for two decimals.</param>
+    public static decimal GetRefund(decimal price, decimal paid, decimal feePercent, string currency = null)
     {
-        var fee = Math.Round(price * Math.Clamp(feePercent, 0m, 100m) / 100m, 2, MidpointRounding.AwayFromZero);
+        var fee = Money.Round(price * Math.Clamp(feePercent, 0m, 100m) / 100m, currency);
 
-        return Math.Max(0m, Math.Round(paid - fee, 2, MidpointRounding.AwayFromZero));
+        return Math.Max(0m, Money.Round(paid - fee, currency));
     }
 
     /// <summary>
