@@ -12,7 +12,7 @@ The AI reports answer the questions a manager asks about an assistant: How many 
 | | |
 | --- | --- |
 | **Menu** | Reports > Artificial Intelligence Reports |
-| **Permission** | View AI Chat Analytics (Export AI Chat Analytics to download CSV files) |
+| **Permission** | View AI Chat Analytics, to see and export the reports |
 | **Feature** | AI Chat Session Analytics, AI Usage Analytics |
 
 <AskYourAdmin />
@@ -49,7 +49,7 @@ A chat counts as finished when it ends naturally or when nobody writes for the p
 2. Choose a **Date range**, such as **Last 30 Days** or dates of your own, and optionally one profile (or **Any profile**).
 3. Click **Show**.
 
-To download the chats behind the report, click **Export as CSV**.
+To download the report with a row for each chat behind it, click **Export** (CSV, or Excel when **Reports (OpenXml)** is on).
 
 ### Conversation & Usage
 
@@ -109,8 +109,8 @@ Lists the details an assistant collected with data extraction, such as names, em
 
 1. Open **Reports > Artificial Intelligence Reports > AI Chat Extracted Data**.
 2. Pick the **AI Profile** (required), and optionally a **Date range**.
-3. Click **Show**. The table has **Session date**, **Session ID** and one column per extracted detail.
-4. Click **Export as CSV** to download it, for example to import leads into another system.
+3. Click **Show**. The table has **Session started (UTC)**, **Session** and one column per extracted detail.
+4. Click **Export** to download it, for example to import leads into another system.
 
 ## AI Chat Conversion Goals
 
@@ -120,8 +120,8 @@ Shows how each finished chat scored against the profile's conversion goals.
 
 1. Open **Reports > Artificial Intelligence Reports > AI Chat Conversion Goals**.
 2. Pick the **AI Profile** (required), and optionally a **Date range**.
-3. Click **Show**. The table has **Session date**, **Session ID**, **Total points** and one column per goal.
-4. Click **Export as CSV** to download it.
+3. Click **Show**. The table has **Session started (UTC)**, **Session**, **Total points** and one column per goal.
+4. Click **Export** to download it.
 
 ## AI Usage Analytics
 

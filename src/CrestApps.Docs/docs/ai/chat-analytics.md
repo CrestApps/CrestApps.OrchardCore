@@ -12,15 +12,15 @@ user_manual:
 | **Feature Name** | AI Chat Session Analytics |
 | **Feature ID** | `CrestApps.OrchardCore.AI.Chat.Analytics` |
 
-Provides comprehensive analytics and reporting for AI chat sessions. Track conversation metrics, user engagement, model performance, and user satisfaction through an admin dashboard.
+Provides comprehensive analytics and reporting for AI chat sessions. Track conversation metrics, user engagement, model performance, and user satisfaction through reports on the [Reports](../modules/reports.md) framework.
 
 ## Overview
 
-The **AI Chat Session Analytics** feature captures detailed metrics about every chat session — including session duration, message counts, resolution outcomes, response latency, token usage, and user feedback. All data is displayed through an interactive admin dashboard with filterable reports.
+The **AI Chat Session Analytics** feature captures detailed metrics about every chat session — including session duration, message counts, resolution outcomes, response latency, token usage, and user feedback. The data is shown in three reports of the Reports module, which share its date range filter, renderer and CSV and Excel exports.
 
 ### Enabling Analytics
 
-Enable the **AI Chat Session Analytics** feature, then tick **Enable session metrics** on each chat profile that should collect data (on the profile editor's **Data Processing & Metrics** tab). The reports are under **Artificial Intelligence > Reports**: **AI Chat Session Analytics**, **AI Chat Extracted Data** and **AI Chat Conversion Goals**, all gated by `ViewChatAnalytics`. **AI Usage Analytics** needs only the **AI Chat** feature and the same permission, and is listed under **Reports > Billing & Usage**.
+Enable the **AI Chat Session Analytics** feature, then tick **Enable session metrics** on each chat profile that should collect data (on the profile editor's **Data Processing & Metrics** tab). The feature depends on **Reports** (`CrestApps.OrchardCore.Reports`), which is enabled with it. The reports are under **Reports > Artificial Intelligence Reports**: **AI Chat Session Analytics** (`/Admin/Reports/view/ai-chat-session-analytics`), **AI Chat Extracted Data** (`ai-chat-extracted-data`) and **AI Chat Conversion Goals** (`ai-chat-conversion-goals`), all gated by `ViewChatAnalytics`. **AI Usage Analytics** (`ai-usage-analytics`) belongs to the **AI Usage Analytics** feature, needs the same permission, and is listed under **Reports > Billing & Usage**.
 
 > **Note:** Session metrics collection is disabled by default. You must enable it per-profile in the profile editor.
 
@@ -33,9 +33,9 @@ Running and reading the reports is described in the User Manual under [Analytics
 
 ---
 
-## Analytics Dashboard
+## Analytics Report
 
-The analytics dashboard provides a comprehensive view of your AI chat performance through multiple report sections. The report is filtered by a date range, picked with the same date range selector as the other reports (relative ranges such as *Last 30 Days*, or custom dates), and an optional AI profile, and runs when the user clicks **Show**. The User Manual page [Analytics](../user-manual/ai/analytics.md#ai-chat-session-analytics) walks through the report with a screencast.
+The **AI Chat Session Analytics** report (`AIChatSessionAnalyticsReport`) gives a view of your AI chat performance in sections: the overview, sessions by time of day and by day of week (in the site's time zone), who chats, performance, resolution and conversion, and feedback. It is filtered by the Reports date range (today at first; relative ranges such as *Last 30 Days*, or custom dates), which applies to the session start, and an optional AI profile. The extracted data and conversion goals reports need an AI profile, since each profile extracts its own fields and has its own goals. The User Manual page [Analytics](../user-manual/ai/analytics.md#ai-chat-session-analytics) walks through the report with a screencast.
 
 ---
 
@@ -158,11 +158,11 @@ When session metrics are enabled, thumbs up (👍) and thumbs down (👎) button
 
 ---
 
-## CSV Export
+## Export
 
-The analytics dashboard supports exporting filtered data as a CSV file for external analysis. Click **Export as CSV** after generating a report.
+Every report exports through the Reports export formats: CSV, and Excel when **Reports (OpenXml)** is enabled. The export of **AI Chat Session Analytics** adds a **Sessions** table with a row per session.
 
-### Exported Fields
+### Session Fields
 
 | Column | Description |
 | --- | --- |
@@ -181,8 +181,8 @@ The analytics dashboard supports exporting filtered data as a CSV file for exter
 
 | Permission | Description |
 | --- | --- |
-| **View Chat Analytics** | Access the analytics dashboard and generate reports. |
-| **Export Chat Analytics** | Download analytics data as CSV files. |
+| **View Chat Analytics** | Run and export the AI chat reports. |
+| **Export Chat Analytics** | Kept for existing roles. The reports export with **View Chat Analytics**, since the Reports framework authorizes a report's page and its exports with one permission. |
 
 ---
 
@@ -268,7 +268,7 @@ After a session closes, the AI evaluates the conversation against each configure
 
 #### Analytics Dashboard
 
-Conversion metrics appear in the analytics dashboard and are available through the `queryChatSessionMetrics` AI tool. The tool returns:
+Conversion metrics appear in the analytics report and are available through the `queryChatSessionMetrics` AI tool. The tool returns:
 - Number of sessions evaluated
 - Average conversion rate (percentage)
 - Average score and max score
@@ -288,33 +288,44 @@ Provider usage across every completion, and the talk time of automated voice cal
 
 ## Extending Analytics
 
-The analytics system uses Orchard Core's display driver pattern, making it easy to add custom metrics:
+The analytics are reports of the [Reports](../modules/reports.md) framework, so a module adds its own figures as another report rather than as a section of these:
 
-1. Create a new **view model** in the `ViewModels/` folder
-2. Create a **display driver** that extends `DisplayDriver<AIChatAnalyticsReport>`
-3. Create a **Razor view** matching your shape name
-4. Register the driver in `Startup.cs`
-
-Example:
+1. Read the sessions through `IAIChatSessionEventReader` (`ListAsync(new AIChatSessionEventQuery { ProfileId, FromUtc, ToUtc })`).
+2. Implement `IReport` with a static `Name`, `DisplayName`, `Description`, `Category` and `Permission`, and build a `ReportDocument` from the sessions.
+3. List `AIChatReportFilters.Profile` (or `AIChatReportFilters.RequiredProfile`) in `IReportFilterMetadata.FilterNames` to get the AI profile filter, and read it with `context.Filter.GetOrDefault<string>(AIChatReportFilters.ProfileId)`.
+4. Register it with `services.AddReport<TReport>()` in a startup that requires `ReportsConstants.Feature`.
 
 ```csharp
-public sealed class MyCustomMetricDisplayDriver : DisplayDriver<AIChatAnalyticsReport>
+public sealed class LongSessionsReport : IReport, IReportFilterMetadata
 {
-    public override IDisplayResult Display(AIChatAnalyticsReport context, BuildDisplayContext buildContext)
+    private readonly IAIChatSessionEventReader _reader;
+
+    public LongSessionsReport(IAIChatSessionEventReader reader) => _reader = reader;
+
+    public static string Name => "my-long-ai-sessions";
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<LongSessionsReport>("Long AI chat sessions");
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<LongSessionsReport>("Sessions with more than 20 messages.");
+    public static string Category => ReportsConstants.Categories.AIReports;
+    public static Permission Permission => ChatAnalyticsPermissionProvider.ViewChatAnalytics;
+
+    public IReadOnlyCollection<string> FilterNames { get; } = [AIChatReportFilters.Profile];
+
+    public async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
-        return Initialize<MyCustomViewModel>("MyCustomMetric", model =>
+        var range = context.Filter.GetDateRange();
+        var sessions = await _reader.ListAsync(new AIChatSessionEventQuery
         {
-            // Compute metrics from context.Events
-            model.MyValue = context.Events.Count(e => /* your condition */);
-        }).Location("Content:10"); // Position in the report
+            ProfileId = context.Filter.GetOrDefault<string>(AIChatReportFilters.ProfileId),
+            FromUtc = range.FromUtc,
+            ToUtc = range.ToUtc,
+        }, cancellationToken);
+
+        return new ReportDocument().Add(ReportSection.ForMetrics("Long sessions",
+        [
+            new ReportMetric("Sessions", ReportFormat.Number(sessions.Count(session => session.MessageCount > 20))),
+        ]));
     }
 }
-```
-
-Then register in your module's `Startup.cs`:
-
-```csharp
-services.AddDisplayDriver<AIChatAnalyticsReport, MyCustomMetricDisplayDriver>();
 ```
 
 ---

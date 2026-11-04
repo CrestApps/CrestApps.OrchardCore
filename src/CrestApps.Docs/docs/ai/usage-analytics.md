@@ -11,10 +11,10 @@ user_manual:
 | --- | --- |
 | **Feature Name** | AI Usage Analytics |
 | **Feature ID** | `CrestApps.OrchardCore.AI.UsageAnalytics` |
-| **Page** | **Reports → Billing & Usage → AI Usage Analytics** (`/Admin/AI/UsageAnalytics/Index`) |
+| **Report** | **Reports → Billing & Usage → AI Usage Analytics** (`/Admin/Reports/view/ai-usage-analytics`, `AIUsageAnalyticsReport`) |
 | **Permission** | `ViewChatAnalytics` |
 
-The AI Usage Analytics page reports what AI cost a tenant, in three parts:
+The AI Usage Analytics report reports what AI cost a tenant, in three parts:
 
 - **Metered usage** — every request sent to an AI provider, of every kind and from every feature: chat
   completions, embeddings, images, speech-to-text, text-to-speech and realtime voice, with every unit the
@@ -24,8 +24,9 @@ The AI Usage Analytics page reports what AI cost a tenant, in three parts:
 - **Voice** — one summary per automated AI voice call: how long the caller heard the assistant, how long the caller
   spoke, how long neither did, how the call ended, and which model held it.
 
-All three are captured only while the **AI Usage Analytics** feature is enabled; the report and its menu entry
-come with it. Nothing used before the feature was enabled can be reported.
+All three are captured only while the **AI Usage Analytics** feature is enabled; the report comes with it. The
+feature depends on **Reports**, which lists the report, renders it with its date range filter, and exports it as CSV
+(and Excel with **Reports (OpenXml)**). Nothing used before the feature was enabled can be reported.
 
 Running the report and reading its figures is described in the User Manual under
 [AI Usage Analytics](../user-manual/ai/analytics.md#ai-usage-analytics). This page covers what is recorded

@@ -8,7 +8,7 @@ Provides UI to interact with AI models using the profiles.
 | --- | --- | --- |
 | AI Chat | `CrestApps.OrchardCore.AI.Chat` | Provides UI to interact with AI models using the profiles. |
 | AI Chat Admin Widget | `CrestApps.OrchardCore.AI.Chat.AdminWidget` | Provides a floating AI chat widget on every admin page, allowing users to interact with a predefined AI profile. |
-| AI Chat Session Analytics | `CrestApps.OrchardCore.AI.Chat.Analytics` | Tracks chat session usage metrics (unique visitors, handle time, containment rate, abandonment rate) and provides reporting with extensible display drivers. |
+| AI Chat Session Analytics | `CrestApps.OrchardCore.AI.Chat.Analytics` | Tracks chat session usage metrics (unique visitors, handle time, containment rate, abandonment rate) and reports them, with the extracted data and conversion goals, under Reports. |
 | AI Usage Analytics | `CrestApps.OrchardCore.AI.UsageAnalytics` | Records the usage of every request sent to an AI provider (tokens, audio, images and automated voice call summaries) and provides the AI Usage Analytics report. |
 
 Enable a feature under **Configuration > Features**, or with the `Feature` step of a recipe.

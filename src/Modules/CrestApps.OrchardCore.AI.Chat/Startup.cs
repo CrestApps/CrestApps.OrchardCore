@@ -25,6 +25,7 @@ using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
@@ -162,20 +163,17 @@ public sealed class ChatAnalyticsUIStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddNavigationProvider<ChatAnalyticsAdminMenu>()
             .AddDataMigration<AIChatSessionExtractedDataMigrations>()
             .AddScoped<IAIConversationPrivacyHandler, AIChatSessionExtractedDataPrivacyHandler>()
             .AddDisplayDriver<AIProfile, AIProfileAnalyticsDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateAnalyticsDisplayDriver>()
-            .AddDisplayDriver<AIChatAnalyticsFilter, AIChatAnalyticsDateRangeFilterDisplayDriver>()
-            .AddDisplayDriver<AIChatAnalyticsFilter, AIChatAnalyticsProfileFilterDisplayDriver>()
-            .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsOverviewDisplayDriver>()
-            .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsTimeOfDayDisplayDriver>()
-            .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsDayOfWeekDisplayDriver>()
-            .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsUserSegmentDisplayDriver>()
-            .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsPerformanceDisplayDriver>()
-            .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsConversionDisplayDriver>()
-            .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsFeedbackDisplayDriver>();
+            .AddScoped<IAIChatSessionEventReader, YesSqlAIChatSessionEventReader>();
+
+        // The feature depends on Reports, which lists, renders and exports these reports.
+        services
+            .AddReport<AIChatSessionAnalyticsReport>()
+            .AddReport<AIChatExtractedDataReport>()
+            .AddReport<AIChatConversionGoalsReport>();
     }
 }
 
@@ -188,9 +186,24 @@ public sealed class UsageAnalyticsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddNavigationProvider<AIUsageAnalyticsAdminMenu>();
         services.AddCoreAIUsageTracking();
+
+        // The feature depends on Reports, which lists, renders and exports the usage report.
+        services
+            .AddReport<AIUsageAnalyticsReport>()
+            .AddDisplayDriver<ReportFilter, AIUsageGroupingReportFilterDisplayDriver>();
     }
+}
+
+/// <summary>
+/// Adds the AI profile filter to the AI chat reports that list it. Both analytics features use it and either may be
+/// enabled alone, so it is registered once, whenever Reports is on.
+/// </summary>
+[RequireFeatures(ReportsConstants.Feature)]
+public sealed class ReportFiltersStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddDisplayDriver<ReportFilter, AIChatProfileReportFilterDisplayDriver>();
 }
 
 /// <summary>
