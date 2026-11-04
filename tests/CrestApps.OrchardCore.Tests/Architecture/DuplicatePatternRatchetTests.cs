@@ -62,15 +62,8 @@ public sealed class DuplicatePatternRatchetTests
         },
         ["GetTimeZones() in a select list"] = new(StringComparer.OrdinalIgnoreCase)
         {
-            ["src/Modules/CrestApps.OrchardCore.Calendars/Services/CalendarSelectLists.cs"] = 1,
             ["src/Modules/CrestApps.OrchardCore.ContactCenter/Drivers/BusinessHoursCalendarDisplayDriver.cs"] = 1,
-            ["src/Modules/CrestApps.OrchardCore.Geo/Controllers/TerritoriesController.cs"] = 1,
-            ["src/Modules/CrestApps.OrchardCore.Scheduling/Controllers/SchedulingResourcesController.cs"] = 1,
-            ["src/Modules/CrestApps.OrchardCore.Teams/Drivers/TeamDisplayDriver.cs"] = 1,
             ["src/Modules/CrestApps.OrchardCore.TimeZones/Drivers/TimeZoneMapDisplayDriver.cs"] = 1,
-            ["src/Modules/CrestApps.OrchardCore.WorkOrders/Agreements/ServiceAgreementsController.cs"] = 1,
-            ["src/Modules/CrestApps.OrchardCore.WorkOrders/Controllers/WorkOrderSettingsController.cs"] = 1,
-            ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/WorkersController.cs"] = 1,
         },
         ["DateTime.UtcNow, DateTime.Now, DateTime.Today or DateTimeOffset.UtcNow"] = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -108,10 +101,6 @@ public sealed class DuplicatePatternRatchetTests
         },
         ["TimeZoneInfo.ConvertTimeToUtc"] = new(StringComparer.OrdinalIgnoreCase)
         {
-            ["src/Core/CrestApps.OrchardCore.WorkOrders.Core/Services/SlaClock.cs"] = 2,
-            ["src/Modules/CrestApps.OrchardCore.Bookings/Calendar/BookingCalendarSlotFilter.cs"] = 1,
-            ["src/Modules/CrestApps.OrchardCore.Bookings/Services/BookingDepositService.cs"] = 1,
-            ["src/Modules/CrestApps.OrchardCore.Bookings/Services/BookingSchedule.cs"] = 1,
             ["src/Modules/CrestApps.OrchardCore.ContactCenter/Reports/Services/ReportTimeZone.cs"] = 2,
             ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Migrations/OmnichannelActivityBatchScheduleMigrations.cs"] = 1,
             ["src/Modules/CrestApps.OrchardCore.Orders/Dashboard/SalesSummaryWidget.cs"] = 1,
