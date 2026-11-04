@@ -345,7 +345,7 @@ internal static class PosApiEndpoints
         IRegisterStore registers,
         IRegisterShiftStore shiftStore,
         PosShiftService shifts,
-        OrderOperationsService operations,
+        IOrderOperationsService operations,
         IAuthorizationService authorizationService,
         ICheckoutTenderLedger ledger)
     {

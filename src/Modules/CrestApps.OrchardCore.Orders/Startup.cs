@@ -110,6 +110,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<OrderOperationScope>();
         services.AddScoped<OrderConfirmationSender>();
         services.AddScoped<OrderOperationsService>();
+        services.AddScoped<IOrderOperationsService>(sp => sp.GetRequiredService<OrderOperationsService>());
         services.AddScoped<IOrderRefunder, OrderRefunder>();
         services.AddScoped<IOrderRequestService, OrderRequestService>();
         services.AddScoped<CartCheckoutService>();

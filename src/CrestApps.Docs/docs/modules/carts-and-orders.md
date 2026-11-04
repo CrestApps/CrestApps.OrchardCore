@@ -295,6 +295,8 @@ A user with `ManageOrders` manages an order from its page, through `OrderOperati
 
 Refunds are recorded on the order by `OrderRefundRecorder`, an `IPaymentRefundHandler`, wherever they were started: the order's page, the payments page or the Pay Later transaction. It finds the order from the refund's checkout (an order's, or a pay link's for the order's transaction) and records each refund once. `OrderOperationScope` carries who is acting and whether stock goes back to it.
 
+Other modules act on orders through `IOrderOperationsService` in `Orders.Core`, which the Orders feature provides through `OrderOperationsService`; Point of Sale refunds a till return that way. `OrderOperationResult`, `OrderMoney` and `OrderPermissions` are in `Orders.Core` too, so no module uses the Orders module's own classes.
+
 ### Disputes and fraud rating
 
 `OrderDisputeRecorder`, an `IPaymentEvent`, finds the order a gateway's dispute is about (the attempt with that `ProviderReference`, through `PaymentAttemptQuery.ProviderReference`, then its checkout) and keeps each dispute on `Order.Disputes` (`OrderDispute`: reference, gateway, amount, reason, status, `IsClosed`), with an event note for each change; a repeated webhook changes nothing. `Order.HasOpenDispute` drives the **Disputed** badge in the orders list, and `OrderDisputesDisplayDriver` shows each dispute on the store's order page.
