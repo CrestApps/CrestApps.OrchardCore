@@ -5,10 +5,15 @@ using CrestApps.Core.AI.FileSources.Connectors;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.OrchardCore.AI.FileSources.BackgroundTasks;
+using CrestApps.OrchardCore.AI.FileSources.Deployments;
 using CrestApps.OrchardCore.AI.FileSources.Drivers;
 using CrestApps.OrchardCore.AI.FileSources.Handlers;
 using CrestApps.OrchardCore.AI.FileSources.Migrations;
+using CrestApps.OrchardCore.AI.FileSources.Recipes;
 using CrestApps.OrchardCore.AI.FileSources.Services;
+using CrestApps.OrchardCore.Core.Deployments;
+using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -16,9 +21,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data.Migration;
+using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.FileSources;
@@ -63,6 +70,12 @@ public sealed class Startup : StartupBase
         services.AddNavigationProvider<FileSourceAdminMenu>();
 
         services.AddSingleton<IBackgroundTask, FileSourceRunBackgroundTask>();
+
+        // File sources travel between sites without their passwords and keys.
+        services.AddRecipeExecutionStep<FileSourcesStep>();
+        services.AddScoped<IRecipeStep, FileSourcesRecipeStepSchema>();
+        services.AddDeployment<FileSourcesDeploymentSource, FileSourcesDeploymentStep, SummaryDeploymentStepDisplayDriver<FileSourcesDeploymentStep>>();
+        services.AddDeploymentStepSchema<FileSourcesDeploymentStepSchema>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

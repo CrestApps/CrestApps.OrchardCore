@@ -168,6 +168,36 @@ keys **without** the `OrchardCore` wrapper, starting at `CrestApps`, because tha
 the tenant.
 :::
 
+## Recipes and deployment
+
+The `FileSources` recipe step creates or updates file sources. A file source is matched by its `ItemId`, then by its `DisplayText` within the same connector, so running a recipe twice adds nothing. Its connector (`Source`) must be enabled on the site, and its `AIDataSourceId` names an AI data source, so import the data sources first.
+
+```json
+{
+  "steps": [
+    {
+      "name": "FileSources",
+      "Sources": [
+        {
+          "ItemId": "4fs00000000000000000000001",
+          "Source": "Sftp",
+          "DisplayText": "Policies",
+          "AIDataSourceId": "4ds00000000000000000000001",
+          "Enabled": true,
+          "ReindexIntervalMinutes": 60,
+          "Properties": {
+            "SftpConnectionMetadata": { "Host": "sftp.example.com", "Username": "reader" },
+            "RemoteFileSourceMetadata": { "RootPath": "/policies", "Recursive": true }
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+The **File sources** deployment step (Artificial Intelligence category) exports every file source. Passwords, private keys, passphrases, tokens and other secrets are never exported: they are protected with the keys of the site that stored them. When a recipe updates a file source and leaves a secret out, the stored secret is kept; after importing a new FTP or SFTP file source, open it and enter its password or key.
+
 ## Related
 
 - [AI Data Sources](./data-sources/) — the data source the ingested knowledge lands in.
