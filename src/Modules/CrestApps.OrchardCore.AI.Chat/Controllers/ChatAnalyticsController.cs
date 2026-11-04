@@ -1,10 +1,11 @@
+using System.Globalization;
 using System.Text;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
-using Cysharp.Text;
+using CrestApps.OrchardCore.Tabular;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -177,47 +178,26 @@ public sealed class ChatAnalyticsController : Controller
 
     private static string GenerateCsvContent(IReadOnlyList<AIChatSessionEvent> events)
     {
-        using var builder = ZString.CreateStringBuilder();
-        builder.AppendLine("SessionId,ProfileId,VisitorId,UserId,IsAuthenticated,SessionStartedUtc,SessionEndedUtc,MessageCount,HandleTimeSeconds,IsResolved");
+        var builder = new StringBuilder();
+
+        CsvWriter.AppendRow(builder, "SessionId", "ProfileId", "VisitorId", "UserId", "IsAuthenticated", "SessionStartedUtc", "SessionEndedUtc", "MessageCount", "HandleTimeSeconds", "IsResolved");
 
         foreach (var evt in events)
         {
-            builder.Append(EscapeCsv(evt.SessionId));
-            builder.Append(',');
-            builder.Append(EscapeCsv(evt.ProfileId));
-            builder.Append(',');
-            builder.Append(EscapeCsv(evt.VisitorId));
-            builder.Append(',');
-            builder.Append(EscapeCsv(evt.UserId));
-            builder.Append(',');
-            builder.Append(evt.IsAuthenticated);
-            builder.Append(',');
-            builder.Append(evt.SessionStartedUtc.ToString("o"));
-            builder.Append(',');
-            builder.Append(evt.SessionEndedUtc?.ToString("o") ?? string.Empty);
-            builder.Append(',');
-            builder.Append(evt.MessageCount);
-            builder.Append(',');
-            builder.Append(evt.HandleTimeSeconds);
-            builder.Append(',');
-            builder.AppendLine(evt.IsResolved.ToString());
+            CsvWriter.AppendRow(builder,
+                evt.SessionId,
+                evt.ProfileId,
+                evt.VisitorId,
+                evt.UserId,
+                evt.IsAuthenticated.ToString(),
+                evt.SessionStartedUtc.ToString("o", CultureInfo.InvariantCulture),
+                evt.SessionEndedUtc?.ToString("o", CultureInfo.InvariantCulture),
+                evt.MessageCount.ToString(CultureInfo.InvariantCulture),
+                evt.HandleTimeSeconds.ToString(CultureInfo.InvariantCulture),
+                evt.IsResolved.ToString());
         }
 
         return builder.ToString();
     }
 
-    private static string EscapeCsv(string value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return string.Empty;
-        }
-
-        if (value.Contains(',') || value.Contains('"') || value.Contains('\n'))
-        {
-            return $"\"{value.Replace("\"", "\"\"")}\"";
-        }
-
-        return value;
-    }
 }

@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using CrestApps.Core;
+using CrestApps.OrchardCore.Tabular;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Localization;
@@ -41,7 +42,7 @@ internal sealed class CsvPayrollExportProvider : IPayrollExportProvider
         var builder = new StringBuilder();
         var rows = 0;
 
-        builder.AppendJoin(',', columns.Select(column => Escape(column.Header))).Append("\r\n");
+        builder.AppendJoin(',', columns.Select(column => CsvWriter.Escape(column.Header))).Append("\r\n");
 
         foreach (var timesheet in context.Timesheets)
         {
@@ -65,18 +66,18 @@ internal sealed class CsvPayrollExportProvider : IPayrollExportProvider
                 var amount = Amount(code, hours, rate);
                 var values = columns.Select(column => column.Field switch
                 {
-                    PayrollCsvField.WorkerExternalId => Escape(worker?.ExternalId ?? worker?.EmployeeNumber),
-                    PayrollCsvField.EmployeeNumber => Escape(worker?.EmployeeNumber),
-                    PayrollCsvField.WorkerName => Escape(worker?.DisplayName),
-                    PayrollCsvField.PayCode => Escape(code?.PayrollCode),
+                    PayrollCsvField.WorkerExternalId => CsvWriter.Escape(worker?.ExternalId ?? worker?.EmployeeNumber),
+                    PayrollCsvField.EmployeeNumber => CsvWriter.Escape(worker?.EmployeeNumber),
+                    PayrollCsvField.WorkerName => CsvWriter.Escape(worker?.DisplayName),
+                    PayrollCsvField.PayCode => CsvWriter.Escape(code?.PayrollCode),
                     PayrollCsvField.Date => group.Key.Date?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty,
                     PayrollCsvField.Hours => hours.ToString("0.00", CultureInfo.InvariantCulture),
                     PayrollCsvField.Rate => rate?.ToString("0.00##", CultureInfo.InvariantCulture) ?? string.Empty,
                     PayrollCsvField.Amount => amount?.ToString("0.00", CultureInfo.InvariantCulture) ?? string.Empty,
                     PayrollCsvField.PeriodStart => timesheet.PeriodStart.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                     PayrollCsvField.PeriodEnd => timesheet.PeriodEnd.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-                    PayrollCsvField.ActivityCode => Escape(group.Key.Activity),
-                    PayrollCsvField.Job => Escape(group.Key.Job),
+                    PayrollCsvField.ActivityCode => CsvWriter.Escape(group.Key.Activity),
+                    PayrollCsvField.Job => CsvWriter.Escape(group.Key.Job),
                     _ => string.Empty,
                 });
 
@@ -110,23 +111,5 @@ internal sealed class CsvPayrollExportProvider : IPayrollExportProvider
         }
 
         return rate.HasValue ? Math.Round(hours * rate.Value * code.Multiplier, 2) : null;
-    }
-
-    /// <summary>
-    /// Quotes a value when it needs it, and keeps a spreadsheet from reading it as a formula.
-    /// </summary>
-    internal static string Escape(string value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return string.Empty;
-        }
-
-        if (value[0] is '=' or '+' or '-' or '@' or '\t' or '\r')
-        {
-            value = "'" + value;
-        }
-
-        return value.IndexOfAny([',', '"', '\r', '\n']) >= 0 ? "\"" + value.Replace("\"", "\"\"", StringComparison.Ordinal) + "\"" : value;
     }
 }

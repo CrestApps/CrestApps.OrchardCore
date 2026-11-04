@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.DncRegistry.BackgroundTasks;
 using CrestApps.OrchardCore.DncRegistry.Indexes;
 using CrestApps.OrchardCore.DncRegistry.Models;
 using CrestApps.OrchardCore.PhoneNumbers;
+using CrestApps.OrchardCore.Tabular;
 using Dapper;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -901,8 +902,8 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
                 continue;
             }
 
-            var nonEmptyFields = line.Split(',')
-                .Select(field => field.Trim().Trim('"'))
+            var nonEmptyFields = CsvReader.ParseLine(line)
+                .Select(field => field.Trim())
                 .Where(field => !string.IsNullOrWhiteSpace(field))
                 .ToArray();
 

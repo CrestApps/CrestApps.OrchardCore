@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
@@ -5,6 +6,7 @@ using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
+using CrestApps.OrchardCore.Tabular;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -197,28 +199,18 @@ public sealed class ChatConversionGoalsController : Controller
         IReadOnlyList<string> columns)
     {
         var builder = new StringBuilder();
-        builder.Append("SessionStartedUtc,SessionId,TotalPoints");
 
-        foreach (var column in columns)
-        {
-            builder.Append(',').Append(EscapeCsv(column));
-        }
-
-        builder.AppendLine();
+        CsvWriter.AppendRow(builder, ["SessionStartedUtc", "SessionId", "TotalPoints", .. columns]);
 
         foreach (var row in rows)
         {
-            builder.Append(row.SessionStartedUtc.ToString("o")).Append(',')
-                .Append(EscapeCsv(row.SessionId)).Append(',')
-                .Append(EscapeCsv(row.TotalPoints));
-
-            foreach (var column in columns)
-            {
-                row.Values.TryGetValue(column, out var value);
-                builder.Append(',').Append(EscapeCsv(value));
-            }
-
-            builder.AppendLine();
+            CsvWriter.AppendRow(builder,
+            [
+                row.SessionStartedUtc.ToString("o", CultureInfo.InvariantCulture),
+                row.SessionId,
+                row.TotalPoints,
+                .. columns.Select(column => row.Values.GetValueOrDefault(column)),
+            ]);
         }
 
         return builder.ToString();
@@ -236,18 +228,4 @@ public sealed class ChatConversionGoalsController : Controller
             : score.Value.ToString();
     }
 
-    private static string EscapeCsv(string value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return string.Empty;
-        }
-
-        if (value.Contains(',') || value.Contains('"') || value.Contains('\n'))
-        {
-            return $"\"{value.Replace("\"", "\"\"")}\"";
-        }
-
-        return value;
-    }
 }

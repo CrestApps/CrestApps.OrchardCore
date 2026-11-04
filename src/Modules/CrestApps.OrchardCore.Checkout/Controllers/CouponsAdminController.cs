@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text;
 using CrestApps.OrchardCore.Checkout.Core;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
@@ -5,6 +7,7 @@ using CrestApps.OrchardCore.Checkout.ViewModels;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
+using CrestApps.OrchardCore.Tabular;
 using CrestApps.OrchardCore.Transactions.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -467,18 +470,20 @@ public sealed class CouponsAdminController : Controller
             return NotFound();
         }
 
-        var csv = new System.Text.StringBuilder("Code,Uses,Limit,Created (UTC)\r\n");
+        var csv = new StringBuilder();
+
+        CsvWriter.AppendRow(csv, "Code", "Uses", "Limit", "Created (UTC)");
 
         foreach (var code in await _couponStore.ListGeneratedCodesAsync(coupon.ItemId, HttpContext.RequestAborted))
         {
-            csv.Append(code.Code).Append(',')
-                .Append(code.RedemptionCount.ToString(System.Globalization.CultureInfo.InvariantCulture)).Append(',')
-                .Append(code.MaxRedemptions?.ToString(System.Globalization.CultureInfo.InvariantCulture)).Append(',')
-                .Append(code.CreatedUtc.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture))
-                .Append("\r\n");
+            CsvWriter.AppendRow(csv,
+                code.Code,
+                code.RedemptionCount.ToString(CultureInfo.InvariantCulture),
+                code.MaxRedemptions?.ToString(CultureInfo.InvariantCulture),
+                code.CreatedUtc.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
         }
 
-        return File(System.Text.Encoding.UTF8.GetBytes(csv.ToString()), "text/csv", $"{coupon.Code}-codes.csv");
+        return File(Encoding.UTF8.GetBytes(csv.ToString()), "text/csv", $"{coupon.Code}-codes.csv");
     }
 
     private async Task PopulateUsesAsync(CouponEditViewModel model, Coupon coupon)

@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Products.Core.Transfer;
+using CrestApps.OrchardCore.Tabular;
 using Xunit;
 
 namespace CrestApps.OrchardCore.Tests.Products;
@@ -78,8 +79,8 @@ public sealed class ProductCsvTests
 
         Assert.Null(read.Format);
         Assert.Single(read.Problems);
-        Assert.Equal("'=HYPERLINK(1)", CsvTable.Escape("=HYPERLINK(1)"));
-        Assert.Equal("-5.00", CsvTable.Escape("-5.00"));
-        Assert.Equal("\"a,b\"", CsvTable.Escape("a,b"));
+        Assert.Equal("'=HYPERLINK(1)", CsvWriter.Escape("=HYPERLINK(1)"));
+        Assert.Equal("-5.00", CsvWriter.Escape("-5.00"));
+        Assert.Equal("\"a,b\"", CsvWriter.Escape("a,b"));
     }
 }

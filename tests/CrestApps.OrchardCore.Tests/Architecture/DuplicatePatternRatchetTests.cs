@@ -17,7 +17,7 @@ public sealed class DuplicatePatternRatchetTests
         new(
             "EscapeCsv",
             @"private\s+(?:static\s+)?[\w<>?]+\s+EscapeCsv\w*\s*\(",
-            "Write CSV with CrestApps.OrchardCore.Core's CsvWriter, which escapes quotes, commas and line breaks and guards against formula injection."),
+            "Write CSV with CsvWriter (CrestApps.OrchardCore.Tabular, in CrestApps.OrchardCore.Abstractions), which escapes quotes, commas and line breaks and guards against formula injection."),
         new(
             "new BlobFileStore",
             @"\bnew\s+BlobFileStore\s*\(",
@@ -52,13 +52,6 @@ public sealed class DuplicatePatternRatchetTests
     /// </summary>
     private static readonly Dictionary<string, Dictionary<string, int>> _knownCopies = new(StringComparer.Ordinal)
     {
-        ["EscapeCsv"] = new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["src/Modules/CrestApps.OrchardCore.AI.Chat/Controllers/ChatAnalyticsController.cs"] = 1,
-            ["src/Modules/CrestApps.OrchardCore.AI.Chat/Controllers/ChatConversionGoalsController.cs"] = 1,
-            ["src/Modules/CrestApps.OrchardCore.AI.Chat/Controllers/ChatExtractedDataController.cs"] = 1,
-            ["src/Modules/CrestApps.OrchardCore.DncRegistry/Controllers/LocalDncRegistryAdminController.cs"] = 1,
-        },
         ["new BlobFileStore"] = new(StringComparer.OrdinalIgnoreCase)
         {
             ["src/Modules/CrestApps.OrchardCore.AI.Documents.Azure/Startup.cs"] = 1,

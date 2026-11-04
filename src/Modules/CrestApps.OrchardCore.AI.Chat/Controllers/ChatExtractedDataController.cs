@@ -1,9 +1,11 @@
-﻿using System.Text;
+using System.Globalization;
+using System.Text;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
+using CrestApps.OrchardCore.Tabular;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -181,44 +183,20 @@ public sealed class ChatExtractedDataController : Controller
         IReadOnlyList<string> columns)
     {
         var builder = new StringBuilder();
-        builder.Append("SessionStartedUtc,SessionId");
 
-        foreach (var column in columns)
-        {
-            builder.Append(',').Append(EscapeCsv(column));
-        }
-
-        builder.AppendLine();
+        CsvWriter.AppendRow(builder, ["SessionStartedUtc", "SessionId", .. columns]);
 
         foreach (var row in rows)
         {
-            builder.Append(row.SessionStartedUtc.ToString("o")).Append(',')
-                .Append(EscapeCsv(row.SessionId));
-
-            foreach (var column in columns)
-            {
-                row.Values.TryGetValue(column, out var value);
-                builder.Append(',').Append(EscapeCsv(value));
-            }
-
-            builder.AppendLine();
+            CsvWriter.AppendRow(builder,
+            [
+                row.SessionStartedUtc.ToString("o", CultureInfo.InvariantCulture),
+                row.SessionId,
+                .. columns.Select(column => row.Values.GetValueOrDefault(column)),
+            ]);
         }
 
         return builder.ToString();
     }
 
-    private static string EscapeCsv(string value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return string.Empty;
-        }
-
-        if (value.Contains(',') || value.Contains('"') || value.Contains('\n'))
-        {
-            return $"\"{value.Replace("\"", "\"\"")}\"";
-        }
-
-        return value;
-    }
 }
