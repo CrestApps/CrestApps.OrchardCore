@@ -1,6 +1,9 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.A2A.Recipes.Schemas;
+using CrestApps.OrchardCore.AI.DataSources.Recipes.Schemas;
+using CrestApps.OrchardCore.AI.Mcp.Recipes.Schemas;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.AdminMenu.Nodes;

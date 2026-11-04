@@ -1,10 +1,14 @@
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using Json.Schema;
 
-namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
+namespace CrestApps.OrchardCore.AI.Core.Recipes;
 
-internal static class KnownRecipeMetadataSchemaBuilders
+/// <summary>
+/// Builds the recipe schemas of the connection metadata the AI modules store (A2A, SSE and stdio MCP, FTP and SFTP).
+/// </summary>
+public static class AIConnectionMetadataSchemaBuilders
 {
-    internal static JsonSchemaBuilder BuildA2AConnectionMetadataSchema()
+    public static JsonSchemaBuilder BuildA2AConnectionMetadataSchema()
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Description("Known A2A client authentication settings stored for the connection. Additional properties are allowed for future A2A transport extensions.")
@@ -26,7 +30,7 @@ internal static class KnownRecipeMetadataSchemaBuilders
                 ("AdditionalHeaders", BuildAdditionalHeadersSchema("Additional HTTP headers sent with each request when AuthenticationType is CustomHeaders.")))
             .AdditionalProperties(true);
 
-    internal static JsonSchemaBuilder BuildFtpConnectionMetadataSchema()
+    public static JsonSchemaBuilder BuildFtpConnectionMetadataSchema()
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Description("Known FTP connection settings for ftp:// MCP resources. Additional properties are allowed for provider-specific extensions.")
@@ -47,7 +51,7 @@ internal static class KnownRecipeMetadataSchemaBuilders
                 ("RetryAttempts", RecipeStepSchemaBuilders.Integer().Description("How many times failed FTP operations should be retried.")))
             .AdditionalProperties(true);
 
-    internal static JsonSchemaBuilder BuildSftpConnectionMetadataSchema()
+    public static JsonSchemaBuilder BuildSftpConnectionMetadataSchema()
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Description("Known SFTP connection settings for sftp:// MCP resources. Additional properties are allowed for provider-specific extensions.")
@@ -69,7 +73,7 @@ internal static class KnownRecipeMetadataSchemaBuilders
                 ("KeepAliveInterval", RecipeStepSchemaBuilders.Integer().Description("Optional keep-alive interval in seconds to keep idle SFTP sessions active.")))
             .AdditionalProperties(true);
 
-    internal static JsonSchemaBuilder BuildSseMcpConnectionMetadataSchema()
+    public static JsonSchemaBuilder BuildSseMcpConnectionMetadataSchema()
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Description("Known HTTP/SSE MCP client settings for remote MCP servers. Additional properties are allowed for future MCP client features.")
@@ -92,7 +96,7 @@ internal static class KnownRecipeMetadataSchemaBuilders
                 ("AdditionalHeaders", BuildAdditionalHeadersSchema("Additional HTTP headers sent with each request when AuthenticationType is CustomHeaders.")))
             .AdditionalProperties(true);
 
-    internal static JsonSchemaBuilder BuildStdioMcpConnectionMetadataSchema()
+    public static JsonSchemaBuilder BuildStdioMcpConnectionMetadataSchema()
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Description("Known STDIO MCP client settings for launching a local MCP process. Additional properties are allowed for future transport options.")

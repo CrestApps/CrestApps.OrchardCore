@@ -18,7 +18,6 @@ using CrestApps.OrchardCore.AI.DataSources.Migrations;
 using CrestApps.OrchardCore.AI.DataSources.Recipes;
 using CrestApps.OrchardCore.AI.DataSources.Services;
 using CrestApps.OrchardCore.AI.Services;
-using CrestApps.OrchardCore.AI.Workflows.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;

@@ -1,6 +1,8 @@
+using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using Json.Schema;
 
-namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
+namespace CrestApps.OrchardCore.AI.Mcp.Recipes.Schemas;
 
 /// <summary>
 /// Schema for the "McpPrompt" recipe step — creates or updates MCP prompt records.

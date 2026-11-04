@@ -16,7 +16,7 @@ using CrestApps.OrchardCore.AI.Mcp.Migrations;
 using CrestApps.OrchardCore.AI.Mcp.Recipes;
 using CrestApps.OrchardCore.AI.Mcp.Services;
 using CrestApps.OrchardCore.AI.Services;
-using CrestApps.OrchardCore.AI.Workflows.Models;
+using CrestApps.OrchardCore.Recipes.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -324,7 +324,7 @@ public sealed class McpContentResourceStartup : StartupBase
 /// Registers services and configuration for the McpRecipeSchemaResource feature.
 /// </summary>
 [Feature(McpPermissions.Feature.Server)]
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class McpRecipeSchemaResourceStartup : StartupBase
 {
     internal readonly IStringLocalizer S;

@@ -4,7 +4,6 @@ using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Tools.Services;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Handlers;
 

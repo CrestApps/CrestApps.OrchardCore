@@ -1,6 +1,7 @@
+using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
 using Json.Schema;
 
-namespace CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
+namespace CrestApps.OrchardCore.AI.Chat.Recipes.Schemas;
 
 /// <summary>
 /// Provides the schema definition for AI chat prompt security settings.

@@ -1,6 +1,6 @@
 using Json.Schema;
 
-namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
+namespace CrestApps.OrchardCore.AI.Recipes.Schemas;
 
 internal static class AIProfileRecipeSchemaBuilder
 {

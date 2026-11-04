@@ -1,6 +1,9 @@
+using CrestApps.OrchardCore.AI.Core.Recipes;
+using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using Json.Schema;
 
-namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
+namespace CrestApps.OrchardCore.AI.Mcp.Recipes.Schemas;
 
 /// <summary>
 /// Schema for the "McpConnection" recipe step — creates or updates MCP client connections.
@@ -27,8 +30,8 @@ public sealed class McpConnectionRecipeStep : IRecipeStep
             .Type(SchemaValueType.Object)
             .Description("Transport-specific MCP client metadata grouped by metadata object name. Known built-in metadata objects are SseMcpConnectionMetadata and StdioMcpConnectionMetadata, and extra objects are allowed for future transport extensions.")
             .Properties(
-                ("SseMcpConnectionMetadata", KnownRecipeMetadataSchemaBuilders.BuildSseMcpConnectionMetadataSchema()),
-                ("StdioMcpConnectionMetadata", KnownRecipeMetadataSchemaBuilders.BuildStdioMcpConnectionMetadataSchema()))
+                ("SseMcpConnectionMetadata", AIConnectionMetadataSchemaBuilders.BuildSseMcpConnectionMetadataSchema()),
+                ("StdioMcpConnectionMetadata", AIConnectionMetadataSchemaBuilders.BuildStdioMcpConnectionMetadataSchema()))
             .AdditionalProperties(true);
 
         var connectionSchema = new JsonSchemaBuilder()

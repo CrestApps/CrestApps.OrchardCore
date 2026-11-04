@@ -1,6 +1,9 @@
+using CrestApps.OrchardCore.AI.Core.Recipes;
+using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using Json.Schema;
 
-namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
+namespace CrestApps.OrchardCore.AI.Mcp.Recipes.Schemas;
 
 /// <summary>
 /// Schema for the "McpResource" recipe step — creates or updates MCP resource records.
@@ -38,8 +41,8 @@ public sealed class McpResourceRecipeStep : IRecipeStep
             .Type(SchemaValueType.Object)
             .Description("Source-specific resource metadata grouped by metadata object name. Known built-in metadata objects are FtpConnectionMetadata and SftpConnectionMetadata, and extra objects are allowed for future resource sources.")
             .Properties(
-                ("FtpConnectionMetadata", KnownRecipeMetadataSchemaBuilders.BuildFtpConnectionMetadataSchema()),
-                ("SftpConnectionMetadata", KnownRecipeMetadataSchemaBuilders.BuildSftpConnectionMetadataSchema()))
+                ("FtpConnectionMetadata", AIConnectionMetadataSchemaBuilders.BuildFtpConnectionMetadataSchema()),
+                ("SftpConnectionMetadata", AIConnectionMetadataSchemaBuilders.BuildSftpConnectionMetadataSchema()))
             .AdditionalProperties(true);
 
         var resourceSchema = new JsonSchemaBuilder()

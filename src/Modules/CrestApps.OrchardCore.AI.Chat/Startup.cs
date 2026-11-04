@@ -14,6 +14,7 @@ using CrestApps.OrchardCore.AI.Chat.Handlers;
 using CrestApps.OrchardCore.AI.Chat.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Migrations;
 using CrestApps.OrchardCore.AI.Chat.Models;
+using CrestApps.OrchardCore.AI.Chat.Recipes.Schemas;
 using CrestApps.OrchardCore.AI.Chat.Reports;
 using CrestApps.OrchardCore.AI.Chat.Schemas;
 using CrestApps.OrchardCore.AI.Chat.Services;
@@ -23,7 +24,6 @@ using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.Recipes.Core;
-using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
 using CrestApps.OrchardCore.Reports;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
@@ -241,7 +241,7 @@ public sealed class RecipesSchemaStartup : StartupBase
 /// <summary>
 /// Registers recipe schema contributors for AI chat site settings.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class SiteSettingsRecipesSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

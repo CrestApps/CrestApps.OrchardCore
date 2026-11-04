@@ -1,6 +1,7 @@
+using CrestApps.OrchardCore.Recipes.Core;
 using Json.Schema;
 
-namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
+namespace CrestApps.OrchardCore.AI.Recipes.Schemas;
 
 /// <summary>
 /// Schema for the "CreateAIProfileFromTemplate" recipe step — creates or updates AI profiles from templates whose source is <c>Profile</c>.

@@ -1829,96 +1829,6 @@ public sealed class AvatarSiteSettingsSchemaStartup : StartupBase
 }
 
 /// <summary>
-/// Registers services and configuration for the AIRecipe feature.
-/// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI")]
-public sealed class AIRecipeStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IRecipeStep, AIProfileRecipeStep>();
-        services.AddScoped<IRecipeStep, CreateAIProfileFromTemplateRecipeStep>();
-        services.AddScoped<IRecipeStep, AIProfileTemplateRecipeStep>();
-        services.AddScoped<IRecipeStep, AIDeploymentRecipeStep>();
-        services.AddScoped<IRecipeStep, DeleteAIDeploymentsRecipeStep>();
-        services.AddScoped<IRecipeStep, AIProviderConnectionsRecipeStep>();
-    }
-}
-
-/// <summary>
-/// Registers services and configuration for the AI data sources recipe feature.
-/// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI.DataSources")]
-public sealed class AIDataSourcesRecipeStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IRecipeStep, AIDataSourceRecipeStep>();
-    }
-}
-
-/// <summary>
-/// Registers services and configuration for the AI tool instances recipe feature.
-/// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI.ToolInstances")]
-public sealed class AIToolInstancesRecipeStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IRecipeStep, AIToolInstanceRecipeStep>();
-    }
-}
-
-/// <summary>
-/// Registers services and configuration for the AI personas recipe feature.
-/// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI.Personas")]
-public sealed class AIPersonasRecipeStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IRecipeStep, AIPersonaRecipeStep>();
-    }
-}
-
-/// <summary>
-/// Registers the schema of the AI Personas deployment step, so a recipe that creates deployment plans can describe it.
-/// </summary>
-[RequireFeatures("OrchardCore.Deployment", "CrestApps.OrchardCore.AI.Personas")]
-public sealed class AIPersonasDeploymentRecipeStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddDeploymentStepSchema<AIPersonaDeploymentStepSchema>();
-    }
-}
-
-/// <summary>
-/// Registers services and configuration for the MCP connection recipe feature.
-/// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI.Mcp")]
-public sealed class McpConnectionsRecipeStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IRecipeStep, McpConnectionRecipeStep>();
-    }
-}
-
-/// <summary>
-/// Registers services and configuration for the MCP server recipe feature.
-/// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI.Mcp.Server")]
-public sealed class McpServerRecipeStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IRecipeStep, McpPromptRecipeStep>();
-        services.AddScoped<IRecipeStep, McpResourceRecipeStep>();
-    }
-}
-
-/// <summary>
 /// Registers the schemas of the Data Connectors recipe steps.
 /// </summary>
 [RequireFeatures("CrestApps.OrchardCore.DataConnectors")]
@@ -1928,18 +1838,6 @@ public sealed class DataConnectorsRecipeStartup : StartupBase
     {
         services.AddScoped<IRecipeStep, DataConnectionRecipeStep>();
         services.AddScoped<IRecipeStep, ConnectedDataSetRecipeStep>();
-    }
-}
-
-/// <summary>
-/// Registers services and configuration for the A2A recipe feature.
-/// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI.A2A")]
-public sealed class A2ARecipeStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IRecipeStep, A2AConnectionRecipeStep>();
     }
 }
 

@@ -1,6 +1,7 @@
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using Json.Schema;
 
-namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment.Steps;
+namespace CrestApps.OrchardCore.AI.Recipes.Schemas;
 
 /// <summary>
 /// Schema for the "AI Personas" deployment step, which exports saved AI personas as an "AIPersonas" recipe step.

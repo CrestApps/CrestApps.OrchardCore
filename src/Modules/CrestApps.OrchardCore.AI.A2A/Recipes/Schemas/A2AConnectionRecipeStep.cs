@@ -1,6 +1,9 @@
+using CrestApps.OrchardCore.AI.Core.Recipes;
+using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using Json.Schema;
 
-namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
+namespace CrestApps.OrchardCore.AI.A2A.Recipes.Schemas;
 
 /// <summary>
 /// Schema for the "A2AConnection" recipe step — creates or updates A2A client connections.
@@ -27,7 +30,7 @@ public sealed class A2AConnectionRecipeStep : IRecipeStep
             .Type(SchemaValueType.Object)
             .Description("Connection metadata grouped by metadata object name. Known built-in metadata currently lives under A2AConnectionMetadata, and extra objects are allowed for future extensions.")
             .Properties(
-                ("A2AConnectionMetadata", KnownRecipeMetadataSchemaBuilders.BuildA2AConnectionMetadataSchema()))
+                ("A2AConnectionMetadata", AIConnectionMetadataSchemaBuilders.BuildA2AConnectionMetadataSchema()))
             .AdditionalProperties(true);
 
         var connectionSchema = new JsonSchemaBuilder()

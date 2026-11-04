@@ -1,6 +1,8 @@
+using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using Json.Schema;
 
-namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
+namespace CrestApps.OrchardCore.AI.Recipes.Schemas;
 
 /// <summary>
 /// Schema for the "AIPersonas" recipe step — creates or updates AI personas.

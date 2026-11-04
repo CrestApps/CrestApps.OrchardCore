@@ -1,9 +1,11 @@
 ﻿using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using Json.Schema;
 using Microsoft.Extensions.Options;
 
-namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
+namespace CrestApps.OrchardCore.AI.Recipes.Schemas;
 
 /// <summary>
 /// Schema for the "AIDeployment" recipe step — creates or updates AI model deployments.
