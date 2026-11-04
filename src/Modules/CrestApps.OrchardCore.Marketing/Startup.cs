@@ -38,6 +38,7 @@ public sealed class Startup : StartupBase
         services.AddPersonalDataContributor<MarketingPersonalDataContributor>();
         services.AddSignedLinks();
         services.AddScoped<CampaignService>();
+        services.AddConsent();
         services.AddScoped<IOrderEventHandler, CustomerPurchasesOrderHandler>();
         services.AddSingleton<IBackgroundTask, MarketingBackgroundTask>();
 

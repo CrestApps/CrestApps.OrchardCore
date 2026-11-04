@@ -480,6 +480,7 @@ public class SmsInboundProcessorTests
                 : new RefusingDistributedLock();
 
             var channels = MessagingTestChannels.Resolver(Dispatcher.Object);
+            var optOutResolver = new CrestApps.OrchardCore.Tests.Modules.Omnichannel.Sms.SharedNumberOptOutResolver();
 
             Processor = new MessagingInboundProcessor(
                 channels,
@@ -494,9 +495,9 @@ public class SmsInboundProcessorTests
                     new SmsKeywordInboundHandler(
                         Dispatcher.Object,
                         contentManager.Object,
-                        new CrestApps.OrchardCore.Tests.Modules.Omnichannel.Sms.SharedNumberOptOutResolver(),
+                        optOutResolver,
                         new OptionsWrapper<SmsKeywordReplySettings>(new SmsKeywordReplySettings()),
-                        clock.Object),
+                        CrestApps.OrchardCore.Tests.Doubles.ConsentDoubles.Over(optOutResolver, contentManager.Object, clock.Object)),
                 ],
                 new FakeInboundMediaIngestor(),
                 aiConversationStarter is null ? [] : [aiConversationStarter],

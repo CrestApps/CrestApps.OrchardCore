@@ -1,4 +1,5 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Consent;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -30,7 +31,7 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
     private readonly IDialerAbandonmentPolicyService _abandonmentPolicyService;
     private readonly IEnumerable<INationalDoNotCallRegistry> _doNotCallRegistries;
     private readonly INotInServiceNumberService _notInServiceNumbers;
-    private readonly IContactOptOutResolver _optOutResolver;
+    private readonly IConsentService _consentService;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -57,7 +58,7 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
         IDialerAbandonmentPolicyService abandonmentPolicyService,
         IEnumerable<INationalDoNotCallRegistry> doNotCallRegistries,
         INotInServiceNumberService notInServiceNumbers,
-        IContactOptOutResolver optOutResolver,
+        IConsentService consentService,
         IClock clock,
         ILogger<DefaultDialerEligibilityService> logger)
     {
@@ -69,7 +70,7 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
         _abandonmentPolicyService = abandonmentPolicyService;
         _doNotCallRegistries = doNotCallRegistries;
         _notInServiceNumbers = notInServiceNumbers;
-        _optOutResolver = optOutResolver;
+        _consentService = consentService;
         _clock = clock;
         _logger = logger;
     }
@@ -141,11 +142,19 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
             ? part
             : null;
 
-        // Asked of the opt-out resolver, not of the contact's own flag: a stop recorded on another record that holds the
-        // same number, or against the number while no record held it, is the same person asking.
+        // Asked of the consent service, not of the contact's own flag: a stop recorded on another record that holds the
+        // same number, or against the number while no record held it, is the same person asking. The do-not-call lists
+        // are screened below with the national registries, under their own reason.
         if (profile.RespectDoNotCall &&
-            (await _optOutResolver.HasOptedOutAsync(contact, OmnichannelConstants.Channels.Phone, cancellationToken) ||
-            await _optOutResolver.HasAddressOptedOutAsync(OmnichannelConstants.Channels.Phone, destination.Value, cancellationToken)))
+            (await _consentService.GetAsync(new ConsentQuery
+            {
+                Channel = ConsentChannels.Phone,
+                Address = destination.Value,
+                ContactKind = ConsentContactKinds.Contact,
+                ContactId = contact?.ContentItemId,
+                Contact = contact,
+                ExcludedSources = [ConsentSourceNames.DoNotCallLists],
+            }, cancellationToken)).HasOptedOut)
         {
             return DialerEligibilityResult.Suppressed(
                 DialerSuppressionReason.DoNotCall,

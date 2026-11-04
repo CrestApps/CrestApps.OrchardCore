@@ -515,7 +515,7 @@ public sealed class DialerEligibilityServiceTests
                 AbandonmentPolicyService.Object,
                 Registries,
                 NotInServiceNumbers.Object,
-                OptOutResolver,
+                CrestApps.OrchardCore.Tests.Doubles.ConsentDoubles.Over(OptOutResolver, ContentManager.Object),
                 clock.Object,
                 NullLogger<DefaultDialerEligibilityService>.Instance);
 

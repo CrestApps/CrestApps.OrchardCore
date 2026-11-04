@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Consent;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -50,7 +51,7 @@ public sealed class SmsMessagingChannel : IMessagingChannel
     private readonly IPhoneNumberService _phoneNumberService;
     private readonly IContactMethodsAccessor _contactMethods;
     private readonly ISession _session;
-    private readonly IContactOptOutResolver _optOutResolver;
+    private readonly IConsentService _consentService;
     private readonly IStringLocalizer S;
 
     /// <summary>
@@ -63,7 +64,7 @@ public sealed class SmsMessagingChannel : IMessagingChannel
     /// <param name="phoneNumberService">The phone number service a typed number is validated with.</param>
     /// <param name="contactMethods">Reads a contact's phone numbers.</param>
     /// <param name="phoneLookup">The lookup that finds a sender by any of a contact's numbers.</param>
-    /// <param name="optOutResolver">The resolver that decides whether a contact or a number has opted out of SMS.</param>
+    /// <param name="consentService">The consent service that decides whether a contact or a number has opted out of SMS.</param>
     public SmsMessagingChannel(
         Lazy<ISmsDispatcher> dispatcher,
         ISession session,
@@ -72,7 +73,7 @@ public sealed class SmsMessagingChannel : IMessagingChannel
         IPhoneNumberService phoneNumberService,
         IContactMethodsAccessor contactMethods,
         IOmnichannelContactPhoneLookup phoneLookup,
-        IContactOptOutResolver optOutResolver)
+        IConsentService consentService)
     {
         _dispatcher = dispatcher;
         _session = session;
@@ -81,7 +82,7 @@ public sealed class SmsMessagingChannel : IMessagingChannel
         _phoneNumberService = phoneNumberService;
         _contactMethods = contactMethods;
         _phoneLookup = phoneLookup;
-        _optOutResolver = optOutResolver;
+        _consentService = consentService;
     }
 
     /// <inheritdoc/>
@@ -161,14 +162,18 @@ public sealed class SmsMessagingChannel : IMessagingChannel
     /// <inheritdoc/>
     public async Task<bool> IsOptedOutAsync(ContentItem contact, string address, CancellationToken cancellationToken = default)
     {
-        // Asked of the resolver rather than the contact's own flag: a stop said on another record that holds the
+        // Asked of the consent service rather than the contact's own flag: a stop said on another record that holds the
         // number, or from the number while no record held it, is the same person asking.
-        if (await _optOutResolver.HasOptedOutAsync(contact, OmnichannelConstants.Channels.Sms, cancellationToken))
+        var consent = await _consentService.GetAsync(new ConsentQuery
         {
-            return true;
-        }
+            Channel = ConsentChannels.Sms,
+            Address = address,
+            ContactKind = ConsentContactKinds.Contact,
+            ContactId = contact?.ContentItemId,
+            Contact = contact,
+        }, cancellationToken);
 
-        return await _optOutResolver.HasAddressOptedOutAsync(OmnichannelConstants.Channels.Sms, address, cancellationToken);
+        return consent.HasOptedOut;
     }
 
     /// <inheritdoc/>

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Consent;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -29,29 +30,29 @@ public sealed class SmsKeywordInboundHandler : IMessagingInboundHandler
     private readonly ISmsDispatcher _dispatcher;
     private readonly IContentManager _contentManager;
     private readonly IContactOptOutResolver _optOutResolver;
+    private readonly IConsentService _consentService;
     private readonly SmsKeywordReplySettings _keywordReplySettings;
-    private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsKeywordInboundHandler"/> class.
     /// </summary>
     /// <param name="dispatcher">The dispatcher the confirmation is sent through.</param>
-    /// <param name="contentManager">The content manager, used to read and update the contact's opt-out.</param>
-    /// <param name="optOutResolver">The resolver that keeps the opt-outs recorded against a number no contact holds.</param>
+    /// <param name="contentManager">The content manager, used to read the contact's opt-out.</param>
+    /// <param name="optOutResolver">The resolver that reads the opt-outs recorded against a number no contact holds.</param>
     /// <param name="keywordReplySettings">The tenant's keyword replies.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="consentService">The consent service every opt-out and opt-in is recorded through.</param>
     public SmsKeywordInboundHandler(
         ISmsDispatcher dispatcher,
         IContentManager contentManager,
         IContactOptOutResolver optOutResolver,
         IOptions<SmsKeywordReplySettings> keywordReplySettings,
-        IClock clock)
+        IConsentService consentService)
     {
         _dispatcher = dispatcher;
         _contentManager = contentManager;
         _optOutResolver = optOutResolver;
         _keywordReplySettings = keywordReplySettings.Value;
-        _clock = clock;
+        _consentService = consentService;
     }
 
     /// <inheritdoc/>
@@ -163,42 +164,21 @@ public sealed class SmsKeywordInboundHandler : IMessagingInboundHandler
             && contactPart.DoNotSms;
     }
 
-    private async Task SetOptedOutAsync(MessagingConversation conversation, bool optedOut, CancellationToken cancellationToken)
-    {
-        var contact = await GetContactAsync(conversation);
-
-        if (optedOut && contact is null)
-        {
-            // Nobody on file holds the number, but the person who texted STOP is owed silence on it all the same, so
-            // the opt-out is recorded against the number. Every send path asks the opt-out resolver about it.
-            await _optOutResolver.RecordAddressOptOutAsync(
-                new ContactAddressOptOut
-                {
-                    Channel = OmnichannelConstants.Channels.Sms,
-                    Address = conversation.ContactAddress,
-                    Source = OptOutSource,
-                    OptedOutUtc = _clock.UtcNow,
-                },
-                cancellationToken);
-
-            return;
-        }
-
-        if (!optedOut)
-        {
-            // An opt-out recorded while no contact held the number is lifted too, whoever holds the number now.
-            await _optOutResolver.ClearAddressOptOutAsync(OmnichannelConstants.Channels.Sms, conversation.ContactAddress, cancellationToken);
-        }
-
-        if (contact is null)
-        {
-            return;
-        }
-
-        contact.Alter<OmnichannelContactPart>(part => part.SetDoNotSms(optedOut, _clock.UtcNow));
-
-        await _contentManager.UpdateAsync(contact);
-    }
+    // Recorded through the consent service: the contact's flag when a contact holds the number, and the number itself
+    // when nobody on file does, since the person who texted STOP is owed silence on it all the same. An opt-in lifts
+    // both. Every send path asks the consent service about it.
+    private Task SetOptedOutAsync(MessagingConversation conversation, bool optedOut, CancellationToken cancellationToken)
+        => _consentService.RecordAsync(
+            ConsentChannels.Sms,
+            conversation.ContactAddress,
+            new ConsentChange
+            {
+                OptedOut = optedOut,
+                Source = OptOutSource,
+                ContactKind = ConsentContactKinds.Contact,
+                ContactId = conversation.ContactContentItemId,
+            },
+            cancellationToken);
 
     private async Task<ContentItem> GetContactAsync(MessagingConversation conversation)
     {

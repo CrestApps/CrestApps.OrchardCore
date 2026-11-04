@@ -105,6 +105,7 @@ public sealed class LocalDncRegistryStartup : StartupBase
         });
 
         services.AddScoped<INationalDoNotCallRegistry, LocalDncRegistry>();
+        services.AddConsentSource<DoNotCallListConsentSource>();
         services.AddScoped<ILocalDncListManager, DefaultLocalDncListManager>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, LocalDncImportBackgroundTask>());
         services.AddNavigationProvider<LocalDncRegistryAdminMenu>();

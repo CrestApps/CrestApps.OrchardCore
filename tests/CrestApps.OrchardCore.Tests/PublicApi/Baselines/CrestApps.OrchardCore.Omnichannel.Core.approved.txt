@@ -1534,6 +1534,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         public System.Threading.Tasks.Task<bool> HasOptedOutAsync(OrchardCore.ContentManagement.ContentItem contact, string channel, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task RecordAddressOptOutAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.ContactAddressOptOut optOut, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class ContactPreferencesConsentSource : CrestApps.OrchardCore.Consent.IConsentSource
+    {
+        public ContactPreferencesConsentSource(CrestApps.OrchardCore.Omnichannel.Core.Services.IContactOptOutResolver optOutResolver, OrchardCore.ContentManagement.IContentManager contentManager, OrchardCore.Modules.IClock clock) { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<bool> HasOptedOutAsync(CrestApps.OrchardCore.Consent.ConsentQuery query, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task RecordAsync(string channel, string address, CrestApps.OrchardCore.Consent.ConsentChange change, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class ContentDefinitionOmnichannelContactTypeProvider : CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelContactTypeProvider
     {
         public ContentDefinitionOmnichannelContactTypeProvider(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCrmOptions> crmOptions) { }

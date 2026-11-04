@@ -48,6 +48,9 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<CustomerIndexProvider>();
 
         services.AddScoped<ICustomerStore, CustomerStore>();
+
+        // A customer's consent to marketing, which every campaign asks and a campaign's unsubscribe link withdraws.
+        services.AddConsentSource<CustomerMarketingConsentSource>();
         services.AddScoped<ICustomerService, DefaultCustomerService>();
 
         // Customers are parties: pickers and lists in any module find and name them by their customer record id.

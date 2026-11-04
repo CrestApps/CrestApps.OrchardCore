@@ -53,7 +53,7 @@ internal static class MessagingTestChannels
     /// Creates the SMS channel over the specified dispatcher.
     /// </summary>
     public static SmsMessagingChannel Sms(ISmsDispatcher dispatcher, ISession session = null, IContactOptOutResolver optOutResolver = null)
-        => new(new Lazy<ISmsDispatcher>(() => dispatcher), session ?? Mock.Of<ISession>(), new PassThroughStringLocalizer<SmsMessagingChannel>(), Mock.Of<IOmnichannelContactTypeProvider>(), new DefaultPhoneNumberService(), global::CrestApps.OrchardCore.Tests.Modules.Omnichannel.TestContactMethods.Accessor, ContactPhoneTestStore.CreateEmptyLookup(), optOutResolver ?? new SharedNumberOptOutResolver());
+        => new(new Lazy<ISmsDispatcher>(() => dispatcher), session ?? Mock.Of<ISession>(), new PassThroughStringLocalizer<SmsMessagingChannel>(), Mock.Of<IOmnichannelContactTypeProvider>(), new DefaultPhoneNumberService(), global::CrestApps.OrchardCore.Tests.Modules.Omnichannel.TestContactMethods.Accessor, ContactPhoneTestStore.CreateEmptyLookup(), global::CrestApps.OrchardCore.Tests.Doubles.ConsentDoubles.Over(optOutResolver ?? new SharedNumberOptOutResolver()));
 
     /// <summary>
     /// Creates a registry holding only the SMS channel over the specified dispatcher.

@@ -1,9 +1,9 @@
+using CrestApps.OrchardCore.Consent;
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Marketing.Services;
 using CrestApps.OrchardCore.Marketing.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using OrchardCore.DisplayManagement;
-using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Marketing.Controllers;
 
@@ -12,17 +12,22 @@ namespace CrestApps.OrchardCore.Marketing.Controllers;
 /// </summary>
 public sealed class UnsubscribeController : Controller
 {
+    /// <summary>
+    /// Where an unsubscribe is said to come from, kept with the change.
+    /// </summary>
+    public const string ConsentSource = "MarketingUnsubscribe";
+
     private readonly CampaignService _campaigns;
     private readonly ICustomerStore _customers;
     private readonly IShapeFactory _shapeFactory;
-    private readonly IClock _clock;
+    private readonly IConsentService _consentService;
 
-    public UnsubscribeController(CampaignService campaigns, ICustomerStore customers, IShapeFactory shapeFactory, IClock clock)
+    public UnsubscribeController(CampaignService campaigns, ICustomerStore customers, IShapeFactory shapeFactory, IConsentService consentService)
     {
         _campaigns = campaigns;
         _customers = customers;
         _shapeFactory = shapeFactory;
-        _clock = clock;
+        _consentService = consentService;
     }
 
     [HttpGet("marketing/unsubscribe", Name = MarketingConstants.UnsubscribeRouteName)]
@@ -49,9 +54,14 @@ public sealed class UnsubscribeController : Controller
 
         if (customer is { AcceptsMarketing: true })
         {
-            customer.AcceptsMarketing = false;
-            customer.ModifiedUtc = _clock.UtcNow;
-            await _customers.UpdateAsync(customer, HttpContext.RequestAborted);
+            // Recorded through the consent service, which every campaign and send asks.
+            await _consentService.RecordAsync(ConsentChannels.Email, customer.Email, new ConsentChange
+            {
+                OptedOut = true,
+                Source = ConsentSource,
+                ContactKind = ConsentContactKinds.Customer,
+                ContactId = customer.ItemId,
+            }, HttpContext.RequestAborted);
         }
 
         return View(await _shapeFactory.CreateAsync<UnsubscribeViewModel>("MarketingUnsubscribe", model =>

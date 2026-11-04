@@ -364,6 +364,23 @@ The numbers come from `OmnichannelContactPhoneNumberIndex`, which holds one row 
 
 The index starts empty on an upgraded tenant. The **Omnichannel Contact Phone Number Backfill** background task indexes the records saved before it, up to 2,000 a minute, resuming where it stopped after a restart; a record saved in the meantime is indexed by the save. Each page of 200 records is read from `OmnichannelContactIndex` alone, by document id after the stored cursor, so the database seeks to the cursor and reads one page; the records are then loaded by id. Until the backfill has finished, every lookup also reads the first Cell and Home numbers of the contact index, so no record that used to be found is missed.
 
+## Consent: may we reach them?
+
+`IConsentService` (Consent.Abstractions, namespace `CrestApps.OrchardCore.Consent`; `services.AddConsent()` in Consent.Core) is the one read and write API for whether a person may be contacted on a channel (`ConsentChannels.Phone`, `Sms`, `Email`) at an address. Consent to record a call is a different concept and isn't kept here.
+
+- `GetAsync(channel, address, contactId?)`, or `GetAsync(ConsentQuery)` with a `ContactKind` (`ConsentContactKinds.Contact` for a CRM contact, `Customer` for a commerce customer), a contact the caller already loaded and `ExcludedSources`, returns a `ConsentStatus`: `HasOptedOut` and the `Source` that says so. The sources are asked in registration order until one says the person opted out.
+- `RecordAsync(channel, address, ConsentChange)` records an opt-out or an opt-in (`OptedOut`, `Source`, `ContactKind`, `ContactId`) with every source that keeps that channel and kind of record.
+
+Each place consent is kept is an `IConsentSource`, registered with `services.AddConsentSource<T>()`:
+
+| Source (`ConsentSourceNames`) | Feature | Answers | Records |
+| --- | --- | --- | --- |
+| `contact-preferences` | Omnichannel activities | A CRM contact's do-not-call, do-not-text and do-not-e-mail flags (followed to every record that shares the number, through `IContactOptOutResolver`) and the opt-outs recorded against an address no contact held | Sets or clears the contact's flag; records or lifts the opt-out against the address when no contact holds it |
+| `do-not-call-lists` | Local DNC lists | A phone number on one of the site's completed do-not-call lists | Nothing; the lists are imported files |
+| `customer-marketing` | Customers | E-mail to a commerce customer (`ContactKind` `Customer`) who hasn't said yes to marketing | Sets the customer's `AcceptsMarketing` |
+
+The SMS STOP and START keywords record through it, as does a campaign's unsubscribe link. The SMS channel's opt-out check (which the messaging workspace and the broadcasts use), automated SMS activities and the dialer's do-not-call check read through it. The dialer leaves the do-not-call lists out of its question (`ExcludedSources`), because it screens them with the national registries under their own reason, so its answers and suppression reasons are what they were.
+
 ## Phone number search
 
 Phone filters in **Load Activities**, **Manage Activities**, and Content Admin search the primary **Cell** and **Home** contact methods. How users type searches, and the `phone:`, `phone-exact:`, `phone-starts:` and `phone-ends:` terms, are described in [Find a contact](../user-manual/contacts.md#find-a-contact) and [Load activities](../user-manual/load-inventory.md#phone-number-tips).

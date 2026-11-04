@@ -264,7 +264,7 @@ public sealed class SmsAutoReplyRouterTests
                 ContentManager.Object,
                 OptOutResolver,
                 Options.Create(new SmsKeywordReplySettings()),
-                clock.Object);
+                CrestApps.OrchardCore.Tests.Doubles.ConsentDoubles.Over(OptOutResolver, ContentManager.Object, clock.Object));
         }
 
         public void AddContact(string contentItemId, bool doNotSms)

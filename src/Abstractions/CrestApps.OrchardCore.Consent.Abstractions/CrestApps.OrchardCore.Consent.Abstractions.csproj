@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Consent</RootNamespace>
+    <Title>CrestApps OrchardCore Consent Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      One read and write API for whether a person may be contacted on a channel (phone, SMS, e-mail) at an address:
+      the CRM's do-not-contact flags and opt-outs, the do-not-call lists and commerce marketing consent, each a
+      consent source.
+    </Description>
+    <PackageTags>$(PackageTags) Consent OptOut DoNotContact Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
+  </ItemGroup>
+
+</Project>

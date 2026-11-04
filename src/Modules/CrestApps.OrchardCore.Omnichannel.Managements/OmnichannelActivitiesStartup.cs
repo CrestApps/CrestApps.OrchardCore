@@ -77,6 +77,10 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
         // workspace) depends on this feature, so all of them answer "may we reach them?" the same way.
         services.AddScoped<IContactOptOutResolver, ContactOptOutResolver>();
 
+        // The consent service answers "may we reach them?" for every channel; the contacts' flags and the address
+        // opt-outs are its CRM source.
+        services.AddConsentSource<ContactPreferencesConsentSource>();
+
         // The load editor and the automated sends take the business-hours gate as a plain dependency, and the
         // contract is declared here, in Omnichannel, so it is registered here too. It reads the shared business hours:
         // with no schedule source every moment is open, and a feature that keeps calendars (the Contact Center business
