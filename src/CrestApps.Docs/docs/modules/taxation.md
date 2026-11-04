@@ -595,6 +595,29 @@ The Taxation module ships the **EU VAT standard rates** recipe (`EuVatStandardRa
 
 **Deployment steps** with the same five names are available under **Configuration → Deployment**, so an existing tenant's taxation catalog can be exported into a deployment plan and re-imported elsewhere. The exported JSON is identical in shape to the recipe payloads above.
 
+### Tax registrations and exemption certificates
+
+The `MerchantTaxRegistration` step (`MerchantTaxRegistrations` array) imports the store's own registrations, matched by `ItemId`, then by name; a registration needs a name and a `JurisdictionId`. The `ExemptionCertificate` step (`ExemptionCertificates` array) imports customers' certificates. A certificate keeps its `ItemId`, which the customer's `ExemptionCertificateIds` list; one without an id is matched by its `CustomerId` and `CertificateNumber`. A certificate needs its customer and a name or a number, and must expire after it takes effect. Import the customers and jurisdictions first. Both records are carried with their dates; only the store's document id is left out. The **Tax registrations** (`MerchantTaxRegistrationDeploymentStep`) and **Exemption certificates** (`ExemptionCertificateDeploymentStep`) deployment steps, under *Taxation*, write them in the same shape.
+
+```json
+{
+  "steps": [
+    {
+      "name": "MerchantTaxRegistration",
+      "MerchantTaxRegistrations": [
+        { "ItemId": "4tr00000000000000000000001", "Name": "California sales tax", "JurisdictionId": "us-ca", "TaxType": "SalesTax", "RegistrationNumber": "123-456", "IsActive": true, "ThresholdAmount": 100000 }
+      ]
+    },
+    {
+      "name": "ExemptionCertificate",
+      "ExemptionCertificates": [
+        { "ItemId": "4ec00000000000000000000001", "Name": "Resale", "CertificateNumber": "R-1001", "CustomerId": "4cs00000000000000000000001", "ExemptionType": "Resale", "Status": "Active", "TaxTypes": [ "SalesTax" ], "JurisdictionIds": [ "us-ca" ] }
+      ]
+    }
+  ]
+}
+```
+
 ## Taxes on orders and the one-stop shop
 
 When a cart's checkout completes, `OrderCheckoutHandler` copies the invoice's tax lines to `Order.TaxLines` (`List<TaxLine>`), so an order keeps every tax it was charged: its name, type, jurisdiction, rate, taxable amount, amount and whether it was included in the price. The Orders API shows them as the order's `taxes`; see [Carts and Orders](carts-and-orders.md#taxes-and-culture-on-the-order).

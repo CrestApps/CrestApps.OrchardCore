@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Core.Deployments;
+using CrestApps.OrchardCore.Taxation.Deployments;
 using CrestApps.OrchardCore.Taxation.Deployments.Sources;
 using CrestApps.OrchardCore.Taxation.Deployments.Steps;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,5 +23,7 @@ public sealed class ConfigurationDeploymentStartup : StartupBase
         services.AddDeployment<TaxJurisdictionDeploymentSource, TaxJurisdictionDeploymentStep, SummaryDeploymentStepDisplayDriver<TaxJurisdictionDeploymentStep>>();
         services.AddDeployment<TaxRuleDeploymentSource, TaxRuleDeploymentStep, SummaryDeploymentStepDisplayDriver<TaxRuleDeploymentStep>>();
         services.AddDeployment<TaxTableDeploymentSource, TaxTableDeploymentStep, SummaryDeploymentStepDisplayDriver<TaxTableDeploymentStep>>();
+        services.AddDeployment<MerchantTaxRegistrationDeploymentSource, MerchantTaxRegistrationDeploymentStep, SummaryDeploymentStepDisplayDriver<MerchantTaxRegistrationDeploymentStep>>();
+        services.AddDeployment<ExemptionCertificateDeploymentSource, ExemptionCertificateDeploymentStep, SummaryDeploymentStepDisplayDriver<ExemptionCertificateDeploymentStep>>();
     }
 }
