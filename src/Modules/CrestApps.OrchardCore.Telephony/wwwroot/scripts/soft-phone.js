@@ -426,6 +426,40 @@
 		};
 	}
 	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/provider-errors.js
+	var ERROR_NAME = /\b([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)\b/;
+	var SIGNALING_LOST_ERRORS = [
+		"SDP_SEND_FAILED",
+		"WEBSOCKET_CONNECTION_FAILED",
+		"WEBSOCKET_ERROR",
+		"RECONNECTION_EXHAUSTED"
+	];
+	var DEFAULT_SIGNALING_LOST = "The call could not be connected because the connection to the phone service dropped. Check your network connection and try again.";
+	function getProviderErrorText(error) {
+		if (!error) return "";
+		if (typeof error === "string") return error;
+		var inner = error.error;
+		if (typeof inner === "string") return inner;
+		if (inner && typeof inner.message === "string") return inner.name ? inner.name + ": " + inner.message : inner.message;
+		return typeof error.message === "string" ? error.message : "";
+	}
+	function getProviderErrorName(error) {
+		if (!error || typeof error === "string") {
+			var fromText = ERROR_NAME.exec(String(error || ""));
+			return fromText ? fromText[1] : "";
+		}
+		var inner = error.error && typeof error.error === "object" ? error.error : null;
+		var named = inner && inner.name || error.name;
+		if (typeof named === "string" && ERROR_NAME.test(named)) return named;
+		var match = ERROR_NAME.exec(getProviderErrorText(error));
+		return match ? match[1] : "";
+	}
+	function describeProviderError(error, strings) {
+		var name = getProviderErrorName(error);
+		if (SIGNALING_LOST_ERRORS.indexOf(name) !== -1) return strings && strings.providerSignalingLost || DEFAULT_SIGNALING_LOST;
+		return getProviderErrorText(error) || "Telnyx WebRTC error.";
+	}
+	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/shared/call-timer.js
 	function pad(value) {
 		return value < 10 ? "0" + value : String(value);
@@ -5687,7 +5721,8 @@
 					if (window.console && console.debug) console.debug("[soft-phone] Ignored benign Telnyx hang-up error.", error);
 					return;
 				}
-				context.showError(error && (error.error || error.message) || "Telnyx WebRTC error.");
+				if (typeof context.reportDiagnostic === "function") context.reportDiagnostic("error", "provider-error", getProviderErrorText(error), getProviderErrorName(error));
+				context.showError(describeProviderError(error, context.strings));
 			});
 			function reportSignalingDegraded(active) {
 				if (disposed || typeof context.onSignalingDegraded !== "function") return;
@@ -7388,6 +7423,7 @@
 							remoteAudioElement: dom.remoteAudio,
 							setRemoteStream: setRemoteAudioStream,
 							showError,
+							strings,
 							shouldAutoAnswerInbound: consumeInboundAutoAnswer,
 							claimOfferLeg,
 							onOfferLegEnded: handleOfferLegEnded,
