@@ -1,11 +1,15 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI.DataSources;
-using OrchardCore.Deployment;
+using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.Core.Deployments;
 
 namespace CrestApps.OrchardCore.AI.DataSources.Deployments;
 
-internal sealed class AIDataSourceDeploymentSource : DeploymentSourceBase<AIDataSourceDeploymentStep>
+/// <summary>
+/// Writes the selected AI data sources to a deployment plan, in the shape <c>AIDataSourceStep</c> reads.
+/// </summary>
+internal sealed class AIDataSourceDeploymentSource : CatalogDeploymentSourceBase<AIDataSourceDeploymentStep, AIDataSource>
 {
     private readonly IAIDataSourceStore _store;
 
@@ -14,49 +18,32 @@ internal sealed class AIDataSourceDeploymentSource : DeploymentSourceBase<AIData
     /// </summary>
     /// <param name="store">The store.</param>
     public AIDataSourceDeploymentSource(IAIDataSourceStore store)
+        : base("DataSources")
     {
         _store = store;
     }
 
-    protected override async Task ProcessAsync(AIDataSourceDeploymentStep step, DeploymentPlanResult result)
-    {
-        var dataSources = await _store.GetAllAsync();
+    protected override async Task<IEnumerable<AIDataSource>> GetEntriesAsync()
+        => await _store.GetAllAsync();
 
-        var sourceObjects = new JsonArray();
+    protected override bool IsSelected(AIDataSourceDeploymentStep step, AIDataSource entry)
+        => IsSelectedByKey(step.IncludeAll, step.SourceIds, entry.ItemId);
 
-        var sourceIds = step.IncludeAll
-        ? []
-        : step.SourceIds ?? [];
-
-        foreach (var dataSource in dataSources)
+    // The source travels too: without it the recipe step reads every data source as a search index profile.
+    protected override JsonObject Export(AIDataSource entry)
+        => new()
         {
-            if (sourceIds.Length > 0 && !sourceIds.Contains(dataSource.ItemId))
-            {
-                continue;
-            }
-
-            var sourceObject = new JsonObject()
-            {
-                { "ItemId", dataSource.ItemId },
-                { "DisplayText", dataSource.DisplayText },
-                { "SourceIndexProfileName", dataSource.SourceIndexProfileName },
-                { "AIKnowledgeBaseIndexProfileName", dataSource.AIKnowledgeBaseIndexProfileName },
-                { "KeyFieldName", dataSource.KeyFieldName },
-                { "TitleFieldName", dataSource.TitleFieldName },
-                { "ContentFieldName", dataSource.ContentFieldName },
-                { "CreatedUtc", dataSource.CreatedUtc },
-                { "OwnerId", dataSource.OwnerId },
-                { "Author", dataSource.Author },
-                { "Properties", dataSource.Properties is not null ? JsonSerializer.SerializeToNode(dataSource.Properties) : null },
-            };
-
-            sourceObjects.Add(sourceObject);
-        }
-
-        result.Steps.Add(new JsonObject
-        {
-            ["name"] = step.Name,
-            ["DataSources"] = sourceObjects,
-        });
-    }
+            { "ItemId", entry.ItemId },
+            { "Source", entry.Source },
+            { "DisplayText", entry.DisplayText },
+            { "SourceIndexProfileName", entry.SourceIndexProfileName },
+            { "AIKnowledgeBaseIndexProfileName", entry.AIKnowledgeBaseIndexProfileName },
+            { "KeyFieldName", entry.KeyFieldName },
+            { "TitleFieldName", entry.TitleFieldName },
+            { "ContentFieldName", entry.ContentFieldName },
+            { "CreatedUtc", entry.CreatedUtc },
+            { "OwnerId", entry.OwnerId },
+            { "Author", entry.Author },
+            { "Properties", entry.Properties is not null ? JsonSerializer.SerializeToNode(entry.Properties) : null },
+        };
 }

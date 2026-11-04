@@ -3,14 +3,19 @@ using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Core.Recipes;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Recipes.Models;
-using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.AI.Recipes;
 
-internal sealed class AIDeploymentStep : NamedRecipeStepHandler
+/// <summary>
+/// Imports AI deployments. A deployment is matched by its item id, then by its name and provider. The provider is read
+/// from <c>ClientName</c>, or from the older <c>ProviderName</c>.
+/// </summary>
+internal sealed class AIDeploymentStep : CatalogRecipeStepBase<AIDeployment>
 {
     /// <summary>
     /// The recipe step key used to identify this handler.
@@ -32,127 +37,82 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
         IAIDeploymentManager manager,
         IOptions<AIOptions> aiOptions,
         IStringLocalizer<AIDeploymentStep> stringLocalizer)
-    : base(StepKey)
+        : base(StepKey, "Deployments")
     {
         _manager = manager;
         _aiOptions = aiOptions.Value;
         S = stringLocalizer;
     }
 
-    protected override async Task HandleAsync(RecipeExecutionContext context)
+    protected override ValueTask<AIDeployment> FindByIdAsync(string id)
+        => _manager.FindByIdAsync(id);
+
+    protected override async ValueTask<CatalogRecipeLookup<AIDeployment>> FindExistingAsync(JsonObject token, RecipeExecutionContext context)
     {
-        var model = context.Step.ToObject<AIModelDeploymentStepModel>();
-        var tokens = model.Deployments.Cast<JsonObject>() ?? [];
+        var source = GetSource(token);
 
-        foreach (var token in tokens)
+        if (string.IsNullOrEmpty(source))
         {
-            AIDeployment deployment = null;
-            var isNew = false;
+            context.Errors.Add(S["Could not find provider name. The deployment will not be imported."]);
 
-            var id = token[nameof(AIDeployment.ItemId)]?.GetValue<string>();
+            return CatalogRecipeLookup<AIDeployment>.Skip;
+        }
 
-            var hasId = !string.IsNullOrEmpty(id);
+        var name = token[nameof(AIDeployment.Name)]?.GetValue<string>()?.Trim();
 
-            if (hasId)
+        if (string.IsNullOrEmpty(name))
+        {
+            context.Errors.Add(S["Could not find deployment name. The deployment will not be imported"]);
+
+            return CatalogRecipeLookup<AIDeployment>.Skip;
+        }
+
+        return CatalogRecipeLookup<AIDeployment>.Found(await _manager.GetAsync(name, source));
+    }
+
+    protected override ValueTask UpdateAsync(AIDeployment entry, JsonObject token)
+        => _manager.UpdateAsync(entry, token);
+
+    protected override async ValueTask<AIDeployment> NewAsync(JsonObject token, RecipeExecutionContext context)
+    {
+        var source = GetSource(token);
+
+        if (!_aiOptions.Deployments.TryGetValue(source, out _))
+        {
+            context.Errors.Add(S["Unable to find a provider-source that can handle the source '{0}'.", source]);
+
+            return null;
+        }
+
+        return await _manager.NewAsync(source, token);
+    }
+
+    protected override void Preparing(AIDeployment entry, JsonObject token)
+    {
+        // A legacy Purpose, Capability, or Type the recipe still carries has already been projected onto
+        // model capabilities while the deployment was populated. Only the old default is left to apply
+        // here: a recipe that names no purpose and declares no capabilities of its own is a text chat
+        // deployment, which validation now requires it to say.
+        if (!entry.TryGet<AIDeploymentMetadata>(out var metadata) || metadata.Features is not { Length: > 0 })
+        {
+            entry.Put(new AIDeploymentMetadata
             {
-                deployment = await _manager.FindByIdAsync(id);
-            }
-
-#pragma warning disable CS0618 // Type or member is obsolete
-            var sourceName = token[nameof(AIDeployment.ClientName)]?.GetValue<string>()
-                ?? token[nameof(AIDeployment.ProviderName)]?.GetValue<string>();
-#pragma warning restore CS0618 // Type or member is obsolete
-            var hasSource = !string.IsNullOrEmpty(sourceName);
-
-            if (deployment is null)
-            {
-                if (!hasSource)
-                {
-                    context.Errors.Add(S["Could not find provider name. The deployment will not be imported."]);
-
-                    continue;
-                }
-
-                var name = token[nameof(AIDeployment.Name)]?.GetValue<string>()?.Trim();
-
-                if (string.IsNullOrEmpty(name))
-                {
-                    context.Errors.Add(S["Could not find deployment name. The deployment will not be imported"]);
-
-                    continue;
-                }
-
-                if (!string.IsNullOrEmpty(name))
-                {
-                    deployment = await _manager.GetAsync(name, sourceName);
-                }
-            }
-
-            if (deployment is not null)
-            {
-                await _manager.UpdateAsync(deployment, token);
-            }
-            else
-            {
-                isNew = true;
-                if (!hasSource)
-                {
-                    context.Errors.Add(S["Could not find provider name. The deployment will not be imported."]);
-
-                    continue;
-                }
-
-                if (!_aiOptions.Deployments.TryGetValue(sourceName, out _))
-                {
-                    context.Errors.Add(S["Unable to find a provider-source that can handle the source '{0}'.", sourceName]);
-
-                    return;
-                }
-
-                deployment = await _manager.NewAsync(sourceName, token);
-
-                if (hasId && UniqueId.IsValid(id))
-                {
-                    deployment.ItemId = id;
-                }
-            }
-
-            // A legacy Purpose, Capability, or Type the recipe still carries has already been projected onto
-            // model capabilities while the deployment was populated. Only the old default is left to apply
-            // here: a recipe that names no purpose and declares no capabilities of its own is a text chat
-            // deployment, which validation now requires it to say.
-            if (!deployment.TryGet<AIDeploymentMetadata>(out var metadata) || metadata.Features is not { Length: > 0 })
-            {
-                deployment.Put(new AIDeploymentMetadata
-                {
-                    Features = [AIDeploymentFeatureNames.TextGeneration],
-                });
-            }
-
-            var validationResult = await _manager.ValidateAsync(deployment);
-
-            if (!validationResult.Succeeded)
-            {
-                foreach (var error in validationResult.Errors)
-                {
-                    context.Errors.Add(error.ErrorMessage);
-                }
-
-                continue;
-            }
-
-            if (isNew)
-            {
-                await _manager.CreateAsync(deployment);
-            }
+                Features = [AIDeploymentFeatureNames.TextGeneration],
+            });
         }
     }
 
-    private sealed class AIModelDeploymentStepModel
+    protected override ValueTask<ValidationResultDetails> ValidateAsync(AIDeployment entry)
+        => _manager.ValidateAsync(entry);
+
+    protected override ValueTask CreateAsync(AIDeployment entry)
+        => _manager.CreateAsync(entry);
+
+    private static string GetSource(JsonObject token)
     {
-        /// <summary>
-        /// Gets or sets the collection of AI deployment definitions to import.
-        /// </summary>
-        public JsonArray Deployments { get; set; }
+#pragma warning disable CS0618 // Type or member is obsolete
+        return token[nameof(AIDeployment.ClientName)]?.GetValue<string>()
+            ?? token[nameof(AIDeployment.ProviderName)]?.GetValue<string>();
+#pragma warning restore CS0618 // Type or member is obsolete
     }
 }

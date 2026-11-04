@@ -1,15 +1,18 @@
 ﻿using System.Text.Json.Nodes;
-using CrestApps.Core;
 using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Recipes;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Recipes.Models;
-using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Recipes;
 
-internal sealed class McpConnectionStep : NamedRecipeStepHandler
+/// <summary>
+/// Imports MCP client connections, matched by their item id.
+/// </summary>
+internal sealed class McpConnectionStep : CatalogRecipeStepBase<McpConnection>
 {
     public const string StepKey = "McpConnection";
 
@@ -28,88 +31,43 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
         ISourceCatalogManager<McpConnection> manager,
         IOptions<McpClientAIOptions> mcpClientOptions,
         IStringLocalizer<McpConnectionStep> stringLocalizer)
-    : base(StepKey)
+        : base(StepKey, "Connections")
     {
         _manager = manager;
         _mcpClientOptions = mcpClientOptions.Value;
         S = stringLocalizer;
     }
 
-    protected override async Task HandleAsync(RecipeExecutionContext context)
-    {
-        var model = context.Step.ToObject<McpConnectionDeploymentStepModel>();
-        var tokens = model.Connections.Cast<JsonObject>() ?? [];
+    protected override ValueTask<McpConnection> FindByIdAsync(string id)
+        => _manager.FindByIdAsync(id);
 
-        foreach (var token in tokens)
+    protected override ValueTask UpdateAsync(McpConnection entry, JsonObject token)
+        => _manager.UpdateAsync(entry, token);
+
+    protected override async ValueTask<McpConnection> NewAsync(JsonObject token, RecipeExecutionContext context)
+    {
+        var source = token[nameof(McpConnection.Source)]?.GetValue<string>();
+
+        if (string.IsNullOrEmpty(source))
         {
-            McpConnection connection = null;
-            var isNew = false;
+            context.Errors.Add(S["Could not find provider name. The deployment will not be imported."]);
 
-            var id = token[nameof(McpConnection.ItemId)]?.GetValue<string>();
-
-            var hasId = !string.IsNullOrEmpty(id);
-
-            if (hasId)
-            {
-                connection = await _manager.FindByIdAsync(id);
-            }
-
-            var sourceName = token[nameof(McpConnection.Source)]?.GetValue<string>();
-            var hasSource = !string.IsNullOrEmpty(sourceName);
-
-            if (connection is not null)
-            {
-                await _manager.UpdateAsync(connection, token);
-            }
-            else
-            {
-                isNew = true;
-                if (!hasSource)
-                {
-                    context.Errors.Add(S["Could not find provider name. The deployment will not be imported."]);
-
-                    continue;
-                }
-
-                if (!_mcpClientOptions.TransportTypes.TryGetValue(sourceName, out _))
-                {
-                    context.Errors.Add(S["Invalid source used for MCP connection '{0}'.", sourceName]);
-
-                    return;
-                }
-
-                connection = await _manager.NewAsync(sourceName, token);
-
-                if (hasId && UniqueId.IsValid(id))
-                {
-                    connection.ItemId = id;
-                }
-            }
-
-            var validationResult = await _manager.ValidateAsync(connection);
-
-            if (!validationResult.Succeeded)
-            {
-                foreach (var error in validationResult.Errors)
-                {
-                    context.Errors.Add(error.ErrorMessage);
-                }
-
-                continue;
-            }
-
-            if (isNew)
-            {
-                await _manager.CreateAsync(connection);
-            }
+            return null;
         }
+
+        if (!_mcpClientOptions.TransportTypes.TryGetValue(source, out _))
+        {
+            context.Errors.Add(S["Invalid source used for MCP connection '{0}'.", source]);
+
+            return null;
+        }
+
+        return await _manager.NewAsync(source, token);
     }
 
-    private sealed class McpConnectionDeploymentStepModel
-    {
-        /// <summary>
-        /// Gets or sets the connections.
-        /// </summary>
-        public JsonArray Connections { get; set; }
-    }
+    protected override ValueTask<ValidationResultDetails> ValidateAsync(McpConnection entry)
+        => _manager.ValidateAsync(entry);
+
+    protected override ValueTask CreateAsync(McpConnection entry)
+        => _manager.CreateAsync(entry);
 }

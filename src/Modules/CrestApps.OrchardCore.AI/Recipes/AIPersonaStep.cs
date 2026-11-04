@@ -1,11 +1,11 @@
 using System.Text.Json.Nodes;
-using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Recipes;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Recipes.Models;
-using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.AI.Recipes;
 
@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.AI.Recipes;
 /// created. Matching by name keeps the links of profiles and interactions working across tenants, where item ids
 /// differ.
 /// </summary>
-internal sealed class AIPersonaStep : NamedRecipeStepHandler
+internal sealed class AIPersonaStep : CatalogRecipeStepBase<AIPersona>
 {
     public const string StepKey = "AIPersonas";
 
@@ -33,78 +33,47 @@ internal sealed class AIPersonaStep : NamedRecipeStepHandler
         IAIPersonaManager personaManager,
         INamedCatalog<AIPersona> personasCatalog,
         IStringLocalizer<AIPersonaStep> stringLocalizer)
-        : base(StepKey)
+        : base(StepKey, "Personas")
     {
         _personaManager = personaManager;
         _personasCatalog = personasCatalog;
         S = stringLocalizer;
     }
 
-    protected override async Task HandleAsync(RecipeExecutionContext context)
+    protected override ValueTask<AIPersona> FindByIdAsync(string id)
+        => _personasCatalog.FindByIdAsync(id);
+
+    protected override async ValueTask<CatalogRecipeLookup<AIPersona>> FindExistingAsync(JsonObject token, RecipeExecutionContext context)
     {
-        var model = context.Step.ToObject<AIPersonaStepModel>();
-        var tokens = model?.Personas?.OfType<JsonObject>() ?? [];
+        var name = GetName(token);
 
-        foreach (var token in tokens)
-        {
-            var id = token[nameof(AIPersona.ItemId)]?.GetValue<string>();
-            var name = token[nameof(AIPersona.Name)]?.GetValue<string>()?.Trim();
-
-            var persona = string.IsNullOrEmpty(id)
-                ? null
-                : await _personasCatalog.FindByIdAsync(id);
-
-            if (persona is null && !string.IsNullOrEmpty(name))
-            {
-                persona = await _personasCatalog.FindByNameAsync(name);
-            }
-
-            if (persona is not null)
-            {
-                // The update keeps the saved name, because that is what links point to.
-                await _personaManager.UpdateAsync(persona, token);
-                await AddErrorsAsync(context, persona);
-
-                continue;
-            }
-
-            if (string.IsNullOrEmpty(name))
-            {
-                context.Errors.Add(S["A persona needs a technical name. It was not imported."]);
-
-                continue;
-            }
-
-            persona = await _personaManager.NewAsync(name, token);
-
-            if (!string.IsNullOrEmpty(id) && UniqueId.IsValid(id))
-            {
-                persona.ItemId = id;
-            }
-
-            if (await AddErrorsAsync(context, persona))
-            {
-                continue;
-            }
-
-            await _personaManager.CreateAsync(persona);
-        }
+        return CatalogRecipeLookup<AIPersona>.Found(string.IsNullOrEmpty(name) ? null : await _personasCatalog.FindByNameAsync(name));
     }
 
-    private async Task<bool> AddErrorsAsync(RecipeExecutionContext context, AIPersona persona)
-    {
-        var result = await _personaManager.ValidateAsync(persona);
+    // The update keeps the saved name, because that is what links point to.
+    protected override ValueTask UpdateAsync(AIPersona entry, JsonObject token)
+        => _personaManager.UpdateAsync(entry, token);
 
-        foreach (var error in result.Errors)
+    protected override async ValueTask<AIPersona> NewAsync(JsonObject token, RecipeExecutionContext context)
+    {
+        var name = GetName(token);
+
+        if (string.IsNullOrEmpty(name))
         {
-            context.Errors.Add(error.ErrorMessage);
+            context.Errors.Add(S["A persona needs a technical name. It was not imported."]);
+
+            return null;
         }
 
-        return !result.Succeeded;
+        return await _personaManager.NewAsync(name, token);
     }
 
-    private sealed class AIPersonaStepModel
-    {
-        public JsonArray Personas { get; set; }
-    }
+    protected override ValueTask<ValidationResultDetails> ValidateAsync(AIPersona entry)
+        => _personaManager.ValidateAsync(entry);
+
+    protected override ValueTask CreateAsync(AIPersona entry)
+        => _personaManager.CreateAsync(entry);
+
+    private static string GetName(JsonObject token)
+        => token[nameof(AIPersona.Name)]?.GetValue<string>()?.Trim();
 }

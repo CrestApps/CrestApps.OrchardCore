@@ -3,11 +3,14 @@ using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
-using OrchardCore.Deployment;
+using CrestApps.OrchardCore.Core.Deployments;
 
 namespace CrestApps.OrchardCore.AI.Deployments.Sources;
 
-internal sealed class AIProfileTemplateDeploymentSource : DeploymentSourceBase<AIProfileTemplateDeploymentStep>
+/// <summary>
+/// Writes the selected AI profile templates to a deployment plan, in the shape <c>AIProfileTemplateStep</c> reads.
+/// </summary>
+internal sealed class AIProfileTemplateDeploymentSource : CatalogDeploymentSourceBase<AIProfileTemplateDeploymentStep, AIProfileTemplate>
 {
     private readonly INamedCatalog<AIProfileTemplate> _templatesCatalog;
 
@@ -16,49 +19,30 @@ internal sealed class AIProfileTemplateDeploymentSource : DeploymentSourceBase<A
     /// </summary>
     /// <param name="templatesCatalog">The templates catalog.</param>
     public AIProfileTemplateDeploymentSource(INamedCatalog<AIProfileTemplate> templatesCatalog)
+        : base("templates")
     {
         _templatesCatalog = templatesCatalog;
     }
 
-    protected override async Task ProcessAsync(AIProfileTemplateDeploymentStep step, DeploymentPlanResult result)
-    {
-        var templates = await _templatesCatalog.GetAllAsync();
+    protected override async Task<IEnumerable<AIProfileTemplate>> GetEntriesAsync()
+        => await _templatesCatalog.GetAllAsync();
 
-        var templatesData = new JsonArray();
+    protected override bool IsSelected(AIProfileTemplateDeploymentStep step, AIProfileTemplate entry)
+        => IsSelectedByKey(step.IncludeAll, step.TemplateNames, entry.Name);
 
-        var templateNames = step.IncludeAll
-        ? []
-        : step.TemplateNames ?? [];
-
-        foreach (var template in templates)
+    protected override JsonObject Export(AIProfileTemplate entry)
+        => new()
         {
-            if (templateNames.Length > 0 && !templateNames.Contains(template.Name))
-            {
-                continue;
-            }
-
-            var templateInfo = new JsonObject()
-            {
-                { "ItemId", template.ItemId },
-                { "Name", template.Name },
-                { "Source", template.Source },
-                { "DisplayText", template.DisplayText },
-                { "Description", template.Description },
-                { "Category", template.Category },
-                { "IsListable", template.IsListable },
-                { "CreatedUtc", template.CreatedUtc },
-                { "OwnerId", template.OwnerId },
-                { "Author", template.Author },
-                { "Properties", template.Properties != null ? JsonSerializer.SerializeToNode(template.Properties) : null },
-            };
-
-            templatesData.Add(templateInfo);
-        }
-
-        result.Steps.Add(new JsonObject
-        {
-            ["name"] = step.Name,
-            ["templates"] = templatesData,
-        });
-    }
+            { "ItemId", entry.ItemId },
+            { "Name", entry.Name },
+            { "Source", entry.Source },
+            { "DisplayText", entry.DisplayText },
+            { "Description", entry.Description },
+            { "Category", entry.Category },
+            { "IsListable", entry.IsListable },
+            { "CreatedUtc", entry.CreatedUtc },
+            { "OwnerId", entry.OwnerId },
+            { "Author", entry.Author },
+            { "Properties", entry.Properties != null ? JsonSerializer.SerializeToNode(entry.Properties) : null },
+        };
 }

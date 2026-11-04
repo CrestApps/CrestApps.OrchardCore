@@ -1,12 +1,16 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
-using OrchardCore.Deployment;
+using CrestApps.OrchardCore.Core.Deployments;
 
 namespace CrestApps.OrchardCore.AI.Deployments.Sources;
 
-internal sealed class AIProfileDeploymentSource : DeploymentSourceBase<AIProfileDeploymentStep>
+/// <summary>
+/// Writes the selected AI profiles to a deployment plan, in the shape <c>AIProfileStep</c> reads.
+/// </summary>
+internal sealed class AIProfileDeploymentSource : CatalogDeploymentSourceBase<AIProfileDeploymentStep, AIProfile>
 {
     private readonly IAIProfileStore _profileStore;
 
@@ -15,56 +19,41 @@ internal sealed class AIProfileDeploymentSource : DeploymentSourceBase<AIProfile
     /// </summary>
     /// <param name="profileStore">The profile store.</param>
     public AIProfileDeploymentSource(IAIProfileStore profileStore)
+        : base("profiles")
     {
         _profileStore = profileStore;
     }
 
-    protected override async Task ProcessAsync(AIProfileDeploymentStep step, DeploymentPlanResult result)
+    protected override async Task<IEnumerable<AIProfile>> GetEntriesAsync()
+        => await _profileStore.GetAllAsync();
+
+    protected override bool IsSelected(AIProfileDeploymentStep step, AIProfile entry)
+        => IsSelectedByKey(step.IncludeAll, step.ProfileNames, entry.Name);
+
+    protected override JsonObject Export(AIProfile entry)
     {
-        var profiles = await _profileStore.GetAllAsync();
-
-        var profilesData = new JsonArray();
-
-        var profileNames = step.IncludeAll
-        ? []
-        : step.ProfileNames ?? [];
-
-        foreach (var profile in profiles)
+        var profileInfo = new JsonObject()
         {
-            if (profileNames.Length > 0 && !profileNames.Contains(profile.Name))
-            {
-                continue;
-            }
+            { "ItemId", entry.ItemId },
+            { "Name", entry.Name },
+            { "DisplayText", entry.DisplayText },
+            { "WelcomeMessage", entry.WelcomeMessage },
+            { "Type", entry.Type.ToString() },
+            { "PromptTemplate", entry.PromptTemplate },
+            { "ChatDeploymentName", entry.ChatDeploymentName },
+            { "UtilityDeploymentName", entry.UtilityDeploymentName },
+            { "CreatedUtc", entry.CreatedUtc },
+            { "OwnerId", entry.OwnerId },
+            { "Author", entry.Author },
+            { "Settings", JsonSerializer.SerializeToNode(entry.Settings) },
+            { "Properties", JsonSerializer.SerializeToNode(entry.Properties) },
+        };
 
-            var profileInfo = new JsonObject()
-            {
-                { "ItemId" , profile.ItemId },
-                { "Name", profile.Name },
-                { "DisplayText", profile.DisplayText },
-                { "WelcomeMessage", profile.WelcomeMessage },
-                { "Type", profile.Type.ToString() },
-                { "PromptTemplate", profile.PromptTemplate },
-                { "ChatDeploymentName", profile.ChatDeploymentName },
-                { "UtilityDeploymentName", profile.UtilityDeploymentName },
-                { "CreatedUtc", profile.CreatedUtc },
-                { "OwnerId", profile.OwnerId },
-                { "Author", profile.Author },
-                { "Settings", JsonSerializer.SerializeToNode(profile.Settings) },
-                { "Properties", JsonSerializer.SerializeToNode(profile.Properties) },
-            };
-
-            if (profile.TitleType.HasValue)
-            {
-                profileInfo.Add("TitleType", profile.TitleType.Value.ToString());
-            }
-
-            profilesData.Add(profileInfo);
+        if (entry.TitleType.HasValue)
+        {
+            profileInfo.Add("TitleType", entry.TitleType.Value.ToString());
         }
 
-        result.Steps.Add(new JsonObject
-        {
-            ["name"] = step.Name,
-            ["profiles"] = profilesData,
-        });
+        return profileInfo;
     }
 }
