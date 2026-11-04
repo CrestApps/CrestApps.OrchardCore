@@ -32,7 +32,7 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Exports the store profile with a deployment; Orchard Core's Settings recipe step imports it.
 /// </summary>
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class DeploymentStartup : StartupBase
 {
     /// <inheritdoc/>
