@@ -169,7 +169,7 @@ public sealed class ContactCenterActivityOwnershipAuthorizationHandlerTests
             CreateServiceProvider(authorizeOwnActivity));
     }
 
-    private static IServiceProvider CreateServiceProvider(bool authorizeOwnActivity)
+    private static ServiceProvider CreateServiceProvider(bool authorizeOwnActivity)
     {
         var authorizationService = new Mock<IAuthorizationService>();
         authorizationService
