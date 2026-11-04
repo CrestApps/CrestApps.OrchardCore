@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using CrestApps.Core;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Core.Http;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -266,7 +267,10 @@ public sealed class AIWebhookSender
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !cancellationToken.IsCancellationRequested)
         {
-            Fail(delivery, null, ex is TaskCanceledException ? "The endpoint did not answer within 15 seconds." : ex.Message, now, retry: true);
+            // A host the egress guard refused (on the site's own network) is refused again on every retry.
+            var refused = ex.Message.Contains(EgressNetwork.RefusedMessage, StringComparison.Ordinal);
+
+            Fail(delivery, null, ex is TaskCanceledException ? "The endpoint did not answer within 15 seconds." : ex.Message, now, retry: !refused);
         }
     }
 

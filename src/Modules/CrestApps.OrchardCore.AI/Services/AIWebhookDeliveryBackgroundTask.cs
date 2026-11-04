@@ -24,6 +24,11 @@ public sealed class AIWebhookDeliveryBackgroundTask : IBackgroundTask
     /// </summary>
     internal const int DeliveriesPerPass = 100;
 
+    /// <summary>
+    /// How long a settled delivery is kept in the log, the same as commerce webhook deliveries.
+    /// </summary>
+    internal static readonly TimeSpan Retention = TimeSpan.FromDays(30);
+
     /// <inheritdoc/>
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
@@ -58,6 +63,17 @@ public sealed class AIWebhookDeliveryBackgroundTask : IBackgroundTask
             {
                 logger.LogError(ex, "Webhook delivery '{DeliveryId}' could not be sent.", delivery.ItemId.SanitizeLogValue());
             }
+        }
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+
+        // The log is kept for a month; one batch a minute keeps up with any store.
+        if (await deliveryStore.DeleteOlderThanAsync(clock.UtcNow - Retention, DeliveriesPerPass, cancellationToken) > 0)
+        {
+            await session.SaveChangesAsync(cancellationToken);
         }
     }
 }

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
+using CrestApps.OrchardCore.Core.Http;
 
 namespace CrestApps.OrchardCore.DataConnectors.Http;
 
@@ -12,41 +13,11 @@ namespace CrestApps.OrchardCore.DataConnectors.Http;
 internal static class DataConnectorNetwork
 {
     /// <summary>
-    /// Returns whether an address is on the site's own network: loopback, private, link-local, shared (carrier-grade
-    /// NAT) or unspecified.
+    /// Returns whether an address is on the site's own network, as the shared <see cref="EgressNetwork"/> guard
+    /// classifies it.
     /// </summary>
     public static bool IsInternal(IPAddress address)
-    {
-        ArgumentNullException.ThrowIfNull(address);
-
-        if (address.IsIPv4MappedToIPv6)
-        {
-            address = address.MapToIPv4();
-        }
-
-        if (IPAddress.IsLoopback(address) ||
-            address.IsIPv6LinkLocal ||
-            address.IsIPv6SiteLocal ||
-            address.IsIPv6UniqueLocal ||
-            address.IsIPv6Multicast ||
-            address.Equals(IPAddress.IPv6Any) ||
-            address.Equals(IPAddress.IPv6None))
-        {
-            return true;
-        }
-
-        var bytes = address.GetAddressBytes();
-
-        return bytes.Length == 4 &&
-            (bytes[0] == 0 ||
-             bytes[0] == 10 ||
-             bytes[0] == 127 ||
-             (bytes[0] == 100 && bytes[1] >= 64 && bytes[1] <= 127) ||
-             (bytes[0] == 169 && bytes[1] == 254) ||
-             (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) ||
-             (bytes[0] == 192 && bytes[1] == 168) ||
-             bytes[0] >= 224);
-    }
+        => EgressNetwork.IsInternal(address);
 
     /// <summary>
     /// Returns whether the configuration names a host as one connectors may call on any network.

@@ -1,8 +1,8 @@
-using System.Net;
 using System.Text.Json;
 using CrestApps.OrchardCore.Commerce.Webhooks.Models;
 using CrestApps.OrchardCore.Commerce.Webhooks.Services;
 using CrestApps.OrchardCore.Commerce.Webhooks.ViewModels;
+using CrestApps.OrchardCore.Core.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -384,27 +384,7 @@ public sealed class WebhooksAdminController : Controller
     /// developing.
     /// </summary>
     internal static bool IsAllowedUrl(string url, bool isDevelopment)
-    {
-        if (!Uri.TryCreate(url?.Trim(), UriKind.Absolute, out var uri) || !string.IsNullOrEmpty(uri.UserInfo))
-        {
-            return false;
-        }
-
-        // An address of the site's own network (a private, link-local or loopback IP) isn't another system's.
-        if (IPAddress.TryParse(uri.Host.Trim('[', ']'), out var literal) && WebhookNetwork.IsInternal(literal))
-        {
-            return isDevelopment && uri.Scheme == Uri.UriSchemeHttp && IPAddress.IsLoopback(literal);
-        }
-
-        if (uri.Scheme == Uri.UriSchemeHttps)
-        {
-            return !uri.IsLoopback;
-        }
-
-        return isDevelopment &&
-            uri.Scheme == Uri.UriSchemeHttp &&
-            (uri.IsLoopback || (IPAddress.TryParse(uri.Host, out var address) && IPAddress.IsLoopback(address)));
-    }
+        => EgressNetwork.IsAllowedUrl(url, isDevelopment);
 
     private void Apply(WebhookEditViewModel model, WebhookSubscription subscription)
     {

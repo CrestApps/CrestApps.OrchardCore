@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Commerce.Webhooks.Migrations;
 using CrestApps.OrchardCore.Commerce.Webhooks.Models;
 using CrestApps.OrchardCore.Commerce.Webhooks.Navigation;
 using CrestApps.OrchardCore.Commerce.Webhooks.Services;
+using CrestApps.OrchardCore.Core.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OrchardCore.BackgroundTasks;
@@ -36,7 +37,7 @@ public sealed class Startup : StartupBase
         // Redirects aren't followed: an https address the merchant approved mustn't send events somewhere else. And a
         // host that resolves to the site's own network is refused when it's called, not only when it's saved.
         services.AddHttpClient(WebhookConstants.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(15))
-            .ConfigurePrimaryHttpMessageHandler(serviceProvider => WebhookNetwork.CreateHandler(serviceProvider.GetRequiredService<IHostEnvironment>().IsDevelopment()));
+            .ConfigurePrimaryHttpMessageHandler(serviceProvider => EgressNetwork.CreateHandler(serviceProvider.GetRequiredService<IHostEnvironment>().IsDevelopment()));
 
         services.AddPermissionProvider<WebhookPermissionProvider>();
         services.AddNavigationProvider<WebhooksAdminMenu>();

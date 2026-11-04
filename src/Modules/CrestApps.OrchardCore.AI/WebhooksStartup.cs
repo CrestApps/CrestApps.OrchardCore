@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.AI.Core.Webhooks;
 using CrestApps.OrchardCore.AI.Drivers;
 using CrestApps.OrchardCore.AI.Migrations;
 using CrestApps.OrchardCore.AI.Services;
+using CrestApps.OrchardCore.Core.Http;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
@@ -38,7 +39,8 @@ public sealed class WebhooksStartup : StartupBase
             .AddPermissionProvider<AIWebhooksPermissionsProvider>();
 
         services.AddScoped<IAIConversationStartingHandler, AIWebhookConversationStartingHandler>();
-        services.AddHttpClient(AIWebhookSender.HttpClientName);
+        // Subscribers are other systems: the egress guard refuses hosts on the site's own network and follows no redirects.
+        services.AddEgressGuardedHttpClient(AIWebhookSender.HttpClientName);
         services.AddSingleton<IBackgroundTask, AIWebhookDeliveryBackgroundTask>();
     }
 }

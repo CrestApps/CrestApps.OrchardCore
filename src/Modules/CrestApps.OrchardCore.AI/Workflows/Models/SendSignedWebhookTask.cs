@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using CrestApps.Core;
+using CrestApps.OrchardCore.Core.Http;
 using Fluid;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
@@ -205,6 +206,12 @@ public sealed class SendSignedWebhookTask : TaskActivity<SendSignedWebhookTask>
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
             {
                 result["Error"] = ex.Message;
+
+                // The egress guard refused a host on the site's own network. Sending it again is refused again.
+                if (ex.Message.Contains(EgressNetwork.RefusedMessage, StringComparison.Ordinal))
+                {
+                    break;
+                }
             }
 
             if (attempt < attempts)

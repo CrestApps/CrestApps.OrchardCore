@@ -45,6 +45,15 @@ public interface IAIWebhookDeliveryStore : ICatalog<AIWebhookDelivery>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The deliveries and how many there are.</returns>
     Task<(IReadOnlyList<AIWebhookDelivery> Deliveries, int Count)> PageAsync(string subscriptionId, int page, int pageSize, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes settled deliveries (delivered or failed) created before a time. Pending deliveries are kept.
+    /// </summary>
+    /// <param name="createdBeforeUtc">Deliveries created before this time are deleted.</param>
+    /// <param name="take">The most deliveries one call deletes.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>How many deliveries were deleted.</returns>
+    Task<int> DeleteOlderThanAsync(DateTime createdBeforeUtc, int take, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -246,5 +255,24 @@ public sealed class AIWebhookDeliveryStore : DocumentCatalog<AIWebhookDelivery, 
         var deliveries = await query.OrderByDescending(index => index.CreatedUtc).Skip(Math.Max(0, page - 1) * pageSize).Take(pageSize).ListAsync(cancellationToken);
 
         return (deliveries.ToList(), count);
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> DeleteOlderThanAsync(DateTime createdBeforeUtc, int take, CancellationToken cancellationToken = default)
+    {
+        var pending = AIWebhookDeliveryStatus.Pending;
+        var old = await Session.Query<AIWebhookDelivery, AIWebhookDeliveryIndex>(index => index.Status != pending && index.CreatedUtc < createdBeforeUtc, collection: CollectionName)
+            .OrderBy(index => index.CreatedUtc)
+            .Take(take)
+            .ListAsync(cancellationToken);
+        var count = 0;
+
+        foreach (var delivery in old)
+        {
+            Session.Delete(delivery, CollectionName);
+            count++;
+        }
+
+        return count;
     }
 }
