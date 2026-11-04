@@ -142,24 +142,35 @@ public sealed class TimeClockTests
     [Fact]
     public async Task ClockingInLongBeforeTheShift_IsRefused()
     {
-        await using var kit = await TimeClockKit.CreateAsync(services => services.AddWorkforceTimeOffCore());
-        var team = await kit.AddTeamAsync("Front desk", policy => policy.BlockEarlyPunchInMinutes = 30);
-        var ana = await PlanningKit.AddMemberAsync(kit.Harness, "Ana", team);
-        var period = await PlanningKit.CreatePeriodAsync(kit.Harness, team);
+        // The time is written in the reader's culture; pin one so the message reads the same on every machine.
+        var previous = System.Globalization.CultureInfo.CurrentCulture;
+        System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.GetCultureInfo("en-US");
 
-        await PlanningKit.AddDraftAsync(kit.Harness, period, ana.ItemId, _monday, new TimeOnly(9, 0), new TimeOnly(17, 0));
-        await PlanningKit.PublishAsync(kit.Harness, period);
+        try
+        {
+            await using var kit = await TimeClockKit.CreateAsync(services => services.AddWorkforceTimeOffCore());
+            var team = await kit.AddTeamAsync("Front desk", policy => policy.BlockEarlyPunchInMinutes = 30);
+            var ana = await PlanningKit.AddMemberAsync(kit.Harness, "Ana", team);
+            var period = await PlanningKit.CreatePeriodAsync(kit.Harness, team);
 
-        kit.Now = TimeClockKit.Local(_monday, 8);
+            await PlanningKit.AddDraftAsync(kit.Harness, period, ana.ItemId, _monday, new TimeOnly(9, 0), new TimeOnly(17, 0));
+            await PlanningKit.PublishAsync(kit.Harness, period);
 
-        var early = await kit.PunchAsync(ana, TimePunchKind.In);
+            kit.Now = TimeClockKit.Local(_monday, 8);
 
-        kit.Now = TimeClockKit.Local(_monday, 8, 35);
+            var early = await kit.PunchAsync(ana, TimePunchKind.In);
 
-        var inTime = await kit.PunchAsync(ana, TimePunchKind.In);
+            kit.Now = TimeClockKit.Local(_monday, 8, 35);
 
-        Assert.Equal(["It's too early to clock in. You can clock in from 8:30 AM."], early.Errors);
-        Assert.True(inTime.Succeeded);
+            var inTime = await kit.PunchAsync(ana, TimePunchKind.In);
+
+            Assert.Equal(["It's too early to clock in. You can clock in from 8:30 AM."], early.Errors);
+            Assert.True(inTime.Succeeded);
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentCulture = previous;
+        }
     }
 
     [Fact]
