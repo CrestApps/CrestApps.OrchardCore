@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Addresses.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Customers.BackgroundTasks;
@@ -54,6 +55,9 @@ public sealed class Startup : StartupBase
         services.AddScoped<IUserEventHandler, CustomerMergeUserEventHandler>();
 
         services.AddScoped<CustomerAddressBook>();
+
+        // Checkout steps such as Shipping list and save the buyer's addresses through the Addresses contract.
+        services.AddScoped<IShippingAddressBook, CustomerShippingAddressBook>();
         services.AddScoped<CustomerAccountPages>();
 
         // Sample stores add their customers through a recipe. Customers are personal data, so there is no export step.
