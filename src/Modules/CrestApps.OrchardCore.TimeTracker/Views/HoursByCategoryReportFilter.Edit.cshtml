@@ -1,0 +1,12 @@
+@model CrestApps.OrchardCore.TimeTracker.ViewModels.HoursByCategoryReportFilterViewModel
+
+<div class="col p-1">
+    <label asp-for="Q" class="form-label">@T["Person"]</label>
+    <input asp-for="Q" class="form-control" placeholder="@T["Search by user name"]" />
+</div>
+<div class="col p-1">
+    <div class="form-check">
+        <input asp-for="ByDay" class="form-check-input" />
+        <label asp-for="ByDay" class="form-check-label">@T["A row per day"]</label>
+    </div>
+</div>

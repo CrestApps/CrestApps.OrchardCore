@@ -1,11 +1,16 @@
+using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.TimeTracker;
 using CrestApps.OrchardCore.TimeTracker.Core.Indexes;
 using CrestApps.OrchardCore.TimeTracker.Core.Services;
 using CrestApps.OrchardCore.TimeTracker.Models;
+using CrestApps.OrchardCore.TimeTracker.Reports;
 using CrestApps.OrchardCore.TimeTracker.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Tests.TimeTracker;
 
@@ -305,6 +310,61 @@ public sealed class TimeTrackerTests
         Assert.Equal("This time comes from the Time Clock; correct it there.", Assert.Single(removed.Errors));
     }
 
+    [Fact]
+    public async Task TheHoursByCategoryReport_WithoutTime_IsEmpty()
+    {
+        await using var kit = await Kit.CreateAsync();
+        await kit.CategoryAsync("Payable");
+
+        var document = await kit.ReportAsync(_nine.Date, _nine.Date.AddDays(1).AddTicks(-1));
+
+        Assert.False(document.HasContent);
+    }
+
+    [Fact]
+    public async Task TheHoursByCategoryReport_HasAColumnPerCategory_AndAnEveryoneTotal()
+    {
+        await using var kit = await Kit.CreateAsync();
+        var payable = await kit.CategoryAsync("Payable");
+        var breaks = await kit.CategoryAsync("Break");
+        var work = await kit.StageAsync("Work", payable);
+        var lunch = await kit.StageAsync("Lunch", breaks);
+
+        // 9:00 work, 12:00 lunch, 12:30 work, now 17:00.
+        await kit.SwitchAsync(work, 0);
+        await kit.SwitchAsync(lunch, 180);
+        await kit.SwitchAsync(work, 210);
+        kit.Now = _nine.AddMinutes(480);
+
+        var document = await kit.ReportAsync(_nine.Date, _nine.Date.AddDays(1).AddTicks(-1));
+
+        var table = document.Sections.Single(section => section.Rows.Count > 0);
+        // Categories at the same position are ordered by name.
+        Assert.Equal(["Person", "Break", "Payable", "Total"], table.Columns.Select(column => column.Label));
+        Assert.Equal(["ana", "0:30", "7:30", "8:00"], table.Rows[0].Cells);
+        Assert.Equal(ReportRowKind.GrandTotal, table.Rows[^1].Kind);
+        Assert.Equal("8:00", table.Rows[^1].Cells[^1]);
+    }
+
+    [Fact]
+    public async Task TheHoursByCategoryReport_AppliesTheSearchAndTheRowPerDay()
+    {
+        await using var kit = await Kit.CreateAsync();
+        var payable = await kit.CategoryAsync("Payable");
+        var work = await kit.StageAsync("Work", payable);
+
+        await kit.SwitchAsync(work, 0);
+        kit.Now = _nine.AddMinutes(60);
+
+        var byDay = await kit.ReportAsync(_nine.Date, _nine.Date.AddDays(1).AddTicks(-1), byDay: true);
+        var nobody = await kit.ReportAsync(_nine.Date, _nine.Date.AddDays(1).AddTicks(-1), search: "bob");
+
+        var table = byDay.Sections.Single(section => section.Rows.Count > 0);
+        Assert.Equal(["Person", "Day", "Payable", "Total"], table.Columns.Select(column => column.Label));
+        Assert.Equal("2026-11-02", table.Rows[0].Cells[1]);
+        Assert.False(nobody.HasContent);
+    }
+
     private sealed class Kit : IAsyncDisposable
     {
         public CalendarTestHarness Harness { get; private set; }
@@ -422,6 +482,30 @@ public sealed class TimeTrackerTests
 
         public Task<IReadOnlyList<TimeTotalsRow>> TotalsAsync(bool byDay, DateTime? from = null, DateTime? to = null)
             => Harness.RunAsync(services => services.GetRequiredService<ITimeTrackerService>().GetTotalsAsync(new TimeEntryQuery { UserIds = ["ana"], FromUtc = from, ToUtc = to }, "America/New_York", byDay), commit: false);
+
+        // The report in New York, the site's time zone; the date range is in UTC, like the Reports date range filter's.
+        public Task<ReportDocument> ReportAsync(DateTime fromUtc, DateTime toUtc, bool byDay = false, string search = null)
+            => Harness.RunAsync(services =>
+            {
+                var site = new Mock<ISite>();
+                site.SetupGet(value => value.TimeZoneId).Returns("America/New_York");
+
+                var siteService = new Mock<ISiteService>();
+                siteService.Setup(value => value.GetSiteSettingsAsync()).ReturnsAsync(site.Object);
+
+                var filter = new ReportFilter { ReportName = HoursByCategoryReport.Name };
+                filter.SetDateRange(new ReportDateRange { FromUtc = fromUtc, ToUtc = toUtc, Key = "custom" });
+                filter.Set<bool?>(HoursByCategoryReport.ByDayFilterKey, byDay ? true : null);
+                filter.Set(HoursByCategoryReport.SearchFilterKey, search);
+
+                var report = new HoursByCategoryReport(
+                    services.GetRequiredService<ITimeTrackerService>(),
+                    services.GetRequiredService<TimeCategoryStore>(),
+                    new TimeTrackerTimeZone(siteService.Object),
+                    new PassThroughStringLocalizer<HoursByCategoryReport>());
+
+                return report.RunAsync(new ReportContext(filter));
+            }, commit: false);
 
         public ValueTask DisposeAsync() => Harness.DisposeAsync();
     }

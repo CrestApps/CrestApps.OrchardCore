@@ -48,16 +48,7 @@ public sealed class TimeTrackerAdminMenu : AdminNavigationProvider
                 .Permission(TimeTrackerPermissions.ManageTimeTrackerSettings)
                 .LocalNav()));
 
-        // Reports sit with every other report, under Reports.
-        builder.Add(S["Reports"], "after.40", reports => reports
-            .Add(S["Time Tracker"], S["Time Tracker"].PrefixPosition(), category => category
-                .AddClass("report-category")
-                .Add(S["Hours by category"], S["Hours by category"].PrefixPosition("10"), report => report
-                    .Id("timeTrackerReport")
-                    .Action("Index", "TimeReport", TimeTrackerConstants.Features.TimeTracker)
-                    .Permission(TimeTrackerPermissions.ViewTimeEntries)
-                    .LocalNav())));
-
+        // The hours by category report is listed by the Reports module, under Reports > Workforce & Payroll.
         return ValueTask.CompletedTask;
     }
 }

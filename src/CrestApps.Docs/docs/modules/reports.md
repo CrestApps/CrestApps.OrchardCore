@@ -279,4 +279,4 @@ The widget renders the report's document with the same `_ReportWidgetSections` p
 }
 ```
 
-Enable `CrestApps.OrchardCore.Reports.OpenXml` only when you want Excel workbook exports, and `CrestApps.OrchardCore.Reports.Pdf` only when you want PDF exports. Enabled modules such as **Omnichannel Management** and **Phone Number Verifications** contribute their reports automatically once `CrestApps.OrchardCore.Reports` is enabled.
+Enable `CrestApps.OrchardCore.Reports.OpenXml` only when you want Excel workbook exports, and `CrestApps.OrchardCore.Reports.Pdf` only when you want PDF exports. Enabled modules such as **Omnichannel Management** and **Phone Number Verifications** contribute their reports automatically once `CrestApps.OrchardCore.Reports` is enabled. The AI analytics are reports too: **AI Chat Session Analytics**, **AI Chat Extracted Data** and **AI Chat Conversion Goals** (AI Chat Session Analytics feature), **AI Usage Analytics** (AI Usage Analytics feature, both of which depend on Reports), the **AI QA Dashboard** (AI Quality), and Time Tracker's **Hours by Category**.

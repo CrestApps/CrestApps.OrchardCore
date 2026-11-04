@@ -1,4 +1,7 @@
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Reports.Models;
+using CrestApps.OrchardCore.TimeTracker.Reports;
 using CrestApps.OrchardCore.TimeTracker.Core.Indexes;
 using CrestApps.OrchardCore.TimeTracker.Drivers;
 using CrestApps.OrchardCore.TimeTracker.Integrations;
@@ -95,5 +98,20 @@ public sealed class RecipesSchemaStartup : StartupBase
     {
         services.AddScoped<IRecipeStep, TimeTrackerRecipeStepSchema>();
         services.AddDeploymentStepSchema<TimeTrackerDeploymentStepSchema>();
+    }
+}
+
+/// <summary>
+/// Publishes the hours by category report, with its search and per-day filters, while Reports is enabled.
+/// </summary>
+[RequireFeatures(ReportsConstants.Feature)]
+public sealed class ReportsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddReport<HoursByCategoryReport>()
+            .AddDisplayDriver<ReportFilter, HoursByCategoryReportFilterDisplayDriver>();
     }
 }

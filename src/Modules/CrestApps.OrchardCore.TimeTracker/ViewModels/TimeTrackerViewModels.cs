@@ -209,50 +209,6 @@ public class TimeEntryEditViewModel
 }
 
 /// <summary>
-/// The time report.
-/// </summary>
-public class TimeReportViewModel
-{
-    /// <summary>
-    /// Gets or sets the first day, as yyyy-MM-dd.
-    /// </summary>
-    public string From { get; set; }
-
-    /// <summary>
-    /// Gets or sets the last day, as yyyy-MM-dd.
-    /// </summary>
-    public string To { get; set; }
-
-    /// <summary>
-    /// Gets or sets whether each day has its own row.
-    /// </summary>
-    public bool ByDay { get; set; }
-
-    /// <summary>
-    /// Gets or sets the user name filter.
-    /// </summary>
-    public string Q { get; set; }
-
-    /// <summary>
-    /// Gets or sets the categories, the report's columns.
-    /// </summary>
-    [BindNever]
-    public IList<TimeCategory> Categories { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the rows.
-    /// </summary>
-    [BindNever]
-    public IList<TimeTotalsRow> Rows { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the time zone.
-    /// </summary>
-    [BindNever]
-    public string TimeZoneId { get; set; }
-}
-
-/// <summary>
 /// A stage or category in its list.
 /// </summary>
 public sealed class TimeSettingRow
