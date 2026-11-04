@@ -14,9 +14,10 @@ using OrchardCore.Users.Services;
 namespace CrestApps.OrchardCore.Memberships.Handlers;
 
 /// <summary>
-/// Makes or extends a membership when its order is paid, and ends it when the order is canceled or refunded in full.
+/// Makes or extends a membership when its order is paid, from the product version it bought, and ends it when the order
+/// is canceled or refunded in full.
 /// </summary>
-internal sealed class MembershipOrderEventHandler : OrderGrantHandlerBase
+internal sealed class MembershipOrderEventHandler : OrderLineGrantHandlerBase<MembershipPart>
 {
     private readonly MembershipService _memberships;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -27,10 +28,12 @@ internal sealed class MembershipOrderEventHandler : OrderGrantHandlerBase
 
     public MembershipOrderEventHandler(
         MembershipService memberships,
+        IContentManager contentManager,
         IHttpContextAccessor httpContextAccessor,
         SignInManager<IUser> signInManager,
         IUserService userService,
         IStringLocalizer<MembershipOrderEventHandler> stringLocalizer)
+        : base(contentManager)
     {
         _memberships = memberships;
         _httpContextAccessor = httpContextAccessor;
@@ -39,9 +42,28 @@ internal sealed class MembershipOrderEventHandler : OrderGrantHandlerBase
         S = stringLocalizer;
     }
 
-    protected override async Task GrantAsync(Order order, CancellationToken cancellationToken)
+    // A guest's order makes no membership, since there's no account to put in a role.
+    protected override Task<bool> CanGrantAsync(Order order, CancellationToken cancellationToken)
+        => Task.FromResult(!string.IsNullOrEmpty(order.UserId));
+
+    protected override Task<ISet<string>> GetGrantedLineIdsAsync(Order order, CancellationToken cancellationToken)
+        => _memberships.GetGrantedLineIdsAsync(order, cancellationToken);
+
+    protected override Task<bool> GrantLineAsync(OrderLineGrantContext<MembershipPart> context, CancellationToken cancellationToken)
+        => _memberships.GrantLineAsync(context.Order, context.Line, context.Part, cancellationToken);
+
+    protected override Task RevokeLineAsync(Order order, OrderLine line, OrderRevokeReason reason, CancellationToken cancellationToken)
+        => _memberships.RevokeLineAsync(
+            order,
+            line,
+            reason == OrderRevokeReason.Canceled
+                ? S["Its order was canceled."]
+                : S["Its order was refunded."],
+            cancellationToken);
+
+    protected override async Task GrantedAsync(Order order, int granted, CancellationToken cancellationToken)
     {
-        if (await _memberships.GrantAsync(order, cancellationToken) == 0)
+        if (granted == 0)
         {
             return;
         }
@@ -55,14 +77,6 @@ internal sealed class MembershipOrderEventHandler : OrderGrantHandlerBase
             await _signInManager.RefreshSignInAsync(user);
         }
     }
-
-    protected override Task RevokeAsync(Order order, OrderRevokeReason reason, CancellationToken cancellationToken)
-        => _memberships.RevokeOrderAsync(
-            order,
-            reason == OrderRevokeReason.Canceled
-                ? S["Its order was canceled."]
-                : S["Its order was refunded."],
-            cancellationToken);
 }
 
 /// <summary>

@@ -38,7 +38,7 @@ This video shows the Membership part and the Memberships list:
 Roles go through `IRoleGrantService` (`CrestApps.OrchardCore.Users.Abstractions`, registered with `services.AddRoleGrants()` from `CrestApps.OrchardCore.Users.Core`), which records each grant on the user by source (`Membership`) and source ID (the membership). `MembershipRoleGrantSource` reports the grants of memberships made before grants were recorded, the first time the service touches a member, so their roles are kept and removed as before.
 - **`ExpireAsync`** ends memberships past their end date. `MembershipsBackgroundTask` calls it hourly.
 
-`MembershipOrderEventHandler` derives from `OrderGrantHandlerBase` (Orders.Core) and does the following on each order event:
+`MembershipOrderEventHandler` derives from `OrderLineGrantHandlerBase<MembershipPart>` (Orders.Core), which reads each line's roles and length from the product version the order bought, and does the following on each order event:
 
 - **Paid:** grants the memberships. When the buyer is the one signed in on the request, it refreshes their sign-in, so the roles apply at once.
 - **Canceled:** ends the memberships the order bought.

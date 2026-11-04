@@ -87,7 +87,7 @@ public sealed class MarketplaceService
 
         foreach (var line in order.Lines ?? [])
         {
-            var item = await _contentManager.GetAsync(line.ContentItemId, VersionOptions.Latest);
+            var item = await _contentManager.GetPurchasedAsync(line);
 
             if (item?.TryGet<VendorPart>(out var part) != true || string.IsNullOrEmpty(part.VendorId) ||
                 await _vendors.FindByIdAsync(part.VendorId, cancellationToken) is not { } vendor)

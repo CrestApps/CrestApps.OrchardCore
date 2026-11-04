@@ -67,7 +67,7 @@ public sealed class BookingDepositService
         {
             if (line.Details?.GetValueOrDefault(BookingsConstants.Details.Date) is not { } date ||
                 BookingSchedule.GetLocalStart(date) is not { } start ||
-                (await _contentManager.GetAsync(line.ContentItemId, VersionOptions.Published))?.TryGet<BookingPart>(out var part) != true ||
+                (await _contentManager.GetPurchasedAsync(line))?.TryGet<BookingPart>(out var part) != true ||
                 part.DepositPercent is <= 0m or >= 100m)
             {
                 continue;

@@ -114,7 +114,7 @@ public sealed class DonationService
 
         foreach (var line in order.Lines ?? [])
         {
-            var campaign = await _contentManager.GetAsync(line.ContentItemId, VersionOptions.Latest);
+            var campaign = await _contentManager.GetPurchasedAsync(line);
 
             if (campaign?.TryGet<FundraisingCampaignPart>(out var part) != true)
             {

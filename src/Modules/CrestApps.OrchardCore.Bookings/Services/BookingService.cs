@@ -86,7 +86,7 @@ public sealed class BookingService
                 continue;
             }
 
-            var item = await _contentManager.GetAsync(line.ContentItemId, VersionOptions.Published);
+            var item = await _contentManager.GetPurchasedAsync(line);
 
             if (item?.TryGet<BookingPart>(out var part) != true)
             {

@@ -143,7 +143,7 @@ public sealed class CommerceTenantIsolationTests
         // A link another tenant signed can't be read, so nothing is looked up.
         var session = new Mock<global::YesSql.ISession>();
 
-        return new DownloadService(session.Object, Mock.Of<IContentManager>(), siteService.Object, protection, SignedLinkDoubles.Urls(siteService.Object, TemplateLinkGenerator.ForToken(DownloadsConstants.RouteNames.Download, "/downloads/")), Mock.Of<IDistributedLock>(), clock.Object);
+        return new DownloadService(session.Object, siteService.Object, protection, SignedLinkDoubles.Urls(siteService.Object, TemplateLinkGenerator.ForToken(DownloadsConstants.RouteNames.Download, "/downloads/")), Mock.Of<IDistributedLock>(), clock.Object);
     }
 
     private static async Task<IStore> CouponStoreAsync(string path)

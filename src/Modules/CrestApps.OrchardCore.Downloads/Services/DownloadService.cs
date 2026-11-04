@@ -32,7 +32,6 @@ public sealed class DownloadService
     private static readonly TimeSpan _lockExpiration = TimeSpan.FromMinutes(1);
 
     private readonly ISession _session;
-    private readonly IContentManager _contentManager;
     private readonly ISiteService _siteService;
     private readonly IDataProtector _protector;
     private readonly SiteUrlGenerator _siteUrlGenerator;
@@ -41,7 +40,6 @@ public sealed class DownloadService
 
     public DownloadService(
         ISession session,
-        IContentManager contentManager,
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
         SiteUrlGenerator siteUrlGenerator,
@@ -49,7 +47,6 @@ public sealed class DownloadService
         IClock clock)
     {
         _session = session;
-        _contentManager = contentManager;
         _siteService = siteService;
         _protector = dataProtectionProvider.CreateProtector(ProtectionPurpose);
         _siteUrlGenerator = siteUrlGenerator;
@@ -58,60 +55,92 @@ public sealed class DownloadService
     }
 
     /// <summary>
-    /// Gives a paid order's buyer the files of the digital products it bought, the product's files as they were when
-    /// it was ordered. Granting again adds only what is missing.
+    /// Returns the IDs of the order's lines that already have files.
     /// </summary>
+    /// <param name="orderId">The order's ID.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    public async Task<ISet<string>> GetGrantedLineIdsAsync(string orderId, CancellationToken cancellationToken = default)
+        => (await ListAsync(orderId, cancellationToken))
+            .Where(entitlement => entitlement.OrderLineId is not null)
+            .Select(entitlement => entitlement.OrderLineId)
+            .ToHashSet(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Gives a paid order's buyer the files of one line's digital product, as they were when it was ordered:
+    /// <paramref name="part"/> comes from the purchased version. Granting again adds only what is missing.
+    /// </summary>
+    /// <param name="order">The paid order.</param>
+    /// <param name="line">The line.</param>
+    /// <param name="part">The digital files of the purchased version of the line's product.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>How many files were given.</returns>
-    public async Task<int> GrantAsync(Order order, CancellationToken cancellationToken = default)
+    public async Task<int> GrantLineAsync(Order order, OrderLine line, DigitalFilesPart part, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(order);
+        ArgumentNullException.ThrowIfNull(line);
+
+        if (part?.Files is not { Count: > 0 })
+        {
+            return 0;
+        }
 
         var settings = await _siteService.GetSettingsAsync<DownloadSettings>();
         var existing = await ListAsync(order.ItemId, cancellationToken);
         var now = _clock.UtcNow;
+        var limit = part.DownloadLimit ?? settings.DownloadLimit;
+        var days = part.LinkLifetimeDays ?? settings.LinkLifetimeDays;
         var granted = 0;
 
-        foreach (var line in order.Lines ?? [])
+        foreach (var file in part.Files)
         {
-            var product = !string.IsNullOrEmpty(line.ContentItemVersionId)
-                ? await _contentManager.GetVersionAsync(line.ContentItemVersionId)
-                : await _contentManager.GetAsync(line.ContentItemId, VersionOptions.Published);
-
-            if (product?.TryGet<DigitalFilesPart>(out var part) != true || part.Files is not { Count: > 0 })
+            if (existing.Any(entitlement => entitlement.OrderLineId == line.LineId && entitlement.FileId == file.FileId))
             {
                 continue;
             }
 
-            var limit = part.DownloadLimit ?? settings.DownloadLimit;
-            var days = part.LinkLifetimeDays ?? settings.LinkLifetimeDays;
-
-            foreach (var file in part.Files)
+            await _session.SaveAsync(new DownloadEntitlement
             {
-                if (existing.Any(entitlement => entitlement.OrderLineId == line.LineId && entitlement.FileId == file.FileId))
-                {
-                    continue;
-                }
+                ItemId = IdGenerator.GenerateId(),
+                OrderId = order.ItemId,
+                OrderNumber = order.OrderNumber,
+                OrderLineId = line.LineId,
+                ProductId = line.ContentItemId,
+                ProductTitle = line.Title,
+                FileId = file.FileId,
+                FileName = file.FileName,
+                DownloadLimit = limit > 0 ? limit : null,
+                ExpiresUtc = days > 0 ? now.AddDays(days) : null,
+                CreatedUtc = now,
+            }, collection: Collection, cancellationToken: cancellationToken);
 
-                await _session.SaveAsync(new DownloadEntitlement
-                {
-                    ItemId = IdGenerator.GenerateId(),
-                    OrderId = order.ItemId,
-                    OrderNumber = order.OrderNumber,
-                    OrderLineId = line.LineId,
-                    ProductId = line.ContentItemId,
-                    ProductTitle = line.Title,
-                    FileId = file.FileId,
-                    FileName = file.FileName,
-                    DownloadLimit = limit > 0 ? limit : null,
-                    ExpiresUtc = days > 0 ? now.AddDays(days) : null,
-                    CreatedUtc = now,
-                }, collection: Collection, cancellationToken: cancellationToken);
-
-                granted++;
-            }
+            granted++;
         }
 
         return granted;
+    }
+
+    /// <summary>
+    /// Takes back the files of one order line, such as when its order was canceled or refunded.
+    /// </summary>
+    /// <param name="orderId">The order's ID.</param>
+    /// <param name="lineId">The line's ID.</param>
+    /// <param name="reason">Why they are taken back.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>How many files were taken back.</returns>
+    public async Task<int> RevokeLineAsync(string orderId, string lineId, string reason, CancellationToken cancellationToken = default)
+    {
+        var revoked = 0;
+
+        foreach (var entitlement in await ListAsync(orderId, cancellationToken))
+        {
+            if (entitlement.RevokedUtc is null && string.Equals(entitlement.OrderLineId, lineId, StringComparison.Ordinal))
+            {
+                await RevokeAsync(entitlement, reason, cancellationToken);
+                revoked++;
+            }
+        }
+
+        return revoked;
     }
 
     /// <summary>
