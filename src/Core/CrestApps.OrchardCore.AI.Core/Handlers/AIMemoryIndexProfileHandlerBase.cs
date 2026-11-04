@@ -1,77 +1,28 @@
 using CrestApps.Core.AI.Clients;
-using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Memory;
-using CrestApps.Core.AI.Resilience;
-using CrestApps.OrchardCore.AI.Core;
-using OrchardCore.Indexing.Core.Handlers;
-using OrchardCore.Indexing.Models;
+using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
 /// <summary>
-/// Represents the AI memory index profile handler base.
+/// The base of an index profile handler for the AI memory index of one provider.
 /// </summary>
-public abstract class AIMemoryIndexProfileHandlerBase : IndexProfileHandlerBase
+public abstract class AIMemoryIndexProfileHandlerBase : EmbeddingIndexProfileHandlerBase
 {
-    protected string ProviderName { get; }
-
-    private readonly IAIDeploymentManager _deploymentManager;
-    private readonly IAIClientFactory _aiClientFactory;
-
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIMemoryIndexProfileHandlerBase"/> class.
+    /// </summary>
+    /// <param name="providerName">The name of the indexing provider the handler manages.</param>
+    /// <param name="deploymentManager">The deployment manager for resolving AI deployments.</param>
+    /// <param name="aiClientFactory">The factory for creating AI clients.</param>
+    /// <param name="logger">The logger the embedding failures are written to; nothing is logged when omitted.</param>
     protected AIMemoryIndexProfileHandlerBase(
         string providerName,
         IAIDeploymentManager deploymentManager,
-        IAIClientFactory aiClientFactory)
+        IAIClientFactory aiClientFactory,
+        ILogger logger = null)
+        : base(MemoryConstants.IndexingTaskType, providerName, deploymentManager, aiClientFactory, logger)
     {
-        ProviderName = providerName;
-        _deploymentManager = deploymentManager;
-        _aiClientFactory = aiClientFactory;
     }
-
-    protected async Task<int> GetEmbeddingDimensionsAsync(IndexProfile indexProfile)
-    {
-        const int defaultDimensions = 1536;
-        var metadata = IndexProfileEmbeddingMetadataAccessor.GetMetadata(indexProfile);
-
-        try
-        {
-            var embeddingDeploymentName = metadata.GetEmbeddingDeploymentName();
-
-            if (string.IsNullOrWhiteSpace(embeddingDeploymentName))
-            {
-                return defaultDimensions;
-            }
-
-            var deployment = await _deploymentManager.FindByNameAsync(embeddingDeploymentName);
-
-            if (deployment == null)
-            {
-                return defaultDimensions;
-            }
-
-            var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(deployment, builder => builder.UseDefaultResilience().UseUsageLabels(purpose: AIUsagePurposes.Indexing));
-
-            if (embeddingGenerator is null)
-            {
-                return defaultDimensions;
-            }
-
-            var embedding = await embeddingGenerator.GenerateAsync(["Sample"]);
-
-            if (embedding?.Count > 0 && embedding[0].Vector.Length > 0)
-            {
-                return embedding[0].Vector.Length;
-            }
-        }
-        catch (Exception)
-        {
-        }
-
-        return defaultDimensions;
-    }
-
-    protected bool CanHandle(IndexProfile indexProfile)
-        => string.Equals(indexProfile.Type, MemoryConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(indexProfile.ProviderName, ProviderName, StringComparison.OrdinalIgnoreCase);
 }

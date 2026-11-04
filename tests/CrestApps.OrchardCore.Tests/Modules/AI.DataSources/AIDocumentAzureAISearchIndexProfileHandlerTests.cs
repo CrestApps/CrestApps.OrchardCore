@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.Infrastructure;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -33,10 +34,10 @@ public sealed class AIDocumentAzureAISearchIndexProfileHandlerTests
         {
             IndexMappings =
             [
-                new AzureAISearchIndexMap { AzureFieldKey = AIConstants.ColumnNames.Content, Type = DocumentIndex.Types.Text, IsSearchable = true },
-                new AzureAISearchIndexMap { AzureFieldKey = AIConstants.ColumnNames.Content, Type = DocumentIndex.Types.Text, IsSearchable = true },
-                new AzureAISearchIndexMap { AzureFieldKey = AIConstants.ColumnNames.Embedding, Type = DocumentIndex.Types.Vector, IsSearchable = true },
-                new AzureAISearchIndexMap { AzureFieldKey = AIConstants.ColumnNames.Embedding, Type = DocumentIndex.Types.Vector, IsSearchable = true },
+                new AzureAISearchIndexMap { AzureFieldKey = DocumentIndexConstants.ColumnNames.Content, Type = DocumentIndex.Types.Text, IsSearchable = true },
+                new AzureAISearchIndexMap { AzureFieldKey = DocumentIndexConstants.ColumnNames.Content, Type = DocumentIndex.Types.Text, IsSearchable = true },
+                new AzureAISearchIndexMap { AzureFieldKey = DocumentIndexConstants.ColumnNames.Embedding, Type = DocumentIndex.Types.Vector, IsSearchable = true },
+                new AzureAISearchIndexMap { AzureFieldKey = DocumentIndexConstants.ColumnNames.Embedding, Type = DocumentIndex.Types.Vector, IsSearchable = true },
                 new AzureAISearchIndexMap { AzureFieldKey = "CustomField", IndexingKey = "CustomField", Type = DocumentIndex.Types.Text, IsFilterable = true },
             ],
         });
@@ -46,11 +47,11 @@ public sealed class AIDocumentAzureAISearchIndexProfileHandlerTests
 
         Assert.True(indexProfile.TryGet<AzureAISearchIndexMetadata>(out var metadata));
         Assert.Equal(9, metadata.IndexMappings.Count);
-        Assert.Single(metadata.IndexMappings, map => string.Equals(map.AzureFieldKey, AIConstants.ColumnNames.Content, StringComparison.OrdinalIgnoreCase));
-        Assert.Single(metadata.IndexMappings, map => string.Equals(map.AzureFieldKey, AIConstants.ColumnNames.Embedding, StringComparison.OrdinalIgnoreCase));
+        Assert.Single(metadata.IndexMappings, map => string.Equals(map.AzureFieldKey, DocumentIndexConstants.ColumnNames.Content, StringComparison.OrdinalIgnoreCase));
+        Assert.Single(metadata.IndexMappings, map => string.Equals(map.AzureFieldKey, DocumentIndexConstants.ColumnNames.Embedding, StringComparison.OrdinalIgnoreCase));
         Assert.Single(metadata.IndexMappings, map => string.Equals(map.AzureFieldKey, "CustomField", StringComparison.OrdinalIgnoreCase));
-        Assert.All(metadata.IndexMappings.Where(map => string.Equals(map.AzureFieldKey, AIConstants.ColumnNames.Content, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(map.AzureFieldKey, AIConstants.ColumnNames.Embedding, StringComparison.OrdinalIgnoreCase)),
+        Assert.All(metadata.IndexMappings.Where(map => string.Equals(map.AzureFieldKey, DocumentIndexConstants.ColumnNames.Content, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(map.AzureFieldKey, DocumentIndexConstants.ColumnNames.Embedding, StringComparison.OrdinalIgnoreCase)),
             map => Assert.Equal(map.AzureFieldKey, map.IndexingKey));
     }
 }

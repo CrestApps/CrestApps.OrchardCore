@@ -107,28 +107,6 @@ public static class AIConstants
     }
 
     /// <summary>
-    /// Represents the column names.
-    /// </summary>
-    public static class ColumnNames
-    {
-        public const string ChunkId = "chunkId";
-
-        public const string Content = "content";
-
-        public const string DocumentId = "documentId";
-
-        public const string FileName = "fileName";
-
-        public const string ReferenceId = "referenceId";
-
-        public const string ReferenceType = "referenceType";
-
-        public const string Embedding = "embedding";
-
-        public const string ChunkIndex = "chunkIndex";
-    }
-
-    /// <summary>
     /// Represents the route names.
     /// </summary>
     public static class RouteNames

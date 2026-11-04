@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Memory;
 using CrestApps.OrchardCore.AI.Core.Handlers;
+using Microsoft.Extensions.Logging;
 using OrchardCore.AzureAI;
 using OrchardCore.AzureAI.Models;
 using OrchardCore.Entities;
@@ -22,10 +23,12 @@ public sealed class AIMemoryAzureAISearchIndexProfileHandler : AIMemoryIndexProf
     /// </summary>
     /// <param name="deploymentManager">The deployment manager.</param>
     /// <param name="aiClientFactory">The ai client factory.</param>
+    /// <param name="logger">The logger.</param>
     public AIMemoryAzureAISearchIndexProfileHandler(
         IAIDeploymentManager deploymentManager,
-        IAIClientFactory aiClientFactory)
-    : base(AzureAISearchConstants.ProviderName, deploymentManager, aiClientFactory)
+        IAIClientFactory aiClientFactory,
+        ILogger<AIMemoryAzureAISearchIndexProfileHandler> logger)
+    : base(AzureAISearchConstants.ProviderName, deploymentManager, aiClientFactory, logger)
     {
     }
 

@@ -70,9 +70,9 @@ public sealed class Startup : StartupBase
 
             options.AddFieldMapping(AzureAISearchConstants.ProviderName, AIConstants.AIDocumentsIndexingTaskType, mapping =>
             {
-                mapping.DefaultKeyField = AIConstants.ColumnNames.ChunkId;
-                mapping.DefaultTitleField = AIConstants.ColumnNames.FileName;
-                mapping.DefaultContentField = AIConstants.ColumnNames.Content;
+                mapping.DefaultKeyField = DocumentIndexConstants.ColumnNames.ChunkId;
+                mapping.DefaultTitleField = DocumentIndexConstants.ColumnNames.FileName;
+                mapping.DefaultContentField = DocumentIndexConstants.ColumnNames.Content;
             });
         });
     }
