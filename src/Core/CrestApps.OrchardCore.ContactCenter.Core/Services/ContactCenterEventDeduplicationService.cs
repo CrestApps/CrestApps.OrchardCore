@@ -37,7 +37,7 @@ public sealed class ContactCenterEventDeduplicationService : IContactCenterEvent
         ArgumentException.ThrowIfNullOrEmpty(eventId);
 
         var existing = await _session
-            .Query<ContactCenterProcessedEvent, ContactCenterProcessedEventIndex>(
+            .QueryIndex<ContactCenterProcessedEventIndex>(
                 index => index.HandlerId == handlerId && index.EventId == eventId,
                 collection: ContactCenterStorage.CollectionName)
             .FirstOrDefaultAsync(cancellationToken);

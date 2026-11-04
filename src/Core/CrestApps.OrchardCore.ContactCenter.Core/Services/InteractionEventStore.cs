@@ -69,7 +69,7 @@ public sealed class InteractionEventStore : DocumentCatalog<InteractionEvent, In
     {
         ArgumentException.ThrowIfNullOrEmpty(idempotencyKey);
 
-        var match = await Session.Query<InteractionEvent, InteractionEventIndex>(
+        var match = await Session.QueryIndex<InteractionEventIndex>(
             index => index.IdempotencyKey == idempotencyKey,
             collection: ContactCenterStorage.CollectionName)
             .FirstOrDefaultAsync(cancellationToken);

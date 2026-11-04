@@ -146,7 +146,7 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
     {
         ArgumentException.ThrowIfNullOrEmpty(agentId);
 
-        return await Session.Query<Interaction, InteractionIndex>(
+        return await Session.QueryIndex<InteractionIndex>(
             index => index.AgentId == agentId &&
                 index.Status.IsIn(InteractionStatuses.OccupyingAgent),
             collection: ContactCenterStorage.CollectionName)

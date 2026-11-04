@@ -660,9 +660,18 @@ public sealed class NamedRecipeStepHandlerTests
         entityQuery.Setup(x => x.With<UserIndex>(It.IsAny<Expression<Func<UserIndex, bool>>>()))
             .Returns(query.Object);
 
+        // The total is counted from the index rows alone.
+        var countQuery = new Mock<IQueryIndex<UserIndex>>();
+        countQuery.Setup(x => x.Where(It.IsAny<Expression<Func<UserIndex, bool>>>()))
+            .Returns(countQuery.Object);
+        countQuery.Setup(x => x.CountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
+
         var rootQuery = new Mock<IQuery>();
         rootQuery.Setup(x => x.For<User>(false))
             .Returns(entityQuery.Object);
+        rootQuery.Setup(x => x.ForIndex<UserIndex>())
+            .Returns(countQuery.Object);
 
         var session = new Mock<ISession>();
         session.Setup(x => x.Query(null))

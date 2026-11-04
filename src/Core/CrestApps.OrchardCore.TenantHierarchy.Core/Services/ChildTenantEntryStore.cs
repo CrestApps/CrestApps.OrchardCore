@@ -100,7 +100,7 @@ public sealed class ChildTenantEntryStore
     /// </summary>
     public Task<int> CountAsync()
     {
-        return _session.Query<ChildTenantEntry, ChildTenantEntryIndex>(Collection).CountAsync();
+        return _session.QueryIndex<ChildTenantEntryIndex>(collection: Collection).CountAsync();
     }
 
     /// <summary>

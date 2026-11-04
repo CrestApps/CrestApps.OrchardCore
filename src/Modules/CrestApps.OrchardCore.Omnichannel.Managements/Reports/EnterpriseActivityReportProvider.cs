@@ -9,7 +9,6 @@ using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
-using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Records;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
@@ -687,7 +686,8 @@ internal sealed class EnterpriseActivityReportProvider : IReportRunner
             return new Dictionary<string, string>(StringComparer.Ordinal);
         }
 
-        var contacts = await _session.Query<ContentItem, ContentItemIndex>(
+        // Only the name is needed, and the content item index row carries it, so the contact documents are not read.
+        var contacts = await _session.QueryIndex<ContentItemIndex>(
                 index => index.ContentItemId.IsIn(contactIds) && index.Latest)
             .ListAsync(cancellationToken);
 
@@ -701,7 +701,7 @@ internal sealed class EnterpriseActivityReportProvider : IReportRunner
         return names;
     }
 
-    private static string BuildContactDisplayName(ContentItem contact)
+    private static string BuildContactDisplayName(ContentItemIndex contact)
     {
         return !string.IsNullOrWhiteSpace(contact.DisplayText)
             ? contact.DisplayText.Trim()

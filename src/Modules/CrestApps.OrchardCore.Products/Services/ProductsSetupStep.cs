@@ -65,7 +65,7 @@ internal sealed class ProductsSetupStep : IStoreSetupStep
         var types = await _productTypes.GetProductTypesAsync(_contentDefinitionManager);
         var count = types.Count == 0
             ? 0
-            : await _session.Query<ContentItem, ContentItemIndex>(index => index.ContentType.IsIn(types) && index.Published).CountAsync(cancellationToken);
+            : await _session.QueryIndex<ContentItemIndex>(index => index.ContentType.IsIn(types) && index.Published).CountAsync(cancellationToken);
         var type = types.Contains(ProductContentType, StringComparer.Ordinal) ? ProductContentType : (types.Count > 0 ? types[0] : null);
 
         return new StoreSetupStepDescription
