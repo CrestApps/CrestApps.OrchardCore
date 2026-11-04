@@ -1,9 +1,11 @@
-﻿namespace CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.ViewModels;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
+
+namespace CrestApps.OrchardCore.AI.FileTransfer.Core.ViewModels;
 
 /// <summary>
-/// Represents the view model for sftp connection.
+/// The fields of an SFTP connection editor. Stored secrets are never shown; the <c>Has…</c> flags say whether one is saved.
 /// </summary>
-public class SftpConnectionViewModel
+public class SftpConnectionFieldsViewModel
 {
     /// <summary>
     /// Gets or sets the host.
@@ -28,6 +30,7 @@ public class SftpConnectionViewModel
     /// <summary>
     /// Gets or sets a value indicating whether has password.
     /// </summary>
+    [BindNever]
     public bool HasPassword { get; set; }
 
     /// <summary>
@@ -38,6 +41,7 @@ public class SftpConnectionViewModel
     /// <summary>
     /// Gets or sets a value indicating whether has private key.
     /// </summary>
+    [BindNever]
     public bool HasPrivateKey { get; set; }
 
     /// <summary>
@@ -48,6 +52,7 @@ public class SftpConnectionViewModel
     /// <summary>
     /// Gets or sets a value indicating whether has passphrase.
     /// </summary>
+    [BindNever]
     public bool HasPassphrase { get; set; }
 
     /// <summary>
@@ -78,6 +83,7 @@ public class SftpConnectionViewModel
     /// <summary>
     /// Gets or sets a value indicating whether has proxy password.
     /// </summary>
+    [BindNever]
     public bool HasProxyPassword { get; set; }
 
     /// <summary>

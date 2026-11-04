@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Models;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.ViewModels;
 using CrestApps.OrchardCore.Core.Security;
@@ -38,7 +39,7 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
     public override IDisplayResult Edit(AIDataSource dataSource, BuildEditorContext context)
     {
         if (!string.Equals(
-            GetSourceType(dataSource),
+            AIDataSourceExtensions.GetSourceType(dataSource),
             AIDataSourceSourceTypes.Elasticsearch,
             StringComparison.OrdinalIgnoreCase))
         {
@@ -67,7 +68,7 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
     public override async Task<IDisplayResult> UpdateAsync(AIDataSource dataSource, UpdateEditorContext context)
     {
         if (!string.Equals(
-            GetSourceType(dataSource),
+            AIDataSourceExtensions.GetSourceType(dataSource),
             AIDataSourceSourceTypes.Elasticsearch,
             StringComparison.OrdinalIgnoreCase))
         {
@@ -228,14 +229,5 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
         }
 
         return ElasticsearchSourceMetadata.NoneAuthenticationType;
-    }
-
-    private static string GetSourceType(AIDataSource dataSource)
-    {
-        ArgumentNullException.ThrowIfNull(dataSource);
-
-        return string.IsNullOrWhiteSpace(dataSource.Source)
-            ? AIDataSourceSourceTypes.SearchIndexProfile
-            : dataSource.Source;
     }
 }

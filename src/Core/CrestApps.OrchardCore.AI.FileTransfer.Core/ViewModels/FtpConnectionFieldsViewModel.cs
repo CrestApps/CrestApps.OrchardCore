@@ -1,59 +1,65 @@
-namespace CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.Models;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
+
+namespace CrestApps.OrchardCore.AI.FileTransfer.Core.ViewModels;
 
 /// <summary>
-/// Metadata for FTP connection settings stored in an MCP resource.
+/// The fields of an FTP or FTPS connection editor. A stored password is never shown; <see cref="HasPassword"/> says whether one is saved.
 /// </summary>
-public sealed class FtpConnectionMetadata
+public class FtpConnectionFieldsViewModel
 {
     /// <summary>
-    /// Gets or sets the FTP server host.
+    /// Gets or sets the host.
     /// </summary>
     public string Host { get; set; }
 
     /// <summary>
-    /// Gets or sets the FTP server port. Defaults to 21 for FTP, 990 for implicit FTPS.
+    /// Gets or sets the port.
     /// </summary>
     public int? Port { get; set; }
 
     /// <summary>
-    /// Gets or sets the username for authentication.
+    /// Gets or sets the username.
     /// </summary>
     public string Username { get; set; }
 
     /// <summary>
-    /// Gets or sets the password for authentication (stored encrypted).
+    /// Gets or sets the password.
     /// </summary>
     public string Password { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether has password.
+    /// </summary>
+    [BindNever]
+    public bool HasPassword { get; set; }
+
+    /// <summary>
     /// Gets or sets the encryption mode.
-    /// Valid values: "None", "Implicit", "Explicit", "Auto".
     /// </summary>
     public string EncryptionMode { get; set; }
 
     /// <summary>
     /// Gets or sets the data connection type.
-    /// Valid values: "AutoPassive", "PASV", "PASVEX", "EPSV", "AutoActive", "PORT", "EPRT".
     /// </summary>
     public string DataConnectionType { get; set; }
 
     /// <summary>
-    /// Gets or sets whether to accept any SSL/TLS certificate, including self-signed certificates.
+    /// Gets or sets the validate any certificate.
     /// </summary>
     public bool ValidateAnyCertificate { get; set; }
 
     /// <summary>
-    /// Gets or sets the connection timeout in seconds.
+    /// Gets or sets the connect timeout.
     /// </summary>
     public int? ConnectTimeout { get; set; }
 
     /// <summary>
-    /// Gets or sets the read timeout in seconds.
+    /// Gets or sets the read timeout.
     /// </summary>
     public int? ReadTimeout { get; set; }
 
     /// <summary>
-    /// Gets or sets the number of retry attempts for failed operations.
+    /// Gets or sets the retry attempts.
     /// </summary>
     public int? RetryAttempts { get; set; }
 }

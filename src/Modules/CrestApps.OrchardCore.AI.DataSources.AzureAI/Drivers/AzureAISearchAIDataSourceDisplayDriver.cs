@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.DataSources.AzureAI.ViewModels;
 using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
@@ -32,7 +33,7 @@ internal sealed class AzureAISearchAIDataSourceDisplayDriver : DisplayDriver<AID
     public override IDisplayResult Edit(AIDataSource dataSource, BuildEditorContext context)
     {
         if (!string.Equals(
-            GetSourceType(dataSource),
+            AIDataSourceExtensions.GetSourceType(dataSource),
             AIDataSourceSourceTypes.AzureAISearch,
             StringComparison.OrdinalIgnoreCase))
         {
@@ -53,7 +54,7 @@ internal sealed class AzureAISearchAIDataSourceDisplayDriver : DisplayDriver<AID
     public override async Task<IDisplayResult> UpdateAsync(AIDataSource dataSource, UpdateEditorContext context)
     {
         if (!string.Equals(
-            GetSourceType(dataSource),
+            AIDataSourceExtensions.GetSourceType(dataSource),
             AIDataSourceSourceTypes.AzureAISearch,
             StringComparison.OrdinalIgnoreCase))
         {
@@ -108,14 +109,5 @@ internal sealed class AzureAISearchAIDataSourceDisplayDriver : DisplayDriver<AID
         });
 
         return Edit(dataSource, context);
-    }
-
-    private static string GetSourceType(AIDataSource dataSource)
-    {
-        ArgumentNullException.ThrowIfNull(dataSource);
-
-        return string.IsNullOrWhiteSpace(dataSource.Source)
-            ? AIDataSourceSourceTypes.SearchIndexProfile
-            : dataSource.Source;
     }
 }

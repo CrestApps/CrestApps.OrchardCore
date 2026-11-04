@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.DataSources.PostgreSQL.Models;
 using CrestApps.OrchardCore.AI.DataSources.PostgreSQL.ViewModels;
 using CrestApps.OrchardCore.Core.Security;
@@ -38,7 +39,7 @@ internal sealed class PostgreSQLAIDataSourceDisplayDriver : DisplayDriver<AIData
     public override IDisplayResult Edit(AIDataSource dataSource, BuildEditorContext context)
     {
         if (!string.Equals(
-            GetSourceType(dataSource),
+            AIDataSourceExtensions.GetSourceType(dataSource),
             AIDataSourceSourceTypes.PostgreSQL,
             StringComparison.OrdinalIgnoreCase))
         {
@@ -58,7 +59,7 @@ internal sealed class PostgreSQLAIDataSourceDisplayDriver : DisplayDriver<AIData
     public override async Task<IDisplayResult> UpdateAsync(AIDataSource dataSource, UpdateEditorContext context)
     {
         if (!string.Equals(
-            GetSourceType(dataSource),
+            AIDataSourceExtensions.GetSourceType(dataSource),
             AIDataSourceSourceTypes.PostgreSQL,
             StringComparison.OrdinalIgnoreCase))
         {
@@ -105,13 +106,4 @@ internal sealed class PostgreSQLAIDataSourceDisplayDriver : DisplayDriver<AIData
 
     private bool HasDefaultConnectionString
         => !string.IsNullOrWhiteSpace(_options.ConnectionString);
-
-    private static string GetSourceType(AIDataSource dataSource)
-    {
-        ArgumentNullException.ThrowIfNull(dataSource);
-
-        return string.IsNullOrWhiteSpace(dataSource.Source)
-            ? AIDataSourceSourceTypes.SearchIndexProfile
-            : dataSource.Source;
-    }
 }

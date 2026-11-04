@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Ftp;
 using CrestApps.Core.AI.Ftp.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.FileSources.Ftp.ViewModels;
+using CrestApps.OrchardCore.AI.FileTransfer.Core.Drivers;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -19,12 +20,8 @@ namespace CrestApps.OrchardCore.AI.FileSources.Ftp.Drivers;
 /// The password never travels back to the browser. The editor is told only that one is stored, and a blank
 /// submission keeps whatever is there -- otherwise opening the form and pressing Save would erase it.
 /// </remarks>
-internal sealed class FtpFileSourceDisplayDriver : DisplayDriver<FileSource>
+internal sealed class FtpFileSourceDisplayDriver : FtpConnectionDisplayDriverBase<FileSource>
 {
-    private readonly IDataProtectionProvider _dataProtectionProvider;
-
-    internal readonly IStringLocalizer S;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="FtpFileSourceDisplayDriver"/> class.
     /// </summary>
@@ -33,9 +30,8 @@ internal sealed class FtpFileSourceDisplayDriver : DisplayDriver<FileSource>
     public FtpFileSourceDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<FtpFileSourceDisplayDriver> stringLocalizer)
+        : base(dataProtectionProvider, stringLocalizer)
     {
-        _dataProtectionProvider = dataProtectionProvider;
-        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(FileSource fileSource, BuildEditorContext context)
@@ -52,17 +48,7 @@ internal sealed class FtpFileSourceDisplayDriver : DisplayDriver<FileSource>
             model.RemoteRecursive = folder.Recursive;
             model.RemoteMaxItems = folder.MaxItems;
 
-            var connection = fileSource.GetOrCreate<FtpConnectionMetadata>();
-            model.Host = connection.Host;
-            model.Port = connection.Port;
-            model.Username = connection.Username;
-            model.EncryptionMode = connection.EncryptionMode;
-            model.DataConnectionType = connection.DataConnectionType;
-            model.ValidateAnyCertificate = connection.ValidateAnyCertificate;
-            model.ConnectTimeout = connection.ConnectTimeout;
-            model.ReadTimeout = connection.ReadTimeout;
-            model.RetryAttempts = connection.RetryAttempts;
-            model.HasPassword = !string.IsNullOrEmpty(connection.Password);
+            PopulateConnectionFields(fileSource.GetOrCreate<FtpConnectionMetadata>(), model);
         }).Location("Content:5");
     }
 
@@ -77,22 +63,12 @@ internal sealed class FtpFileSourceDisplayDriver : DisplayDriver<FileSource>
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrWhiteSpace(model.Host))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Host), S["A host is required."]);
-        }
-
-        if (model.Port is < 1 or > 65535)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Port), S["The port must be between 1 and 65535."]);
-        }
-
         if (model.RemoteMaxItems is < 1)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.RemoteMaxItems), S["The number of files must be a positive number."]);
         }
 
-        var existing = fileSource.GetOrCreate<FtpConnectionMetadata>();
+        var connection = ApplyConnectionFields(context, model, fileSource.GetOrCreate<FtpConnectionMetadata>());
 
         fileSource.Put(new RemoteFileSourceMetadata
         {
@@ -101,27 +77,10 @@ internal sealed class FtpFileSourceDisplayDriver : DisplayDriver<FileSource>
             MaxItems = model.RemoteMaxItems,
         });
 
-        fileSource.Put(new FtpConnectionMetadata
-        {
-            Host = model.Host?.Trim(),
-            Port = model.Port,
-            Username = Trimmed(model.Username),
-            Password = string.IsNullOrWhiteSpace(model.Password)
-                ? existing.Password
-                : _dataProtectionProvider.CreateProtector(FtpResourceConstants.DataProtectionPurpose).Protect(model.Password),
-            EncryptionMode = Trimmed(model.EncryptionMode),
-            DataConnectionType = Trimmed(model.DataConnectionType),
-            ValidateAnyCertificate = model.ValidateAnyCertificate,
-            ConnectTimeout = model.ConnectTimeout,
-            ReadTimeout = model.ReadTimeout,
-            RetryAttempts = model.RetryAttempts,
-        });
+        fileSource.Put(connection);
 
         return Edit(fileSource, context);
     }
-
-    private static string Trimmed(string value)
-        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static bool IsFtp(FileSource fileSource)
         => string.Equals(fileSource.Source, FtpIngestionConnector.ConnectorName, StringComparison.OrdinalIgnoreCase);

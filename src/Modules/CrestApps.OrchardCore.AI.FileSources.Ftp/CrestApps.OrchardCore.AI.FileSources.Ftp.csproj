@@ -30,6 +30,7 @@
       Enabling this feature also enables File Sources, which registers the run service, the knowledge store
       and the screens this connector appears on.
     -->
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.FileTransfer.Core/CrestApps.OrchardCore.AI.FileTransfer.Core.csproj" />
     <ProjectReference Include="../CrestApps.OrchardCore.AI.FileSources/CrestApps.OrchardCore.AI.FileSources.csproj" PrivateAssets="none" />
   </ItemGroup>
 

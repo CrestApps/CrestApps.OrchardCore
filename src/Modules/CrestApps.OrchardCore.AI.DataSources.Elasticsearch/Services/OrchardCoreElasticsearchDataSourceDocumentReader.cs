@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using CrestApps.Core.Infrastructure.Indexing;
 using CrestApps.Core.Infrastructure.Indexing.DataSources;
 using CrestApps.Core.Infrastructure.Indexing.Models;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using Elastic.Clients.Elasticsearch;
 
 namespace CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Services;
@@ -168,7 +169,7 @@ internal sealed class OrchardCoreElasticsearchDataSourceDocumentReader : IDataSo
 
         if (string.IsNullOrEmpty(title) && !string.IsNullOrEmpty(content))
         {
-            title = ExtractTitleFromContent(content);
+            title = AIDataSourceExtensions.GetTitleFromContent(content);
         }
 
         var fields = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
@@ -271,23 +272,5 @@ internal sealed class OrchardCoreElasticsearchDataSourceDocumentReader : IDataSo
         }
 
         return node.ToJsonString();
-    }
-
-    private static string ExtractTitleFromContent(string content)
-    {
-        var firstLine = content.AsSpan();
-        var newlineIndex = firstLine.IndexOfAny('\r', '\n');
-
-        if (newlineIndex > 0)
-        {
-            firstLine = firstLine[..newlineIndex];
-        }
-
-        if (firstLine.Length > 200)
-        {
-            firstLine = firstLine[..200];
-        }
-
-        return firstLine.ToString().Trim();
     }
 }

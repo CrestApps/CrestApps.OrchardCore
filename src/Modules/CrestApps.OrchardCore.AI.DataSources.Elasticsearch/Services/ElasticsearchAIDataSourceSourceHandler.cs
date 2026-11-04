@@ -6,6 +6,7 @@ using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Infrastructure.Indexing.Models;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Models;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Transport;
@@ -395,7 +396,7 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
 
         if (string.IsNullOrEmpty(title) && !string.IsNullOrEmpty(content))
         {
-            title = ExtractTitleFromContent(content);
+            title = AIDataSourceExtensions.GetTitleFromContent(content);
         }
 
         var fields = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
@@ -498,23 +499,5 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
         }
 
         return node.ToJsonString();
-    }
-
-    private static string ExtractTitleFromContent(string content)
-    {
-        var firstLine = content.AsSpan();
-        var newlineIndex = firstLine.IndexOfAny('\r', '\n');
-
-        if (newlineIndex > 0)
-        {
-            firstLine = firstLine[..newlineIndex];
-        }
-
-        if (firstLine.Length > 200)
-        {
-            firstLine = firstLine[..200];
-        }
-
-        return firstLine.ToString().Trim();
     }
 }
