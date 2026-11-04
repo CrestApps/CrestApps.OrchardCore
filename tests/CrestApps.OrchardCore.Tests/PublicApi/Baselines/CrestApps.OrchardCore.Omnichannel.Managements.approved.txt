@@ -863,7 +863,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers
     {
         public ContactActivityExportHandler(System.IServiceProvider serviceProvider, OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager, YesSql.ISession session, CrestApps.Core.Services.INamedCatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> dispositionCatalog, CrestApps.OrchardCore.Users.IDisplayNameProvider displayNameProvider) { }
         public System.Threading.Tasks.Task ExportAsync(CrestApps.OrchardCore.ContentTransfer.ContentExportContext content) { }
-        public System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContentTransfer.ImportColumn> GetColumns(CrestApps.OrchardCore.ContentTransfer.ImportContentContext context) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContentTransfer.ImportColumn>> GetColumnsAsync(CrestApps.OrchardCore.ContentTransfer.ImportContentContext context) { }
         public System.Threading.Tasks.Task ImportAsync(CrestApps.OrchardCore.ContentTransfer.ContentImportContext content) { }
         public System.Threading.Tasks.Task PrepareExportBatchAsync(CrestApps.OrchardCore.ContentTransfer.ContentExportBatchContext context) { }
     }
@@ -871,7 +871,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers
     {
         public LeadExportFilterHandler() { }
         public System.Threading.Tasks.Task ExportAsync(CrestApps.OrchardCore.ContentTransfer.ContentExportContext content) { }
-        public System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContentTransfer.ImportColumn> GetColumns(CrestApps.OrchardCore.ContentTransfer.ImportContentContext context) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContentTransfer.ImportColumn>> GetColumnsAsync(CrestApps.OrchardCore.ContentTransfer.ImportContentContext context) { }
         public System.Threading.Tasks.Task ImportAsync(CrestApps.OrchardCore.ContentTransfer.ContentImportContext content) { }
     }
     public sealed class LeadPartContentImportHandler : CrestApps.OrchardCore.ContentTransfer.Handlers.ContentImportHandlerBase, CrestApps.OrchardCore.ContentTransfer.IContentPartImportHandler

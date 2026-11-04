@@ -48,7 +48,7 @@ public sealed class ContentImportManager : IContentImportManager
 
         var columns = new List<ImportColumn>();
 
-        columns.AddRange(_contentImportHandlers.Invoke(handler => handler.GetColumns(context), _logger).SelectMany(x => x));
+        columns.AddRange((await _contentImportHandlers.InvokeAsync(handler => handler.GetColumnsAsync(context), _logger)).SelectMany(x => x));
 
         foreach (var typePartDefinition in context.ContentTypeDefinition.Parts)
         {

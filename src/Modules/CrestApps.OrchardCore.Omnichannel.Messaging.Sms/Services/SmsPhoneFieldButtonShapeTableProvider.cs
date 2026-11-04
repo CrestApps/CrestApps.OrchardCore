@@ -36,17 +36,17 @@ internal sealed class SmsPhoneFieldButtonShapeTableProvider : IShapeTableProvide
     /// <inheritdoc/>
     public ValueTask DiscoverAsync(ShapeTableBuilder builder)
     {
-        builder.Describe("PhoneField").OnDisplaying(_ => RegisterButton());
-        builder.Describe("PhoneField_Edit").OnDisplaying(_ => RegisterButton());
+        builder.Describe("PhoneField").OnDisplaying(_ => RegisterButtonAsync());
+        builder.Describe("PhoneField_Edit").OnDisplaying(_ => RegisterButtonAsync());
 
         // The phone actions placeholder that a number shown outside a phone field renders, such as a contact's
         // primary numbers in its list header.
-        builder.Describe("PhoneNumberActions").OnDisplaying(_ => RegisterButton());
+        builder.Describe("PhoneNumberActions").OnDisplaying(_ => RegisterButtonAsync());
 
         return ValueTask.CompletedTask;
     }
 
-    private void RegisterButton()
+    private async Task RegisterButtonAsync()
     {
         var httpContext = _httpContextAccessor.HttpContext;
 
@@ -64,14 +64,8 @@ internal sealed class SmsPhoneFieldButtonShapeTableProvider : IShapeTableProvide
 
         var services = httpContext.RequestServices;
 
-        // OnDisplaying is synchronous. The workspace permission is evaluated by the standard permission handler,
-        // which reads the already-loaded principal and completes synchronously (no I/O), so this does not block.
-        var authorizeTask = services.GetRequiredService<IAuthorizationService>()
+        var authorized = await services.GetRequiredService<IAuthorizationService>()
             .AuthorizeAsync(httpContext.User, MessagingPermissions.UseMessagingWorkspace);
-
-        var authorized = authorizeTask.IsCompletedSuccessfully
-            ? authorizeTask.Result
-            : authorizeTask.GetAwaiter().GetResult();
 
         if (!authorized)
         {

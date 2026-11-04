@@ -19,9 +19,12 @@ internal sealed class AITemplateMethodProvider : IGlobalMethodProvider
         _globalMethod = new GlobalMethod
         {
             Name = "renderAITemplate",
+            // Recipe expressions such as [js: renderAITemplate("id")] are evaluated synchronously and read the value
+            // the call returns, so the documented renderAITemplate() has to wait for the template. Scripts that can
+            // await call renderAITemplateAsync(), which returns a promise instead.
             Method = serviceProvider => (Func<string, object, object>)((templateId, arguments) =>
                 ResolveTemplateContentAsync(serviceProvider, templateId, arguments).GetAwaiter().GetResult()),
-            AsyncMethod = serviceProvider => (Func<string, object, object>)((templateId, arguments) =>
+            AsyncMethod = serviceProvider => (Func<string, object, Task<object>>)((templateId, arguments) =>
                 ResolveTemplateContentAsync(serviceProvider, templateId, arguments)),
         };
     }

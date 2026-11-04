@@ -42,6 +42,10 @@ public sealed class DuplicatePatternRatchetTests
             @"\bTimeZoneInfo\.ConvertTimeToUtc\b",
             "Convert wall-clock times with CalendarTime, which resolves daylight-saving gaps instead of throwing."),
         new(
+            "GetAwaiter().GetResult()",
+            @"\.GetAwaiter\s*\(\s*\)\s*\.GetResult\s*\(\s*\)",
+            "Await the task: make the caller async, or use the async overload of the hook (OnDisplaying, InvokeAsync, GetColumnsAsync). Blocking on a task ties up a thread and can deadlock."),
+        new(
             "private FixedTimeEquals",
             @"private\s+(?:static\s+)?bool\s+FixedTimeEquals\s*\(",
             "Call CryptographicOperations.FixedTimeEquals."),
@@ -65,6 +69,11 @@ public sealed class DuplicatePatternRatchetTests
             ["src/Modules/CrestApps.OrchardCore.Orders/Dashboard/SalesSummaryWidget.cs"] = 1,
             ["src/Modules/CrestApps.OrchardCore.Reports/Designer/Services/ReportExecutionContextFactory.cs"] = 1,
             ["src/Modules/CrestApps.OrchardCore.Reports/Subscriptions/Services/ReportSubscriptionSchedule.cs"] = 1,
+        },
+        ["GetAwaiter().GetResult()"] = new(StringComparer.OrdinalIgnoreCase)
+        {
+            // Orchard's synchronous scripting contract: recipe expressions call renderAITemplate() and read its value.
+            ["src/Modules/CrestApps.OrchardCore.AI/Recipes/AITemplateMethodProvider.cs"] = 1,
         },
         ["private FixedTimeEquals"] = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -144,6 +153,8 @@ public sealed class DuplicatePatternRatchetTests
     [InlineData("DateTime.UtcNow, DateTime.Now, DateTime.Today or DateTimeOffset.UtcNow", "var now = DateTimeOffset.UtcNow;", 1)]
     [InlineData("DateTime.UtcNow, DateTime.Now, DateTime.Today or DateTimeOffset.UtcNow", "// Never call DateTime.UtcNow here.", 0)]
     [InlineData("DateTime.UtcNow, DateTime.Now, DateTime.Today or DateTimeOffset.UtcNow", "var now = _clock.UtcNow;", 0)]
+    [InlineData("GetAwaiter().GetResult()", "var value = task.GetAwaiter().GetResult();", 1)]
+    [InlineData("GetAwaiter().GetResult()", "var value = await task;", 0)]
     [InlineData("private FixedTimeEquals", "    private static bool FixedTimeEquals(string a, string b)", 1)]
     [InlineData("private FixedTimeEquals", "    return CryptographicOperations.FixedTimeEquals(a, b);", 0)]
     public void Count_MatchesDeclarationsAndCallsButNotComments(string patternName, string line, int expected)
