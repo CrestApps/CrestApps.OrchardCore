@@ -1,8 +1,10 @@
 using CrestApps.OrchardCore.Bookings.Models;
 using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Checkout.Core.Models;
+using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
-using CrestApps.OrchardCore.Customers.Models;
+using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
@@ -20,15 +22,13 @@ namespace CrestApps.OrchardCore.Bookings.Services;
 /// before the earliest booking, with its reminders and pay link, and charged then to the card the deposit is paid with.
 /// Refunding what's owed takes it off the invoice.
 /// </summary>
-public sealed class BookingBalanceTenderProvider : ICheckoutTenderProvider
+public sealed class BookingBalanceTenderProvider : DeferredBalanceTenderProviderBase
 {
     // The obligation an order's balance invoice is recorded under, so completing a checkout twice owes once.
-    internal const string ObligationId = "booking-balance";
+    internal const string BalanceObligationId = "booking-balance";
 
     private readonly BookingDepositService _deposits;
     private readonly IBookingBalanceStore _balances;
-    private readonly ITransactionManager _transactions;
-    private readonly ITransactionCommandService _commands;
     private readonly IServiceProvider _serviceProvider;
     private readonly IOrderStore _orders;
     private readonly IClock _clock;
@@ -46,11 +46,10 @@ public sealed class BookingBalanceTenderProvider : ICheckoutTenderProvider
         IClock clock,
         ILogger<BookingBalanceTenderProvider> logger,
         IStringLocalizer<BookingBalanceTenderProvider> stringLocalizer)
+        : base(transactions, commands, clock, logger, stringLocalizer)
     {
         _deposits = deposits;
         _balances = balances;
-        _transactions = transactions;
-        _commands = commands;
         _serviceProvider = serviceProvider;
         _orders = orders;
         _clock = clock;
@@ -58,14 +57,17 @@ public sealed class BookingBalanceTenderProvider : ICheckoutTenderProvider
         S = stringLocalizer;
     }
 
-    public string Key
+    public override string Key
         => BookingsConstants.BalanceTenderKey;
 
     // The balance is charged later to the card this checkout keeps.
-    public bool PaysWithSavedPaymentMethod
+    public override bool PaysWithSavedPaymentMethod
         => true;
 
-    public async Task<IReadOnlyList<TenderLine>> GetTendersAsync(CheckoutTenderContext context, CancellationToken cancellationToken = default)
+    protected override string ObligationId
+        => BalanceObligationId;
+
+    public override async Task<IReadOnlyList<TenderLine>> GetTendersAsync(CheckoutTenderContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
 
@@ -96,7 +98,7 @@ public sealed class BookingBalanceTenderProvider : ICheckoutTenderProvider
         ];
     }
 
-    public async Task<decimal?> GetBalanceAsync(string reference, string currency, CancellationToken cancellationToken = default)
+    public override async Task<decimal?> GetBalanceAsync(string reference, string currency, CancellationToken cancellationToken = default)
     {
         var (orderId, sessionId) = BookingDepositService.FromReference(reference);
 
@@ -115,53 +117,34 @@ public sealed class BookingBalanceTenderProvider : ICheckoutTenderProvider
         return (await _deposits.GetOfferAsync(order, new CheckoutInvoice { InitialPaymentAmount = whole, Currency = invoice.Currency }, cancellationToken))?.Balance;
     }
 
-    public async Task DebitAsync(string reference, decimal amount, string currency, CheckoutFlow flow, CancellationToken cancellationToken = default)
+    protected override string GetSessionId(string reference)
+        => BookingDepositService.FromReference(reference).SessionId;
+
+    protected override async Task<DeferredBalanceDebit> PrepareDebitAsync(string reference, CheckoutSession session, decimal amount, string currency, CancellationToken cancellationToken)
     {
-        var (orderId, sessionId) = BookingDepositService.FromReference(reference);
+        var (orderId, _) = BookingDepositService.FromReference(reference);
 
-        if (flow?.Session is not CheckoutSession session ||
-            !string.Equals(session.SessionId, sessionId, StringComparison.Ordinal) ||
-            await _orders.FindByIdAsync(orderId, cancellationToken) is not { } order)
+        if (await _orders.FindByIdAsync(orderId, cancellationToken) is not { } order)
         {
-            throw new InvalidOperationException($"The booking balance '{reference}' doesn't belong to this checkout.");
+            return null;
         }
 
-        if (await _transactions.GetByObligationAsync(session.SessionId, ObligationId, cancellationToken) is not null)
-        {
-            return;
-        }
-
-        var now = _clock.UtcNow;
         var offer = await _deposits.GetOfferAsync(order, new CheckoutInvoice { InitialPaymentAmount = amount + 1m, Currency = currency }, cancellationToken);
-        var dueUtc = offer?.DueUtc ?? now.AddDays(1);
-        var transaction = await _transactions.NewAsync(cancellationToken: cancellationToken);
+        var dueUtc = offer?.DueUtc ?? _clock.UtcNow.AddDays(1);
 
-        transaction.Title = S["Order {0}, balance", order.OrderNumber].Value;
-        transaction.Source = BookingsConstants.TransactionSource;
-        transaction.OwnerId = session.OwnerId;
-        transaction.OwnerKind = CustomerOwnerKind.Authenticated;
-        transaction.ReferenceType = session.ReferenceType;
-        transaction.ReferenceId = session.ReferenceId;
-        transaction.ReferenceVersionId = session.ReferenceVersionId;
-        transaction.CheckoutSessionId = session.SessionId;
-        transaction.ObligationId = ObligationId;
-        transaction.Currency = currency;
-        transaction.Amount = amount;
-        transaction.TaxAmount = 0m;
-        transaction.TotalAmount = amount;
-        transaction.AmountPaid = 0m;
-        transaction.Status = TransactionStatus.Outstanding;
-        transaction.CreatedUtc = now;
-        transaction.UpdatedUtc = now;
-        transaction.DueUtc = dueUtc;
-        transaction.Events.Add(new TransactionEvent
+        return new DeferredBalanceDebit
         {
-            CreatedUtc = now,
-            Type = TransactionEventType.Created,
+            Title = S["Order {0}, balance", order.OrderNumber].Value,
+            Source = BookingsConstants.TransactionSource,
+            DueUtc = dueUtc,
             Message = S["The rest of the bookings' price after the deposit, charged to the card on {0:d}.", dueUtc].Value,
-        });
+            State = order,
+        };
+    }
 
-        await _transactions.CreateAsync(transaction, cancellationToken);
+    protected override async Task DebitedAsync(Transaction transaction, DeferredBalanceDebit debit, CheckoutSession session, CancellationToken cancellationToken)
+    {
+        var order = (Order)debit.State;
 
         await _balances.CreateAsync(new BookingBalance
         {
@@ -173,46 +156,25 @@ public sealed class BookingBalanceTenderProvider : ICheckoutTenderProvider
             OwnerId = session.OwnerId,
             CustomerName = order.CustomerName,
             CustomerEmail = order.CustomerEmail,
-            Amount = amount,
-            Currency = currency,
-            DueUtc = dueUtc,
+            Amount = transaction.Amount,
+            Currency = transaction.Currency,
+            DueUtc = debit.DueUtc,
             Status = BookingBalanceStatus.Scheduled,
-            CreatedUtc = now,
+            CreatedUtc = transaction.CreatedUtc,
         }, cancellationToken);
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
-            _logger.LogInformation("The balance of order '{OrderNumber}', {Amount}, is due {DueUtc:u}.", order.OrderNumber, ProductPriceFormatter.Format(amount, currency), dueUtc);
+            _logger.LogInformation("The balance of order '{OrderNumber}', {Amount}, is due {DueUtc:u}.", order.OrderNumber, ProductPriceFormatter.Format(transaction.Amount, transaction.Currency), debit.DueUtc);
         }
     }
 
-    public async Task CreditAsync(string reference, decimal amount, string currency, string reason, CancellationToken cancellationToken = default)
+    // Once nothing is owed any more, the charge scheduled for the due date is canceled.
+    protected override async Task CreditedAsync(string reference, Transaction transaction, decimal adjustment, CancellationToken cancellationToken)
     {
-        var (orderId, sessionId) = BookingDepositService.FromReference(reference);
+        var (orderId, _) = BookingDepositService.FromReference(reference);
 
-        if (amount <= 0m || string.IsNullOrEmpty(sessionId) ||
-            await _transactions.GetByObligationAsync(sessionId, ObligationId, cancellationToken) is not { } transaction)
-        {
-            return;
-        }
-
-        // What's refunded comes off what's still owed; what was already paid on the invoice is refunded by the store.
-        var adjustment = Math.Min(amount, transaction.OutstandingAmount);
-
-        if (adjustment <= 0m)
-        {
-            _logger.LogWarning("A refund of {Amount} went to the balance of checkout '{SessionId}', which was already paid; refund it directly.", amount, sessionId);
-
-            return;
-        }
-
-        var result = await _commands.AdjustAsync(transaction.ItemId, adjustment, TransactionAdjustmentKind.Waiver, string.IsNullOrWhiteSpace(reason) ? S["Refunded"].Value : reason, cancellationToken);
-
-        if (!result.Succeeded)
-        {
-            _logger.LogWarning("The balance invoice '{TransactionId}' couldn't be lowered by a refund: {Errors}", transaction.ItemId, string.Join(" ", result.Errors));
-        }
-        else if (adjustment >= transaction.OutstandingAmount && await _balances.FindByOrderAsync(orderId, cancellationToken) is { Status: BookingBalanceStatus.Scheduled } balance)
+        if (adjustment >= transaction.OutstandingAmount && await _balances.FindByOrderAsync(orderId, cancellationToken) is { Status: BookingBalanceStatus.Scheduled } balance)
         {
             balance.Status = BookingBalanceStatus.Canceled;
             await _balances.UpdateAsync(balance, cancellationToken);

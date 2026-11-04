@@ -286,7 +286,7 @@ public sealed class BookingPaymentEventsTests
         {
             ItemId = "tx1",
             Source = BookingsConstants.TransactionSource,
-            ObligationId = BookingBalanceTenderProvider.ObligationId,
+            ObligationId = BookingBalanceTenderProvider.BalanceObligationId,
             ReferenceType = CheckoutReferenceTypes.Order,
             ReferenceId = "order1",
             Currency = "USD",
