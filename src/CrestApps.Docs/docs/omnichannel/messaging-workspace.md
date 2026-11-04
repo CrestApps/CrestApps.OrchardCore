@@ -64,7 +64,7 @@ Every notification the server sends is logged at the `Information` level (delive
 ## Enable the features
 
 1. Go to **Tools → Features**.
-2. Enable **SMS Messaging Channel**. This also enables the **Omnichannel Messaging Workspace** and everything it needs (Channel Endpoints, Contact Center Agent Services, Contact Center Provider Webhook Inbox, SignalR, Orchard Core SMS).
+2. Enable **SMS Messaging Channel**. This also enables the **Omnichannel Messaging Workspace** and everything it needs (Channel Endpoints, Contact Center Agent Services, Provider Webhook Inbox, SignalR, Orchard Core SMS).
 3. Optionally enable **Omnichannel Messaging Routed Distribution** to push department conversations to the least-loaded available agent. This needs Contact Center Work Distribution.
 
 Enabling the workspace on its own gives you the inbox with nothing to send or receive on. That is expected: channels come from channel features.
@@ -77,7 +77,7 @@ Enabling the workspace on its own gives you the inbox with nothing to send or re
 | **Contact Center Inbound Entry Points** | Where each number's messages go is set on the [inbound entry point](../user-manual/entry-points-and-ivr.md#text-entry-points) that answers it for the channel, with opening hours and auto-replies. Entry points route to a queue or an agent, so this brings Contact Center Work Distribution's queues and the agents with it. |
 | **Contact Center Agent Services** (dependency-only) | Operators are Contact Center **agent profiles**. A bare profile is created automatically the first time a permitted user opens the workspace, so no Contact Center administration is required. |
 | **Orchard Core SignalR** | The workspace's own real-time hub. |
-| **Contact Center Provider Webhook Inbox** *(SMS channel only)* | The durable inbox that inbound provider deliveries are committed to before they are processed, so a retried delivery is de-duplicated and none is lost. |
+| **Provider Webhook Inbox** *(SMS channel only)* | The durable inbox that inbound provider deliveries are committed to before they are processed, so a retried delivery is de-duplicated and none is lost. |
 | **Orchard Core SMS** *(SMS channel only)* | The SMS provider abstraction and the tenant default provider. |
 
 The workspace does **not** require Contact Center Voice, and it does not pull in the Omnichannel Management CRM.

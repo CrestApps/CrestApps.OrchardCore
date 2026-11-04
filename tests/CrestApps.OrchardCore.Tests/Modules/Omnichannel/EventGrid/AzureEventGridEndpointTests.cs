@@ -10,6 +10,8 @@ using CrestApps.OrchardCore.Omnichannel.EventGrid;
 using CrestApps.OrchardCore.Omnichannel.EventGrid.Models;
 using CrestApps.OrchardCore.Omnichannel.EventGrid.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using CrestApps.OrchardCore.Webhooks;
+using CrestApps.OrchardCore.Webhooks.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.DependencyInjection;

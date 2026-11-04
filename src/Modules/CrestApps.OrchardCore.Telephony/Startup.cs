@@ -94,7 +94,7 @@ public sealed class Startup : StartupBase
                 "'CrestApps_Telephony:Coordination:TokenRefreshLockExpiration' must exceed 'TokenRefreshLockTimeout', otherwise the refresh lease expires while a peer is still waiting for it and two refreshes run at once.")
             .ValidateOnStart();
 
-        services.TryAddSingleton<IProviderIdentityResolver, ProviderIdentityResolver>();
+        services.AddProviderIdentityResolver();
         services.AddRedaction(builder => builder.SetRedactor<ErasingRedactor>(LogDataClassifications.AddressSet));
         services.AddScoped<IVoiceIngressGate, VoiceIngressGate>();
         services.AddScoped<INormalizedVoiceEventIngestor, NormalizedVoiceEventIngestor>();

@@ -113,18 +113,6 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
-    Id = ContactCenterConstants.Feature.ProviderInbox,
-    Name = "Contact Center Provider Webhook Inbox",
-    Description = "Durably commits an authenticated provider webhook delivery before any handler runs, deduplicates redeliveries on the provider's own delivery id, and retries processing from storage so a callback is never lost to a restart. Shared by every channel that ingests provider callbacks.",
-    Category = "Contact Center",
-    EnabledByDependencyOnly = true,
-    Dependencies =
-    [
-        ContactCenterConstants.Feature.Area,
-    ]
-)]
-
-[assembly: Feature(
     Id = ContactCenterConstants.Feature.Voice,
     Name = "Contact Center Voice",
     Description = "Routes inbound and outbound voice calls through the Voice Contact Center Call Router while Telephony providers execute media operations, and lets each of the tenant's phone numbers carry the agents who dial out from it.",

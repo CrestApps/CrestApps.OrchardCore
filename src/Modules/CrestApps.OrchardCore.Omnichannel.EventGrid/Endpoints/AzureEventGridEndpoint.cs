@@ -1,12 +1,8 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
 using CrestApps.Core.Support;
-using CrestApps.OrchardCore.ContactCenter;
-using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Core.Http;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -14,6 +10,9 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.EventGrid;
 using CrestApps.OrchardCore.Omnichannel.EventGrid.Models;
 using CrestApps.OrchardCore.Omnichannel.EventGrid.Services;
+using CrestApps.OrchardCore.Webhooks;
+using CrestApps.OrchardCore.Webhooks.Core.Signatures;
+using CrestApps.OrchardCore.Webhooks.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -37,6 +36,8 @@ internal static class AzureEventGridEndpoint
     internal const string ProviderName = "AzureEventGrid";
 
     private const long _maximumRequestBodySizeBytes = 1024 * 1024;
+
+    private static readonly SharedKeyWebhookSignatureValidator _sharedKeyValidator = new();
 
     /// <summary>
     /// Adds the azure event grid endpoint.
@@ -69,7 +70,11 @@ internal static class AzureEventGridEndpoint
         // Check SAS key
         if (!string.IsNullOrEmpty(eventGridOptions.EventGridSasKey) &&
             context.Request.Headers.TryGetValue("aeg-sas-key", out var headerKey) &&
-            CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(headerKey.ToString()), Encoding.UTF8.GetBytes(eventGridOptions.EventGridSasKey)))
+            _sharedKeyValidator.IsValid(new WebhookSignatureValidationContext
+            {
+                Secret = eventGridOptions.EventGridSasKey,
+                Signature = headerKey.ToString(),
+            }))
         {
             isAuthorized = true;
         }

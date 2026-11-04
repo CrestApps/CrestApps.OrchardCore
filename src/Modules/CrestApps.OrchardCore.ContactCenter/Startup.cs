@@ -284,7 +284,7 @@ public sealed class Startup : StartupBase
 
         // The call-session index and its migration canonicalize provider identity, and this feature does not
         // depend on Telephony, so the resolver must also be available without the Telephony module.
-        services.TryAddSingleton<IProviderIdentityResolver, ProviderIdentityResolver>();
+        services.AddProviderIdentityResolver();
 
         services
             .AddIndexProvider<CallSessionIndexProvider>()

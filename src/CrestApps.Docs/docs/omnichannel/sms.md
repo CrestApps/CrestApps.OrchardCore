@@ -40,7 +40,7 @@ You describe what you want the AI to do (tone, rules, goals), and the AI carries
 ## Enable the feature
 
 1. In Orchard Core Admin, go to `Tools` → `Features`.
-2. Enable `SMS Omnichannel Automation`. It depends on the AI features, Omnichannel Management, Orchard Core SMS, **Contact Center Business Hours**, which it enables so that background follow-ups can respect business-hours calendars, and the **Contact Center Provider Webhook Inbox**, which stores every inbound text before the provider is answered.
+2. Enable `SMS Omnichannel Automation`. It depends on the AI features, Omnichannel Management, Orchard Core SMS, **Contact Center Business Hours**, which it enables so that background follow-ups can respect business-hours calendars, and the **Provider Webhook Inbox**, which stores every inbound text before the provider is answered.
 
 For the step-by-step setup with screencasts, see [Automated AI SMS and voice](../user-manual/automated-ai.md) in the User Manual.
 
@@ -54,7 +54,7 @@ The Twilio webhook verifies Twilio's `X-Twilio-Signature` header with the auth t
 
 ### Inbound texts are stored before Twilio is answered
 
-The webhook commits each signed text to the durable provider webhook inbox, keyed on Twilio's `MessageSid`, before it answers Twilio, and starts processing it as soon as the response is sent. The **Contact Center Provider Webhook Inbox Dispatch** background task finishes any text whose processing did not complete, so a text is not lost when the site restarts. A redelivery of the same `MessageSid` is recognized on every node and is neither stored nor answered twice. When the text cannot be stored, the webhook answers `503 Service Unavailable` so that Twilio sends it again. Telnyx SMS and Azure Event Grid texts take the same path, under the `sms-inbound` inbox handler.
+The webhook commits each signed text to the durable provider webhook inbox, keyed on Twilio's `MessageSid`, before it answers Twilio, and starts processing it as soon as the response is sent. The **Provider Webhook Inbox Dispatch** background task finishes any text whose processing did not complete, so a text is not lost when the site restarts. A redelivery of the same `MessageSid` is recognized on every node and is neither stored nor answered twice. When the text cannot be stored, the webhook answers `503 Service Unavailable` so that Twilio sends it again. Telnyx SMS and Azure Event Grid texts take the same path, under the `sms-inbound` inbox handler.
 
 ## Typical setup (high level)
 

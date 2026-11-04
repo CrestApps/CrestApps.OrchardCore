@@ -1,6 +1,7 @@
 ﻿using System.Collections.Specialized;
 using System.Security.Cryptography;
 using System.Text;
+using CrestApps.OrchardCore.Webhooks.Core.Signatures;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Twilio;
 
@@ -177,16 +178,7 @@ internal sealed class TwilioRequestValidator
     }
 
     private static bool SecureCompare(string a, string b)
-    {
-        if (a == null || b == null)
-        {
-            return false;
-        }
-
-        return CryptographicOperations.FixedTimeEquals(
-            Encoding.UTF8.GetBytes(a),
-            Encoding.UTF8.GetBytes(b));
-    }
+        => WebhookSignatures.FixedTimeEquals(a, b);
 
     /// <summary>
     /// Returns URL without port if given URL has port, returns URL with port if given URL has no port

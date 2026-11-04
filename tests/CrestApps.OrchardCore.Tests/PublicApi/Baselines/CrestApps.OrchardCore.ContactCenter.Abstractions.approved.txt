@@ -477,26 +477,6 @@ namespace CrestApps.OrchardCore.ContactCenter
     {
         System.Threading.Tasks.Task<bool> IngestAsync(CrestApps.OrchardCore.Telephony.Models.ProviderVoiceEvent providerEvent, System.Threading.CancellationToken cancellationToken = default);
     }
-    public interface IProviderWebhookInbox
-    {
-        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ProviderWebhookInboxAcceptanceResult> AcceptAsync(CrestApps.OrchardCore.ContactCenter.Models.ProviderWebhookInboxDelivery delivery, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<bool> DispatchAsync(string messageId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<int> DispatchDueAsync(System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task DispatchHandlerAsync(string handlerName, string payload, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<bool> SettleClaimAsync(string messageId, string ownerToken, long fenceToken, bool succeeded, string errorType, System.Threading.CancellationToken cancellationToken = default);
-    }
-    public interface IProviderWebhookInboxHandler
-    {
-        CrestApps.OrchardCore.ContactCenter.ContactCenterHandlerReplaySafety ReplaySafety { get; }
-        string TechnicalName { get; }
-        System.Threading.Tasks.Task HandleAsync(string payload, System.Threading.CancellationToken cancellationToken = default);
-    }
-    public interface IProviderWebhookIngressLimiter
-    {
-        System.Threading.Tasks.ValueTask<CrestApps.OrchardCore.ContactCenter.Models.ProviderWebhookIngressLease> AcquireConcurrencyAsync(System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.ValueTask<CrestApps.OrchardCore.ContactCenter.Models.ProviderWebhookIngressLease> AcquireRateAsync(string provider, System.Threading.CancellationToken cancellationToken = default);
-        bool IsFresh(System.DateTime? occurredUtc);
-    }
     public interface IQueuedCallerAbandonmentHandler
     {
         System.Threading.Tasks.Task CallerAbandonedAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default);
@@ -1014,33 +994,6 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         Monitor = 0,
         Whisper = 1,
         Barge = 2,
-    }
-    public sealed class ProviderWebhookInboxAcceptanceResult
-    {
-        public ProviderWebhookInboxAcceptanceResult() { }
-        public string MessageId { get; set; }
-        public CrestApps.OrchardCore.ContactCenter.Models.ProviderWebhookInboxAcceptanceStatus Status { get; set; }
-    }
-    public enum ProviderWebhookInboxAcceptanceStatus
-    {
-        Accepted = 0,
-        Duplicate = 1,
-        Busy = 2,
-    }
-    public sealed class ProviderWebhookInboxDelivery
-    {
-        public ProviderWebhookInboxDelivery() { }
-        public string DeliveryId { get; set; }
-        public string HandlerName { get; set; }
-        public string Payload { get; set; }
-        public string ProviderName { get; set; }
-    }
-    public sealed class ProviderWebhookIngressLease : System.IDisposable
-    {
-        public ProviderWebhookIngressLease(System.Threading.RateLimiting.RateLimitLease lease) { }
-        public bool IsAcquired { get; }
-        public System.TimeSpan? RetryAfter { get; }
-        public void Dispose() { }
     }
     public enum QueueAfterHoursAction
     {

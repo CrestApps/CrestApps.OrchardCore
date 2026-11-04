@@ -10,6 +10,13 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Twilio;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Tests.Utilities;
+using CrestApps.OrchardCore.Webhooks;
+using CrestApps.OrchardCore.Webhooks.Core.Indexes;
+using CrestApps.OrchardCore.Webhooks.Core.Models;
+using CrestApps.OrchardCore.Webhooks.Core.Services;
+using CrestApps.OrchardCore.Webhooks.Indexes;
+using CrestApps.OrchardCore.Webhooks.Models;
+using ISession = YesSql.ISession;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,7 +29,6 @@ using OrchardCore.Modules;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
-using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel;
 
@@ -201,7 +207,7 @@ public sealed class TwilioInboundSmsInboxTests
         clock.SetupGet(service => service.UtcNow).Returns(_now);
 
         ProviderWebhookInbox inbox = null;
-        var scopeExecutor = new Mock<IContactCenterScopeExecutor>();
+        var scopeExecutor = new Mock<IProviderWebhookInboxScopeExecutor>();
         scopeExecutor
             .Setup(service => service.ExecuteAsync(It.IsAny<Func<IProviderWebhookInbox, Task>>()))
             .Returns((Func<IProviderWebhookInbox, Task> operation) => operation(inbox));
@@ -214,7 +220,7 @@ public sealed class TwilioInboundSmsInboxTests
             new ProviderIdentityResolver([]),
             scopeExecutor.Object,
             clock.Object,
-            Options.Create(new ContactCenterRetentionOptions()),
+            Options.Create(new ProviderWebhookInboxOptions()),
             NullLogger<ProviderWebhookInbox>.Instance);
 
         return inbox;
@@ -239,7 +245,7 @@ public sealed class TwilioInboundSmsInboxTests
 
         public string TechnicalName => OmnichannelConstants.WebhookInboxHandlers.SmsReceived;
 
-        public ContactCenterHandlerReplaySafety ReplaySafety => ContactCenterHandlerReplaySafety.GuardedByDurableStore;
+        public WebhookHandlerReplaySafety ReplaySafety => WebhookHandlerReplaySafety.GuardedByDurableStore;
 
         public Task HandleAsync(string payload, CancellationToken cancellationToken = default)
         {

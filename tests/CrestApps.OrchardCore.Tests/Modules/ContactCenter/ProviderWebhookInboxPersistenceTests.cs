@@ -6,6 +6,11 @@ using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Tests.Utilities;
+using CrestApps.OrchardCore.Webhooks.Core.Indexes;
+using CrestApps.OrchardCore.Webhooks.Core.Models;
+using CrestApps.OrchardCore.Webhooks.Core.Services;
+using CrestApps.OrchardCore.Webhooks.Indexes;
+using CrestApps.OrchardCore.Webhooks.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -95,9 +100,9 @@ public sealed class ProviderWebhookInboxPersistenceTests
             session,
             distributedLock,
             new ProviderIdentityResolver([]),
-            new Mock<IContactCenterScopeExecutor>().Object,
+            new Mock<IProviderWebhookInboxScopeExecutor>().Object,
             clock.Object,
-            Options.Create(new ContactCenterRetentionOptions()),
+            Options.Create(new ProviderWebhookInboxOptions()),
             NullLogger<ProviderWebhookInbox>.Instance);
     }
 

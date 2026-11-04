@@ -91,7 +91,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.HealthChecks
     }
     public sealed class ContactCenterProviderIngressHealthCheck : Microsoft.Extensions.Diagnostics.HealthChecks.IHealthCheck
     {
-        public ContactCenterProviderIngressHealthCheck(CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderWebhookInboxStore inboxStore, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterHealthCheckOptions> options, OrchardCore.Modules.IClock clock) { }
+        public ContactCenterProviderIngressHealthCheck(CrestApps.OrchardCore.Webhooks.Core.Services.IProviderWebhookInboxStore inboxStore, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterHealthCheckOptions> options, OrchardCore.Modules.IClock clock) { }
         public System.Threading.Tasks.Task<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult> CheckHealthAsync(Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ContactCenterQueueBacklogHealthCheck : Microsoft.Extensions.Diagnostics.HealthChecks.IHealthCheck
@@ -443,16 +443,6 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Indexes
         public System.DateTime NextAttemptUtc { get; set; }
         public string ProviderName { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommandStatus Status { get; set; }
-    }
-    public sealed class ProviderWebhookInboxMessageIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
-    {
-        public ProviderWebhookInboxMessageIndex() { }
-        public string DeliveryId { get; set; }
-        public long DocumentId { get; set; }
-        public System.DateTime NextAttemptUtc { get; set; }
-        public System.DateTime? ProcessedUtc { get; set; }
-        public string ProviderName { get; set; }
-        public CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxStatus Status { get; set; }
     }
     public sealed class QueueItemIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
     {
@@ -2887,39 +2877,6 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         Resume = 5,
         Reject = 6,
         SendToVoicemail = 7,
-    }
-    public sealed class ProviderWebhookInboxMessage : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel
-    {
-        public ProviderWebhookInboxMessage() { }
-        public int AttemptCount { get; set; }
-        public System.DateTime CreatedUtc { get; set; }
-        public string DeliveryId { get; set; }
-        public long FenceToken { get; set; }
-        public string HandlerName { get; set; }
-        public string LastError { get; set; }
-        public System.DateTime? ModifiedUtc { get; set; }
-        public System.DateTime NextAttemptUtc { get; set; }
-        public string OwnerToken { get; set; }
-        public string Payload { get; set; }
-        public System.DateTime? ProcessedUtc { get; set; }
-        public string ProviderName { get; set; }
-        public CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxStatus Status { get; set; }
-    }
-    public enum ProviderWebhookInboxStatus
-    {
-        Pending = 0,
-        Claimed = 1,
-        Completed = 2,
-        DeadLettered = 3,
-    }
-    public sealed class ProviderWebhookIngressOptions
-    {
-        public ProviderWebhookIngressOptions() { }
-        public int ConcurrencyPermitLimit { get; set; }
-        public int MaximumDeliveryAgeSeconds { get; set; }
-        public int MaximumFutureSkewSeconds { get; set; }
-        public int RatePeriodSeconds { get; set; }
-        public int RatePermitLimit { get; set; }
     }
     public sealed class QueueAdmissionDecision
     {
@@ -5831,14 +5788,6 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         System.Threading.Tasks.Task ReconcileEndedOfferAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);
     }
-    public interface IProviderWebhookInboxStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxMessage>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxMessage>
-    {
-        System.Threading.Tasks.Task<int> CountByStatusAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxStatus status, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<int> CountOverdueAsync(System.DateTime nowUtc, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxMessage> FindByDeliveryAsync(string providerName, string deliveryId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxMessage>> GetDueAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxMessage>> GetProcessedBeforeAsync(System.DateTime processedBeforeUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default);
-    }
     public interface IQueueCallbackOfferResponder
     {
         System.Threading.Tasks.Task<bool> HandleAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, CrestApps.OrchardCore.ContactCenter.Services.InboundVoiceDigitsEvent digitsEvent, System.Threading.CancellationToken cancellationToken = default);
@@ -6598,11 +6547,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommandStatus From { get; }
         public CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommandStatus To { get; }
     }
-    public sealed class ProviderVoiceEventInboxHandler : CrestApps.OrchardCore.ContactCenter.IProviderWebhookInboxHandler
+    public sealed class ProviderVoiceEventInboxHandler : CrestApps.OrchardCore.Webhooks.IProviderWebhookInboxHandler
     {
         public const string HandlerTechnicalName = "provider-voice-event";
         public ProviderVoiceEventInboxHandler(CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderVoiceEventService providerVoiceEventService) { }
-        public CrestApps.OrchardCore.ContactCenter.ContactCenterHandlerReplaySafety ReplaySafety { get; }
+        public CrestApps.OrchardCore.Webhooks.WebhookHandlerReplaySafety ReplaySafety { get; }
         public string TechnicalName { get; }
         public System.Threading.Tasks.Task HandleAsync(string payload, System.Threading.CancellationToken cancellationToken = default) { }
     }
@@ -6637,38 +6586,6 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public ProviderVoiceOfferSynchronizationService(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionManager callSessionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityReservationManager reservationManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterWorkStateService workStateService, System.IServiceProvider serviceProvider, System.Lazy<CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterAuditRecorder> auditRecorder, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.ProviderVoiceOfferSynchronizationService> logger) { }
         public System.Threading.Tasks.Task ReconcileEndedOfferAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
-    }
-    public sealed class ProviderWebhookInbox : CrestApps.OrchardCore.ContactCenter.IProviderWebhookInbox
-    {
-        public const int MaxAttempts = 10;
-        public const int MaxBatchSize = 100;
-        public const int MaxDeliveryIdLength = 256;
-        public const int MaxTombstoneCleanupBatchSize = 100;
-        public const double TombstoneRetentionDays = 7D;
-        public ProviderWebhookInbox(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.IProviderWebhookInboxHandler> handlers, CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderWebhookInboxStore store, YesSql.ISession session, OrchardCore.Locking.Distributed.IDistributedLock distributedLock, CrestApps.OrchardCore.Telephony.Core.Services.IProviderIdentityResolver providerIdentityResolver, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterScopeExecutor scopeExecutor, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterRetentionOptions> retentionOptions, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.ProviderWebhookInbox> logger) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ProviderWebhookInboxAcceptanceResult> AcceptAsync(CrestApps.OrchardCore.ContactCenter.Models.ProviderWebhookInboxDelivery delivery, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<bool> DispatchAsync(string messageId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<int> DispatchDueAsync(System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task DispatchHandlerAsync(string handlerName, string payload, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<bool> SettleClaimAsync(string messageId, string ownerToken, long fenceToken, bool succeeded, string errorType, System.Threading.CancellationToken cancellationToken = default) { }
-    }
-    public sealed class ProviderWebhookInboxStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxMessage, CrestApps.OrchardCore.ContactCenter.Core.Indexes.ProviderWebhookInboxMessageIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxMessage>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxMessage>, CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderWebhookInboxStore
-    {
-        public ProviderWebhookInboxStore(YesSql.ISession session) { }
-        protected override bool CheckConcurrency { get; }
-        public System.Threading.Tasks.Task<int> CountByStatusAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxStatus status, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<int> CountOverdueAsync(System.DateTime nowUtc, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxMessage> FindByDeliveryAsync(string providerName, string deliveryId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxMessage>> GetDueAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxMessage>> GetProcessedBeforeAsync(System.DateTime processedBeforeUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
-    }
-    public sealed class ProviderWebhookIngressLimiter : CrestApps.OrchardCore.ContactCenter.IProviderWebhookIngressLimiter, System.IDisposable
-    {
-        public ProviderWebhookIngressLimiter(Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookIngressOptions> options, OrchardCore.Modules.IClock clock) { }
-        public System.Threading.Tasks.ValueTask<CrestApps.OrchardCore.ContactCenter.Models.ProviderWebhookIngressLease> AcquireConcurrencyAsync(System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.ValueTask<CrestApps.OrchardCore.ContactCenter.Models.ProviderWebhookIngressLease> AcquireRateAsync(string provider, System.Threading.CancellationToken cancellationToken = default) { }
-        public void Dispose() { }
-        public bool IsFresh(System.DateTime? occurredUtc) { }
     }
     public sealed class QueueCallbackOfferResponder : CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueCallbackOfferResponder
     {
@@ -7225,11 +7142,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services.Retention
         protected override System.Linq.Expressions.Expression<System.Func<CrestApps.OrchardCore.ContactCenter.Core.Indexes.ProviderCommandIndex, bool>> BuildExpiredPredicate(System.DateTime cutoffUtc) { }
         protected override double GetRetentionDays(CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterRetentionOptions options) { }
     }
-    public sealed class ProviderWebhookInboxMessageRetentionPolicy : CrestApps.OrchardCore.ContactCenter.Core.Services.Retention.ContactCenterRetentionPolicyBase<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxMessage, CrestApps.OrchardCore.ContactCenter.Core.Indexes.ProviderWebhookInboxMessageIndex>
+    public sealed class ProviderWebhookInboxMessageRetentionPolicy : CrestApps.OrchardCore.ContactCenter.Core.Services.Retention.ContactCenterRetentionPolicyBase<CrestApps.OrchardCore.Webhooks.Core.Models.ProviderWebhookInboxMessage, CrestApps.OrchardCore.Webhooks.Core.Indexes.ProviderWebhookInboxMessageIndex>
     {
-        public ProviderWebhookInboxMessageRetentionPolicy(YesSql.ISession session, CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderWebhookInboxStore inboxStore) { }
+        public ProviderWebhookInboxMessageRetentionPolicy(YesSql.ISession session, CrestApps.OrchardCore.Webhooks.Core.Services.IProviderWebhookInboxStore inboxStore) { }
         public override string EntityName { get; }
-        protected override System.Linq.Expressions.Expression<System.Func<CrestApps.OrchardCore.ContactCenter.Core.Indexes.ProviderWebhookInboxMessageIndex, bool>> BuildExpiredPredicate(System.DateTime cutoffUtc) { }
+        protected override System.Linq.Expressions.Expression<System.Func<CrestApps.OrchardCore.Webhooks.Core.Indexes.ProviderWebhookInboxMessageIndex, bool>> BuildExpiredPredicate(System.DateTime cutoffUtc) { }
         protected override double GetEntityFloorDays(CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterRetentionOptions options) { }
         protected override double GetRetentionDays(CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterRetentionOptions options) { }
     }

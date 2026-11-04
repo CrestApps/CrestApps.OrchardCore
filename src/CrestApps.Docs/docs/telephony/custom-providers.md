@@ -139,7 +139,7 @@ Capability flags are discovery metadata, not executable behavior. Advertise an e
 
 Providers that can attach an external media stream to an active call may implement `IContactCenterVoiceMediaProvider`.
 
-Provider modules should reference `CrestApps.OrchardCore.ContactCenter.Abstractions` only. Do not reference the Contact Center Core or module assemblies to ingest events, route inbound calls, reconcile provider state, or participate in the durable webhook inbox; use the stable provider-facing contracts above.
+Provider modules should reference `CrestApps.OrchardCore.ContactCenter.Abstractions` only, plus `CrestApps.OrchardCore.Webhooks.Abstractions` for the durable webhook inbox contracts (`IProviderWebhookInbox`, `IProviderWebhookInboxHandler`, `IProviderWebhookIngressLimiter`; see [Webhooks](../modules/webhooks.md#provider-webhook-inbox)). Do not reference the Contact Center Core or module assemblies to ingest events, route inbound calls or reconcile provider state; use the stable provider-facing contracts above.
 
 Channel modules use the same project for the agent directory and entry points: `IAgentProfileReader` names the agent profile a user is, `IAgentQueueMembershipReader` reads queue membership, and `services.AddEntryPointChannel(...)` (with `EntryPointChannelOptions` and `EntryPointAIAgentOptions`) offers a channel to inbound entry points. The SMS workspace module is built on these and no longer references `ContactCenter.Core`.
 

@@ -124,7 +124,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.ContactCenter.RealTime` | Contact Center Real-Time (dependency only) | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
 | `CrestApps.OrchardCore.Telnyx.AiVoice` | Telnyx AI Voice Agent | [Telnyx AI Voice Agent](./telephony/telnyx#telnyx-ai-voice-agent) |
 | `CrestApps.OrchardCore.ContactCenter.BusinessHours` | Contact Center Business Hours | [Business hours and overflow](./contact-center/agents-queues-dialer#business-hours-and-overflow) |
-| `CrestApps.OrchardCore.ContactCenter.ProviderInbox` | Contact Center Provider Webhook Inbox (dependency only) | [Voice routing](./contact-center/voice-routing) |
+| `CrestApps.OrchardCore.ContactCenter.ProviderInbox` | Provider Webhook Inbox (dependency only, in the Webhooks module) | [Webhooks](./modules/webhooks#provider-webhook-inbox) |
 | `CrestApps.OrchardCore.ContactCenter.Recording.Core` | Contact Center Recording Governance (dependency only) | [Recording governance](./contact-center/#recording-governance) |
 | `CrestApps.OrchardCore.Omnichannel.Messaging.RoutedDistribution` | Omnichannel Messaging Routed Distribution | [Messaging Workspace](./omnichannel/messaging-workspace) |
 | `CrestApps.OrchardCore.Omnichannel.Voice` | Automated Voice | [Telnyx AI Voice Agent](./telephony/telnyx#telnyx-ai-voice-agent) |

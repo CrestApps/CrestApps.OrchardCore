@@ -19,6 +19,7 @@ using CrestApps.OrchardCore.Stripe.Services;
 using CrestApps.OrchardCore.Stripe.Workflows;
 using CrestApps.OrchardCore.Stripe.Workflows.Drivers;
 using CrestApps.OrchardCore.Stripe.Workflows.Events;
+using CrestApps.OrchardCore.Webhooks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -248,4 +249,16 @@ public sealed class TerminalStartup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
         => routes.MapStripeTerminalApi();
+}
+
+/// <summary>
+/// Processes verified Stripe events from the provider webhook inbox: the webhook endpoint stores each event and answers
+/// Stripe at once, and the payment handlers run from storage with retries.
+/// </summary>
+[RequireFeatures(WebhooksConstants.Feature.ProviderInbox)]
+public sealed class ProviderInboxStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddScoped<IProviderWebhookInboxHandler, StripeWebhookInboxHandler>();
 }

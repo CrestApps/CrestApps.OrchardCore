@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Webhooks;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -28,7 +29,7 @@ public sealed class ProviderVoiceEventInboxHandler : IProviderWebhookInboxHandle
     public string TechnicalName => HandlerTechnicalName;
 
     /// <inheritdoc/>
-    public ContactCenterHandlerReplaySafety ReplaySafety => ContactCenterHandlerReplaySafety.GuardedByDurableStore;
+    public WebhookHandlerReplaySafety ReplaySafety => WebhookHandlerReplaySafety.GuardedByDurableStore;
 
     /// <inheritdoc/>
     public async Task HandleAsync(string payload, CancellationToken cancellationToken = default)
