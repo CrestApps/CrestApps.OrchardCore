@@ -1,11 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.SignalR.Core;
 using CrestApps.OrchardCore.Telephony;
-using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
-using Microsoft.AspNetCore.SignalR;
-using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Handlers;
@@ -31,9 +27,8 @@ public sealed class ContactCenterSoftPhoneTransferEventHandler : IContactCenterE
     private readonly ICallSessionManager _callSessionManager;
     private readonly IAgentProfileManager _agentProfileManager;
     private readonly ITelephonyInteractionStore _telephonyInteractionStore;
-    private readonly IHubContext<TelephonyHub, ITelephonyClient> _hubContext;
+    private readonly ISoftPhoneClientNotifier _softPhones;
     private readonly IClock _clock;
-    private readonly string _tenantName;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterSoftPhoneTransferEventHandler"/> class.
@@ -43,17 +38,15 @@ public sealed class ContactCenterSoftPhoneTransferEventHandler : IContactCenterE
         ICallSessionManager callSessionManager,
         IAgentProfileManager agentProfileManager,
         ITelephonyInteractionStore telephonyInteractionStore,
-        IHubContext<TelephonyHub, ITelephonyClient> hubContext,
-        IClock clock,
-        ShellSettings shellSettings)
+        ISoftPhoneClientNotifier softPhones,
+        IClock clock)
     {
         _interactionManager = interactionManager;
         _callSessionManager = callSessionManager;
         _agentProfileManager = agentProfileManager;
         _telephonyInteractionStore = telephonyInteractionStore;
-        _hubContext = hubContext;
+        _softPhones = softPhones;
         _clock = clock;
-        _tenantName = shellSettings.Name;
     }
 
     /// <inheritdoc/>
@@ -110,18 +103,16 @@ public sealed class ContactCenterSoftPhoneTransferEventHandler : IContactCenterE
             await _telephonyInteractionStore.UpdateAsync(projection, cancellationToken);
         }
 
-        await _hubContext.Clients
-            .Group(TenantSignalRGroupName.ForUser(_tenantName, agent.UserId))
-            .CallStateChanged(new TelephonyCall
+        await _softPhones.CallStateChangedAsync(agent.UserId, new TelephonyCall
+        {
+            CallId = callId,
+            State = CallState.Disconnected,
+            ProviderName = session?.ProviderName ?? interaction.ProviderName,
+            Metadata = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
             {
-                CallId = callId,
-                State = CallState.Disconnected,
-                ProviderName = session?.ProviderName ?? interaction.ProviderName,
-                Metadata = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
-                {
-                    ["interactionId"] = interaction.ItemId,
-                    [takenOver ? "takenOver" : "transferred"] = true,
-                },
-            });
+                ["interactionId"] = interaction.ItemId,
+                [takenOver ? "takenOver" : "transferred"] = true,
+            },
+        });
     }
 }

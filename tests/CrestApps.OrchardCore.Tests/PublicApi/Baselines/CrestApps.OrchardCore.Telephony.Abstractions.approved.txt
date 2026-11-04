@@ -44,6 +44,12 @@ namespace CrestApps.OrchardCore.Telephony
     {
         System.Threading.Tasks.Task<bool> ReportCapabilitiesAsync(string userId, string credentialId, System.Collections.Generic.IReadOnlyCollection<string> capabilities, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface ISoftPhoneClientNotifier
+    {
+        System.Threading.Tasks.Task CallStateChangedAsync(string userId, CrestApps.OrchardCore.Telephony.Models.TelephonyCall call);
+        System.Threading.Tasks.Task DialRequestedAsync(string userId, CrestApps.OrchardCore.Telephony.Models.TelephonyDialRequest request);
+        System.Threading.Tasks.Task IncomingCallAnsweredAsync(string userId, CrestApps.OrchardCore.Telephony.Models.IncomingCallAnsweredNotification notification);
+    }
     public interface ISoftPhoneConnectionRegistrar
     {
         System.Threading.Tasks.Task ReportConnectionClosedAsync(string userId, string connectionId, System.Threading.CancellationToken cancellationToken = default);
@@ -776,6 +782,18 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public CrestApps.OrchardCore.Telephony.Models.TelephonyCapabilities Capabilities { get; set; }
         public string DefaultCountryCode { get; set; }
         public bool EnableDiagnostics { get; set; }
+        public int RecentCallsCount { get; set; }
+    }
+    public sealed class SoftPhoneWidgetSettings
+    {
+        public const string DefaultAccentColor = "#2f6fed";
+        public const int DefaultRecentCallsCount = 30;
+        public SoftPhoneWidgetSettings() { }
+        public string AccentColor { get; set; }
+        public string DefaultCountryCode { get; set; }
+        public bool DisplayOnAdmin { get; set; }
+        public bool EnableDiagnostics { get; set; }
+        public bool Enabled { get; set; }
         public int RecentCallsCount { get; set; }
     }
     [System.Flags]

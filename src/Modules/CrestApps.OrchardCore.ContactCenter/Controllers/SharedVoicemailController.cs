@@ -9,17 +9,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
-using CrestApps.OrchardCore.SignalR.Core;
 using CrestApps.OrchardCore.Telephony;
-using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
-using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 
@@ -45,8 +41,7 @@ public sealed class SharedVoicemailController : Controller
     private readonly IActivityQueueManager _queueManager;
     private readonly IInteractionManager _interactionManager;
     private readonly INotifier _notifier;
-    private readonly IHubContext<TelephonyHub, ITelephonyClient> _telephonyHub;
-    private readonly ShellSettings _shellSettings;
+    private readonly ISoftPhoneClientNotifier _softPhones;
     private readonly ILogger _logger;
 
     internal readonly IHtmlLocalizer H;
@@ -59,8 +54,7 @@ public sealed class SharedVoicemailController : Controller
     /// <param name="queueManager">The queue manager used to name the queues.</param>
     /// <param name="interactionManager">The interaction manager used to read each message's recording and length.</param>
     /// <param name="notifier">The admin notifier.</param>
-    /// <param name="telephonyHub">The soft phone hub a call-back is dialed through.</param>
-    /// <param name="shellSettings">The tenant, whose soft phone groups the hub addresses.</param>
+    /// <param name="softPhones">Asks the user's soft phones to dial a call-back.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     public SharedVoicemailController(
@@ -69,13 +63,11 @@ public sealed class SharedVoicemailController : Controller
         IActivityQueueManager queueManager,
         IInteractionManager interactionManager,
         INotifier notifier,
-        IHubContext<TelephonyHub, ITelephonyClient> telephonyHub,
-        ShellSettings shellSettings,
+        ISoftPhoneClientNotifier softPhones,
         ILogger<SharedVoicemailController> logger,
         IHtmlLocalizer<SharedVoicemailController> htmlLocalizer)
     {
-        _telephonyHub = telephonyHub;
-        _shellSettings = shellSettings;
+        _softPhones = softPhones;
         _logger = logger;
         _sharedVoicemailService = sharedVoicemailService;
         _authorizationService = authorizationService;
@@ -313,9 +305,7 @@ public sealed class SharedVoicemailController : Controller
 
         // The same push the call button beside a phone number sends: the user's soft phone dials it. Live, a call-back
         // was queued as a preview call instead, which the user then had to wait for and dial again.
-        await _telephonyHub.Clients
-            .Group(TenantSignalRGroupName.ForUser(_shellSettings.Name, userId))
-            .DialRequested(new TelephonyDialRequest { Number = number });
+        await _softPhones.DialRequestedAsync(userId, new TelephonyDialRequest { Number = number });
 
         if (_logger.IsEnabled(LogLevel.Information))
         {

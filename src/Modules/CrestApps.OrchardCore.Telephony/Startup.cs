@@ -100,6 +100,10 @@ public sealed class Startup : StartupBase
         services.AddScoped<INormalizedVoiceEventIngestor, NormalizedVoiceEventIngestor>();
         services.AddScoped<INormalizedVoiceEventHandler, TelephonyCallHistoryVoiceEventHandler>();
         services.AddScoped<ITelephonyRemotePartyNotifier, TelephonyRemotePartyNotifier>();
+
+        // How other modules, such as Contact Center, push to a user's soft phones without using the hub itself.
+        services.AddSingleton<ISoftPhoneClientNotifier, SoftPhoneClientNotifier>();
+
         services.AddScoped<ITelephonyProviderResolver, DefaultTelephonyProviderResolver>();
         services.AddScoped<IVoiceAgentMediaProviderResolver, VoiceAgentMediaProviderResolver>();
         services.AddScoped<IOutboundCallScreeningService, DefaultOutboundCallScreeningService>();

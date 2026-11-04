@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.SignalR.Core;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.SignalR;
 using Moq;
@@ -122,9 +123,8 @@ public sealed class ContactCenterSoftPhoneTransferEventHandlerTests
                 sessions.Object,
                 agents.Object,
                 Store.Object,
-                hub.Object,
-                new StubClock(),
-                new ShellSettings { Name = "Default" });
+                new SoftPhoneClientNotifier(hub.Object, new ShellSettings { Name = "Default" }),
+                new StubClock());
         }
 
         public TelephonyInteraction Projection { get; } = new()

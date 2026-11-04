@@ -312,18 +312,6 @@ namespace CrestApps.OrchardCore.Telephony.Models
     {
         public SoftPhonePart() { }
     }
-    public sealed class SoftPhoneWidgetSettings
-    {
-        public const string DefaultAccentColor = "#2f6fed";
-        public const int DefaultRecentCallsCount = 30;
-        public SoftPhoneWidgetSettings() { }
-        public string AccentColor { get; set; }
-        public string DefaultCountryCode { get; set; }
-        public bool DisplayOnAdmin { get; set; }
-        public bool EnableDiagnostics { get; set; }
-        public bool Enabled { get; set; }
-        public int RecentCallsCount { get; set; }
-    }
     public sealed class TelephonyCoordinationOptions
     {
         public TelephonyCoordinationOptions() { }
@@ -465,6 +453,13 @@ namespace CrestApps.OrchardCore.Telephony.Services
         public System.Threading.Tasks.Task<System.IO.Stream> OpenReadAsync(string storageReference, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<string> StoreAsync(CrestApps.OrchardCore.Telephony.Models.RecordingMediaWriteRequest request, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> TryPurgeAllAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class SoftPhoneClientNotifier : CrestApps.OrchardCore.Telephony.ISoftPhoneClientNotifier
+    {
+        public SoftPhoneClientNotifier(Microsoft.AspNetCore.SignalR.IHubContext<CrestApps.OrchardCore.Telephony.Hubs.TelephonyHub, CrestApps.OrchardCore.Telephony.ITelephonyClient> hubContext, OrchardCore.Environment.Shell.ShellSettings shellSettings) { }
+        public System.Threading.Tasks.Task CallStateChangedAsync(string userId, CrestApps.OrchardCore.Telephony.Models.TelephonyCall call) { }
+        public System.Threading.Tasks.Task DialRequestedAsync(string userId, CrestApps.OrchardCore.Telephony.Models.TelephonyDialRequest request) { }
+        public System.Threading.Tasks.Task IncomingCallAnsweredAsync(string userId, CrestApps.OrchardCore.Telephony.Models.IncomingCallAnsweredNotification notification) { }
     }
     public sealed class SoftPhoneWidgetPresenter : CrestApps.OrchardCore.Telephony.Services.ISoftPhoneWidgetPresenter
     {
