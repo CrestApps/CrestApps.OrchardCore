@@ -204,7 +204,7 @@ public sealed class ProjectReferenceRulesTests
             projectName.Equals(marker, StringComparison.Ordinal) ||
             projectName.StartsWith(marker + ".", StringComparison.Ordinal));
 
-    private static IEnumerable<string> ReadProjectReferenceNames(string projectPath)
+    internal static IEnumerable<string> ReadProjectReferenceNames(string projectPath)
     {
         var document = XDocument.Load(projectPath);
 
@@ -221,7 +221,7 @@ public sealed class ProjectReferenceRulesTests
         }
     }
 
-    private static string FindRepositoryRoot()
+    internal static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
 
