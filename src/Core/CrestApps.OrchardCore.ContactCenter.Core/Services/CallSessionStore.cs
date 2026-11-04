@@ -90,7 +90,7 @@ public sealed class CallSessionStore : DocumentCatalog<CallSession, CallSessionI
 
     public async Task<int> CountActiveAsync(CancellationToken cancellationToken = default)
     {
-        return await Session.Query<CallSession, CallSessionIndex>(
+        return await Session.QueryIndex<CallSessionIndex>(
             index => index.EndedUtc == null,
             collection: ContactCenterStorage.CollectionName)
             .CountAsync(cancellationToken);

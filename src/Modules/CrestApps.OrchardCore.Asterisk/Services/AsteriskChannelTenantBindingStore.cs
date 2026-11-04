@@ -131,7 +131,7 @@ internal sealed class AsteriskChannelTenantBindingStore : IAsteriskChannelTenant
         await using var session = _store.CreateSession();
 
         var binding = await session
-            .Query<AsteriskChannelTenantBinding, AsteriskChannelTenantBindingIndex>()
+            .QueryIndex<AsteriskChannelTenantBindingIndex>()
             .FirstOrDefaultAsync(cancellationToken);
 
         return binding is not null;
@@ -174,7 +174,7 @@ internal sealed class AsteriskChannelTenantBindingStore : IAsteriskChannelTenant
             await using var session = _store.CreateSession();
 
             var existing = await session
-                .Query<AsteriskChannelTenantBinding, AsteriskChannelTenantBindingIndex>(index =>
+                .QueryIndex<AsteriskChannelTenantBindingIndex>(index =>
                     index.ChannelId == binding.ChannelId)
                 .FirstOrDefaultAsync();
 
@@ -218,7 +218,7 @@ internal sealed class AsteriskChannelTenantBindingStore : IAsteriskChannelTenant
             await using var session = _store.CreateSession();
 
             var existing = await session
-                .Query<AsteriskChannelTenantBinding, AsteriskChannelTenantBindingIndex>(index =>
+                .QueryIndex<AsteriskChannelTenantBindingIndex>(index =>
                     index.ChannelId == channelId)
                 .FirstOrDefaultAsync(cancellationToken);
 

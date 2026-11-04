@@ -59,7 +59,7 @@ public sealed class ProviderWebhookInboxStore : DocumentCatalog<ProviderWebhookI
     /// <inheritdoc/>
     public async Task<int> CountByStatusAsync(ProviderWebhookInboxStatus status, CancellationToken cancellationToken = default)
     {
-        return await Session.Query<ProviderWebhookInboxMessage, ProviderWebhookInboxMessageIndex>(
+        return await Session.QueryIndex<ProviderWebhookInboxMessageIndex>(
             index => index.Status == status,
             collection: ContactCenterStorage.CollectionName)
             .CountAsync(cancellationToken);
@@ -68,7 +68,7 @@ public sealed class ProviderWebhookInboxStore : DocumentCatalog<ProviderWebhookI
     /// <inheritdoc/>
     public async Task<int> CountOverdueAsync(DateTime nowUtc, CancellationToken cancellationToken = default)
     {
-        return await Session.Query<ProviderWebhookInboxMessage, ProviderWebhookInboxMessageIndex>(
+        return await Session.QueryIndex<ProviderWebhookInboxMessageIndex>(
             index => (index.Status == ProviderWebhookInboxStatus.Pending || index.Status == ProviderWebhookInboxStatus.Claimed) &&
                 index.NextAttemptUtc <= nowUtc,
             collection: ContactCenterStorage.CollectionName)

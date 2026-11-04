@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.Accounts.Services;
 using CrestApps.OrchardCore.Assets.Models;
 using CrestApps.OrchardCore.Assets.Services;
-using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Records;
 using YesSql;
 using YesSql.Services;
@@ -38,8 +37,8 @@ internal sealed class AccountAssetOwnerSource : IAssetOwnerSource
         var search = query?.Trim();
 
         var items = string.IsNullOrEmpty(search)
-            ? _session.Query<ContentItem, ContentItemIndex>(index => index.Latest && index.ContentType.IsIn(types))
-            : _session.Query<ContentItem, ContentItemIndex>(index => index.Latest && index.ContentType.IsIn(types) && index.DisplayText.Contains(search));
+            ? _session.QueryIndex<ContentItemIndex>(index => index.Latest && index.ContentType.IsIn(types))
+            : _session.QueryIndex<ContentItemIndex>(index => index.Latest && index.ContentType.IsIn(types) && index.DisplayText.Contains(search));
 
         return [.. (await items.OrderBy(index => index.DisplayText).Take(count).ListAsync(cancellationToken)).Select(item => new AssetOwnerOption(item.ContentItemId, item.DisplayText))];
     }
@@ -51,7 +50,7 @@ internal sealed class AccountAssetOwnerSource : IAssetOwnerSource
             return new Dictionary<string, string>();
         }
 
-        var items = await _session.Query<ContentItem, ContentItemIndex>(index => index.Latest && index.ContentItemId.IsIn(ids)).ListAsync(cancellationToken);
+        var items = await _session.QueryIndex<ContentItemIndex>(index => index.Latest && index.ContentItemId.IsIn(ids)).ListAsync(cancellationToken);
         var names = new Dictionary<string, string>(StringComparer.Ordinal);
 
         foreach (var item in items)

@@ -22,7 +22,7 @@ internal sealed class WorkforceInboxStore : DocumentCatalog<WorkforceInboxItem, 
     {
         var query = Session.Query<WorkforceInboxItem, WorkforceInboxIndex>(index => index.WorkerId == workerId, collection: CollectionName);
         var count = await query.CountAsync(cancellationToken);
-        var unread = await Session.Query<WorkforceInboxItem, WorkforceInboxIndex>(index => index.WorkerId == workerId && !index.IsRead, collection: CollectionName).CountAsync(cancellationToken);
+        var unread = await Session.QueryIndex<WorkforceInboxIndex>(index => index.WorkerId == workerId && !index.IsRead, collection: CollectionName).CountAsync(cancellationToken);
         var page = await query.OrderByDescending(index => index.CreatedUtc).ThenByDescending(index => index.Id).Skip(skip).Take(take).ListAsync(cancellationToken);
 
         return (count, unread, page.ToArray());

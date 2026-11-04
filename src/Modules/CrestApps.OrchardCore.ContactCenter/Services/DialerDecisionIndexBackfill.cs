@@ -182,7 +182,7 @@ internal static class DialerDecisionIndexBackfill
             .Distinct(StringComparer.Ordinal)
             .ToArray();
 
-        var campaigns = (await session.Query<OmnichannelActivity, OmnichannelActivityIndex>(
+        var campaigns = (await session.QueryIndex<OmnichannelActivityIndex>(
             index => index.ItemId.IsIn(activityIds),
             collection: OmnichannelConstants.CollectionName)
             .ListAsync(cancellationToken))

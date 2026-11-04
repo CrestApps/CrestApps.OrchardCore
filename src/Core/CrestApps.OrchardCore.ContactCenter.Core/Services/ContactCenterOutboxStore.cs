@@ -53,7 +53,7 @@ public sealed class ContactCenterOutboxStore : DocumentCatalog<ContactCenterOutb
     /// <inheritdoc/>
     public async Task<int> CountByStatusAsync(OutboxMessageStatus status, CancellationToken cancellationToken = default)
     {
-        return await Session.Query<ContactCenterOutboxMessage, ContactCenterOutboxMessageIndex>(
+        return await Session.QueryIndex<ContactCenterOutboxMessageIndex>(
             index => index.Status == status,
             collection: ContactCenterStorage.CollectionName)
             .CountAsync(cancellationToken);
@@ -62,7 +62,7 @@ public sealed class ContactCenterOutboxStore : DocumentCatalog<ContactCenterOutb
     /// <inheritdoc/>
     public async Task<int> CountOverdueAsync(DateTime nowUtc, CancellationToken cancellationToken = default)
     {
-        return await Session.Query<ContactCenterOutboxMessage, ContactCenterOutboxMessageIndex>(
+        return await Session.QueryIndex<ContactCenterOutboxMessageIndex>(
             index => (index.Status == OutboxMessageStatus.Pending || index.Status == OutboxMessageStatus.Claimed) &&
                 index.NextAttemptUtc <= nowUtc,
             collection: ContactCenterStorage.CollectionName)

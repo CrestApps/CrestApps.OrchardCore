@@ -58,8 +58,9 @@ public sealed class HandoffContainmentReportProvider : OmnichannelReportBase, IR
         // The population is: automated conversations the AI contained, plus every conversation that escalated to a
         // human. A routed voice handoff leaves the automated lane (it becomes an agent call), so escalations are
         // matched on the durable AiEscalated flag rather than on Source. Two queries keep each side an indexed
-        // lookup; they never overlap (contained is AiEscalated == false).
-        var contained = await _session.Query<OmnichannelActivity, OmnichannelActivityIndex>(
+        // lookup; they never overlap (contained is AiEscalated == false). Only index rows are read, since every value
+        // the aggregator needs is on the row and a period can hold many activities.
+        var contained = await _session.QueryIndex<OmnichannelActivityIndex>(
             index => index.Status == ActivityStatus.Completed &&
                      index.Source == ActivitySources.Automatic &&
                      !index.AiEscalated &&
@@ -68,7 +69,7 @@ public sealed class HandoffContainmentReportProvider : OmnichannelReportBase, IR
             collection: OmnichannelConstants.CollectionName)
             .ListAsync(cancellationToken);
 
-        var escalated = await _session.Query<OmnichannelActivity, OmnichannelActivityIndex>(
+        var escalated = await _session.QueryIndex<OmnichannelActivityIndex>(
             index => index.Status == ActivityStatus.Completed &&
                      index.AiEscalated &&
                      index.CompletedUtc >= from &&
@@ -76,7 +77,13 @@ public sealed class HandoffContainmentReportProvider : OmnichannelReportBase, IR
             collection: OmnichannelConstants.CollectionName)
             .ListAsync(cancellationToken);
 
-        var summary = HandoffContainmentAggregator.Compute([.. contained, .. escalated]);
+        var summary = HandoffContainmentAggregator.Compute(contained.Concat(escalated).Select(index => new OmnichannelActivity
+        {
+            AiEscalated = index.AiEscalated,
+            TerminalReasonCode = index.TerminalReasonCode,
+            CompletedUtc = index.CompletedUtc,
+            CreatedUtc = index.CreatedUtc,
+        }));
 
         var overviewColumns = new[]
         {

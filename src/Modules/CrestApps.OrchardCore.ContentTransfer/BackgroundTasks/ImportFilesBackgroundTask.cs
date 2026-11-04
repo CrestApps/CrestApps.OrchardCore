@@ -1303,7 +1303,8 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
     {
         await using var scope = serviceProvider.CreateAsyncScope();
         var session = scope.ServiceProvider.GetRequiredService<ISession>();
-        var currentEntry = await session.Query<ContentTransferEntry, ContentTransferEntryIndex>(x => x.EntryId == entryId).FirstOrDefaultAsync(cancellationToken);
+        // Only the status is needed, and the index row carries it, so the entry document with its progress is not read.
+        var currentEntry = await session.QueryIndex<ContentTransferEntryIndex>(x => x.EntryId == entryId).FirstOrDefaultAsync(cancellationToken);
 
         return currentEntry?.Status.ShouldStopImport() == true;
     }

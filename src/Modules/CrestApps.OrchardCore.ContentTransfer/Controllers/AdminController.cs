@@ -174,7 +174,7 @@ public sealed class AdminController : Controller, IUpdateModel
 
         if (!string.IsNullOrWhiteSpace(entryId))
         {
-            var entry = await _session.Query<ContentTransferEntry, ContentTransferEntryIndex>(x => x.EntryId == entryId).FirstOrDefaultAsync();
+            var entry = await _session.QueryIndex<ContentTransferEntryIndex>(x => x.EntryId == entryId).FirstOrDefaultAsync();
 
             if (entry != null)
             {
@@ -1139,7 +1139,7 @@ public sealed class AdminController : Controller, IUpdateModel
             return;
         }
 
-        var query = _session.Query<ContentTransferEntry, ContentTransferEntryIndex>(x =>
+        var query = _session.QueryIndex<ContentTransferEntryIndex>(x =>
             x.EntryId.IsIn(itemIds) && x.Direction == direction);
 
         if (!string.IsNullOrWhiteSpace(owner))
