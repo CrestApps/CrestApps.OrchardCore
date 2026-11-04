@@ -282,14 +282,33 @@ The `Workforce` step imports activity codes (by id or name), teams (by id or nam
 
 The **Workforce teams and workers** deployment step exports the activity codes and teams, and optionally the workers, without their date of birth.
 
-Each feature has its own settings step, matching records by id or name (pay codes by code) so a second run updates them, and naming the records they refer to: `WorkforceShiftPlanning` (`Templates`, with `teamNames` and each segment's `activityName`), `WorkforceTimeOff` (`Types`; `Policies` with `typeName` and `teamNames`; `Allotments` and `BlackoutPeriods` with `teamName` and `typeNames`), `WorkforceLaborRules` (`RuleSets`) and `WorkforceTimeClock` (`PayPeriods`; `PayCodes`; `Policies` with `payPeriodsName` and `teamNames`, which gives those teams the policy). A name that doesn't exist is reported and its record skipped. The **Workforce settings** deployment step writes the steps of the features that are on.
+Each feature has its own settings step, matching records by id or name (pay codes by code) so a second run updates them, and naming the records they refer to: `WorkforceShiftPlanning` (`Templates`, with `teamNames` and each segment's `activityName`; `Patterns`, the rotations, with `teamName` and each day's `templateName`; `CoverageRequirements`, matched by id or by team and name, with `teamName` and `skillName`), `WorkforceTimeOff` (`Types`; `Policies` with `typeName` and `teamNames`; `Allotments` and `BlackoutPeriods` with `teamName` and `typeNames`), `WorkforceLaborRules` (`RuleSets`, with `teamNames`) and `WorkforceTimeClock` (`PayPeriods`; `PayCodes`; `Policies` with `payPeriodsName` and `teamNames`, which gives those teams the policy; `Kiosks` with `teamName`; `PayrollCsv`, the columns of the payroll CSV file). A name that doesn't exist is reported and its record skipped. The **Workforce settings** deployment step writes the steps of the features that are on.
+
+A kiosk's address is a secret: the deployment step never writes its token, and the recipe step never changes the token of a kiosk it updates. After you import a new kiosk, open it and select **Give it a new address**.
 
 ```json
 {
   "name": "WorkforceTimeClock",
   "PayPeriods": [ { "name": "Every two weeks", "frequency": "Biweekly", "anchorDate": "2026-01-04", "weekStart": "Sunday" } ],
   "PayCodes": [ { "code": "NIGHT", "kind": "ShiftDifferential", "windowStart": "22:00:00", "windowEnd": "06:00:00", "premiumPerHour": 2 } ],
-  "Policies": [ { "name": "Hourly staff", "payPeriodsName": "Every two weeks", "roundingMinutes": 5, "teamNames": [ "Front Desk" ] } ]
+  "Policies": [ { "name": "Hourly staff", "payPeriodsName": "Every two weeks", "roundingMinutes": 5, "teamNames": [ "Front Desk" ] } ],
+  "Kiosks": [ { "name": "Lobby", "teamName": "Front Desk", "enabled": true } ],
+  "PayrollCsv": { "columns": [ { "header": "EmployeeId", "field": "WorkerExternalId" }, { "header": "Hours", "field": "Hours" } ] }
+}
+```
+
+```json
+{
+  "name": "WorkforceShiftPlanning",
+  "Templates": [ { "name": "Early", "start": "07:00:00", "lengthMinutes": 480, "teamNames": [ "Front Desk" ] } ],
+  "Patterns": [
+    { "name": "Two-week rotation", "teamName": "Front Desk", "weekCount": 2,
+      "days": [ { "week": 0, "day": "Monday", "templateName": "Early" }, { "week": 1, "day": "Tuesday", "templateName": "Early" } ] }
+  ],
+  "CoverageRequirements": [
+    { "name": "Weekday mornings", "teamName": "Front Desk", "skillName": "Spanish",
+      "rows": [ { "day": "Monday", "start": "08:00:00", "end": "12:00:00", "minimum": 1, "target": 2 } ] }
+  ]
 }
 ```
 

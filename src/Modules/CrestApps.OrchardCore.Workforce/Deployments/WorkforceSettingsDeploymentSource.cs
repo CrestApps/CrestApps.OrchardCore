@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.Skills.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Recipes;
@@ -11,8 +12,9 @@ using OrchardCore.Environment.Shell;
 namespace CrestApps.OrchardCore.Workforce.Deployments;
 
 /// <summary>
-/// Writes the WorkforceShiftPlanning, WorkforceTimeOff and WorkforceTimeClock steps of the features that are on, with
-/// references written as names so they import into another site.
+/// Writes the WorkforceShiftPlanning, WorkforceTimeOff, WorkforceTimeClock and WorkforceLaborRules steps of the
+/// features that are on, with references written as names so they import into another site. Kiosk tokens are never
+/// written.
 /// </summary>
 internal sealed class WorkforceSettingsDeploymentSource : DeploymentSourceBase<WorkforceSettingsDeploymentStep>
 {
@@ -64,6 +66,8 @@ internal sealed class WorkforceSettingsDeploymentSource : DeploymentSourceBase<W
 
                     return (JsonNode)node;
                 })]),
+                ["Patterns"] = await PatternsAsync(teams),
+                ["CoverageRequirements"] = await CoverageRequirementsAsync(teams),
             });
         }
 
@@ -112,8 +116,96 @@ internal sealed class WorkforceSettingsDeploymentSource : DeploymentSourceBase<W
 
                     return (JsonNode)node;
                 })]),
+                ["Kiosks"] = new JsonArray([.. (await _services.GetRequiredService<ITimeClockKioskManager>().GetAllAsync()).Select(kiosk =>
+                {
+                    // The token hash and the last use belong to this site and are never exported.
+                    var node = Serialize(kiosk, "teamId", "tokenHash", "lastUsedUtc");
+
+                    if (!string.IsNullOrEmpty(kiosk.TeamId) && teams.TryGetValue(kiosk.TeamId, out var teamName))
+                    {
+                        node["teamName"] = teamName;
+                    }
+
+                    return (JsonNode)node;
+                })]),
+                ["PayrollCsv"] = Serialize(await _services.GetRequiredService<IPayrollExportService>().GetCsvSettingsAsync()),
             });
         }
+
+        if (On(WorkforceConstants.Features.LaborRules) && _services.GetService<ILaborRuleSetManager>() is { } ruleSets)
+        {
+            result.Steps.Add(new JsonObject
+            {
+                ["name"] = LaborRulesRecipeStep.LaborRulesStepName,
+                ["RuleSets"] = new JsonArray([.. (await ruleSets.GetAllAsync()).Select(set =>
+                {
+                    var node = Serialize(set, "teamIds");
+
+                    node["teamNames"] = Names(set.TeamIds, teams);
+
+                    return (JsonNode)node;
+                })]),
+            });
+        }
+    }
+
+    private async Task<JsonArray> PatternsAsync(Dictionary<string, string> teams)
+    {
+        var templates = (await _services.GetRequiredService<IShiftTemplateManager>().GetAllAsync())
+            .ToDictionary(template => template.ItemId, template => template.Name, StringComparer.Ordinal);
+        var patterns = await _services.GetRequiredService<IShiftPatternManager>().GetAllAsync();
+
+        return new JsonArray([.. patterns.Select(pattern =>
+        {
+            var node = Serialize(pattern, "teamId");
+
+            if (!string.IsNullOrEmpty(pattern.TeamId) && teams.TryGetValue(pattern.TeamId, out var teamName))
+            {
+                node["teamName"] = teamName;
+            }
+
+            if (node["days"] is JsonArray days)
+            {
+                foreach (var day in days.OfType<JsonObject>())
+                {
+                    if (day["templateId"]?.GetValue<string>() is { } templateId && templates.TryGetValue(templateId, out var templateName))
+                    {
+                        day["templateName"] = templateName;
+                    }
+
+                    day.Remove("templateId");
+                }
+            }
+
+            return (JsonNode)node;
+        })]);
+    }
+
+    private async Task<JsonArray> CoverageRequirementsAsync(Dictionary<string, string> teams)
+    {
+        var coverage = _services.GetRequiredService<ICoverageService>();
+        var skills = (await _services.GetRequiredService<ISkillManager>().GetAllAsync())
+            .ToDictionary(skill => skill.ItemId, skill => skill.Name, StringComparer.Ordinal);
+        var requirements = new JsonArray();
+
+        foreach (var (teamId, teamName) in teams.OrderBy(team => team.Value, StringComparer.OrdinalIgnoreCase))
+        {
+            foreach (var requirement in await coverage.ListRequirementsAsync(teamId))
+            {
+                var node = Serialize(requirement, "teamId", "skillId");
+
+                node["teamName"] = teamName;
+
+                if (!string.IsNullOrEmpty(requirement.SkillId) && skills.TryGetValue(requirement.SkillId, out var skillName))
+                {
+                    node["skillName"] = skillName;
+                }
+
+                requirements.Add(node);
+            }
+        }
+
+        return requirements;
     }
 
     private static JsonObject WithTeamAndTypes(JsonObject node, string teamId, IEnumerable<string> typeIds, Dictionary<string, string> teams, Dictionary<string, string> types)
