@@ -1,14 +1,19 @@
 using CrestApps.OrchardCore.Carts.Core.Services;
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Memberships.BackgroundTasks;
+using CrestApps.OrchardCore.Memberships.Deployments;
 using CrestApps.OrchardCore.Memberships.Drivers;
 using CrestApps.OrchardCore.Memberships.Handlers;
 using CrestApps.OrchardCore.Memberships.Indexes;
 using CrestApps.OrchardCore.Memberships.Migrations;
 using CrestApps.OrchardCore.Memberships.Models;
 using CrestApps.OrchardCore.Memberships.Navigation;
+using CrestApps.OrchardCore.Memberships.Recipes;
 using CrestApps.OrchardCore.Memberships.Services;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using CrestApps.OrchardCore.Users;
 using CrestApps.OrchardCore.Users.Core;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,9 +22,11 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Memberships;
@@ -48,5 +55,10 @@ public sealed class Startup : StartupBase
         services.AddPermissionProvider<MembershipsPermissionProvider>();
         services.AddNavigationProvider<MembershipsAdminMenu>();
         services.AddNavigationProvider<MembershipsAccountMenu>();
+
+        services.AddRecipeExecutionStep<MembershipsStep>();
+        services.AddScoped<IRecipeStep, MembershipsRecipeStepSchema>();
+        services.AddDeployment<MembershipsDeploymentSource, MembershipsDeploymentStep, SummaryDeploymentStepDisplayDriver<MembershipsDeploymentStep>>();
+        services.AddDeploymentStepSchema<MembershipsDeploymentStepSchema>();
     }
 }

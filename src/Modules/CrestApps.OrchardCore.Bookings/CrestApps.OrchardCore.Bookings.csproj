@@ -37,6 +37,7 @@
     <PackageReference Include="OrchardCore.ResourceManagement" />
     <PackageReference Include="OrchardCore.Users.Abstractions" />
     <PackageReference Include="OrchardCore.Workflows.Abstractions" />
+    <PackageReference Include="OrchardCore.Deployment.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>
@@ -55,6 +56,7 @@
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Reports.Core\CrestApps.OrchardCore.Reports.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.PersonalData.Core\CrestApps.OrchardCore.PersonalData.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Recipes.Core\CrestApps.OrchardCore.Recipes.Core.csproj" />
   </ItemGroup>
 
 </Project>

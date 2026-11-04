@@ -50,6 +50,19 @@ Roles go through `IRoleGrantService` (`CrestApps.OrchardCore.Users.Abstractions`
 
 Content Access Control restricts a content type's items to the roles chosen on their **RolePickerPart**, when the part's settings restrict content. `RoleBasedContentItemAuthorizationHandler` refuses **View content** on such an item to whoever isn't in one of its roles, even when the permission was granted to everyone, anonymous visitors included. Administrators see every item.
 
+## Recipes and deployment
+
+The `Memberships` recipe step (`MembershipsStep`) creates or updates memberships. The member is named by `UserName`, which must exist on the site; the member's id there is stored with the membership. A membership is matched by its `ItemId`, then by its member, its product (`ContentItemId`) and `StartsUtc`, so running a recipe twice changes nothing. An active membership grants its `RoleNames` through the role grants, as a bought one does. The **Memberships** deployment step (`MembershipsDeploymentStep`, *Commerce*) writes every membership; the member's user id and the roles a membership put its member in (`AddedRoleNames`) belong to the site, so they are left out.
+
+```json
+{
+  "name": "Memberships",
+  "Memberships": [
+    { "ItemId": "4ms00000000000000000000001", "UserName": "ana", "ContentItemId": "4gold0000000000000000000001", "Title": "Gold", "RoleNames": [ "Member" ], "StartsUtc": "2026-01-01T00:00:00Z", "EndsUtc": "2027-01-01T00:00:00Z", "Status": "Active" }
+  ]
+}
+```
+
 ## Pages
 
 **Commerce > Memberships** (`ManageMemberships`) lists memberships with their member, roles and end date, filtered by status. **End now** ends one without a refund. The storefront account's **Memberships** page (`account/memberships`, the `AccountMemberships` shape) lists the member's own.

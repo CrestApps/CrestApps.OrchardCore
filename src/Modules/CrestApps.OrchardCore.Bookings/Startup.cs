@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Bookings.BackgroundTasks;
+using CrestApps.OrchardCore.Bookings.Deployments;
 using CrestApps.OrchardCore.Bookings.Drivers;
 using CrestApps.OrchardCore.Bookings.Handlers;
 using CrestApps.OrchardCore.Bookings.Indexes;
@@ -12,9 +13,12 @@ using CrestApps.OrchardCore.Carts.Core.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Commerce.Core;
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.PersonalData.Core;
+using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
@@ -22,6 +26,7 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Localization;
 using OrchardCore.Modules;
@@ -72,6 +77,10 @@ public sealed class Startup : StartupBase
         services.AddSingleton<IBackgroundTask, BookingsBackgroundTask>();
         services.AddPermissionProvider<BookingsPermissionProvider>();
         services.AddNavigationProvider<BookingsAdminMenu>();
+
+        // The upcoming open dates are exported in the shape the BookingDates recipe step reads.
+        services.AddDeployment<BookingDatesDeploymentSource, BookingDatesDeploymentStep, SummaryDeploymentStepDisplayDriver<BookingDatesDeploymentStep>>();
+        services.AddDeploymentStepSchema<BookingDatesDeploymentStepSchema>();
     }
 }
 
@@ -82,5 +91,8 @@ public sealed class Startup : StartupBase
 public sealed class RecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
-        => services.AddRecipeExecutionStep<BookingDatesStep>();
+    {
+        services.AddRecipeExecutionStep<BookingDatesStep>();
+        services.AddScoped<IRecipeStep, BookingDatesRecipeStepSchema>();
+    }
 }

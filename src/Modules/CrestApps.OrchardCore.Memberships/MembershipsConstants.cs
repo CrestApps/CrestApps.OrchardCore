@@ -8,4 +8,12 @@ public static class MembershipsConstants
     /// The YesSql collection that holds memberships.
     /// </summary>
     public const string CollectionName = "Memberships";
+
+    public static class Recipes
+    {
+        /// <summary>
+        /// The recipe step that adds or updates memberships.
+        /// </summary>
+        public const string Memberships = "Memberships";
+    }
 }
