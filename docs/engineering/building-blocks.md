@@ -27,8 +27,8 @@ Before you start, search for the concept by name and by meaning (for example "ho
 
 Rules that follow from the table:
 
-- A project references another **module** project only to extend that module's own UI from a sub-module or provider of the same family (`AI.Documents.AzureAI` → `AI.Documents`, `OpenAI` → `AI`), or to use its tag helpers and view components in views (`Resources`). To reach another domain's services, models, stores or view models, the type belongs in that module's `.Abstractions` (or `.Core` for a shared implementation base); move it there first.
-- A `.Core` library never references a module project, and an `.Abstractions` library never references a `.Core` library.
+- A module may reference another module project only to carry the feature dependency (the manifest declares it, and the reference makes the dependency's NuGet package come along). Module code, including compiled views, never uses a type from another module assembly: no services, models, view models, tag helpers or view components. Whatever two modules share lives in the owner's `.Abstractions` or `.Core`. There is no exception for sub-modules, providers or `Resources`.
+- A `.Core` library never references a module project, and an `.Abstractions` library never references a `.Core` library or a module project.
 - Reference another building block's `.Core` only to reuse an implementation base class; reference `.Abstractions` for everything else. Remove references nothing uses.
 - A building block never names its consumers. No hard-coded tabs, enum values, feature IDs or types of the modules that build on it: consumers register themselves (an open string "kind", a registration helper, a placement position).
 - Optional integrations (AI tools, reports, workflows, another domain module) live in a `[RequireFeatures]` startup in the consumer, or in a bridge module, so the building block works without them.

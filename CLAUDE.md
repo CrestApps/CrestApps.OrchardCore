@@ -8,7 +8,8 @@
 
 - The solution is a set of building blocks: each module owns one concept (Accounts, Teams, Addresses, PhoneNumbers, Geo, Calendars, Skills, Money, Reports...) and other modules compose and extend it through shapes, display drivers, parts, handlers and provider interfaces. Never build the same concept twice.
 - Before you add a module, a record type, a provider or a shared helper, read the "Building Blocks and Reuse" section of `AGENTS.md` and the catalog in `docs/engineering/building-blocks.md`, map every concept to its owner, and follow the reuse ladder: use, extend, add the missing extension point to the owner, extract a building block when a second module needs a concept, and only then keep it private.
-- Never copy a pattern that `docs/engineering/reusability-audit-2026-11.md` lists as a duplicate. Reach other building blocks' services and models through their `.Abstractions` projects, never through another domain's module project.
+- Never copy a pattern that `docs/engineering/reusability-audit-2026-11.md` lists as a duplicate. Reach other building blocks' services and models through their `.Abstractions` and `.Core` projects.
+- A `.Core` or `.Abstractions` library never references a module project. A module may reference another module project only to carry its feature dependency (so the NuGet package comes along); module code, views included, never uses a type from another module assembly. Anything shared moves to `.Core` or `.Abstractions` first. No exceptions.
 
 ## Admin Index (CRUD List) Pages
 
