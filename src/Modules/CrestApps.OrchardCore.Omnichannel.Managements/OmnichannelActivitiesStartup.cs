@@ -126,6 +126,12 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
             .AddIndexProvider<NotInServiceNumberIndexProvider>()
             .AddDataMigration<NotInServiceNumberIndexMigrations>();
 
+        // Opt-outs recorded against an address no contact holds (a STOP from an unknown number), read through the
+        // opt-out resolver by every send path.
+        services
+            .AddIndexProvider<ContactAddressOptOutIndexProvider>()
+            .AddDataMigration<ContactAddressOptOutIndexMigrations>();
+
         services.AddContentPart<OmnichannelContactPart>();
         services.AddContentPart<OmnichannelSubjectPart>();
         services.AddScoped<OmnichannelContactDefinitionService>();

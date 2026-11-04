@@ -1191,6 +1191,7 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
         await CrmMigrations.CreateLeadIndexAsync(schemaBuilder);
         await CrmMigrations.CreateLeadImportIndexAsync(schemaBuilder);
         await OmnichannelContactsMigrations.CreatePhoneNumberIndexTableAsync(schemaBuilder);
+        await ContactAddressOptOutIndexMigrations.CreateIndexTableAsync(schemaBuilder);
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 

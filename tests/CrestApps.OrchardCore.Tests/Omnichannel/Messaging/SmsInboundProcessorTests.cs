@@ -494,6 +494,7 @@ public class SmsInboundProcessorTests
                     new SmsKeywordInboundHandler(
                         Dispatcher.Object,
                         contentManager.Object,
+                        new CrestApps.OrchardCore.Tests.Modules.Omnichannel.Sms.SharedNumberOptOutResolver(),
                         new OptionsWrapper<SmsKeywordReplySettings>(new SmsKeywordReplySettings()),
                         clock.Object),
                 ],

@@ -152,6 +152,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes
         public string DisplayText { get; set; }
         public bool Enabled { get; set; }
     }
+    public sealed class ContactAddressOptOutIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public ContactAddressOptOutIndex() { }
+        public string Address { get; set; }
+        public string Channel { get; set; }
+    }
     public interface IOmnichannelContactMatch
     {
         string ContentItemId { get; }
@@ -619,6 +625,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public OrchardCore.ContentManagement.ContentItem ContactContentItem { get; set; }
         public string ReturnUrl { get; set; }
         public OrchardCore.DisplayManagement.IShape Subject { get; set; }
+    }
+    public sealed class ContactAddressOptOut : CrestApps.Core.Models.CatalogItem
+    {
+        public ContactAddressOptOut() { }
+        public string Address { get; set; }
+        public string Channel { get; set; }
+        public System.DateTime OptedOutUtc { get; set; }
+        public string Source { get; set; }
     }
     public sealed class ContactEmailAddress
     {
@@ -1521,7 +1535,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     public sealed class ContactOptOutResolver : CrestApps.OrchardCore.Omnichannel.Core.Services.IContactOptOutResolver
     {
         public ContactOptOutResolver(YesSql.ISession session, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelContactPhoneLookup phoneLookup) { }
+        public System.Threading.Tasks.Task<bool> ClearAddressOptOutAsync(string channel, string address, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> HasAddressOptedOutAsync(string channel, string address, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> HasOptedOutAsync(OrchardCore.ContentManagement.ContentItem contact, string channel, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task RecordAddressOptOutAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.ContactAddressOptOut optOut, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ContentDefinitionOmnichannelContactTypeProvider : CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelContactTypeProvider
     {
@@ -1630,7 +1647,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     }
     public interface IContactOptOutResolver
     {
+        System.Threading.Tasks.Task<bool> ClearAddressOptOutAsync(string channel, string address, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> HasAddressOptedOutAsync(string channel, string address, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> HasOptedOutAsync(OrchardCore.ContentManagement.ContentItem contact, string channel, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task RecordAddressOptOutAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.ContactAddressOptOut optOut, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IFollowUpActivityHandler
     {
@@ -1909,6 +1929,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     public static class OmnichannelSmsComplianceHelper
     {
         public static System.Collections.Generic.IReadOnlyList<string> DefaultOptOutKeywords { get; }
+        public static System.Collections.Generic.IReadOnlyList<string> HelpKeywords { get; }
+        public static System.Collections.Generic.IReadOnlyList<string> OptInKeywords { get; }
+        public static bool IsHelpRequest(string message) { }
+        public static bool IsOptInRequest(string message) { }
         public static bool IsOptOutRequest(string message, System.Collections.Generic.IEnumerable<string> keywords = null) { }
         public static System.Collections.Generic.IReadOnlyList<string> NormalizeOptOutKeywords(System.Collections.Generic.IEnumerable<string> keywords) { }
         public static System.Collections.Generic.IReadOnlyList<string> ParseOptOutKeywords(string keywords) { }
@@ -1951,4 +1975,4 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectDirection direction, System.Threading.CancellationToken cancellationToken = default) { }
         public bool IsConfigured(CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings flowSettings) { }
     }
-}
+}

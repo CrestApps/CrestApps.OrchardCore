@@ -45,7 +45,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services
     }
     public sealed class SmsDispatcher : CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services.ISmsDispatcher
     {
-        public SmsDispatcher(CrestApps.OrchardCore.Omnichannel.Core.Services.ISmsProviderRouter providerRouter, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingContactResolver contactResolver, OrchardCore.ContentManagement.IContentManager contentManager, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Compliance.Redaction.IRedactorProvider redactorProvider, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services.ISmsMediaSender> mediaSenders, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services.SmsDispatcher> logger) { }
+        public const string ProviderRefusalOptOutSource = "ProviderRefusal";
+        public SmsDispatcher(CrestApps.OrchardCore.Omnichannel.Core.Services.ISmsProviderRouter providerRouter, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingContactResolver contactResolver, OrchardCore.ContentManagement.IContentManager contentManager, CrestApps.OrchardCore.Omnichannel.Core.Services.IContactOptOutResolver optOutResolver, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Compliance.Redaction.IRedactorProvider redactorProvider, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services.ISmsMediaSender> mediaSenders, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services.SmsDispatcher> logger) { }
         public System.Threading.Tasks.ValueTask<string> ResolveProviderNameAsync(string fromNumber, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Services.MessageDispatchResult> SendAsync(OrchardCore.Sms.SmsMessage message, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Services.MessageDispatchResult> SendAsync(OrchardCore.Sms.SmsMessage message, System.Collections.Generic.IReadOnlyList<string> mediaUrls, System.Threading.CancellationToken cancellationToken = default) { }
@@ -60,7 +61,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services
     }
     public sealed class SmsKeywordInboundHandler : CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingInboundHandler
     {
-        public SmsKeywordInboundHandler(CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services.ISmsDispatcher dispatcher, OrchardCore.ContentManagement.IContentManager contentManager, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Models.SmsKeywordReplySettings> keywordReplySettings, OrchardCore.Modules.IClock clock) { }
+        public const string OptOutSource = "SmsKeyword";
+        public SmsKeywordInboundHandler(CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services.ISmsDispatcher dispatcher, OrchardCore.ContentManagement.IContentManager contentManager, CrestApps.OrchardCore.Omnichannel.Core.Services.IContactOptOutResolver optOutResolver, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Models.SmsKeywordReplySettings> keywordReplySettings, OrchardCore.Modules.IClock clock) { }
         public int Order { get; }
         public System.Threading.Tasks.Task ReceivedAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.MessagingInboundContext context, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task ReceivingAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.MessagingInboundContext context, System.Threading.CancellationToken cancellationToken = default) { }
@@ -77,7 +79,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services
     }
     public sealed class SmsMessagingChannel : CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingChannel
     {
-        public SmsMessagingChannel(System.Lazy<CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services.ISmsDispatcher> dispatcher, YesSql.ISession session, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services.SmsMessagingChannel> stringLocalizer, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelContactTypeProvider contactTypeProvider, CrestApps.OrchardCore.PhoneNumbers.IPhoneNumberService phoneNumberService, CrestApps.OrchardCore.Omnichannel.Core.Services.IContactMethodsAccessor contactMethods, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelContactPhoneLookup phoneLookup) { }
+        public SmsMessagingChannel(System.Lazy<CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services.ISmsDispatcher> dispatcher, YesSql.ISession session, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services.SmsMessagingChannel> stringLocalizer, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelContactTypeProvider contactTypeProvider, CrestApps.OrchardCore.PhoneNumbers.IPhoneNumberService phoneNumberService, CrestApps.OrchardCore.Omnichannel.Core.Services.IContactMethodsAccessor contactMethods, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelContactPhoneLookup phoneLookup, CrestApps.OrchardCore.Omnichannel.Core.Services.IContactOptOutResolver optOutResolver) { }
         public CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.MessagingChannelCapabilities Capabilities { get; }
         public Microsoft.Extensions.Localization.LocalizedString DisplayName { get; }
         public string IconCssClass { get; }
@@ -86,7 +88,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string>> FindContactIdsAsync(string address, System.Threading.CancellationToken cancellationToken = default) { }
         public string FormatAddress(string address) { }
         public System.Collections.Generic.IReadOnlyList<string> GetContactAddresses(OrchardCore.ContentManagement.ContentItem contact) { }
-        public bool IsOptedOut(OrchardCore.ContentManagement.ContentItem contact) { }
+        public System.Threading.Tasks.Task<bool> IsOptedOutAsync(OrchardCore.ContentManagement.ContentItem contact, string address, System.Threading.CancellationToken cancellationToken = default) { }
         public bool IsValidAddress(string address) { }
         public bool IsValidNewAddress(string address) { }
         public string NormalizeAddress(string address) { }

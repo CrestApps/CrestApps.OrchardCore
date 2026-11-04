@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
@@ -13,14 +14,21 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services;
 
 /// <summary>
 /// Applies the carrier keywords to an inbound text. STOP closes the thread, sets the contact's <c>Do not SMS</c>
-/// flag and confirms; START reverses an opt-out and confirms; HELP says who is texting. These are not a product
-/// feature: a contact who texts STOP is entitled to a confirmation and to hear nothing further, so the workspace's
-/// own automation is silenced for a keyword and the one reply owed is sent here.
+/// flag (or, when no contact holds the number, records the opt-out against the number) and confirms; START reverses
+/// an opt-out and confirms; HELP says who is texting. These are not a product feature: a contact who texts STOP is
+/// entitled to a confirmation and to hear nothing further, so the workspace's own automation is silenced for a
+/// keyword and the one reply owed is sent here.
 /// </summary>
 public sealed class SmsKeywordInboundHandler : IMessagingInboundHandler
 {
+    /// <summary>
+    /// The source recorded on an opt-out made by an inbound keyword.
+    /// </summary>
+    public const string OptOutSource = "SmsKeyword";
+
     private readonly ISmsDispatcher _dispatcher;
     private readonly IContentManager _contentManager;
+    private readonly IContactOptOutResolver _optOutResolver;
     private readonly SmsKeywordReplySettings _keywordReplySettings;
     private readonly IClock _clock;
 
@@ -29,16 +37,19 @@ public sealed class SmsKeywordInboundHandler : IMessagingInboundHandler
     /// </summary>
     /// <param name="dispatcher">The dispatcher the confirmation is sent through.</param>
     /// <param name="contentManager">The content manager, used to read and update the contact's opt-out.</param>
+    /// <param name="optOutResolver">The resolver that keeps the opt-outs recorded against a number no contact holds.</param>
     /// <param name="keywordReplySettings">The tenant's keyword replies.</param>
     /// <param name="clock">The clock.</param>
     public SmsKeywordInboundHandler(
         ISmsDispatcher dispatcher,
         IContentManager contentManager,
+        IContactOptOutResolver optOutResolver,
         IOptions<SmsKeywordReplySettings> keywordReplySettings,
         IClock clock)
     {
         _dispatcher = dispatcher;
         _contentManager = contentManager;
+        _optOutResolver = optOutResolver;
         _keywordReplySettings = keywordReplySettings.Value;
         _clock = clock;
     }
@@ -84,7 +95,7 @@ public sealed class SmsKeywordInboundHandler : IMessagingInboundHandler
         {
             case SmsKeyword.Stop:
                 conversation.Status = ConversationStatus.Closed;
-                await SetDoNotSmsAsync(conversation, true);
+                await SetOptedOutAsync(conversation, true, cancellationToken);
 
                 break;
 
@@ -96,7 +107,7 @@ public sealed class SmsKeywordInboundHandler : IMessagingInboundHandler
                 // the agent's real reply. Nothing to reopen means nothing to confirm, so leave the message to the
                 // conversation. STOP and HELP stay unconditional — those the carrier rules require us to answer
                 // however the thread is going.
-                if (!await IsOptedOutAsync(conversation))
+                if (!await IsOptedOutAsync(conversation, cancellationToken))
                 {
                     return;
                 }
@@ -104,7 +115,7 @@ public sealed class SmsKeywordInboundHandler : IMessagingInboundHandler
                 // Reopening is the point: a contact who texts START is asking to be reachable again, and leaving
                 // the thread closed would mean their next message arrives with no history attached.
                 conversation.Status = ConversationStatus.Open;
-                await SetDoNotSmsAsync(conversation, false);
+                await SetOptedOutAsync(conversation, false, cancellationToken);
 
                 break;
         }
@@ -133,17 +144,17 @@ public sealed class SmsKeywordInboundHandler : IMessagingInboundHandler
         => string.Equals(context.Channel?.Name, OmnichannelConstants.Channels.Sms, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Determines whether the conversation's contact is currently opted out of SMS, which is what makes an
-    /// opt-in keyword meaningful. A conversation with no contact record has no recorded opt-out to reverse.
+    /// Determines whether the conversation's contact, or its number when no contact holds it, is currently opted out
+    /// of SMS, which is what makes an opt-in keyword meaningful.
     /// </summary>
-    private async Task<bool> IsOptedOutAsync(MessagingConversation conversation)
+    private async Task<bool> IsOptedOutAsync(MessagingConversation conversation, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrEmpty(conversation.ContactContentItemId))
+        if (await _optOutResolver.HasAddressOptedOutAsync(OmnichannelConstants.Channels.Sms, conversation.ContactAddress, cancellationToken))
         {
-            return false;
+            return true;
         }
 
-        var contact = await _contentManager.GetAsync(conversation.ContactContentItemId, VersionOptions.Latest);
+        var contact = await GetContactAsync(conversation);
 
         // TryGet rather than As: a contact that has never carried the part should read as "not opted out", not
         // have an empty one created on it during what is only a question.
@@ -152,22 +163,50 @@ public sealed class SmsKeywordInboundHandler : IMessagingInboundHandler
             && contactPart.DoNotSms;
     }
 
-    private async Task SetDoNotSmsAsync(MessagingConversation conversation, bool doNotSms)
+    private async Task SetOptedOutAsync(MessagingConversation conversation, bool optedOut, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrEmpty(conversation.ContactContentItemId))
+        var contact = await GetContactAsync(conversation);
+
+        if (optedOut && contact is null)
         {
+            // Nobody on file holds the number, but the person who texted STOP is owed silence on it all the same, so
+            // the opt-out is recorded against the number. Every send path asks the opt-out resolver about it.
+            await _optOutResolver.RecordAddressOptOutAsync(
+                new ContactAddressOptOut
+                {
+                    Channel = OmnichannelConstants.Channels.Sms,
+                    Address = conversation.ContactAddress,
+                    Source = OptOutSource,
+                    OptedOutUtc = _clock.UtcNow,
+                },
+                cancellationToken);
+
             return;
         }
 
-        var contact = await _contentManager.GetAsync(conversation.ContactContentItemId, VersionOptions.Latest);
+        if (!optedOut)
+        {
+            // An opt-out recorded while no contact held the number is lifted too, whoever holds the number now.
+            await _optOutResolver.ClearAddressOptOutAsync(OmnichannelConstants.Channels.Sms, conversation.ContactAddress, cancellationToken);
+        }
 
         if (contact is null)
         {
             return;
         }
 
-        contact.Alter<OmnichannelContactPart>(part => part.SetDoNotSms(doNotSms, _clock.UtcNow));
+        contact.Alter<OmnichannelContactPart>(part => part.SetDoNotSms(optedOut, _clock.UtcNow));
 
         await _contentManager.UpdateAsync(contact);
+    }
+
+    private async Task<ContentItem> GetContactAsync(MessagingConversation conversation)
+    {
+        if (string.IsNullOrEmpty(conversation.ContactContentItemId))
+        {
+            return null;
+        }
+
+        return await _contentManager.GetAsync(conversation.ContactContentItemId, VersionOptions.Latest);
     }
 }

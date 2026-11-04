@@ -21,9 +21,15 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services;
 /// </summary>
 public sealed class SmsDispatcher : ISmsDispatcher
 {
+    /// <summary>
+    /// The source recorded on an opt-out made because the provider refused a recipient who opted out with it.
+    /// </summary>
+    public const string ProviderRefusalOptOutSource = "ProviderRefusal";
+
     private readonly ISmsProviderRouter _providerRouter;
     private readonly IMessagingContactResolver _contactResolver;
     private readonly IContentManager _contentManager;
+    private readonly IContactOptOutResolver _optOutResolver;
     private readonly IClock _clock;
     private readonly Redactor _addressRedactor;
     private readonly IEnumerable<ISmsMediaSender> _mediaSenders;
@@ -35,6 +41,7 @@ public sealed class SmsDispatcher : ISmsDispatcher
     /// <param name="providerRouter">The router that picks the provider owning the sending number, shared with automated SMS.</param>
     /// <param name="contactResolver">The resolver that finds the contact a refused recipient number belongs to.</param>
     /// <param name="contentManager">The content manager used to record a contact's SMS opt-out.</param>
+    /// <param name="optOutResolver">The resolver an opt-out is recorded with when no contact holds the number.</param>
     /// <param name="clock">The clock the opt-out is stamped with.</param>
     /// <param name="redactorProvider">The redactor provider used to keep phone numbers out of the log.</param>
     /// <param name="mediaSenders">The picture-message senders for providers whose own implementation carries text only.</param>
@@ -43,6 +50,7 @@ public sealed class SmsDispatcher : ISmsDispatcher
         ISmsProviderRouter providerRouter,
         IMessagingContactResolver contactResolver,
         IContentManager contentManager,
+        IContactOptOutResolver optOutResolver,
         IClock clock,
         IRedactorProvider redactorProvider,
         IEnumerable<ISmsMediaSender> mediaSenders,
@@ -51,6 +59,7 @@ public sealed class SmsDispatcher : ISmsDispatcher
         _providerRouter = providerRouter;
         _contactResolver = contactResolver;
         _contentManager = contentManager;
+        _optOutResolver = optOutResolver;
         _clock = clock;
         _addressRedactor = redactorProvider.GetRedactor(LogDataClassifications.AddressSet);
         _mediaSenders = mediaSenders ?? [];
@@ -161,10 +170,27 @@ public sealed class SmsDispatcher : ISmsDispatcher
 
         if (contact is null)
         {
+            if (string.IsNullOrWhiteSpace(recipient))
+            {
+                return;
+            }
+
+            // No contact holds the number, so the opt-out is recorded against the number itself, which every send
+            // path asks the opt-out resolver about.
+            await _optOutResolver.RecordAddressOptOutAsync(
+                new ContactAddressOptOut
+                {
+                    Channel = OmnichannelConstants.Channels.Sms,
+                    Address = recipient.GetCleanedPhoneNumber(),
+                    Source = ProviderRefusalOptOutSource,
+                    OptedOutUtc = _clock.UtcNow,
+                },
+                cancellationToken);
+
             if (_logger.IsEnabled(LogLevel.Information))
             {
                 _logger.LogInformation(
-                    "The SMS provider refused a message because the recipient {Recipient} has opted out, and no contact record matches the number to record it on.",
+                    "The SMS provider refused a message because the recipient {Recipient} has opted out, and no contact record matches the number; the opt-out is recorded against the number.",
                     _addressRedactor.Redact(recipient));
             }
 

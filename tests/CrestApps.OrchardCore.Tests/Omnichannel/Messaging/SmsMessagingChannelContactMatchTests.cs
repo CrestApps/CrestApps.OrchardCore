@@ -42,7 +42,8 @@ public sealed class SmsMessagingChannelContactMatchTests
                 contactTypes.Object,
                 new DefaultPhoneNumberService(),
                 Modules.Omnichannel.TestContactMethods.Accessor,
-                ContactPhoneTestStore.CreateLookup(session));
+                ContactPhoneTestStore.CreateLookup(session),
+                new CrestApps.OrchardCore.Tests.Modules.Omnichannel.Sms.SharedNumberOptOutResolver());
 
             // Act
             var matches = await channel.FindContactIdsAsync("+17025550104", TestContext.Current.CancellationToken);

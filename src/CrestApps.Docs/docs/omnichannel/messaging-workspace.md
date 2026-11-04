@@ -101,7 +101,7 @@ The SMS channel applies the carrier keywords, whatever the workspace is doing:
 
 | Keyword | Synonyms | What happens | Default reply |
 | --- | --- | --- | --- |
-| **STOP** | STOPALL, UNSUBSCRIBE, CANCEL, END, QUIT | Closes the conversation, sets the contact's **Do not SMS** flag and sends one confirmation. | *You have been unsubscribed and will not receive further messages. Reply START to resubscribe.* |
+| **STOP** | STOPALL, UNSUBSCRIBE, CANCEL, END, QUIT | Closes the conversation, sets the contact's **Do not SMS** flag and sends one confirmation. When no contact holds the number, the opt-out is recorded against the number (`ContactAddressOptOut`), and every SMS send path (the workspace, auto-replies, broadcasts, automation and re-engagement) refuses that number until it texts START. | *You have been unsubscribed and will not receive further messages. Reply START to resubscribe.* |
 | **START** | UNSTOP, YES | Reverses an opt-out and confirms. It is ignored when the contact is not opted out, so an ordinary "Yes" stays part of the conversation. | *You have been resubscribed and will receive messages again. Reply STOP to unsubscribe.* |
 | **HELP** | INFO | Answers with the help reply. | *Reply STOP to unsubscribe. Message and data rates may apply.* |
 

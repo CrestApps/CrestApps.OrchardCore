@@ -161,16 +161,41 @@ public sealed class MessagingChannelWorkspaceTests
     }
 
     [Fact]
-    public void SmsChannel_ReadsTheDoNotSmsFlag_AsTheOptOut()
+    public async Task SmsChannel_ReadsTheDoNotSmsFlag_AsTheOptOut()
     {
         var channel = MessagingTestChannels.Sms(Mock.Of<ISmsDispatcher>());
         var contact = new ContentItem { ContentType = "Customer" };
 
-        Assert.False(channel.IsOptedOut(contact));
+        Assert.False(await channel.IsOptedOutAsync(contact, "+15550000002", TestContext.Current.CancellationToken));
 
         contact.Alter<OmnichannelContactPart>(part => part.SetDoNotSms(true, DateTime.UtcNow));
 
-        Assert.True(channel.IsOptedOut(contact));
+        Assert.True(await channel.IsOptedOutAsync(contact, "+15550000002", TestContext.Current.CancellationToken));
+    }
+
+    // Bug: the channel read the contact's own flag, so a number that opted out with no contact on file (or through
+    // another record that holds the number) was still texted. It now asks the opt-out resolver.
+    [Fact]
+    public async Task SmsChannel_RefusesANumberThatOptedOutWithoutAContact()
+    {
+        var resolver = new CrestApps.OrchardCore.Tests.Modules.Omnichannel.Sms.SharedNumberOptOutResolver();
+        resolver.AddressOptOuts.Add(new ContactAddressOptOut { Channel = "SMS", Address = "+15550000002" });
+        var channel = MessagingTestChannels.Sms(Mock.Of<ISmsDispatcher>(), optOutResolver: resolver);
+
+        Assert.True(await channel.IsOptedOutAsync(null, "+15550000002", TestContext.Current.CancellationToken));
+        Assert.False(await channel.IsOptedOutAsync(null, "+15550000003", TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task SmsChannel_RefusesAContactWhenAnotherRecordAtTheNumberOptedOut()
+    {
+        var resolver = new CrestApps.OrchardCore.Tests.Modules.Omnichannel.Sms.SharedNumberOptOutResolver
+        {
+            SomebodyAtTheNumberOptedOut = true,
+        };
+        var channel = MessagingTestChannels.Sms(Mock.Of<ISmsDispatcher>(), optOutResolver: resolver);
+
+        Assert.True(await channel.IsOptedOutAsync(new ContentItem { ContentType = "Customer" }, "+15550000002", TestContext.Current.CancellationToken));
     }
 
     [Fact]

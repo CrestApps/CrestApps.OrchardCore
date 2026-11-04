@@ -125,6 +125,29 @@ public class SmsDispatcherTests
     }
 
     [Fact]
+    public async Task SendAsync_WhenTheProviderSaysAnUnknownRecipientOptedOut_RecordsTheOptOutAgainstTheNumber()
+    {
+        // Arrange
+        // Bug: with no contact holding the number, the opt-out was only logged, so the number kept being texted.
+        var provider = new Mock<ISmsProvider>();
+        provider.As<ISmsDispatchProvider>()
+            .Setup(p => p.DispatchAsync(It.IsAny<SmsMessage>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MessageDispatchResult { Succeeded = false, ErrorCode = OmnichannelConstants.SmsErrorCodes.RecipientOptedOut });
+
+        var optOutResolver = new CrestApps.OrchardCore.Tests.Modules.Omnichannel.Sms.SharedNumberOptOutResolver();
+        var dispatcher = CreateDispatcher("Telnyx", smsDefault: null, name => provider.Object, optOutResolver: optOutResolver);
+
+        // Act
+        await dispatcher.SendAsync(new SmsMessage { From = "+15553334444", To = "+15551112222", Body = "hi" }, TestContext.Current.CancellationToken);
+
+        // Assert
+        var optOut = Assert.Single(optOutResolver.AddressOptOuts);
+        Assert.Equal(OmnichannelConstants.Channels.Sms, optOut.Channel);
+        Assert.Equal("+15551112222", optOut.Address);
+        Assert.Equal(SmsDispatcher.ProviderRefusalOptOutSource, optOut.Source);
+    }
+
+    [Fact]
     public async Task SendAsync_WhenTheProviderRefusesForAnotherReason_LeavesTheContactAlone()
     {
         // Arrange
@@ -195,7 +218,8 @@ public class SmsDispatcherTests
         Func<string, ISmsProvider> resolver = null,
         Mock<IContentManager> contentManager = null,
         string contactContentItemId = null,
-        IEnumerable<ISmsMediaSender> mediaSenders = null)
+        IEnumerable<ISmsMediaSender> mediaSenders = null,
+        IContactOptOutResolver optOutResolver = null)
     {
         var endpointManager = new Mock<IOmnichannelChannelEndpointManager>();
         endpointManager.Setup(m => m.GetByServiceAddressAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -230,6 +254,7 @@ public class SmsDispatcherTests
             providerRouter,
             contactResolver.Object,
             (contentManager ?? new Mock<IContentManager>()).Object,
+            optOutResolver ?? new CrestApps.OrchardCore.Tests.Modules.Omnichannel.Sms.SharedNumberOptOutResolver(),
             clock.Object,
             RedactorProviderFactory.Create(),
             mediaSenders ?? [],

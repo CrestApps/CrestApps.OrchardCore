@@ -17,8 +17,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services;
 
 /// <summary>
 /// The SMS channel of the messaging workspace. Addresses are phone numbers, a message leaves through the
-/// provider that owns the sending number, and a contact is reached on their cell (then home) number and opted out
-/// by the Omnichannel contact's <c>Do not SMS</c> flag.
+/// provider that owns the sending number, and a contact is reached on their cell (then home) number. Whether a
+/// contact or a number has opted out is decided by <see cref="IContactOptOutResolver"/>.
 /// </summary>
 public sealed class SmsMessagingChannel : IMessagingChannel
 {
@@ -50,6 +50,7 @@ public sealed class SmsMessagingChannel : IMessagingChannel
     private readonly IPhoneNumberService _phoneNumberService;
     private readonly IContactMethodsAccessor _contactMethods;
     private readonly ISession _session;
+    private readonly IContactOptOutResolver _optOutResolver;
     private readonly IStringLocalizer S;
 
     /// <summary>
@@ -62,6 +63,7 @@ public sealed class SmsMessagingChannel : IMessagingChannel
     /// <param name="phoneNumberService">The phone number service a typed number is validated with.</param>
     /// <param name="contactMethods">Reads a contact's phone numbers.</param>
     /// <param name="phoneLookup">The lookup that finds a sender by any of a contact's numbers.</param>
+    /// <param name="optOutResolver">The resolver that decides whether a contact or a number has opted out of SMS.</param>
     public SmsMessagingChannel(
         Lazy<ISmsDispatcher> dispatcher,
         ISession session,
@@ -69,7 +71,8 @@ public sealed class SmsMessagingChannel : IMessagingChannel
         IOmnichannelContactTypeProvider contactTypeProvider,
         IPhoneNumberService phoneNumberService,
         IContactMethodsAccessor contactMethods,
-        IOmnichannelContactPhoneLookup phoneLookup)
+        IOmnichannelContactPhoneLookup phoneLookup,
+        IContactOptOutResolver optOutResolver)
     {
         _dispatcher = dispatcher;
         _session = session;
@@ -78,6 +81,7 @@ public sealed class SmsMessagingChannel : IMessagingChannel
         _phoneNumberService = phoneNumberService;
         _contactMethods = contactMethods;
         _phoneLookup = phoneLookup;
+        _optOutResolver = optOutResolver;
     }
 
     /// <inheritdoc/>
@@ -155,10 +159,17 @@ public sealed class SmsMessagingChannel : IMessagingChannel
     }
 
     /// <inheritdoc/>
-    public bool IsOptedOut(ContentItem contact)
-        => contact is not null &&
-            contact.TryGet<OmnichannelContactPart>(out var part) &&
-            part.DoNotSms;
+    public async Task<bool> IsOptedOutAsync(ContentItem contact, string address, CancellationToken cancellationToken = default)
+    {
+        // Asked of the resolver rather than the contact's own flag: a stop said on another record that holds the
+        // number, or from the number while no record held it, is the same person asking.
+        if (await _optOutResolver.HasOptedOutAsync(contact, OmnichannelConstants.Channels.Sms, cancellationToken))
+        {
+            return true;
+        }
+
+        return await _optOutResolver.HasAddressOptedOutAsync(OmnichannelConstants.Channels.Sms, address, cancellationToken);
+    }
 
     /// <inheritdoc/>
     public IReadOnlyList<string> GetContactAddresses(ContentItem contact)

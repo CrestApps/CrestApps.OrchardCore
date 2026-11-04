@@ -190,7 +190,8 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
         //
         // Asked of everybody reachable at the number, not only this record: a person who said stop on one record
         // is the same person on another that holds their number, and texting them there is the same violation.
-        if (await _optOutResolver.HasOptedOutAsync(contact, activity.Channel, cancellationToken))
+        if (await _optOutResolver.HasOptedOutAsync(contact, activity.Channel, cancellationToken) ||
+            await _optOutResolver.HasAddressOptedOutAsync(activity.Channel, activity.PreferredDestination, cancellationToken))
         {
             return;
         }

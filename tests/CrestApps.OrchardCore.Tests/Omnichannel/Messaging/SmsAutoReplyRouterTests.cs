@@ -123,6 +123,49 @@ public sealed class SmsAutoReplyRouterTests
             Times.Never);
     }
 
+    // Bug: a STOP from a number that no contact holds was dropped, so the number kept getting auto-replies and
+    // broadcasts. It is now recorded against the number, and every send path honors it.
+    [Fact]
+    public async Task Stop_FromANumberNoContactHolds_IsRecordedAgainstTheNumber_AndNothingMoreIsSentThere()
+    {
+        // Arrange
+        var harness = new Harness(autoReply: "Thanks, we got your message.");
+        var conversation = new MessagingConversation { Channel = "SMS", ItemId = "c1", ServiceAddress = "+16502530000", ContactAddress = "+16502530001" };
+
+        // Act
+        await harness.ReceiveAsync(conversation, "STOP");
+        harness.Dispatcher.Invocations.Clear();
+
+        await harness.RouteAsync(
+            new MessagingConversation { Channel = "SMS", ItemId = "c1", ServiceAddress = "+16502530000", ContactAddress = "+16502530001" },
+            body: "hello?");
+
+        // Assert
+        var optOut = Assert.Single(harness.OptOutResolver.AddressOptOuts);
+        Assert.Equal("SMS", optOut.Channel);
+        Assert.Equal("+16502530001", optOut.Address);
+        Assert.Equal(SmsKeywordInboundHandler.OptOutSource, optOut.Source);
+        harness.Dispatcher.Verify(
+            dispatcher => dispatcher.SendAsync(It.IsAny<SmsMessage>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Start_FromANumberOptedOutWithoutAContact_LiftsTheOptOut()
+    {
+        // Arrange
+        var harness = new Harness(autoReply: "Thanks, we got your message.");
+        var conversation = new MessagingConversation { Channel = "SMS", ItemId = "c1", ServiceAddress = "+16502530000", ContactAddress = "+16502530001" };
+        await harness.ReceiveAsync(conversation, "STOP");
+
+        // Act
+        await harness.ReceiveAsync(conversation, "START");
+
+        // Assert
+        Assert.Empty(harness.OptOutResolver.AddressOptOuts);
+        Assert.Equal(ConversationStatus.Open, conversation.Status);
+    }
+
     [Fact]
     public async Task Never_ClaimsTheConversation()
     {
@@ -185,6 +228,8 @@ public sealed class SmsAutoReplyRouterTests
 
         public Mock<IContentManager> ContentManager { get; } = new();
 
+        public CrestApps.OrchardCore.Tests.Modules.Omnichannel.Sms.SharedNumberOptOutResolver OptOutResolver { get; } = new();
+
         public Harness(string autoReply)
         {
             _endpoint = new OmnichannelChannelEndpoint
@@ -213,10 +258,11 @@ public sealed class SmsAutoReplyRouterTests
             clock.SetupGet(value => value.UtcNow).Returns(_now);
 
             _router = new AutoReplyRouter(ContentManager.Object, clock.Object);
-            _channel = MessagingTestChannels.Sms(Dispatcher.Object);
+            _channel = MessagingTestChannels.Sms(Dispatcher.Object, optOutResolver: OptOutResolver);
             _keywordHandler = new SmsKeywordInboundHandler(
                 Dispatcher.Object,
                 ContentManager.Object,
+                OptOutResolver,
                 Options.Create(new SmsKeywordReplySettings()),
                 clock.Object);
         }
@@ -227,6 +273,18 @@ public sealed class SmsAutoReplyRouterTests
             contact.Alter<OmnichannelContactPart>(part => part.SetDoNotSms(doNotSms, _now));
             _contacts[contentItemId] = contact;
         }
+
+        // Runs the keyword handler's after-receipt step, which applies a STOP or START and sends the one reply owed.
+        public Task ReceiveAsync(MessagingConversation conversation, string body)
+            => _keywordHandler.ReceivedAsync(
+                new MessagingInboundContext
+                {
+                    Channel = _channel,
+                    Message = new OmnichannelMessage { Id = "m1", Channel = "SMS", Content = body },
+                    Endpoint = _endpoint,
+                    Conversation = conversation,
+                },
+                TestContext.Current.CancellationToken);
 
         // Runs the SMS channel's inbound handler first, as the inbound pipeline does, so a carrier keyword silences the
         // auto-reply the same way it does in production.

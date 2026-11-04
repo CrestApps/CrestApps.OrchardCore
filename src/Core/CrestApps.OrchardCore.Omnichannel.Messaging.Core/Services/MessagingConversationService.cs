@@ -100,7 +100,7 @@ public sealed class MessagingConversationService : IMessagingConversationService
         }
 
         // Enforce the contact's opt-out of this channel on every send.
-        if (await IsOptedOutAsync(channel, conversation))
+        if (await channel.IsConversationOptedOutAsync(conversation, _contentManager, cancellationToken))
         {
             return MessagingSendResult.Failed($"The contact has opted out of {channel.DisplayName.Value}.");
         }
@@ -224,7 +224,7 @@ public sealed class MessagingConversationService : IMessagingConversationService
             };
         }
 
-        if (await IsOptedOutAsync(messagingChannel, conversation))
+        if (await messagingChannel.IsConversationOptedOutAsync(conversation, _contentManager, cancellationToken))
         {
             return MessagingSendResult.Failed($"The contact has opted out of {messagingChannel.DisplayName.Value}.");
         }
@@ -542,18 +542,6 @@ public sealed class MessagingConversationService : IMessagingConversationService
         }
 
         return await _authorizationService.AuthorizeConversationAsync(principal, conversation, operation);
-    }
-
-    private async Task<bool> IsOptedOutAsync(IMessagingChannel channel, MessagingConversation conversation)
-    {
-        if (string.IsNullOrEmpty(conversation.ContactContentItemId))
-        {
-            return false;
-        }
-
-        var contact = await _contentManager.GetAsync(conversation.ContactContentItemId, VersionOptions.Latest);
-
-        return channel.IsOptedOut(contact);
     }
 
     // Records what the provider said about one attempt. An accepted message stores the provider's own id so a

@@ -94,7 +94,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string>> FindContactIdsAsync(string address, System.Threading.CancellationToken cancellationToken = default);
         string FormatAddress(string address);
         System.Collections.Generic.IReadOnlyList<string> GetContactAddresses(OrchardCore.ContentManagement.ContentItem contact);
-        bool IsOptedOut(OrchardCore.ContentManagement.ContentItem contact);
+        System.Threading.Tasks.Task<bool> IsOptedOutAsync(OrchardCore.ContentManagement.ContentItem contact, string address, System.Threading.CancellationToken cancellationToken = default);
         bool IsValidAddress(string address);
         bool IsValidNewAddress(string address);
         string NormalizeAddress(string address);
