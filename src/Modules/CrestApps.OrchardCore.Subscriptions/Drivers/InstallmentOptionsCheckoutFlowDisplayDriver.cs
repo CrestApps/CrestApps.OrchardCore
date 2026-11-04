@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core;
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Services;

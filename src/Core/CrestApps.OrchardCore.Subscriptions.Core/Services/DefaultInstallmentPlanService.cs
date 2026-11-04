@@ -1,11 +1,12 @@
-using CrestApps.OrchardCore.Customers.Services;
-using CrestApps.OrchardCore.Locking;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Customers.Models;
+using CrestApps.OrchardCore.Customers.Services;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Models;

@@ -1,4 +1,5 @@
 using System.Text.Encodings.Web;
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Payments;

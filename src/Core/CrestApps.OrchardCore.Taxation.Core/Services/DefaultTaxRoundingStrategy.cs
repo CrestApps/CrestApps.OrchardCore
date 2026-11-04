@@ -1,4 +1,5 @@
 using System;
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Taxation.Core.Models;
 using CrestApps.OrchardCore.Taxation.Services;

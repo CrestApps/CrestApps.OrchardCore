@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Taxation.Models;
 
 namespace CrestApps.OrchardCore.Taxation.Core.Models;

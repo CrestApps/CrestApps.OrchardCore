@@ -162,7 +162,7 @@ A checkout started by a guest is therefore issued a 32-byte random **ownership t
 
 ## Currency-correct money
 
-Money is compared and rounded through the provider-neutral **`Money`** and **`CurrencyScale`** helpers in `CrestApps.OrchardCore.Payments.Abstractions`:
+Money is compared and rounded through the provider-neutral **`Money`** helper in `CrestApps.OrchardCore.Payments.Abstractions` and **`CurrencyScale`** (namespace `CrestApps.OrchardCore.Currencies` in `CrestApps.OrchardCore.Abstractions`, so the catalog can round prices without referencing payments):
 
 - `CurrencyScale.GetDecimalPlaces` knows the ISO-4217 precision of each currency, so a `JPY` amount is never multiplied by 100 (which would overcharge 100×) and a `KWD` amount is settled in thousandths.
 - `Money.AreEqual` / `Money.IsGreaterThan` compare amounts after normalizing to whole minor units, so binary floating-point drift (for example `19.99 + 10.00` not being exactly `29.99`) can never reject a valid payment or treat two different amounts as equal.

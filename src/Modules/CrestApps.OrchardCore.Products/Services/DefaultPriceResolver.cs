@@ -144,7 +144,7 @@ public sealed class DefaultPriceResolver : IPriceResolver
 
         if (context.ContentItem is not null && context.ContentItem.TryGet<ProductPart>(out var productPart))
         {
-            unitPrice = ProductVolumePricing.Apply(unitPrice, ProductVolumePricing.GetPercentOff(productPart, Math.Max(1, context.Quantity), GetRoles()));
+            unitPrice = ProductVolumePricing.Apply(unitPrice, ProductVolumePricing.GetPercentOff(productPart, Math.Max(1, context.Quantity), GetRoles()), currency);
         }
 
         return new PriceResult(unitPrice, currency, context.Quantity);

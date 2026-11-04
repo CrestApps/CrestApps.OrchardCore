@@ -1,5 +1,6 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Customers.Indexes;
 using CrestApps.OrchardCore.Customers.Models;
@@ -117,7 +118,7 @@ public sealed class LoyaltyService
             return 0m;
         }
 
-        var factor = (decimal)Math.Pow(10, Payments.CurrencyScale.GetDecimalPlaces(currency));
+        var factor = (decimal)Math.Pow(10, Currencies.CurrencyScale.GetDecimalPlaces(currency));
 
         return Math.Floor(points * settings.PointValue * factor) / factor;
     }

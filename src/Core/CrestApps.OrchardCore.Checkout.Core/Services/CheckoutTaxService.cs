@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Taxation.Services;
 using OrchardCore.Modules;

@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace CrestApps.OrchardCore.Payments;
+namespace CrestApps.OrchardCore.Currencies;
 
 /// <summary>
 /// Provides provider-neutral, ISO-4217 aware conversion between major currency units (e.g. dollars) and

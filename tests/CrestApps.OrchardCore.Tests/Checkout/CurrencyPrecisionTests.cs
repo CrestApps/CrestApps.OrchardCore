@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Bookings.Services;
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Marketplace.Services;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;

@@ -1,4 +1,5 @@
 using System.Globalization;
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Payments;
 
 namespace CrestApps.OrchardCore.Stripe.Core;
