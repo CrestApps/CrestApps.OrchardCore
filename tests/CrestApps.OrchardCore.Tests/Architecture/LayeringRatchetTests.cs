@@ -48,9 +48,7 @@ public sealed class LayeringRatchetTests
         "CrestApps.OrchardCore.AI.Memory.AzureAI -> CrestApps.OrchardCore.AI.Memory",
         "CrestApps.OrchardCore.AI.WebMcp -> CrestApps.OrchardCore.AI",
         "CrestApps.OrchardCore.ContactCenter -> CrestApps.OrchardCore.Telephony",
-        "CrestApps.OrchardCore.Dispatch -> CrestApps.OrchardCore.Workforce",
         "CrestApps.OrchardCore.PointOfSale -> CrestApps.OrchardCore.Orders",
-        "CrestApps.OrchardCore.Workforce.ContactCenter -> CrestApps.OrchardCore.Workforce",
     };
 
     private static readonly Lazy<List<ModuleUse>> _moduleUses = new(ReadModuleUses);

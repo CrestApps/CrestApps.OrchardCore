@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Workforce.Core;
@@ -14,6 +15,11 @@ namespace CrestApps.OrchardCore.Workforce.Recipes;
 /// </summary>
 public sealed class RecipeImport
 {
+    /// <summary>
+    /// The options the Workforce recipe steps read and write records with: web defaults, with enums as text.
+    /// </summary>
+    public static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web) { Converters = { new JsonStringEnumConverter() } };
+
     private readonly RecipeExecutionContext _context;
     private readonly string _stepName;
 
@@ -43,7 +49,7 @@ public sealed class RecipeImport
 
             try
             {
-                item = node.Deserialize<T>(WorkforceRecipeStep.JsonOptions);
+                item = node.Deserialize<T>(JsonOptions);
             }
             catch (JsonException ex)
             {

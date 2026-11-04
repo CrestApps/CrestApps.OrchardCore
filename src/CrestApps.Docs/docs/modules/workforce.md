@@ -297,6 +297,10 @@ Services raise events through `IWorkforceEvents` after saving, named in `Workfor
 
 The AI tools (`workforceWhoIsWorking`, `workforceMySchedule`, `workforceTimeOffBalance`, `workforceRequestTimeOff`, `workforceFindCover`, `workforceExplainViolations`) are registered with `AddCoreAITool` when the AI feature is on, each with its feature. They read the signed-in user from the request and use the same permission and scope checks as the admin; a person who manages no team gets an answer saying so.
 
+### Building on Workforce
+
+Modules that extend Workforce, such as Workforce Contact Center and Dispatch, build on base types in `CrestApps.OrchardCore.Workforce.Core`, never on the Workforce module's own classes: `WorkforceAIToolBase` for AI tools that run as the signed-in user, `MyWorkPortal` and `MyWorkNavViewModel` for pages in the My Work portal, `WorkforceSetupViewModel` and `WorkforceSetupStep` for a Get Started checklist, `RecipeImport` (with its `JsonOptions`) for recipe steps that save catalog records with the admin's checks, `IWorkforceReportDataSet`, `WorkforceReportDataSet<TRecord, TIndex>` and `WorkforceReportRow<T>` for report data sets, and `WorkforceEventActivity`, `WorkforceEventActivityDisplayDriver<TActivity>` and `WorkforceEventActivityViewModel` for workflow events limited to some teams. Their full type names are unchanged, so workflow activities keep their names.
+
 ## Reports
 
 The `Workforce` report data source (`WorkforceReportDataSource`) holds the `IWorkforceReportDataSet` data sets each feature adds: `WorkforceWorkers` (always, View workers, by main team), `WorkforceScheduleChanges` (Shift Planning, Plan team schedules: every change to a published schedule, with its hours of notice and whether the worker asked), `WorkforcePunches`, `WorkforceTimesheetLines`, `WorkforceAttendanceExceptions` (Time Clock), `WorkforceTimeOffRequests` (Time Off) and `WorkforcePredictabilityPay` (Labor Rules). `WorkforceReportDataSet<TRecord, TIndex>` reads them through their index, limits the rows to the teams the reader manages (`IWorkforceScopeService`, by the index's team column) and adds the worker's and team's names.
