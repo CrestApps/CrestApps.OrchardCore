@@ -1,21 +1,19 @@
 using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI.A2A.Models;
 using CrestApps.Core.AI.A2A.Services;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Core.Handlers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.A2A.Handlers;
 
-internal sealed class A2AConnectionHandler : CatalogEntryHandlerBase<A2AConnection>
+internal sealed class A2AConnectionHandler : CatalogEntryAuditHandlerBase<A2AConnection>
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IA2AAgentCardCacheService _cacheService;
-    private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
 
@@ -31,11 +29,21 @@ internal sealed class A2AConnectionHandler : CatalogEntryHandlerBase<A2AConnecti
         IA2AAgentCardCacheService cacheService,
         IClock clock,
         IStringLocalizer<A2AConnectionHandler> stringLocalizer)
+        : base(httpContextAccessor, clock)
     {
-        _httpContextAccessor = httpContextAccessor;
         _cacheService = cacheService;
-        _clock = clock;
         S = stringLocalizer;
+    }
+
+    protected override void SetCreated(A2AConnection entry, DateTime createdUtc, string ownerId, string author, bool hasUser)
+    {
+        entry.CreatedUtc = createdUtc;
+
+        if (hasUser)
+        {
+            entry.OwnerId = ownerId;
+            entry.Author = author;
+        }
     }
 
     public override Task InitializingAsync(InitializingContext<A2AConnection> context, CancellationToken cancellationToken = default)
@@ -43,7 +51,7 @@ internal sealed class A2AConnectionHandler : CatalogEntryHandlerBase<A2AConnecti
 
     public override Task UpdatingAsync(UpdatingContext<A2AConnection> context, CancellationToken cancellationToken = default)
     {
-        context.Model.ModifiedUtc = _clock.UtcNow;
+        StampModified(context.Model);
 
         return PopulateAsync(context.Model, context.Data, false);
     }
@@ -86,15 +94,7 @@ internal sealed class A2AConnectionHandler : CatalogEntryHandlerBase<A2AConnecti
     {
         if (isNew)
         {
-            connection.CreatedUtc = _clock.UtcNow;
-
-            var user = _httpContextAccessor.HttpContext?.User;
-
-            if (user is not null)
-            {
-                connection.Author = user.Identity.Name;
-                connection.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            }
+            StampCreated(connection);
         }
 
         var displayText = data[nameof(A2AConnection.DisplayText)]?.ToString();

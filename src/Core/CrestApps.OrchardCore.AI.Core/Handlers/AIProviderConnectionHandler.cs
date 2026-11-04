@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI;
@@ -7,6 +6,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Handlers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -17,12 +17,10 @@ namespace CrestApps.OrchardCore.AI.Core.Handlers;
 /// <summary>
 /// Handles catalog lifecycle events for <see cref="AIProviderConnection"/> entries, including initialization, validation, and population from JSON data.
 /// </summary>
-public sealed class AIProviderConnectionHandler : CatalogEntryHandlerBase<AIProviderConnection>
+public sealed class AIProviderConnectionHandler : CatalogEntryAuditHandlerBase<AIProviderConnection>
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly AIOptions _aiOptions;
     private readonly INamedCatalog<AIProviderConnection> _connectionsCatalog;
-    private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
 
@@ -40,12 +38,22 @@ public sealed class AIProviderConnectionHandler : CatalogEntryHandlerBase<AIProv
         INamedCatalog<AIProviderConnection> connectionsCatalog,
         IClock clock,
         IStringLocalizer<AIProviderConnectionHandler> stringLocalizer)
+        : base(httpContextAccessor, clock)
     {
-        _httpContextAccessor = httpContextAccessor;
         _aiOptions = aiOptions.Value;
         _connectionsCatalog = connectionsCatalog;
-        _clock = clock;
         S = stringLocalizer;
+    }
+
+    protected override void SetCreated(AIProviderConnection entry, DateTime createdUtc, string ownerId, string author, bool hasUser)
+    {
+        entry.CreatedUtc = createdUtc;
+
+        if (hasUser)
+        {
+            entry.OwnerId = ownerId;
+            entry.Author = author;
+        }
     }
 
     public override Task InitializingAsync(InitializingContext<AIProviderConnection> context, CancellationToken cancellationToken = default)
@@ -53,7 +61,7 @@ public sealed class AIProviderConnectionHandler : CatalogEntryHandlerBase<AIProv
 
     public override Task UpdatingAsync(UpdatingContext<AIProviderConnection> context, CancellationToken cancellationToken = default)
     {
-        context.Model.ModifiedUtc = _clock.UtcNow;
+        StampModified(context.Model);
 
         return PopulateAsync(context.Model, context.Data, false);
     }
@@ -86,15 +94,7 @@ public sealed class AIProviderConnectionHandler : CatalogEntryHandlerBase<AIProv
 
     public override Task InitializedAsync(InitializedContext<AIProviderConnection> context, CancellationToken cancellationToken = default)
     {
-        context.Model.CreatedUtc = _clock.UtcNow;
-
-        var user = _httpContextAccessor.HttpContext?.User;
-
-        if (user != null)
-        {
-            context.Model.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            context.Model.Author = user.Identity.Name;
-        }
+        StampCreated(context.Model);
 
         return Task.CompletedTask;
     }

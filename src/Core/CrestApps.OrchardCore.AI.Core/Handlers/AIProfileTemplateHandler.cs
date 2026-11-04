@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Settings;
@@ -7,6 +6,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Handlers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
@@ -16,11 +16,9 @@ namespace CrestApps.OrchardCore.AI.Core.Handlers;
 /// <summary>
 /// Handles catalog lifecycle events for <see cref="AIProfileTemplate"/> entries, including initialization, validation, creation, and population from JSON data.
 /// </summary>
-public sealed class AIProfileTemplateHandler : CatalogEntryHandlerBase<AIProfileTemplate>
+public sealed class AIProfileTemplateHandler : CatalogEntryAuditHandlerBase<AIProfileTemplate>
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly INamedCatalog<AIProfileTemplate> _templatesCatalog;
-    private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
 
@@ -36,11 +34,21 @@ public sealed class AIProfileTemplateHandler : CatalogEntryHandlerBase<AIProfile
         INamedCatalog<AIProfileTemplate> templatesCatalog,
         IClock clock,
         IStringLocalizer<AIProfileTemplateHandler> stringLocalizer)
+        : base(httpContextAccessor, clock)
     {
-        _httpContextAccessor = httpContextAccessor;
         _templatesCatalog = templatesCatalog;
-        _clock = clock;
         S = stringLocalizer;
+    }
+
+    protected override void SetCreated(AIProfileTemplate entry, DateTime createdUtc, string ownerId, string author, bool hasUser)
+    {
+        entry.CreatedUtc = createdUtc;
+
+        if (hasUser)
+        {
+            entry.OwnerId = ownerId;
+            entry.Author = author;
+        }
     }
 
     public override Task InitializingAsync(InitializingContext<AIProfileTemplate> context, CancellationToken cancellationToken = default)
@@ -48,7 +56,7 @@ public sealed class AIProfileTemplateHandler : CatalogEntryHandlerBase<AIProfile
 
     public override Task UpdatingAsync(UpdatingContext<AIProfileTemplate> context, CancellationToken cancellationToken = default)
     {
-        context.Model.ModifiedUtc = _clock.UtcNow;
+        StampModified(context.Model);
 
         return PopulateAsync(context.Model, context.Data, false);
     }
@@ -77,15 +85,7 @@ public sealed class AIProfileTemplateHandler : CatalogEntryHandlerBase<AIProfile
 
     public override Task InitializedAsync(InitializedContext<AIProfileTemplate> context, CancellationToken cancellationToken = default)
     {
-        context.Model.CreatedUtc = _clock.UtcNow;
-
-        var user = _httpContextAccessor.HttpContext?.User;
-
-        if (user != null)
-        {
-            context.Model.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            context.Model.Author = user.Identity.Name;
-        }
+        StampCreated(context.Model);
 
         return Task.CompletedTask;
     }
