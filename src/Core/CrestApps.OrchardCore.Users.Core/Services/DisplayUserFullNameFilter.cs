@@ -29,9 +29,9 @@ public sealed class DisplayUserFullNameFilter : ILiquidFilter
     /// <param name="context">The Liquid template context.</param>
     public async ValueTask<FluidValue> ProcessAsync(FluidValue input, FilterArguments arguments, LiquidTemplateContext context)
     {
-        if (input.ToObjectValue() is IUser user)
+        if (input.ToObjectValue(context) is IUser user)
         {
-            return new StringValue(await _displayNameProvider.GetAsync(user));
+            return StringValue.Create(await _displayNameProvider.GetAsync(user));
         }
 
         return StringValue.Empty;

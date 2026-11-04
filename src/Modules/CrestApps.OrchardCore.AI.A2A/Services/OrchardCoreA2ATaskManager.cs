@@ -38,7 +38,7 @@ internal sealed class OrchardCoreA2ARequestHandler : IA2ARequestHandler
     }
 
     /// <inheritdoc/>
-    public async Task<SendMessageResponse> SendMessageAsync(SendMessageRequest request, CancellationToken cancellationToken)
+    public async Task<SendMessageResponse> SendMessageAsync(SendMessageRequest request, A2ARequestContext requestContext, CancellationToken cancellationToken)
     {
         var services = GetRequestServices();
         var context = await CreateExecutionContextAsync(services, request, cancellationToken);
@@ -97,6 +97,7 @@ internal sealed class OrchardCoreA2ARequestHandler : IA2ARequestHandler
     /// <inheritdoc/>
     public async IAsyncEnumerable<StreamResponse> SendStreamingMessageAsync(
         SendMessageRequest request,
+        A2ARequestContext requestContext,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var services = GetRequestServices();
@@ -164,42 +165,42 @@ internal sealed class OrchardCoreA2ARequestHandler : IA2ARequestHandler
     }
 
     /// <inheritdoc/>
-    public Task<AgentTask> GetTaskAsync(GetTaskRequest request, CancellationToken cancellationToken)
+    public Task<AgentTask> GetTaskAsync(GetTaskRequest request, A2ARequestContext requestContext, CancellationToken cancellationToken)
         => throw new A2AException("Task retrieval is not supported by this A2A host.", A2AErrorCode.UnsupportedOperation);
 
     /// <inheritdoc/>
-    public Task<ListTasksResponse> ListTasksAsync(ListTasksRequest request, CancellationToken cancellationToken)
+    public Task<ListTasksResponse> ListTasksAsync(ListTasksRequest request, A2ARequestContext requestContext, CancellationToken cancellationToken)
         => Task.FromResult(new ListTasksResponse
         {
             Tasks = [],
         });
 
     /// <inheritdoc/>
-    public Task<AgentTask> CancelTaskAsync(CancelTaskRequest request, CancellationToken cancellationToken)
+    public Task<AgentTask> CancelTaskAsync(CancelTaskRequest request, A2ARequestContext requestContext, CancellationToken cancellationToken)
         => throw new A2AException("Task cancellation is not supported by this A2A host.", A2AErrorCode.UnsupportedOperation);
 
     /// <inheritdoc/>
-    public IAsyncEnumerable<StreamResponse> SubscribeToTaskAsync(SubscribeToTaskRequest request, CancellationToken cancellationToken)
+    public IAsyncEnumerable<StreamResponse> SubscribeToTaskAsync(SubscribeToTaskRequest request, A2ARequestContext requestContext, CancellationToken cancellationToken)
         => throw new A2AException("Task subscription is not supported by this A2A host.", A2AErrorCode.UnsupportedOperation);
 
     /// <inheritdoc/>
-    public Task<TaskPushNotificationConfig> CreateTaskPushNotificationConfigAsync(CreateTaskPushNotificationConfigRequest request, CancellationToken cancellationToken)
+    public Task<TaskPushNotificationConfig> CreateTaskPushNotificationConfigAsync(TaskPushNotificationConfig config, A2ARequestContext requestContext, CancellationToken cancellationToken)
         => throw new A2AException("Push notifications are not supported by this A2A host.", A2AErrorCode.PushNotificationNotSupported);
 
     /// <inheritdoc/>
-    public Task<TaskPushNotificationConfig> GetTaskPushNotificationConfigAsync(GetTaskPushNotificationConfigRequest request, CancellationToken cancellationToken)
+    public Task<TaskPushNotificationConfig> GetTaskPushNotificationConfigAsync(GetTaskPushNotificationConfigRequest request, A2ARequestContext requestContext, CancellationToken cancellationToken)
         => throw new A2AException("Push notifications are not supported by this A2A host.", A2AErrorCode.PushNotificationNotSupported);
 
     /// <inheritdoc/>
-    public Task<ListTaskPushNotificationConfigResponse> ListTaskPushNotificationConfigAsync(ListTaskPushNotificationConfigRequest request, CancellationToken cancellationToken)
+    public Task<ListTaskPushNotificationConfigsResponse> ListTaskPushNotificationConfigsAsync(ListTaskPushNotificationConfigsRequest request, A2ARequestContext requestContext, CancellationToken cancellationToken)
         => throw new A2AException("Push notifications are not supported by this A2A host.", A2AErrorCode.PushNotificationNotSupported);
 
     /// <inheritdoc/>
-    public Task DeleteTaskPushNotificationConfigAsync(DeleteTaskPushNotificationConfigRequest request, CancellationToken cancellationToken)
+    public Task DeleteTaskPushNotificationConfigAsync(DeleteTaskPushNotificationConfigRequest request, A2ARequestContext requestContext, CancellationToken cancellationToken)
         => throw new A2AException("Push notifications are not supported by this A2A host.", A2AErrorCode.PushNotificationNotSupported);
 
     /// <inheritdoc/>
-    public async Task<AgentCard> GetExtendedAgentCardAsync(GetExtendedAgentCardRequest request, CancellationToken cancellationToken)
+    public async Task<AgentCard> GetExtendedAgentCardAsync(GetExtendedAgentCardRequest request, A2ARequestContext requestContext, CancellationToken cancellationToken)
     {
         var services = GetRequestServices();
         var options = services.GetRequiredService<IOptions<A2AHostOptions>>().Value;

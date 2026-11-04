@@ -93,12 +93,12 @@ public sealed class DisplayNameProvider : IDisplayNameProvider
         var customName = await _liquidTemplateManager.RenderStringAsync(setting.Template, NullEncoder.Default,
         new Dictionary<string, FluidValue>()
         {
-            ["User"] = new ObjectValue(user),
-            [nameof(userPart.FirstName)] = new StringValue(userPart.FirstName),
-            [nameof(userPart.MiddleName)] = new StringValue(userPart.MiddleName),
-            [nameof(userPart.LastName)] = new StringValue(userPart.LastName),
-            [nameof(userPart.DisplayName)] = new StringValue(userPart.DisplayName),
-            [nameof(IUser.UserName)] = new StringValue(user.UserName),
+            ["User"] = ObjectValue.Create(user),
+            [nameof(userPart.FirstName)] = StringValue.Create(userPart.FirstName),
+            [nameof(userPart.MiddleName)] = StringValue.Create(userPart.MiddleName),
+            [nameof(userPart.LastName)] = StringValue.Create(userPart.LastName),
+            [nameof(userPart.DisplayName)] = StringValue.Create(userPart.DisplayName),
+            [nameof(IUser.UserName)] = StringValue.Create(user.UserName),
         });
 
         if (!string.IsNullOrWhiteSpace(customName))

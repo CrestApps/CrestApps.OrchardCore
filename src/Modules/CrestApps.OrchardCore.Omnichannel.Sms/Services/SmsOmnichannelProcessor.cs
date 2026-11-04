@@ -142,16 +142,16 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
 
         var templateContext = new Dictionary<string, FluidValue>
         {
-            ["Activity"] = new ObjectValue(activity),
-            ["Contact"] = new ObjectValue(contact),
-            ["FlowSettings"] = new ObjectValue(flowSettings),
-            ["Profile"] = new ObjectValue(profile),
-            ["Session"] = new ObjectValue(chatSession),
+            ["Activity"] = ObjectValue.Create(activity),
+            ["Contact"] = ObjectValue.Create(contact),
+            ["FlowSettings"] = ObjectValue.Create(flowSettings),
+            ["Profile"] = ObjectValue.Create(profile),
+            ["Session"] = ObjectValue.Create(chatSession),
         };
 
         if (campaign is not null)
         {
-            templateContext["Campaign"] = new ObjectValue(campaign);
+            templateContext["Campaign"] = ObjectValue.Create(campaign);
         }
 
         var initialPrompt = await _liquidTemplateManager.RenderStringAsync(

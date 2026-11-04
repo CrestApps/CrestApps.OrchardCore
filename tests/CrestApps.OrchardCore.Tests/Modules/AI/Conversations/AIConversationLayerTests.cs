@@ -141,8 +141,7 @@ public sealed class AIConversationLayerTests
             new AIConversationContext { Channel = AIConversationChannels.Phone, Session = session },
             new AIProfile());
 
-        var options = new TemplateOptions();
-        options.MemberAccessStrategy.Register<AIConversationTemplateModel>();
+        var options = TemplateOptions.Default;
 
         var parser = new FluidParser();
         Assert.True(parser.TryParse("Hi {{ Variables.first_name }} on {{ Conversation.Channel }}", out var template, out var error), error);

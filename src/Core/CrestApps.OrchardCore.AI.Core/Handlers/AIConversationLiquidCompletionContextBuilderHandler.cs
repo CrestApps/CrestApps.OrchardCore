@@ -20,7 +20,7 @@ namespace CrestApps.OrchardCore.AI.Core.Handlers;
 /// </remarks>
 public sealed class AIConversationLiquidCompletionContextBuilderHandler : IAICompletionContextBuilderHandler
 {
-    private static readonly TemplateOptions _templateOptions = new();
+    private static readonly TemplateOptions _templateOptions = TemplateOptions.Default;
 
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly ILogger _logger;
@@ -83,7 +83,7 @@ public sealed class AIConversationLiquidCompletionContextBuilderHandler : IAICom
 
         if (resource is AIProfile profile)
         {
-            properties["Profile"] = new ObjectValue(profile);
+            properties["Profile"] = ObjectValue.Create(profile);
         }
 
         if (conversation is null)
@@ -91,23 +91,23 @@ public sealed class AIConversationLiquidCompletionContextBuilderHandler : IAICom
             return properties;
         }
 
-        properties["Conversation"] = new ObjectValue(new AIConversationTemplateModel(conversation));
+        properties["Conversation"] = ObjectValue.Create(new AIConversationTemplateModel(conversation));
 
         if (conversation.Session is not null)
         {
-            properties["Session"] = new ObjectValue(conversation.Session);
+            properties["Session"] = ObjectValue.Create(conversation.Session);
         }
 
         if (conversation.Contact is not null)
         {
-            properties["Contact"] = new ObjectValue(conversation.Contact);
+            properties["Contact"] = ObjectValue.Create(conversation.Contact);
         }
 
         foreach (var (name, value) in conversation.Values)
         {
             if (value is not null && !properties.ContainsKey(name))
             {
-                properties[name] = new ObjectValue(value);
+                properties[name] = ObjectValue.Create(value);
             }
         }
 

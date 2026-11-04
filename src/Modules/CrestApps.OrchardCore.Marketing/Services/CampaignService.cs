@@ -92,9 +92,9 @@ public sealed partial class CampaignService
         var site = await _siteService.GetSiteSettingsAsync();
         var values = new Dictionary<string, FluidValue>
         {
-            ["Customer"] = new ObjectValue(new CampaignCustomer(customer, purchases)),
-            ["UnsubscribeUrl"] = new StringValue(unsubscribeUrl ?? string.Empty),
-            ["StoreName"] = new StringValue(site.SiteName ?? string.Empty),
+            ["Customer"] = ObjectValue.Create(new CampaignCustomer(customer, purchases)),
+            ["UnsubscribeUrl"] = StringValue.Create(unsubscribeUrl ?? string.Empty),
+            ["StoreName"] = StringValue.Create(site.SiteName ?? string.Empty),
         };
 
         var subject = await _liquid.RenderStringAsync(campaign.Subject ?? string.Empty, NullEncoder.Default, values);
