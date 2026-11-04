@@ -7166,7 +7166,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services.Retention
         public string EntityName { get; }
         public int StagedBeforeFailure { get; }
     }
-    public abstract class ContactCenterRetentionPolicyBase<TModel, TIndex> : CrestApps.OrchardCore.ContactCenter.Core.Services.Retention.IContactCenterRetentionPolicy
+    public abstract class ContactCenterRetentionPolicyBase<TModel, TIndex> : CrestApps.OrchardCore.YesSql.Core.Retention.DocumentRetentionPolicyBase<TModel, TIndex>, CrestApps.OrchardCore.ContactCenter.Core.Services.Retention.IContactCenterRetentionPolicy
         where TModel : CrestApps.Core.Models.CatalogItem
         where TIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
     {
@@ -7176,13 +7176,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services.Retention
         protected virtual bool IsSubjectToLegalHold { get; }
         protected virtual bool IsSubjectToReplayHorizon { get; }
         public System.Type ModelType { get; }
-        protected abstract System.Linq.Expressions.Expression<System.Func<TIndex, bool>> BuildExpiredPredicate(System.DateTime cutoffUtc);
+        public override string Name { get; }
+        protected override System.Threading.Tasks.ValueTask DeleteAsync(TModel record, System.Threading.CancellationToken cancellationToken) { }
         protected virtual double GetEntityFloorDays(CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterRetentionOptions options) { }
         public System.Linq.Expressions.LambdaExpression GetExpiredPredicate(System.DateTime cutoffUtc) { }
+        protected override sealed double GetRetentionDays() { }
         protected abstract double GetRetentionDays(CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterRetentionOptions options);
-        public System.Threading.Tasks.Task<int> PurgeBatchAsync(System.DateTime cutoffUtc, int batchSize, System.Threading.CancellationToken cancellationToken = default) { }
+        protected override System.Exception OnBatchFailed(int stagedCount, System.Exception exception) { }
         public bool TryGetCutoff(System.DateTime nowUtc, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterRetentionOptions options, out System.DateTime cutoffUtc) { }
-        protected virtual System.Threading.Tasks.Task<bool> TryPrepareForDeletionAsync(TModel record, System.Threading.CancellationToken cancellationToken) { }
     }
     public sealed class ContactCenterWorkStateRetentionPolicy : CrestApps.OrchardCore.ContactCenter.Core.Services.Retention.ContactCenterRetentionPolicyBase<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState, CrestApps.OrchardCore.ContactCenter.Core.Indexes.ContactCenterWorkStateIndex>
     {

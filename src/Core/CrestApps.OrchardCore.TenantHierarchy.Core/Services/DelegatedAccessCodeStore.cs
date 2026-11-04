@@ -61,25 +61,4 @@ public sealed class DelegatedAccessCodeStore
         await _session.SaveAsync(code, checkConcurrency: true, Collection);
         await _session.SaveChangesAsync();
     }
-
-    /// <summary>
-    /// Deletes the codes that expired before the given time.
-    /// </summary>
-    /// <param name="utcNow">The current time.</param>
-    public async Task<int> DeleteExpiredAsync(DateTime utcNow)
-    {
-        var expired = await _session.Query<DelegatedAccessCode, DelegatedAccessCodeIndex>(index => index.ExpiresUtc < utcNow, Collection)
-            .Take(200)
-            .ListAsync();
-
-        var count = 0;
-
-        foreach (var code in expired)
-        {
-            _session.Delete(code, Collection);
-            count++;
-        }
-
-        return count;
-    }
 }

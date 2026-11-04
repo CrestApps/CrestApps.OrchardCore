@@ -61,6 +61,7 @@ public sealed class ParentStartup : StartupBase
             .AddScoped<ChildTenantEntryStore>()
             .AddScoped<AccessGrantStore>()
             .AddScoped<DelegatedAccessCodeStore>()
+            .AddRetentionPolicy<DelegatedAccessCodeRetentionPolicy>()
             .AddScoped<DelegatedAccessSessionStore>()
             .AddScoped<HierarchyAuditLog>()
             .AddScoped<TenantSwitcherPreferenceStore>()
