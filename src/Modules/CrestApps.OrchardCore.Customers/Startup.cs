@@ -17,6 +17,7 @@ using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Commerce.Webhooks;
 using CrestApps.OrchardCore.Customers.Api;
+using CrestApps.OrchardCore.PersonalData.Core;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -61,9 +62,10 @@ public sealed class Startup : StartupBase
         // Access and erasure requests, and the retention windows for guests' personal data.
         services.AddScoped<ICustomerPrivacyService, DefaultCustomerPrivacyService>();
 
-        // Erasing or exporting a customer covers what the other commerce modules keep about them: checkouts,
-        // transactions, subscriptions, installment plans, coupon redemptions and payment-provider customers.
-        services.AddScoped<ICustomerPrivacyHandler, CommercePersonalDataCustomerPrivacyHandler>();
+        // Erasing or exporting a customer covers what every other module keeps about them, through each module's
+        // personal-data contributor: commerce records, the CRM, Workforce, Scheduling, Bookings and the rest.
+        services.AddPersonalData();
+        services.AddScoped<ICustomerPrivacyHandler, PersonalDataCustomerPrivacyHandler>();
         services.AddSingleton<IBackgroundTask, CustomerRetentionBackgroundTask>();
         services.AddSiteDisplayDriver<CustomerPrivacySettingsDisplayDriver>();
         services.AddNavigationProvider<CustomerSettingsAdminMenu>();

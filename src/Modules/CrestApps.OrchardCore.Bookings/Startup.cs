@@ -13,6 +13,7 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
@@ -42,6 +43,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IBookingSlotStore, BookingSlotStore>();
         services.AddScoped<IBookingStore, BookingStore>();
         services.AddScoped<IBookingBalanceStore, BookingBalanceStore>();
+        services.AddPersonalDataContributor<BookingPersonalDataContributor>();
         services.AddScoped<BookingCapacityService>();
         services.AddScoped<BookingService>();
         services.AddScoped<BookingEmailSender>();

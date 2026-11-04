@@ -184,7 +184,9 @@ public sealed class BookingCalendarTests
                 .Column<DateTime>("StartsUtc")
                 .Column<int>("Status")
                 .Column<DateTime>("HoldExpiresUtc", column => column.Nullable())
-                .Column<DateTime>("CreatedUtc"),
+                .Column<DateTime>("CreatedUtc")
+                .Column<string>("UserId", column => column.Nullable().WithLength(26))
+                .Column<string>("CustomerEmail", column => column.Nullable().WithLength(255)),
                 collection: BookingsConstants.CollectionName),
             indexProviders: [new BookingIndexProvider()],
             collections: [BookingsConstants.CollectionName]);

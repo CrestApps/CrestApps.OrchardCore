@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Scheduling.BackgroundTasks;
 using CrestApps.OrchardCore.Scheduling.Core;
 using CrestApps.OrchardCore.Scheduling.Core.Indexes;
@@ -35,6 +36,7 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<WaitlistEntryIndexProvider>();
 
         services.AddSchedulingCore();
+        services.AddPersonalDataContributor<AppointmentPersonalDataContributor>();
         services.AddScoped<SchedulingResourceCalendars>();
         services.AddScoped<SchedulingPageService>();
         services.AddDisplayDriver<Appointment, AppointmentDisplayDriver>();

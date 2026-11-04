@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Marketing.Models;
 using CrestApps.OrchardCore.Marketing.Navigation;
 using CrestApps.OrchardCore.Marketing.Services;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.PersonalData.Core;
 using Fluid;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
@@ -34,6 +35,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<ISegmentStore, SegmentStore>();
         services.AddScoped<ICampaignStore, CampaignStore>();
         services.AddScoped<CustomerPurchasesService>();
+        services.AddPersonalDataContributor<MarketingPersonalDataContributor>();
         services.AddSignedLinks();
         services.AddScoped<CampaignService>();
         services.AddScoped<IOrderEventHandler, CustomerPurchasesOrderHandler>();

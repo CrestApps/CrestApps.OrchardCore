@@ -17,6 +17,7 @@ using CrestApps.OrchardCore.Shipping.Services;
 using OrchardCore.Deployment;
 using CrestApps.OrchardCore.Accounts.B2B.Services;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -49,6 +50,7 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<B2BAccountIndexProvider>()
             .AddIndexProvider<PriceListIndexProvider>();
         services.AddScoped<IB2BAccountStore, B2BAccountStore>();
+        services.AddPersonalDataContributor<B2BBuyerPersonalDataContributor>();
         services.AddScoped<IPriceListStore, PriceListStore>();
         services.AddScoped<IBuyerPriceProvider, B2BPriceProvider>();
         services.AddScoped<B2BAccountService>();

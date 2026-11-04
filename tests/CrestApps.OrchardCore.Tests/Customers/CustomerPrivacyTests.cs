@@ -12,6 +12,7 @@ using CrestApps.OrchardCore.Orders.Core.Indexes;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Orders.Migrations;
+using CrestApps.OrchardCore.PersonalData;
 using CrestApps.OrchardCore.Tests.Checkout.Fakes;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.DependencyInjection;
@@ -347,7 +348,7 @@ public sealed class CustomerPrivacyTests
     {
         // The commerce handler follows checkout emails and owners to guest transactions and plans, which the order
         // handler erases.
-        ICustomerPrivacyHandler commerce = new CommercePersonalDataCustomerPrivacyHandler(Mock.Of<ICommercePersonalDataService>());
+        ICustomerPrivacyHandler commerce = new PersonalDataCustomerPrivacyHandler(Mock.Of<IPersonalDataService>());
         ICustomerPrivacyHandler orders = new OrderCustomerPrivacyHandler(_orders, CreateAnonymizer(), new ServiceCollection().BuildServiceProvider());
 
         Assert.True(commerce.Order < orders.Order);

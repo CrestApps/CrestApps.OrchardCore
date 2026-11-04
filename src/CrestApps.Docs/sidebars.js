@@ -557,6 +557,7 @@ const sidebars = {
                 'modules/signalr',
                 'modules/accounts',
                 'modules/addresses',
+                'modules/personal-data',
                 'modules/tenant-hierarchy',
                 'modules/websockets',
                 'modules/time-zones',

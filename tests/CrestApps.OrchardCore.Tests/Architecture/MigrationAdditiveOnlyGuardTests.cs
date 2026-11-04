@@ -788,6 +788,12 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "ac3e01a635593982",
             "Command factory for the duplicate-interaction repair whose statement arrives as a parameter. It adds nothing to the text it is given, and every caller in the same type passes a literal SELECT, UPDATE or DELETE of rows; the two deletes are authorized in the contract register, and none of the statements creates, alters or drops a schema object."),
         new ReviewedDynamicSqlEntry(
+            "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/CatalogIndexBackfill.cs",
+            "CatalogIndexBackfill",
+            "ReindexAsync",
+            "bc3e9128102669bb",
+            "Not SQL text at all: a YesSql LINQ query that pages through a catalog's documents and saves each one again through the session, so YesSql maps its index rows again. It only reads documents and rewrites index rows for them; it never creates, alters or drops a schema object."),
+        new ReviewedDynamicSqlEntry(
             "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Migrations/OmnichannelIndexMigration.cs",
             "OmnichannelIndexMigration",
             "ColumnExistsAsync",

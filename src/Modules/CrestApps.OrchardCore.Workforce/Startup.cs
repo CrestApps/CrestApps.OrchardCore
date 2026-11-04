@@ -1,10 +1,12 @@
 using CrestApps.OrchardCore.Teams.Models;
+using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Workforce.Core;
 using CrestApps.OrchardCore.Workforce.Core.Indexes;
 using CrestApps.OrchardCore.Workforce.Drivers;
 using CrestApps.OrchardCore.Workforce.Migrations;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Navigation;
+using CrestApps.OrchardCore.Workforce.PersonalData;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -33,6 +35,7 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<ActivityCodeIndexProvider>();
 
         services.AddWorkforceCore();
+        services.AddPersonalDataContributor<WorkerProfilePersonalDataContributor>();
         services.AddDisplayDriver<Team, WorkforceTeamDisplayDriver>();
         services.AddDisplayDriver<Team, WorkforceTeamRowDisplayDriver>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAuthorizationHandler, WorkforceTeamsAuthorizationHandler>());

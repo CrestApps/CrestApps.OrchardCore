@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Commerce.Navigation;
 using CrestApps.OrchardCore.Transactions.FinancialDocuments;
 using CrestApps.OrchardCore.Commerce.Services;
 using CrestApps.OrchardCore.Customers.PersonalData;
+using CrestApps.OrchardCore.PersonalData.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -37,6 +38,9 @@ public sealed class Startup : StartupBase
         // Exports and anonymizes a person's commerce data. Each enabled commerce feature adds its own records through
         // an ICommercePersonalDataContributor, so the service sees only what is enabled.
         services.AddScoped<ICommercePersonalDataService, DefaultCommercePersonalDataService>();
+
+        // The commerce records reach every privacy request through the one personal-data service.
+        services.AddPersonalDataContributor<CommercePersonalDataContributor>();
 
         // The store's setup guide, whose steps come from the modules they're about.
         services.AddPermissionProvider<CommercePermissionProvider>();

@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.PointOfSale.Indexes;
 using CrestApps.OrchardCore.PointOfSale.Models;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.PointOfSale.Services;
 
@@ -40,6 +41,14 @@ public interface IRegisterShiftStore : ICatalog<RegisterShift>
     /// Returns a page of shifts, newest first: a register's, or every register's.
     /// </summary>
     Task<(int Count, IReadOnlyList<RegisterShift> Shifts)> PageAsync(string registerId, int skip, int take, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the shifts a person opened or closed, newest first, for a privacy request.
+    /// </summary>
+    /// <param name="userIds">The person's user IDs.</param>
+    /// <param name="take">The most shifts returned for each way the person took part.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    Task<IReadOnlyList<RegisterShift>> ListForUsersAsync(IEnumerable<string> userIds, int take, CancellationToken cancellationToken = default);
 }
 
 public sealed class RegisterShiftStore : DocumentCatalog<RegisterShift, RegisterShiftIndex>, IRegisterShiftStore
@@ -70,5 +79,35 @@ public sealed class RegisterShiftStore : DocumentCatalog<RegisterShift, Register
         var page = await query.OrderByDescending(index => index.OpenedUtc).Skip(skip).Take(take).ListAsync(cancellationToken);
 
         return (count, [.. page]);
+    }
+
+    public async Task<IReadOnlyList<RegisterShift>> ListForUsersAsync(IEnumerable<string> userIds, int take, CancellationToken cancellationToken = default)
+    {
+        var users = (userIds ?? []).Where(userId => !string.IsNullOrEmpty(userId)).Distinct(StringComparer.Ordinal).ToArray();
+
+        if (users.Length == 0)
+        {
+            return [];
+        }
+
+        var found = new Dictionary<string, RegisterShift>(StringComparer.Ordinal);
+
+        foreach (var shift in await Session.Query<RegisterShift, RegisterShiftIndex>(index => index.OpenedByUserId.IsIn(users), collection: CollectionName)
+            .OrderByDescending(index => index.OpenedUtc)
+            .Take(take)
+            .ListAsync(cancellationToken))
+        {
+            found.TryAdd(shift.ItemId, shift);
+        }
+
+        foreach (var shift in await Session.Query<RegisterShift, RegisterShiftIndex>(index => index.ClosedByUserId.IsIn(users), collection: CollectionName)
+            .OrderByDescending(index => index.OpenedUtc)
+            .Take(take)
+            .ListAsync(cancellationToken))
+        {
+            found.TryAdd(shift.ItemId, shift);
+        }
+
+        return [.. found.Values.OrderByDescending(shift => shift.OpenedUtc)];
     }
 }

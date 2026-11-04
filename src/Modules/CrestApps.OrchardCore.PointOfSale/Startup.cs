@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Orders.Core;
+using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.PointOfSale.Api;
 using CrestApps.OrchardCore.PointOfSale.Drivers;
 using CrestApps.OrchardCore.PointOfSale.Indexes;
@@ -30,6 +31,7 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<RegisterShiftIndexProvider>();
         services.AddScoped<IRegisterStore, RegisterStore>();
         services.AddScoped<IRegisterShiftStore, RegisterShiftStore>();
+        services.AddPersonalDataContributor<RegisterShiftPersonalDataContributor>();
         services.AddScoped<PosShiftService>();
         services.AddScoped<PosSaleService>();
         services.AddCommerceEmailSender();

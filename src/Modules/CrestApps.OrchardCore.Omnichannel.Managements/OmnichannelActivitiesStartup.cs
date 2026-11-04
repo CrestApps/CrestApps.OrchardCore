@@ -13,6 +13,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
+using CrestApps.OrchardCore.PersonalData.Core;
 using Fluid;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -258,6 +259,11 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
             .AddIndexProvider<OmnichannelContactIndexProvider>()
             .AddIndexProvider<OmnichannelContactPhoneNumberIndexProvider>()
             .AddDataMigration<OmnichannelContactsMigrations>();
+
+        // Privacy requests export and anonymize a person's contacts, leads and activities.
+        services.AddScoped<CrmPersonalDataContacts>();
+        services.AddPersonalDataContributor<CrmActivityPersonalDataContributor>();
+        services.AddPersonalDataContributor<CrmContactPersonalDataContributor>();
 
         // Every lookup by phone number goes through this, so it finds a record by any of its numbers.
         services.AddScoped<IOmnichannelContactPhoneLookup, OmnichannelContactPhoneLookup>();
