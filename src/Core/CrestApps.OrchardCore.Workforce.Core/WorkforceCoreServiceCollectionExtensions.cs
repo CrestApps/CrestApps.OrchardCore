@@ -1,6 +1,7 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
+using CrestApps.OrchardCore.Skills.Services;
 using CrestApps.OrchardCore.Teams.Core;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Workforce.Core.Handlers;
@@ -38,6 +39,7 @@ public static class WorkforceCoreServiceCollectionExtensions
         services.TryAddScoped<IWorkerManager, WorkerManager>();
         services.TryAddScoped<IActivityCodeManager, ActivityCodeManager>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<WorkerProfile>, WorkerCatalogHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ISkillSubjectLinkProvider, WorkerSkillSubjectLinkProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Team>, WorkforceTeamCatalogHandler>());
         services.AddTeamDeletionGuard<WorkforceTeamDeletionGuard>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ActivityCode>, ActivityCodeCatalogHandler>());

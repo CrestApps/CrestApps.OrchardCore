@@ -17,7 +17,9 @@ public interface ISkillAssignmentService
 
     /// <summary>
     /// Lists the skills that count for a person on a day: inside their effective dates, the skill enabled and, when the
-    /// skill requires a certification, the certification valid that day.
+    /// skill requires a certification, the certification valid that day. Skills held under another subject that names the
+    /// same person (see <see cref="ISkillSubjectLinkProvider"/>), such as the user linked to a worker profile, count too;
+    /// when both hold a skill, the higher proficiency counts.
     /// </summary>
     /// <param name="subject">The person.</param>
     /// <param name="date">The day.</param>

@@ -15,6 +15,7 @@ internal sealed class DefaultSkillAssignmentService : ISkillAssignmentService
     private readonly SkillStore _skillStore;
     private readonly CertificationRecordStore _recordStore;
     private readonly IEnumerable<ISkillAssignmentHandler> _handlers;
+    private readonly IEnumerable<ISkillSubjectLinkProvider> _linkProviders;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
@@ -24,6 +25,7 @@ internal sealed class DefaultSkillAssignmentService : ISkillAssignmentService
         SkillStore skillStore,
         CertificationRecordStore recordStore,
         IEnumerable<ISkillAssignmentHandler> handlers,
+        IEnumerable<ISkillSubjectLinkProvider> linkProviders,
         IClock clock,
         IStringLocalizer<DefaultSkillAssignmentService> stringLocalizer)
     {
@@ -31,6 +33,7 @@ internal sealed class DefaultSkillAssignmentService : ISkillAssignmentService
         _skillStore = skillStore;
         _recordStore = recordStore;
         _handlers = handlers;
+        _linkProviders = linkProviders;
         _clock = clock;
         S = stringLocalizer;
     }
@@ -47,7 +50,22 @@ internal sealed class DefaultSkillAssignmentService : ISkillAssignmentService
 
     public async Task<IReadOnlyList<SkillAssignment>> GetEffectiveAsync(SkillSubject subject, DateOnly date, CancellationToken cancellationToken = default)
     {
-        var assignments = (await GetAssignmentsAsync(subject, cancellationToken))
+        if (subject.IsEmpty)
+        {
+            return [];
+        }
+
+        // The person's skills under every subject that names them, such as a worker profile and its user: Contact Center
+        // gives skills to the user, Workforce and Dispatch read the worker.
+        var subjects = await GetPersonSubjectsAsync(subject, cancellationToken);
+        var held = new List<SkillAssignment>();
+
+        foreach (var personSubject in subjects)
+        {
+            held.AddRange(await _store.ListForSubjectAsync(personSubject, cancellationToken));
+        }
+
+        var assignments = held
             .Where(assignment => assignment.IsEffectiveOn(date))
             .ToArray();
 
@@ -72,7 +90,7 @@ internal sealed class DefaultSkillAssignmentService : ISkillAssignmentService
 
             if (!string.IsNullOrEmpty(skill.RequiredCertificationId))
             {
-                records ??= await _recordStore.ListForSubjectAsync(subject, cancellationToken);
+                records ??= await ListRecordsAsync(subjects, cancellationToken);
 
                 if (!records.Any(record => record.CertificationId == skill.RequiredCertificationId && record.IsValidOn(date)))
                 {
@@ -83,7 +101,41 @@ internal sealed class DefaultSkillAssignmentService : ISkillAssignmentService
             effective.Add(assignment);
         }
 
-        return effective;
+        // One assignment per skill: the highest proficiency, and the subject's own on a tie.
+        return effective
+            .GroupBy(assignment => assignment.SkillId, StringComparer.Ordinal)
+            .Select(group => group.MaxBy(assignment => assignment.Proficiency))
+            .ToArray();
+    }
+
+    private async Task<IReadOnlyList<SkillSubject>> GetPersonSubjectsAsync(SkillSubject subject, CancellationToken cancellationToken)
+    {
+        var subjects = new List<SkillSubject> { subject };
+
+        foreach (var provider in _linkProviders)
+        {
+            foreach (var linked in await provider.GetLinkedSubjectsAsync(subject, cancellationToken) ?? [])
+            {
+                if (!linked.IsEmpty && !subjects.Contains(linked))
+                {
+                    subjects.Add(linked);
+                }
+            }
+        }
+
+        return subjects;
+    }
+
+    private async Task<IReadOnlyList<CertificationRecord>> ListRecordsAsync(IReadOnlyList<SkillSubject> subjects, CancellationToken cancellationToken)
+    {
+        var records = new List<CertificationRecord>();
+
+        foreach (var subject in subjects)
+        {
+            records.AddRange(await _recordStore.ListForSubjectAsync(subject, cancellationToken));
+        }
+
+        return records;
     }
 
     public async Task<SkillsResult> SetAsync(SkillSubject subject, IEnumerable<SkillAssignmentInput> assignments, string actor, CancellationToken cancellationToken = default)
