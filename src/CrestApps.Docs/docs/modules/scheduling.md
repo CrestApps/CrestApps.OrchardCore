@@ -89,11 +89,11 @@ A request sent twice takes effect once. `BookAsync` refuses, with `Conflict`, a 
 
 Every booking and reschedule:
 
-1. Takes a distributed lock `SCHEDULING_RESOURCE_{id}` on every resource it could take, from every resource requirement (narrowed by a chosen resource), in ordinal key order so two requests never deadlock. With a per-customer limit, the customer's `SCHEDULING_CUSTOMER_...` keys join the same ordered set.
+1. Takes a distributed lock `SCHEDULING_RESOURCE_{id}` on every resource it could take, from every resource requirement (narrowed by a chosen resource), in ordinal key order so two requests never deadlock. The calendars of those resources are locked too, under the name Calendars uses (`CalendarLockKeys.Calendar`), so an event added to a linked calendar such as a room can't take the time meanwhile. With a per-customer limit, the customer's `SCHEDULING_CUSTOMER_...` keys join the same ordered set.
 2. Checks availability again under the locks.
 3. Picks a resource (or all of them) from each requirement.
 4. Raises the `BookingVersion` of every resource it took, in every group, and saves them with YesSql's concurrency check, so two nodes can't book the same staff member, room or piece of equipment for the same time even when their bookings share only one resource.
-5. Writes the appointment and its calendar event (`Source = Scheduling`, `SourceId` = the appointment; tentative while held or requested, confirmed once booked) in the same session. The calendar write uses `SkipConflictCheck`, because Scheduling has already checked under its own locks.
+5. Writes the appointment and its calendar event (`Source = Scheduling`, `SourceId` = the appointment; tentative while held or requested, confirmed once booked) in the same session. The calendar write sets `CalendarLocksHeld`, so a calendar that limits overlapping events (a room) runs its own overlap check, under the locks Scheduling already holds, and refuses a time taken there.
 
 ## Booking policies
 

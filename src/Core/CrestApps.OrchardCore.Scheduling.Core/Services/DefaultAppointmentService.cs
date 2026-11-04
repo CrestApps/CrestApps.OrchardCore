@@ -122,7 +122,7 @@ public sealed class DefaultAppointmentService : IAppointmentService
         var limitCustomer = request.SelfService && type.MaxUpcomingPerCustomer > 0;
 
         // With a per-customer limit, the customer is locked too, so two of their bookings can't both slip under it.
-        var lockers = await LockAsync(ResourceLockKeys(candidates).Concat(limitCustomer ? CustomerLockKeys(type, request) : []));
+        var lockers = await LockAsync([.. ResourceLockKeys(candidates), .. await CalendarLockKeysAsync(candidates), .. (limitCustomer ? CustomerLockKeys(type, request) : [])]);
 
         if (lockers is null)
         {
@@ -273,7 +273,7 @@ public sealed class DefaultAppointmentService : IAppointmentService
         var start = Truncate(startUtc);
         var requirements = SchedulingRequirements.ForRequest(type, resourceId) ?? [];
         var candidates = requirements.SelectMany(requirement => requirement.ResourceIds).ToList();
-        var lockers = await LockAsync(ResourceLockKeys(candidates));
+        var lockers = await LockAsync([.. ResourceLockKeys(candidates), .. await CalendarLockKeysAsync(candidates)]);
 
         if (lockers is null)
         {
@@ -459,7 +459,7 @@ public sealed class DefaultAppointmentService : IAppointmentService
         }
 
         var tentative = appointment.Status is AppointmentStatus.Held or AppointmentStatus.Requested;
-        var options = new CalendarChangeOptions { Actor = actor ?? SchedulingConstants.EventSource, SkipConflictCheck = true };
+        var options = BookingOptions(actor);
         var customer = new CalendarAttendee
         {
             Name = appointment.CustomerName,
@@ -560,7 +560,7 @@ public sealed class DefaultAppointmentService : IAppointmentService
             return false;
         }
 
-        var options = new CalendarChangeOptions { Actor = actor ?? SchedulingConstants.EventSource, SkipConflictCheck = true };
+        var options = BookingOptions(actor);
         var moved = await _eventManager.UpdateAsync(calendarEvent, target =>
         {
             target.Start = CalendarTime.ToLocal(appointment.StartUtc, target.TimeZoneId);
@@ -741,6 +741,35 @@ public sealed class DefaultAppointmentService : IAppointmentService
     private static IEnumerable<string> ResourceLockKeys(IEnumerable<string> resourceIds)
     {
         return resourceIds.Select(id => "SCHEDULING_RESOURCE_" + id);
+    }
+
+    // The resources' calendars are locked too, under the name the calendar event manager uses, so an event added to a
+    // linked calendar such as a room can't take the time while it is being booked here, and the other way around.
+    private async Task<IEnumerable<string>> CalendarLockKeysAsync(List<string> resourceIds)
+    {
+        if (resourceIds.Count == 0)
+        {
+            return [];
+        }
+
+        var resources = await _resourceStore.GetAsync(resourceIds.Distinct(StringComparer.Ordinal));
+
+        return resources
+            .Select(resource => resource.CalendarId)
+            .Where(calendarId => !string.IsNullOrEmpty(calendarId))
+            .Select(CalendarLockKeys.Calendar)
+            .ToList();
+    }
+
+    // Bookings are made under the calendar locks taken above, so the calendar's own overlap check runs on them without
+    // taking the locks again; a calendar that limits overlapping events refuses a time already taken there.
+    private static CalendarChangeOptions BookingOptions(string actor)
+    {
+        return new CalendarChangeOptions
+        {
+            Actor = actor ?? SchedulingConstants.EventSource,
+            CalendarLocksHeld = true,
+        };
     }
 
     private static IEnumerable<string> CustomerLockKeys(AppointmentType type, AppointmentRequest request)

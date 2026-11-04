@@ -225,7 +225,7 @@ Type-specific data goes in the `Properties` bag of `Calendar` or `CalendarEvent`
 | `ICalendarAvailabilityService` | `GetBusyAsync` (busy intervals for calendars, users and resources, unmerged so each says where it comes from, including every `ICalendarBusyTimeSource`) and `FindFreeWindowsAsync` (windows of a given length when everyone in the query is free). |
 | `ICalendarAccessService` | The access level of a user on a calendar, the calendars a user reaches at a level, and whether a user may create calendars of a type. |
 
-Every write takes a `CalendarChangeOptions`: `Actor` (a user id, `workflow`, or a module name), `Reason`, `SkipConflictCheck` (for a module that checked availability itself under its own lock), `Notify` (tell the after-commit observers, default true) and `SendInvitations` (default true). Writes return `CalendarResult<T>` with `Succeeded` and `Errors` (`CalendarError`, with `CalendarError.ConflictCode` for overlap refusals).
+Every write takes a `CalendarChangeOptions`: `Actor` (a user id, `workflow`, or a module name), `Reason`, `SkipConflictCheck` (for a module that checked availability itself under its own lock), `CalendarLocksHeld` (the caller already holds `CalendarLockKeys.Calendar(id)` for every limited calendar, so the overlap check runs under its locks), `Notify` (tell the after-commit observers, default true) and `SendInvitations` (default true). Writes return `CalendarResult<T>` with `Succeeded` and `Errors` (`CalendarError`, with `CalendarError.ConflictCode` for overlap refusals).
 
 ## Conflicts and concurrency
 
@@ -234,7 +234,7 @@ A calendar with `ConflictPolicy = LimitConcurrent` refuses a busy event when its
 On every create, change and move, `DefaultCalendarEventManager`:
 
 1. Finds the calendars the event counts toward: its own calendar when it limits overlaps, and each invited room or equipment calendar.
-2. Takes a distributed lock `CALENDAR_{calendarId}` on each, in id order so two requests never deadlock. A lock that can't be taken fails the write with a conflict error ("The calendar ... is busy. Try again in a moment.").
+2. Takes a distributed lock `CALENDAR_{calendarId}` (`CalendarLockKeys.Calendar`) on each, in id order so two requests never deadlock, unless the caller says it holds them (`CalendarLocksHeld`). A lock that can't be taken fails the write with a conflict error ("The calendar ... is busy. Try again in a moment.").
 3. Checks the overlap with `CalendarConflictChecker`.
 4. Raises each target calendar's `BookingVersion` and saves it with YesSql's concurrency check, so if another node changed the same calendar meanwhile, this commit fails instead of double-booking.
 5. Stages the event.

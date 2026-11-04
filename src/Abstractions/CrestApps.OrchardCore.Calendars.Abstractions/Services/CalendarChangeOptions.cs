@@ -21,6 +21,14 @@ public sealed class CalendarChangeOptions
     public bool SkipConflictCheck { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the caller already holds the lock (<see cref="CalendarLockKeys.Calendar"/>) of every calendar
+    /// whose overlap limit the event counts toward, so the overlap check runs under the caller's locks instead of taking
+    /// them again. A module that books a calendar from its own availability, such as Scheduling, takes the calendar locks
+    /// with its own and sets this, so its bookings and the calendar's own events can't overlap.
+    /// </summary>
+    public bool CalendarLocksHeld { get; set; }
+
+    /// <summary>
     /// Gets or sets whether to tell the after-commit observers (workflows, invitations, synchronization) about the change.
     /// </summary>
     public bool Notify { get; set; } = true;
