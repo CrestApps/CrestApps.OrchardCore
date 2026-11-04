@@ -30,7 +30,18 @@ public sealed class ContactCenterCallPathLookupIndexMigrationTests
             m => m.CreateAsync(),
             m => m.UpdateFrom8Async(),
             expectedVersion: 9,
+            expectedFreshVersion: 10,
             ("IDX_QueueItemIndex_ActivityItemId", "ActivityItemId, EnqueuedUtc, DocumentId"));
+
+    [Fact]
+    public Task QueueItemIndex_HasTheRoutingIndexes()
+        => AssertLookupIndexesAsync<QueueItemIndex, QueueItemIndexMigrations>(
+            store => new QueueItemIndexMigrations(store, new StubClock()),
+            m => m.CreateAsync(),
+            m => m.UpdateFrom9Async(),
+            expectedVersion: 10,
+            ("IDX_QueueItemIndex_Head", "QueueId, Status, Priority, EnqueuedUtc, DocumentId"),
+            ("IDX_QueueItemIndex_StatusQueue", "Status, QueueId, DocumentId"));
 
     [Fact]
     public Task InteractionIndex_HasTheProviderAndCorrelationLookupIndexes()

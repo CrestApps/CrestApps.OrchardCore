@@ -54,4 +54,28 @@ public static class QueueItemQueries
 
         return builder.ToSqlString();
     }
+
+    /// <summary>
+    /// Builds the statement that lists the queues holding at least one waiting item. Routing runs it on every pass,
+    /// and it reads only the queue column, so the status and queue index answers it without reading a row.
+    /// </summary>
+    /// <param name="configuration">The YesSql configuration that names the table, schema, prefix and dialect.</param>
+    public static string BuildWaitingQueueIdsSql(IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        var dialect = configuration.SqlDialect;
+        var tableName = configuration.TableNameConvention.GetIndexTable(typeof(QueueItemIndex), ContactCenterStorage.CollectionName);
+        var queueColumn = dialect.QuoteForColumnName(nameof(QueueItemIndex.QueueId));
+        var statusColumn = dialect.QuoteForColumnName(nameof(QueueItemIndex.Status));
+
+        var builder = new SqlBuilder(configuration.TablePrefix, dialect);
+        builder.Select();
+        builder.Distinct();
+        builder.Selector(queueColumn);
+        builder.Table(tableName, alias: null, configuration.Schema);
+        builder.WhereAnd($"{statusColumn} = {(int)QueueItemStatus.Waiting}");
+
+        return builder.ToSqlString();
+    }
 }

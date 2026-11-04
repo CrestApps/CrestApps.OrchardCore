@@ -291,8 +291,8 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
     }
 
     /// <summary>
-    /// Adds the content item index that the contact and lead lists read, so a search by name no longer reads every
-    /// content item of the tenant.
+    /// Adds the content item indexes that the contact and lead lists read, so a search by name, or the list of a
+    /// user who may view only their own records, no longer reads every content item of the tenant.
     /// </summary>
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom13Async()
@@ -306,9 +306,11 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
     // could not seek to its rows: a search by name, which matches anywhere in the display text, read every content
     // item of the tenant and outlived the command timeout on a large one. This index starts with the type and the
     // latest flag the list always filters by, holds its rows in the list's default order (modified, newest first),
-    // and carries the display text and the published flag, so the list finds its page from the index alone.
-    private Task<bool> CreateContentItemListIndexAsync()
-        => IndexTableIndexCreation.CreateIfMissingAsync<ContentItemIndex>(
+    // and carries the display text and the published flag, so the list finds its page from the index alone. A user
+    // who may view only their own records gets the list filtered by owner as well, which the second index seeks.
+    private async Task CreateContentItemListIndexAsync()
+    {
+        await IndexTableIndexCreation.CreateIfMissingAsync<ContentItemIndex>(
             SchemaBuilder,
             "IDX_ContentItemIndex_ContentType_Latest",
             collection: null,
@@ -318,6 +320,17 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
             "DisplayText",
             "Published",
             "DocumentId");
+
+        await IndexTableIndexCreation.CreateIfMissingAsync<ContentItemIndex>(
+            SchemaBuilder,
+            "IDX_ContentItemIndex_ContentType_Owner",
+            collection: null,
+            "ContentType",
+            "Owner",
+            "Latest",
+            "ModifiedUtc",
+            "DocumentId");
+    }
 
     internal static Task CreatePhoneNumberIndexTableAsync(ISchemaBuilder schemaBuilder)
         => schemaBuilder.CreateMapIndexTableAsync<OmnichannelContactPhoneNumberIndex>(table => table

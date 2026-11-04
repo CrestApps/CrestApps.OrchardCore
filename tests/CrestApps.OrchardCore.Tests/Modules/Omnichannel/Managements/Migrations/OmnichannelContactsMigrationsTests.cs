@@ -200,6 +200,7 @@ public sealed class OmnichannelContactsMigrationsTests
 
             var schema = await CaptureCommittedSchemaAsync(databasePath, ContentItemTableName(store));
             Assert.Contains(ContentItemListIndexName + " ", schema);
+            Assert.Contains("IDX_ContentItemIndex_ContentType_Owner ", schema);
             Assert.Equal(0, connections.Created);
         }
         finally
@@ -409,6 +410,7 @@ public sealed class OmnichannelContactsMigrationsTests
             await schemaBuilder.CreateMapIndexTableAsync<ContentItemIndex>(table => table
                 .Column<string>("ContentType", column => column.WithLength(ContentItemIndex.MaxContentTypeSize))
                 .Column<string>("DisplayText", column => column.Nullable().WithLength(ContentItemIndex.MaxDisplayTextSize))
+                .Column<string>("Owner", column => column.Nullable().WithLength(ContentItemIndex.MaxOwnerSize))
                 .Column<DateTime>("ModifiedUtc", column => column.Nullable())
                 .Column<bool>("Published")
                 .Column<bool>("Latest"));
