@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.Asterisk.Services;
 using CrestApps.OrchardCore.Asterisk.ViewModels;
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -102,9 +103,9 @@ internal sealed class AsteriskSettingsDisplayDriver : SiteDisplayDriver<Asterisk
                 : AsteriskConstants.DefaultPjsipContactExpirationSeconds;
             model.PjsipRealtimeProviderInvariantName = settings.PjsipRealtimeProviderInvariantName;
             model.PjsipRealtimeTablePrefix = settings.PjsipRealtimeTablePrefix;
-            model.HasPassword = !string.IsNullOrEmpty(settings.Password);
-            model.HasTurnSharedSecret = !string.IsNullOrEmpty(settings.TurnSharedSecret);
-            model.HasPjsipRealtimeConnectionString = !string.IsNullOrEmpty(settings.PjsipRealtimeConnectionString);
+            model.HasPassword = ProtectedSettingExtensions.HasSecret(settings.Password);
+            model.HasTurnSharedSecret = ProtectedSettingExtensions.HasSecret(settings.TurnSharedSecret);
+            model.HasPjsipRealtimeConnectionString = ProtectedSettingExtensions.HasSecret(settings.PjsipRealtimeConnectionString);
         }).Location("Content:10#Asterisk")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TelephonyPermissions.ManageTelephonySettings))
         .OnGroup(SettingsGroupId);
@@ -294,35 +295,23 @@ internal sealed class AsteriskSettingsDisplayDriver : SiteDisplayDriver<Asterisk
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.Password), S["Enter the Asterisk ARI password."]);
             }
 
-            if (!string.IsNullOrWhiteSpace(model.Password))
-            {
-                var protector = _dataProtectionProvider.CreateProtector(AsteriskConstants.ProtectorName);
-                var protectedPassword = protector.Protect(model.Password);
+            var protectedPassword = _dataProtectionProvider.ApplySecret(AsteriskConstants.ProtectorName, settings.Password, model.Password);
 
-                hasChanges |= settings.Password != protectedPassword;
+            hasChanges |= settings.Password != protectedPassword;
 
-                settings.Password = protectedPassword;
-            }
+            settings.Password = protectedPassword;
 
-            if (!string.IsNullOrWhiteSpace(model.TurnSharedSecret))
-            {
-                var protector = _dataProtectionProvider.CreateProtector(AsteriskConstants.ProtectorName);
-                var protectedTurnSharedSecret = protector.Protect(model.TurnSharedSecret);
+            var protectedTurnSharedSecret = _dataProtectionProvider.ApplySecret(AsteriskConstants.ProtectorName, settings.TurnSharedSecret, model.TurnSharedSecret);
 
-                hasChanges |= settings.TurnSharedSecret != protectedTurnSharedSecret;
+            hasChanges |= settings.TurnSharedSecret != protectedTurnSharedSecret;
 
-                settings.TurnSharedSecret = protectedTurnSharedSecret;
-            }
+            settings.TurnSharedSecret = protectedTurnSharedSecret;
 
-            if (!string.IsNullOrWhiteSpace(model.PjsipRealtimeConnectionString))
-            {
-                var protector = _dataProtectionProvider.CreateProtector(AsteriskConstants.ProtectorName);
-                var protectedConnectionString = protector.Protect(model.PjsipRealtimeConnectionString);
+            var protectedConnectionString = _dataProtectionProvider.ApplySecret(AsteriskConstants.ProtectorName, settings.PjsipRealtimeConnectionString, model.PjsipRealtimeConnectionString);
 
-                hasChanges |= settings.PjsipRealtimeConnectionString != protectedConnectionString;
+            hasChanges |= settings.PjsipRealtimeConnectionString != protectedConnectionString;
 
-                settings.PjsipRealtimeConnectionString = protectedConnectionString;
-            }
+            settings.PjsipRealtimeConnectionString = protectedConnectionString;
         }
 
         // Reject abandoning the tenant's live ARI identity while calls are still bound to it. This runs after the
