@@ -1,5 +1,6 @@
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Numbering;
+using CrestApps.OrchardCore.Payments;
 
 namespace CrestApps.OrchardCore.Orders.Core.Models;
 
@@ -93,19 +94,8 @@ public sealed class GiftCard : CatalogItem
     /// </summary>
     public void ChangeBalance(decimal amount, string reason, DateTime utcNow, string sessionId = null, string actor = null)
     {
-        var before = Balance;
-
-        Balance = Payments.Money.Round(Math.Max(0m, Balance + amount), Currency);
         Activity ??= [];
-        Activity.Add(new GiftCardActivity
-        {
-            CreatedUtc = utcNow,
-            Amount = Balance - before,
-            Balance = Balance,
-            Reason = reason,
-            SessionId = sessionId,
-            Actor = actor,
-        });
+        Balance = BalanceLedger.ChangeBalance(Balance, amount, Currency, Activity, reason, utcNow, sessionId, actor);
     }
 
     /// <summary>
@@ -121,34 +111,8 @@ public sealed class GiftCard : CatalogItem
 /// <summary>
 /// One change to a gift card's balance.
 /// </summary>
-public sealed class GiftCardActivity
+public sealed class GiftCardActivity : BalanceLedgerEntry
 {
-    public DateTime CreatedUtc { get; set; }
-
-    /// <summary>
-    /// Gets or sets how much it changed: positive when money was put on, negative when it was spent.
-    /// </summary>
-    public decimal Amount { get; set; }
-
-    /// <summary>
-    /// Gets or sets the balance afterwards.
-    /// </summary>
-    public decimal Balance { get; set; }
-
-    /// <summary>
-    /// Gets or sets why, such as "Spent at checkout" or a staff member's reason.
-    /// </summary>
-    public string Reason { get; set; }
-
-    /// <summary>
-    /// Gets or sets the checkout it was spent or refunded on, when it was.
-    /// </summary>
-    public string SessionId { get; set; }
-
-    /// <summary>
-    /// Gets or sets who made the change, for a change staff made.
-    /// </summary>
-    public string Actor { get; set; }
 }
 
 /// <summary>
