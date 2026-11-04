@@ -97,7 +97,7 @@ Work Orders links up with three other features when they are on.
 - `IWorkOrderHandler`: change a work order before it is created or saved.
 - `IWorkOrderObserver`: hear about the events after they happen.
 - `IWorkOrderPartsService` and `IWorkOrderBilling`: take parts off stock and invoice, in place of Inventory and Transactions.
-- `IServiceHoursProvider`: give the open hours of a policy's calendar.
+- `IServiceHoursProvider`: give the open hours of a policy's calendar, and list the calendars you know (`ListCalendarsAsync`, returning `ServiceHoursCalendar(Id, Name)` records) so the service level editor offers them in its **Hours calendar** picker. The picker appears when a provider lists a calendar; WorkOrders merges every provider's calendars through `ServiceHoursCalendars.ListAsync` and never uses the provider's own types.
 - `WorkOrderPanels`: a display driver for it adds a panel, placed in the Content zone, to the work order's page.
 
 ## Recipes and deployment

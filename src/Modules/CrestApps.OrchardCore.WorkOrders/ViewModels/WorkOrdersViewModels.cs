@@ -435,6 +435,11 @@ public class ServiceLevelPolicyEditViewModel
     public string TimeZoneId { get; set; }
 
     /// <summary>
+    /// Gets or sets the hours calendar the clock runs in, or <see langword="null"/> for the weekly hours or around the clock.
+    /// </summary>
+    public string HoursCalendarId { get; set; }
+
+    /// <summary>
     /// Gets or sets whether the clock runs only in opening hours.
     /// </summary>
     public bool BusinessHoursOnly { get; set; }
@@ -474,6 +479,12 @@ public class ServiceLevelPolicyEditViewModel
     /// </summary>
     [BindNever]
     public IList<SelectListItem> TimeZoneOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the hours calendars the policy can run in.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> HoursCalendarOptions { get; set; } = [];
 }
 
 /// <summary>

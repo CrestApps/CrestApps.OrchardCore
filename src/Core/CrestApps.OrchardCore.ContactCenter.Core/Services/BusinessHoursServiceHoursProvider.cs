@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.WorkOrders.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -36,5 +37,17 @@ public sealed class BusinessHoursServiceHoursProvider : IServiceHoursProvider
         }
 
         return DefaultBusinessHoursService.GetOpenWindows(calendar, fromUtc, toUtc, timeZoneId: null);
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>Lists the enabled business-hours calendars by name.</remarks>
+    public async Task<IReadOnlyList<ServiceHoursCalendar>> ListCalendarsAsync(CancellationToken cancellationToken = default)
+    {
+        var calendars = await _calendarManager.GetAllAsync(cancellationToken);
+
+        return [.. calendars
+            .Where(calendar => calendar.Enabled)
+            .OrderBy(calendar => calendar.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Select(calendar => new ServiceHoursCalendar(calendar.ItemId, calendar.Name ?? calendar.ItemId))];
     }
 }

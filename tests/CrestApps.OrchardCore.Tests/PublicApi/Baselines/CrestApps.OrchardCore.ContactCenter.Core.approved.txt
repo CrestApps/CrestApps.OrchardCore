@@ -4095,6 +4095,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
                 "StartUtc",
                 "EndUtc"})]
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<System.ValueTuple<System.DateTime, System.DateTime>>> GetOpenAsync(string calendarId, string timeZoneId, System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.WorkOrders.Models.ServiceHoursCalendar>> ListCalendarsAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class CallControlAuthorizationService : CrestApps.OrchardCore.ContactCenter.Core.Services.ICallControlAuthorizationService
     {

@@ -61,6 +61,7 @@ public sealed class WorkOrderSettingsController : Controller
     private readonly ITimeZoneSelectListProvider _timeZoneSelectListProvider;
     private readonly ISiteService _siteService;
     private readonly INotifier _notifier;
+    private readonly IEnumerable<IServiceHoursProvider> _serviceHoursProviders;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -79,6 +80,7 @@ public sealed class WorkOrderSettingsController : Controller
     /// <param name="timeZoneSelectListProvider">The time zone list provider.</param>
     /// <param name="siteService">The site service.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="serviceHoursProviders">The providers of the hours calendars a service level can run in.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public WorkOrderSettingsController(
@@ -93,6 +95,7 @@ public sealed class WorkOrderSettingsController : Controller
         ITimeZoneSelectListProvider timeZoneSelectListProvider,
         ISiteService siteService,
         INotifier notifier,
+        IEnumerable<IServiceHoursProvider> serviceHoursProviders,
         IHtmlLocalizer<WorkOrderSettingsController> htmlLocalizer,
         IStringLocalizer<WorkOrderSettingsController> stringLocalizer)
     {
@@ -107,6 +110,7 @@ public sealed class WorkOrderSettingsController : Controller
         _timeZoneSelectListProvider = timeZoneSelectListProvider;
         _siteService = siteService;
         _notifier = notifier;
+        _serviceHoursProviders = serviceHoursProviders;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -416,6 +420,7 @@ public sealed class WorkOrderSettingsController : Controller
             Id = id,
             Name = item.Name,
             TimeZoneId = item.TimeZoneId ?? (string.IsNullOrEmpty(id) ? (await _siteService.GetSiteSettingsAsync()).TimeZoneId : null),
+            HoursCalendarId = item.HoursCalendarId,
             BusinessHoursOnly = weekly is not null,
             Days = weekly is null ? WeeklyHours.Weekdays() : [.. weekly.Days],
             Opens = (weekly ?? new WeeklyHours()).Opens,
@@ -457,6 +462,7 @@ public sealed class WorkOrderSettingsController : Controller
 
         item.Name = form.Name?.Trim();
         item.TimeZoneId = string.IsNullOrEmpty(form.TimeZoneId) ? null : form.TimeZoneId;
+        item.HoursCalendarId = string.IsNullOrWhiteSpace(form.HoursCalendarId) ? null : form.HoursCalendarId.Trim();
         item.WeeklyHours = form.BusinessHoursOnly ? new WeeklyHours { Days = [.. (form.Days ?? []).Distinct().Order()], Opens = form.Opens, Closes = form.Closes } : null;
         item.WarningPercent = form.WarningPercent;
         item.PauseStatuses = [.. (form.PauseStatuses ?? []).Distinct()];
@@ -741,9 +747,31 @@ public sealed class WorkOrderSettingsController : Controller
         }
     }
 
+    /// <summary>
+    /// Returns the hours calendars a service level can run in as picker options, keeping a selected calendar that no
+    /// provider lists any more so saving the policy doesn't lose it.
+    /// </summary>
+    /// <param name="calendars">The calendars the providers list.</param>
+    /// <param name="selectedId">The calendar the policy runs in, or <see langword="null"/>.</param>
+    /// <returns>The options.</returns>
+    internal static IList<SelectListItem> HoursCalendarOptions(IReadOnlyList<ServiceHoursCalendar> calendars, string selectedId)
+    {
+        var options = calendars
+            .Select(calendar => new SelectListItem(calendar.Name, calendar.Id, string.Equals(calendar.Id, selectedId, StringComparison.Ordinal)))
+            .ToList();
+
+        if (!string.IsNullOrEmpty(selectedId) && !options.Any(option => option.Selected))
+        {
+            options.Add(new SelectListItem(selectedId, selectedId, true));
+        }
+
+        return options;
+    }
+
     private async Task PopulateAsync(ServiceLevelPolicyEditViewModel model)
     {
         model.TimeZoneOptions = await _timeZoneSelectListProvider.GetTimeZoneOptionsAsync(model.TimeZoneId, HttpContext.RequestAborted);
+        model.HoursCalendarOptions = HoursCalendarOptions(await ServiceHoursCalendars.ListAsync(_serviceHoursProviders, HttpContext.RequestAborted), model.HoursCalendarId);
 
         foreach (var priority in Enum.GetValues<WorkOrderPriority>().OrderDescending())
         {
