@@ -25,6 +25,7 @@ public sealed class PayPeriodsController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IPayPeriodCalendarManager _manager;
     private readonly INotifier _notifier;
+    private readonly ILocalClock _localClock;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -35,18 +36,21 @@ public sealed class PayPeriodsController : Controller
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="manager">The manager.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="localClock">The site's clock, which dates the upcoming periods from the site's today.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public PayPeriodsController(
         IAuthorizationService authorizationService,
         IPayPeriodCalendarManager manager,
         INotifier notifier,
+        ILocalClock localClock,
         IHtmlLocalizer<PayPeriodsController> htmlLocalizer,
         IStringLocalizer<PayPeriodsController> stringLocalizer)
     {
         _authorizationService = authorizationService;
         _manager = manager;
         _notifier = notifier;
+        _localClock = localClock;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -206,14 +210,14 @@ public sealed class PayPeriodsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    private static Task PopulateAsync(PayPeriodEditViewModel model)
+    private async Task PopulateAsync(PayPeriodEditViewModel model)
     {
         var preview = new PayPeriodCalendar
         {
             Frequency = Enum.TryParse<PayPeriodFrequency>(model.Frequency, out var frequency) ? frequency : PayPeriodFrequency.Biweekly,
             AnchorDate = model.AnchorDate == default ? new PayPeriodCalendar().AnchorDate : model.AnchorDate,
         };
-        var date = DateOnly.FromDateTime(DateTime.Today);
+        var date = DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime);
 
         for (var index = 0; index < 4; index++)
         {
@@ -222,7 +226,5 @@ public sealed class PayPeriodsController : Controller
             model.Upcoming.Add(period);
             date = period.End.AddDays(1);
         }
-
-        return Task.CompletedTask;
     }
 }

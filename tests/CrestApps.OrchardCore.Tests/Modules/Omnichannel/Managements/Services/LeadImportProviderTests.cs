@@ -467,7 +467,7 @@ public sealed class LeadImportProviderTests
                 .WithPart(OmnichannelConstants.ContentParts.Lead)
                 .Build()]);
 
-        return new LeadImportProvider(session, localClock.Object, new PassThroughStringLocalizer<LeadImportProvider>(), state.Object, definitions.Object, importsCache);
+        return new LeadImportProvider(session, localClock.Object, new CrestApps.OrchardCore.Tests.Telephony.Doubles.StubClock(), new PassThroughStringLocalizer<LeadImportProvider>(), state.Object, definitions.Object, importsCache);
     }
 
     private static LeadImport Import(string entryId, string fileName, DateTime importedUtc)
@@ -485,6 +485,6 @@ public sealed class LeadImportProviderTests
             .Setup(clock => clock.ConvertToLocalAsync(It.IsAny<DateTimeOffset>()))
             .ReturnsAsync((DateTimeOffset value) => value);
 
-        return new LeadImportProvider(session, localClock.Object, new PassThroughStringLocalizer<LeadImportProvider>());
+        return new LeadImportProvider(session, localClock.Object, new CrestApps.OrchardCore.Tests.Telephony.Doubles.StubClock(), new PassThroughStringLocalizer<LeadImportProvider>());
     }
 }

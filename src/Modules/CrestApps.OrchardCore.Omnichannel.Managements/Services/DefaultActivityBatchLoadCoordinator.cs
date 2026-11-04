@@ -27,15 +27,15 @@ public sealed class DefaultActivityBatchLoadCoordinator : IActivityBatchLoadCoor
     /// <param name="loaders">The registered source-specific activity batch loaders.</param>
     /// <param name="defaultLoader">The default contact-based activity batch loader used as a fallback.</param>
     /// <param name="logger">The logger.</param>
-    /// <param name="registry">The loads this process is running, which a load registers itself in while it runs.</param>
     /// <param name="clock">The clock used to stamp a load's progress.</param>
+    /// <param name="registry">The loads this process is running, which a load registers itself in while it runs.</param>
     public DefaultActivityBatchLoadCoordinator(
         ICatalog<OmnichannelActivityBatch> catalog,
         IEnumerable<IActivityBatchLoader> loaders,
         DefaultContactActivityBatchLoader defaultLoader,
         ILogger<DefaultActivityBatchLoadCoordinator> logger,
-        ActivityBatchLoadRegistry registry = null,
-        IClock clock = null)
+        IClock clock,
+        ActivityBatchLoadRegistry registry = null)
     {
         _catalog = catalog;
         _defaultLoader = defaultLoader;
@@ -178,7 +178,7 @@ public sealed class DefaultActivityBatchLoadCoordinator : IActivityBatchLoadCoor
             var loader = ResolveLoader(batch.Source);
 
             batch.Status = OmnichannelActivityBatchStatus.Loading;
-            batch.LoadHeartbeatUtc = _clock?.UtcNow ?? DateTime.UtcNow;
+            batch.LoadHeartbeatUtc = _clock.UtcNow;
 
             await _catalog.UpdateAsync(batch, cancellationToken);
 

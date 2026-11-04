@@ -543,6 +543,7 @@ public sealed class TelnyxTransferLegOrchestrationTests
             [],
             [],
             [],
-            store.Object);
+            store.Object,
+            new StubClock());
     }
 }

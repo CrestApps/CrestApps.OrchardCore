@@ -1,8 +1,9 @@
 @model ShapeViewModel<PayPeriodCalendar>
+@inject OrchardCore.Modules.ILocalClock LocalClock
 
 @{
     var calendar = Model.Value;
-    var (start, end) = calendar.PeriodOn(DateOnly.FromDateTime(DateTime.Today));
+    var (start, end) = calendar.PeriodOn(DateOnly.FromDateTime((await LocalClock.GetLocalNowAsync()).DateTime));
 }
 <span class="badge ta-badge fw-normal">@(calendar.Frequency switch
 {

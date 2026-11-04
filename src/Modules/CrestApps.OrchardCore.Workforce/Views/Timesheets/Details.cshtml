@@ -1,12 +1,13 @@
 @model TimesheetDetailsViewModel
 @using CrestApps.OrchardCore.Calendars
 @inject IEnumerable<CrestApps.OrchardCore.Workforce.Services.ITimePunchSourceProvider> SourceProviders
+@inject OrchardCore.Modules.IClock Clock
 @{
     var timesheet = Model.Timesheet;
     var editable = timesheet.IsEditable;
     var returnUrl = Context.Request.Path + Context.Request.QueryString;
     string Local(DateTime utc) => CalendarTime.ToLocal(utc, Model.TimeZoneId).ToString("t");
-    var today = DateOnly.FromDateTime(CalendarTime.ToLocal(DateTime.UtcNow, Model.TimeZoneId));
+    var today = DateOnly.FromDateTime(CalendarTime.ToLocal(Clock.UtcNow, Model.TimeZoneId));
     var defaultDay = (today < timesheet.PeriodStart ? timesheet.PeriodStart : today > timesheet.PeriodEnd ? timesheet.PeriodEnd : today).ToString("yyyy-MM-dd");
     var manualCodes = Model.PayCodes.Values.Where(code => code.Enabled).OrderBy(code => code.Kind).ThenBy(code => code.Code).ToList();
 }

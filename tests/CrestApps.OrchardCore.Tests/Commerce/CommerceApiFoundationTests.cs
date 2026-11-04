@@ -136,7 +136,7 @@ public sealed class CommerceApiFoundationTests
     }
 
     private static GuestSessionTokenManager Manager(IDataProtectionProvider protection, HttpContext context)
-        => new(new HttpContextAccessor { HttpContext = context }, protection);
+        => new(new HttpContextAccessor { HttpContext = context }, protection, new CrestApps.OrchardCore.Tests.Telephony.Doubles.StubClock(DateTime.UtcNow));
 
     private static ServiceProvider Services()
         => new ServiceCollection()

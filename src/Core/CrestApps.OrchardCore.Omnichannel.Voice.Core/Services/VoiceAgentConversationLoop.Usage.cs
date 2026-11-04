@@ -31,7 +31,8 @@ public sealed partial class VoiceAgentConversationLoop
     /// <param name="sessionHeldTheCall">Whether the session returned normally having held the call.</param>
     private Task RecordRealtimeSessionAsync(VoiceAgentEvent voiceEvent, AIVoiceSessionMeter meter, string deploymentName, bool sessionHeldTheCall)
     {
-        var measured = meter.Measure(DateTime.UtcNow.Ticks);
+        // The live session measures on the machine clock, so the session is measured up to now on the same clock.
+        var measured = meter.Measure(_timeProvider.GetUtcNow().UtcTicks);
 
         // No session ever held the call -- the provider carries no live media, or the session could not be
         // opened -- so the turn-based loop takes it, and that is what it is reported as.

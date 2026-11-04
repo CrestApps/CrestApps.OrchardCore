@@ -256,6 +256,7 @@ public sealed class EntryPointAddressTests
                 addressManager.Object,
                 [queueManager.Object],
                 phoneNumbers.Object,
+                new CrestApps.OrchardCore.Tests.Telephony.Doubles.StubClock(),
                 NullLogger<EntryPointAddressMigrations>.Instance);
         }
 

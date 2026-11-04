@@ -517,7 +517,7 @@ public sealed class CartServiceTests
                 return new CartService(
                     Store,
                     Mock.Of<ISession>(),
-                    new GuestSessionTokenManager(_accessor, _protection),
+                    new GuestSessionTokenManager(_accessor, _protection, new CrestApps.OrchardCore.Tests.Telephony.Doubles.StubClock(DateTime.UtcNow)),
                     _accessor,
                     contentManager.Object,
                     snapshots.Object,
@@ -535,7 +535,7 @@ public sealed class CartServiceTests
             return new CartService(
                 Store,
                 Mock.Of<ISession>(),
-                new GuestSessionTokenManager(_accessor, _protection),
+                new GuestSessionTokenManager(_accessor, _protection, new CrestApps.OrchardCore.Tests.Telephony.Doubles.StubClock(DateTime.UtcNow)),
                 _accessor,
                 contentManager.Object,
                 snapshots.Object,

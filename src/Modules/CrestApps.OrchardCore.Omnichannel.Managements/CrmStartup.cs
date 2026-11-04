@@ -98,6 +98,7 @@ public sealed class CrmStartup : StartupBase
         services.AddScoped(serviceProvider => new LeadImportProvider(
             serviceProvider.GetRequiredService<ISession>(),
             serviceProvider.GetRequiredService<ILocalClock>(),
+            serviceProvider.GetRequiredService<IClock>(),
             serviceProvider.GetRequiredService<IStringLocalizer<LeadImportProvider>>(),
             importsCache: serviceProvider.GetRequiredService<LeadImportListCache>()));
         services.AddScoped<OpportunityContactFieldSynchronizer>();

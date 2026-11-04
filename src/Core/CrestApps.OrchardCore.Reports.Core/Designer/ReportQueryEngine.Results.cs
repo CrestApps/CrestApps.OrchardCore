@@ -142,7 +142,10 @@ public sealed partial class ReportQueryEngine
 
         if (!plan.IsAggregated)
         {
-            return new ReportQueryResult(columns, kept, isAggregated: false, indexes => RegroupRows(plan, kept, indexes));
+            return new ReportQueryResult(columns, kept, isAggregated: false, indexes => RegroupRows(plan, kept, indexes))
+            {
+                Today = run.Today,
+            };
         }
 
         var groupings = new Dictionary<string, ReportResultGroup[]>(StringComparer.Ordinal);
@@ -166,7 +169,10 @@ public sealed partial class ReportQueryEngine
         return new ReportQueryResult(columns, kept, isAggregated: true, indexes =>
             groupings.TryGetValue(GroupingKey(indexes), out var groups)
                 ? groups
-                : throw new InvalidOperationException($"The result was not grouped by the columns {string.Join(", ", indexes.Select(index => columns[index].Id))}. Ask for the grouping in {nameof(ReportQueryExecutionContext)}.{nameof(ReportQueryExecutionContext.Groupings)}."));
+                : throw new InvalidOperationException($"The result was not grouped by the columns {string.Join(", ", indexes.Select(index => columns[index].Id))}. Ask for the grouping in {nameof(ReportQueryExecutionContext)}.{nameof(ReportQueryExecutionContext.Groupings)}."))
+        {
+            Today = run.Today,
+        };
     }
 
     // Groups the rows of the groups a grouped result kept again, by some of its dimensions, so averages and distinct
