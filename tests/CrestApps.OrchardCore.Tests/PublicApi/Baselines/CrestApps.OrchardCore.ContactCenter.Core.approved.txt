@@ -4100,6 +4100,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Services.BusinessHoursCalendarOption>> GetCalendarOptionsAsync(System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> IsOpenAsync(string calendarId, System.DateTime utcInstant, string timeZoneId, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class BusinessHoursServiceHoursProvider : CrestApps.OrchardCore.WorkOrders.Services.IServiceHoursProvider
+    {
+        public BusinessHoursServiceHoursProvider(CrestApps.OrchardCore.ContactCenter.Core.Services.IBusinessHoursCalendarManager calendarManager) { }
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "StartUtc",
+                "EndUtc"})]
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<System.ValueTuple<System.DateTime, System.DateTime>>> GetOpenAsync(string calendarId, string timeZoneId, System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class CallControlAuthorizationService : CrestApps.OrchardCore.ContactCenter.Core.Services.ICallControlAuthorizationService
     {
         public CallControlAuthorizationService(CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionManager callSessionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.ISupervisorQueueAuthorizationService supervisorQueueAuthorizationService) { }
@@ -4678,6 +4686,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<bool> IsOpenAsync(string calendarId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> IsOpenAsync(string calendarId, System.DateTime utcInstant, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> IsOpenAsync(string calendarId, System.DateTime utcInstant, string timeZoneId, System.Threading.CancellationToken cancellationToken = default) { }
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "StartUtc",
+                "EndUtc"})]
+        public static System.Collections.Generic.IReadOnlyList<System.ValueTuple<System.DateTime, System.DateTime>> GetOpenWindows(CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar calendar, System.DateTime fromUtc, System.DateTime toUtc, string timeZoneId) { }
         public static bool IsOpen(CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar calendar, System.DateTime utcInstant) { }
         public static bool IsOpen(CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar calendar, System.DateTime utcInstant, string timeZoneId) { }
     }

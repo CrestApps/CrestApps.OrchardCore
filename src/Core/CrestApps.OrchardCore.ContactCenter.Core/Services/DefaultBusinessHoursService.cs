@@ -116,6 +116,113 @@ public sealed class DefaultBusinessHoursService : IBusinessHoursService
         return IsWithinPreviousOvernightWindow(previousWindow, minuteOfDay);
     }
 
+    /// <summary>
+    /// Gives the stretches the supplied calendar is open between two UTC times, by the same rules as
+    /// <see cref="IsOpen(BusinessHoursCalendar, DateTime, string)"/>: a day's window, a window that closes before it opens
+    /// running past midnight, and holidays closed all day.
+    /// </summary>
+    /// <remarks>
+    /// An opening or closing time that a daylight-saving change skips moves forward by the gap, and one that happens twice
+    /// is the earlier of the two.
+    /// </remarks>
+    /// <param name="calendar">The calendar to evaluate.</param>
+    /// <param name="fromUtc">The start.</param>
+    /// <param name="toUtc">The end.</param>
+    /// <param name="timeZoneId">The time zone used instead of the calendar time zone when supplied.</param>
+    /// <returns>The open stretches, in order, merged where they touch and clipped to the range.</returns>
+    public static IReadOnlyList<(DateTime StartUtc, DateTime EndUtc)> GetOpenWindows(BusinessHoursCalendar calendar, DateTime fromUtc, DateTime toUtc, string timeZoneId)
+    {
+        ArgumentNullException.ThrowIfNull(calendar);
+
+        var from = DateTime.SpecifyKind(fromUtc, DateTimeKind.Utc);
+        var to = DateTime.SpecifyKind(toUtc, DateTimeKind.Utc);
+
+        if (to <= from)
+        {
+            return [];
+        }
+
+        var timeZone = ResolveTimeZone(string.IsNullOrWhiteSpace(timeZoneId) ? calendar.TimeZoneId : timeZoneId);
+        var schedule = calendar.WeeklySchedule ?? [];
+        var stretches = new List<(DateTime StartUtc, DateTime EndUtc)>();
+        var lastDay = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(to, timeZone));
+
+        for (var day = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(from, timeZone)).AddDays(-1); day <= lastDay; day = day.AddDays(1))
+        {
+            if (calendar.Holidays is not null && calendar.Holidays.Contains(day))
+            {
+                continue;
+            }
+
+            var window = schedule.FirstOrDefault(item => item.Day == day.DayOfWeek);
+
+            if (IsValidWindow(window))
+            {
+                var (open, close) = window.OpenMinute == window.CloseMinute
+                    ? (0, 1440)
+                    : window.OpenMinute < window.CloseMinute
+                        ? (window.OpenMinute, window.CloseMinute)
+                        : (window.OpenMinute, 1440);
+
+                stretches.Add((ToUtc(day, open, timeZone), ToUtc(day, close, timeZone)));
+            }
+
+            var previous = schedule.FirstOrDefault(item => item.Day == day.AddDays(-1).DayOfWeek);
+
+            if (IsValidWindow(previous) && previous.OpenMinute > previous.CloseMinute && previous.CloseMinute > 0)
+            {
+                stretches.Add((ToUtc(day, 0, timeZone), ToUtc(day, previous.CloseMinute, timeZone)));
+            }
+        }
+
+        var merged = new List<(DateTime StartUtc, DateTime EndUtc)>();
+
+        foreach (var (start, end) in stretches.OrderBy(stretch => stretch.StartUtc))
+        {
+            var clippedStart = start < from ? from : start;
+            var clippedEnd = end > to ? to : end;
+
+            if (clippedEnd <= clippedStart)
+            {
+                continue;
+            }
+
+            if (merged.Count > 0 && merged[^1].EndUtc >= clippedStart)
+            {
+                merged[^1] = (merged[^1].StartUtc, clippedEnd > merged[^1].EndUtc ? clippedEnd : merged[^1].EndUtc);
+
+                continue;
+            }
+
+            merged.Add((clippedStart, clippedEnd));
+        }
+
+        return merged;
+    }
+
+    // Converts a wall-clock minute of a day to UTC without throwing in a daylight-saving gap: a skipped time moves forward
+    // by the gap, and a time that happens twice is the earlier of the two.
+    private static DateTime ToUtc(DateOnly day, int minuteOfDay, TimeZoneInfo timeZone)
+    {
+        var local = day.ToDateTime(TimeOnly.MinValue).AddMinutes(minuteOfDay);
+        TimeSpan offset;
+
+        if (timeZone.IsInvalidTime(local))
+        {
+            offset = timeZone.GetUtcOffset(local.AddHours(-3));
+        }
+        else if (timeZone.IsAmbiguousTime(local))
+        {
+            offset = timeZone.GetAmbiguousTimeOffsets(local).Max();
+        }
+        else
+        {
+            offset = timeZone.GetUtcOffset(local);
+        }
+
+        return DateTime.SpecifyKind(local - offset, DateTimeKind.Utc);
+    }
+
     private static bool IsWithinSameDayWindow(BusinessHoursDay window, int minuteOfDay)
     {
         if (!IsValidWindow(window))

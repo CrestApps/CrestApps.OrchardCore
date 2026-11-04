@@ -9,6 +9,8 @@ using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Recipes;
 using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.WorkOrders;
+using CrestApps.OrchardCore.WorkOrders.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Data;
@@ -88,5 +90,19 @@ public sealed class BusinessHoursRecipesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddRecipeExecutionStep<ContactCenterBusinessHoursCalendarStep>();
+    }
+}
+
+/// <summary>
+/// Runs a work-order service level policy's clock in the hours of the business hours calendar it names.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.BusinessHours)]
+[RequireFeatures(WorkOrdersConstants.Features.WorkOrders)]
+public sealed class BusinessHoursWorkOrdersStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IServiceHoursProvider, BusinessHoursServiceHoursProvider>();
     }
 }
