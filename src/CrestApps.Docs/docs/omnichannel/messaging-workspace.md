@@ -105,6 +105,8 @@ The SMS channel applies the carrier keywords, whatever the workspace is doing:
 | **START** | UNSTOP, YES | Reverses an opt-out and confirms. It is ignored when the contact is not opted out, so an ordinary "Yes" stays part of the conversation. | *You have been resubscribed and will receive messages again. Reply STOP to unsubscribe.* |
 | **HELP** | INFO | Answers with the help reply. | *Reply STOP to unsubscribe. Message and data rates may apply.* |
 
+A keyword is the whole message: it is trimmed, trailing punctuation (`. ! ? , ; :`) is removed, and the rest is compared without regard to case, as the carriers (CTIA) expect. "STOP" and "stop." are keywords; "STOP please" and "stop by later" are not. SMS automation uses the same policy (`OmnichannelSmsComplianceHelper`), so a text means the same thing on both paths.
+
 A keyword silences the entry point's auto-reply for that message. Replies can be customised under the `CrestApps:Omnichannel:Messaging:Sms:KeywordReplies` configuration section (`StopMessage`, `HelpMessage`, `StartMessage`).
 
 SMS also observes **quiet hours**: outside the destination queue's business hours, in the contact's local time, the conversation shows a banner above the composer. The banner is a warning only; it never blocks sending. The `SendMessagesDuringQuietHours` permission only changes how the banner looks: without it, the banner adds that sending now may reach the contact at an unsociable hour.

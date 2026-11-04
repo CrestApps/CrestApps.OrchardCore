@@ -106,7 +106,7 @@
                 <div class="ocat-end">
                     <textarea asp-for="SmsOptOutKeywords" rows="3" class="form-control"></textarea>
                     <span asp-validation-for="SmsOptOutKeywords" class="text-danger"></span>
-                    <span class="hint">@T["Enter one keyword per line or separate keywords with commas. Defaults include STOP, STOPALL, UNSUBSCRIBE, CANCEL, END, and QUIT."]</span>
+                    <span class="hint">@T["Enter one keyword per line or separate keywords with commas. STOP, STOPALL, UNSUBSCRIBE, CANCEL, END and QUIT always opt out as well. A keyword is the whole message: \"STOP\" opts out, \"STOP please\" does not."]</span>
                 </div>
             </div>
         </div>

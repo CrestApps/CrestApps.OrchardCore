@@ -70,7 +70,7 @@ Use the subject-flow SMS automation settings to control:
 
 - **No-response timeout**: fails an automated SMS activity when the contact stops responding.
 - **Response delay**: the minimum wait before each AI SMS reply; replies are paced naturally on top of it. A reply delay chosen on the activity load is saved on each activity when it is loaded and takes precedence; the subject flow's value applies only when the load set none.
-- **Opt-out keywords**: customizes the keywords that stop the SMS conversation and update the contact preference.
+- **Opt-out keywords**: adds keywords that stop the SMS conversation and update the contact preference. The standard keywords (STOP, STOPALL, UNSUBSCRIBE, CANCEL, END and QUIT) always opt out as well. A keyword is the whole message, after trimming and removing trailing punctuation, compared without regard to case: "STOP" opts out, "STOP please" does not. The messaging workspace uses the same rule.
 
 ## Handing off to a live agent
 
