@@ -623,8 +623,8 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
         var generatedPrompt = await liquidTemplateManager.RenderStringAsync(profile.PromptTemplate, NullEncoder.Default,
         new Dictionary<string, FluidValue>
         {
-            ["Profile"] = new ObjectValue(profile),
-            ["Session"] = new ObjectValue(chatSession),
+            ["Profile"] = ObjectValue.Create(profile),
+            ["Session"] = ObjectValue.Create(chatSession),
         });
 
         var assistantMessage = new AIChatSessionPrompt

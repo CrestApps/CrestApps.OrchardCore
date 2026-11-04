@@ -127,12 +127,6 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICheckoutReferenceDescriber, OrderCheckoutReferenceDescriber>();
         services.AddScoped<CouponItemLookup>();
         services.AddDisplayDriver<Coupon, CouponItemLimitsDisplayDriver>();
-
-        services.Configure<TemplateOptions>(options =>
-        {
-            options.MemberAccessStrategy.Register<Order>();
-            options.MemberAccessStrategy.Register<OrderLine>();
-        });
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

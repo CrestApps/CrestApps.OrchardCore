@@ -101,7 +101,7 @@ public sealed class AIConversationStageTask : TaskActivity<AIConversationStageTa
             ? null
             : await _liquidTemplateManager.RenderStringAsync(Instructions, NullEncoder.Default, new Dictionary<string, FluidValue>
             {
-                ["Workflow"] = new ObjectValue(workflowContext),
+                ["Workflow"] = ObjectValue.Create(workflowContext),
             });
 
         var state = session.GetOrCreate<AIConversationFlowState>();

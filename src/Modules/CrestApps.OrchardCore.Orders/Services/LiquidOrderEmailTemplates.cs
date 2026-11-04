@@ -20,7 +20,7 @@ namespace CrestApps.OrchardCore.Orders.Services;
 public sealed partial class LiquidOrderEmailTemplates : IOrderEmailTemplates
 {
     private static readonly JsonSerializerOptions _json = new() { PropertyNamingPolicy = null, Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() } };
-    private static readonly TemplateOptions _options = new();
+    private static readonly TemplateOptions _options = TemplateOptions.Default;
 
     private readonly ILiquidTemplateManager _liquid;
     private readonly ISiteService _siteService;
@@ -51,15 +51,15 @@ public sealed partial class LiquidOrderEmailTemplates : IOrderEmailTemplates
             var site = await _siteService.GetSiteSettingsAsync();
             var values = new Dictionary<string, FluidValue>(StringComparer.Ordinal)
             {
-                ["Content"] = new StringValue(context.Html ?? string.Empty, false),
-                ["Subject"] = new StringValue(context.Subject ?? string.Empty),
-                ["StoreName"] = new StringValue(site.SiteName ?? string.Empty),
+                ["Content"] = StringValue.Create(context.Html ?? string.Empty, encode: false),
+                ["Subject"] = StringValue.Create(context.Subject ?? string.Empty),
+                ["StoreName"] = StringValue.Create(site.SiteName ?? string.Empty),
                 ["Order"] = context.Order is null ? NilValue.Instance : FluidValue.Create(ToPlain(ToJson(context.Order)), _options),
             };
 
             foreach (var (name, value) in context.Values)
             {
-                values[name] = new StringValue(value ?? string.Empty);
+                values[name] = StringValue.Create(value ?? string.Empty);
             }
 
             var subject = context.Subject;
@@ -75,7 +75,7 @@ public sealed partial class LiquidOrderEmailTemplates : IOrderEmailTemplates
                 if (!string.IsNullOrWhiteSpace(template.Body))
                 {
                     html = await _liquid.RenderStringAsync(template.Body, HtmlEncoder.Default, values);
-                    values["Content"] = new StringValue(html, false);
+                    values["Content"] = StringValue.Create(html, encode: false);
                 }
             }
 

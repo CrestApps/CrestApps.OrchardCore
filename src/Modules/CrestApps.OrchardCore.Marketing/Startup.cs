@@ -39,9 +39,6 @@ public sealed class Startup : StartupBase
         services.AddScoped<IOrderEventHandler, CustomerPurchasesOrderHandler>();
         services.AddSingleton<IBackgroundTask, MarketingBackgroundTask>();
 
-        // A campaign's Liquid reads its customer.
-        services.Configure<TemplateOptions>(options => options.MemberAccessStrategy.Register<CampaignCustomer>());
-
         services.AddPermissionProvider<MarketingPermissionProvider>();
         services.AddNavigationProvider<MarketingAdminMenu>();
         services.AddDisplayDriver<Segment, SegmentDisplayDriver>();

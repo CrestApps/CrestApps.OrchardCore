@@ -57,12 +57,6 @@ public sealed class AddressFieldStartup : StartupBase
         services.AddDataMigration<AddressFieldIndexMigrations>();
         // Scoped, like Orchard Core's own field indexes: it reads the scoped content definitions.
         services.AddScopedIndexProvider<AddressFieldIndexProvider>();
-
-        services.Configure<TemplateOptions>(options =>
-        {
-            options.MemberAccessStrategy.Register<AddressField>();
-            options.MemberAccessStrategy.Register<Address>();
-        });
     }
 }
 

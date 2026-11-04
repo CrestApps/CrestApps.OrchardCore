@@ -53,18 +53,6 @@ public sealed class Startup : StartupBase
 
         services.AddDisplayDriver<Navbar, CartNavbarDisplayDriver>();
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, CartResourceManagementOptionsConfiguration>();
-
-        // The cart's shapes can be overridden in Liquid as well as Razor.
-        services.Configure<TemplateOptions>(options =>
-        {
-            options.MemberAccessStrategy.Register<AddToCartViewModel>();
-            options.MemberAccessStrategy.Register<CartViewModel>();
-            options.MemberAccessStrategy.Register<CartLinkViewModel>();
-            options.MemberAccessStrategy.Register<CartPricing>();
-            options.MemberAccessStrategy.Register<CartLinePricing>();
-            options.MemberAccessStrategy.Register<Cart>();
-            options.MemberAccessStrategy.Register<CartLine>();
-        });
     }
 }
 
