@@ -701,7 +701,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services
     }
     public sealed class MessagingQuietHoursGuard
     {
-        public MessagingQuietHoursGuard(CrestApps.OrchardCore.Omnichannel.Core.Services.IBusinessHoursGate businessHoursGate, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingQueuePolicyReader queuePolicyReader, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingContactTimeZoneResolver timeZoneResolver, OrchardCore.Modules.IClock clock) { }
+        public MessagingQuietHoursGuard(CrestApps.OrchardCore.Omnichannel.Core.Services.IBusinessHoursGate businessHoursGate, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingQueuePolicyReader queuePolicyReader, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingContactTimeZoneResolver timeZoneResolver, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingQuietHoursGuard> stringLocalizer) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.QuietHoursDecision> EvaluateAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation conversation, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public static class MessagingRecipients

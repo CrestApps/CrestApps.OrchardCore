@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.DncRegistry.Models;
 using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.Tabular;
 using Dapper;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore;
@@ -39,6 +40,8 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
     private readonly BackgroundWorkPacingOptions _pacingOptions;
     private readonly ILogger _logger;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultLocalDncListManager"/> class.
     /// </summary>
@@ -49,6 +52,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
     /// <param name="phoneNumberService">The phone number service for E.164 formatting.</param>
     /// <param name="pacingOptions">How much of the database the import and delete batches may use.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="stringLocalizer">The string localizer for the import errors shown on the list.</param>
     public DefaultLocalDncListManager(
         ISession session,
         IDistributedLock distributedLock,
@@ -56,7 +60,8 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
         IClock clock,
         IPhoneNumberService phoneNumberService,
         IOptions<BackgroundWorkPacingOptions> pacingOptions,
-        ILogger<DefaultLocalDncListManager> logger)
+        ILogger<DefaultLocalDncListManager> logger,
+        IStringLocalizer<DefaultLocalDncListManager> stringLocalizer)
     {
         _session = session;
         _distributedLock = distributedLock;
@@ -65,6 +70,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
         _phoneNumberService = phoneNumberService;
         _pacingOptions = pacingOptions.Value;
         _logger = logger;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc/>
@@ -165,7 +171,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
 
             if (fileInfo == null || fileInfo.Length == 0)
             {
-                SaveListFailure(list, "The uploaded DNC file no longer exists.");
+                SaveListFailure(list, S["The uploaded DNC file no longer exists."]);
 
                 // Retrying cannot bring the file back, so the background task leaves this list alone.
                 list.FailedAttempts = LocalDncListRecoveryPolicy.MaxAutomaticImportAttempts;
@@ -381,7 +387,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
         }
 
         list.Status = LocalDncListStatus.Paused;
-        list.Error = "Import was paused by the user.";
+        list.Error = S["Import was paused by the user."];
         list.ProcessSaveUtc = _clock.UtcNow;
 
         await _session.SaveAsync(list, false, DncRegistryConstants.CollectionName, cancellationToken);
@@ -898,7 +904,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
 
             if (string.IsNullOrWhiteSpace(line))
             {
-                AddRowError(list, rowIndex, "Blank row ignored.");
+                AddRowError(list, rowIndex, S["Blank row ignored."]);
                 continue;
             }
 
@@ -909,13 +915,13 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
 
             if (nonEmptyFields.Length == 0)
             {
-                AddRowError(list, rowIndex, "Blank row ignored.");
+                AddRowError(list, rowIndex, S["Blank row ignored."]);
                 continue;
             }
 
             if (nonEmptyFields.Length > 1)
             {
-                AddRowError(list, rowIndex, "Row ignored because the file must contain a single column with phone numbers only.");
+                AddRowError(list, rowIndex, S["Row ignored because the file must contain a single column with phone numbers only."]);
                 continue;
             }
 
@@ -938,13 +944,13 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
 
             if (!_phoneNumberService.TryParse(value, list.CountryCode, out var canonical))
             {
-                AddRowError(list, rowIndex, "Row ignored because it does not contain a valid phone number.");
+                AddRowError(list, rowIndex, S["Row ignored because it does not contain a valid phone number."]);
                 continue;
             }
 
             if (!seenNumbers.Add(canonical.Value))
             {
-                AddRowError(list, rowIndex, "Duplicate phone number ignored.");
+                AddRowError(list, rowIndex, S["Duplicate phone number ignored."]);
                 continue;
             }
 
@@ -1105,11 +1111,11 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
         }
     }
 
-    private static void AddRowError(LocalDncList list, int rowIndex, string errorMessage)
+    private void AddRowError(LocalDncList list, int rowIndex, string errorMessage)
     {
         list.ErrorMessages ??= [];
         list.ErrorMessages[rowIndex] = string.IsNullOrWhiteSpace(errorMessage)
-            ? "The row was ignored."
+            ? S["The row was ignored."]
             : errorMessage;
     }
 

@@ -201,6 +201,7 @@ public sealed class LocalDncListRecoveryTests
             services.AddSingleton(CreateFileStore(csv));
             services.AddSingleton<IPhoneNumberService, DefaultPhoneNumberService>();
             services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
+            services.AddSingleton(typeof(Microsoft.Extensions.Localization.IStringLocalizer<>), typeof(CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<>));
             services.AddSingleton(Options.Create(new BackgroundWorkPacingOptions { DatabaseShare = 1 }));
             services.AddScoped<ILocalDncListManager, DefaultLocalDncListManager>();
 

@@ -238,7 +238,7 @@ public sealed class MarketplaceServiceTests
         var clock = new Mock<IClock>();
         clock.Setup(c => c.UtcNow).Returns(_now);
 
-        return new MarketplaceService(vendors.Object, earnings.Object, payouts.Object, content.Object, orders.Object, site.Object, [_provider, .. otherProviders], clock.Object, NullLogger<MarketplaceService>.Instance);
+        return new MarketplaceService(vendors.Object, earnings.Object, payouts.Object, content.Object, orders.Object, site.Object, [_provider, .. otherProviders], clock.Object, NullLogger<MarketplaceService>.Instance, new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<MarketplaceService>());
     }
 
     private sealed class FakePayoutProvider : IVendorPayoutProvider

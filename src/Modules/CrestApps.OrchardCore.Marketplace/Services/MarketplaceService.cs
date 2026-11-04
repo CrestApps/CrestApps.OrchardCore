@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Products.Core.Models;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
@@ -43,6 +44,8 @@ public sealed class MarketplaceService
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
+    internal readonly IStringLocalizer S;
+
     public MarketplaceService(
         IVendorStore vendors,
         IVendorEarningStore earnings,
@@ -52,7 +55,8 @@ public sealed class MarketplaceService
         ISiteService siteService,
         IEnumerable<IVendorPayoutProvider> payoutProviders,
         IClock clock,
-        ILogger<MarketplaceService> logger)
+        ILogger<MarketplaceService> logger,
+        IStringLocalizer<MarketplaceService> stringLocalizer)
     {
         _vendors = vendors;
         _earnings = earnings;
@@ -63,6 +67,7 @@ public sealed class MarketplaceService
         _payoutProviders = payoutProviders;
         _clock = clock;
         _logger = logger;
+        S = stringLocalizer;
     }
 
     public bool CanPayOut
@@ -247,8 +252,8 @@ public sealed class MarketplaceService
         if (SelectPayoutProvider(_payoutProviders, settings.PayoutProvider) is not { } provider)
         {
             return (0m, [_payoutProviders.Any()
-                ? "Choose the payout provider in the marketplace settings: more than one is enabled, or the one chosen is not."
-                : "No payout provider is enabled, such as Marketplace payouts with Stripe Connect."]);
+                ? S["Choose the payout provider in the marketplace settings: more than one is enabled, or the one chosen is not."].Value
+                : S["No payout provider is enabled, such as Marketplace payouts with Stripe Connect."].Value]);
         }
 
         if (vendor.Status != VendorStatus.Active || !vendor.PayoutsEnabled)
