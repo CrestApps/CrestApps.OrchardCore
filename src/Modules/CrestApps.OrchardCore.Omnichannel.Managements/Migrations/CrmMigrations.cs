@@ -20,6 +20,7 @@ using OrchardCore.Title.Models;
 using YesSql;
 using YesSql.Services;
 using YesSql.Sql;
+using YesSql.Sql.Schema;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 
@@ -76,18 +77,12 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
 
         // A tenant can hold one of these tables from an earlier install although its migration was never recorded.
         // Creating it again failed this step on every start ("There is already an object named ..."), so only a
-        // missing table is created, and a table that is already there is brought up to date as UpdateFrom1Async does.
+        // missing table is created, and a table that is already there is given every column it lacks.
         var existingTableFound = false;
 
         if (await IndexTableExistsAsync<LeadIndex>(null))
         {
             existingTableFound = true;
-
-            await EnsureColumnExistsAsync<LeadIndex>(
-                null,
-                "SourceId",
-                table => table.AddColumn<string>("SourceId", column => column.WithLength(26)),
-                "add the 'SourceId' column to the existing lead index");
         }
         else
         {
@@ -97,16 +92,15 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
         if (await IndexTableExistsAsync<OpportunityIndex>(null))
         {
             existingTableFound = true;
-
-            await EnsureColumnExistsAsync<OpportunityIndex>(
-                null,
-                "SourceId",
-                table => table.AddColumn<string>("SourceId", column => column.WithLength(26)),
-                "add the 'SourceId' column to the existing opportunity index");
         }
         else
         {
             await CreateOpportunityIndexAsync(SchemaBuilder);
+        }
+
+        if (existingTableFound)
+        {
+            await EnsureIndexColumnsAsync();
         }
 
         if (existingTableFound)
@@ -125,7 +119,7 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
             .GetRequiredService<CrmCatalogSeeder>()
             .SeedAsync());
 
-        return 6;
+        return 7;
     }
 
     /// <summary>
@@ -223,6 +217,52 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
         }
 
         return 6;
+    }
+
+    /// <summary>
+    /// Adds the lead and opportunity index columns that a table from an earlier install is missing. Such a table was
+    /// kept by the create step, which only added <c>SourceId</c> to it, so a tenant could lack a column every query of
+    /// the index names: the Opportunities list failed with "Invalid column name 'IsClosed'". The leads and opportunities
+    /// are indexed again when a column was added, so the new column holds their values rather than its default.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom6Async()
+    {
+        if (await EnsureIndexColumnsAsync())
+        {
+            if (Logger.IsEnabled(LogLevel.Warning))
+            {
+                Logger.LogWarning("Added the columns the CRM index tables were missing; existing leads and opportunities will be indexed again.");
+            }
+
+            ShellScope.AddDeferredTask(MoveValuesIntoFieldsAsync);
+        }
+
+        return 7;
+    }
+
+    // Gives an existing lead or opportunity index table every column this version maps. Returns whether any was added.
+    private async Task<bool> EnsureIndexColumnsAsync()
+    {
+        var added = false;
+
+        if (await IndexTableExistsAsync<LeadIndex>(null))
+        {
+            foreach (var (name, addColumn) in _leadIndexColumns)
+            {
+                added |= await EnsureColumnExistsAsync<LeadIndex>(null, name, addColumn, $"add the '{name}' column to the lead index");
+            }
+        }
+
+        if (await IndexTableExistsAsync<OpportunityIndex>(null))
+        {
+            foreach (var (name, addColumn) in _opportunityIndexColumns)
+            {
+                added |= await EnsureColumnExistsAsync<OpportunityIndex>(null, name, addColumn, $"add the '{name}' column to the opportunity index");
+            }
+        }
+
+        return added;
     }
 
     // The imports already made are recorded on their leads by LeadImportBackfillBackgroundTask, after activation:
@@ -572,6 +612,46 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
     private const string LeadCountIndexName = "IDX_LeadIndex_ContentType_Converted";
 
     private static readonly string[] _leadCountIndexColumns = ["ContentType", "IsConverted", "Latest", "Published"];
+
+    // The columns CreateLeadIndexAsync and CreateOpportunityIndexAsync create, for a table that was already there.
+    private static readonly (string Name, Action<IAlterTableCommand> AddColumn)[] _leadIndexColumns =
+    [
+        ("ContentItemId", table => table.AddColumn<string>("ContentItemId", column => column.WithLength(26))),
+        ("ContentType", table => table.AddColumn<string>("ContentType", column => column.WithLength(255))),
+        ("Published", table => table.AddColumn<bool>("Published", column => column.NotNull().WithDefault(false))),
+        ("Latest", table => table.AddColumn<bool>("Latest", column => column.NotNull().WithDefault(false))),
+        ("StatusId", table => table.AddColumn<string>("StatusId", column => column.WithLength(50))),
+        ("IsClosed", table => table.AddColumn<bool>("IsClosed", column => column.NotNull().WithDefault(false))),
+        ("IsConverted", table => table.AddColumn<bool>("IsConverted", column => column.NotNull().WithDefault(false))),
+        ("SourceId", table => table.AddColumn<string>("SourceId", column => column.WithLength(26))),
+        ("ListName", table => table.AddColumn<string>("ListName", column => column.WithLength(255))),
+        ("Rating", table => table.AddColumn<string>("Rating", column => column.WithLength(20))),
+        ("OwnerId", table => table.AddColumn<string>("OwnerId", column => column.WithLength(50))),
+        ("ConvertedContactItemId", table => table.AddColumn<string>("ConvertedContactItemId", column => column.WithLength(26))),
+        ("ConvertedUtc", table => table.AddColumn<DateTime>("ConvertedUtc", column => column.Nullable())),
+        ("CreatedUtc", table => table.AddColumn<DateTime>("CreatedUtc", column => column.Nullable())),
+    ];
+
+    private static readonly (string Name, Action<IAlterTableCommand> AddColumn)[] _opportunityIndexColumns =
+    [
+        ("ContentItemId", table => table.AddColumn<string>("ContentItemId", column => column.WithLength(26))),
+        ("ContentType", table => table.AddColumn<string>("ContentType", column => column.WithLength(255))),
+        ("Published", table => table.AddColumn<bool>("Published", column => column.NotNull().WithDefault(false))),
+        ("Latest", table => table.AddColumn<bool>("Latest", column => column.NotNull().WithDefault(false))),
+        ("StageId", table => table.AddColumn<string>("StageId", column => column.WithLength(50))),
+        ("IsClosed", table => table.AddColumn<bool>("IsClosed", column => column.NotNull().WithDefault(false))),
+        ("IsWon", table => table.AddColumn<bool>("IsWon", column => column.NotNull().WithDefault(false))),
+        ("Probability", table => table.AddColumn<int>("Probability", column => column.Nullable())),
+        ("Amount", table => table.AddColumn<decimal>("Amount", column => column.Nullable())),
+        ("CloseDate", table => table.AddColumn<DateTime>("CloseDate", column => column.Nullable())),
+        ("OwnerId", table => table.AddColumn<string>("OwnerId", column => column.WithLength(50))),
+        ("AccountContentItemId", table => table.AddColumn<string>("AccountContentItemId", column => column.WithLength(26))),
+        ("CampaignId", table => table.AddColumn<string>("CampaignId", column => column.WithLength(50))),
+        ("PrimaryContactItemId", table => table.AddColumn<string>("PrimaryContactItemId", column => column.WithLength(26))),
+        ("SourceId", table => table.AddColumn<string>("SourceId", column => column.WithLength(26))),
+        ("ConvertedFromLeadItemId", table => table.AddColumn<string>("ConvertedFromLeadItemId", column => column.WithLength(26))),
+        ("CreatedUtc", table => table.AddColumn<DateTime>("CreatedUtc", column => column.Nullable())),
+    ];
 
     internal static async Task CreateLeadImportIndexAsync(ISchemaBuilder schemaBuilder)
     {
