@@ -28,6 +28,21 @@ public static class TransactionsServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Registers the payment issues: <see cref="IPaymentIssueStore"/> and <see cref="IPaymentIssueRecorder"/>, which
+    /// keep money operations that failed and must be finished by hand. The host also registers
+    /// <c>PaymentIssueIndexProvider</c> and creates its index table.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The same service collection so calls can be chained.</returns>
+    public static IServiceCollection AddPaymentIssues(this IServiceCollection services)
+    {
+        services.TryAddScoped<IPaymentIssueStore, PaymentIssueStore>();
+        services.TryAddScoped<IPaymentIssueRecorder, DefaultPaymentIssueRecorder>();
+
+        return services;
+    }
+
+    /// <summary>
     /// Registers a transaction source so the administration report can present and filter transactions by a
     /// friendly, localizable name instead of the raw source key.
     /// </summary>

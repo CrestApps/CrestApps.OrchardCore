@@ -1,0 +1,27 @@
+@model PaymentIssuesAdminIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="PaymentIssues" title="@T["Payment issues"]" />
+</zone>
+
+@* The filter renders in the list's toolbar, after this form, and names it with its form attribute. The list stays
+   outside the form because its rows post forms of their own (Mark resolved). *@
+<form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" id="payment-issues-filter" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+</form>
+
+<p class="text-muted">@T["Money operations that failed and must be finished by hand, such as a refund the checkout could not issue or a subscription the payment provider did not cancel. Finish each one in the payment provider's dashboard, then mark it resolved."]</p>
+
+<admin-list name="PaymentIssues" context="Model.List" show-select-all="false"
+            empty-message="@T["<strong>Nothing here!</strong> There are no payment issues that match the current filter."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Issue" position="20" title="@T["Issue"]" />
+        <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
+        <admin-list-column name="Details" position="40" title="@T["Details"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="commerce-admin-list" at="Foot"></script>

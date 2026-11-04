@@ -91,7 +91,8 @@ public sealed class CheckoutStartup : StartupBase
         // The rows of the payments and refunds ledgers.
         services
             .AddDisplayDriver<PaymentAttempt, PaymentAttemptDisplayDriver>()
-            .AddDisplayDriver<PaymentRefund, PaymentRefundDisplayDriver>();
+            .AddDisplayDriver<PaymentRefund, PaymentRefundDisplayDriver>()
+            .AddDisplayDriver<PaymentIssue, PaymentIssueDisplayDriver>();
         services.AddScoped<ICommercePersonalDataContributor, TransactionSettlementPersonalDataContributor>();
     }
 }
