@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Calendars.Core;
 using CrestApps.OrchardCore.Calendars.Services;
 using CrestApps.OrchardCore.Scheduling.Core.Services;
@@ -29,7 +30,7 @@ public sealed class SchedulingResourcesController : Controller
     private readonly SchedulingResourceStore _resourceStore;
     private readonly SchedulingResourceCalendars _resourceCalendars;
     private readonly ICalendarService _calendarService;
-    private readonly IClock _clock;
+    private readonly ITimeZoneSelectListProvider _timeZoneSelectListProvider;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
@@ -42,7 +43,7 @@ public sealed class SchedulingResourcesController : Controller
     /// <param name="resourceStore">The resource store.</param>
     /// <param name="resourceCalendars">The resource calendar service.</param>
     /// <param name="calendarService">The calendar service.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeZoneSelectListProvider">The time zone list provider.</param>
     /// <param name="notifier">The notifier.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
@@ -51,7 +52,7 @@ public sealed class SchedulingResourcesController : Controller
         SchedulingResourceStore resourceStore,
         SchedulingResourceCalendars resourceCalendars,
         ICalendarService calendarService,
-        IClock clock,
+        ITimeZoneSelectListProvider timeZoneSelectListProvider,
         INotifier notifier,
         IHtmlLocalizer<SchedulingResourcesController> htmlLocalizer,
         IStringLocalizer<SchedulingResourcesController> stringLocalizer)
@@ -60,7 +61,7 @@ public sealed class SchedulingResourcesController : Controller
         _resourceStore = resourceStore;
         _resourceCalendars = resourceCalendars;
         _calendarService = calendarService;
-        _clock = clock;
+        _timeZoneSelectListProvider = timeZoneSelectListProvider;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
@@ -263,7 +264,7 @@ public sealed class SchedulingResourcesController : Controller
             new SelectListItem(S["Equipment"], nameof(SchedulingResourceKind.Equipment)),
             new SelectListItem(S["Other"], nameof(SchedulingResourceKind.Other)),
         ];
-        model.TimeZoneOptions = _clock.GetTimeZones().Select(zone => new SelectListItem(zone.TimeZoneId, zone.TimeZoneId, zone.TimeZoneId == model.TimeZoneId)).ToList();
+        model.TimeZoneOptions = await _timeZoneSelectListProvider.GetTimeZoneOptionsAsync(model.TimeZoneId, HttpContext.RequestAborted);
         model.InitialUserJson = string.IsNullOrEmpty(model.UserId) ? "[]" : JsonSerializer.Serialize(new[] { new { value = model.UserId, text = model.UserId } });
     }
 }

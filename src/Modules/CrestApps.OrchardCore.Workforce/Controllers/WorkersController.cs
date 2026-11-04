@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Skills;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
@@ -43,6 +44,7 @@ public sealed class WorkersController : Controller
     private readonly ICertificationManager _certificationManager;
     private readonly ICertificationRecordService _recordService;
     private readonly IClock _clock;
+    private readonly ITimeZoneSelectListProvider _timeZoneSelectListProvider;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
@@ -60,6 +62,7 @@ public sealed class WorkersController : Controller
     /// <param name="certificationManager">The certification manager.</param>
     /// <param name="recordService">The certification record service.</param>
     /// <param name="clock">The clock.</param>
+    /// <param name="timeZoneSelectListProvider">The time zone list provider.</param>
     /// <param name="notifier">The notifier.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
@@ -73,6 +76,7 @@ public sealed class WorkersController : Controller
         ICertificationManager certificationManager,
         ICertificationRecordService recordService,
         IClock clock,
+        ITimeZoneSelectListProvider timeZoneSelectListProvider,
         INotifier notifier,
         IHtmlLocalizer<WorkersController> htmlLocalizer,
         IStringLocalizer<WorkersController> stringLocalizer)
@@ -86,6 +90,7 @@ public sealed class WorkersController : Controller
         _certificationManager = certificationManager;
         _recordService = recordService;
         _clock = clock;
+        _timeZoneSelectListProvider = timeZoneSelectListProvider;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
@@ -496,7 +501,7 @@ public sealed class WorkersController : Controller
             new SelectListItem(S["Subcontractor"], nameof(EmploymentType.Subcontractor), model.EmploymentType == nameof(EmploymentType.Subcontractor)),
         ];
         model.StatusOptions = StatusOptions(model.Status);
-        model.TimeZoneOptions = _clock.GetTimeZones().Select(zone => new SelectListItem(zone.TimeZoneId, zone.TimeZoneId, zone.TimeZoneId == model.TimeZoneId)).ToList();
+        model.TimeZoneOptions = await _timeZoneSelectListProvider.GetTimeZoneOptionsAsync(model.TimeZoneId, HttpContext.RequestAborted);
         model.CertificationOptions = (await _certificationManager.GetEnabledAsync(HttpContext.RequestAborted))
             .Select(certification => new SelectListItem(certification.Name, certification.ItemId))
             .ToList();

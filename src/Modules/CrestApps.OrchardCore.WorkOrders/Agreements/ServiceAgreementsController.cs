@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Calendars.Core.Recurrence;
 using CrestApps.OrchardCore.WorkOrders.Agreements.ViewModels;
@@ -39,6 +40,7 @@ public sealed class ServiceAgreementsController : Controller
     private readonly WorkOrderLookups _lookups;
     private readonly ISession _session;
     private readonly IClock _clock;
+    private readonly ITimeZoneSelectListProvider _timeZoneSelectListProvider;
     private readonly ISiteService _siteService;
     private readonly INotifier _notifier;
 
@@ -55,6 +57,7 @@ public sealed class ServiceAgreementsController : Controller
     /// <param name="lookups">The lookups.</param>
     /// <param name="session">The session.</param>
     /// <param name="clock">The clock.</param>
+    /// <param name="timeZoneSelectListProvider">The time zone list provider.</param>
     /// <param name="siteService">The site service.</param>
     /// <param name="notifier">The notifier.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
@@ -67,6 +70,7 @@ public sealed class ServiceAgreementsController : Controller
         WorkOrderLookups lookups,
         ISession session,
         IClock clock,
+        ITimeZoneSelectListProvider timeZoneSelectListProvider,
         ISiteService siteService,
         INotifier notifier,
         IHtmlLocalizer<ServiceAgreementsController> htmlLocalizer,
@@ -79,6 +83,7 @@ public sealed class ServiceAgreementsController : Controller
         _lookups = lookups;
         _session = session;
         _clock = clock;
+        _timeZoneSelectListProvider = timeZoneSelectListProvider;
         _siteService = siteService;
         _notifier = notifier;
         H = htmlLocalizer;
@@ -440,7 +445,7 @@ public sealed class ServiceAgreementsController : Controller
         model.CustomerPickers.Remove(nameof(CrestApps.OrchardCore.Assets.Models.AssetOwnerKind.Contact));
         model.TypeOptions = [.. (await _types.GetAllAsync()).OrderBy(type => type.Name, StringComparer.CurrentCultureIgnoreCase).Select(type => new SelectListItem(type.Name, type.ItemId))];
         model.AssetOptions = [.. (await _lookups.AssetsAsync(HttpContext.RequestAborted)).Select(option => new SelectListItem(option.Text, option.Value, model.AssetIds.Contains(option.Value)))];
-        model.TimeZoneOptions = [.. _clock.GetTimeZones().Select(zone => zone.TimeZoneId).Order(StringComparer.Ordinal).Select(zoneId => new SelectListItem(zoneId, zoneId, string.Equals(zoneId, model.TimeZoneId, StringComparison.OrdinalIgnoreCase)))];
+        model.TimeZoneOptions = await _timeZoneSelectListProvider.GetTimeZoneOptionsAsync(model.TimeZoneId, HttpContext.RequestAborted);
         model.RuleOptions = [.. Presets.Select(preset => new SelectListItem(preset.Value, preset.Key)), new SelectListItem(S["Custom rule"], string.Empty)];
 
         // One empty row to add a schedule.

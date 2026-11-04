@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Calendars.Core;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
 using CrestApps.OrchardCore.Calendars.ViewModels;
+using CrestApps.OrchardCore.Core.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -26,7 +27,7 @@ internal sealed class CalendarEventDisplayDriver : DisplayDriver<CalendarEvent>
     private readonly ICalendarService _calendarService;
     private readonly ICalendarTypeManager _typeManager;
     private readonly IStringLocalizerFactory _localizerFactory;
-    private readonly IClock _clock;
+    private readonly ITimeZoneSelectListProvider _timeZoneSelectListProvider;
     private readonly IShellFeaturesManager _shellFeaturesManager;
     private readonly ICalendarCategoryService _categoryService;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -37,7 +38,7 @@ internal sealed class CalendarEventDisplayDriver : DisplayDriver<CalendarEvent>
         ICalendarService calendarService,
         ICalendarTypeManager typeManager,
         IStringLocalizerFactory localizerFactory,
-        IClock clock,
+        ITimeZoneSelectListProvider timeZoneSelectListProvider,
         IShellFeaturesManager shellFeaturesManager,
         ICalendarCategoryService categoryService,
         IHttpContextAccessor httpContextAccessor,
@@ -46,7 +47,7 @@ internal sealed class CalendarEventDisplayDriver : DisplayDriver<CalendarEvent>
         _calendarService = calendarService;
         _typeManager = typeManager;
         _localizerFactory = localizerFactory;
-        _clock = clock;
+        _timeZoneSelectListProvider = timeZoneSelectListProvider;
         _shellFeaturesManager = shellFeaturesManager;
         _categoryService = categoryService;
         _httpContextAccessor = httpContextAccessor;
@@ -68,7 +69,7 @@ internal sealed class CalendarEventDisplayDriver : DisplayDriver<CalendarEvent>
             categories.Insert(0, current);
         }
 
-        return Initialize<CalendarEventGeneralViewModel>("CalendarEventGeneral_Edit", model =>
+        return Initialize<CalendarEventGeneralViewModel>("CalendarEventGeneral_Edit", async model =>
         {
             var lastDay = calendarEvent.AllDay ? calendarEvent.End.Date.AddDays(-1) : calendarEvent.End;
 
@@ -101,7 +102,7 @@ internal sealed class CalendarEventDisplayDriver : DisplayDriver<CalendarEvent>
             model.EventTypeOptions = eventTypes
                 .Select(eventType => new SelectListItem(_localizerFactory.Localize(eventType.DisplayName).Value, eventType.Name, string.Equals(eventType.Name, calendarEvent.EventType, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
-            model.TimeZoneOptions = CalendarSelectLists.TimeZones(_clock, calendarEvent.TimeZoneId);
+            model.TimeZoneOptions = await _timeZoneSelectListProvider.GetTimeZoneOptionsAsync(calendarEvent.TimeZoneId);
             model.StatusOptions = CalendarSelectLists.Statuses(S);
             model.TransparencyOptions = CalendarSelectLists.Transparencies(S);
             model.ReminderOptions = CalendarSelectLists.Reminders(S, model.ReminderMinutes);

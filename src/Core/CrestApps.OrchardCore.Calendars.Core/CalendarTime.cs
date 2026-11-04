@@ -125,24 +125,6 @@ public static class CalendarTime
 
     private static DateTimeZone FindZone(string timeZoneId)
     {
-        if (string.IsNullOrWhiteSpace(timeZoneId))
-        {
-            return null;
-        }
-
-        var id = timeZoneId.Trim();
-        var zone = DateTimeZoneProviders.Tzdb.GetZoneOrNull(id);
-
-        if (zone is not null)
-        {
-            return zone;
-        }
-
-        if (TzdbDateTimeZoneSource.Default.WindowsMapping.PrimaryMapping.TryGetValue(id, out var ianaId))
-        {
-            return DateTimeZoneProviders.Tzdb.GetZoneOrNull(ianaId);
-        }
-
-        return null;
+        return CalendarTimeZones.Find(timeZoneId);
     }
 }

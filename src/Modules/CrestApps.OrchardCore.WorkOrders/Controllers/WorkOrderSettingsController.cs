@@ -1,4 +1,5 @@
 using System.Globalization;
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
@@ -57,7 +58,7 @@ public sealed class WorkOrderSettingsController : Controller
     private readonly WorkOrderLookups _lookups;
     private readonly WorkOrderStore _workOrderStore;
     private readonly ISession _session;
-    private readonly IClock _clock;
+    private readonly ITimeZoneSelectListProvider _timeZoneSelectListProvider;
     private readonly ISiteService _siteService;
     private readonly INotifier _notifier;
 
@@ -75,7 +76,7 @@ public sealed class WorkOrderSettingsController : Controller
     /// <param name="lookups">The lookups.</param>
     /// <param name="workOrderStore">The work order store.</param>
     /// <param name="session">The session.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeZoneSelectListProvider">The time zone list provider.</param>
     /// <param name="siteService">The site service.</param>
     /// <param name="notifier">The notifier.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
@@ -89,7 +90,7 @@ public sealed class WorkOrderSettingsController : Controller
         WorkOrderLookups lookups,
         WorkOrderStore workOrderStore,
         ISession session,
-        IClock clock,
+        ITimeZoneSelectListProvider timeZoneSelectListProvider,
         ISiteService siteService,
         INotifier notifier,
         IHtmlLocalizer<WorkOrderSettingsController> htmlLocalizer,
@@ -103,7 +104,7 @@ public sealed class WorkOrderSettingsController : Controller
         _lookups = lookups;
         _workOrderStore = workOrderStore;
         _session = session;
-        _clock = clock;
+        _timeZoneSelectListProvider = timeZoneSelectListProvider;
         _siteService = siteService;
         _notifier = notifier;
         H = htmlLocalizer;
@@ -426,7 +427,7 @@ public sealed class WorkOrderSettingsController : Controller
                 : new TargetEditModel { Priority = priority })],
         };
 
-        Populate(model);
+        await PopulateAsync(model);
 
         return View(model);
     }
@@ -480,7 +481,7 @@ public sealed class WorkOrderSettingsController : Controller
 
         if (!ModelState.IsValid)
         {
-            Populate(form);
+            await PopulateAsync(form);
 
             return View(form);
         }
@@ -740,9 +741,9 @@ public sealed class WorkOrderSettingsController : Controller
         }
     }
 
-    private void Populate(ServiceLevelPolicyEditViewModel model)
+    private async Task PopulateAsync(ServiceLevelPolicyEditViewModel model)
     {
-        model.TimeZoneOptions = [.. _clock.GetTimeZones().Select(zone => zone.TimeZoneId).Order(StringComparer.Ordinal).Select(zoneId => new SelectListItem(zoneId, zoneId, string.Equals(zoneId, model.TimeZoneId, StringComparison.OrdinalIgnoreCase)))];
+        model.TimeZoneOptions = await _timeZoneSelectListProvider.GetTimeZoneOptionsAsync(model.TimeZoneId, HttpContext.RequestAborted);
 
         foreach (var priority in Enum.GetValues<WorkOrderPriority>().OrderDescending())
         {
