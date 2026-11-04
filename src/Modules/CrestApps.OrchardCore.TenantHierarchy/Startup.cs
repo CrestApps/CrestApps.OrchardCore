@@ -1,10 +1,15 @@
+using CrestApps.OrchardCore.Core.Deployments;
+using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using CrestApps.OrchardCore.TenantHierarchy.BackgroundTasks;
 using CrestApps.OrchardCore.TenantHierarchy.Core.Indexes;
 using CrestApps.OrchardCore.TenantHierarchy.Core.Services;
+using CrestApps.OrchardCore.TenantHierarchy.Deployments;
 using CrestApps.OrchardCore.TenantHierarchy.Drivers;
 using CrestApps.OrchardCore.TenantHierarchy.Handlers;
 using CrestApps.OrchardCore.TenantHierarchy.Migrations;
 using CrestApps.OrchardCore.TenantHierarchy.Models;
+using CrestApps.OrchardCore.TenantHierarchy.Recipes;
 using CrestApps.OrchardCore.TenantHierarchy.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
@@ -17,9 +22,11 @@ using OrchardCore.AuditTrail.Services.Models;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Setup;
 using OrchardCore.Users.Events;
@@ -88,6 +95,11 @@ public sealed class ParentStartup : StartupBase
         services.AddDisplayDriver<AuditTrailEvent, HierarchyAuditTrailEventDisplayDriver>();
         services.AddDisplayDriver<ChildTenantListItem, ChildTenantListItemDisplayDriver>();
         services.AddTransient<IConfigureOptions<AuditTrailOptions>, TenantHierarchyAuditTrailEventConfiguration>();
+
+        services.AddRecipeExecutionStep<AccessGrantsStep>();
+        services.AddScoped<IRecipeStep, AccessGrantsRecipeStepSchema>();
+        services.AddDeployment<AccessGrantsDeploymentSource, AccessGrantsDeploymentStep, SummaryDeploymentStepDisplayDriver<AccessGrantsDeploymentStep>>();
+        services.AddDeploymentStepSchema<AccessGrantsDeploymentStepSchema>();
     }
 
     internal static void AddCommonServices(IServiceCollection services)
