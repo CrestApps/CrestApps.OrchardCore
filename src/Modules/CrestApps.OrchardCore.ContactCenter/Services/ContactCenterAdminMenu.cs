@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.ContactCenter.Core;
-using CrestApps.OrchardCore.Skills;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;
 
@@ -42,12 +41,6 @@ public sealed class ContactCenterAdminMenu : AdminNavigationProvider
                     .Id("contactCenterQueues")
                     .Action("Index", "Queues", "CrestApps.OrchardCore.ContactCenter")
                     .Permission(ContactCenterPermissions.ManageQueues)
-                        .LocalNav())
-                    .Add(S["Skills"], S["Skills"].PrefixPosition(), skills => skills
-                    .AddClass("contact-center-skills")
-                    .Id("contactCenterSkills")
-                    .Action("Index", "Skills", SkillsConstants.Features.Skills)
-                    .Permission(SkillsPermissions.ManageSkills)
                         .LocalNav())),
                 priority: 1);
 

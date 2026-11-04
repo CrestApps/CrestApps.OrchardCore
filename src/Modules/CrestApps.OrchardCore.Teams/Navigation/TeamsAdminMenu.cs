@@ -4,7 +4,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.Teams.Navigation;
 
 /// <summary>
-/// Adds the top-level Teams item to the admin menu.
+/// Adds Teams to the Content admin menu.
 /// </summary>
 public sealed class TeamsAdminMenu : AdminNavigationProvider
 {
@@ -22,14 +22,13 @@ public sealed class TeamsAdminMenu : AdminNavigationProvider
     /// <inheritdoc />
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
-        builder.Add(S["Teams"], S["Teams"].PrefixPosition("6.5"), teams => teams
-            .AddClass("teams")
-            .AddClass("icon-class-fa-solid")
-            .AddClass("icon-class-fa-people-group")
-            .Id("teams")
-            .Action("Index", "Teams", TeamsConstants.Features.Teams)
-            .Permission(TeamsPermissions.ManageTeams)
-            .LocalNav());
+        // Teams are shared by Workforce, Contact Center and other modules, so they sit under Content rather than any one of them.
+        builder.Add(S["Content"], content => content
+            .Add(S["Teams"], S["Teams"].PrefixPosition(), teams => teams
+                .Id("teams")
+                .Action("Index", "Teams", TeamsConstants.Features.Teams)
+                .Permission(TeamsPermissions.ManageTeams)
+                .LocalNav()));
 
         return ValueTask.CompletedTask;
     }

@@ -10,7 +10,7 @@ Teams describe how your organization is built: a region, a site, a department, a
 
 | | |
 | --- | --- |
-| **Menu** | Teams |
+| **Menu** | Content > Teams |
 | **Permission** | Manage teams (Manage workforce teams gives it too when Workforce is on) |
 | **Feature** | Teams (Workforce turns it on) |
 
@@ -18,7 +18,7 @@ Teams describe how your organization is built: a region, a site, a department, a
 
 ## Build the team tree
 
-1. Open **Teams** and choose **Add team**.
+1. Open **Content > Teams** and choose **Add team**.
 2. Start at the top, such as your organization or a region, and choose **Save**.
 3. Add the teams under it. From a team's **Actions** menu, **Add a team under it** starts a new team with that team in **Part of**.
 

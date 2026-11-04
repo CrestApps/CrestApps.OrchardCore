@@ -11,7 +11,7 @@ technical_manual:
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > Management > Skills, and Interaction Center > Management > Agent entitlements |
+| **Menu** | Content > Skills, and Interaction Center > Management > Agent entitlements |
 | **Permission** | Manage Contact Center skills; Manage Contact Center agents |
 | **Features** | Skills come with Contact Center Work Distribution, and are kept by the **Skills** feature, which Contact Center turns on. Entitlements are the optional **Contact Center Agent Entitlements** feature. |
 
@@ -26,14 +26,14 @@ technical_manual:
 <YouTube video="contact-center-routing-explained" title="Video of skill requirements, Relax after, agent skills, capacity and queue preferences" start={137} end={210} />
 
 
-1. Open **Interaction Center > Management > Skills** and click **Add skill**.
+1. Open **Content > Skills** and click **Add skill**.
 2. Enter a **Name** (for example *Spanish*) and an optional **Description**.
 3. Leave **Enabled** ticked and click **Save**.
 
 A disabled skill stays on the agents and queues that already use it, but it can no longer be picked for new ones.
 
 :::tip[One skill list for the whole site]
-These are the same skills as the ones under **Workforce > Skills**: both menu items open the same page. An agent's skills are the same as the skills in their user's **Skills** section, and a change on either shows on the other. See [Skills and Certifications](./workforce/skills-and-certifications.md).
+Skills are shared across the site, by Contact Center, Workforce and other features. An agent's skills are the same as the skills in their user's **Skills** section, and a change on either shows on the other. See [Skills and Certifications](./workforce/skills-and-certifications.md).
 :::
 
 ## Grant an agent queues, campaigns and skills

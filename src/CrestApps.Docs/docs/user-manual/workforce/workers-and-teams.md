@@ -20,7 +20,7 @@ Every team gets a **Workforce calendar** that holds its published shifts and app
 
 ## Build the team tree
 
-Teams are kept by the **Teams** feature, so every feature uses the same tree. Open **Teams** to add them; see [Teams](./teams.md) for the fields every team has. Workforce adds the **Workforce** card to the team editor, and **Workers**, **Add a worker** and **Calendar** to each team's **Actions** menu.
+Teams are kept by the **Teams** feature, so every feature uses the same tree. Open **Content > Teams** to add them; see [Teams](./teams.md) for the fields every team has. Workforce adds the **Workforce** card to the team editor, and **Workers**, **Add a worker** and **Calendar** to each team's **Actions** menu.
 
 ### The Workforce card
 
@@ -83,7 +83,7 @@ One line for each enabled skill: choose how well the worker holds it, from **1 -
 
 **Certificates**
 
-After the worker is saved, the editor lists their certificates. Add one with **Certification**, **Number**, **Issued on**, **Valid until** (leave it empty to work it out from the certification) and **Checked**, then choose **Add**. The certificate also appears in **Workforce > Certificates**.
+After the worker is saved, the editor lists their certificates. Add one with **Certification**, **Number**, **Issued on**, **Valid until** (leave it empty to work it out from the certification) and **Checked**, then choose **Add**. The certificate also appears in **Content > Certificates**.
 
 ## From the user editor
 

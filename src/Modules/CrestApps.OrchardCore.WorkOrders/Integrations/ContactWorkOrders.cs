@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Accounts;
 using CrestApps.OrchardCore.Accounts.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
@@ -91,7 +92,7 @@ internal abstract class OwnerWorkOrdersDisplayDriver : ContentDisplayDriver
             model.Count = await query.CountAsync();
             model.WorkOrders = [.. await query.OrderByDescending(index => index.CreatedUtc).Take(MaxRows).ListAsync()];
             model.Types = canManage ? [.. (await _types.GetAllAsync()).OrderBy(type => type.Name, StringComparer.CurrentCultureIgnoreCase)] : [];
-        }).Location(OrchardCoreConstants.DisplayType.DetailAdmin, "Content:21");
+        }).Location(OrchardCoreConstants.DisplayType.DetailAdmin, _isAccount ? AccountPageTabs.Location(AccountPageTabs.Service, "1") : "Content:21");
     }
 }
 

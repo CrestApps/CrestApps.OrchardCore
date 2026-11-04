@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Accounts;
 using CrestApps.OrchardCore.Accounts.Models;
 using CrestApps.OrchardCore.Assets.Core.Indexes;
 using CrestApps.OrchardCore.Assets.Core.Services;
@@ -35,7 +36,7 @@ internal sealed class ContactAssetsDisplayDriver : OwnerAssetsDisplayDriver
 internal sealed class AccountAssetsDisplayDriver : OwnerAssetsDisplayDriver
 {
     public AccountAssetsDisplayDriver(ISession session, AssetTypeManager types, IAuthorizationService authorizationService, IHttpContextAccessor httpContextAccessor)
-        : base(session, types, authorizationService, httpContextAccessor, AssetOwnerKind.Account, "Content:22")
+        : base(session, types, authorizationService, httpContextAccessor, AssetOwnerKind.Account, AccountPageTabs.Location(AccountPageTabs.Service, "2"))
     {
     }
 
