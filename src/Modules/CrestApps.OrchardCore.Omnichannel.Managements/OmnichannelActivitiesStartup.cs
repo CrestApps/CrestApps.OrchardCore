@@ -70,9 +70,10 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AutomatedActivitiesProcessorBackgroundTask>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ActivityDialerProfileIndexBackfillBackgroundTask>());
 
-        // Shared with the Contact Center's outbound screening, so the loader and the dialler answer "may we reach
-        // them?" the same way. Whichever feature registers it first provides it.
-        services.TryAddScoped<IContactOptOutResolver, ContactOptOutResolver>();
+        // The one registration of the opt-out resolver. It lives in this feature, beside the contact phone index it
+        // reads, and every consumer (the loader, the dialer and manual screener, SMS automation, the messaging
+        // workspace) depends on this feature, so all of them answer "may we reach them?" the same way.
+        services.AddScoped<IContactOptOutResolver, ContactOptOutResolver>();
 
         // The load editor and the automated sends take the business-hours gate as a plain dependency, and the
         // contract is declared here, in Omnichannel, so its always-open default is registered here too. The business

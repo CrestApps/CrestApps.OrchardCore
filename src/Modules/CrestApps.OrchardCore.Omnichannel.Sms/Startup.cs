@@ -45,9 +45,6 @@ public sealed class Startup : StartupBase
         // with one technical name would stop the inbox from starting.
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProviderWebhookInboxHandler, SmsInboundInboxHandler>());
 
-        // Asked before any text goes out, so a stop said on any record that holds the number is honoured here too.
-        services.TryAddScoped<IContactOptOutResolver, ContactOptOutResolver>();
-
         // Automated texts leave through the provider that owns the sending number, picked exactly as the messaging
         // workspace picks it. The SMS Messaging Channel registers the same router, so TryAdd keeps one registration.
         services.TryAddScoped<ISmsProviderRouter, SmsProviderRouter>();
