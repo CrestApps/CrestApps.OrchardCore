@@ -5,7 +5,7 @@ namespace CrestApps.OrchardCore.Stripe.Core.Models;
 /// webhook. Verification of a recurring obligation depends on this, so a subscription is never treated as
 /// paid when the first invoice actually failed.
 /// </summary>
-public class SubscriptionDetails
+public sealed class SubscriptionDetails
 {
     /// <summary>
     /// Gets or sets the Stripe subscription identifier.

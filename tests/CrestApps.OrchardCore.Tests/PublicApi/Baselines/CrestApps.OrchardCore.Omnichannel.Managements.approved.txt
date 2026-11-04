@@ -1312,7 +1312,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
         public DefaultActivityDispositionService(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, CrestApps.Core.Services.INamedCatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> dispositionsCatalog, OrchardCore.ContentManagement.IContentManager contentManager, CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectActionExecutor subjectActionExecutor, CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService subjectFlowSettingsService, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityDispositionHandler> handlers, OrchardCore.Modules.IClock clock) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDispositionResult> ApplyAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDispositionRequest request, System.Threading.CancellationToken cancellationToken = default) { }
     }
-    public class DefaultContactActivityBatchLoader : CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityBatchLoader
+    public sealed class DefaultContactActivityBatchLoader : CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityBatchLoader
     {
         public DefaultContactActivityBatchLoader(
                     CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch> catalog,
@@ -1331,9 +1331,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
                     CrestApps.OrchardCore.Omnichannel.Core.Services.IContactMethodsAccessor contactMethods,
                     Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultContactActivityBatchLoader> logger,
                     System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelContactTypeProvider> contactTypeProviders = null) { }
-        public virtual string Source { get; }
-        public virtual System.Threading.Tasks.Task LoadAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityBatchLoadContext context, System.Threading.CancellationToken cancellationToken = default) { }
-        protected System.Threading.Tasks.Task StopAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityBatchLoadContext context, string reason, System.Threading.CancellationToken cancellationToken) { }
+        public string Source { get; }
+        public System.Threading.Tasks.Task LoadAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityBatchLoadContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public interface IActivityBatchLoadCoordinator
     {

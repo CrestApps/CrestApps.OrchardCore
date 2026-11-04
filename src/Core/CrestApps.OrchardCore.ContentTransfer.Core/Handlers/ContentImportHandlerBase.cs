@@ -2,7 +2,7 @@ using System.Data;
 
 namespace CrestApps.OrchardCore.ContentTransfer.Handlers;
 
-public class ContentImportHandlerBase
+public abstract class ContentImportHandlerBase
 {
     protected static bool Is(string columnName, params string[] terms)
     {

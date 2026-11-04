@@ -26,7 +26,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
 /// OrchardCore's scoping, authorization, localization, analytics, and citation systems.
 /// </summary>
 [Authorize]
-public class ChatInteractionHub : ChatInteractionHubBase
+public sealed class ChatInteractionHub : ChatInteractionHubBase
 {
     private readonly IStringLocalizer S;
 

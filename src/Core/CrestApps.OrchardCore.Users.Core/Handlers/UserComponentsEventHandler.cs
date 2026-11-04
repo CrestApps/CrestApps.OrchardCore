@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.Users.Core.Handlers;
 /// <summary>
 /// Handles events for user components event.
 /// </summary>
-public class UserComponentsEventHandler : UserEventHandlerBase
+public sealed class UserComponentsEventHandler : UserEventHandlerBase
 {
     private readonly IServiceProvider _serviceProvider;
 

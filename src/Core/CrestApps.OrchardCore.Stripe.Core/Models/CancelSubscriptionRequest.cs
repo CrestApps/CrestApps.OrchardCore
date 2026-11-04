@@ -3,7 +3,7 @@ namespace CrestApps.OrchardCore.Stripe.Core.Models;
 /// <summary>
 /// Represents a request to stop billing a Stripe subscription.
 /// </summary>
-public class CancelSubscriptionRequest : StripeWriteRequest
+public sealed class CancelSubscriptionRequest : StripeWriteRequest
 {
     /// <summary>
     /// Gets or sets the Stripe subscription identifier.
