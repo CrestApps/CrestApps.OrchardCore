@@ -428,7 +428,7 @@ public sealed class NamedRecipeStepHandlerTests
     /// </summary>
     /// <param name="manager">The manager that owns the reason codes.</param>
     private static AgentStateReasonCodeStep CreateReasonCodeHandler(IAgentStateReasonCodeManager manager)
-        => new(manager, new PassThroughStringLocalizer<AgentStateReasonCodeStep>());
+        => new(manager);
 
     [Fact]
     public async Task AgentStateReasonCodeStep_WhenReasonCodeExists_ShouldUpdateInsteadOfCreate()
@@ -443,7 +443,7 @@ public sealed class NamedRecipeStepHandlerTests
         var manager = new Mock<IAgentStateReasonCodeManager>();
         manager.Setup(x => x.FindByIdAsync("reason-1", It.IsAny<CancellationToken>()))
             .Returns(() => ValueTask.FromResult(reasonCode));
-        manager.Setup(x => x.ValidateAsync(reasonCode, It.IsAny<CancellationToken>()))
+        manager.Setup(x => x.ValidateAsync(It.IsAny<AgentStateReasonCode>(), It.IsAny<CancellationToken>()))
             .Returns(() => ValueTask.FromResult(new ValidationResultDetails()));
 
         var handler = CreateReasonCodeHandler(manager.Object);

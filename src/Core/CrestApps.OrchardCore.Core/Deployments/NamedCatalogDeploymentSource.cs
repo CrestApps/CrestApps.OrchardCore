@@ -15,12 +15,10 @@ namespace CrestApps.OrchardCore.Core.Deployments;
 /// </remarks>
 /// <typeparam name="TStep">The deployment step type.</typeparam>
 /// <typeparam name="TEntry">The catalog entry type.</typeparam>
-public abstract class NamedCatalogDeploymentSource<TStep, TEntry> : CatalogDeploymentSourceBase<TStep, TEntry>
+public abstract class NamedCatalogDeploymentSource<TStep, TEntry> : CatalogDeploymentSource<TStep, TEntry>
     where TStep : DeploymentStep
     where TEntry : CatalogItem, INameAwareModel, new()
 {
-    private readonly INamedCatalogManager<TEntry> _manager;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="NamedCatalogDeploymentSource{TStep, TEntry}"/> class.
     /// </summary>
@@ -29,20 +27,7 @@ public abstract class NamedCatalogDeploymentSource<TStep, TEntry> : CatalogDeplo
     protected NamedCatalogDeploymentSource(
         string entriesName,
         INamedCatalogManager<TEntry> manager)
-        : base(entriesName)
+        : base(entriesName, manager)
     {
-        _manager = manager;
     }
-
-    /// <summary>
-    /// Orders the entries the way they are written to the plan.
-    /// </summary>
-    /// <param name="entries">The stored entries.</param>
-    /// <returns>The entries in the order they are exported.</returns>
-    protected virtual IEnumerable<TEntry> Order(IEnumerable<TEntry> entries)
-        => entries;
-
-    /// <inheritdoc/>
-    protected override async Task<IEnumerable<TEntry>> GetEntriesAsync()
-        => Order(await _manager.GetAllAsync());
 }

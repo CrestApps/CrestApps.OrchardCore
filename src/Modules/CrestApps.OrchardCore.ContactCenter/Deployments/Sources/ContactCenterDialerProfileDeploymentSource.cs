@@ -1,39 +1,21 @@
-using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Deployments.Steps;
 using CrestApps.OrchardCore.Core.Deployments;
-using OrchardCore.Deployment;
 
 namespace CrestApps.OrchardCore.ContactCenter.Deployments.Sources;
 
-internal sealed class ContactCenterDialerProfileDeploymentSource : DeploymentSourceBase<ContactCenterDialerProfileDeploymentStep>
+/// <summary>
+/// Exports every entry of the catalog as the <c>DialerProfile</c> recipe step.
+/// </summary>
+internal sealed class ContactCenterDialerProfileDeploymentSource : CatalogDeploymentSource<ContactCenterDialerProfileDeploymentStep, DialerProfile>
 {
-    private readonly IDialerProfileManager _manager;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterDialerProfileDeploymentSource"/> class.
     /// </summary>
     /// <param name="manager">The manager that owns the dialer profiles.</param>
     public ContactCenterDialerProfileDeploymentSource(IDialerProfileManager manager)
+        : base("DialerProfiles", manager)
     {
-        _manager = manager;
-    }
-
-    protected override async Task ProcessAsync(ContactCenterDialerProfileDeploymentStep step, DeploymentPlanResult result)
-    {
-        var entries = await _manager.GetAllAsync();
-
-        var data = new JsonArray();
-
-        foreach (var entry in entries)
-        {
-            data.Add(CatalogDeploymentSerializer.Export(entry));
-        }
-
-        result.Steps.Add(new JsonObject
-        {
-            ["name"] = ContactCenterDeploymentSteps.DialerProfile,
-            ["DialerProfiles"] = data,
-        });
     }
 }

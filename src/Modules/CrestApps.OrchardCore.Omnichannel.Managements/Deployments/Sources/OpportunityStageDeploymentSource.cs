@@ -1,40 +1,21 @@
-using System.Text.Json.Nodes;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps;
-using OrchardCore.Deployment;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Sources;
 
-internal sealed class OpportunityStageDeploymentSource : DeploymentSourceBase<OpportunityStageDeploymentStep>
+/// <summary>
+/// Exports every entry of the catalog as the <c>OpportunityStage</c> recipe step.
+/// </summary>
+internal sealed class OpportunityStageDeploymentSource : CatalogDeploymentSource<OpportunityStageDeploymentStep, OpportunityStage>
 {
-    private readonly INamedCatalogManager<OpportunityStage> _manager;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="OpportunityStageDeploymentSource"/> class.
     /// </summary>
     /// <param name="manager">The manager that owns the opportunity stages.</param>
     public OpportunityStageDeploymentSource(INamedCatalogManager<OpportunityStage> manager)
+        : base("OpportunityStages", manager)
     {
-        _manager = manager;
-    }
-
-    protected override async Task ProcessAsync(OpportunityStageDeploymentStep step, DeploymentPlanResult result)
-    {
-        var entries = await _manager.GetAllAsync();
-
-        var data = new JsonArray();
-
-        foreach (var entry in entries)
-        {
-            data.Add(CatalogDeploymentSerializer.Export(entry));
-        }
-
-        result.Steps.Add(new JsonObject
-        {
-            ["name"] = OmnichannelDeploymentSteps.OpportunityStage,
-            ["OpportunityStages"] = data,
-        });
     }
 }

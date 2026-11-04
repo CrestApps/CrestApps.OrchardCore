@@ -1,8 +1,7 @@
-using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.ContactCenter.Deployments.Steps;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Deployments.Steps;
 using CrestApps.OrchardCore.Core.Deployments;
-using OrchardCore.Deployment;
 
 namespace CrestApps.OrchardCore.ContactCenter.Deployments.Sources;
 
@@ -10,34 +9,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Deployments.Sources;
 /// Exports every stored entry of the voice media clips catalog, whole, so a member added to the record later travels without a
 /// change here.
 /// </summary>
-internal sealed class ContactCenterVoiceMediaDeploymentSource : DeploymentSourceBase<ContactCenterVoiceMediaDeploymentStep>
+internal sealed class ContactCenterVoiceMediaDeploymentSource : CatalogDeploymentSource<ContactCenterVoiceMediaDeploymentStep, VoiceMediaItem>
 {
-    private readonly IVoiceMediaItemManager _manager;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterVoiceMediaDeploymentSource"/> class.
     /// </summary>
     /// <param name="manager">The manager that owns the voice media clips.</param>
     public ContactCenterVoiceMediaDeploymentSource(IVoiceMediaItemManager manager)
+        : base("VoiceMedia", manager)
     {
-        _manager = manager;
-    }
-
-    protected override async Task ProcessAsync(ContactCenterVoiceMediaDeploymentStep step, DeploymentPlanResult result)
-    {
-        var entries = await _manager.GetAllAsync();
-
-        var data = new JsonArray();
-
-        foreach (var entry in entries)
-        {
-            data.Add(CatalogDeploymentSerializer.Export(entry));
-        }
-
-        result.Steps.Add(new JsonObject
-        {
-            ["name"] = ContactCenterDeploymentSteps.VoiceMedia,
-            ["VoiceMedia"] = data,
-        });
     }
 }
