@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Teams.Models;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using OrchardCore.Recipes.Models;
@@ -107,7 +109,7 @@ internal sealed class TimeOffRecipeStep : NamedRecipeStepHandler
         }
     }
 
-    private static bool Resolve(RecipeImport import, System.Text.Json.Nodes.JsonObject node, string owner, string name, IReadOnlyList<WorkforceTeam> teams, IReadOnlyList<TimeOffType> types, Action<string> setTeam, IList<string> typeIds)
+    private static bool Resolve(RecipeImport import, System.Text.Json.Nodes.JsonObject node, string owner, string name, IReadOnlyList<Team> teams, IReadOnlyList<TimeOffType> types, Action<string> setTeam, IList<string> typeIds)
     {
         var ok = true;
 

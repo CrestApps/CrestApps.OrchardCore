@@ -29,6 +29,12 @@ public class WorkerEditViewModel
     public string Email { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the name and email come from the worker's user account.
+    /// </summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public bool NameFromUser { get; set; }
+
+    /// <summary>
     /// Gets or sets the phone number.
     /// </summary>
     public string Phone { get; set; }

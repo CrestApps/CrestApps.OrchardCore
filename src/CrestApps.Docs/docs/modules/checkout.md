@@ -15,6 +15,10 @@ description: A provider-agnostic checkout and payment framework for Orchard Core
 | **Core** | `CrestApps.OrchardCore.Checkout.Core` |
 | **Category** | Commerce |
 
+This video shows the cart and the checkout in use:
+
+<YouTube video="carts-checkout" title="Video overview of the cart and the checkout" />
+
 The **Checkout** feature provides a provider-agnostic checkout and payment framework. It is the reusable foundation that any purchase flow builds on — recurring [Subscriptions](subscriptions) as well as one-time goods purchases — so the steps, the invoice, taxation, and the money-handling safety guarantees are written once and shared.
 
 It deliberately does **not** implement a storefront. It defines the contracts and the durable, distributed-safe machinery for collecting money; a consuming module (such as Subscriptions) contributes the domain-specific steps and decides what a completed checkout means.

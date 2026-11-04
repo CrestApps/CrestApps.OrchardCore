@@ -2031,6 +2031,7 @@ public sealed class ContactCenterWorkflowRecipeStartup : StartupBase
             .AddWorkflowActivitySchema<StartCallRecordingTaskSchema>()
             .AddWorkflowActivitySchema<StartOmnichannelActivityTaskSchema>()
             .AddWorkflowActivitySchema<CreateAIActivityTaskSchema>()
+            .AddWorkflowActivitySchema<UpdateContactTaskSchema>()
             .AddWorkflowActivitySchema<AICallActionTaskSchema>()
             .AddWorkflowActivitySchema<TransferAICallTaskSchema>()
             .AddWorkflowActivitySchema<AIAlertTriggeredEventSchema>()

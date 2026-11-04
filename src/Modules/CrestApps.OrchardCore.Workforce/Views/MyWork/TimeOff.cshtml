@@ -1,13 +1,14 @@
 @model MyTimeOffViewModel
 @{
-    Layout = null;
-    ViewData["MyWorkNav"] = Model.Nav;
-    ViewData["Title"] = T["Time off"].Value;
     var preview = Model.Preview;
 }
-<partial name="_MyWorkHead" />
+<zone Name="Title">
+    <breadcrumb name="MyWorkTimeOff" title="@T["Time off"]">
+        <breadcrumb-item id="MyWork" action="Index" controller="MyWork" area="CrestApps.OrchardCore.Workforce">@T["My Work"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+<partial name="~/Areas/CrestApps.OrchardCore.Workforce/Views/Shared/_MyWorkAssets.cshtml" />
 
-<h1 class="h4 mb-3">@T["My time off"]</h1>
 
 <div class="row g-3 mb-3">
     @foreach (var balance in Model.Balances)
@@ -19,6 +20,10 @@
                     <h2 class="h6 text-muted">@(balance.Type?.Name ?? balance.Policy.Name)</h2>
                     <p class="fs-4 mb-0"><partial name="_TimeOffAmount" model="(balance.Available, unit)" /></p>
                     <p class="small text-muted mb-0">@T["available"]@if (balance.Upcoming + balance.Pending > 0) {<text> · </text><partial name="_TimeOffAmount" model="(balance.Upcoming + balance.Pending, unit)" /><text> </text>@T["booked or waiting"]}</p>
+                    @foreach (var grant in balance.Grants)
+                    {
+                        <p class="small text-warning mb-0"><i class="fa-regular fa-hourglass-half" aria-hidden="true"></i> <partial name="_TimeOffAmount" model="(grant.Remaining, unit)" /> @T["to use by {0}", grant.ExpiresOn.ToString("d MMM yyyy")]</p>
+                    }
                 </div>
             </div>
         </div>
@@ -28,7 +33,7 @@
 <div class="card mb-3">
     <div class="card-body">
         <h2 class="h5">@T["Ask for time off"]</h2>
-        <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/time-off")">
+        <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/time-off")">
             @Html.ValidationSummary()
             <div class="row g-2">
                 <div class="col-md-4"><label for="TypeId" class="form-label">@T["Kind"]</label><select asp-for="TypeId" asp-items="Model.TypeOptions" class="form-select"><option value="">@T["Choose"]</option></select></div>
@@ -103,7 +108,7 @@
             </div>
             @if (request.IsOpen || request.Status == TimeOffRequestStatus.Approved)
             {
-                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/time-off/cancel/" + request.ItemId)">
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/time-off/cancel/" + request.ItemId)">
                     <button type="submit" class="btn btn-outline-danger btn-sm">@(request.IsOpen ? T["Withdraw"] : T["Cancel"])</button>
                 </form>
             }
@@ -125,4 +130,3 @@
     })();
 </script>
 
-<partial name="_MyWorkFoot" />

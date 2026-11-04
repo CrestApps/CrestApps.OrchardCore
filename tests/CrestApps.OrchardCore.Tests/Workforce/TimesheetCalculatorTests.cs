@@ -120,6 +120,95 @@ public sealed class TimesheetCalculatorTests
     }
 
     [Fact]
+    public void DailyOvertime_DoesNotCountTowardTheWeeklyOvertime()
+    {
+        // Four ten-hour days and an eight-hour Friday: 32 regular hours before Friday, so Friday is all regular.
+        var punches = Enumerable.Range(0, 4)
+            .SelectMany(offset => new[]
+            {
+                Punch(TimePunchKind.In, _monday.AddDays(offset), 8, 0),
+                Punch(TimePunchKind.Out, _monday.AddDays(offset), 18, 0),
+            })
+            .Append(Punch(TimePunchKind.In, _monday.AddDays(4), 8, 0))
+            .Append(Punch(TimePunchKind.Out, _monday.AddDays(4), 16, 0))
+            .ToArray();
+        var input = Input(punches);
+
+        input.Policy.DailyOvertimeHours = 8;
+
+        var result = _calculator.Calculate(input);
+
+        Assert.Equal(40m, Hours(result, "REG", _monday, _monday.AddDays(4)));
+        Assert.Equal(8m, Hours(result, "OT", _monday, _monday.AddDays(4)));
+        Assert.Equal(8m, Hours(result, "REG", _monday.AddDays(4)));
+    }
+
+    [Fact]
+    public void RegularHoursOnAHoliday_ArePaidWithTheHolidayCode_AndOvertimeStaysOvertime()
+    {
+        var input = Input(
+            Punch(TimePunchKind.In, _monday, 8, 0),
+            Punch(TimePunchKind.Out, _monday, 17, 0),
+            Punch(TimePunchKind.In, _monday.AddDays(1), 8, 0),
+            Punch(TimePunchKind.Out, _monday.AddDays(1), 12, 0));
+
+        input.Policy.DailyOvertimeHours = 8;
+        input.Policy.Holidays = [_monday];
+        input.PayCodes = [.. input.PayCodes, Code("HOL", PayCodeKind.Holiday, 1.5m)];
+
+        var result = _calculator.Calculate(input);
+
+        Assert.Equal([(_monday, "HOL", 8m), (_monday, "OT", 1m), (_monday.AddDays(1), "REG", 4m)], Lines(result));
+    }
+
+    [Fact]
+    public void RegularHoursOnAWeekendDay_ArePaidWithTheWeekendCode_OrRegularWithoutOne()
+    {
+        var saturday = _monday.AddDays(5);
+        var input = Input(
+            Punch(TimePunchKind.In, saturday, 8, 0),
+            Punch(TimePunchKind.Out, saturday, 12, 0));
+
+        input.Policy.WeekendDays = [DayOfWeek.Saturday, DayOfWeek.Sunday];
+
+        Assert.Equal([(saturday, "REG", 4m)], Lines(_calculator.Calculate(input)));
+
+        input.PayCodes = [.. input.PayCodes, Code("WKND", PayCodeKind.Weekend, 1.5m)];
+
+        Assert.Equal([(saturday, "WKND", 4m)], Lines(_calculator.Calculate(input)));
+    }
+
+    [Fact]
+    public void TheSeventhDayInARow_IsOvertime_ThenDoubleTimePastEightHours()
+    {
+        // The week starts on Sunday; six-hour days Sunday to Friday, then ten hours on Saturday.
+        var sunday = _monday.AddDays(-1);
+        var punches = Enumerable.Range(0, 6)
+            .SelectMany(offset => new[]
+            {
+                Punch(TimePunchKind.In, sunday.AddDays(offset), 8, 0),
+                Punch(TimePunchKind.Out, sunday.AddDays(offset), 14, 0),
+            })
+            .Append(Punch(TimePunchKind.In, sunday.AddDays(6), 8, 0))
+            .Append(Punch(TimePunchKind.Out, sunday.AddDays(6), 18, 0))
+            .ToArray();
+        var input = Input(punches);
+
+        input.Policy.DailyOvertimeHours = 8;
+        input.Policy.SeventhDayOvertime = true;
+
+        var result = _calculator.Calculate(input);
+
+        Assert.Equal(36m, Hours(result, "REG", sunday, sunday.AddDays(5)));
+        Assert.Equal([(sunday.AddDays(6), "DT", 2m), (sunday.AddDays(6), "OT", 8m)], Lines(result).Where(line => line.Date == sunday.AddDays(6)).ToArray());
+
+        // Without the rule, Saturday's first four hours reach the weekly forty, and the rest is overtime.
+        input.Policy.SeventhDayOvertime = false;
+
+        Assert.Equal([(sunday.AddDays(6), "OT", 6m), (sunday.AddDays(6), "REG", 4m)], Lines(_calculator.Calculate(input)).Where(line => line.Date == sunday.AddDays(6)).ToArray());
+    }
+
+    [Fact]
     public void WeeklyOvertime_CountsTheDaysOfTheWeekBeforeThePeriod()
     {
         // A twice-a-month period starts on Monday the 16th, but its overtime week started on Sunday the 15th.

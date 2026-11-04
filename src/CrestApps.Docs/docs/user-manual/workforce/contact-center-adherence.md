@@ -49,6 +49,10 @@ The day shows adherence (the share of scheduled time in adherence), conformance 
 
 A day is saved each hour after it ends. Before that, the page works it out from the schedule and the agent's states. Choose **Save**, or **Compute again** after adding an exception.
 
+## Agents see their own days
+
+With the My Work portal on, an agent who has saved days has **Adherence** in the My Work menu. It lists their latest 14 scheduled days, newest first, with their adherence, conformance and the minutes they were out of adherence, so they can see the same numbers their supervisor does.
+
 ## Record an exception
 
 Some time shouldn't count against an agent, such as coaching or a phone outage.

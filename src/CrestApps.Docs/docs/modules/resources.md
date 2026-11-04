@@ -3,12 +3,16 @@ sidebar_label: Resources
 sidebar_position: 5
 title: Resources
 description: Extends the Resources module with additional reusable scripts and stylesheets.
+user_manual: user-manual/administration/recipes
 ---
 
 | | |
 | --- | --- |
 | **Feature Name** | CrestApps Resources |
 | **Feature ID** | `CrestApps.OrchardCore.Resources` |
+
+
+<YouTube video="site-wizard-recipes" title="Video overview of wizards, recipes and shared resources" />
 
 Provides shared resources and libraries used by various CrestApps modules.
 
@@ -25,7 +29,7 @@ This feature registers reusable Orchard resource-manager assets that can be cons
 Current shared libraries include:
 
 - `intl-tel-input` script and stylesheet resources, backed by local copied assets with CDN fallbacks
-- `fullcalendar` and `fullcalendar-locales` scripts: [FullCalendar](https://fullcalendar.io/) 6 (MIT), the day, week, month and list calendar the Calendars module uses, with its translations. Local copied assets with CDN fallbacks.
+- `fullcalendar` and `fullcalendar-locales` scripts: [FullCalendar](https://fullcalendar.io/) 7 (MIT), the day, week, month and list calendar the Calendars module uses, with its translations, plus the `fullcalendar`, `fullcalendar-theme` and `fullcalendar-palette` stylesheets it needs. Local copied assets with CDN fallbacks.
 
 ## Named script resources
 
@@ -39,7 +43,7 @@ The feature also registers reusable scripts that other modules can require by na
 | `item-selector` | – | A reusable item selector widget (script and style). |
 | `collapsible-panel` | – | Toggle behavior for collapsible admin panels. |
 | `date-range-picker` | `flatpickr`, `flatpickr-culture` | A reusable date-range dropdown described below. |
-| `fullcalendar` | – | [FullCalendar](https://fullcalendar.io/) 6 global build (`FullCalendar.Calendar`), with the day grid, time grid, list, multi-month and interaction plugins. |
+| `fullcalendar` | – | [FullCalendar](https://fullcalendar.io/) 7 global build (`FullCalendar.Calendar`), with the day grid, time grid, list, multi-month and interaction plugins. |
 | `fullcalendar-locales` | `fullcalendar` | Every FullCalendar translation; pass the page culture as the calendar's `locale`. |
 
 ## Date range picker

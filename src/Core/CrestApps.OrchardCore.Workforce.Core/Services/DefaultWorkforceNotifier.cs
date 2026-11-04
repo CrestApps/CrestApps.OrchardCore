@@ -1,24 +1,30 @@
 using CrestApps.Core;
+using CrestApps.OrchardCore.Calendars.Core;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Workforce.Core.Services;
 
 /// <summary>
 /// The portal's notifier: the inbox always, and every other channel the worker hasn't turned off, unless they turned
-/// the notification's kind off. A channel that fails doesn't stop the others.
+/// the notification's kind off or it is their quiet hours. A channel that fails doesn't stop the others.
 /// </summary>
 internal sealed class DefaultWorkforceNotifier : IWorkforceNotifier
 {
     private readonly WorkerStore _workerStore;
     private readonly IEnumerable<IWorkforceNotificationChannel> _channels;
+    private readonly IWorkerTimeZoneService _timeZones;
+    private readonly IClock _clock;
     private readonly ILogger _logger;
 
-    public DefaultWorkforceNotifier(WorkerStore workerStore, IEnumerable<IWorkforceNotificationChannel> channels, ILogger<DefaultWorkforceNotifier> logger)
+    public DefaultWorkforceNotifier(WorkerStore workerStore, IEnumerable<IWorkforceNotificationChannel> channels, IWorkerTimeZoneService timeZones, IClock clock, ILogger<DefaultWorkforceNotifier> logger)
     {
         _workerStore = workerStore;
         _channels = channels;
+        _timeZones = timeZones;
+        _clock = clock;
         _logger = logger;
     }
 
@@ -35,6 +41,13 @@ internal sealed class DefaultWorkforceNotifier : IWorkforceNotifier
 
         var settings = worker.TryGet<WorkerPortalSettings>(out var stored) ? stored : new WorkerPortalSettings();
         var kindOff = settings.DisabledKinds.Contains(notification.Kind);
+
+        if (!kindOff && settings.QuietStart.HasValue && settings.QuietEnd.HasValue)
+        {
+            var zone = await _timeZones.GetAsync(worker, worker.PrimaryTeamId, cancellationToken);
+
+            kindOff = settings.IsQuiet(TimeOnly.FromDateTime(CalendarTime.ToLocal(_clock.UtcNow, zone)));
+        }
 
         foreach (var channel in _channels)
         {

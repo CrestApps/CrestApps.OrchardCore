@@ -102,7 +102,9 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
             return;
         }
 
-        if (await IsPacedDialAwaitingAgentAsync(interaction, cancellationToken))
+        var session = await _callSessionManager.FindByInteractionIdAsync(interaction.ItemId, cancellationToken);
+
+        if (await IsPacedDialAwaitingAgentAsync(interaction, session, cancellationToken))
         {
             // The end is the one worth naming: it is where a dead number used to reach the agent.
             if (interactionEvent.EventType == ContactCenterConstants.Events.CallEnded && _logger.IsEnabled(LogLevel.Information))
@@ -126,7 +128,6 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
             return;
         }
 
-        var session = await _callSessionManager.FindByInteractionIdAsync(interaction.ItemId, cancellationToken);
         var agentId = ResolveAgentId(interaction, session, isVoicemail);
 
         if (string.IsNullOrEmpty(agentId))
@@ -163,9 +164,13 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
     // number told the agent it was not in service, although the dialer dispositions those attempts itself and the
     // agent has nothing to do with them. The soft phone hears of the call once the agent joins it. A preview dial is
     // the agent's own from the start, so it still shows.
-    private async Task<bool> IsPacedDialAwaitingAgentAsync(Interaction interaction, CancellationToken cancellationToken)
+    //
+    // The joined mark on the interaction is not the only record of the join: the agent's leg on the call's topology says
+    // the same, and the dialer reads both when it settles the attempt. Reading only the mark, a mark lost to a race
+    // between two writes of the interaction kept a call the agent talked on out of their recent calls.
+    private async Task<bool> IsPacedDialAwaitingAgentAsync(Interaction interaction, CallSession session, CancellationToken cancellationToken)
     {
-        if (!DialerCallMetadata.IsAwaitingAgent(interaction))
+        if (!DialerCallMetadata.IsAwaitingAgent(interaction) || HasAnsweredAgentLeg(session))
         {
             return false;
         }
@@ -174,6 +179,10 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
 
         return AgentOfferKindHelper.FromActivitySource(activity?.Source) == AgentOfferKind.AutoDial;
     }
+
+    private static bool HasAnsweredAgentLeg(CallSession session)
+        => session?.Legs is not null &&
+        session.Legs.Any(leg => leg is not null && leg.Role == CallPartyRole.Agent && leg.AnsweredUtc.HasValue);
 
     private static bool IsVoicemailProjection(Interaction interaction)
     {

@@ -43,6 +43,20 @@ public interface IInventoryService
     /// </summary>
     Task<int> RestockAsync(string orderId, IEnumerable<StockRequest> lines, string locationId, string reason, StockActor actor, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Uses units up at a location, such as parts fitted on a work order, recording what they were for.
+    /// </summary>
+    /// <param name="stockItemId">The stock item.</param>
+    /// <param name="locationId">The location, such as a van's.</param>
+    /// <param name="quantity">How many units, more than zero.</param>
+    /// <param name="referenceType">The kind of record they were used for, such as <c>WorkOrder</c>.</param>
+    /// <param name="referenceId">The record they were used for.</param>
+    /// <param name="reason">Why.</param>
+    /// <param name="actor">Who.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The result; it fails when the location doesn't have the units available.</returns>
+    Task<StockChangeResult> ConsumeAsync(string stockItemId, string locationId, int quantity, string referenceType, string referenceId, string reason, StockActor actor, CancellationToken cancellationToken = default);
+
     Task<StockChangeResult> TransferAsync(string stockItemId, string fromLocationId, string toLocationId, int quantity, string reason, StockActor actor, CancellationToken cancellationToken = default);
 
     /// <summary>

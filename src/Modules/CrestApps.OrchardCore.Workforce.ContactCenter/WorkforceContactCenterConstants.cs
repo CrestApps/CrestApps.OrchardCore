@@ -34,5 +34,15 @@ public static class WorkforceContactCenterConstants
         /// Intraday management: the day as it happens, reforecasts and voluntary overtime and time off.
         /// </summary>
         public const string Intraday = "CrestApps.OrchardCore.Workforce.Intraday";
+
+        /// <summary>
+        /// Agents' states kept in Time Tracker, each in its stage.
+        /// </summary>
+        public const string TimeTracker = "CrestApps.OrchardCore.Workforce.ContactCenter.TimeTracker";
     }
+
+    /// <summary>
+    /// The id agents' state entries are kept under in Time Tracker.
+    /// </summary>
+    public const string TimeTrackerClockId = "Workforce.ContactCenter";
 }

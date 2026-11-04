@@ -4,6 +4,7 @@ title: Shift Planning
 description: "Plan a team's shifts as a draft from templates, rotations or the auto-scheduler, see where the schedule falls short of the people needed, publish it to the team's calendar, offer the shifts with nobody as open shifts, and let workers trade shifts, with a log of every change made after publishing."
 technical_manual:
   - modules/workforce
+  - modules/or-tools
 ---
 
 Shift Planning builds a team's schedule. You describe your usual shifts once as **shift templates**, set up **rotations** that repeat week after week, and say how many people the team needs with **coverage requirements**. A **schedule** covers one to twelve weeks of one team: you fill it as a draft, by hand, from rotations or with **Auto-schedule**, check it against coverage on the planner board, then **publish** it to the team's Workforce calendar. Workers see their published shifts on the calendar. When you publish again, only the shifts you changed move, and each change is logged.
@@ -12,7 +13,7 @@ Shifts with nobody become **open shifts** that the team's workers can claim, and
 
 | | |
 | --- | --- |
-| **Menu** | Workforce > Schedules, Workforce > Open Shifts, Workforce > Shift Trades, Workforce > Rotations, Workforce > Coverage, Workforce > Shift Templates |
+| **Menu** | Calendars > Shift Schedules, Open Shifts, Shift Trades, Rotations, Coverage, Shift Templates |
 | **Permission** | Plan team schedules, Publish team schedules, Manage open shifts, Approve shift trades, Manage shift templates, Manage the whole workforce |
 | **Feature** | Workforce Shift Planning (it needs Workforce) |
 
@@ -22,7 +23,7 @@ Schedules, rotations and coverage belong to a team, so a manager or scheduler on
 
 ## Shift templates
 
-Open **Workforce > Shift Templates** and choose **Add shift template**.
+Open **Calendars > Shift Templates** and choose **Add shift template**.
 
 | Field | What it does |
 | --- | --- |
@@ -38,7 +39,7 @@ Whether a break counts as paid time, or as time the worker is available for work
 
 ## Rotations
 
-A rotation is a pattern of shifts that repeats every few weeks, such as *days Monday and Tuesday, then Wednesday the week after*. Open **Workforce > Rotations** and choose **Add rotation**.
+A rotation is a pattern of shifts that repeats every few weeks, such as *days Monday and Tuesday, then Wednesday the week after*. Open **Calendars > Rotations** and choose **Add rotation**.
 
 | Field | What it does |
 | --- | --- |
@@ -52,7 +53,7 @@ A rotation is a pattern of shifts that repeats every few weeks, such as *days Mo
 
 ## Coverage
 
-Coverage says how many people the team needs at each time. Open **Workforce > Coverage**, choose the team in the list's filter, and choose **Add requirement**.
+Coverage says how many people the team needs at each time. Open **Calendars > Coverage**, choose the team in the list's filter, and choose **Add requirement**.
 
 | Field | What it does |
 | --- | --- |
@@ -66,7 +67,7 @@ A line that can't be read is shown back to you with the reason, and nothing is s
 
 ## Plan a schedule
 
-Open **Workforce > Schedules** and choose **Start a schedule**. Choose the **Team**, the **First day** and the number of **Weeks** (1 to 12), and optionally a **Name**. The planner board opens.
+Shift planning is part of the calendars: a published schedule is the team's Workforce calendar, and on **Calendars > Manage Calendars** that calendar's menu has **Shift schedules**. Open **Calendars > Shift Schedules** and choose **Start a schedule**. Choose the **Team**, the **First day** and the number of **Weeks** (1 to 12), and optionally a **Name**. The planner board opens.
 
 The board shows one week at a time; use the arrows above it to move between weeks. Each row is a worker on the team that week, then **Open shifts**, which have nobody yet. The **Hours** column adds up each worker's shifts for the week, less unpaid breaks. A worker who has shifts but isn't on the team that week is marked **Off team**.
 
@@ -104,6 +105,8 @@ It keeps to these rules:
 
 Falling short of the minimum counts far more than falling short of the target, and people beyond the target or the maximum count against a shift. After the run, a message says how many shifts were added and what share of the people wanted and needed the schedule now covers; the share also shows above the board. You can change any shift it added, and run it again after changing the coverage or the templates.
 
+With **OR-Tools Shift Scheduling** on, Auto-schedule also hands the schedule to the OR-Tools solver, which looks for a better one under the same rules and keeps whichever is better. A second message names the solver used and how long it took.
+
 ## Publish
 
 Choose **Publish** to put the schedule on the team's Workforce calendar. Open shifts stay off the calendar until you give them to someone. You need **Publish team schedules**; **Plan team schedules** alone lets you prepare the draft.
@@ -112,11 +115,13 @@ Shifts with nobody are offered as [open shifts](#open-shifts). When the team has
 
 After the first publish, the button reads **Publish changes**. Publishing again adds new shifts, moves or reassigns the ones you changed, and removes the ones you deleted. Shifts you didn't touch stay as they are. If a shift can't be published, a warning says which one and why, and the others are still published.
 
+To change one shift now, without publishing the whole schedule, open it from the board. Under **On the published schedule**, enter a reason, then change its hours, give it to someone else, or take it off the schedule. Each change is checked against the labor rules, logged, and counts for predictability pay, unless you tick **The worker asked for it**. The draft follows, so the next publish keeps the change.
+
 **Change log** lists every shift added, moved, reassigned, swapped, filled from an open shift, removed or whose breaks changed after the first publish, newest first, with the version, who made the change and when. Changes a worker asked for, through a trade or a claim, are marked **Worker's request**. A schedule that was never published can be deleted from its **Actions** menu. A published one can't: remove its shifts and publish again instead.
 
 ## Open shifts
 
-Open **Workforce > Open Shifts** to see the shifts with nobody of the teams you manage. Publishing a schedule posts its shifts with nobody here, and publishing again updates them, or stops offering those you deleted or gave to someone in the draft. Choose **Post an open shift** to offer one that isn't in any schedule, such as cover for someone off sick: choose the team, the day, the hours and, if you want, a template, whose skills a worker then needs.
+Open **Calendars > Open Shifts** to see the shifts with nobody of the teams you manage. Publishing a schedule posts its shifts with nobody here, and publishing again updates them, or stops offering those you deleted or gave to someone in the draft. Choose **Post an open shift** to offer one that isn't in any schedule, such as cover for someone off sick: choose the team, the day, the hours and, if you want, a template, whose skills a worker then needs.
 
 Choose **View** to open a shift. It lists its claims and **Give it to someone**, with the team's workers who can take it: on the team that day, holding its skills, with no other shift at that time, resting at least 10 hours before and after, and within their weekly and daily hours. A worker who can't take it isn't listed; a claim from one shows why.
 
@@ -132,7 +137,7 @@ A filled shift goes on the team's calendar and into its schedule, so publishing 
 
 ## Shift trades
 
-Workers can give a published shift to a colleague, let anyone eligible pick it up, or swap it for a colleague's shift. Open **Workforce > Shift Trades** to see the trades of the teams you manage, and choose **Offer a trade** to offer one on a worker's behalf:
+Workers can give a published shift to a colleague, let anyone eligible pick it up, or swap it for a colleague's shift. Open **Calendars > Shift Trades** to see the trades of the teams you manage, and choose **Offer a trade** to offer one on a worker's behalf:
 
 | Field | What it does |
 | --- | --- |
@@ -149,7 +154,7 @@ When the team's **Shift trades** setting needs a manager, an accepted trade wait
 
 ## Team settings
 
-When Shift Planning is on, a team's editor under **Workforce > Teams** has two more settings, and a third when [Time Off](./time-off.md) is on too. A team left at **As the parent team** takes its parent's setting; at the top, a manager approves both.
+When Shift Planning is on, a team's editor under **Teams** has two more settings on its **Workforce** card, and a third when [Time Off](./time-off.md) is on too. A team left at **As the parent team** takes its parent's setting; at the top, a manager approves both.
 
 | Field | What it does |
 | --- | --- |

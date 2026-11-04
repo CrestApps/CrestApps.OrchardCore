@@ -3,6 +3,7 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Capabilities;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Speech;
 using CrestApps.OrchardCore.AI.Chat.Drivers;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
@@ -35,6 +36,7 @@ public sealed class ChatModeVoiceSaveTests
             Mock.Of<IAIDeploymentCapabilityService>(),
             null,
             Mock.Of<ISiteService>(),
+            Mock.Of<IRealtimeVoiceResolver>(),
             Mock.Of<IStringLocalizer<AIProfileChatModeDisplayDriver>>());
         var profile = new AIProfile { Type = AIProfileType.Chat };
 
@@ -55,6 +57,7 @@ public sealed class ChatModeVoiceSaveTests
             Mock.Of<IAIDeploymentCapabilityService>(),
             null,
             Mock.Of<ISiteService>(),
+            Mock.Of<IRealtimeVoiceResolver>(),
             Mock.Of<IStringLocalizer<AIProfileChatModeDisplayDriver>>());
         var profile = new AIProfile { Type = AIProfileType.Chat };
         profile.AlterSettings<ChatModeProfileSettings>(settings => settings.VoiceName = "coral");
@@ -78,6 +81,7 @@ public sealed class ChatModeVoiceSaveTests
             Mock.Of<IAIDeploymentCapabilityService>(),
             null,
             Mock.Of<ISiteService>(),
+            Mock.Of<IRealtimeVoiceResolver>(),
             Mock.Of<IStringLocalizer<AIProfileTemplateChatModeDisplayDriver>>());
         var template = new AIProfileTemplate { Name = "voice-template", Source = AITemplateSources.Profile };
 
@@ -88,10 +92,117 @@ public sealed class ChatModeVoiceSaveTests
         Assert.Equal("coral", template.GetOrCreate<ChatModeProfileSettings>().VoiceName);
     }
 
-    private static UpdateEditorContext CreateContext(ChatMode chatMode, string voiceName)
+    [Fact]
+    public async Task AProfile_WithAVoiceItsRealtimeDeploymentDoesNotOffer_IsRefused()
+    {
+        // Arrange
+        // Live, a profile moved to OpenAI's realtime model kept an ElevenLabs voice. OpenAI refused the session's
+        // set-up over it, so the calls ran with neither the profile's instructions nor its tools.
+        var (deploymentManager, voiceResolver) = OpenAIRealtime();
+        var driver = new AIProfileChatModeDisplayDriver(
+            deploymentManager,
+            Mock.Of<IAIDeploymentCapabilityService>(),
+            null,
+            Mock.Of<ISiteService>(),
+            voiceResolver,
+            new PassThroughLocalizer<AIProfileChatModeDisplayDriver>());
+        var profile = new AIProfile { Type = AIProfileType.Chat };
+        var context = CreateContext(ChatMode.Conversation, "EXAVITQu4vr4xnSDxMaL", "GptRealtime");
+
+        // Act
+        await driver.UpdateAsync(profile, context);
+
+        // Assert
+        var error = Assert.Single(context.Updater.ModelState.Values.SelectMany(entry => entry.Errors));
+        Assert.Contains("GptRealtime", error.ErrorMessage, StringComparison.Ordinal);
+        Assert.Contains("EXAVITQu4vr4xnSDxMaL", error.ErrorMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AProfile_WithOneOfItsRealtimeDeploymentsVoices_IsSaved()
+    {
+        // Arrange
+        var (deploymentManager, voiceResolver) = OpenAIRealtime();
+        var driver = new AIProfileChatModeDisplayDriver(
+            deploymentManager,
+            Mock.Of<IAIDeploymentCapabilityService>(),
+            null,
+            Mock.Of<ISiteService>(),
+            voiceResolver,
+            new PassThroughLocalizer<AIProfileChatModeDisplayDriver>());
+        var profile = new AIProfile { Type = AIProfileType.Chat };
+        var context = CreateContext(ChatMode.Conversation, "marin", "GptRealtime");
+
+        // Act
+        await driver.UpdateAsync(profile, context);
+
+        // Assert
+        Assert.True(context.Updater.ModelState.IsValid);
+        Assert.True(profile.TryGetSettings<ChatModeProfileSettings>(out var settings));
+        Assert.Equal("marin", settings.VoiceName);
+    }
+
+    [Fact]
+    public async Task AProfileTemplate_WithAVoiceItsRealtimeDeploymentDoesNotOffer_IsRefused()
+    {
+        // Arrange
+        // The profiles a template creates take its voice, so they would carry the refusal to every call.
+        var (deploymentManager, voiceResolver) = OpenAIRealtime();
+        var driver = new AIProfileTemplateChatModeDisplayDriver(
+            deploymentManager,
+            Mock.Of<IAIDeploymentCapabilityService>(),
+            null,
+            Mock.Of<ISiteService>(),
+            voiceResolver,
+            new PassThroughLocalizer<AIProfileTemplateChatModeDisplayDriver>());
+        var template = new AIProfileTemplate { Name = "voice-template", Source = AITemplateSources.Profile };
+        var context = CreateContext(ChatMode.Conversation, "EXAVITQu4vr4xnSDxMaL", "GptRealtime");
+
+        // Act
+        await driver.UpdateAsync(template, context);
+
+        // Assert
+        Assert.False(context.Updater.ModelState.IsValid);
+    }
+
+    private static (IAIDeploymentManager DeploymentManager, IRealtimeVoiceResolver VoiceResolver) OpenAIRealtime()
+    {
+        var deployment = new AIDeployment { Name = "GptRealtime", ModelName = "gpt-realtime", ClientName = "OpenAI" };
+
+        var deploymentManager = new Mock<IAIDeploymentManager>();
+        deploymentManager.Setup(manager => manager.ResolveSlotAsync(
+                AIDeploymentSlotNames.Realtime,
+                "GptRealtime",
+                It.IsAny<string>(),
+                It.IsAny<IReadOnlyDictionary<string, string>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(deployment);
+
+        var voiceResolver = new Mock<IRealtimeVoiceResolver>();
+        voiceResolver.Setup(resolver => resolver.GetVoicesAsync(deployment))
+            .ReturnsAsync([new SpeechVoice { Id = "alloy", Name = "Alloy" }, new SpeechVoice { Id = "marin", Name = "Marin" }]);
+
+        return (deploymentManager.Object, voiceResolver.Object);
+    }
+
+    private static UpdateEditorContext CreateContext(ChatMode chatMode, string voiceName, string conversationDeploymentName = null)
         => new(null, string.Empty, false, string.Empty, null, null, new FakeUpdateModel(new AIProfileChatModeViewModel
         {
             ChatMode = chatMode,
             VoiceName = voiceName,
+            ConversationDeploymentName = conversationDeploymentName,
         }));
+
+    // Formats the message with its arguments, so a test can read what the editor says.
+    private sealed class PassThroughLocalizer<T> : IStringLocalizer<T>
+    {
+        public LocalizedString this[string name]
+            => new(name, name);
+
+        public LocalizedString this[string name, params object[] arguments]
+            => new(name, string.Format(System.Globalization.CultureInfo.InvariantCulture, name, arguments));
+
+        public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures)
+            => [];
+    }
 }

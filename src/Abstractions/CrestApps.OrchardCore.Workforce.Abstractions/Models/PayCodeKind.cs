@@ -49,4 +49,9 @@ public enum PayCodeKind
     /// Time that is recorded but not paid.
     /// </summary>
     Unpaid,
+
+    /// <summary>
+    /// Hours worked on the policy's weekend days, paid in place of regular hours.
+    /// </summary>
+    Weekend,
 }

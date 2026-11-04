@@ -1,6 +1,7 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 
 namespace CrestApps.OrchardCore.Workforce.Core.Services;
@@ -44,7 +45,7 @@ internal sealed class WorkerShiftReader
         }
 
         var calendarIds = (await _teamStore.GetAsync(teamIds, cancellationToken))
-            .Select(team => team.CalendarId)
+            .Select(team => team.GetWorkforceSettings().CalendarId)
             .Where(id => !string.IsNullOrEmpty(id))
             .Distinct(StringComparer.Ordinal)
             .ToArray();

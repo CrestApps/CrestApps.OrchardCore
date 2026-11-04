@@ -19,11 +19,15 @@ The **Contact Center** settings page holds the rules that apply to every queue a
 
 <AskYourAdmin />
 
+<YouTube video="contact-center-settings" title="Video overview of the Contact Center settings: default numbers, recording governance, transfers and secure data capture" />
+
 <YouTube video="contact-center-setup-walkthroughs" title="Video of the Contact Center settings tabs: recording governance, external transfer destinations and secure data capture" start={75} end={112} />
 
 The page has up to four tabs. A tab only appears when its feature is enabled, and the **Settings > Contact Center** menu item only appears once a tab does.
 
 ## Recording governance
+
+<YouTube video="contact-center-settings" title="Video of the recording governance settings" start={96} end={209} />
 
 Needs the **Contact Center Call Recording** feature. Enabling the feature is what allows calls to be recorded; disable it to stop all recording.
 
@@ -45,6 +49,8 @@ Needs the **Contact Center Call Recording** feature. Enabling the feature is wha
 
 ### How the disclosure is given
 
+<YouTube video="contact-center-settings" title="Video of how the recording disclosure is given" start={209} end={261} />
+
 Set the disclosure here once, rather than in each entry point's welcome message or each AI profile's instructions. That way every call gets the same approved words, and calls that never hear a welcome message are covered too.
 
 | Call | Who says it | When |
@@ -62,6 +68,8 @@ This feature gives the notice and records that it was given. Which calls need a 
 
 ## Default numbers
 
+<YouTube video="contact-center-settings" title="Video of the default numbers" start={56} end={96} />
+
 Needs the **Omnichannel Channel Endpoints** feature, which adds the **Omnichannel Addresses** list the numbers are picked from. These are the numbers used for an agent who has none of their own.
 
 | Field | What it does |
@@ -71,17 +79,23 @@ Needs the **Omnichannel Channel Endpoints** feature, which adds the **Omnichanne
 
 ## External transfer destinations
 
+<YouTube video="contact-center-settings" title="Video of the external transfer destinations" start={261} end={319} />
+
 Needs a voice feature, such as **Contact Center Inbound Voice** or **Contact Center Outbound Dialer**, which brings **Contact Center Voice**. These are the outside numbers agents and IVR menus may transfer calls to.
 
 1. Add a row for each destination with a **Display name** (for example *After-hours answering service*) and its **E.164 address** (for example `+17025550199`).
-2. Untick **Enabled** to keep a row but stop offering it.
+2. After you save, each destination also shows an **Identifier**: the key that callers and phone menus use to request that transfer, so the real number is never sent by the caller. Untick **Enabled** to keep a row but stop offering it.
 3. Tick **Let agents transfer to numbers that are not on this list** only if agents may type any number. Agents also need the *Transfer Contact Center calls externally* permission.
 
 Emergency and premium-rate numbers are always refused.
 
 ## Secure Data Capture
 
+<YouTube video="contact-center-settings" title="Video of secure data capture" start={319} end={363} />
+
 Needs the **Contact Center Secure Data Capture** feature. It lets an agent send the customer a one-time link to type card or bank details themselves, so the agent never hears or sees them.
+
+<YouTube video="contact-center-secure-capture" title="Video of the Secure Data Capture settings" start={59} end={96} />
 
 | Field | What it does |
 | --- | --- |
@@ -89,4 +103,4 @@ Needs the **Contact Center Secure Data Capture** feature. It lets an agent send 
 | **Capture link lifetime (seconds)** | How long the link works. 30 to 3600, default 300. |
 | **Pause recording during capture** | Pauses the call recording while the customer enters the data. On by default. |
 
-Card numbers are checked, only the last four digits are kept, and the security code is never stored.
+Card numbers are checked, and the security code is never stored. What else is kept depends on the tokenization sink. The built-in sink, which is for development and evaluation only, keeps a masked reference such as the last four digits of a card. It is available only in the Development environment: on any other site, secure capture refuses every submission until a developer connects a tokenization provider that meets your payment-card compliance requirements. See [Production sites](agent-workspace.md#secure-capture-on-a-production-site).

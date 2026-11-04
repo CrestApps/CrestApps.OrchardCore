@@ -1,0 +1,34 @@
+@model ShapeViewModel<TimeEntryRow>
+
+@{
+    var entry = Model.Value.Entry;
+    var minutes = (int)Math.Round(((entry.EndUtc ?? DateTime.UtcNow) - entry.StartUtc).TotalMinutes);
+}
+<span class="badge fw-normal" style="background-color: @(Model.Value.Stage?.Color ?? "#6c757d")">@(Model.Value.Stage?.Name ?? T["No stage"].Value)</span>
+<span class="badge ta-badge fw-normal">@TimeTrackerTimeZone.Hours(minutes)</span>
+@if (entry.IsOpen)
+{
+    <span class="badge text-bg-success fw-normal">@T["Now"]</span>
+}
+@if (entry.Source != TimeTrackerConstants.Sources.Self)
+{
+    <span class="badge ta-badge fw-normal">@(entry.Source switch
+    {
+        TimeTrackerConstants.Sources.Manager => T["Manager"],
+        TimeTrackerConstants.Sources.Kiosk => T["Kiosk"],
+        TimeTrackerConstants.Sources.Mobile => T["Mobile"],
+        TimeTrackerConstants.Sources.ContactCenter => T["Contact Center"],
+        TimeTrackerConstants.Sources.TimeOff => T["Time off"],
+        TimeTrackerConstants.Sources.Api => T["API"],
+        TimeTrackerConstants.Sources.Import => T["Import"],
+        _ => T["{0}", entry.Source],
+    })</span>
+}
+@if (Model.Value.KeptBy is { } keptBy)
+{
+    <span class="badge ta-badge fw-normal" title="@T["Corrected in {0}", keptBy]"><i class="fa-solid fa-lock" aria-hidden="true"></i> @T["From {0}", keptBy]</span>
+}
+@if (entry.Changes.Count > 0)
+{
+    <span class="badge text-bg-warning fw-normal" title="@string.Join(" · ", entry.Changes.Select(change => $"{change.By}: {change.Reason}"))"><i class="fa-solid fa-pen" aria-hidden="true"></i> @T["Changed"]</span>
+}

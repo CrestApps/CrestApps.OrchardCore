@@ -26,6 +26,8 @@ public sealed class UserPickerViewModel
     public string InitialItemsJson { get; set; }
 
     public bool SmallButton { get; set; } = true;
+
+    public bool Required { get; set; }
 }
 
 /// <summary>

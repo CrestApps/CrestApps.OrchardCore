@@ -1,8 +1,10 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -31,6 +33,8 @@ internal sealed class DefaultTimeOffRequestService : ITimeOffRequestService
     private readonly WorkerShiftReader _shiftReader;
     private readonly WorkerTimeZones _timeZones;
     private readonly IWorkforceEvents _events;
+    private readonly IEnumerable<ITimeOffRequestObserver> _observers;
+    private readonly ILogger _logger;
     private readonly ISession _session;
     private readonly IClock _clock;
 
@@ -51,8 +55,10 @@ internal sealed class DefaultTimeOffRequestService : ITimeOffRequestService
         WorkerShiftReader shiftReader,
         WorkerTimeZones timeZones,
         IWorkforceEvents events,
+        IEnumerable<ITimeOffRequestObserver> observers,
         ISession session,
         IClock clock,
+        ILogger<DefaultTimeOffRequestService> logger,
         IStringLocalizer<DefaultTimeOffRequestService> stringLocalizer)
     {
         _workerStore = workerStore;
@@ -69,8 +75,10 @@ internal sealed class DefaultTimeOffRequestService : ITimeOffRequestService
         _shiftReader = shiftReader;
         _timeZones = timeZones;
         _events = events;
+        _observers = observers;
         _session = session;
         _clock = clock;
+        _logger = logger;
         S = stringLocalizer;
     }
 
@@ -168,6 +176,7 @@ internal sealed class DefaultTimeOffRequestService : ITimeOffRequestService
 
         if (result.Value is { } submitted)
         {
+            await NotifyObserversAsync(submitted, cancellationToken);
             await _events.RaiseAsync(WorkforceEvents.TimeOffRequested, WorkforceEventInputs.TimeOff(submitted), submitted.ItemId, cancellationToken);
 
             if (submitted.Status == TimeOffRequestStatus.Approved)
@@ -214,11 +223,29 @@ internal sealed class DefaultTimeOffRequestService : ITimeOffRequestService
         return declined;
     }
 
-    private Task RaiseAsync(PlanningResult<TimeOffRequest> result, string name, CancellationToken cancellationToken)
+    private async Task RaiseAsync(PlanningResult<TimeOffRequest> result, string name, CancellationToken cancellationToken)
     {
-        return result.Succeeded && result.Value is { } request
-            ? _events.RaiseAsync(name, WorkforceEventInputs.TimeOff(request), request.ItemId, cancellationToken)
-            : Task.CompletedTask;
+        if (result.Succeeded && result.Value is { } request)
+        {
+            await NotifyObserversAsync(request, cancellationToken);
+            await _events.RaiseAsync(name, WorkforceEventInputs.TimeOff(request), request.ItemId, cancellationToken);
+        }
+    }
+
+    // After the request is saved; an observer that fails doesn't undo it.
+    private async Task NotifyObserversAsync(TimeOffRequest request, CancellationToken cancellationToken)
+    {
+        foreach (var observer in _observers)
+        {
+            try
+            {
+                await observer.ChangedAsync(request, cancellationToken);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                _logger.LogError(exception, "A time-off observer failed for request {RequestId}.", request.ItemId);
+            }
+        }
     }
 
     public async Task<PlanningResult<TimeOffRequest>> CancelAsync(string id, string actor, string note = null, CancellationToken cancellationToken = default)
@@ -380,7 +407,7 @@ internal sealed class DefaultTimeOffRequestService : ITimeOffRequestService
 
         foreach (var allotment in allotments)
         {
-            var subtree = await TeamTree.GetSubtreeIdsAsync(teams, allotment.TeamId);
+            var subtree = TeamTree.GetSubtreeIds(teams, allotment.TeamId);
 
             waiting.AddRange(await _requestStore.ListForTeamsAsync(subtree.ToArray(), [TimeOffRequestStatus.Waitlisted], freed.StartDate, freed.EndDate, cancellationToken));
         }
@@ -406,6 +433,7 @@ internal sealed class DefaultTimeOffRequestService : ITimeOffRequestService
         var keys = allotments.Concat(plans.SelectMany(plan => plan.Allotments)).Select(allotment => TimeOffLocks.Allotment(allotment.ItemId))
             .Concat(plans.Select(plan => TimeOffLocks.Worker(plan.Request.WorkerId)));
         var lockers = await _locks.LockAsync(keys);
+        var promoted = new List<TimeOffRequest>();
 
         if (lockers is null)
         {
@@ -450,11 +478,18 @@ internal sealed class DefaultTimeOffRequestService : ITimeOffRequestService
 
                 // Saved one at a time, so the next request counts the place this one took.
                 await _session.SaveChangesAsync(cancellationToken);
+                promoted.Add(request);
             }
         }
         finally
         {
             await TimeOffLocks.ReleaseAsync(lockers);
+        }
+
+        foreach (var request in promoted)
+        {
+            await NotifyObserversAsync(request, cancellationToken);
+            await _events.RaiseAsync(WorkforceEvents.TimeOffWaitlistPromoted, WorkforceEventInputs.TimeOff(request), request.ItemId, cancellationToken);
         }
     }
 

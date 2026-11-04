@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -70,7 +71,7 @@ internal sealed class DefaultWorkforceScopeService : IWorkforceScopeService
 
                 foreach (var teamId in managed)
                 {
-                    ids.UnionWith(await TeamTree.GetSubtreeIdsAsync(teams, teamId));
+                    ids.UnionWith(TeamTree.GetSubtreeIds(teams, teamId));
                 }
 
                 scope = new WorkforceScope(false, ids);

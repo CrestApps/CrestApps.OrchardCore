@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.TimeTracker.Services;
+using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using CrestApps.OrchardCore.Workforce.ViewModels;
@@ -5,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -109,9 +112,11 @@ public sealed class ActivityCodesController : Controller
             CountsAsWork = code.CountsAsWork,
             CountsTowardCoverage = code.CountsTowardCoverage,
             Enabled = code.Enabled,
+            StageId = code.StageId,
         };
 
         model.KindOptions = KindOptions(model.Kind);
+        model.StageOptions = await StageOptionsAsync(model.StageId);
 
         return View(model);
     }
@@ -150,6 +155,13 @@ public sealed class ActivityCodesController : Controller
         code.CountsTowardCoverage = model.CountsTowardCoverage;
         code.Enabled = model.Enabled;
 
+        var stageManager = HttpContext.RequestServices.GetService<ITimeStageManager>();
+
+        if (stageManager is not null)
+        {
+            code.StageId = string.IsNullOrEmpty(model.StageId) || await stageManager.FindByIdAsync(model.StageId) is null ? null : model.StageId;
+        }
+
         var validation = await _activityCodeManager.ValidateAsync(code);
 
         foreach (var error in validation.Errors)
@@ -160,8 +172,15 @@ public sealed class ActivityCodesController : Controller
         if (!ModelState.IsValid)
         {
             model.KindOptions = KindOptions(model.Kind);
+            model.StageOptions = await StageOptionsAsync(model.StageId);
 
             return View(model);
+        }
+
+        // With the time clock on, a code without a stage gets one of its own.
+        if (stageManager is not null && string.IsNullOrEmpty(code.StageId))
+        {
+            await HttpContext.RequestServices.GetRequiredService<TimeClockStageAttacher>().AttachAsync(code);
         }
 
         if (isNew)
@@ -219,5 +238,25 @@ public sealed class ActivityCodesController : Controller
             new SelectListItem(S["Time off"], nameof(ActivityKind.TimeOff), selected == nameof(ActivityKind.TimeOff)),
             new SelectListItem(S["Other"], nameof(ActivityKind.Other), selected == nameof(ActivityKind.Other)),
         ];
+    }
+
+    // The stages, when the time clock keeps time in Time Tracker; null otherwise, and the card isn't shown.
+    private async Task<IList<SelectListItem>> StageOptionsAsync(string selected)
+    {
+        var stageManager = HttpContext.RequestServices.GetService<ITimeStageManager>();
+
+        if (stageManager is null || HttpContext.RequestServices.GetService<TimeClockStageAttacher>() is null)
+        {
+            return null;
+        }
+
+        var options = new List<SelectListItem> { new(S["A stage of its own, made when saved"], string.Empty) };
+
+        options.AddRange((await stageManager.GetAllAsync())
+            .OrderBy(stage => stage.Position)
+            .ThenBy(stage => stage.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Select(stage => new SelectListItem(stage.Name, stage.ItemId, stage.ItemId == selected)));
+
+        return options;
     }
 }

@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.TimeTracker.Core</RootNamespace>
+    <Title>CrestApps OrchardCore Time Tracker Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core services for time tracking: the stores and indexes of stages, categories and entries, and the time tracker
+      service that clocks people in, switches their stage, keeps their entries from overlapping and totals their time.
+    </Description>
+    <PackageTags>$(PackageTags) TimeTracker Timesheets Core</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NodaTime" />
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.TimeTracker.Abstractions\CrestApps.OrchardCore.TimeTracker.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
+  </ItemGroup>
+
+</Project>

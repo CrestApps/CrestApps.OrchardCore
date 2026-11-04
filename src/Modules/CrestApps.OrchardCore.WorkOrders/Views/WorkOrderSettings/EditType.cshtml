@@ -1,0 +1,204 @@
+@model WorkOrderTypeEditViewModel
+
+<zone Name="Title"><breadcrumb name="WorkOrderTypesEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["Add a Work Order Type"] : T["Edit {0}", Model.Name])" /></zone>
+
+<form asp-action="EditType" asp-route-id="@Model.Id" method="post" class="no-multisubmit">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <input type="hidden" asp-for="Id" />
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Details"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Name" class="form-control" required />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Color" class="ocat-label">@T["Color"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Color" type="color" class="form-control form-control-color" />
+                    <span class="hint">@T["Shown on the dispatch board."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="DefaultDurationMinutes" class="ocat-label">@T["Usual duration (minutes)"]</label>
+                <div class="ocat-end">
+                    <input asp-for="DefaultDurationMinutes" type="number" min="0" step="5" class="form-control" style="max-width: 12rem" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="CrewSize" class="ocat-label">@T["People needed"]</label>
+                <div class="ocat-end">
+                    <input asp-for="CrewSize" type="number" min="1" class="form-control" style="max-width: 12rem" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="DefaultPriority" class="ocat-label">@T["Usual priority"]</label>
+                <div class="ocat-end">
+                    <select asp-for="DefaultPriority" asp-items="Html.GetEnumSelectList<WorkOrderPriority>()" class="form-select"></select>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="ServiceLevelPolicyId" class="ocat-label">@T["Service level"]</label>
+                <div class="ocat-end">
+                    <select asp-for="ServiceLevelPolicyId" asp-items="Model.PolicyOptions" class="form-select">
+                        <option value="">@T["None"]</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Billing"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="BillingMode" class="ocat-label">@T["Billed"]</label>
+                <div class="ocat-end">
+                    <select asp-for="BillingMode" class="form-select">
+                        <option value="@WorkOrderBillingMode.NotBillable">@T["Not billed"]</option>
+                        <option value="@WorkOrderBillingMode.FixedPrice">@T["At a fixed price"]</option>
+                        <option value="@WorkOrderBillingMode.TimeAndMaterials">@T["For the time and materials used"]</option>
+                    </select>
+                    <span class="hint">@T["When Transactions is on, completing a billed work order makes its invoice."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="FixedPrice" class="ocat-label">@T["Fixed price"]</label>
+                <div class="ocat-end">
+                    <input asp-for="FixedPrice" type="number" min="0" step="0.01" class="form-control" style="max-width: 12rem" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Currency" class="ocat-label">@T["Currency"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Currency" class="form-control" maxlength="3" />
+                </div>
+            </div>
+            @if (Model.SkillOptions.Count + Model.CertificationOptions.Count > 0)
+            {
+                <h2 class="h5 mt-4">@T["Who can do it"]</h2>
+                <p class="hint">@T["Dispatch offers only technicians with these skills, at the level or above, and these certifications, valid on the day."]</p>
+                @if (Model.SkillOptions.Count > 0)
+                {
+                    <div class="ocat-wrapper">
+                        <div class="ocat-end-offset">
+                            <div class="form-label">@T["Skills needed"]</div>
+                            @for (var i = 0; i < Model.RequiredSkills.Count; i++)
+                            {
+                                <div class="row g-2 mb-2">
+                                    <div class="col-8 col-md-5">
+                                        <label for="RequiredSkills_@(i)__SkillId" class="visually-hidden">@T["Skill"]</label>
+                                        <select id="RequiredSkills_@(i)__SkillId" name="RequiredSkills[@i].SkillId" class="form-select">
+                                            <option value="">@T["No skill"]</option>
+                                            @foreach (var option in Model.SkillOptions)
+                                            {
+                                                <option value="@option.Value" selected="@(option.Value == Model.RequiredSkills[i].SkillId)">@option.Text</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-4 col-md-3">
+                                        <label for="RequiredSkills_@(i)__MinProficiency" class="visually-hidden">@T["Lowest level"]</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">@T["Level"]</span>
+                                            <input id="RequiredSkills_@(i)__MinProficiency" name="RequiredSkills[@i].MinProficiency" type="number" min="1" max="5" value="@Model.RequiredSkills[i].MinProficiency" class="form-control" style="max-width: 12rem" />
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                            <span class="hint">@T["Save to get another empty row."]</span>
+                        </div>
+                    </div>
+                }
+                @if (Model.CertificationOptions.Count > 0)
+                {
+                    <div class="ocat-wrapper">
+                        <div class="ocat-end-offset">
+                            <div class="form-label">@T["Certifications needed"]</div>
+                            @foreach (var option in Model.CertificationOptions)
+                            {
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" name="RequiredCertificationIds" value="@option.Value" id="certification-@option.Value" checked="@option.Selected" />
+                                    <label class="form-check-label" for="certification-@option.Value">@option.Text</label>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+    @if (Model.AppointmentTypeOptions.Count > 0)
+    {
+        <div class="card text-bg-theme mb-3">
+            <div class="card-header">@T["Bookings"]</div>
+            <div class="card-body">
+                <div class="ocat-wrapper">
+                    <span class="ocat-label">@T["Made from bookings of"]</span>
+                    <div class="ocat-end">
+                        @foreach (var option in Model.AppointmentTypeOptions)
+                        {
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" name="AppointmentTypeIds" value="@option.Value" id="appointment-type-@option.Value" checked="@option.Selected" />
+                                <label class="form-check-label" for="appointment-type-@option.Value">@option.Text</label>
+                            </div>
+                        }
+                        <span class="hint">@T["A confirmed booking of these appointment types makes a work order of this type, at the booked time, for the customer who booked; rescheduling moves it and canceling cancels it."]</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Finishing the job"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <div class="form-check">
+                        <input asp-for="RequiresSignature" type="checkbox" class="form-check-input" />
+                        <label asp-for="RequiresSignature" class="form-check-label">@T["The customer must sign"]</label>
+                        <span class="hint dashed">@T["A work order of this type can't be completed until someone signs for the work."]</span>
+                    </div>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="RequiredPhotos" class="ocat-label">@T["Photos needed"]</label>
+                <div class="ocat-end">
+                    <input asp-for="RequiredPhotos" type="number" min="0" class="form-control" style="max-width: 12rem" />
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Checklists"]</div>
+        <div class="card-body">
+            @if (Model.ChecklistOptions.Count == 0)
+            {
+                <p class="hint">@T["No checklists yet."] <a asp-action="EditChecklist">@T["Add a checklist"]</a></p>
+            }
+            else
+            {
+                <div class="mb-3">
+                    @foreach (var option in Model.ChecklistOptions)
+                    {
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" name="ChecklistTemplateIds" value="@option.Value" id="checklist-@option.Value" checked="@option.Selected" />
+                            <label class="form-check-label" for="checklist-@option.Value">@option.Text</label>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Lines every work order starts with"]</div>
+        <div class="card-body">
+            <p class="hint">@T["Parts, labor and charges planned for the job. Leave a row empty to skip it."]</p>
+            <partial name="_LineRows" model="(Model.Lines, Model.StockItemOptions)" />
+        </div>
+    </div>
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+        <a asp-action="Index" asp-route-kind="@WorkOrderSettingsController.Types" class="btn btn-secondary">@T["Cancel"]</a>
+    </div>
+</form>

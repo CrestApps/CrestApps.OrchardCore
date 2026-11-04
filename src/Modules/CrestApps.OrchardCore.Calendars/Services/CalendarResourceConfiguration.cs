@@ -39,7 +39,7 @@ internal sealed class CalendarResourceConfiguration : IConfigureOptions<Resource
             .SetUrl(
                 "~/CrestApps.OrchardCore.Calendars/scripts/calendar-view.min.js",
                 "~/CrestApps.OrchardCore.Calendars/scripts/calendar-view.js")
-            .SetDependencies("fullcalendar")
+            .SetDependencies("fullcalendar-theme")
             .SetVersion("1.0.0");
 
         _manifest
@@ -47,7 +47,7 @@ internal sealed class CalendarResourceConfiguration : IConfigureOptions<Resource
             .SetUrl(
                 "~/CrestApps.OrchardCore.Calendars/scripts/calendar-picker.min.js",
                 "~/CrestApps.OrchardCore.Calendars/scripts/calendar-picker.js")
-            .SetDependencies("fullcalendar")
+            .SetDependencies("fullcalendar-theme")
             .SetVersion("1.0.0");
 
         _manifest
@@ -62,6 +62,7 @@ internal sealed class CalendarResourceConfiguration : IConfigureOptions<Resource
             .SetUrl(
                 "~/CrestApps.OrchardCore.Calendars/styles/calendar-view.min.css",
                 "~/CrestApps.OrchardCore.Calendars/styles/calendar-view.css")
+            .SetDependencies("fullcalendar-palette")
             .SetVersion("1.0.0");
     }
 

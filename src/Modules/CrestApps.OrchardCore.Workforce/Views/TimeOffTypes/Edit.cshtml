@@ -38,5 +38,17 @@
         <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="VisibleToWorkers" class="form-check-input" /><label asp-for="VisibleToWorkers" class="form-check-label">@T["Workers can request it"]</label><span class="hint dashed">@T["Turn off for a type only managers record."]</span></div></div></div>
         <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["In use"]</label></div></div></div>
     </div></div>
-    <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Save"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a></div></div>
+    @if (Model.StageOptions is not null)
+    {
+        <div class="card text-bg-theme mb-3">
+            <div class="card-header">@T["Time Tracker"]</div>
+            <div class="card-body">
+                <div class="ocat-wrapper"><label asp-for="StageId" class="ocat-label">@T["Stage"]</label><div class="ocat-end"><select asp-for="StageId" asp-items="Model.StageOptions" class="form-select" style="max-width: 24rem"></select><span class="hint">@T["Each day of approved time off of this type is kept in Time Tracker in this stage, and counts toward its categories, once the day comes. A full day starts at 9:00."]</span></div></div>
+            </div>
+        </div>
+    }
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a>
+    </div>
 </form>

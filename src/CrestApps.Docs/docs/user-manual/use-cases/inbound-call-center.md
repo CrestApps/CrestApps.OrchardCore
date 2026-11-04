@@ -18,9 +18,13 @@ When it is done:
 - after hours, callers hear a closed message and are held, sent to voicemail, moved to another queue or refused, as you choose;
 - agents answer in the soft phone and record the outcome; supervisors watch the queues live, listen in, and read reports.
 
+<YouTube video="use-case-inbound-call-center" title="Video overview of running an inbound call center, from the features to turn on to what each person does" />
+
 <YouTube video="contact-center-setup-walkthroughs" title="Video of adding a voice calls entry point that routes a number's calls to a queue, with business hours and voicemail settings" start={420} end={473} />
 
 ## Before you start
+
+<YouTube video="use-case-inbound-call-center" title="Video of the features, roles and phone provider an inbound call center needs" start={65} end={107} />
 
 | You need | Who sets it up |
 | --- | --- |
@@ -33,22 +37,36 @@ When it is done:
 
 ## Steps
 
+<YouTube video="use-case-inbound-call-center" title="Video of the set-up order: numbers, hours, queues, people and routing" start={107} end={149} />
+
 1. **Connect the phone provider.** The administrator connects the provider under **Settings > Communication > Telephony**, and picks the default caller ID. See [Phone and SMS setup](../telephony-settings.md).
 2. **List your numbers.** Add each number customers call under **Interaction Center > Management > Omnichannel Addresses**, with **Voice calls** ticked. See [Omnichannel addresses](../channel-endpoints.md).
-3. **Set your opening hours.** Create a calendar with your weekly hours and holidays under **Interaction Center > Management > Business hours**. See [Business hours](../business-hours.md).
+3. **Set your opening hours.** Click **Add calendar** under **Interaction Center > Management > Business hours**, and set your weekly hours and holidays. See [Business hours](../business-hours.md).
+
+   <YouTube video="use-case-inbound-call-center" title="Video of listing the numbers customers call and the opening hours" start={149} end={174} />
 4. **Upload hold music and prompts (optional).** Add your hold music and any recorded menu prompts under **Voice Media**. See [Voice media](../voice-media.md).
-5. **Create the queues.** Add a queue for each team, such as *Sales* and *Support*, under **Queues**, with its routing strategy, service level, business hours calendar, overflow, and what callers hear while they wait. Turn on callbacks here if you want them. Queue groups are optional and only organize reports. See [Queues and queue groups](../queues.md).
+5. **Create the queues.** Click **Add Queue** under **Queues** and add a queue for each team, such as *Sales* and *Support*. The form has cards: **General**, **Routing** (the **Routing strategy**, which defaults to *Longest idle*), **Service levels**, **Skills**, **Hours and overflow** (the **Business hours calendar**, the **After-hours action** and the overflow queue), **Limits**, **While callers wait** (welcome message, **Hold music**, announcements) and **Callback** (the **Callback key**). Turn on callbacks here if you want them.
+
+   <YouTube video="use-case-inbound-call-center" title="Video of creating a queue" start={174} end={214} /> Queue groups are optional and only organize reports. See [Queues and queue groups](../queues.md).
 6. **Decide who works each queue.** Create skills such as *Spanish*, then give each agent their queues, priorities and skills under **Agent entitlements**. Give each supervisor an entitlement record with the queues they supervise too. See [Skills and agent entitlements](../skills-and-entitlements.md).
+
+   <YouTube video="use-case-inbound-call-center" title="Video of adding a queue to an agent's entitlements" start={258} end={288} />
 7. **Review the break reasons.** Check the reason codes agents pick when they step away, and add your own. See [Agent states](../agent-states.md).
-8. **Route the number.** Add a **Voice calls** entry point under **Inbound entry points**: pick the number, set **Route to** to your main queue, pick the calendar and the closed action, write the welcome message, and choose where voicemail goes. Build a keypad menu if callers should choose a department. See [Inbound entry points and IVR menus](../entry-points-and-ivr.md).
+8. **Route the number.** Click **Add inbound entry point** under **Inbound entry points** and choose **Voice calls**. Enter a **Name** and pick the **Numbers** it answers, set **Route to** to *Queue* and pick the **Target queue**, pick the **Business hours calendar** and the **Closed action** (*Hold in queue*, *Voicemail*, *Overflow* or *Reject*), write the **Welcome message** and the **Closed message**, and choose where voicemail goes under **Deliver voicemail to**. Click **Build an IVR menu** if callers should choose a department.
+
+   <YouTube video="use-case-inbound-call-center" title="Video of routing a number to a queue with an inbound entry point" start={214} end={258} /> See [Inbound entry points and IVR menus](../entry-points-and-ivr.md).
 9. **Give people extensions (optional).** Short internal numbers let colleagues call and transfer to each other by extension or by name. See [Extensions](../extensions.md).
 10. **Set the house rules.** The administrator sets call recording and consent, and the outside numbers agents may transfer to, under **Settings > Contact Center**. See [Contact Center settings](../contact-center-settings.md).
 11. **Get the agents ready.** Each agent installs the phone app, signs in to their queues, and records a voicemail greeting. See [Browser extension and Windows app](../phone-apps.md), [Agent workspace](../agent-workspace.md) and [Voicemail](../voicemail.md).
+
+    <YouTube video="use-case-inbound-call-center" title="Video of what agents and supervisors do" start={288} end={332} />
 12. **Train agents on calls and wrap-up.** Agents answer, transfer and conference in the soft phone, then complete the activity with a disposition. See [Placing and handling calls](../calls.md), [Activities](../activities.md) and [Dispositions](../dispositions.md).
 13. **Supervise.** Supervisors watch the queues and agents, step into calls, and work the shared voicemail. See [Live dashboard](../live-dashboard.md) and [Voicemail](../voicemail.md).
 14. **Measure.** Use **Call insights**, **Queue usage** and **Agent productivity** to see how the line performs. See [Reports](../reports.md).
 
 ## Check that it works
+
+<YouTube video="use-case-inbound-call-center" title="Video of how to check that it works, and tips" start={332} end={383} />
 
 1. Have an agent sign in to the queue and set themselves **Available**.
 2. Call the number from another phone during opening hours. You should hear the welcome message and, if you built one, the menu.

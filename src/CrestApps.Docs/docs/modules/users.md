@@ -14,6 +14,8 @@ user_manual:
 
 Extends the Orchard Core Users module by adding functionality to cache users.
 
+<YouTube video="users-roles" title="Video overview of users, roles, names and avatars" />
+
 :::note[Note]
 This feature is enabled by dependency only.
 :::

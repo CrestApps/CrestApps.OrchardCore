@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Accounts;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using OrchardCore.DisplayManagement.Descriptors;
 using OrchardCore.Lists.ViewModels;
@@ -22,7 +23,7 @@ internal sealed class AccountListPartShapeTableProvider : IShapeTableProvider
                 if (displaying.Shape is ListPartNavigationAdminViewModel model &&
                     model.Container is not null &&
                     model.ContainerContentTypeDefinition is not null &&
-                    model.ContainerContentTypeDefinition.Parts.Any(x => x.PartDefinition?.Name == OmnichannelConstants.ContentParts.Account))
+                    model.ContainerContentTypeDefinition.Parts.Any(x => x.PartDefinition?.Name == AccountsConstants.ContentParts.Account))
                 {
                     displaying.Shape.Metadata.Alternates.Add(NavigationAccountAlternate);
                 }

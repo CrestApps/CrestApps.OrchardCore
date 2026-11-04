@@ -19,6 +19,8 @@ This page lists the problems people most often meet in the Report Builder, and w
 
 ## Menus, data and buttons
 
+<YouTube video="report-builder-administration" title="Video of the common Report Builder problems and their fixes" start={187} end={234} />
+
 | Problem | What to do |
 | --- | --- |
 | There is no **Report Builder** under **Reports** | The Report Builder feature may be off, or you may not have the *Build reports and manage own custom reports and views* permission. People who only run shared reports see **Shared Reports** instead, once a report is shared with them. Ask your administrator. |

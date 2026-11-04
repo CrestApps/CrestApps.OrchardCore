@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CrestApps Dispatch configuration",
+  "description": "The settings of the Dispatch module read from appsettings.json, in the OrchardCore section of the host or a tenant.",
+  "type": "object",
+  "properties": {
+    "OrchardCore": {
+      "type": "object",
+      "properties": {
+        "CrestApps": {
+          "type": "object",
+          "properties": {
+            "Dispatch": {
+              "type": "object",
+              "properties": {
+                "Mobile": {
+                  "type": "object",
+                  "description": "The technician app (the Technician Mobile feature).",
+                  "additionalProperties": false,
+                  "properties": {
+                    "OfflineDays": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "default": 2,
+                      "description": "How many days after today the app keeps visits for, offline."
+                    },
+                    "PingIntervalSeconds": {
+                      "type": "integer",
+                      "minimum": 10,
+                      "default": 60,
+                      "description": "How often the app sends the technician's position while they work, in seconds."
+                    },
+                    "LocationRetentionDays": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "default": 30,
+                      "description": "How long positions are kept, in days."
+                    },
+                    "ReceiptRetentionDays": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "default": 30,
+                      "description": "How long the records of the app's commands are kept, in days; a command sent again after that is applied again."
+                    },
+                    "ConsentNoticeVersion": {
+                      "type": "string",
+                      "default": "1",
+                      "description": "The version of the location notice. Change it when the notice changes, so technicians agree again."
+                    },
+                    "MaxFileKilobytes": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "default": 4096,
+                      "description": "The largest photo or signature accepted, in kilobytes."
+                    },
+                    "MaxCommandsPerSync": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "default": 200,
+                      "description": "The most commands taken in one sync; the app sends the rest next."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

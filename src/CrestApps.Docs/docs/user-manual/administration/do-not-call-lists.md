@@ -16,9 +16,13 @@ A **do-not-call list** holds phone numbers your company must not call. You can u
 
 <AskYourAdmin />
 
+<YouTube video="do-not-call-lists" title="Video overview of Do Not Call Lists: local lists, enforcement, imports and the national registries" />
+
 <YouTube video="site-administration-walkthroughs" title="Video of enabling the Local Do Not Call Registry and uploading a CSV list" start={260} end={286} />
 
 ## Where the lists are checked
+
+<YouTube video="do-not-call-lists" title="Video of where the lists are checked" start={57} end={102} />
 
 - **Contact imports.** When you [import contacts or leads](import-and-export.md), you can check the file against the lists you choose. Your administrator can make some lists mandatory for every import (see [Check every import](#check-every-import)).
 - **The dialer.** When a [dialer profile](../dialer-profiles.md) has **Respect do-not-call and communication preferences** turned on, every connected list and registry is checked before each call. A number on a list is not called.
@@ -27,6 +31,8 @@ A **do-not-call list** holds phone numbers your company must not call. You can u
 A registry that cannot answer, for example because it is unreachable, never counts as "not listed". An import skips that row and says why, and the dialer tries the record again in a later cycle.
 
 ## Upload a local list
+
+<YouTube video="do-not-call-lists" title="Video of uploading a local list" start={102} end={156} />
 
 The **Local Do Not Call Registry** keeps lists you upload yourself, organized by country.
 
@@ -39,6 +45,8 @@ The page returns right away and the list imports in the background. Its row show
 
 ### Prepare the file
 
+<YouTube video="do-not-call-lists" title="Video of preparing the CSV file" start={156} end={197} />
+
 - A CSV file with one phone number on each row, in a single column. If your list is a spreadsheet with several columns or tabs, save just the phone number column as a CSV file first.
 - A header row such as *Phone Number* is optional. It is skipped and not counted as an error.
 - Numbers that do not start with `+` are read as numbers of the country you picked.
@@ -46,6 +54,8 @@ The page returns right away and the list imports in the background. Its row show
 - Blank rows, rows with more than one value, and repeated numbers are skipped and counted as rejected records.
 
 ### Follow and manage lists
+
+<YouTube video="do-not-call-lists" title="Video of following and managing lists" start={197} end={265} />
 
 Each list shows its file name, country, status, how many records were imported, how many were rejected, and when it was last processed.
 
@@ -76,6 +86,8 @@ A background task checks every 10 minutes for lists that are waiting or stuck, f
 
 ## Check every import
 
+<YouTube video="do-not-call-lists" title="Video of making every import check the lists" start={265} end={299} />
+
 Use this when company policy says every contact import must be checked, so nobody can forget.
 
 <YouTube video="site-administration-walkthroughs" title="Video of uploading a local DNC list and enforcing it globally" start={289} end={310} />
@@ -89,6 +101,8 @@ On the import screen, an enforced list shows an **Enforced** badge, and the do-n
 
 ## What people see when they import contacts
 
+<YouTube video="do-not-call-lists" title="Video of the do-not-call section of the import screen" start={299} end={358} />
+
 On the import screen for a contact or lead type, the **Do-not-call registry** section offers:
 
 | Field | What it does |
@@ -100,6 +114,8 @@ On the import screen for a contact or lead type, the **Do-not-call registry** se
 See [Contacts](../contacts.md) for the full contact import.
 
 ## Connect a national registry
+
+<YouTube video="do-not-call-lists" title="Video of connecting the national registries" start={358} end={428} />
 
 Each national registry needs an account with the registry's operator. Get the account details first, then:
 

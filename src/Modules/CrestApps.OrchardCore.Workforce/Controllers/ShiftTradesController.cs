@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore.Calendars.Core;
 using CrestApps.OrchardCore.Calendars.Models;
+using CrestApps.OrchardCore.Teams.Models;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using CrestApps.OrchardCore.Workforce.ViewModels;
@@ -384,7 +386,7 @@ public sealed class ShiftTradesController : Controller
         }
     }
 
-    private async Task<(ShiftTrade Trade, WorkforceTeam Team, IActionResult Denied)> AuthorizeTradeAsync(string id)
+    private async Task<(ShiftTrade Trade, Team Team, IActionResult Denied)> AuthorizeTradeAsync(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.ApproveShiftTrades))
         {

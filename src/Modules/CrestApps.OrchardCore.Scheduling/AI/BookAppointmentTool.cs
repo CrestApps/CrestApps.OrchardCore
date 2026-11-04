@@ -70,6 +70,7 @@ public sealed class BookAppointmentTool : SchedulingAIToolBase
             Notes = Read(arguments, "notes"),
             Source = "AI",
             Actor = "AI",
+            SelfService = !await CanManageAsync(arguments.Services),
         }, cancellationToken);
 
         if (!result.Succeeded)
@@ -77,9 +78,12 @@ public sealed class BookAppointmentTool : SchedulingAIToolBase
             return "Not booked: " + string.Join(" ", result.Errors);
         }
 
+        var resources = await arguments.Services.GetRequiredService<SchedulingResourceStore>().GetAsync(result.Appointment.ResourceIds, cancellationToken);
+
         return JsonSerializer.Serialize(new
         {
             appointmentId = result.Appointment.ItemId,
+            with = result.Appointment.ResourceIds.Select(id => resources.FirstOrDefault(resource => resource.ItemId == id)?.Name).Where(name => name is not null).ToList(),
             manageCode = result.Appointment.ManageToken,
             status = result.Appointment.Status == AppointmentStatus.Requested ? "Requested: waits for confirmation" : result.Appointment.Status.ToString(),
             start = await LocalAsync(arguments.Services, result.Appointment.StartUtc),

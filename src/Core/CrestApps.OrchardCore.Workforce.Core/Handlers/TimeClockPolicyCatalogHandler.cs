@@ -85,6 +85,9 @@ internal sealed class TimeClockPolicyCatalogHandler : CatalogEntryHandlerBase<Ti
             context.Result.Fail(new ValidationResult(S["Overtime starts after more than 0 hours, up to 24 a day or 168 a week."], [nameof(TimeClockPolicy.WeeklyOvertimeHours)]));
         }
 
+        item.Holidays = (item.Holidays ?? []).Distinct().Order().ToList();
+        item.WeekendDays = (item.WeekendDays ?? []).Where(Enum.IsDefined).Distinct().ToList();
+
         if (item.DailyOvertimeHours.HasValue && item.DailyDoubleTimeHours.HasValue && item.DailyDoubleTimeHours <= item.DailyOvertimeHours)
         {
             context.Result.Fail(new ValidationResult(S["Double time starts after daily overtime."], [nameof(TimeClockPolicy.DailyDoubleTimeHours)]));

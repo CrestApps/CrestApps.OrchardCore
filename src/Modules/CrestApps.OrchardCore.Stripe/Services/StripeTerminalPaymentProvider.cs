@@ -89,7 +89,7 @@ public sealed class StripeTerminalPaymentProvider : ICheckoutPaymentProvider, IC
                 {
                     Amount = StripeCurrency.ToMinorUnits(attempt.ExpectedAmount + attempt.ExpectedTaxAmount, attempt.Currency),
                     Currency = attempt.Currency.ToLowerInvariant(),
-                    PaymentMethodTypes = ["card_present"],
+                    AllowedPaymentMethodTypes = ["card_present"],
                     CaptureMethod = "automatic",
                     Metadata = new Dictionary<string, string>
                     {

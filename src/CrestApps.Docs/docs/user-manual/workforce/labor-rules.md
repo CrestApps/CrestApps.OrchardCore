@@ -10,7 +10,7 @@ Labor rules keep schedules within the limits your teams must follow, such as the
 
 | | |
 | --- | --- |
-| **Menu** | Workforce > Labor Rules, Workforce > Rule Overrides, Workforce > Predictability Pay |
+| **Menu** | Workforce > Labor Rules, Workforce > Rule Overrides, Workforce > Time Management > Predictability Pay |
 | **Permission** | Manage labor rules, Override labor rules, Approve predictability pay, Manage the whole workforce |
 | **Feature** | Workforce Labor Rules (it needs Workforce Shift Planning) |
 
@@ -29,6 +29,7 @@ Open **Workforce > Labor Rules** and choose **Add rule set**.
 | **Name** | The set's name, such as *California hourly staff*. |
 | **Jurisdiction** | The place or law the set follows, as a reminder. |
 | **Teams** | The teams it applies to, with the teams under them. |
+| **Workers** | Workers who follow the set on their own, whatever their teams, such as a minor or someone under a special agreement. Search them by name. |
 | **Employment types** | Leave empty for everyone, or pick types such as part time. |
 
 A worker gets one rule set: the one given to them alone, or else the nearest team's, starting with their own team and going up. A set limited to some employment types is skipped for other workers, who get the next set up the tree.
@@ -88,7 +89,7 @@ Add the **Predictability pay** rule to a rule set to record a premium when the e
 
 Changes a worker asked for, such as trades, claims and time off, owe nothing.
 
-Open **Workforce > Predictability Pay** to see what is owed for the teams you manage. Choose **Approve** to have it paid, or give the reason it isn't owed, such as an emergency closure, and choose **Waive**. Filter by status to see approved, waived and exported entries.
+Open **Workforce > Time Management > Predictability Pay** to see what is owed for the teams you manage. Choose **Approve** to have it paid, or give the reason it isn't owed, such as an emergency closure, and choose **Waive**. Filter by status to see approved, waived and exported entries.
 
 ## Permissions
 

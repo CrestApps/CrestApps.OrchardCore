@@ -18,6 +18,7 @@ The admin screens are described in the User Manual: [Contact Center Adherence](.
 | `CrestApps.OrchardCore.Workforce.Forecasting` | Workforce Forecasting | Workforce for Contact Center, `CrestApps.OrchardCore.Workforce.ShiftPlanning`, `CrestApps.OrchardCore.ContactCenter.IntervalStatistics` |
 | `CrestApps.OrchardCore.Workforce.Intraday` | Workforce Intraday | `CrestApps.OrchardCore.Workforce.Forecasting` |
 | `CrestApps.OrchardCore.Workforce.Adherence` | Workforce Adherence | Workforce for Contact Center, `CrestApps.OrchardCore.Workforce.ShiftPlanning`, `CrestApps.OrchardCore.ContactCenter.IntervalStatistics` |
+| `CrestApps.OrchardCore.Workforce.ContactCenter.TimeTracker` | Contact Center Time Tracker | Workforce for Contact Center, `CrestApps.OrchardCore.ContactCenter.IntervalStatistics`, `CrestApps.OrchardCore.TimeTracker` |
 
 ## Agents and workers
 
@@ -30,6 +31,14 @@ An agent and a worker are the same person when they share a user account. `Agent
 - **Sign-in** (source `SignIn`, or Offline to any other state): the agent's worker is clocked in with source `ContactCenter`, at the time of the change, unless they are already clocked in another way.
 - **Sign-out** (source `SignOut`, or any state to Offline): the worker is clocked out, but only when the clock-in that opened their stretch came from the contact center.
 - Each punch carries `contact-center:<event id>` as its idempotency key, so an event delivered twice punches once. A punch the time clock refuses (no policy, the contact center not allowed by the policy) is logged and skipped.
+
+## Agent states in Time Tracker
+
+The **Contact Center Time Tracker** feature keeps every agent's states in [Time Tracker](./time-tracker.md), for any agent with a user, worker or not.
+
+- **Stages.** `ContactCenterTimeStages` (a site setting, exported with the **Contact Center time stages** deployment step) holds the stage of each `AgentPresenceStatus` by name, and of each reason by name, which comes first. A state with no stage isn't tracked. When the feature is turned on, `ContactCenterTimeStageSeeder` fills in the usual states, using a stage with the same name or making it: Available (also offered work and asking for a break), On a call, Wrap-up, Meeting and Training count toward `Paid` and `Worked`; Break and Away toward nothing until the site says. Do not disturb, after hours and offline have no stage. The stages are set on **Time Tracker > Contact Center Stages**.
+- **Sync.** `AgentStateTimeTrackerHandler` (an `IContactCenterEventHandler`) runs on every `AgentStateChanged` event. `ContactCenterTimeTrackerSync` reads the agent's state log (`IAgentStateHistory`) from ten minutes before the change to now and calls `ITimeTrackerService.SyncAsync` with `ReplacesRangeOnly`, so only those minutes are rebuilt. The entry running into them ends at their start, or goes on in the same stage. Back-to-back states in one stage make one entry, the reason is the entry's note, and the state the agent is in now stays open. It rebuilds from the log, so an event delivered twice changes nothing.
+- **Over the time clock.** The entries are kept under `Workforce.ContactCenter` with `Overrides` set to the time clock, so a worker's clocked work is cut around their states while they are signed in, and the time clock's next sync goes around them too. Time Tracker shows them as kept by the Contact Center's agent states, read-only.
 
 ## Adherence
 
@@ -52,7 +61,11 @@ An agent and a worker are the same person when they share a user account. `Agent
 
 The workflow event's input has `WorkerId`, `WorkerName`, `TeamId`, `Status`, `Reason`, `ScheduledActivity`, `OutSinceUtc` and `Minutes`.
 
-### Reports
+### My Work
+
+With the Workforce My Work Portal feature on, `MyAdherenceController` serves `Admin/my-work/adherence`: the signed-in worker's latest 14 saved `AdherenceDay`s with time scheduled, newest first, with adherence, conformance and the minutes out of adherence. `MyAdherenceLinkProvider` (an `IMyWorkLinkProvider`) adds **Adherence** to the My Work menu once the worker has a saved day.
+
+## Reports
 
 The **Workforce** report data source gains two data sets, limited to the reader's teams and to readers with **View adherence**:
 
@@ -108,6 +121,8 @@ When the AI feature is on, two tools join the Workforce tools:
 - `workforceOutOfAdherence` (**Workforce Adherence**, needs **View adherence**): the agents scheduled now in the teams the user manages, or a named team, and those out of adherence, with the scheduled activity, their state and reason, the minutes out and whether an alert was raised.
 
 ## Recipes
+
+The **Adherence rule sets** and **Forecasting setup** deployment steps export what the `WorkforceAdherence` and `WorkforceForecasting` steps import, with the records' ids; the stages of agent states go with the **Contact Center time stages** settings step.
 
 Each feature has a recipe step that matches records by id or name, so a second run updates them, and names the records it refers to. A name that doesn't exist is reported and its record skipped.
 

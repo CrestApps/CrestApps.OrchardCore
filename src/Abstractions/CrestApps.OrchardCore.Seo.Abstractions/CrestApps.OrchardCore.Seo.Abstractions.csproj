@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Seo</RootNamespace>
+    <Title>CrestApps OrchardCore SEO Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Public contracts for schema.org structured data: the JSON-LD graph, the providers other modules implement to
+      describe their content items with schema.org types, and the manager that builds the JSON-LD for a page or for
+      an agent's answer.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS SEO SchemaOrg JsonLd StructuredData Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
+  </ItemGroup>
+
+</Project>

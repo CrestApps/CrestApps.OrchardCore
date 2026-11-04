@@ -16,7 +16,13 @@ When products are sold online, visitors can add them to a **cart** from your pro
 
 <AskYourAdmin />
 
+This video shows the buyer's account, checking out as a guest, how a guest finds an order, and how a guest order becomes an account:
+
+<YouTube video="buyer-account-guest-orders" title="Narrated video overview of the buyer account and guest orders" />
+
 ## What buyers see
+
+<YouTube video="carts-checkout" title="Video of Add to cart, the mini cart and the cart page" start={93} end={139} />
 
 - **Add to cart** appears on each product that can be bought online, on its listing card and its page. Buyers choose how many, and the option when a product has several prices. Products that are only listed, and subscription plans, do not show it; plans have their own **Sign up** button.
 - The **Cart** link in the navigation bar shows how many items are in the cart. Only themes with a navigation bar, such as **TheTheme**, show it; in any theme, the message shown after adding a product has a **View cart** link.
@@ -35,7 +41,11 @@ With the [Shipping](shipping.md) feature on, an order with goods shows where it 
 
 ## Finding orders
 
-**Commerce > Orders** lists the orders placed on your site, newest first. Search by order number or by the customer's email, and filter by status:
+This video walks through finding, managing, refunding and creating orders, and the settings and emails around them:
+
+<YouTube video="orders" title="Video overview of orders" />
+
+**Commerce > Orders** lists the orders placed on your site, newest first. Search by order number or by the customer's whole email address, and filter by status. The status drop-down starts on **Placed**, which lists the paid orders and the ones awaiting payment, and also offers **Paid**, **Awaiting payment**, **Canceled**, **Drafts** and **Any status**:
 
 | Status | Meaning |
 | --- | --- |
@@ -64,6 +74,8 @@ An order paid offline, by bank transfer, cash on delivery or Pay Later, reads **
 
 ## Offer one more thing at checkout
 
+<YouTube video="orders-quotes-disputes" title="The order bump" start={51} end={88} />
+
 Under **Settings > Commerce > Orders**, **Order bump** offers a product on the payment step, such as a small item that goes with most orders. Choose the **Product offered**, an optional **Discount** and a **Headline**. Buyers tick one box to add it, and the total changes before they pay. It isn't offered on orders that already have it, or while it's out of stock. Clear the product to stop the offer.
 
 ## Manage an order
@@ -71,6 +83,8 @@ Under **Settings > Commerce > Orders**, **Order bump** offers a product on the p
 Open an order from **Commerce > Orders**. The **Manage** box on the right does what you need, and every action is written in the order's **Notes** with who did it.
 
 ### Print an invoice or a packing slip
+
+<YouTube video="orders" title="Video of the order page, with its shipments, invoice, packing slip and notes" start={139} end={188} />
 
 Above the order's details, **Invoice** and **Packing slip** open a page to print, with **Print invoice** or **Print packing slip** at the top. Your browser's print dialog can also save it as a PDF.
 
@@ -83,6 +97,8 @@ The store's name, logo, address, contact details and footer come from **Settings
 Buyers print their own invoice too: an **Invoice** button on their order's page, in their account or on the order link a guest has.
 
 ### Refund an order
+
+<YouTube video="orders" title="Video of refunding and canceling an order, and sending its confirmation again" start={188} end={227} />
 
 1. Under **Refund**, enter the **Amount**. It starts at everything that can still be refunded.
 2. Optionally give a **Reason**, such as *Scratched strap*. It is kept with the refund and in the notes.
@@ -109,6 +125,8 @@ Click **Send the confirmation again** to email the order confirmation to the cus
 
 ### Disputes
 
+<YouTube video="orders-quotes-disputes" title="Disputes and risky payments" start={249} end={294} />
+
 When a buyer disputes a card payment with their bank (a chargeback), Stripe tells your site and the order shows it: a red **Disputed** box under the items, with the amount, why the buyer disputed it (for example *they don't recognize the payment*) and its status, such as *needs your response*. The orders list marks the order **Disputed** while it is open, and a note records each change.
 
 Answer a dispute from your Stripe dashboard before its deadline, with evidence such as the shipping tracking: otherwise the money goes back to the buyer. When it is decided, the box says *won, the money stays with you* or *lost, the money went back to the payer*. It needs Stripe's webhook, which Stripe Connect sets up.
@@ -122,6 +140,8 @@ Stripe's fraud checks rate every card payment. An order whose payment was rated 
 Write a note under **Notes** and click **Add note** to keep something for the store, such as *Called the customer about the delivery date*. Customers never see notes. Refunds, cancellations and resent confirmations add their own notes, with who did them.
 
 ## Create an order for a buyer
+
+<YouTube video="orders" title="Video of creating an order for a buyer" start={227} end={267} />
 
 Put an order together for a buyer yourself, such as one taken over the phone, and email them an invoice to pay it online.
 
@@ -142,9 +162,13 @@ Sending the invoice needs your site's email to be set up; the draft's editor war
 
 ### Add items to a paid order
 
+<YouTube video="orders-quotes-disputes" title="Add items to a paid order" start={194} end={221} />
+
 A paid order can't be changed, but on its page **Add items** starts a new order for the same buyer, marked *These items are added to order ...*. Fill it in and send its invoice like any other; its page links back to the paid order. To take items off a paid order, refund them, or let the buyer [return them](returns.md).
 
 ## Quotes
+
+<YouTube video="orders-quotes-disputes" title="Quotes" start={88} end={110} />
 
 Let signed-in buyers ask for a quote instead of checking out, such as for a large or trade order.
 
@@ -157,7 +181,15 @@ The buyer accepts the quote by paying it, from the email or their orders, before
 
 Sending a quote needs your site's email to be set up.
 
+## Do something when an order is paid
+
+With Orchard Core's **Workflows** on, the store tells your workflows what happens, so you can email someone, call another system or add a note without code. Start a workflow from **Order Paid**, **Order Canceled** or **Order Refunded**. Orders also adds two ready-made workflows under **Tools > Recipes**: **Automation: thank-you email** (turned on) and **Automation: canceled order alert** (turned off until you set the address it goes to).
+
+The other parts of the store add events of their own: **Subscription Started**, **Renewed**, **Past Due**, **Canceled** and **Expired**; **Stripe Payment Received**, **Payment Failed**, **Payment Refunded** and **Dispute Created**, among others; and the setup wizard's **Wizard Started**, **Step Displayed**, **Completed** and **Failed**. To send the same news to another system as soon as it happens, without a workflow, use [Webhooks](webhooks.md). The technical guides list every event with what it carries: [Orders](../../modules/carts-and-orders.md#workflow-events), [Subscriptions](../../modules/subscriptions.md) and [Payments](../../modules/payments.md#workflow-events).
+
 ## Write your own emails
+
+<YouTube video="orders" title="Video of the order settings, the order emails and the receipt settings" start={331} end={379} />
 
 On **Settings > Commerce > Emails**, write the emails your store sends about orders in your own words.
 
@@ -167,6 +199,8 @@ On **Settings > Commerce > Emails**, write the emails your store sends about ord
 In a template, `{{ Content }}` is the email as the store would send it, so a body of *Thanks so much!* followed by `{{ Content }}` adds a line above it. `{{ Order.OrderNumber }}` and `{{ Order.CustomerName }}` put in the order's details, and each email lists its own links, such as `{{ PayUrl }}`. A template that has a mistake can't be saved, and one that can't be filled in sends the store's own email instead.
 
 ## Store reports
+
+<YouTube video="commerce-reports-dashboard" title="Store reports" start={84} end={135} />
 
 With the **Reports** feature on, **Reports > Commerce** answers what the store sold. Choose a period at the top, such as *Today* or *Last Month*, and click **Show**; every report exports to CSV, and to Excel with Reports (OpenXml).
 
@@ -195,9 +229,17 @@ Amounts in different currencies are never added together: each currency gets its
 
 ### On the dashboard
 
-With the **Admin Dashboard** feature on, add the **Sales Summary** widget under **Manage Dashboard**. It shows your sales today, over the last 7 and 30 days, and the orders to ship.
+<YouTube video="commerce-reports-dashboard" title="Reports on the dashboard" start={235} end={298} />
+
+With the **Admin Dashboard** feature on, open **Manage Dashboard > Add Widget**. Each report above has a ready-made widget, such as **Sales Overview**, **Sales Trend**, **Top Selling Products**, **Orders to Ship**, **Refunds**, **Payment Disputes** and **Low Stock**, and the **Report** widget shows any report you may view. Set the widget's **Period** (last 30 days moves with the clock), what to **Show** (figures, tables or charts), how many **Rows per table**, and **Keep for (minutes)**, how long it keeps what it shows. A person sees a widget only when they may view its report.
+
+The **Sales Summary** widget shows your sales today, over the last 7 and 30 days, and the orders to ship.
+
+To build your own report, run the **Reports: store reports to adapt** recipe under **Tools > Recipes**. It adds the order reports to **Reports > Report Builder**, in the **Store** group, where you can run, change and save them as your own.
 
 ## Wishlists
+
+<YouTube video="buyer-account-guest-orders" title="Video of the buyer's account, with the wishlist" start={81} end={144} />
 
 With **Wishlists** on, a signed-in shopper can click **Save to wishlist** on a product's page, and find what they saved under **Wishlist** in their account, each with its **Add to cart**. A product you stop selling drops off their wishlist.
 
@@ -232,14 +274,47 @@ Under **Settings > Commerce > Orders**, turn on **Email buyers who leave a check
 
 ## Guests and their orders
 
+<YouTube video="buyer-account-guest-orders" title="Video of checking out as a guest, and the order link" start={144} end={204} />
+
 A guest has no account to sign in to, so they reach their order through a **link**:
 
 - The confirmation page and the confirmation email give a guest a link that opens their order: what they bought, the total, the billing address, and a **Pay now** button when something is still owed. A link works for 60 days. A changed or expired link shows *This order link no longer works* and nothing about any order.
 - **Track your order** (`/orders/track` on your site) asks for the order number and the email the order was placed with, and opens the paid order's page, with its shipments and where each parcel is. Both must match, and tries are limited, so a number alone shows nothing. **Find my order** links to it.
 - **Find my order** (`/orders/find` on your site) asks for an email and emails a link to each order placed with it in the last year. It always answers the same way, whether or not there are orders, so it never tells anyone who has bought from you. It is limited to a few requests per visitor and per email.
-- When a guest later creates an account with the same email and confirms it, their guest orders join the account and appear under **My Orders**. See [Customers](customers.md#guests-who-create-an-account).
+- A guest's order page ends with *Create an account with the same email to see this order and future ones in your account*, with a **Create an account** link, when your site lets visitors register. When a guest later creates an account with the same email and confirms it, their guest orders join the account and appear under **My Orders**. See [Customers](customers.md#guests-who-create-an-account).
+
+<YouTube video="buyer-account-guest-orders" title="Video of turning a guest order into an account" start={248} end={281} />
 
 Link to **Track your order** and **Find my order** from your site's footer or help page so guests can find them.
+
+<YouTube video="buyer-account-guest-orders" title="Video of Track your order and Find my order" start={204} end={248} />
+
+## Automate with workflows
+
+With **Workflows** on, the moments of your store start workflows, which can send an email, call a web address, change content and more. This video shows the recipes, the editor, turning a workflow on and testing it:
+
+<YouTube video="commerce-automation" title="Narrated video overview of commerce automation" />
+
+| Event | Starts when | Feature |
+| --- | --- | --- |
+| **Order Paid** | An order is paid. | Orders |
+| **Order Canceled** | An order is canceled, with why. | Orders |
+| **Order Refunded** | Money is given back for an order. | Orders |
+| **Low Stock** | A product or variant runs low or sells out. | Inventory |
+| **Shipment Created**, **Shipped**, **Delivered**, **Returned** | A shipment of an order changes. | Shipping |
+| **Stripe** events, such as **Stripe Payment Failed** and **Stripe Dispute Created** | Stripe tells your site. | Stripe |
+
+In a workflow's editor (**Design > Workflows**), **Add Event** shows them under **Commerce** and **Stripe**. Each event's details, such as the order number, total, customer email and the reason, are there for its tasks.
+
+Three recipes under **Tools > Recipes** add workflows to start from: **Automation: thank-you email** (on), **Automation: canceled order alert** and **Automation: low stock alert** (both added off). Run one, then open the workflow, set the address it goes to, and turn it on under **Properties** with **Enabled**. **Delete successfully completed workflows** keeps your list tidy; untick it to keep every run under the workflow's **Instances**.
+
+<YouTube video="commerce-automation" title="Video of the ready-made automation recipes" start={85} end={150} />
+
+<YouTube video="commerce-automation" title="Video of the workflow editor" start={150} end={208} />
+
+<YouTube video="commerce-automation" title="Video of turning a workflow on and testing it" start={208} end={267} />
+
+Workflows act inside your site. To tell another system, such as your accounting software, use [Webhooks](webhooks.md).
 
 ## Order confirmations
 

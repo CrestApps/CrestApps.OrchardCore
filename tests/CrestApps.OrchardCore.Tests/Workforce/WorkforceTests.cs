@@ -12,6 +12,10 @@ using CrestApps.OrchardCore.Scheduling.Services;
 using CrestApps.OrchardCore.Skills;
 using CrestApps.OrchardCore.Skills.Core;
 using CrestApps.OrchardCore.Skills.Core.Indexes;
+using CrestApps.OrchardCore.Teams;
+using CrestApps.OrchardCore.Teams.Core.Indexes;
+using CrestApps.OrchardCore.Teams.Models;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.Core;
@@ -116,7 +120,7 @@ public sealed class WorkforceTests
         Assert.NotNull(calendar);
         Assert.Equal(WorkforceConstants.CalendarType, calendar.Type);
         Assert.Equal("Billing and Payments", calendar.Name);
-        Assert.Equal(calendar.ItemId, savedTeam.CalendarId);
+        Assert.Equal(calendar.ItemId, savedTeam.GetWorkforceSettings().CalendarId);
     }
 
     [Fact]
@@ -406,7 +410,7 @@ public sealed class WorkforceTests
         Assert.Equal(["9:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00"], slots.Select(slot => CalendarTime.ToLocal(slot.StartUtc, "America/New_York").ToString("H:mm", null)));
     }
 
-    internal static Task<CalendarTestHarness> CreateAsync(Action<IServiceCollection> configure = null, Func<ISchemaBuilder, Task> schema = null, IEnumerable<IIndexProvider> indexProviders = null)
+    internal static Task<CalendarTestHarness> CreateAsync(Action<IServiceCollection> configure = null, Func<ISchemaBuilder, Task> schema = null, IEnumerable<IIndexProvider> indexProviders = null, IEnumerable<string> collections = null)
     {
         return CalendarTestHarness.CreateAsync(
             services =>
@@ -419,6 +423,7 @@ public sealed class WorkforceTests
             async schemaBuilder =>
             {
                 await SkillsIndexSchema.CreateAsync(schemaBuilder);
+                await TeamsIndexSchema.CreateAsync(schemaBuilder);
                 await SchedulingIndexSchema.CreateAsync(schemaBuilder);
                 await WorkforceIndexSchema.CreateAsync(schemaBuilder);
                 await ShiftPlanningIndexSchema.CreateAsync(schemaBuilder);
@@ -434,6 +439,7 @@ public sealed class WorkforceTests
             },
             new IIndexProvider[] { new SchedulingResourceIndexProvider(), new AppointmentTypeIndexProvider(), new AppointmentIndexProvider(), new WaitlistEntryIndexProvider() }
                 .Concat(SkillsIndexProviders.All())
+                .Concat(TeamsIndexProviders.All())
                 .Concat(WorkforceIndexProviders.All())
                 .Concat(ShiftPlanningIndexProviders.All())
                 .Concat(TimeOffIndexProviders.All())
@@ -442,10 +448,10 @@ public sealed class WorkforceTests
                 .Concat(TimeClockIndexProviders.All())
                 .Concat(indexProviders ?? [])
                 .ToArray(),
-            [SkillsConstants.CollectionName, SchedulingConstants.CollectionName, WorkforceConstants.CollectionName]);
+            new[] { SkillsConstants.CollectionName, TeamsConstants.CollectionName, SchedulingConstants.CollectionName, WorkforceConstants.CollectionName }.Concat(collections ?? []).ToArray());
     }
 
-    internal static Task<WorkforceTeam> AddTeamAsync(CalendarTestHarness harness, string name, TeamKind kind, string parentId = null)
+    internal static Task<Team> AddTeamAsync(CalendarTestHarness harness, string name, TeamKind kind, string parentId = null)
     {
         return harness.RunAsync(async services =>
         {

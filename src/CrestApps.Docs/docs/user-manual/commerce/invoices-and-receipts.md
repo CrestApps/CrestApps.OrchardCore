@@ -19,6 +19,10 @@ An **invoice** tells a customer what they owe and gives them a link to pay it. A
 
 <YouTube video="commerce" title="Narrated video of an invoice, its pay link, and a customer paying through the link" start={452} end={501} />
 
+This video shows how to brand invoices and receipts, send an invoice, how a customer pays from its link, and the receipts and refund notices:
+
+<YouTube video="invoices-receipts" title="Narrated video overview of invoices and receipts" />
+
 ## Invoice numbers
 
 A transaction gets an **invoice number** the first time the customer is told about a payment they pay themselves: when an administrator clicks [Send invoice](transactions.md#send-the-invoice-now), or with the first [payment reminder](transactions.md#payment-reminders) for it, either the notice that a payment is coming due or the first reminder once it is due. Numbers run in order across the whole site: **INV-1001**, **INV-1002**, and so on.
@@ -30,6 +34,8 @@ A transaction gets an **invoice number** the first time the customer is told abo
 Once a transaction has an invoice number, it shows as **Invoice** on the transaction's page, for administrators and for the customer.
 
 ## Pay from a reminder
+
+<YouTube video="invoices-receipts" title="Video of a customer paying from the link" start={166} end={188} />
 
 Every reminder for a payment the customer pays themselves carries a **link that pays it without signing in**. Email reminders show it as a button, such as **Pay USD 50.00**.
 
@@ -54,6 +60,8 @@ The page says instead:
 | *This payment link no longer works* | The link is more than 60 days old, was changed, or the payment no longer exists. The customer can sign in and pay from **My Transactions**, or ask you for a new link. |
 
 ## Print an invoice
+
+<YouTube video="invoices-receipts" title="Video of sending, printing and copying the link of an invoice" start={119} end={166} />
 
 The invoice page shows the invoice exactly as it prints.
 
@@ -87,6 +95,8 @@ The link works for 60 days, and a new one is made each time you open the page. I
 
 ## Receipts
 
+<YouTube video="invoices-receipts" title="Video of recording a payment and its receipt" start={188} end={234} />
+
 With the **Send Payment Receipts** feature on, the customer is sent a receipt after **every payment** on a transaction, however it was paid: online through checkout or a pay link, charged automatically to a saved card, or recorded by an administrator with **Record payment** or **Mark as paid**.
 
 - Each receipt gets its own number, in order across the site: **R-1001**, **R-1002**, and so on. The number never changes, so a reprinted receipt shows the number the customer was sent.
@@ -112,6 +122,8 @@ A receipt shows:
 
 ## Refund notices
 
+<YouTube video="invoices-receipts" title="Video of refund notices, the test payment badge and the Base url" start={234} end={262} />
+
 With the **Send Payment Receipts** feature on, when a refund of a payment on a transaction succeeds, the customer is told. The message is titled *Your refund of*, followed by the amount, and says the money went back to the card or account they paid with and can take a few business days to appear on their statement. The transaction's **Timeline** notes that the customer was told. A refund that an administrator settles by hand with **Mark settled** sends the same notice. See [Payments and Refunds](payments-and-refunds.md).
 
 ## Links to the customer's pages
@@ -121,6 +133,8 @@ Receipts and reminders sent to a customer with an account carry a link to the do
 The links open the customer's pages in the admin (**Commerce > My Transactions**) unless your administrator sets them to open the [pages on the website](transactions.md#my-transactions-on-the-website). That is a setting in the site's configuration, not on a settings screen.
 
 ## Brand your invoices and receipts
+
+<YouTube video="invoices-receipts" title="Video of branding invoices and receipts" start={82} end={119} />
 
 Invoices and receipts share one set of branding settings.
 

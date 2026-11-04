@@ -114,6 +114,12 @@ public sealed class TimeOffRequest : CatalogItem, IModifiedUtcAwareModel
     public IList<string> FlaggedShiftEventIds { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the published shifts taken off the schedule for the time off, with their drafts, so canceling
+    /// the time off can put back the ones still to come.
+    /// </summary>
+    public IList<TimeOffRemovedShift> RemovedShifts { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the UTC time the request was created.
     /// </summary>
     public DateTime CreatedUtc { get; set; }

@@ -61,6 +61,17 @@ public class LaborRuleSetEditViewModel
     public int WorkerCount { get; set; }
 
     /// <summary>
+    /// Gets or sets the workers who have the set on their own, whatever their teams.
+    /// </summary>
+    public string[] WorkerIds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the workers that can be chosen.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> WorkerOptions { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the rules in the catalog, by key.
     /// </summary>
     [BindNever]

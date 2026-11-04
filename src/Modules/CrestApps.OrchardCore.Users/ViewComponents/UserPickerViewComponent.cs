@@ -34,6 +34,7 @@ public sealed class UserPickerViewComponent : ViewComponent
     /// <param name="buttonText">Optional toggle-button text.</param>
     /// <param name="searchPlaceholder">Optional search-box placeholder.</param>
     /// <param name="smallButton">Whether the toggle button uses the small button size. Pass <see langword="false"/> when the picker sits in a form row beside full-height inputs.</param>
+    /// <param name="required">Whether a user must be chosen, so a single picker doesn't list its empty choice.</param>
     public async Task<IViewComponentResult> InvokeAsync(
         string name,
         IEnumerable<string> selectedValues = null,
@@ -43,7 +44,8 @@ public sealed class UserPickerViewComponent : ViewComponent
         string label = null,
         string buttonText = null,
         string searchPlaceholder = null,
-        bool smallButton = true)
+        bool smallButton = true,
+        bool required = false)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
 
@@ -76,6 +78,7 @@ public sealed class UserPickerViewComponent : ViewComponent
             ButtonText = buttonText,
             SearchPlaceholder = searchPlaceholder,
             SmallButton = smallButton,
+            Required = required,
             InitialItemsJson = JsonSerializer.Serialize(initialItems),
         };
 

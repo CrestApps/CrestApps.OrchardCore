@@ -39,4 +39,9 @@ public enum WorkforceNotificationKind
     /// An attendance exception, or a decision on a punch correction.
     /// </summary>
     Attendance,
+
+    /// <summary>
+    /// A shift is about to start.
+    /// </summary>
+    ShiftReminder,
 }

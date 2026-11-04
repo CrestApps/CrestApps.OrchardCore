@@ -1,6 +1,7 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Localization;
@@ -64,7 +65,7 @@ internal sealed class TimeOffApprovals
 
         await _calendarService.EnsureCalendarAsync(team, cancellationToken);
 
-        var calendar = await _calendars.FindByIdAsync(team.CalendarId, cancellationToken);
+        var calendar = await _calendars.FindByIdAsync(team.GetWorkforceSettings().CalendarId, cancellationToken);
         var calendarEvent = await _eventManager.NewAsync(calendar, WorkforceConstants.EventTypes.TimeOff, cancellationToken: cancellationToken);
 
         ShiftEvents.Assign(calendarEvent, worker);
@@ -172,6 +173,11 @@ internal sealed class TimeOffApprovals
         {
             await _eventManager.CancelAsync(calendarEvent, Options(actor), cancellationToken);
         }
+
+        foreach (var handler in _handlers)
+        {
+            await handler.CanceledAsync(request, actor, cancellationToken);
+        }
     }
 
     /// <summary>
@@ -189,7 +195,7 @@ internal sealed class TimeOffApprovals
             Kind = WorkforceNotificationKind.TimeOff,
             Title = title,
             Body = string.IsNullOrWhiteSpace(note) ? days : $"{days}: {note.Trim()}",
-            Url = "my-work/time-off",
+            Url = "Admin/my-work/time-off",
         }, cancellationToken);
     }
 

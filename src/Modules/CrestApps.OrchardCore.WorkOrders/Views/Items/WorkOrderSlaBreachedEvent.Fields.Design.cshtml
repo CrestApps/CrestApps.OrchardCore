@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.WorkOrders.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<WorkOrderSlaBreachedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Work Order Service Level Breached"])
+    </h4>
+</header>

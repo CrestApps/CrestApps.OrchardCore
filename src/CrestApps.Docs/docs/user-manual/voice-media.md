@@ -18,9 +18,18 @@ The **voice media** library holds the audio your phone system plays: hold music 
 
 <AskYourAdmin />
 
+<YouTube video="contact-center-voice-media" title="Video overview of Voice Media: hold music and prompts" />
+
 <YouTube video="contact-center-setup-walkthroughs" title="Video of the voice media library and the upload form" start={194} end={218} />
 
+<YouTube video="contact-center-ai-voice-agent-inbound" title="Video of the two things called Voice Media: the Contact Center Voice Media feature and this library" start={205} end={245} />
+
+The **Voice Media** library on this page is not the **Contact Center Voice Media** feature. That feature (see **Tools > Features**) gives automated calls a live two-way audio path, which an AI voice agent needs for a live conversation. The library is part of the base Contact Center and has no feature of its own.
+<YouTube video="telephony-recording-storage" title="Video of the voice media master copy and where it is stored" start={112} end={139} />
+
 ## Add a clip
+
+<YouTube video="contact-center-voice-media" title="Video of adding a clip" start={61} end={114} />
 
 1. Open **Interaction Center > Management > Voice Media** and click **Add Voice Media**.
 2. Enter a **Name** that people will recognize, such as *Main hold music*, and an optional **Description**.
@@ -35,7 +44,19 @@ If the phone provider does not accept the upload, the clip is still saved with i
 The demo site is not connected to a phone provider, so the screencast shows the form without uploading a file.
 :::
 
+## Voice media after an export and import
+
+A clip travels in a [deployment plan](administration/import-and-export.md) as its library entry (name, description and format) but the audio does not: the **Contact Center Voice Media Library** step carries no audio. After an import on a site that does not have the file, the clip is listed with its **Master copy** badge, but the audio is not there: open the clip, choose the audio file again and save. The clip keeps its identifier, so the queues, entry points and menus that use it start playing it again. Deleting a clip deletes its master copy and every provider copy, so when two sites share one media store, deleting a clip in one removes the audio the other plays.
+
+<YouTube video="contact-center-configuration-deployment" title="Video of re-uploading the audio of an imported voice media clip" start={207} end={256} />
+
+:::caution[Two things with similar names]
+The **Voice Media** screen under **Interaction Center > Management** is the library of hold music and prompts described on this page. The **Contact Center Voice Media** feature on the **Features** page is a different thing: it adds live two-way audio for calls, such as AI voice conversations. You do not need that feature for hold music and recorded prompts.
+:::
+
 ## What the badges mean
+
+<YouTube video="contact-center-voice-media" title="Video of what the badges mean" start={114} end={152} />
 
 Each clip in the list shows what is stored for it:
 
@@ -58,11 +79,15 @@ The clip now has a master copy, and queues and IVR menus that use it are unchang
 
 ## Re-sync a clip with the phone provider
 
+<YouTube video="contact-center-voice-media" title="Video of replacing, protecting and re-syncing a clip" start={152} end={205} />
+
 Click **Re-sync media** on a clip to check that every enabled phone provider still holds it, and to send it to any provider that does not. Use it after you change provider, or when the provider has deleted a clip and you do not want to wait for the clip to be sent again on its own. You see a message for each provider: that it already held the clip, that it received a copy, or that it did not accept one.
 
 The button appears only on clips with a master copy. A clip with no master copy has nothing to send; upload its audio again instead.
 
 ## Use a clip
+
+<YouTube video="contact-center-voice-media" title="Video of using a clip" start={205} end={240} />
 
 - On a queue, pick it as **Hold music** on the *While callers wait* card. See [Queues](queues.md#while-callers-wait).
 - In an IVR menu, pick it as a menu's **Recorded prompt**. See [IVR menus](entry-points-and-ivr.md#build-an-ivr-menu).
@@ -70,6 +95,8 @@ The button appears only on clips with a master copy. A clip with no master copy 
 The first time a provider plays a clip it has no copy of, it is sent one from the master copy. A caller may notice a short delay on that first call only.
 
 ## Delete a clip
+
+<YouTube video="contact-center-voice-media" title="Video of deleting a clip" start={240} end={277} />
 
 Deleting a clip removes its master copy and every provider's copy. Queues and IVR menus that pointed at it fall back to their spoken text or to silence, so update them first.
 

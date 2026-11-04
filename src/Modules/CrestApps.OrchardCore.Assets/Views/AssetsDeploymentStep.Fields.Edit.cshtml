@@ -1,0 +1,13 @@
+@using CrestApps.OrchardCore.Assets.Recipes
+@model AssetsDeploymentStepViewModel
+
+<h5>@T["Asset types and assets"]</h5>
+<p class="hint">@T["Every asset type, and every asset with its owner, place and parent."]</p>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="IncludeAssets" class="form-check-input" />
+            <label asp-for="IncludeAssets" class="form-check-label">@T["Include the assets"]</label>
+        </div>
+    </div>
+</div>

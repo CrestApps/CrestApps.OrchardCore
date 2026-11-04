@@ -1,8 +1,10 @@
 @{
     var filters = (SkillsListViewModel)Model.ViewModel;
 }
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 <div class="btn-group filter">
-    <select name="certificationId" form="certificates-filter" class="form-select form-select-sm" aria-label="@T["Certification"]" onchange="this.form.submit()">
+    <select name="certificationId" form="certificates-filter" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Certification"]" data-dropdown-align-right="auto" aria-label="@T["Certification"]" onchange="this.form.submit()">
         <option value="">@T["All certifications"]</option>
         @foreach (var option in filters.CertificationOptions)
         {
@@ -11,7 +13,7 @@
     </select>
 </div>
 <div class="btn-group filter">
-    <select name="status" form="certificates-filter" class="form-select form-select-sm" aria-label="@T["Status"]" onchange="this.form.submit()">
+    <select name="status" form="certificates-filter" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Status"]" data-dropdown-align-right="auto" aria-label="@T["Status"]" onchange="this.form.submit()">
         <option value="">@T["All statuses"]</option>
         @foreach (var option in filters.StatusOptions)
         {
@@ -20,7 +22,7 @@
     </select>
 </div>
 <div class="btn-group filter">
-    <select name="expiring" form="certificates-filter" class="form-select form-select-sm" aria-label="@T["Expiry"]" onchange="this.form.submit()">
+    <select name="expiring" form="certificates-filter" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Expiry"]" data-dropdown-align-right="auto" aria-label="@T["Expiry"]" onchange="this.form.submit()">
         <option value="false" selected="@(!filters.Expiring)">@T["Any expiry"]</option>
         <option value="true" selected="@filters.Expiring">@T["Expiring in 60 days"]</option>
     </select>

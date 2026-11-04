@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
@@ -27,6 +28,8 @@ public sealed class VoiceQueueOfferService : IVoiceQueueOfferService
     private readonly IAgentProfileManager _agentManager;
     private readonly IInteractionManager _interactionManager;
     private readonly IOmnichannelActivityManager _activityManager;
+    private readonly IDialerProfileReader _dialerProfileReader;
+    private readonly IServiceProvider _serviceProvider;
     private readonly IProviderVoiceOfferSynchronizationService _offerSynchronizationService;
     private readonly IContactCenterFeatureWorkManager _workManager;
     private readonly IContactCenterAuditRecorder _auditRecorder;
@@ -41,6 +44,8 @@ public sealed class VoiceQueueOfferService : IVoiceQueueOfferService
     /// <param name="agentManager">The agent profile manager used to resolve the reserved agent.</param>
     /// <param name="interactionManager">The interaction manager used to record communication history.</param>
     /// <param name="activityManager">The CRM activity manager.</param>
+    /// <param name="dialerProfileReader">The reader of the dialer profile a preview record belongs to.</param>
+    /// <param name="serviceProvider">The provider the dialer attempt service is resolved from when the dialer is enabled, used to close preview records that can never be dialed before they are offered.</param>
     /// <param name="offerSynchronizationService">The offer synchronization service used to remove calls already known to have ended.</param>
     /// <param name="workManager">The feature work manager used to reject offering while Voice is quiescing.</param>
     /// <param name="auditRecorder">The recorder that writes each offer that starts ringing to the audit log.</param>
@@ -52,6 +57,8 @@ public sealed class VoiceQueueOfferService : IVoiceQueueOfferService
         IAgentProfileManager agentManager,
         IInteractionManager interactionManager,
         IOmnichannelActivityManager activityManager,
+        IDialerProfileReader dialerProfileReader,
+        IServiceProvider serviceProvider,
         IProviderVoiceOfferSynchronizationService offerSynchronizationService,
         IContactCenterFeatureWorkManager workManager,
         IContactCenterAuditRecorder auditRecorder,
@@ -63,6 +70,8 @@ public sealed class VoiceQueueOfferService : IVoiceQueueOfferService
         _agentManager = agentManager;
         _interactionManager = interactionManager;
         _activityManager = activityManager;
+        _dialerProfileReader = dialerProfileReader;
+        _serviceProvider = serviceProvider;
         _offerSynchronizationService = offerSynchronizationService;
         _workManager = workManager;
         _auditRecorder = auditRecorder;
@@ -141,6 +150,13 @@ public sealed class VoiceQueueOfferService : IVoiceQueueOfferService
                     {
                         await _reservationService.RejectAsync(reservation.ItemId, cancellationToken);
                     }
+                    else if (await TrySuppressUndialablePreviewAsync(activity, reservation, cancellationToken))
+                    {
+                        // Offering a record that can never be dialed (a number on a do-not-call registry, say) left
+                        // the agent clicking Call with nothing ringing. It is closed instead, and the next record is
+                        // offered.
+                        continue;
+                    }
 
                     return null;
 
@@ -203,6 +219,33 @@ public sealed class VoiceQueueOfferService : IVoiceQueueOfferService
         }
 
         return outcome == OfferOutcome.Offered ? userId : null;
+    }
+
+    private async Task<bool> TrySuppressUndialablePreviewAsync(
+        OmnichannelActivity activity,
+        ActivityReservation reservation,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(reservation.DialerProfileId) ||
+            !string.Equals(activity.Source, ActivitySources.PreviewDial, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        // Resolved here rather than injected: the dialer attempt service places calls through the call router, which
+        // offers work through this service, and injecting it closed that loop and hung every request at startup.
+        var dialerAttemptService = _serviceProvider.GetService<IDialerAttemptService>();
+
+        if (dialerAttemptService is null)
+        {
+            return false;
+        }
+
+        var profile = await _dialerProfileReader.FindByIdAsync(reservation.DialerProfileId, cancellationToken);
+
+        return profile is not null &&
+            profile.Enabled &&
+            await dialerAttemptService.TrySuppressUndialableAsync(profile, reservation, cancellationToken);
     }
 
     /// <summary>

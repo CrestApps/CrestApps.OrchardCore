@@ -24,13 +24,13 @@ using YesSql.Sql;
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 
 /// <summary>
-/// Creates the CRM parts with their content fields, the <c>Account</c> and <c>LeadSource</c> content types, the lead
-/// and opportunity indexes, and seeds the lead statuses and opportunity stages.
+/// Creates the CRM parts with their content fields, the <c>LeadSource</c> content type, the lead and opportunity
+/// indexes, and seeds the lead statuses and opportunity stages. The <c>Account</c> type comes from the Accounts
+/// feature, which the CRM depends on.
 /// </summary>
 /// <remarks>
-/// The migration never alters a content type that already exists, so an administrator's changes to the
-/// <c>Account</c> type survive every upgrade, and it creates no contact, lead or opportunity type: those are the
-/// tenant's to name.
+/// The migration never alters a content type that already exists, and it creates no contact, lead or opportunity
+/// type: those are the tenant's to name.
 /// </remarks>
 public sealed class CrmMigrations : OmnichannelIndexMigration
 {
@@ -65,46 +65,10 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
             .WithDisplayName("Lead")
             .WithDescription("Marks a contact type as a lead type: its records are called and texted like contacts but kept apart from them until they are converted. Attach it together with the Omnichannel Contact part."));
 
-        await _contentDefinitionManager.AlterPartDefinitionAsync(OmnichannelConstants.ContentParts.Account, part => part
-            .Attachable()
-            .WithDisplayName("Account")
-            .WithDescription("Marks a content type as an account, the company or household that contacts and opportunities belong to."));
-
         await _contentDefinitionManager.AlterPartDefinitionAsync(OmnichannelConstants.ContentParts.Opportunity, part => part
             .Attachable()
             .WithDisplayName("Opportunity")
             .WithDescription("Marks a content type as an opportunity, a deal in progress with a stage, an amount and a close date. Attach it to one content type per kind of deal."));
-
-        if (await _contentDefinitionManager.GetTypeDefinitionAsync(OmnichannelConstants.ContentTypes.Account) is null)
-        {
-            var definitions = await _contentDefinitionManager.ListTypeDefinitionsAsync();
-            var containedContentTypes = definitions
-                .Where(Core.Services.OmnichannelRecordKinds.IsAccountChild)
-                .Select(definition => definition.Name)
-                .ToArray();
-
-            await _contentDefinitionManager.AlterTypeDefinitionAsync(OmnichannelConstants.ContentTypes.Account, type => type
-                .WithDisplayName("Account")
-                .Creatable()
-                .Listable()
-                .Securable()
-                .WithPart<TitlePart>(part => part
-                    .WithPosition("1"))
-                .WithPart(OmnichannelConstants.ContentParts.Account, part => part
-                    .WithPosition("2")
-                    .WithSettings(new Core.Models.AccountPartSettings
-                    {
-                        OfferedContentTypes = containedContentTypes,
-                    }))
-                .WithPart(OmnichannelConstants.ContentParts.List, part => part
-                    .WithPosition("3")
-                    .WithSettings(new ListPartSettings
-                    {
-                        PageSize = 20,
-                        ShowHeader = true,
-                        ContainedContentTypes = containedContentTypes,
-                    })));
-        }
 
         await CreateLeadSourceTypeAsync();
         await AddLeadFieldsAsync();

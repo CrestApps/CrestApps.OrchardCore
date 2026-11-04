@@ -161,6 +161,107 @@ describe('columns and filters', () => {
     });
 });
 
+describe('shelves', () => {
+    it('adds a field to the Rows shelf and keeps each shelf in its own order', () => {
+        const value = design();
+        const total = designer.addColumn(value.query, field('Order.Total', 'Decimal'));
+        const region = designer.addColumn(value.query, field('Customer.Region', 'Text'), 0, 'Rows');
+        const name = designer.addColumn(value.query, field('Customer.Name', 'Text'), 0, 'Rows');
+        const status = designer.addColumn(value.query, field('Order.Status', 'Text'), 0);
+
+        expect(designer.shelfColumns(value.query, 'Rows').map(column => column.id)).toEqual([name.id, region.id]);
+        expect(designer.shelfColumns(value.query, 'Columns').map(column => column.id)).toEqual([status.id, total.id]);
+        expect(region.shelf).toBe('Rows');
+        expect(designer.shelfOf({})).toBe('Columns');
+    });
+
+    it('moves a column to the other shelf at a position among its columns', () => {
+        const value = design();
+        const total = designer.addColumn(value.query, field('Order.Total', 'Decimal'));
+        const region = designer.addColumn(value.query, field('Customer.Region', 'Text'), null, 'Rows');
+        const status = designer.addColumn(value.query, field('Order.Status', 'Text'));
+
+        designer.placeColumn(value.query, status.id, 'Rows', 0);
+
+        expect(designer.shelfColumns(value.query, 'Rows').map(column => column.id)).toEqual([status.id, region.id]);
+        expect(designer.shelfColumns(value.query, 'Columns').map(column => column.id)).toEqual([total.id]);
+        expect(designer.placeColumn(value.query, 'missing', 'Rows', 0)).toBeNull();
+    });
+
+    it('sorts by a column first and keeps the other sorts after it', () => {
+        const value = design();
+
+        value.query.sorts = [{ columnId: 'a', descending: false }, { columnId: 'b', descending: true }];
+        designer.sortBy(value.query, 'b', false);
+
+        expect(value.query.sorts).toEqual([{ columnId: 'b', descending: false }, { columnId: 'a', descending: false }]);
+    });
+});
+
+describe('column colors', () => {
+    it('adds red, orange and green bands that fill the cells', () => {
+        const column = { id: 'c1' };
+
+        designer.addTrafficLightRules(column, 20, 50);
+
+        expect(column.colors.rules).toEqual([
+            { operator: 'LessThan', values: ['20'], color: '#F8D7DA', target: 'Background' },
+            { operator: 'Between', values: ['20', '50'], color: '#FFE5D0', target: 'Background' },
+            { operator: 'GreaterThanOrEqual', values: ['50'], color: '#D1E7DD', target: 'Background' },
+        ]);
+    });
+
+    it('drops colors that no longer color anything', () => {
+        const column = { id: 'c1' };
+
+        designer.ensureColors(column).color = '#DC3545';
+        designer.pruneColors(column);
+        expect(column.colors.color).toBe('#DC3545');
+
+        column.colors.color = null;
+        designer.pruneColors(column);
+        expect(column.colors).toBeNull();
+    });
+
+    it('compares values with single values and ranges only', () => {
+        expect(designer.colorOperatorsFor('Decimal')).toContain('Between');
+        expect(designer.colorOperatorsFor('Decimal')).not.toContain('In');
+        expect(designer.colorOperatorsFor('Date')).not.toContain('InLastDays');
+        expect(designer.colorOperatorsFor('Text')).toContain('Contains');
+    });
+});
+
+describe('quick formulas', () => {
+    const functions = ['SUM', 'AVG', 'MIN', 'MAX', 'MEDIAN', 'COUNT', 'COUNTD', 'ROUND', 'ABS', 'UPPER', 'LOWER', 'TRIM', 'LEN', 'YEAR', 'DATETRUNC', 'ISBLANK']
+        .map(name => ({ name }));
+
+    it('offers the aggregates and functions that suit the type of a field', () => {
+        const number = designer.quickFormulas(field('Order.Total', 'Decimal'), functions).map(formula => formula.expression);
+        const text = designer.quickFormulas(field('Order.Status', 'Text'), functions).map(formula => formula.expression);
+        const date = designer.quickFormulas(field('Order.Placed', 'DateTime'), functions).map(formula => formula.expression);
+
+        expect(number.slice(0, 3)).toEqual(['SUM([Order.Total])', 'AVG([Order.Total])', 'MIN([Order.Total])']);
+        expect(number).toContain('ROUND([Order.Total], 2)');
+        expect(text).not.toContain('SUM([Order.Status])');
+        expect(text).toEqual(expect.arrayContaining(['MIN([Order.Status])', 'COUNTD([Order.Status])', 'UPPER([Order.Status])']));
+        expect(date).toContain('DATETRUNC(\'month\', [Order.Placed])');
+    });
+
+    it('offers only the functions the catalog has', () => {
+        const expressions = designer.quickFormulas(field('Order.Placed', 'DateTime'), functions).map(formula => formula.expression);
+
+        expect(expressions.some(expression => expression.startsWith('MONTH('))).toBe(false);
+        expect(expressions.some(expression => expression.startsWith('DATEDIFF('))).toBe(false);
+    });
+
+    it('does not aggregate a field that is already aggregated', () => {
+        const formulas = designer.quickFormulas(field('Margin', 'Decimal', { isAggregate: true }), functions);
+
+        expect(formulas.some(formula => formula.isAggregate)).toBe(false);
+        expect(designer.quickFormulas(field(designer.ROW_COUNT_FIELD, 'Integer', { isAggregate: true }), functions)).toEqual([]);
+    });
+});
+
 describe('join suggestions', () => {
     it('matches an order picker that names the customer with the customer id', () => {
         const customer = {
@@ -502,5 +603,167 @@ describe('chart rendering', () => {
         expect(area.data.datasets[0].fill).toBe(true);
         expect(pie.options.scales).toEqual({});
         expect(pie.data.datasets[0].backgroundColor).toHaveLength(2);
+    });
+});
+
+describe('quick table calculations', () => {
+    it('offers a calculation on numeric measures, or on any number of a result that groups nothing', () => {
+        const measure = { id: 'total', dataType: 'Decimal', isMeasure: true };
+        const dimension = { id: 'region', dataType: 'Text', isMeasure: false };
+        const count = { id: 'count', dataType: 'Integer', isMeasure: false };
+
+        expect(designer.canShowAs(measure, [dimension, measure])).toBe(true);
+        expect(designer.canShowAs(dimension, [dimension, measure])).toBe(false);
+        expect(designer.canShowAs(count, [dimension, count, measure])).toBe(false);
+        expect(designer.canShowAs(count, [dimension, count])).toBe(true);
+        expect(designer.canShowAs(undefined, [])).toBe(false);
+    });
+
+    it('sets a calculation and its direction, and forgets both when showing values again', () => {
+        const column = { id: 'total' };
+
+        designer.setShowAs(column, 'PercentOfTotal');
+        expect(column).toMatchObject({ showAs: 'PercentOfTotal', showAsDirection: 'Down' });
+
+        designer.setShowAs(column, 'RunningTotal', 'Across');
+        expect(column).toMatchObject({ showAs: 'RunningTotal', showAsDirection: 'Across' });
+
+        designer.setShowAs(column, 'Rank');
+        expect(column.showAsDirection).toBe('Across');
+
+        designer.setShowAs(column, 'Rank', 'Sideways');
+        expect(column.showAsDirection).toBe('Down');
+
+        designer.setShowAs(column, 'Value');
+        expect(column).toEqual({ id: 'total' });
+
+        designer.setShowAs(column, 'Unknown');
+        expect(column).toEqual({ id: 'total' });
+    });
+
+    it('badges the pill of a calculated column', () => {
+        expect(designer.showAsBadge({ showAs: 'PercentOfTotal' })).toBe('%');
+        expect(designer.showAsBadge({ showAs: 'DifferenceFromPrevious' })).toBe('Δ');
+        expect(designer.showAsBadge({ showAs: 'Rank' })).toBe('#');
+        expect(designer.showAsBadge({})).toBeNull();
+    });
+});
+
+describe('reference lines', () => {
+    it('adds the average of the first value column', () => {
+        const visual = { type: 'Chart', valueColumnIds: ['total', 'count'] };
+
+        const line = designer.addReferenceLine(visual);
+
+        expect(line).toEqual({ columnId: 'total', kind: 'Average', value: null, label: '' });
+        expect(visual.referenceLines).toEqual([line]);
+    });
+
+    it('drops the lines of a column the chart no longer plots, keeping constants', () => {
+        const visual = {
+            valueColumnIds: ['total'],
+            referenceLines: [
+                { columnId: 'total', kind: 'Median' },
+                { columnId: 'count', kind: 'Average' },
+                { columnId: 'count', kind: 'Constant', value: 5 },
+            ],
+        };
+
+        designer.pruneReferenceLines(visual);
+
+        expect(visual.referenceLines).toEqual([
+            { columnId: 'total', kind: 'Median' },
+            { columnId: null, kind: 'Constant', value: 5 },
+        ]);
+    });
+
+    it('prunes the lines of a removed column', () => {
+        const value = design();
+        value.query.columns = [{ id: 'total', field: 'Order.Total' }];
+        value.visuals = [{ id: 'v1', type: 'Chart', valueColumnIds: ['total'], referenceLines: [{ columnId: 'total', kind: 'Average' }] }];
+
+        designer.removeColumn(value, 'total');
+
+        expect(value.visuals[0].referenceLines).toEqual([]);
+    });
+
+    it('stretches the value axis to every line, and draws none on a pie', () => {
+        const model = {
+            type: 'bar',
+            labels: ['A', 'B'],
+            datasets: [{ label: 'Total', data: [10, 20] }],
+            referenceLines: [{ label: 'Target: 50', value: 50, datasetIndex: null }, { label: 'Floor', value: -5, datasetIndex: 0 }],
+        };
+
+        const config = charts.buildConfig(model, '#000', '#ccc');
+        const pie = charts.buildConfig({ ...model, type: 'pie' }, '#000', '#ccc');
+
+        expect(config.options.scales.y).toMatchObject({ suggestedMin: -5, suggestedMax: 50 });
+        expect(config.options.plugins.reportReferenceLines.lines).toHaveLength(2);
+        expect(config.plugins).toEqual([charts.referenceLinesPlugin]);
+        expect(pie.plugins).toEqual([]);
+        expect(charts.referenceLineRange([], true)).toEqual({ suggestedMin: undefined, suggestedMax: 100 });
+        expect(charts.referenceLineRange([{ value: 140 }], true).suggestedMax).toBe(140);
+    });
+
+    it('draws each line across the plot in the color of its dataset', () => {
+        const calls = [];
+        const ctx = new Proxy({ measureText: () => ({ width: 60 }) }, {
+            get: (target, name) => (name in target ? target[name] : (...args) => calls.push([name, ...args])),
+            set: (target, name, value) => {
+                target[name] = value;
+                calls.push(['set ' + String(name), value]);
+                return true;
+            },
+        });
+        const chart = {
+            ctx,
+            chartArea: { left: 10, right: 210, top: 0, bottom: 100 },
+            scales: { y: { getPixelForValue: (value) => 100 - value } },
+        };
+
+        charts.referenceLinesPlugin.afterDatasetsDraw(chart, {}, {
+            lines: [{ label: 'Average: 40', value: 40, datasetIndex: 1 }],
+            horizontal: false,
+            textColor: '#111',
+            background: '#fff',
+        });
+
+        expect(calls).toContainEqual(['moveTo', 10, 60]);
+        expect(calls).toContainEqual(['lineTo', 210, 60]);
+        expect(calls).toContainEqual(['set strokeStyle', '#14b8a6']);
+        expect(calls).toContainEqual(['fillText', 'Average: 40', 206, 57]);
+        expect(calls).toContainEqual(['fillRect', 143, 43, 66, 15]);
+        expect(charts.referenceLineColor({ datasetIndex: null }, '#111')).toBe('#111');
+    });
+});
+
+describe('filters on measures', () => {
+    it('filters the result by the column that shows an aggregate field, not by the field', () => {
+        const value = design();
+        value.query.columns = [{ id: 'c3', field: '$count' }];
+
+        const filter = designer.addFilter(value.query, field('$count', 'Integer', { isAggregate: true, label: 'Number of rows' }));
+
+        expect(filter).toMatchObject({ stage: 'Result', field: 'c3', operator: 'GreaterThanOrEqual' });
+    });
+
+    it('leaves the column of an aggregate filter to pick when no column shows the field', () => {
+        const filter = designer.addFilter(design().query, field('$count', 'Integer', { isAggregate: true }));
+
+        expect(filter).toMatchObject({ stage: 'Result', field: null });
+    });
+
+    it('filters a measure column by its result and a dimension column by its field', () => {
+        const value = design();
+        const total = { id: 'c2', field: 'Order.Total', aggregate: 'Sum', label: 'Revenue' };
+        const channel = { id: 'c1', field: 'Order.Channel', aggregate: 'None' };
+
+        const measure = designer.addColumnFilter(value.query, total, field('Order.Total', 'Decimal'));
+        const dimension = designer.addColumnFilter(value.query, channel, field('Order.Channel', 'Text'));
+
+        expect(measure).toMatchObject({ stage: 'Result', field: 'c2', label: 'Revenue', operator: 'GreaterThanOrEqual' });
+        expect(dimension).toMatchObject({ stage: 'Rows', field: 'Order.Channel', operator: 'Contains' });
+        expect(value.query.filters).toHaveLength(2);
     });
 });

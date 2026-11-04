@@ -18,6 +18,10 @@ The **Shipping** feature prices shipping. Zones say where; each zone's methods s
 
 ## Model
 
+This video shows the shipping screens in the admin:
+
+<YouTube video="shipping" title="Video overview of shipping" />
+
 - **`ShippingZone`** (`INamedCatalog<ShippingZone>`, one document): `Name`, `Position`, `Countries` (ISO 3166-1 alpha-2), `Regions` (ISO 3166-2, such as `US-AK`), `RestOfWorld` and `Methods`. A country with no region in `Regions` is covered whole.
 - **`ShippingMethod`** (an `Entity`, inside its zone): `MethodId`, `Name`, `Description`, `ProviderName`, `Enabled`, `Position`, `Currency` (empty for any), `TaxCategoryCode` and `ClassSurcharges` (per unit, by class, matched ignoring case). The provider's settings are in the method's properties: `FlatRateSettings` (`Amount`, `PerItemAmount`), `TableRateSettings` (`Basis`: `Weight`, `Subtotal` or `Quantity`; `Rows` of `From` and `Amount`; `Maximum`) and `FreeShippingSettings` (`MinimumSubtotal`).
 - **`ShippingPart`**: `Weight` (one unit, in the site unit), `ShippingClass`, and `VariantWeights` by variant id. `GetWeight(variantId)` falls back to the product's weight, then to zero.
@@ -41,7 +45,21 @@ The **Shipping** feature prices shipping. Zones say where; each zone's methods s
 
 - **`ShippingCheckoutHandler`** adds the **Shipping** step (`ShippingConstants.CheckoutStepKey`, order 2, after Contact) to an order's checkout when a line is a good (`ProductType.Good`). On completion it adds a signed-in buyer's new address to their address book when they asked, as their default shipping address if they had none.
 - **`ShippingCheckoutFlowDisplayDriver`** renders and posts the step.
-  - The address comes from the customer's address book (Customers, optional) or the address editor, with the recipient's name and phone.
+  - The address comes from the customer's address book (Customers, optional), from an `IShippingAddressSource`, or the address editor, with the recipient's name and phone.
+  - An `IShippingAddressSource` offers a signed-in buyer more addresses to ship to, such as the locations of the business account they buy for ([Accounts B2B](accounts-b2b.md)). They are listed after the address book with where they come from, shipped to as they are, and never saved to the address book. A buyer with no default address of their own starts with the first of them.
+
+    ```csharp
+    public sealed class DepotShippingAddressSource : IShippingAddressSource
+    {
+        public Task<IReadOnlyList<ShippingAddressOption>> GetAddressesAsync(string userId, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ShippingAddressOption>>(
+            [
+                new ShippingAddressOption { AddressId = "depot-reno", Label = "Reno depot", Description = "Company depots", Address = new Address { Company = "Contoso", AddressLine1 = "2 Pine St", City = "Reno", Region = "NV", PostalCode = "89501", Country = "US" } },
+            ]);
+    }
+
+    services.AddScoped<IShippingAddressSource, DepotShippingAddressSource>();
+    ```
   - **`ShippingOrderRateService`** prices the order's goods: their weight and class come from the product version bought, and the currency is the order's.
   - An address posted without a rate chosen for it (or with a rate the address doesn't offer) comes back with its rates and the error *Choose how to ship your order*, so the step finishes only with a rate priced on the server. One rate is chosen for the buyer.
   - The step's billing item is the shipping line (`TaxableKind = Shipping`, the method's `TaxCategoryCode`), then the invoice is rebuilt. The choice is kept as `ShippingCheckoutStep` in `SavedSteps` and as **`CheckoutShippingInfo`** (address, rate, method, zone, name, amount) in the session.

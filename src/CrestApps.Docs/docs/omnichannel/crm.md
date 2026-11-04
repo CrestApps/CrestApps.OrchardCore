@@ -9,6 +9,9 @@ user_manual:
   - user-manual/load-inventory
 ---
 
+<YouTube video="omnichannel-crm-setup" title="Video overview of setting up the Omnichannel CRM" />
+<YouTube video="omnichannel-leads" title="Video overview of working and converting leads" />
+
 | | |
 | --- | --- |
 | **Feature Name** | Omnichannel CRM |
@@ -27,10 +30,10 @@ A type's parts decide what it is. The rules live in `OmnichannelRecordKinds`.
 | --- | --- | --- |
 | Contact | `OmnichannelContactPart` without `LeadPart` | Unchanged. |
 | Lead | `OmnichannelContactPart` and `LeadPart` | Reachable like a contact; listed under **Leads**, not **Contacts**. |
-| Account | `AccountPart` | Holds its children through Orchard's `ListPart`. |
+| Account | `AccountPart` | From the [Accounts](../modules/accounts.md) feature, which the CRM depends on. Holds its children through Orchard's `ListPart`. |
 | Opportunity | `OpportunityPart` | Attach it to one type per kind of deal. |
 
-Contacts and opportunities are **account children**: they can belong to an account. Leads never do.
+Contacts and opportunities are **account children**: they can belong to an account. Leads never do. The CRM registers this as an `IAccountChildTypeRule` (`CrmAccountChildTypeRule`), and the Accounts feature keeps every account type's list in line with it.
 
 Because a lead keeps `OmnichannelContactPart`, every channel works on it with no second code path. That covers the dialer, SMS, do-not-contact checks, time zones and phone verification. The same compliance checks apply to leads and contacts.
 
@@ -38,11 +41,12 @@ Because a lead keeps `OmnichannelContactPart`, every channel works on it with no
 
 The feature's migration runs once per tenant and never changes a type that already exists.
 
-- The `LeadPart`, `AccountPart` and `OpportunityPart` definitions.
-- An `Account` type, only if none exists. It has `TitlePart`, `AccountPart` and a `ListPart` with its header shown.
-  - Its list contains every account-child type.
-  - A contact or opportunity type added later joins the list automatically.
+- The `LeadPart` and `OpportunityPart` definitions.
+- The `Account` type comes from the [Accounts](../modules/accounts.md) feature.
+  - Its list contains every contact and opportunity type, and one added later joins the list automatically.
   - An administrator can remove a type from the list, and it is not added back.
+  - The account picker, the account search and the `Account` import column come from that feature too.
+- On a site that ran the CRM before accounts had a feature of their own, `CrmAccountsFeatureMigrations` enables the Accounts feature. The site's `Account` type and its accounts were created under the same names and are kept as they are.
 - The `LeadIndex` and `OpportunityIndex` tables. `LeadIndex` carries an index on `ContentType`, `IsConverted`, `Latest` and `Published` (`IDX_LeadIndex_ContentType_Converted`), which the count of the Leads list reads.
 - `ContentType` and `IsConverted` columns on `OmnichannelContactIndex`, backfilled from existing rows.
 - A seeded **Lead Status** catalog and **Opportunity Stage** catalog.
@@ -73,7 +77,23 @@ Holds stage, open/closed/won flags, probability, amount, close date, owner, sour
 
 ### `AccountPart`
 
-A marker. Its setting records which types the feature added to the account's list, so a type an administrator removed is not added again.
+A marker from the [Accounts](../modules/accounts.md) feature. Its setting records which types were added to the account's list, so a type an administrator removed is not added again.
+
+## The account page
+
+The CRM adds four tabs to an [account's page](../modules/accounts.md#the-account-page), through
+`AccountCrmTabsDisplayDriver`:
+
+- **Contacts**: the contacts the account holds (`ContainedPartIndex`), by name, with their primary email and phone from
+  `OmnichannelContactIndex`, and a **New** button per contact type the user may create, which opens the editor inside
+  the account.
+- **Opportunities**: the opportunities with the account's `OpportunityIndex.AccountContentItemId`, open ones first by
+  close date, with their stage, amount and close date.
+- **Leads**: the converted leads whose `LeadIndex.ConvertedContactItemId` is one of the account's contacts.
+- **Activities**: how many activities of the account's contacts are scheduled and completed, the next and the last,
+  and **List Activities** for the account's activity page. It needs `ListContactActivities`.
+
+Each list shows 25 rows; the **Records** tab lists everything. A tab shows only the content types the user may view.
 
 ## Leads list count
 
@@ -217,5 +237,7 @@ Both catalogs have a recipe step and a deployment step, matched by name on impor
 Listing and editing leads, accounts and opportunities uses the ordinary content permissions of each type; the **Leads**, **Accounts**, **Opportunities** and **Lead Sources** menu items need `ListContent`.
 
 ## Reports
+
+<YouTube video="omnichannel-accounts-opportunities" title="Video of the three CRM reports" start={185} end={223} />
 
 The feature adds **Lead funnel**, **Lead conversion by source and list** and **Opportunity pipeline** to the Reports area, in the **CRM & Campaigns** category. They read the lead and opportunity indexes, are filtered by date range only, and require **View Omnichannel reports** (`ViewOmnichannelReports`). See the [report catalog](../contact-center/report-catalog.md) for the other CRM reports.

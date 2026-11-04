@@ -84,12 +84,10 @@
         </div>
     </div>
 
-    <div class="ocat-wrapper">
-        <div class="ocat-end-offset">
-            <button class="btn btn-primary" type="submit"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Create {0}", labels.ChildLower]</button>
-            <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Cancel"]</a>
-            <span class="text-muted small ms-2">@T["{0} of {1} used", Model.TotalCount, Model.MaxChildren]</span>
-        </div>
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Create {0}", labels.ChildLower]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Cancel"]</a>
+        <span class="text-muted small ms-2">@T["{0} of {1} used", Model.TotalCount, Model.MaxChildren]</span>
     </div>
 </form>
 

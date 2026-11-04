@@ -65,4 +65,17 @@ public interface IShiftService
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The changed event, or why not.</returns>
     Task<PlanningResult<CalendarEvent>> ChangeTimesAsync(string eventId, DateTime startUtc, DateTime endUtc, ScheduleChangeInitiator initiatedBy, string reason, string actor, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Takes a published shift off the schedule, such as when the work isn't needed after all. The shift's draft goes
+    /// too, so the next publish doesn't bring it back, and the change is logged like any other.
+    /// </summary>
+    /// <param name="eventId">The shift's calendar event.</param>
+    /// <param name="initiatedBy">Whether the employer or the worker asked for it; a worker's change earns no
+    /// predictability pay.</param>
+    /// <param name="reason">Why, for the change log.</param>
+    /// <param name="actor">Who made the change.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The canceled event, or why not.</returns>
+    Task<PlanningResult<CalendarEvent>> RemoveAsync(string eventId, ScheduleChangeInitiator initiatedBy, string reason, string actor, CancellationToken cancellationToken = default);
 }

@@ -647,7 +647,7 @@ internal sealed class DefaultTimesheetService : ITimesheetService
                 Kind = WorkforceNotificationKind.Attendance,
                 Title = S["A punch is missing"],
                 Body = S["Your punches on {0} don't add up. Ask for the punch you missed on your timesheet.", exception.Date.ToString("D", CultureInfo.CurrentCulture)],
-                Url = "~/my-work/timesheet?date=" + exception.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                Url = "~/Admin/my-work/timesheet?date=" + exception.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             }, cancellationToken);
         }
 
@@ -699,7 +699,7 @@ internal sealed class DefaultTimesheetService : ITimesheetService
             Kind = WorkforceNotificationKind.Timesheet,
             Title = title,
             Body = body,
-            Url = "~/my-work/timesheet?date=" + timesheet.PeriodStart.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            Url = "~/Admin/my-work/timesheet?date=" + timesheet.PeriodStart.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
         }, cancellationToken);
     }
 

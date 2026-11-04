@@ -65,4 +65,33 @@ public static class WorkforceEvents
     /// An agent has been out of adherence with their schedule for longer than their rule allows.
     /// </summary>
     public const string OutOfAdherence = "WorkforceOutOfAdherenceEvent";
+
+    /// <summary>
+    /// A shift was added to a published schedule for a worker, such as by a republish, an open shift claimed, or
+    /// time off canceled. Input: ShiftKey, Kind, StartUtc, EndUtc, Reason, InitiatedBy.
+    /// </summary>
+    public const string ShiftAssigned = "WorkforceShiftAssignedEvent";
+
+    /// <summary>
+    /// A published shift was moved, given to someone else, swapped or had its breaks changed. Input: ShiftKey, Kind,
+    /// PreviousWorkerId, BeforeStartUtc, BeforeEndUtc, StartUtc, EndUtc, Reason, InitiatedBy.
+    /// </summary>
+    public const string ShiftChanged = "WorkforceShiftChangedEvent";
+
+    /// <summary>
+    /// A published shift was taken off the schedule. Input: ShiftKey, BeforeStartUtc, BeforeEndUtc, Reason, InitiatedBy.
+    /// </summary>
+    public const string ShiftRemoved = "WorkforceShiftRemovedEvent";
+
+    /// <summary>
+    /// A waitlisted time-off request got a place because another was canceled or withdrawn. Input: as the other time
+    /// off events, with its new status.
+    /// </summary>
+    public const string TimeOffWaitlistPromoted = "WorkforceTimeOffWaitlistPromotedEvent";
+
+    /// <summary>
+    /// A shift with nobody was offered to the team, posted on its own or by a publish. Input: OpenShiftId, Date,
+    /// StartUtc, EndUtc, ClaimPolicy, ClaimDeadlineUtc. When it is filled, Shift Assigned follows.
+    /// </summary>
+    public const string OpenShiftPosted = "WorkforceOpenShiftPostedEvent";
 }

@@ -12,35 +12,34 @@ Every team gets a **Workforce calendar** that holds its published shifts and app
 
 | | |
 | --- | --- |
-| **Menu** | Workforce > Workers, Workforce > Teams, Workforce > Activity Codes |
+| **Menu** | Workforce > Workers, Teams, Workforce > Activity Codes |
 | **Permission** | View workers, Manage workers, Manage workforce teams, Manage activity codes, View sensitive worker details, Manage the whole workforce |
-| **Feature** | Workforce (it needs Calendars and Skills) |
+| **Feature** | Workforce (it needs Calendars, Skills and Teams) |
 
 <AskYourAdmin />
 
 ## Build the team tree
 
-Open **Workforce > Teams** and choose **Add team**. Start at the top, such as your organization or a region, then add the teams under it. From a team's **Actions** menu, **Add a team under it** starts a new team with that team as its parent.
+Teams are kept by the **Teams** feature, so every feature uses the same tree. Open **Content > Teams** to add them; see [Teams](./teams.md) for the fields every team has. Workforce adds the **Workforce** card to the team editor, and **Workers**, **Add a worker** and **Calendar** to each team's **Actions** menu.
+
+### The Workforce card
 
 | Field | What it does |
 | --- | --- |
-| **Name** | The team's name. |
-| **Kind** | **Organization**, **Region**, **Site**, **Department**, **Team** or **Crew**. A crew is a team sent out as one unit for field work. |
-| **Part of** | The team it belongs to, or **Nothing (top level)**. A team can't be placed under itself or under one of its own teams. |
-| **Description** | What the team does. |
-| **Time zone** | Where the team works. Its days start and end at midnight in this time zone. |
 | **Address** | Where the team works, for a site. |
-| **Role that can read the calendar** | Optional. Users in this role can read the team's Workforce calendar, as the team's members can. |
+| **Site coordinates**, **Time clock policy** | Shown when the Time Clock is on. See [Time Clock](./time-clock.md). |
 | **Open shifts go to**, **Shift trades** | Shown when Shift Planning is on. See [Team settings](./shift-planning.md#team-settings). |
-| **In use** | Untick to stop using a team without deleting it. |
+| **Shifts under approved time off** | Shown when Shift Planning and Time Off are on. |
 
-A team that still has teams under it, or current members, can't be deleted. Move them first. Deleting a team keeps its calendar.
+The team's **Linked role** on the **Team** card is the role whose users can read the team's Workforce calendar, as the team's members can.
+
+A team that still has teams under it, or current workers, can't be deleted. Move them first. Deleting a team keeps its calendar.
 
 ## Who can see what
 
 - People with **Manage the whole workforce** see every team and every worker.
 - Anyone else sees the workers of the teams where they are a **Manager** or a **Scheduler**, and of the teams under those. They can only add workers to those teams.
-- On a team's Workforce calendar, its managers and schedulers (and those of the teams above it) can make changes; its members, and the users in its **Role that can read the calendar**, can read it.
+- On a team's Workforce calendar, its managers and schedulers (and those of the teams above it) can make changes; its members, and the users in its **Linked role**, can read it.
 
 ## Add a worker
 
@@ -51,7 +50,7 @@ Open **Workforce > Workers** and choose **Add worker**, or choose **Add a worker
 | Field | What it does |
 | --- | --- |
 | **Name** | How the worker is shown. |
-| **User account** | Optional. The user the worker signs in as. Without one, the worker can still be scheduled but can't sign in to see their schedule. A user can be only one worker. |
+| **User account** | Optional. The user the worker signs in as. Without one, the worker can still be scheduled but can't sign in to see their schedule. A user can be only one worker. A worker with an account takes its **Name** and **Email** from it, and they can't be changed here. |
 | **Job title**, **Email**, **Phone** | Contact details. |
 | **Employee number** | Optional, but two workers can't share one. |
 | **HR or payroll id** | The worker's id in another system, for exports. |
@@ -84,7 +83,17 @@ One line for each enabled skill: choose how well the worker holds it, from **1 -
 
 **Certificates**
 
-After the worker is saved, the editor lists their certificates. Add one with **Certification**, **Number**, **Issued on**, **Valid until** (leave it empty to work it out from the certification) and **Checked**, then choose **Add**. The certificate also appears in **Workforce > Certificates**.
+After the worker is saved, the editor lists their certificates. Add one with **Certification**, **Number**, **Issued on**, **Valid until** (leave it empty to work it out from the certification) and **Checked**, then choose **Add**. The certificate also appears in **Content > Certificates**.
+
+## From the user editor
+
+People with an account are managed with their user too. With **Manage workers**, the user editor (**Access Control > Users > Edit**) has a **Workforce** card:
+
+- For a user who isn't a worker yet, tick **Make them a worker** and fill in their employee number, job title, employment, status, hire date, **Main team** and contracted hours. Saving the user makes the worker, with the user's name and email.
+- For a worker, the same fields change their worker. A new main team is joined from today, and the teams they were in stay. **Open their worker page** has the rest: teams and their dates, hours, availability, pay rates and certificates.
+- Whenever the user is saved, their worker takes the user's name and email.
+
+The **Workers** list stays, for workers without an account (such as people who clock in only at a kiosk) and for HR records kept after an account is closed.
 
 ## Find workers
 
@@ -92,7 +101,7 @@ After the worker is saved, the editor lists their certificates. Add one with **C
 
 ## Activity codes
 
-An activity code says what a worker does during part of a shift: work, a break, a meal, a meeting, training and so on. The usual codes are added the first time Workforce is turned on. Open **Workforce > Activity Codes** to change them or add your own.
+An activity code says what a worker does during part of a shift: work, a break, a meal, a meeting, training and so on. The usual codes are added the first time Workforce is turned on. Open **Workforce > Activity Codes** to change them or add your own. With the time clock on, each code also has the Time Tracker **stage** its clocked time is kept in.
 
 | Field | What it does |
 | --- | --- |

@@ -76,4 +76,28 @@ public class DraftShiftEditViewModel
     /// </summary>
     [BindNever]
     public IList<SelectListItem> TemplateOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the shift's event on the published schedule, when it is published.
+    /// </summary>
+    [BindNever]
+    public string PublishedEventId { get; set; }
+
+    /// <summary>
+    /// Gets or sets who works the published shift.
+    /// </summary>
+    [BindNever]
+    public string PublishedWorkerName { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the published shift starts, in the team's time zone.
+    /// </summary>
+    [BindNever]
+    public DateTime? PublishedStart { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the published shift ends, in the team's time zone.
+    /// </summary>
+    [BindNever]
+    public DateTime? PublishedEnd { get; set; }
 }

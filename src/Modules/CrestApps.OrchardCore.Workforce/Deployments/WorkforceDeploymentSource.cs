@@ -1,5 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.Teams.Services;
+using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Recipes;
 using CrestApps.OrchardCore.Workforce.Services;
 using OrchardCore.Deployment;
@@ -40,7 +42,13 @@ internal sealed class WorkforceDeploymentSource : DeploymentSourceBase<Workforce
             ["ActivityCodes"] = new JsonArray([.. (await _activityCodeManager.GetAllAsync()).Select(code => Serialize(code))]),
             ["Teams"] = new JsonArray([.. tree.Select(item =>
             {
-                var team = Serialize(item.Team, "calendarId", "parentId");
+                var team = Serialize(item.Team, "parentId", "properties");
+
+                // The Workforce settings sit beside the team's own fields, as the Workforce step reads them.
+                foreach (var (name, value) in Serialize(item.Team.GetWorkforceSettings(), "calendarId").ToList())
+                {
+                    team[name] = value?.DeepClone();
+                }
 
                 if (item.Team.ParentId is { } parentId && names.TryGetValue(parentId, out var parentName))
                 {

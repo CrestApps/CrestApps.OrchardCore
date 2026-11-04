@@ -399,7 +399,7 @@ internal sealed class DefaultShiftTradeService : IShiftTradeService
                 Kind = WorkforceNotificationKind.ShiftTrade,
                 Title = title,
                 Body = body ?? string.Empty,
-                Url = "my-work/shifts",
+                Url = "Admin/my-work/shifts",
             }, cancellationToken);
     }
 

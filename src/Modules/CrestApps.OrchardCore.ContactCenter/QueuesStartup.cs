@@ -116,8 +116,7 @@ public sealed class QueuesStartup : StartupBase
         // feature this feature depends on.)
         services
             .AddDisplayDriver<ActivityQueueGroup, ActivityQueueGroupDisplayDriver>()
-            .AddDisplayDriver<ActivityQueue, ActivityQueueDisplayDriver>()
-            .AddDisplayDriver<ContactCenterSkill, ContactCenterSkillDisplayDriver>();
+            .AddDisplayDriver<ActivityQueue, ActivityQueueDisplayDriver>();
 
         services.AddNavigationProvider<ContactCenterAdminMenu>();
 

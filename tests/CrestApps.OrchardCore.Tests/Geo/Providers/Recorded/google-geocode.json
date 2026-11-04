@@ -1,0 +1,17 @@
+{
+  "results": [
+    {
+      "address_components": [
+        { "long_name": "1", "short_name": "1", "types": ["street_number"] },
+        { "long_name": "City Hall Square", "short_name": "City Hall Sq", "types": ["route"] },
+        { "long_name": "02201", "short_name": "02201", "types": ["postal_code"] },
+        { "long_name": "United States", "short_name": "US", "types": ["country", "political"] }
+      ],
+      "formatted_address": "1 City Hall Square, Boston, MA 02201, USA",
+      "geometry": { "location": { "lat": 42.3603, "lng": -71.058 }, "location_type": "ROOFTOP" },
+      "place_id": "ChIJ-sample",
+      "types": ["street_address"]
+    }
+  ],
+  "status": "OK"
+}

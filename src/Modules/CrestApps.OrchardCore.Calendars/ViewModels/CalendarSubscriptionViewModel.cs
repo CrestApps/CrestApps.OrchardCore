@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Calendars.Core.External;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -51,4 +52,38 @@ public class CalendarSubscriptionViewModel
     /// </summary>
     [BindNever]
     public string LastResult { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether changes made here are written back to the external calendar.
+    /// </summary>
+    public bool TwoWay { get; set; }
+
+    /// <summary>
+    /// Gets or sets which copy wins when an event changed on both sides.
+    /// </summary>
+    public CalendarSyncConflictPolicy ConflictPolicy { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the external account refused access.
+    /// </summary>
+    [BindNever]
+    public bool NeedsReconnect { get; set; }
+
+    /// <summary>
+    /// Gets or sets the conflict policies to choose from.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> ConflictPolicyOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the providers that subscribe with an address.
+    /// </summary>
+    [BindNever]
+    public IList<string> AddressProviders { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the providers that can write changes back.
+    /// </summary>
+    [BindNever]
+    public IList<string> WritableProviders { get; set; } = [];
 }

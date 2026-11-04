@@ -18,6 +18,10 @@ user_manual:
 | **Category** | Contact Center |
 | **Admin menu** | **Messaging** |
 
+<YouTube video="messaging-inbox" title="Video overview of the messaging inbox" />
+
+The video shows how agents open, claim, answer, close, favorite and start conversations in the inbox.
+
 The **Messaging Workspace** is a **human-operated** inbox for every non-voice channel. Agents use one screen to send and receive on any channel for the same customer. Picture a list of customers on the left and the selected customer's conversation on the right, with a row of channel icons above it. Switching icons keeps the same view; it only changes which channel messages are read from and sent to.
 
 The workspace itself carries **no channel**. Each channel is a separate feature that plugs into it:
@@ -79,6 +83,8 @@ Enabling the workspace on its own gives you the inbox with nothing to send or re
 The workspace does **not** require Contact Center Voice, and it does not pull in the Omnichannel Management CRM.
 
 ## Setting up SMS
+
+<YouTube video="messaging-setup" title="Video of setting up text messages from the features to a test text" />
 
 1. **Configure an SMS provider.** Enable at least one, for example [Telnyx SMS](../telephony/telnyx.md#telnyx-sms) or Twilio, and pick the tenant **default provider** at **Settings > Communication > SMS**.
 2. **Add your numbers as SMS channel endpoints** in **Interaction Center > Management > Omnichannel Addresses** (see [Omnichannel Addresses](../user-manual/channel-endpoints.md)). Each SMS endpoint can pin the **provider** that owns the number; leave it empty to use the tenant default.

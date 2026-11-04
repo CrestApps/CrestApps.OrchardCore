@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Localization;
@@ -118,7 +119,7 @@ internal sealed class PortalNotices : ISchedulePublishHandler, IScheduleChangeHa
                 Kind = kind,
                 Title = title,
                 Body = body ?? string.Empty,
-                Url = "my-work/schedule",
+                Url = "Admin/my-work/schedule",
             }, cancellationToken);
     }
 }

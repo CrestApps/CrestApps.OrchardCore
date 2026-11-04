@@ -22,20 +22,19 @@ public sealed class SkillsAdminMenu : AdminNavigationProvider
     /// <inheritdoc />
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
-        builder.Add(S["Workforce"], S["Workforce"].PrefixPosition("6"), workforce => workforce
-            .AddClass("workforce")
-            .Id("workforce")
-            .Add(S["Skills"], S["Skills"].PrefixPosition("80"), skills => skills
+        // Skills are shared by Workforce, Contact Center and other modules, so they sit under Content rather than any one of them.
+        builder.Add(S["Content"], content => content
+            .Add(S["Skills"], S["Skills"].PrefixPosition(), skills => skills
                 .Id("skills")
                 .Action("Index", "Skills", SkillsConstants.Features.Skills)
                 .Permission(SkillsPermissions.ManageSkills)
                 .LocalNav())
-            .Add(S["Certifications"], S["Certifications"].PrefixPosition("81"), certifications => certifications
+            .Add(S["Certification Types"], S["Certification Types"].PrefixPosition(), certifications => certifications
                 .Id("certifications")
                 .Action("Index", "Certifications", SkillsConstants.Features.Skills)
                 .Permission(SkillsPermissions.ManageSkills)
                 .LocalNav())
-            .Add(S["Certificates"], S["Certificates"].PrefixPosition("82"), records => records
+            .Add(S["Certificates"], S["Certificates"].PrefixPosition(), records => records
                 .Id("certificationRecords")
                 .Action("Index", "CertificationRecords", SkillsConstants.Features.Skills)
                 .Permission(SkillsPermissions.ViewSkills)

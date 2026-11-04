@@ -54,6 +54,17 @@ public class ActivityCodeEditViewModel
     public bool Enabled { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets the Time Tracker stage its clocked time is kept in; empty for a stage of its own.
+    /// </summary>
+    public string StageId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the stages to choose from, or <see langword="null"/> when the time clock is off.
+    /// </summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> StageOptions { get; set; }
+
+    /// <summary>
     /// Gets or sets the kinds to choose from.
     /// </summary>
     [BindNever]

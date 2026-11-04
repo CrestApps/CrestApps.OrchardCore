@@ -2,6 +2,8 @@ using System.Linq.Expressions;
 using System.Reflection;
 using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer.DataSources;
+using CrestApps.OrchardCore.Teams;
+using CrestApps.OrchardCore.Teams.Core.Indexes;
 using CrestApps.OrchardCore.Workforce.Core.Indexes;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -97,7 +99,7 @@ public abstract class WorkforceReportDataSet<TRecord, TIndex> : IndexedReportDat
         _workers = (await Session.QueryIndex<WorkerIndex>(collection: WorkforceConstants.CollectionName).ListAsync(cancellationToken))
             .GroupBy(index => index.ItemId, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.First().DisplayName, StringComparer.Ordinal);
-        _teams = (await Session.QueryIndex<TeamIndex>(collection: WorkforceConstants.CollectionName).ListAsync(cancellationToken))
+        _teams = (await Session.QueryIndex<TeamIndex>(collection: TeamsConstants.CollectionName).ListAsync(cancellationToken))
             .GroupBy(index => index.ItemId, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.First().Name, StringComparer.Ordinal);
 

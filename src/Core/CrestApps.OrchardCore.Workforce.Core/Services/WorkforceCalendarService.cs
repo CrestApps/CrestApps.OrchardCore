@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 
 namespace CrestApps.OrchardCore.Workforce.Core.Services;
@@ -16,7 +17,7 @@ internal sealed class WorkforceCalendarService
         _calendarService = calendarService;
     }
 
-    public async Task EnsureCalendarAsync(WorkforceTeam team, CancellationToken cancellationToken = default)
+    public async Task EnsureCalendarAsync(Team team, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(team);
 
@@ -44,13 +45,13 @@ internal sealed class WorkforceCalendarService
 
             if (created.Succeeded)
             {
-                team.CalendarId = created.Value.ItemId;
+                team.AlterWorkforceSettings(settings => settings.CalendarId = created.Value.ItemId);
             }
 
             return;
         }
 
-        team.CalendarId = calendar.ItemId;
+        team.AlterWorkforceSettings(settings => settings.CalendarId = calendar.ItemId);
 
         if (calendar.Name != team.Name || calendar.TimeZoneId != (team.TimeZoneId ?? calendar.TimeZoneId) || calendar.Enabled != team.Enabled)
         {
@@ -59,7 +60,7 @@ internal sealed class WorkforceCalendarService
         }
     }
 
-    private static void Apply(WorkforceTeam team, Calendar calendar)
+    private static void Apply(Team team, Calendar calendar)
     {
         calendar.Name = team.Name;
         calendar.Enabled = team.Enabled;

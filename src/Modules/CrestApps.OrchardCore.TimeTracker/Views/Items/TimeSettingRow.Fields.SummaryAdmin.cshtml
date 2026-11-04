@@ -1,0 +1,9 @@
+@model ShapeViewModel<TimeSettingRow>
+
+<a asp-action="@(Model.Value.Kind == TimeSettingsController.Categories ? "EditCategory" : "EditStage")" asp-route-id="@Model.Value.Id">
+    <span class="d-inline-block rounded-circle me-1 align-middle" style="width: .75rem; height: .75rem; background-color: @(Model.Value.Color ?? "#6c757d")" aria-hidden="true"></span>@Model.Value.Name
+</a>
+@if (!string.IsNullOrEmpty(Model.Value.Code))
+{
+    <span class="text-muted small">@Model.Value.Code</span>
+}

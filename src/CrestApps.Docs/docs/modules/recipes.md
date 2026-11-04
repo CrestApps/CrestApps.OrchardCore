@@ -3,6 +3,7 @@ sidebar_label: Recipes
 sidebar_position: 6
 title: CrestApps Recipes
 description: JSON-Schema support for Orchard Core recipes with per-step validation and AI guidance.
+user_manual: user-manual/administration/recipes
 ---
 
 | | |
@@ -10,7 +11,18 @@ description: JSON-Schema support for Orchard Core recipes with per-step validati
 | **Feature Name** | CrestApps Recipes |
 | **Feature ID** | `CrestApps.OrchardCore.Recipes` |
 
+
+<YouTube video="site-wizard-recipes" title="Video overview of wizards, recipes and shared resources" />
+
 Provides recipe steps for all modules.
+
+## In the admin
+
+Under **Tools > Recipes**, the feature adds a description and tags to every recipe, and a search box, so an administrator can read what a recipe does before running it. Under **Tools > Deployments > JSON Import**, the **Recipe JSON** editor uses the step schemas to suggest step names and settings as you type and to underline mistakes before anything is imported. To export the setup of a site as a recipe, build a deployment plan under **Tools > Deployments > Plans** and execute it to a file.
+
+<YouTube video="recipes" title="Video of the recipe catalog, the JSON editor and a deployment plan" />
+
+<YouTube video="recipes" title="Video of the recipe catalog and running a recipe" start={41} end={77} />
 
 ## Overview
 

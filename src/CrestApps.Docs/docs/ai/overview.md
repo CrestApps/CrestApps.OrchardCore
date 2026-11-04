@@ -119,7 +119,7 @@ Use **Settings -> Artificial Intelligence** for tenant-managed options such as:
 - orchestrator defaults
 - distributed caching and OpenTelemetry overrides
 
-The page is made of cards contributed by the enabled features. The **General** card holds **Enable preemptive memory retrieval**, **Maximum iterations per request** (capped by the host), **Enable distributed caching** and **Enable OpenTelemetry**. The other cards are **Default Deployments**, **Prompt Security**, **Visitor Identity**, **Default Orchestrator**, **Data Sources**, **Chat Interactions**, **Documents**, **Memory**, **Admin Widget**, **Copilot**, **Claude** and **MCP Server**; each is described on the page of the feature that adds it. The User Manual explains the ones administrators change in the browser, starting at [Choose the default models](../user-manual/ai/connections.md#choose-the-default-models).
+The page is made of cards contributed by the enabled features. The **General** card holds **Enable preemptive memory retrieval**, **Maximum iterations per request** (capped by the host), **Enable distributed caching** and **Enable OpenTelemetry**. The other cards are **Default Deployments**, **Prompt Security**, **Visitor Identity**, **Default Orchestrator**, **Data Sources**, **Chat Interactions**, **Documents**, **Memory**, **Admin Widget**, **Copilot**, **Claude**, **MCP Server** and **WebMCP**; each is described on the page of the feature that adds it. The User Manual explains the ones administrators change in the browser, starting at [Choose the default models](../user-manual/ai/connections.md#choose-the-default-models).
 
 ## Creating AI profiles
 
@@ -140,12 +140,22 @@ The editor's cards, tabs and fields are described in the User Manual under [AI p
 
 ## Recipes, deployment, and workflows
 
+<YouTube video="ai-export-import" title="Video overview of exporting and importing the AI setup" />
+
 This module also wires Orchard integrations beyond the admin UI:
 
 - recipe steps for AI profiles, profile templates, and deployments
 - Orchard deployment plan support
 - workflow activities for profile-based and direct AI completion
 - workflow events for chat-session extraction, closure, and post-processing
+
+### Move the AI setup to another site
+
+<YouTube video="ai-export-import" title="Video of building an AI deployment plan, exporting it and importing it" start={52} end={162} />
+
+Enable **OrchardCore.Deployment** (and the same AI features on both sites), then open **Tools > Deployments > Plans**, add a plan, and add the steps you need under **Artificial Intelligence**: **AI Provider Connections**, **AI Deployments**, **AI Profiles**, **AI Profile Templates**, **AI Tool Instances**, **AI Data Sources**, and the **MCP Connections**, **MCP Prompts** and **MCP Resources** steps. Each step exports every item (**Include all**) or only the ones you pick. Put the steps in this order: connections, deployments, tool instances and data sources, then profiles, because profiles point at the others.
+
+Click **Execute** on the plan and choose **File Download** to get the result as a file, then import it on the other site with **Tools > Deployments > JSON Import** (paste a recipe) or **Package Import** (upload the file). Treat the exported file as sensitive, re-enter any secret that was left out, and run the knowledge syncs again on the new site: uploaded files and indexed content are not part of these steps.
 
 ## Framework references
 

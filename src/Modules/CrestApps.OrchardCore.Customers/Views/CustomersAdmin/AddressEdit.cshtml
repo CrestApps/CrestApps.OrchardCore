@@ -10,7 +10,7 @@
 <form asp-action="@(Model.IsNew ? "AddressCreate" : "AddressEdit")" asp-route-customerId="@Model.CustomerId" asp-route-addressId="@Model.AddressId" method="post" class="no-multisubmit">
     <partial name="_CustomerAddressFields" model="Model" />
 
-    <div class="mt-4">
+    <div class="action-bar-bottom">
         <button type="submit" class="btn btn-primary save">@T["Save"]</button>
         <a class="btn btn-secondary" asp-action="Edit" asp-route-customerId="@Model.CustomerId">@T["Cancel"]</a>
     </div>

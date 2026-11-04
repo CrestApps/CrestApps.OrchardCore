@@ -1,0 +1,284 @@
+@model AssetEditViewModel
+
+<zone Name="Title"><breadcrumb name="AssetsEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["Add an Asset"] : T["Edit {0}", Model.Name])" /></zone>
+
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="no-multisubmit">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <input type="hidden" asp-for="Id" />
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Details"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Name" class="form-control" required />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="AssetTypeId" class="ocat-label">@T["Type"]</label>
+                <div class="ocat-end">
+                    <select asp-for="AssetTypeId" asp-items="Model.TypeOptions" class="form-select" required>
+                        <option value="">@T["Choose a type"]</option>
+                    </select>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Number" class="ocat-label">@T["Asset number"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Number" class="form-control" placeholder="@T["Next number"]" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="SerialNumber" class="ocat-label">@T["Serial number"]</label>
+                <div class="ocat-end">
+                    <input asp-for="SerialNumber" class="form-control" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Manufacturer" class="ocat-label">@T["Manufacturer"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Manufacturer" class="form-control" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Model" class="ocat-label">@T["Model"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Model" class="form-control" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Status" class="ocat-label">@T["State"]</label>
+                <div class="ocat-end">
+                    <select asp-for="Status" asp-items="Html.GetEnumSelectList<AssetStatus>()" class="form-select"></select>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Owner and place"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="OwnerKind" class="ocat-label">@T["Owned by"]</label>
+                <div class="ocat-end">
+                    <select asp-for="OwnerKind" class="form-select" data-asset-owner-kind>
+                        @foreach (var kind in Model.OwnerKinds)
+                        {
+                            <option value="@kind" selected="@(kind == Model.OwnerKind)">@(kind switch { AssetOwnerKind.Internal => T["The business"].Value, AssetOwnerKind.Customer => T["A customer"].Value, AssetOwnerKind.Account => T["An account"].Value, _ => T["A contact"].Value })</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            @foreach (var kind in Model.OwnerKinds.Where(kind => kind != AssetOwnerKind.Internal))
+            {
+                var current = kind == Model.OwnerKind && !string.IsNullOrEmpty(Model.OwnerId);
+                var initial = current ? System.Text.Json.JsonSerializer.Serialize(new[] { new { value = Model.OwnerId, text = Model.OwnerName ?? Model.OwnerId, selected = true } }) : "[]";
+                var label = kind switch { AssetOwnerKind.Customer => T["Customer"].Value, AssetOwnerKind.Account => T["Account"].Value, _ => T["Contact"].Value };
+                var choose = kind switch { AssetOwnerKind.Customer => T["Choose a customer"].Value, AssetOwnerKind.Account => T["Choose an account"].Value, _ => T["Choose a contact"].Value };
+
+                <div class="ocat-wrapper" data-asset-owner="@kind" hidden="@(kind != Model.OwnerKind)">
+                    <label class="ocat-label">@label</label>
+                    <div class="ocat-end">
+                        @await Component.InvokeAsync("ItemSelector", new
+                        {
+                            id = $"asset-owner-{kind.ToString().ToLowerInvariant()}",
+                            inputName = $"{Html.NameFor(m => m.OwnerIds)}[{kind}]",
+                            endpoint = kind == AssetOwnerKind.Account ? Url.RouteUrl(CrestApps.OrchardCore.Accounts.AccountsConstants.RouteNames.Search) : Url.Content($"~/Admin/api/crestapps/assets/owners/search?kind={kind}"),
+                            initialItemsJson = initial,
+                            multiple = false,
+                            enableSearch = true,
+                            buttonText = choose,
+                            searchPlaceholder = T["Search by name"].Value,
+                            emptyResultsText = T["Nothing found."].Value,
+                            noSelectionText = choose,
+                            selectedItemsLabel = label,
+                            availableItemsLabel = label,
+                            smallButton = false,
+                        })
+                    </div>
+                </div>
+            }
+            @if (Model.OwnerKind != AssetOwnerKind.Internal && !Model.OwnerKinds.Contains(Model.OwnerKind))
+            {
+                <input type="hidden" asp-for="OwnerId" />
+            }
+            <div class="ocat-wrapper">
+                <label asp-for="ParentAssetId" class="ocat-label">@T["Part of"]</label>
+                <div class="ocat-end">
+                    <select asp-for="ParentAssetId" asp-items="Model.ParentOptions" class="form-select">
+                        <option value="">@T["Not part of another asset"]</option>
+                    </select>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="AddressLine1" class="ocat-label">@T["Street address"]</label>
+                <div class="ocat-end">
+                    <input asp-for="AddressLine1" class="form-control" autocomplete="off" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="City" class="ocat-label">@T["City"]</label>
+                <div class="ocat-end">
+                    <input asp-for="City" class="form-control" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Region" class="ocat-label">@T["State or region"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Region" class="form-control" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="PostalCode" class="ocat-label">@T["Postal code"]</label>
+                <div class="ocat-end">
+                    <input asp-for="PostalCode" class="form-control" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Country" class="ocat-label">@T["Country"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Country" class="form-control" maxlength="2" placeholder="US" />
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Installation and warranty"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="InstallDate" class="ocat-label">@T["Installed"]</label>
+                <div class="ocat-end">
+                    <input asp-for="InstallDate" type="date" class="form-control" style="max-width: 12rem" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="WarrantyStart" class="ocat-label">@T["Warranty from"]</label>
+                <div class="ocat-end">
+                    <input asp-for="WarrantyStart" type="date" class="form-control" style="max-width: 12rem" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="WarrantyEnd" class="ocat-label">@T["Warranty until"]</label>
+                <div class="ocat-end">
+                    <input asp-for="WarrantyEnd" type="date" class="form-control" style="max-width: 12rem" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="WarrantyProvider" class="ocat-label">@T["Warranty from whom"]</label>
+                <div class="ocat-end">
+                    <input asp-for="WarrantyProvider" class="form-control" />
+                </div>
+            </div>
+            @if (Model.Type?.Attributes.Count > 0)
+            {
+                <h2 class="h5 mt-4">@T["{0} details", Model.Type.Name]</h2>
+                @foreach (var field in Model.Type.Attributes)
+                {
+                var id = "attribute-" + field.Name.Replace(' ', '-');
+                var value = Model.Attributes.GetValueOrDefault(field.Name);
+                <div class="ocat-wrapper">
+                    <label for="@id" class="ocat-label">@field.Name</label>
+                    <div class="ocat-end">
+                        @switch (field.Kind)
+                        {
+                            case AssetAttributeKind.Number:
+                                <input id="@id" name="Attributes[@field.Name]" type="number" step="any" value="@value" class="form-control" style="max-width: 12rem" />
+                                break;
+                            case AssetAttributeKind.Date:
+                                <input id="@id" name="Attributes[@field.Name]" type="date" value="@value" class="form-control" style="max-width: 12rem" />
+                                break;
+                            case AssetAttributeKind.YesNo:
+                                <select id="@id" name="Attributes[@field.Name]" class="form-select">
+                                    <option value=""></option>
+                                    <option value="Yes" selected="@(value == "Yes")">@T["Yes"]</option>
+                                    <option value="No" selected="@(value == "No")">@T["No"]</option>
+                                </select>
+                                break;
+                            default:
+                                <input id="@id" name="Attributes[@field.Name]" value="@value" class="form-control" />
+                                break;
+                        }
+                    </div>
+                </div>
+                }
+            }
+            else if (Model.Type is null)
+            {
+                <p class="hint">@T["Choose the type and save to fill in the values its type records."]</p>
+            }
+            @if (Model.ShowFleet)
+            {
+                <h2 class="h5 mt-4">@T["Fleet"]</h2>
+                <div class="ocat-wrapper">
+                    <div class="ocat-end-offset">
+                        <div class="form-check">
+                            <input asp-for="Schedulable" type="checkbox" class="form-check-input" />
+                            <label asp-for="Schedulable" class="form-check-label">@T["Book it for visits"]</label>
+                            <span class="hint dashed">@T["It gets its own Equipment calendar, which refuses two bookings at once."]</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <div class="ocat-end-offset">
+                        <div class="form-check">
+                            <input asp-for="CarriesStock" type="checkbox" class="form-check-input" />
+                            <label asp-for="CarriesStock" class="form-check-label">@T["It carries stock"]</label>
+                            <span class="hint dashed">@T["Its parts are kept at its own Inventory location, so parts used on a job come off it."]</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <label asp-for="Plate" class="ocat-label">@T["Plate"]</label>
+                    <div class="ocat-end">
+                        <input asp-for="Plate" class="form-control" />
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <label asp-for="Vin" class="ocat-label">@T["VIN"]</label>
+                    <div class="ocat-end">
+                        <input asp-for="Vin" class="form-control" />
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <label asp-for="Capacity" class="ocat-label">@T["Capacity"]</label>
+                    <div class="ocat-end">
+                        <input asp-for="Capacity" class="form-control" placeholder="@T["2 seats, 800 kg"]" />
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <label asp-for="FuelType" class="ocat-label">@T["Fuel"]</label>
+                    <div class="ocat-end">
+                        <input asp-for="FuelType" class="form-control" />
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Documents"]</div>
+        <div class="card-body">
+            <div class="mb-3">
+                <textarea asp-for="Documents" class="form-control font-monospace" rows="2" placeholder="manuals/boiler-x200.pdf"></textarea>
+                <span class="hint">@T["Paths of manuals and certificates in the media library, one a line."]</span>
+            </div>
+        </div>
+    </div>
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+        <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+    </div>
+</form>
+
+<script at="Foot">
+    (() => {
+        const kind = document.querySelector('[data-asset-owner-kind]');
+
+        if (!kind) {
+            return;
+        }
+
+        const show = () => document.querySelectorAll('[data-asset-owner]').forEach(row => row.hidden = row.dataset.assetOwner !== kind.value);
+
+        kind.addEventListener('change', show);
+        show();
+    })();
+</script>

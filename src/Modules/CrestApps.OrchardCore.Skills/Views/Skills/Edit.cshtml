@@ -16,5 +16,8 @@
         <div class="ocat-wrapper"><label asp-for="RequiredCertificationId" class="ocat-label">@T["Required certification"]</label><div class="ocat-end"><select asp-for="RequiredCertificationId" asp-items="Model.CertificationOptions" class="form-select" style="max-width: 22rem"><option value="">@T["None"]</option></select><span class="hint">@T["When set, the skill only counts for a person on days they hold a valid certificate of this certification."]</span></div></div>
         <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["Enabled"]</label><span class="hint dashed">@T["Disabled skills can't be given to people, and the people who hold them don't count as holding them."]</span></div></div></div>
     </div></div>
-    <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Save"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a></div></div>
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a>
+    </div>
 </form>

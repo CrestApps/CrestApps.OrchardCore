@@ -34,6 +34,11 @@ public sealed class TimeOffAdjustment
     public DateOnly EffectiveDate { get; set; }
 
     /// <summary>
+    /// Gets or sets the last day a grant can be used; needed for a <see cref="TimeOffLedgerKind.Grant"/>.
+    /// </summary>
+    public DateOnly? ExpiresOn { get; set; }
+
+    /// <summary>
     /// Gets or sets a note.
     /// </summary>
     public string Note { get; set; }

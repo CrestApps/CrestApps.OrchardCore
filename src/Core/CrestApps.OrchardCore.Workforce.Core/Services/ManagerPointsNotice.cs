@@ -35,7 +35,7 @@ internal sealed class ManagerPointsNotice : IAttendancePointsHandler
             Kind = WorkforceNotificationKind.Attendance,
             Title = S["{0} reached {1} attendance points", worker.DisplayName, points.ToString("0.##", CultureInfo.CurrentCulture)],
             Body = S["Their latest exception was on {0}.", exception.Date.ToString("D", CultureInfo.CurrentCulture)],
-            Url = "~/my-work/approvals",
+            Url = "~/Admin/my-work/approvals",
         }, cancellationToken);
     }
 }

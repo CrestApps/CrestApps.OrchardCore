@@ -60,6 +60,11 @@ public sealed class ItemSelectorViewModel
     /// Gets or sets a value indicating whether the selector is drawn small, for use in toolbars.
     /// </summary>
     public bool SmallButton { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets whether a value must be chosen, so a single selector doesn't list its empty choice.
+    /// </summary>
+    public bool Required { get; set; }
 }
 
 /// <summary>

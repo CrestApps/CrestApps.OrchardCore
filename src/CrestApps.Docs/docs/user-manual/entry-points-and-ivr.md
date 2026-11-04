@@ -25,9 +25,13 @@ A text entry point decides where the conversations go, how a queue hands them ou
 
 <AskYourAdmin />
 
+<YouTube video="contact-center-entry-points-ivr" title="Video overview of inbound entry points: numbers, routing, closed hours, voicemail, personal lines, text entry points and cloning" />
+
 <YouTube video="contact-center-setup-walkthroughs" title="Video of adding a voice calls entry point that picks a number from the address list and routes its calls to a queue, with business hours and voicemail settings" start={420} end={473} />
 
 ## Create an entry point
+
+<YouTube video="contact-center-call-flows" title="Video of the life of an inbound call: the recording notice, welcome, menu, queue, offer and wrap-up" start={27} end={74} />
 
 1. Add the numbers first, under **Interaction Center > Management > [Omnichannel Addresses](channel-endpoints.md)**, with **Voice calls** or **Text messages (SMS)** ticked.
 2. Open **Interaction Center > Management > Inbound entry points** and click **Add inbound entry point**. When more than one channel is available, a dialog asks what the entry point answers: click **Add** on the **Voice calls** or **Text messages** card.
@@ -47,17 +51,21 @@ Numbers that were typed on an entry point before entry points picked them from t
 
 ### Routing
 
+<YouTube video="contact-center-entry-points-ivr" title="Video of a personal line that rings one specific agent, with a ring window and voicemail" start={228} end={265} />
+
 | Field | What it does |
 | --- | --- |
 | **Route to** | **Queue** (the default), **Specific agent**, or an AI: **AI voice agent** for calls, offered when the Telnyx AI Voice Agent feature is on, and **AI agent** for texts, offered when SMS Omnichannel Automation is on. A specific-agent line rings one person and never falls back to a queue. |
 | **AI agent** | The AI chat profile that answers the calls (AI voice agent routing). See [AI voice agent](#ai-voice-agent). |
 | **Target queue** | The queue that receives the calls (queue routing). |
-| **Priority** | Calls only. Lowest to Highest. Calls from this number jump ahead of lower-priority work in the queue. |
+| **Priority** | Calls only. Lowest to Highest, **Normal** by default. Calls from this number start at this priority and jump ahead of lower-priority work in the queue; it replaces the queue's **Default priority**. A caller who rings again within four hours of their last call is raised to **High**, and a customer who returns one of your callbacks within 24 hours to **Highest**; priority is only ever raised. These raises apply to calls that go straight to the queue: a call that first plays a welcome message, a recording notice or a menu is queued at the entry point's priority. |
 | **Target agent** | The person to ring (specific-agent routing). |
 | **Send unanswered calls to voicemail** | Specific-agent lines only. When off, the caller keeps ringing until the agent answers or the caller hangs up. |
 | **Ring window (seconds)** | How long to ring the agent before voicemail. 5 to 300, default 30. |
 
 ### Hours
+
+<YouTube video="contact-center-entry-points-ivr" title="Video of choosing a business hours calendar, a closed action and a closed message" start={164} end={202} />
 
 | Field | What it does |
 | --- | --- |
@@ -67,6 +75,8 @@ Numbers that were typed on an entry point before entry points picked them from t
 | **Closed message** | Spoken to a caller who rings while the entry point is closed, before the closed action. Once it has been said the caller is held in the queue, moved to the overflow queue or sent to voicemail; with **Reject** the call ends after the message. Empty applies the closed action straight away, with no message. |
 
 ### Welcome and IVR menu
+
+<YouTube video="contact-center-call-flows" title="Video of the welcome message and the IVR menu on an entry point" start={74} end={110} />
 
 The IVR menu is optional. With no menu, callers go straight to the routing target.
 
@@ -78,6 +88,8 @@ The queue has a **Welcome message** of its own, set on the [queue](queues.md). I
 
 ### Voicemail
 
+<YouTube video="contact-center-entry-points-ivr" title="Video of setting the default voicemail greeting and choosing whose inbox receives the message" start={202} end={228} />
+
 | Field | What it does |
 | --- | --- |
 | **Default voicemail greeting** | Spoken when the person receiving the voicemail has not recorded [their own greeting](voicemail.md#record-your-voicemail-greeting). Empty uses the system default. |
@@ -85,6 +97,8 @@ The queue has a **Welcome message** of its own, set on the [queue](queues.md). I
 | **Voicemail inbox** | The agent whose inbox receives the voicemail. Hidden when the shared box is chosen. |
 
 ## Test a new number before you publish it
+
+<YouTube video="contact-center-entry-points-ivr" title="Video of the checklist for testing a new number before you publish it" start={352} end={381} />
 
 1. Add the number under [Omnichannel Addresses](channel-endpoints.md) with **Voice calls** ticked.
 2. Create the target [queue](queues.md): its routing strategy, service level, reservation timeout, required skills and overflow queue. Attach a [business hours](business-hours.md) calendar if the line should close or overflow outside staffed hours.
@@ -94,21 +108,29 @@ The queue has a **Welcome message** of its own, set on the [queue](queues.md). I
 
 ## Clone an entry point
 
+<YouTube video="contact-center-entry-points-ivr" title="Video of cloning an entry point from its Actions menu" start={317} end={352} />
+
 To start an entry point from an existing one, open its **Actions** menu in the entry point list and choose **Clone**. The form opens with every setting of the original, including its routing, hours, phone menu and voicemail, and the name **Copy of** the original's name. **Numbers** starts empty, because each number is answered by one entry point on each channel. Pick the new entry point's numbers and click **Save**.
 
 ## AI voice agent
 
+<YouTube video="contact-center-ai-voice-agent-inbound" title="Video overview of the AI voice agent for inbound calls: the entry point, open and closed hours, the subject, live conversation and review" />
+
 A call entry point can hand its calls to an AI voice agent: an AI chat profile, such as one made from the **Answer calls at the front desk** template. This is the only place an AI is set to answer calls; texts are set the same way on a [text entry point](automated-ai.md#let-the-ai-answer-incoming-texts). Queues have no AI setting.
 
-1. Make the profile under **Artificial Intelligence > Profiles**, with an initial prompt (what it says when it picks up) and the business details its prompt asks for.
+<YouTube video="contact-center-ai-voice-agent-inbound" title="Video of routing a number to an AI voice agent and setting open and closed hours" start={68} end={155} />
+
+1. Make the profile under **Artificial Intelligence > Profiles**, with an **Opening message** (what it says when it picks up) and the business details its instructions ask for.
 2. On the entry point's **Routing** card, set **Route to** to **AI voice agent** and pick the profile under **AI agent**.
 3. To let the AI pass callers to a person, set up the hand-off on the [subject flow](subjects.md) for the number.
 
-While the entry point is open, the AI answers each call itself, greets the caller with its initial prompt and holds the conversation. The welcome message and phone menu are not used. The call becomes an automated activity with the AI's transcript, and it reaches an agent's queue only if the AI hands the caller over. While the entry point is closed, callers go to voicemail, or are refused when the closed action is **Reject**.
+While the entry point is open, the AI answers each call itself, greets the caller and holds the conversation. A turn-based call speaks the profile's **Opening message**; in a live audio conversation the model words its own greeting from the profile's instructions. The welcome message and phone menu are not used. The call becomes an automated activity with the AI's transcript, and it reaches an agent's queue only if the AI hands the caller over. While the entry point is closed, callers go to voicemail, or are refused when the closed action is **Reject**. An AI entry point has no queue, so **Hold in queue** and **Overflow** act as **Voicemail**, and the voicemail should be delivered to **An agent's inbox** (pick the **Voicemail inbox**): the queue's shared voicemail box needs a queue. A call that arrives on a provider that has no AI voice agent, such as Asterisk, is rejected.
 
-The AI voice agent needs the **Telnyx AI Voice Agent** feature. The profile's **Conversation deployment** holds a live conversation, or the site's default realtime deployment when the profile names none; without a realtime deployment the agent takes turns, speaking and then listening. If the feature is turned off after an entry point is set up, its calls are refused until you pick another target.
+The AI voice agent needs the **Telnyx AI Voice Agent** feature, and a live audio conversation also needs the **Contact Center Voice Media** feature. The profile's **Conversation deployment** holds a live conversation, or the site's default realtime deployment when the profile names none; without a realtime deployment the agent takes turns, speaking and then listening. If the feature is turned off after an entry point is set up, its calls are refused until you pick another target.
 
 ## Text entry points
+
+<YouTube video="contact-center-entry-points-ivr" title="Video of adding a text entry point with queue distribution, an auto-reply and a closed auto-reply" start={265} end={317} />
 
 <YouTube video="contact-center-setup-walkthroughs" title="Video of adding a text messages entry point that routes a number's texts to a queue, with an auto-reply and a closed auto-reply" start={476} end={522} />
 
@@ -126,6 +148,10 @@ A number with no enabled text entry point still receives texts; they land in the
 Before text entry points, where a number's texts went was set on the number itself. When the site was upgraded, each number's settings became a text entry point named after the number (with " (SMS)" added when the name was taken, usually by the number's call entry point), with the same target, distribution and auto-reply. A number whose texts went nowhere got no entry point.
 
 ## Build an IVR menu
+
+<YouTube video="contact-center-ivr-menus" title="Video overview of IVR menus: the welcome message, building a menu with keys and submenus, tries and the AI voice agent" />
+
+<YouTube video="contact-center-ivr-menus" title="Video of building a menu with a prompt and a key for each choice, including a recorded prompt" start={116} end={179} />
 
 <YouTube video="contact-center-setup-walkthroughs" title="Video of building a two-level IVR menu with queue, agent, voicemail and submenu key actions" start={525} end={564} />
 
@@ -148,7 +174,9 @@ An IVR menu is a set of **menus**. Each menu has a prompt and a list of **keys**
 4. At the top, set **Tries**, the number of wrong or missing keys a caller is allowed (default 3), and **When the tries run out** (the default, *Route to the entry point target*, sends the caller where the entry point routes calls with no menu).
 5. Click **Save**. Until every problem is fixed, the builder shows how many there are and the entry point will not save: a menu needs a prompt or recording and at least one key, a key can only be used once per menu, and queue, agent and transfer actions need a target. Allowed keys are 0-9, `*` and `#`.
 
-Each menu has a **Menu** name; renaming a menu updates every key that opens it. A key that is already used on a menu is not offered again for that menu. **Remove menu** deletes a menu you no longer need.
+<YouTube video="contact-center-ivr-menus" title="Video of a submenu, going back to another menu, repeating a menu, tries and the problems the builder reports" start={179} end={285} />
+
+Menus are not named. The builder draws them the way a caller walks them: the first menu at the top, and each submenu nested under the key that opens it, labelled by the keys that lead there, such as *Main menu > 4*. A key that is already used on a menu is not offered again for that menu. In a submenu's header, the red button (**Remove submenu**) deletes it; in the first menu's header it removes the whole IVR menu.
 
 Two kinds of problems are only warnings, and do not stop you saving: a menu that no key leads to, listed under **Menus no key opens** (callers never hear it), and a queue, agent or destination that no longer exists (shown as *Not found*).
 

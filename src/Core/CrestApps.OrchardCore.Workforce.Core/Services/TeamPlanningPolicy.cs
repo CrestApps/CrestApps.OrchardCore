@@ -1,5 +1,7 @@
+using CrestApps.OrchardCore.Teams.Core.Services;
+using CrestApps.OrchardCore.Teams.Models;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Models;
-using CrestApps.OrchardCore.Workforce.Services;
 
 namespace CrestApps.OrchardCore.Workforce.Core.Services;
 
@@ -24,9 +26,9 @@ internal sealed class TeamPlanningPolicy
     {
         foreach (var team in await LineageAsync(teamId, cancellationToken))
         {
-            if (team.OpenShiftClaimPolicy.HasValue)
+            if (team.GetWorkforceSettings().OpenShiftClaimPolicy.HasValue)
             {
-                return team.OpenShiftClaimPolicy.Value;
+                return team.GetWorkforceSettings().OpenShiftClaimPolicy.Value;
             }
         }
 
@@ -40,9 +42,9 @@ internal sealed class TeamPlanningPolicy
     {
         foreach (var team in await LineageAsync(teamId, cancellationToken))
         {
-            if (team.ShiftTradesNeedApproval.HasValue)
+            if (team.GetWorkforceSettings().ShiftTradesNeedApproval.HasValue)
             {
-                return team.ShiftTradesNeedApproval.Value;
+                return team.GetWorkforceSettings().ShiftTradesNeedApproval.Value;
             }
         }
 
@@ -57,16 +59,16 @@ internal sealed class TeamPlanningPolicy
     {
         foreach (var team in await LineageAsync(teamId, cancellationToken))
         {
-            if (team.TimeOffShiftHandling.HasValue)
+            if (team.GetWorkforceSettings().TimeOffShiftHandling.HasValue)
             {
-                return team.TimeOffShiftHandling.Value;
+                return team.GetWorkforceSettings().TimeOffShiftHandling.Value;
             }
         }
 
         return TimeOffShiftHandling.Flag;
     }
 
-    private async Task<IReadOnlyList<WorkforceTeam>> LineageAsync(string teamId, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<Team>> LineageAsync(string teamId, CancellationToken cancellationToken)
     {
         var team = string.IsNullOrEmpty(teamId) ? null : await _teamStore.FindByIdAsync(teamId, cancellationToken);
 

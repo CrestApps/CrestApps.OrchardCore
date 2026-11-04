@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Dispatch.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<VisitStatusChangedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-truck-fast" aria-hidden="true"></i>
+    @T["Visit Status Changed"]
+</h4>
+<p>@T["Starts when a visit is dispatched, on its way, on site, paused, completed, incomplete or canceled. The input has VisitId, Number, WorkOrderId, Status, PreviousStatus, the workers and the times."]</p>

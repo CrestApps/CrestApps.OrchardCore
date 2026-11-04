@@ -3,6 +3,7 @@ using System.Security.Claims;
 using CrestApps.OrchardCore.Calendars.Core;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Controllers;
 using CrestApps.OrchardCore.Workforce.Core;
 using CrestApps.OrchardCore.Workforce.Core.Services;
@@ -298,12 +299,12 @@ internal static class WorkforceApiEndpoints
         var shifts = new List<object>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
 
-        foreach (var team in teams.Where(team => !string.IsNullOrEmpty(team.CalendarId)))
+        foreach (var team in teams.Where(team => !string.IsNullOrEmpty(team.GetWorkforceSettings().CalendarId)))
         {
             var zone = await PlanningOptions.TimeZoneOfAsync(team, siteService);
             var occurrences = await queries.GetOccurrencesAsync(new CalendarOccurrenceQuery
             {
-                CalendarIds = [team.CalendarId],
+                CalendarIds = [team.GetWorkforceSettings().CalendarId],
                 FromUtc = CalendarTime.ToUtc(start.Value.ToDateTime(TimeOnly.MinValue), zone),
                 ToUtc = CalendarTime.ToUtc(end.Value.ToDateTime(TimeOnly.MinValue), zone),
                 EventTypes = [WorkforceConstants.EventTypes.Shift],

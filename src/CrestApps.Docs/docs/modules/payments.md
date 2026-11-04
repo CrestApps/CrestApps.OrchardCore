@@ -15,6 +15,10 @@ The **Payments** framework defines the provider-agnostic contracts that let any 
 
 ## Concepts
 
+This video shows the payment screens in the admin:
+
+<YouTube video="payments" title="Video overview of payments" />
+
 ### Payment methods and options
 
 Every gateway advertises itself by registering an **`ICheckoutPaymentProvider`**. There is no separate list of

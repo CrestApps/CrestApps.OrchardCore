@@ -14,6 +14,8 @@ user_manual:
 | **Core** | `CrestApps.OrchardCore.Carts.Core`, `CrestApps.OrchardCore.Orders.Core` |
 | **Category** | Commerce |
 
+<YouTube video="buyer-account-guest-orders" title="Narrated video overview of the buyer account and guest orders" />
+
 **Carts** lets visitors put products sold online in a cart from a listing card or a product page. **Orders** checks the cart out through the [Checkout](checkout) framework and records what was bought. Together they sell goods the way [Subscriptions](subscriptions) sells plans: through the same checkout, payment providers, coupons and taxes.
 
 ## Carts
@@ -100,6 +102,10 @@ The carts and wishlists indexes hold no dates, so these data sets have no main d
 | Wishlist items | `AddedUtc` | Saved | |
 
 ## Orders
+
+This video shows the order screens in the admin:
+
+<YouTube video="orders" title="Video overview of orders" />
 
 ### Checking out
 
@@ -354,7 +360,7 @@ Money is in the order's own currency, which the `Currency` field of the same row
 
 | Data set | Fields |
 | --- | --- |
-| **Orders** | `ItemId` (identifier), `OrderNumber`, `Status`, `Channel`, `Culture`, `PurchaseOrderNumber`, `LineCount`, `ItemCount` (units), `CartId` (references `Carts.Carts`), `CheckoutSessionId` (references `Checkout.CheckoutSessions`); money: `Currency`, `Subtotal`, `DiscountTotal`, `ShippingAmount`, `TaxAmount`, `Total`, `TenderedAmount` (paid from gift cards and store credit), `RefundedAmount`, `NetAmount` (total less refunds), `RefundStatus`, `HasOpenDispute`, `PaymentRisk`; dates: `CreatedUtc` (placed, the main date), `PaidUtc`, `CanceledUtc`, `CancelReason`, `ModifiedUtc`, `IsAnonymized`, `RecoveryEmailSentUtc` (when the buyer was emailed a link back to the unpaid checkout), `IsRecovered` (paid after that email); customer: `CustomerId` (references `Customers.Customers`), `UserId` (references `Users`), `IsGuest`, `CustomerName`, `CustomerEmail`, `CompanyId` (references `Companies.Companies`); addresses: `BillingCountry`, `BillingRegion`, `BillingCity`, `BillingPostalCode`, `ShippingCountry`, `ShippingRegion`, `ShippingCity`, `ShippingPostalCode`; fulfillment: `FulfillmentStatus`, `ShippingMethod`, `ShippingProvider`, `IsPickup`; store: `LocationId` (references `Inventory.Locations`), `RegisterId` (references `PointOfSale.Registers`), `RegisterName`, `ShiftId` (references `PointOfSale.RegisterShifts`), `StaffUserId` (references `Users`), `StaffName`; quote and approval: `QuoteStatus`, `QuoteRequestedUtc`, `QuoteSentUtc`, `ApprovalStatus`, `IsInvoice`, `InvoiceDueUtc` |
+| **Orders** | `ItemId` (identifier), `OrderNumber`, `Status`, `Channel`, `Culture`, `PurchaseOrderNumber`, `LineCount`, `ItemCount` (units), `CartId` (references `Carts.Carts`), `CheckoutSessionId` (references `Checkout.CheckoutSessions`); money: `Currency`, `Subtotal`, `DiscountTotal`, `ShippingAmount`, `TaxAmount`, `Total`, `TenderedAmount` (paid from gift cards and store credit), `RefundedAmount`, `NetAmount` (total less refunds), `RefundStatus`, `HasOpenDispute`, `PaymentRisk`; dates: `CreatedUtc` (placed, the main date), `PaidUtc`, `CanceledUtc`, `CancelReason`, `ModifiedUtc`, `IsAnonymized`, `RecoveryEmailSentUtc` (when the buyer was emailed a link back to the unpaid checkout), `IsRecovered` (paid after that email); customer: `CustomerId` (references `Customers.Customers`), `UserId` (references `Users`), `IsGuest`, `CustomerName`, `CustomerEmail`, `AccountId` (references `B2BAccounts.B2BAccounts`); addresses: `BillingCountry`, `BillingRegion`, `BillingCity`, `BillingPostalCode`, `ShippingCountry`, `ShippingRegion`, `ShippingCity`, `ShippingPostalCode`; fulfillment: `FulfillmentStatus`, `ShippingMethod`, `ShippingProvider`, `IsPickup`; store: `LocationId` (references `Inventory.Locations`), `RegisterId` (references `PointOfSale.Registers`), `RegisterName`, `ShiftId` (references `PointOfSale.RegisterShifts`), `StaffUserId` (references `Users`), `StaffName`; quote and approval: `QuoteStatus`, `QuoteRequestedUtc`, `QuoteSentUtc`, `ApprovalStatus`, `IsInvoice`, `InvoiceDueUtc` |
 | Every order entry data set | `OrderId` (references `Orders`), `OrderNumber`, `OrderStatus`, `OrderChannel`, `OrderCreatedUtc` (the main date), `OrderPaidUtc`, `Currency`, `CustomerId` (references `Customers.Customers`), then the fields below |
 | **Order lines** | `LineId` (identifier), `Position`, `Quantity`, `UnitPrice`, `LineTotal`, `QuotedUnitPrice`, `PriceName`, `AddOns`, `AddOnAmount`, `ExcludeFromDiscounts`, `ShipsFromUtc`, `ProductId` (references `Products.Products`), `ProductVersionId`, `ContentType`, `Title`, `Sku`, `VariantId` (references `Products.ProductVariants`), `VariantTitle`, `ProductType`, `Categories` (category ids, comma separated), `IsBundle`, `TaxCategoryCode` |
 | **Order refunds** | `RefundId` (identifier), `Amount`, `Reason`, `RefundedUtc` |
@@ -385,6 +391,8 @@ The customers, cohorts, checkouts, sales by category and VAT one-stop-shop repor
 
 ### Workflow events
 
+<YouTube video="commerce-automation" title="Narrated video overview of commerce automation" />
+
 With Workflows on, **Order Paid**, **Order Canceled** and **Order Refunded** events start workflows. Their input has `Order`, `OrderId`, `OrderNumber`, `Total`, `Currency` and `CustomerEmail`; a cancel adds `Reason` and `Note`, and a refund adds `Amount`, `Reason`, `RefundedAmount` and `FullyRefunded`. An order replaced by a newer one from the same cart doesn't start Order Canceled.
 
 ### Screens and permissions
@@ -406,6 +414,13 @@ The widget has these options: the **first window** (7 days) and **second window*
 ### Automation recipes
 
 Orders adds the recipes **Automation: thank-you email** (on) and **Automation: canceled order alert** (added off), and Inventory adds **Automation: low stock alert** (added off). Each turns on Workflows and Email and adds a `WorkflowType` with stable ids: `OrderPaidEvent`, `OrderCanceledEvent` or `LowStockEvent` leading to an `EmailTask` in Liquid over `Workflow.Input`.
+
+## The account page
+
+With [Accounts](accounts.md) on, an account's page gets an **Orders** tab: the latest 25 orders placed for the account
+(`OrderQuery.AccountId`), with their status, buyer, date and total, linked to each order. It needs `ManageOrders`. An
+order is placed for an account when one of its members buys for it as a business, through
+[Accounts B2B](accounts-b2b.md).
 
 ## Wishlists
 

@@ -375,7 +375,7 @@ public sealed class PublicApiApprovalTests
     };
 
     private static readonly Regex _familyRegex = new(
-        @"^CrestApps\.OrchardCore\.(ContactCenter|Telephony|Omnichannel)(\..+)?$",
+        @"^CrestApps\.OrchardCore\.(Accounts|ContactCenter|Telephony|Omnichannel)(\..+)?$",
         RegexOptions.Compiled);
 
     private static readonly Regex _typeDeclarationRegex = new(
@@ -413,8 +413,8 @@ public sealed class PublicApiApprovalTests
     /// </summary>
     /// <remarks>
     /// A hand-written list is a list someone has to remember to add to. Deriving the set means a new project in the
-    /// Contact Center, Telephony or Omnichannel families starts being governed the moment something compiles against
-    /// it, rather than the moment somebody notices.
+    /// Accounts, Contact Center, Telephony or Omnichannel families starts being governed the moment something compiles
+    /// against it, rather than the moment somebody notices.
     /// </remarks>
     private static List<string> GetGovernedAssemblyNames()
     {

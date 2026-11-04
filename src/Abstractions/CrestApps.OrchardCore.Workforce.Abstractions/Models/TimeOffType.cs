@@ -74,6 +74,11 @@ public sealed class TimeOffType : CatalogItem, INameAwareModel, IModifiedUtcAwar
     public bool Enabled { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets the Time Tracker stage approved time off of this type is kept in, when Time Tracker is on.
+    /// </summary>
+    public string StageId { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC time the type was created.
     /// </summary>
     public DateTime CreatedUtc { get; set; }

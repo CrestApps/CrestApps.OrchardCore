@@ -1,0 +1,25 @@
+@model OsrmSettingsViewModel
+
+<h2 class="h5 mt-4">@T["OSRM"]</h2>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p class="text-muted">@T["Choose OSRM above for travel times or routes. OSRM is an open-source routing server you run yourself, built from OpenStreetMap data; it doesn't geocode."]</p>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="BaseUrl" class="ocat-label">@T["Server address"]</label>
+    <div class="ocat-end">
+        <input asp-for="BaseUrl" class="form-control" placeholder="http://localhost:5000" />
+        <span class="hint">@T["Where the OSRM server answers. Without one, the built-in estimate is used."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Profile" class="ocat-label">@T["Profile"]</label>
+    <div class="ocat-end">
+        <input asp-for="Profile" class="form-control" style="max-width: 12rem" />
+        <span class="hint">@T["The profile the server was built with, usually driving."]</span>
+    </div>
+</div>

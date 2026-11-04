@@ -13,10 +13,12 @@ namespace CrestApps.OrchardCore.Workforce.Core.Services;
 /// never broken: one shift a day, the worker's days, availability and skills, rest, weekly and daily hours, and days
 /// in a row. Workers are tried in an order drawn from the seed, so a run is repeatable.
 /// </summary>
-internal sealed class DefaultShiftScheduleSolver : IShiftScheduleSolver
+public sealed class DefaultShiftScheduleSolver : IShiftScheduleSolver
 {
+    /// <inheritdoc/>
     public string Name => WorkforceConstants.DefaultSolver;
 
+    /// <inheritdoc/>
     public Task<ShiftScheduleProposal> SolveAsync(ShiftScheduleProblem problem, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(problem);

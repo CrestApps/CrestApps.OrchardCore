@@ -1,8 +1,8 @@
 @model CertificationEditViewModel
 
 <zone Name="Title">
-    <breadcrumb name="CertificationsEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Certification"] : T["Edit '{0}' Certification", Model.Name])">
-        <breadcrumb-item id="Certifications" action="Index" controller="Certifications" area="CrestApps.OrchardCore.Skills">@T["Certifications"]</breadcrumb-item>
+    <breadcrumb name="CertificationsEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Certification Type"] : T["Edit '{0}' Certification Type", Model.Name])">
+        <breadcrumb-item id="Certifications" action="Index" controller="Certifications" area="CrestApps.OrchardCore.Skills">@T["Certification Types"]</breadcrumb-item>
     </breadcrumb>
 </zone>
 
@@ -18,5 +18,8 @@
         <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="RequiresDocument" class="form-check-input" /><label asp-for="RequiresDocument" class="form-check-label">@T["Needs a copy of the certificate"]</label><span class="hint dashed">@T["A certificate can't be marked valid until a copy is attached."]</span></div></div></div>
         <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["Enabled"]</label></div></div></div>
     </div></div>
-    <div class="ocat-wrapper"><div class="ocat-end-offset"><button class="btn btn-primary" type="submit">@T["Save"]</button> <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a></div></div>
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a>
+    </div>
 </form>

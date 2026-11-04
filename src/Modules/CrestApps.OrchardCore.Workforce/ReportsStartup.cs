@@ -15,6 +15,21 @@ public sealed class ReportsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDataSource<WorkforceReportDataSource>();
+        services.AddScoped<IWorkforceReportDataSet, WorkersReportDataSet>();
+    }
+}
+
+/// <summary>
+/// Adds the schedule changes data set to the Workforce report data source.
+/// </summary>
+[Feature(WorkforceConstants.Features.ShiftPlanning)]
+[RequireFeatures("OrchardCore.DataPipelines.Core")]
+public sealed class ShiftPlanningReportsStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IWorkforceReportDataSet, ScheduleChangesReportDataSet>();
     }
 }
 

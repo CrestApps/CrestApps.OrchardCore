@@ -12,7 +12,7 @@ internal sealed class DefaultTimesheetCalculator : ITimesheetCalculator
 {
     // How long after a shift ends, or after clocking in when there is no shift, an open punch counts as missed.
     private static readonly TimeSpan _missedAfterShift = TimeSpan.FromHours(4);
-    private static readonly TimeSpan _missedWithoutShift = TimeSpan.FromHours(16);
+    internal static readonly TimeSpan MissedWithoutShift = TimeSpan.FromHours(16);
 
     // How far from a shift's start a stretch with no overlap still belongs to it.
     private static readonly TimeSpan _shiftReach = TimeSpan.FromHours(1);
@@ -65,7 +65,7 @@ internal sealed class DefaultTimesheetCalculator : ITimesheetCalculator
             var open = stretch.Spans[^1];
             var missed = stretch.Shift is not null
                 ? input.NowUtc > stretch.Shift.EndUtc + _missedAfterShift
-                : input.NowUtc > stretch.Start + _missedWithoutShift;
+                : input.NowUtc > stretch.Start + MissedWithoutShift;
 
             if (!missed)
             {
@@ -225,7 +225,7 @@ internal sealed class DefaultTimesheetCalculator : ITimesheetCalculator
     /// <summary>
     /// Pairs punches into stretches of spans, each stretch from clocking in to clocking out.
     /// </summary>
-    private static List<Stretch> Pair(IEnumerable<TimePunch> punches)
+    internal static List<Stretch> Pair(IEnumerable<TimePunch> punches)
     {
         var stretches = new List<Stretch>();
         Stretch current = null;
@@ -262,7 +262,7 @@ internal sealed class DefaultTimesheetCalculator : ITimesheetCalculator
                 case TimePunchKind.In:
                 case TimePunchKind.JobStart when state is null:
                     // Clocking in long after an open stretch began starts a new one; the open one is a missed punch.
-                    if (state is null || (current.IsOpen && punch.Utc - current.Start > _missedWithoutShift))
+                    if (state is null || (current.IsOpen && punch.Utc - current.Start > MissedWithoutShift))
                     {
                         activity = punch.ActivityCodeId;
                         job = punch.Job;
@@ -513,7 +513,9 @@ internal sealed class DefaultTimesheetCalculator : ITimesheetCalculator
     }
 
     /// <summary>
-    /// Classifies paid time into regular, overtime and double time, in order, counting the day and the week.
+    /// Classifies paid time into regular, overtime and double time, in order, counting the day and the week. Only
+    /// regular hours count toward the weekly overtime, so hours already paid as daily overtime aren't counted twice.
+    /// Regular hours on a holiday or a weekend day are paid with that code instead.
     /// </summary>
     private static void Classify(IReadOnlyList<Segment> segments, TimeClockPolicy policy, DayOfWeek weekStart, PayCodes codes, Action<DateOnly, string, string, string, TimesheetLineSource, long, IEnumerable<string>, string> add)
     {
@@ -522,49 +524,73 @@ internal sealed class DefaultTimesheetCalculator : ITimesheetCalculator
         var dailyOvertime = Seconds(policy.DailyOvertimeHours);
         var dailyDoubleTime = Seconds(policy.DailyDoubleTimeHours);
         var weeklyOvertime = Seconds(policy.WeeklyOvertimeHours);
+        var holidays = (policy.Holidays ?? []).ToHashSet();
+        var weekendDays = (policy.WeekendDays ?? []).ToHashSet();
+        var workedDays = segments.Where(segment => segment.Seconds > 0).Select(segment => segment.Date).ToHashSet();
+
+        DateOnly WeekOf(DateOnly date) => date.AddDays(-(((int)date.DayOfWeek - (int)weekStart + 7) % 7));
+
+        // The seventh day of the week, worked after each of the six before it.
+        bool IsSeventhDay(DateOnly date)
+            => policy.SeventhDayOvertime && date == WeekOf(date).AddDays(6) && Enumerable.Range(1, 6).All(back => workedDays.Contains(date.AddDays(-back)));
 
         foreach (var segment in segments.OrderBy(segment => segment.Start))
         {
-            var week = segment.Date.AddDays(-(((int)segment.Date.DayOfWeek - (int)weekStart + 7) % 7));
+            var week = WeekOf(segment.Date);
+            var seventhDay = IsSeventhDay(segment.Date);
+            var dayOvertime = seventhDay ? 0 : dailyOvertime;
+            var dayDoubleTime = seventhDay ? SeventhDayDoubleTime : dailyDoubleTime;
             var remaining = segment.Seconds;
 
             while (remaining > 0)
             {
                 var day = days.GetValueOrDefault(segment.Date);
-                var weekUsed = weeks.GetValueOrDefault(week);
+                var weekRegular = weeks.GetValueOrDefault(week);
                 PayCodeKind kind;
                 long boundary;
 
-                if (dailyDoubleTime.HasValue && day >= dailyDoubleTime)
+                if (dayDoubleTime.HasValue && day >= dayDoubleTime)
                 {
                     kind = PayCodeKind.DoubleTime;
                     boundary = remaining;
                 }
-                else if ((dailyOvertime.HasValue && day >= dailyOvertime) || (weeklyOvertime.HasValue && weekUsed >= weeklyOvertime))
+                else if ((dayOvertime.HasValue && day >= dayOvertime) || (weeklyOvertime.HasValue && weekRegular >= weeklyOvertime))
                 {
                     kind = PayCodeKind.Overtime;
-                    boundary = dailyDoubleTime.HasValue ? dailyDoubleTime.Value - day : remaining;
+                    boundary = dayDoubleTime.HasValue ? dayDoubleTime.Value - day : remaining;
                 }
                 else
                 {
                     kind = PayCodeKind.Regular;
                     boundary = new[]
                     {
-                        dailyOvertime - day,
-                        dailyDoubleTime - day,
-                        weeklyOvertime - weekUsed,
+                        dayOvertime - day,
+                        dayDoubleTime - day,
+                        weeklyOvertime - weekRegular,
                     }.Where(value => value.HasValue).Select(value => value.Value).DefaultIfEmpty(remaining).Min();
                 }
 
                 var take = Math.Min(remaining, Math.Max(1, boundary));
+                var paidAs = kind != PayCodeKind.Regular ? kind
+                    : holidays.Contains(segment.Date) ? PayCodeKind.Holiday
+                    : weekendDays.Contains(segment.Date.DayOfWeek) ? PayCodeKind.Weekend
+                    : kind;
 
-                add(segment.Date, codes.Of(kind), segment.ActivityCodeId, segment.Job, TimesheetLineSource.Punches, take, segment.PunchIds, null);
+                add(segment.Date, codes.Of(paidAs), segment.ActivityCodeId, segment.Job, TimesheetLineSource.Punches, take, segment.PunchIds, null);
                 days[segment.Date] = day + take;
-                weeks[week] = weekUsed + take;
+
+                if (kind == PayCodeKind.Regular)
+                {
+                    weeks[week] = weekRegular + take;
+                }
+
                 remaining -= take;
             }
         }
     }
+
+    // On the seventh day in a row, hours past eight are double time.
+    private static readonly long? SeventhDayDoubleTime = 8 * 3600;
 
     private static long DifferentialSeconds(PayCode differential, Segment segment, string zone)
     {
@@ -603,7 +629,7 @@ internal sealed class DefaultTimesheetCalculator : ITimesheetCalculator
 
     private static TimeSpan Min(TimeSpan first, TimeSpan second) => first < second ? first : second;
 
-    private sealed class Stretch
+    internal sealed class Stretch
     {
         public DateTime Start { get; set; }
 
@@ -614,7 +640,7 @@ internal sealed class DefaultTimesheetCalculator : ITimesheetCalculator
         public bool IsOpen => Spans.Count > 0 && Spans[^1].End is null;
     }
 
-    private sealed class Span
+    internal sealed class Span
     {
         public TimesheetSpanKind Kind { get; set; }
 
@@ -689,7 +715,8 @@ internal sealed class DefaultTimesheetCalculator : ITimesheetCalculator
         public List<PayCode> Differentials { get; } = [];
 
         /// <summary>
-        /// Returns the code of a kind, falling back to regular for overtime and double time without their own.
+        /// Returns the code of a kind, falling back to regular for overtime, double time, holiday and weekend hours
+        /// without their own.
         /// </summary>
         public string Of(PayCodeKind kind)
         {
@@ -701,7 +728,7 @@ internal sealed class DefaultTimesheetCalculator : ITimesheetCalculator
             return kind switch
             {
                 PayCodeKind.DoubleTime => Of(PayCodeKind.Overtime),
-                PayCodeKind.Overtime or PayCodeKind.PaidTimeOff or PayCodeKind.PredictabilityPay => _byKind.GetValueOrDefault(PayCodeKind.Regular),
+                PayCodeKind.Overtime or PayCodeKind.PaidTimeOff or PayCodeKind.PredictabilityPay or PayCodeKind.Holiday or PayCodeKind.Weekend => _byKind.GetValueOrDefault(PayCodeKind.Regular),
                 _ => null,
             };
         }

@@ -40,6 +40,16 @@ public sealed class StockMovement : CatalogItem
     /// </summary>
     public string OrderId { get; set; }
 
+    /// <summary>
+    /// Gets or sets the kind of record the movement is for, such as <c>WorkOrder</c>, beside orders.
+    /// </summary>
+    public string ReferenceType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the record the movement is for.
+    /// </summary>
+    public string ReferenceId { get; set; }
+
     public string ActorId { get; set; }
 
     public string ActorName { get; set; }
@@ -78,4 +88,9 @@ public enum StockMovementKind
     /// Units moved from one location to another: one movement out of the first and one into the second.
     /// </summary>
     Transferred = 5,
+
+    /// <summary>
+    /// Used up, such as parts fitted on a work order.
+    /// </summary>
+    Consumed = 6,
 }

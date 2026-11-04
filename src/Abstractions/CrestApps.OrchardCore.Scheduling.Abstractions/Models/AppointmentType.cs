@@ -58,19 +58,51 @@ public sealed class AppointmentType : CatalogItem
     public int MaxPerDay { get; set; }
 
     /// <summary>
+    /// Gets or sets the most appointments of this type one resource takes in a week (Monday to Sunday in the resource's time
+    /// zone), or 0 for no limit.
+    /// </summary>
+    public int MaxPerWeek { get; set; }
+
+    /// <summary>
+    /// Gets or sets the most upcoming appointments of this type one customer may hold when booking it themselves, or 0 for no
+    /// limit. Customers are matched by user id, email or phone number. Staff who manage appointments aren't limited.
+    /// </summary>
+    public int MaxUpcomingPerCustomer { get; set; }
+
+    /// <summary>
+    /// Gets or sets how soon before the start a customer can still cancel the appointment themselves, or 0 for any time before it.
+    /// Staff who manage appointments can always cancel.
+    /// </summary>
+    public int CancelNoticeMinutes { get; set; }
+
+    /// <summary>
+    /// Gets or sets how soon before the start a customer can still move the appointment themselves, or 0 for any time before it.
+    /// Staff who manage appointments can always move it.
+    /// </summary>
+    public int RescheduleNoticeMinutes { get; set; }
+
+    /// <summary>
     /// Gets or sets how many customers share one appointment, for a class or group session.
     /// </summary>
     public int Capacity { get; set; } = 1;
 
     /// <summary>
-    /// Gets or sets the resources that take the appointment.
+    /// Gets or sets the resources that take the appointment. With <see cref="ResourceRequirements"/>, it holds every resource of
+    /// every requirement, for code that only needs to know who can be involved.
     /// </summary>
     public IList<string> ResourceIds { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets how resources are picked.
+    /// Gets or sets how resources are picked, when the type has no <see cref="ResourceRequirements"/>.
     /// </summary>
     public AppointmentAssignment Assignment { get; set; }
+
+    /// <summary>
+    /// Gets or sets the groups of resources each appointment needs, such as one person from the staff and one room, each with
+    /// its own way of picking. When empty, <see cref="ResourceIds"/> and <see cref="Assignment"/> make the only requirement. Use
+    /// <see cref="AppointmentTypeExtensions.GetResourceRequirements(AppointmentType)"/> to read them either way.
+    /// </summary>
+    public IList<AppointmentResourceRequirement> ResourceRequirements { get; set; } = [];
 
     /// <summary>
     /// Gets or sets whether a booking waits for someone to confirm it.

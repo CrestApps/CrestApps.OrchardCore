@@ -19,11 +19,15 @@ All call controls live in the **soft phone**, which agents run in the [browser e
 
 <AskYourAdmin />
 
+<YouTube video="telephony-calls" title="Video overview of placing and handling calls: dialing, extensions, answering, hold, transfer and conference" />
+
 <YouTube video="contact-center-agent-walkthroughs" title="Video of the soft phone keypad: typing a number, switching to extension dialing and searching for a colleague by name" start={107} end={127} />
 
 The phone only shows the buttons your phone system supports. If a button described here is missing, your provider does not offer it.
 
 ## Dial a phone number
+
+<YouTube video="telephony-calls" title="Video of typing a phone number on the Keypad tab" start={42} end={67} />
 
 1. In the soft phone, choose the **Keypad** tab.
 2. Type the number in international form, starting with `+`, or pick the country flag first and type the national number. The number is formatted as you type and turned into a full international number before it is dialed.
@@ -32,6 +36,8 @@ The phone only shows the buttons your phone system supports. If a button describ
 The number field empties as soon as the call starts, so a second press of **Enter** does not dial again. While the call is connected, the field shows the number you are talking to.
 
 ### What you hear while it rings
+
+<YouTube video="telephony-calls" title="Video describing the ringback tone and the numbers the phone refuses" start={67} end={94} />
 
 While the number rings, the phone plays a ringback tone in your headset (two seconds of tone, four seconds of silence) and the status reads *Ringing...* with no call timer. The tone stops the moment the other person answers, and the timer starts then. It also stops if the number is busy, does not answer or is not in service (you hear the not-in-service message instead), when you hang up, and when you put the call on hold or switch to another call. The same applies when you call an extension and your colleague's phone is ringing.
 
@@ -49,8 +55,10 @@ If the phone system cannot connect the call that way, for example while your pho
 
 ## Call an extension
 
+<YouTube video="telephony-calls" title="Video of calling an extension by number or by name" start={94} end={129} />
+
 1. On the **Keypad** tab, click **Dial extension**. The country flag disappears and the field reads *Search a name, or enter an extension*.
-2. Type the extension number and click **Call**, or start typing a name: the people who match are listed with their extension under **Matching extensions**. Click one to call them, or press **Enter** when only one person matches.
+2. Type the extension number and click **Call**, or start typing a name: the people who match are listed with their extension (for example *Ext 1002*). Click one to call them, or press **Enter** when only one person matches.
 3. Click **Dial phone number** to go back to ordinary numbers.
 
 While you type an extension, the phone shows who it rings. The call is shown with the person's name, for example *Jane Doe · ext 2*, and so is the entry on the **Recent** tab, which calls it back as an extension. Your own extension is never listed; typing it shows *That's your own extension.*
@@ -58,6 +66,8 @@ While you type an extension, the phone shows who it rings. The call is shown wit
 Extension calls are internal, so do-not-call lists and calling-hours rules do not apply to them. If your colleague does not answer, you are sent to their voicemail. See [Extensions](extensions.md).
 
 ## Answer an incoming call
+
+<YouTube video="telephony-calls" title="Video describing the Incoming call window and its buttons" start={129} end={165} />
 
 An incoming call opens the **Incoming call** window in the soft phone, even when the phone panel is closed. It shows the caller, the queue or who transferred the call, and any **Matched records**.
 
@@ -80,6 +90,8 @@ A call from a queue arrives as an **offer** first: the workspace and the docked 
 A call a colleague hands to you rings with **Answer** and **Ignore** and shows *Transferred by* and your colleague's name. It has no **Voicemail** button. **Ignore** gives the caller back to your colleague. Once answered, it is an ordinary call on your phone: you can hold it, transfer it again or merge it.
 
 ## During a call
+
+<YouTube video="telephony-calls" title="Video describing mute, hold, keypad, hang up and adding a second call" start={165} end={202} />
 
 <YouTube video="contact-center-agent-walkthroughs" title="Video of a live call in the soft phone window: mute, hold, keypad, the transfer panel and hang up" start={172} end={222} />
 
@@ -113,6 +125,8 @@ With a call up, the **Keypad** tab lists your calls under **Active calls**. Each
 While you add a call, the keypad types the new number and never sends key presses to the held call, and the site's own number cannot be added. **Hold** only holds a call; use **Add call** to place a second one. A phone system that cannot hold a call cannot add one either, and the button's tooltip says so.
 
 ## Transfer a call
+
+<YouTube video="telephony-calls" title="Video describing blind and warm transfers" start={202} end={250} />
 
 1. Click **Transfer**. The transfer panel opens inside the phone, in place of the keypad. The back arrow returns to the keypad.
 2. When your phone system offers both, choose **Blind** (*The call is sent straight to them.*) or **Warm** (*You speak to them before the call is handed over.*). A call that supports only one shows no choice.
@@ -168,6 +182,8 @@ A number you dialed from the keypad on Telnyx is transferred like this:
 A colleague receives the call as described in [Receive a transferred call](#receive-a-transferred-call).
 
 ## Merge calls into a conference
+
+<YouTube video="telephony-calls" title="Video describing how to merge calls into a conference, and leave or end it" start={250} end={282} />
 
 1. With two or more calls up, the **Active calls** list shows a checkbox beside every call and a **Merge calls** button. The button stays disabled until two or more calls are ticked.
 2. Tick the calls to join, or tick **Select all**. The button then reads **Merge 2 calls**, **Merge 3 calls** and so on, and the line beside it names the calls it joins.

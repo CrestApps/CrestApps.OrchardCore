@@ -1,12 +1,11 @@
 @model MyShiftsViewModel
-@{
-    Layout = null;
-    ViewData["MyWorkNav"] = Model.Nav;
-    ViewData["Title"] = T["Shifts"].Value;
-}
-<partial name="_MyWorkHead" />
+<zone Name="Title">
+    <breadcrumb name="MyWorkShifts" title="@T["Shifts"]">
+        <breadcrumb-item id="MyWork" action="Index" controller="MyWork" area="CrestApps.OrchardCore.Workforce">@T["My Work"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+<partial name="~/Areas/CrestApps.OrchardCore.Workforce/Views/Shared/_MyWorkAssets.cshtml" />
 
-<h1 class="h4 mb-3">@T["Shifts"]</h1>
 
 <h2 class="h5">@T["Open shifts"]</h2>
 @if (Model.OpenShifts.Count == 0)
@@ -30,11 +29,11 @@
             </div>
             @if (row.MyClaim is not null)
             {
-                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/shifts/withdraw/" + row.Shift.ItemId)"><button type="submit" class="btn btn-outline-secondary btn-sm">@T["Withdraw"]</button></form>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/shifts/withdraw/" + row.Shift.ItemId)"><button type="submit" class="btn btn-outline-secondary btn-sm">@T["Withdraw"]</button></form>
             }
             else if (row.Problems.Count == 0)
             {
-                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/shifts/claim/" + row.Shift.ItemId)"><button type="submit" class="btn btn-success btn-sm">@T["Claim"]</button></form>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/shifts/claim/" + row.Shift.ItemId)"><button type="submit" class="btn btn-success btn-sm">@T["Claim"]</button></form>
             }
         </div>
     </div>
@@ -67,10 +66,10 @@
                     <div class="small text-muted">@row.Trade.Note</div>
                 }
             </div>
-            <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/trades/" + row.Trade.ItemId + "/accept")"><button type="submit" class="btn btn-success btn-sm">@T["Accept"]</button></form>
+            <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/trades/" + row.Trade.ItemId + "/accept")"><button type="submit" class="btn btn-success btn-sm">@T["Accept"]</button></form>
             @if (row.Trade.TargetWorkerId is not null)
             {
-                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/trades/" + row.Trade.ItemId + "/reject")"><button type="submit" class="btn btn-outline-secondary btn-sm">@T["Turn down"]</button></form>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/trades/" + row.Trade.ItemId + "/reject")"><button type="submit" class="btn btn-outline-secondary btn-sm">@T["Turn down"]</button></form>
             }
         </div>
     </div>
@@ -91,7 +90,7 @@
                 @if (offered is not null)
                 {
                     <span class="badge text-bg-warning fw-normal">@(offered.Trade.Status == ShiftTradeStatus.Accepted ? T["Accepted; waits for a manager"] : offered.ToName is null ? T["Offered to anyone"] : T["Offered to {0}", offered.ToName])</span>
-                    <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/trades/" + offered.Trade.ItemId + "/cancel")"><button type="submit" class="btn btn-outline-secondary btn-sm">@T["Take back"]</button></form>
+                    <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/trades/" + offered.Trade.ItemId + "/cancel")"><button type="submit" class="btn btn-outline-secondary btn-sm">@T["Take back"]</button></form>
                 }
                 else
                 {
@@ -100,7 +99,7 @@
             </div>
             @if (offered is null)
             {
-                <form method="post" asp-antiforgery="true" action="@Url.Content("~/my-work/trades/offer")" class="collapse mt-2" id="trade-@shift.EventId">
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/trades/offer")" class="collapse mt-2" id="trade-@shift.EventId">
                     <input type="hidden" name="shiftEventId" value="@shift.EventId" />
                     <div class="row g-2">
                         <div class="col-md-6">
@@ -120,4 +119,3 @@
     </div>
 }
 
-<partial name="_MyWorkFoot" />

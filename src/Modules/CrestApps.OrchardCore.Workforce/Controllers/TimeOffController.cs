@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -541,6 +542,7 @@ public sealed class TimeOffController : Controller
             Kind = Enum.TryParse<TimeOffLedgerKind>(model.Kind, out var kind) ? kind : TimeOffLedgerKind.Adjustment,
             Amount = model.Amount,
             EffectiveDate = model.EffectiveDate ?? await PlanningOptions.TodayAsync(_localClock),
+            ExpiresOn = model.ExpiresOn,
             Note = model.Note,
         }, User.Identity?.Name, HttpContext.RequestAborted);
 

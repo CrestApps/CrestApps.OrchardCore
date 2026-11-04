@@ -48,4 +48,10 @@ public sealed class ActivityCode : CatalogItem, INameAwareModel
     /// Gets or sets whether the code can be scheduled.
     /// </summary>
     public bool Enabled { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the Time Tracker stage that time clocked in this activity is kept in, when the time clock keeps
+    /// people's time in Time Tracker.
+    /// </summary>
+    public string StageId { get; set; }
 }

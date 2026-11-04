@@ -1,0 +1,95 @@
+@model WebMcpSettingsViewModel
+
+<p class="text-muted">@T["WebMCP lets AI agents in the browser, such as the browser's own assistant, call tools on the pages a signed-in user opens. The tools run as that user, and each one also needs the user's permission for that tool. Browsers that do not support WebMCP ignore it."]</p>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnableOnAdminPages" />
+            <label class="form-check-label" asp-for="EnableOnAdminPages">
+                @T["Offer tools on admin pages"]
+            </label>
+            <span class="hint dashed">@T["When enabled, admin pages offer WebMCP tools to users who have the Use WebMCP tools in the browser permission."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnableOnFrontEndPages" />
+            <label class="form-check-label" asp-for="EnableOnFrontEndPages">
+                @T["Offer tools on front-end pages"]
+            </label>
+            <span class="hint dashed">@T["When enabled, the site's public pages also offer WebMCP tools to signed-in users who have the permission. Anonymous visitors never get tools."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnablePageTools" />
+            <label class="form-check-label" asp-for="EnablePageTools">
+                @T["Add page tools"]
+            </label>
+            <span class="hint dashed">@T["When enabled, the pages that offer WebMCP tools also get page tools: page info, the page's links, opening another page of the site, and reading and filling its forms. They never submit a form."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="ExposeAllTools" data-webmcp-expose-all-tools="true" />
+            <label class="form-check-label" asp-for="ExposeAllTools">
+                @T["Expose all tools"]
+            </label>
+            <span class="hint dashed">@T["When enabled, every selectable tool and tool instance is offered, and the selection below is ignored. Leave disabled to offer only the tools you select."]</span>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    (() => {
+        const init = () => {
+            const exposeAllTools = document.querySelector('[data-webmcp-expose-all-tools="true"]');
+
+            if (!exposeAllTools) {
+                return;
+            }
+
+            // The tool pickers are separate shapes, and other cards on the settings page (such as the MCP Server) render
+            // the same pickers. Every field of this card is posted under the same prefix (for example "WebMcpSettings."),
+            // so pick the pickers whose fields share the prefix of this checkbox.
+            const prefix = exposeAllTools.name.substring(0, exposeAllTools.name.lastIndexOf('.') + 1);
+
+            if (!prefix) {
+                return;
+            }
+
+            const sections = new Set();
+
+            document.querySelectorAll('.tool-groups-container input, [id^="tool-instance-"]').forEach(input => {
+                if (input.name && input.name.startsWith(prefix)) {
+                    const section = input.closest('.ocat-wrapper');
+
+                    if (section) {
+                        sections.add(section);
+                    }
+                }
+            });
+
+            const toggleToolSelectors = () => sections.forEach(section => section.classList.toggle('d-none', exposeAllTools.checked));
+
+            exposeAllTools.addEventListener('change', toggleToolSelectors);
+            toggleToolSelectors();
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    })();
+</script>

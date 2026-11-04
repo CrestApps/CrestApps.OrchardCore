@@ -1,0 +1,29 @@
+@model TimeSettingsListViewModel
+
+@{
+    var categories = Model.Kind == TimeSettingsController.Categories;
+}
+
+<zone Name="Title"><breadcrumb name="TimeTrackerSettings" title="@(categories ? T["Time Categories"] : T["Time Stages"])" /></zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 gy-2 align-items-center">
+            <div class="col">
+                <span class="text-muted small">@(categories ? T["Categories total time: each is a column of the time report, such as Payable or Billable."] : T["Stages are what people do while their time is tracked, such as Work, Break or Lunch."])</span>
+            </div>
+            <div class="col-auto">
+                <a asp-action="@(categories ? "EditCategory" : "EditStage")" class="btn btn-secondary create">@(categories ? T["Add category"] : T["Add stage"])</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<admin-list name="@(categories ? "TimeCategories" : "TimeStages")" context="Model.List" show-select-all="false" empty-message="@(categories ? T["<strong>Nothing here!</strong> Add the categories time is totalled by, such as Payable and Billable."] : T["<strong>Nothing here!</strong> Add the stages people clock into, such as Work and Lunch."])">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Name"]" />
+        <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

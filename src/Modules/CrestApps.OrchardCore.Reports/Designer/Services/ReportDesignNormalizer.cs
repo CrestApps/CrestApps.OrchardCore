@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Reports.Models;
 using OrchardCore.DataSources;
 
 namespace CrestApps.OrchardCore.Reports.Designer.Services;
@@ -12,6 +13,16 @@ public static class ReportDesignNormalizer
     /// The longest title, label, or name accepted.
     /// </summary>
     public const int MaxNameLength = 200;
+
+    /// <summary>
+    /// The most color rules a column keeps.
+    /// </summary>
+    public const int MaxColorRules = 20;
+
+    /// <summary>
+    /// The most reference lines a chart keeps.
+    /// </summary>
+    public const int MaxReferenceLines = 10;
 
     /// <summary>
     /// Normalizes a query in place.
@@ -51,6 +62,7 @@ public static class ReportDesignNormalizer
         {
             column.Label = Truncate(column.Label);
             column.Format = Truncate(column.Format);
+            column.Colors = Normalize(column.Colors);
         }
 
         foreach (var filter in query.Filters)
@@ -108,6 +120,13 @@ public static class ReportDesignNormalizer
             visual.ColumnIds = (visual.ColumnIds ?? []).Where(id => !string.IsNullOrEmpty(id)).ToList();
             visual.ValueColumnIds = (visual.ValueColumnIds ?? []).Where(id => !string.IsNullOrEmpty(id)).ToList();
             visual.ContainerId = string.IsNullOrWhiteSpace(visual.ContainerId) ? null : visual.ContainerId.Trim();
+            visual.ReferenceLines = (visual.ReferenceLines ?? []).Where(line => line is not null).Take(MaxReferenceLines).ToList();
+
+            foreach (var line in visual.ReferenceLines)
+            {
+                line.ColumnId = string.IsNullOrWhiteSpace(line.ColumnId) ? null : line.ColumnId.Trim();
+                line.Label = Truncate(line.Label);
+            }
         }
 
         return list;
@@ -170,6 +189,58 @@ public static class ReportDesignNormalizer
         }
 
         return list;
+    }
+
+    /// <summary>
+    /// Cleans the colors of a column: a color that is not a hex value or a color name is dropped, rules without a color
+    /// are dropped, and colors that color nothing become <see langword="null"/>.
+    /// </summary>
+    /// <param name="colors">The colors received.</param>
+    /// <returns>The cleaned colors, or <see langword="null"/> when they color nothing.</returns>
+    public static ReportColumnColors Normalize(ReportColumnColors colors)
+    {
+        if (colors is null)
+        {
+            return null;
+        }
+
+        colors.HeaderColor = ReportColor.ToCssColor(colors.HeaderColor);
+        colors.HeaderBackgroundColor = ReportColor.ToCssColor(colors.HeaderBackgroundColor);
+        colors.Color = ReportColor.ToCssColor(colors.Color);
+        colors.BackgroundColor = ReportColor.ToCssColor(colors.BackgroundColor);
+        colors.Rules = (colors.Rules ?? [])
+            .Where(rule => rule is not null)
+            .Take(MaxColorRules)
+            .ToList();
+
+        foreach (var rule in colors.Rules)
+        {
+            rule.Color = ReportColor.ToCssColor(rule.Color);
+            rule.Values = (rule.Values ?? []).Select(value => value ?? string.Empty).Take(50).ToList();
+        }
+
+        colors.Rules = colors.Rules.Where(rule => rule.Color is not null).ToList();
+
+        if (colors.Scale is not null)
+        {
+            colors.Scale.LowColor = ReportColor.ToCssColor(colors.Scale.LowColor);
+            colors.Scale.MidColor = ReportColor.ToCssColor(colors.Scale.MidColor);
+            colors.Scale.HighColor = ReportColor.ToCssColor(colors.Scale.HighColor);
+
+            if (colors.Scale.LowColor is null || colors.Scale.HighColor is null)
+            {
+                colors.Scale = null;
+            }
+        }
+
+        var colorsNothing = colors.HeaderColor is null &&
+            colors.HeaderBackgroundColor is null &&
+            colors.Color is null &&
+            colors.BackgroundColor is null &&
+            colors.Scale is null &&
+            colors.Rules.Count == 0;
+
+        return colorsNothing ? null : colors;
     }
 
     /// <summary>
