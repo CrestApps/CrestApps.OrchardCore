@@ -39,8 +39,6 @@ public sealed class AccountsDeploymentStep : DeploymentStep
 
 internal sealed class AccountsDeploymentSource : DeploymentSourceBase<AccountsDeploymentStep>
 {
-    private const int BatchSize = 500;
-
     private readonly ISession _session;
     private readonly IAccountContentTypeProvider _accountContentTypeProvider;
 
@@ -50,6 +48,11 @@ internal sealed class AccountsDeploymentSource : DeploymentSourceBase<AccountsDe
         _accountContentTypeProvider = accountContentTypeProvider;
     }
 
+    /// <summary>
+    /// Gets how many accounts, or accounts' records, are read in one query.
+    /// </summary>
+    internal int BatchSize { get; init; } = 500;
+
     protected override async Task ProcessAsync(AccountsDeploymentStep step, DeploymentPlanResult result)
     {
         var accountTypes = (await _accountContentTypeProvider.GetAccountTypesAsync()).Select(type => type.Name).ToArray();
@@ -57,13 +60,30 @@ internal sealed class AccountsDeploymentSource : DeploymentSourceBase<AccountsDe
         var records = new JsonArray();
         var accountIds = new List<string>();
 
-        if (accountTypes.Length > 0)
+        // The accounts are read a page at a time, after the last document of the page before, so a site with many
+        // accounts never loads them in one query.
+        var lastDocumentId = 0L;
+
+        while (accountTypes.Length > 0)
         {
-            foreach (var account in await _session.Query<ContentItem, ContentItemIndex>(index => index.Latest && index.ContentType.IsIn(accountTypes)).ListAsync())
+            var after = lastDocumentId;
+            var page = (await _session.Query<ContentItem, ContentItemIndex>(index => index.Latest && index.ContentType.IsIn(accountTypes) && index.DocumentId > after)
+                .OrderBy(index => index.DocumentId)
+                .Take(BatchSize)
+                .ListAsync()).ToList();
+
+            foreach (var account in page)
             {
                 accounts.Add(JObject.FromObject(account));
                 accountIds.Add(account.ContentItemId);
             }
+
+            if (page.Count < BatchSize)
+            {
+                break;
+            }
+
+            lastDocumentId = page[^1].Id;
         }
 
         // The records an account holds sit in it through Orchard Core's list part.

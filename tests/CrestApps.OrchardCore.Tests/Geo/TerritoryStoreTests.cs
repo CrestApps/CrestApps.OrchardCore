@@ -83,6 +83,41 @@ public sealed class TerritoryStoreTests
         Assert.Null(found.Item3);
     }
 
+    [Fact]
+    public async Task TheResolver_ReadsTheTerritoriesOncePerScope_AndAgainAfterOneChanges()
+    {
+        await using var harness = await CreateAsync();
+
+        var found = await harness.RunAsync(async services =>
+        {
+            var resolver = services.GetRequiredService<ITerritoryResolver>();
+            var cache = services.GetRequiredService<ServiceTerritoryScopeCache>();
+            var manager = services.GetRequiredService<ServiceTerritoryManager>();
+
+            var before = await resolver.ResolveAsync(null, "02108");
+            var read = cache.Territories;
+
+            await resolver.ResolveAsync(null, "10001");
+            var sameRead = ReferenceEquals(read, cache.Territories);
+
+            var north = await manager.NewAsync();
+
+            north.Name = "North";
+            north.PostalCodes = ["02108"];
+            await manager.CreateAsync(north);
+
+            var forgotten = cache.Territories is null;
+            var after = await resolver.ResolveAsync(null, "02108");
+
+            return (before, sameRead, forgotten, after);
+        }, commit: false);
+
+        Assert.Null(found.before);
+        Assert.True(found.sameRead);
+        Assert.True(found.forgotten);
+        Assert.Equal("North", found.after.Territory.Name);
+    }
+
     private static Task<CalendarTestHarness> CreateAsync()
     {
         return CalendarTestHarness.CreateAsync(

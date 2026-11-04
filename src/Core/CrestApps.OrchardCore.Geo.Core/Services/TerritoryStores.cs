@@ -68,6 +68,7 @@ internal sealed class ServiceTerritoryHandler : CatalogEntryHandlerBase<ServiceT
 {
     private readonly ServiceTerritoryStore _store;
     private readonly IClock _clock;
+    private readonly ServiceTerritoryScopeCache _cache;
 
     internal readonly IStringLocalizer S;
 
@@ -77,11 +78,32 @@ internal sealed class ServiceTerritoryHandler : CatalogEntryHandlerBase<ServiceT
     /// <param name="store">The store.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public ServiceTerritoryHandler(ServiceTerritoryStore store, IClock clock, IStringLocalizer<ServiceTerritoryHandler> stringLocalizer)
+    /// <param name="cache">The territories read in this scope, forgotten when one changes.</param>
+    public ServiceTerritoryHandler(ServiceTerritoryStore store, IClock clock, IStringLocalizer<ServiceTerritoryHandler> stringLocalizer, ServiceTerritoryScopeCache cache)
     {
         _store = store;
         _clock = clock;
         S = stringLocalizer;
+        _cache = cache;
+    }
+
+    /// <inheritdoc/>
+    public override Task CreatedAsync(CreatedContext<ServiceTerritory> context, CancellationToken cancellationToken = default)
+        => Forget();
+
+    /// <inheritdoc/>
+    public override Task UpdatedAsync(UpdatedContext<ServiceTerritory> context, CancellationToken cancellationToken = default)
+        => Forget();
+
+    /// <inheritdoc/>
+    public override Task DeletedAsync(DeletedContext<ServiceTerritory> context, CancellationToken cancellationToken = default)
+        => Forget();
+
+    private Task Forget()
+    {
+        _cache.Territories = null;
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
