@@ -13,6 +13,7 @@ using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using QueryContext = CrestApps.Core.Models.QueryContext;
 
 namespace CrestApps.OrchardCore.Workforce.Controllers;
 
@@ -73,14 +74,16 @@ public sealed class LaborRuleSetsController : Controller
             return Forbid();
         }
 
-        var sets = (await _setManager.GetAllAsync(HttpContext.RequestAborted)).OrderBy(set => set.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
         var pager = new Pager(pagerParameters, pagerOptions.Value);
+
+        // Paged and counted in SQL, ordered by the name in the index.
+        var sets = await _setManager.PageAsync(pager.Page, pager.PageSize, new QueryContext { Sorted = true }, HttpContext.RequestAborted);
 
         return View(new WorkforceListViewModel
         {
             List = new AdminListContext<LaborRuleSet>
             {
-                Source = sets.Skip(pager.GetStartIndex()).Take(pager.PageSize).ToList(),
+                Source = [.. sets.Entries],
                 Pager = await shapeFactory.PagerAsync(pager, sets.Count),
             },
         });

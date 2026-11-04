@@ -60,6 +60,17 @@ public sealed class ForecastEventStore : DocumentCatalog<ForecastEvent, Forecast
     {
         CollectionName = WorkforceConstants.CollectionName;
     }
+
+    /// <inheritdoc/>
+    /// <remarks>Pages list the latest events first.</remarks>
+    protected override ValueTask PagingAsync<TQuery>(IQuery<ForecastEvent> query, TQuery context)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        query.With<ForecastEventIndex>().OrderByDescending(index => index.StartDate);
+
+        return ValueTask.CompletedTask;
+    }
 }
 
 /// <summary>

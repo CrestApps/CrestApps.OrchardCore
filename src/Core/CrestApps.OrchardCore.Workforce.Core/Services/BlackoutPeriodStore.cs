@@ -20,4 +20,15 @@ internal sealed class BlackoutPeriodStore : DocumentCatalog<BlackoutPeriod, Blac
     {
         return ListByNameAsync(index => index.Name, cancellationToken);
     }
+
+    /// <inheritdoc/>
+    /// <remarks>Pages list the latest blackout dates first.</remarks>
+    protected override ValueTask PagingAsync<TQuery>(IQuery<BlackoutPeriod> query, TQuery context)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        query.With<BlackoutPeriodIndex>().OrderByDescending(index => index.StartDate);
+
+        return ValueTask.CompletedTask;
+    }
 }

@@ -82,15 +82,15 @@ public sealed class SchedulingResourcesController : Controller
             return Forbid();
         }
 
-        var resources = await _resourceStore.ListAsync();
         var pager = new Pager(pagerParameters, pagerOptions.Value);
+        var (count, resources) = await _resourceStore.PageAsync(pager.GetStartIndex(), pager.PageSize, HttpContext.RequestAborted);
 
         return View(new SchedulingListViewModel
         {
             List = new AdminListContext<SchedulingResource>
             {
-                Source = resources.Skip(pager.GetStartIndex()).Take(pager.PageSize).ToList(),
-                Pager = await shapeFactory.PagerAsync(pager, resources.Count),
+                Source = resources,
+                Pager = await shapeFactory.PagerAsync(pager, count),
             },
         });
     }

@@ -68,15 +68,15 @@ public sealed partial class AppointmentTypesController : Controller
             return Forbid();
         }
 
-        var types = await _typeStore.ListAsync();
         var pager = new Pager(pagerParameters, pagerOptions.Value);
+        var (count, types) = await _typeStore.PageAsync(pager.GetStartIndex(), pager.PageSize, HttpContext.RequestAborted);
 
         return View(new SchedulingListViewModel
         {
             List = new AdminListContext<AppointmentType>
             {
-                Source = types.Skip(pager.GetStartIndex()).Take(pager.PageSize).ToList(),
-                Pager = await shapeFactory.PagerAsync(pager, types.Count),
+                Source = types,
+                Pager = await shapeFactory.PagerAsync(pager, count),
             },
         });
     }
