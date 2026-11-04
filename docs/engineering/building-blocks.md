@@ -21,7 +21,7 @@ Before you start, search for the concept by name and by meaning (for example "ho
 | Layer | Holds | May reference |
 | --- | --- | --- |
 | `CrestApps.OrchardCore.X.Abstractions` | Contracts (interfaces), records and value types others read, constants, feature IDs, events | Other `.Abstractions` projects, Orchard Core `*.Abstractions`, CrestApps.Core abstractions |
-| `CrestApps.OrchardCore.X.Core` | Implementations, stores, indexes, background logic. No views, controllers, drivers or endpoints | Its own `.Abstractions`, other `.Abstractions`, shared platform libraries (`Core`, `YesSql.Core`) |
+| `CrestApps.OrchardCore.X.Core` | Implementations, stores, indexes, background logic, and anything two modules share, UI building blocks included (base drivers, shared view models, tag helpers, view components). No module-specific views, controllers or endpoints | Its own `.Abstractions`, other `.Abstractions`, shared platform libraries (`Core`, `YesSql.Core`) |
 | `CrestApps.OrchardCore.X` (module) | Manifest, startups, drivers, controllers, views, migrations, recipe and deployment steps, endpoints | Its own `.Core` and `.Abstractions`, other modules' `.Abstractions` |
 | Integration (`[RequireFeatures]` startup, or a bridge module `X.Y`) | Code that makes two building blocks work together | Both sides' `.Abstractions` |
 
