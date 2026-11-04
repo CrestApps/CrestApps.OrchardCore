@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.Core.Migrations;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -78,6 +79,7 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
         }
 
         var importedCount = 0;
+        var skipped = new MigrationSkipReport(nameof(AIDeploymentV1DocumentMigrations), logger);
         var existingDeployments = (await deploymentManager.GetAllAsync()).ToList();
 
         foreach (var batch in BatchDocuments(documents))
@@ -111,9 +113,7 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
                         if (string.IsNullOrWhiteSpace(itemId) &&
                             (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(sourceName)))
                         {
-                            logger.LogWarning(
-                                "Skipping v1 AI deployment '{Key}' because no usable item ID or name/source pair was found.",
-                                record.Key);
+                            skipped.Skip(record.Key, "no usable item ID or name/source pair was found");
                             continue;
                         }
 
@@ -133,9 +133,7 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
                         {
                             if (string.IsNullOrWhiteSpace(sourceName))
                             {
-                                logger.LogWarning(
-                                    "Skipping v1 AI deployment {ItemId} because no source/client name was found.",
-                                    itemId ?? record.Key);
+                                skipped.Skip(itemId ?? record.Key, "no source/client name was found");
                                 continue;
                             }
 
@@ -176,10 +174,9 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
 
                         if (!validationResult.Succeeded)
                         {
-                            logger.LogWarning(
-                                "Skipping v1 AI deployment {ItemId} because validation failed: {Errors}",
+                            skipped.Skip(
                                 itemId ?? name ?? record.Key,
-                                string.Join("; ", validationResult.Errors.Select(error => error.ErrorMessage)));
+                                "validation failed: " + string.Join("; ", validationResult.Errors.Select(error => error.ErrorMessage)));
                             continue;
                         }
 
@@ -189,11 +186,13 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
                     }
                     catch (Exception ex)
                     {
-                        logger.LogWarning(ex, "Failed to migrate v1 AIDeployment with key '{Key}'. Skipping.", record.Key);
+                        skipped.Skip(record.Key, "the record could not be migrated", ex);
                     }
                 }
             }
         }
+
+        skipped.LogSummary();
 
         if (importedCount > 0 && logger.IsEnabled(LogLevel.Information))
         {

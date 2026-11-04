@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Data.YesSql;
+using CrestApps.OrchardCore.Core.Migrations;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -122,6 +123,7 @@ internal sealed class AIProfileDocumentMigrations : DataMigration
             }
 
             var totalMigrated = 0;
+            var skipped = new MigrationSkipReport(nameof(AIProfileDocumentMigrations), logger);
 
             foreach (var batch in BatchDocuments(documents))
             {
@@ -176,10 +178,9 @@ internal sealed class AIProfileDocumentMigrations : DataMigration
                             var validationResult = await profileManager.ValidateAsync(profile);
                             if (!validationResult.Succeeded)
                             {
-                                logger.LogWarning(
-                                    "Skipping legacy AI profile {ItemId} because validation failed: {Errors}",
+                                skipped.Skip(
                                     itemId ?? name ?? record.Key,
-                                    string.Join("; ", validationResult.Errors.Select(error => error.ErrorMessage)));
+                                    "validation failed: " + string.Join("; ", validationResult.Errors.Select(error => error.ErrorMessage)));
                                 continue;
                             }
 
@@ -188,11 +189,13 @@ internal sealed class AIProfileDocumentMigrations : DataMigration
                         }
                         catch (Exception ex)
                         {
-                            logger.LogWarning(ex, "Failed to migrate AIProfile with key '{Key}'. Skipping.", record.Key);
+                            skipped.Skip(record.Key, "the record could not be migrated", ex);
                         }
                     }
                 }
             }
+
+            skipped.LogSummary();
 
             if (logger.IsEnabled(LogLevel.Information))
             {
