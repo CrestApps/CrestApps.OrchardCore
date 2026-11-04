@@ -1,0 +1,166 @@
+@using System.Globalization
+@using OrchardCore
+@using OrchardCore.ContentManagement
+@using OrchardCore.DisplayManagement.Zones
+@using OrchardCore.Mvc.Utilities
+
+@*
+    The Content zone of an account's page. Modules place their shapes in it with AccountPageTabs.Location, as Orchard
+    Core tabs. This layout lists those tabs down the side, with the selected one on the right, so the tabs never wrap
+    however many modules add one. On a phone the list becomes a dropdown. The selected tab is kept in the address's hash.
+*@
+@{
+    var content = Model as IShape;
+    var sections = new List<(string Key, string Name, double Position, List<IShape> Shapes)>();
+
+    foreach (var item in content?.Items ?? [])
+    {
+        if (item is not IShape shape)
+        {
+            continue;
+        }
+
+        // A tab is placed as "Name;Position". A shape placed without a tab goes in the Overview.
+        var tab = shape.Metadata.Tab;
+        var name = string.IsNullOrWhiteSpace(tab) ? AccountPageTabs.Overview : tab.Split(';')[0].Trim();
+        double position = AccountPageTabs.GetPosition(name);
+
+        if (!string.IsNullOrWhiteSpace(tab) && tab.Split(';') is { Length: > 1 } parts &&
+            double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var placed))
+        {
+            position = placed;
+        }
+
+        var pane = sections.FindIndex(entry => string.Equals(entry.Name, name, StringComparison.Ordinal));
+
+        if (pane < 0)
+        {
+            sections.Add(("account-" + name.HtmlClassify(), name, position, [shape]));
+        }
+        else
+        {
+            sections[pane].Shapes.Add(shape);
+        }
+    }
+
+    sections = [.. sections.OrderBy(pane => pane.Position).ThenBy(pane => pane.Name, StringComparer.Ordinal)];
+
+    string Label(string name) => name switch
+    {
+        AccountPageTabs.Overview => T["Overview"].Value,
+        AccountPageTabs.Contacts => T["Contacts"].Value,
+        AccountPageTabs.Opportunities => T["Opportunities"].Value,
+        AccountPageTabs.Leads => T["Leads"].Value,
+        AccountPageTabs.Activities => T["Activities"].Value,
+        AccountPageTabs.Orders => T["Orders"].Value,
+        AccountPageTabs.Business => T["Business buying"].Value,
+        AccountPageTabs.Invoices => T["Invoices"].Value,
+        AccountPageTabs.Service => T["Service"].Value,
+        AccountPageTabs.Records => T["All records"].Value,
+        _ => name,
+    };
+
+    string Icon(string name) => name switch
+    {
+        AccountPageTabs.Overview => "fa-solid fa-building",
+        AccountPageTabs.Contacts => "fa-solid fa-address-book",
+        AccountPageTabs.Opportunities => "fa-solid fa-handshake",
+        AccountPageTabs.Leads => "fa-solid fa-user-plus",
+        AccountPageTabs.Activities => "fa-solid fa-list-check",
+        AccountPageTabs.Orders => "fa-solid fa-bag-shopping",
+        AccountPageTabs.Business => "fa-solid fa-briefcase",
+        AccountPageTabs.Invoices => "fa-solid fa-file-invoice-dollar",
+        AccountPageTabs.Service => "fa-solid fa-screwdriver-wrench",
+        AccountPageTabs.Records => "fa-solid fa-folder-open",
+        _ => "fa-solid fa-circle",
+    };
+
+    const string pageId = "account-page";
+}
+
+@if (sections.Count > 0)
+{
+    <div class="row g-3" id="@pageId" data-account-page>
+        <div class="col-12 col-md-4 col-lg-3">
+            <select class="form-select d-md-none mb-2" aria-label="@T["Section"]" data-account-page-select>
+                @foreach (var pane in sections)
+                {
+                    <option value="@pane.Key">@Label(pane.Name)</option>
+                }
+            </select>
+            <div class="list-group d-none d-md-flex" role="tablist" aria-orientation="vertical">
+                @for (var i = 0; i < sections.Count; i++)
+                {
+                    var pane = sections[i];
+
+                    <button type="button" class="list-group-item list-group-item-action d-flex align-items-center gap-2@(i == 0 ? " active" : null)"
+                            id="@(pane.Key)-nav" data-bs-toggle="list" data-bs-target="#@pane.Key" role="tab"
+                            aria-controls="@pane.Key" aria-selected="@(i == 0 ? "true" : "false")" data-account-page-tab="@pane.Key">
+                        <i class="@Icon(pane.Name) fa-fw text-secondary" aria-hidden="true"></i>
+                        <span>@Label(pane.Name)</span>
+                    </button>
+                }
+            </div>
+        </div>
+        <div class="col-12 col-md-8 col-lg-9">
+            <div class="tab-content">
+                @for (var i = 0; i < sections.Count; i++)
+                {
+                    var pane = sections[i];
+
+                    <div class="tab-pane@(i == 0 ? " active" : null)" id="@pane.Key" role="tabpanel" aria-labelledby="@(pane.Key)-nav" tabindex="0">
+                        @foreach (var shape in pane.Shapes.OrderBy(shape => shape.Metadata.Position, FlatPositionComparer.Instance))
+                        {
+                            @await DisplayAsync(shape)
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <script at="Foot">
+        // Bootstrap's own script may come later in the page, so the tabs are wired once the page has loaded.
+        document.addEventListener('DOMContentLoaded', () => {
+            const page = document.getElementById('@pageId');
+
+            if (!page || !window.bootstrap) {
+                return;
+            }
+
+            const select = page.querySelector('[data-account-page-select]');
+            const tabs = [...page.querySelectorAll('[data-account-page-tab]')];
+
+            const show = (key, updateHash) => {
+                const tab = tabs.find(entry => entry.dataset.accountPageTab === key);
+
+                if (!tab) {
+                    return;
+                }
+
+                bootstrap.Tab.getOrCreateInstance(tab).show();
+
+                if (select) {
+                    select.value = key;
+                }
+
+                if (updateHash) {
+                    history.replaceState(null, '', '#' + key);
+                }
+            };
+
+            tabs.forEach(tab => tab.addEventListener('shown.bs.tab', () => {
+                if (select) {
+                    select.value = tab.dataset.accountPageTab;
+                }
+
+                history.replaceState(null, '', '#' + tab.dataset.accountPageTab);
+            }));
+
+            select?.addEventListener('change', () => show(select.value, true));
+
+            // A link to a pane of the page, such as the one a record's editor returns to, opens that pane.
+            show(location.hash.replace(/^#/, ''), false);
+        });
+    </script>
+}

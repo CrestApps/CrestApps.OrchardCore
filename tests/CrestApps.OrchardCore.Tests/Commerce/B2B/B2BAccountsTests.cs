@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Accounts;
+using CrestApps.OrchardCore.Accounts.B2B;
 using CrestApps.OrchardCore.Accounts.B2B.Models;
 using CrestApps.OrchardCore.Accounts.B2B.Services;
 using CrestApps.OrchardCore.Accounts.Models;
@@ -229,17 +231,98 @@ public sealed class B2BAccountsTests
         return new B2BAccountService(store.Object, new HttpContextAccessor { HttpContext = httpContext });
     }
 
-    private static AccountTermsService CreateTerms(B2BAccount account)
+    [Fact]
+    public async Task WhatAnAccountOwes_IsItsOutstandingTermsInvoices_WhoeverOfItsBuyersPlacedTheOrder()
     {
-        var transactions = new Mock<ITransactionManager>();
-        transactions.Setup(value => value.PageAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<TransactionQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CrestApps.Core.Models.PageResult<CrestApps.OrchardCore.Transactions.Models.Transaction> { Entries = [] });
+        // Arrange - one invoice is for a buyer who has since left the account; it is still the account's.
+        var account = Account(new AccountTerms { NetDays = 30 });
+        var transactions = new Mock<ITransactionStore>();
+        transactions.Setup(value => value.GetByParentReferenceAsync(AccountsConstants.ReferenceTypes.Account, account.AccountId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+            [
+                Invoice(100m, CrestApps.OrchardCore.Transactions.Models.TransactionStatus.Outstanding, ownerId: "former-buyer", createdUtc: new DateTime(2026, 10, 1)),
+                Invoice(40m, CrestApps.OrchardCore.Transactions.Models.TransactionStatus.PartiallyPaid, paid: 15m, createdUtc: new DateTime(2026, 10, 5)),
+                Invoice(70m, CrestApps.OrchardCore.Transactions.Models.TransactionStatus.Paid, paid: 70m),
+                Invoice(30m, CrestApps.OrchardCore.Transactions.Models.TransactionStatus.Outstanding, currency: "EUR"),
+                Invoice(25m, CrestApps.OrchardCore.Transactions.Models.TransactionStatus.Outstanding, source: "subscription"),
+            ]);
+
+        var terms = CreateTerms(account, transactions.Object);
+
+        // Act
+        var (owed, currency) = await terms.GetOwedAsync(account, TestContext.Current.CancellationToken);
+        var invoices = await terms.ListInvoicesAsync(account, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("USD", currency);
+        Assert.Equal(125m, owed);
+        Assert.Equal(4, invoices.Count);
+        Assert.Equal(40m, invoices[0].TotalAmount);
+    }
+
+    [Fact]
+    public async Task ABuyerShipsToTheAccountsLocations_OnceEach_WithTheAccountsNameShownOnce()
+    {
+        // Arrange - one location has no street to ship to; another was saved with the name as both recipient and company.
+        var account = TestB2BAccounts.Create(
+            configure: part => part.Terms = new AccountTerms(),
+            members: [new AccountMember { UserId = BuyerId }],
+            locations:
+            [
+                new AccountLocation { LocationId = "hq", Name = "Head office", Address = new CrestApps.OrchardCore.Addresses.Models.Address { Name = "Fabrikam Ltd", Company = "Fabrikam Ltd", AddressLine1 = "500 Commerce Way", City = "Reno", Region = "NV", PostalCode = "89501", Country = "US" } },
+                new AccountLocation { LocationId = "empty", Name = "Somewhere", Address = new CrestApps.OrchardCore.Addresses.Models.Address { Country = "US" } },
+            ]);
+        var source = new AccountLocationsShippingAddressSource(B2BAccounts(account));
+
+        // Act
+        var options = await source.GetAddressesAsync(BuyerId, TestContext.Current.CancellationToken);
+        var none = await new AccountLocationsShippingAddressSource(B2BAccounts(TestB2BAccounts.Create(configure: part => part.Enabled = false, members: [new AccountMember { UserId = BuyerId }]))).GetAddressesAsync(BuyerId, TestContext.Current.CancellationToken);
+
+        // Assert
+        var option = Assert.Single(options);
+        Assert.Equal("account-location-hq", option.AddressId);
+        Assert.Equal("Head office", option.Label);
+        Assert.Equal("Fabrikam Ltd", option.Description);
+        Assert.Null(option.Address.Name);
+        Assert.Equal("Fabrikam Ltd", option.Address.Company);
+        Assert.Equal("500 Commerce Way", option.Address.AddressLine1);
+        Assert.Empty(none);
+    }
+
+    private static CrestApps.OrchardCore.Transactions.Models.Transaction Invoice(
+        decimal total,
+        CrestApps.OrchardCore.Transactions.Models.TransactionStatus status,
+        decimal paid = 0m,
+        string ownerId = BuyerId,
+        string currency = "USD",
+        string source = B2BAccountsConstants.TransactionSource,
+        DateTime? createdUtc = null)
+        => new()
+        {
+            ItemId = Guid.NewGuid().ToString("N"),
+            Source = source,
+            OwnerId = ownerId,
+            Currency = currency,
+            Amount = total,
+            TotalAmount = total,
+            AmountPaid = paid,
+            Status = status,
+            CreatedUtc = createdUtc ?? new DateTime(2026, 9, 1),
+            ParentReferenceType = AccountsConstants.ReferenceTypes.Account,
+            ParentReferenceId = "account-1",
+        };
+
+    private static AccountTermsService CreateTerms(B2BAccount account, ITransactionStore transactionStore = null)
+    {
+        var transactions = new Mock<ITransactionStore>();
+        transactions.Setup(value => value.GetByParentReferenceAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
 
         var site = new Mock<ISite>();
         site.Setup(value => value.GetOrCreate<CheckoutSettings>()).Returns(new CheckoutSettings { Currency = "USD" });
         var siteService = new Mock<ISiteService>();
         siteService.Setup(value => value.GetSiteSettingsAsync()).ReturnsAsync(site.Object);
 
-        return new AccountTermsService(transactions.Object, B2BAccounts(account), siteService.Object);
+        return new AccountTermsService(transactionStore ?? transactions.Object, B2BAccounts(account), siteService.Object);
     }
 }

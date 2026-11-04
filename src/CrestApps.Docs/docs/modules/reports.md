@@ -16,6 +16,8 @@ user_manual:
 
 The **Reports** module is a reusable reporting framework. It provides a single admin **Reports** area and a small contract that any module can implement to surface an industry-standard report — with a shared from/to date-range filter, extensible filters, a uniform renderer (metric cards, tables, bars, and interactive charts), and pluggable exports (CSV built in). The feature depends on **CrestApps Resources** and loads its named `chart.js` resource only when the current report contains a chart section. Modules such as [Omnichannel](../omnichannel/index.md) and [Phone Number Verifications](phone-number-verifications) contribute their reports through this framework so every report looks and behaves the same.
 
+<YouTube video="reports-run-and-export" title="Video overview of finding, running, filtering and exporting reports" />
+
 | | |
 | --- | --- |
 | **Add-on Feature Name** | Reports (OpenXml) |

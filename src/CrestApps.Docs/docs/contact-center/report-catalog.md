@@ -10,6 +10,7 @@ user_manual:
 
 # Enterprise Contact Center Report Catalog
 
+<YouTube video="reports-run-and-export" title="Video overview of finding, running, filtering and exporting reports" />
 <YouTube video="contact-center-reports" title="Video overview of running, filtering, reading and exporting Contact Center reports" />
 
 <YouTube video="contact-center-reports-catalog" title="Video tour of the report categories and which report answers which question" />

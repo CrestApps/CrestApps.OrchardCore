@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Localization;
+using OrchardCore;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
@@ -44,6 +45,27 @@ internal sealed class AccountMembersPartDisplayDriver : ContentPartDisplayDriver
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
+    }
+
+    public override IDisplayResult Display(AccountMembersPart part, BuildPartDisplayContext context)
+    {
+        // The members show on the account's page, in its Overview tab; the editor is the place to change them.
+        if (context.DisplayType != OrchardCoreConstants.DisplayType.DetailAdmin)
+        {
+            return null;
+        }
+
+        return Initialize<AccountMembersPartViewModel>("AccountMembersPart_Overview", model =>
+        {
+            model.Members = [.. (part.Members ?? [])
+                .Where(member => member is not null)
+                .Select(member => new AccountMemberRowViewModel
+                {
+                    User = member.Email ?? member.UserName,
+                    Role = member.Role,
+                    ContactContentItemId = member.ContactContentItemId,
+                })];
+        }).Location(OrchardCoreConstants.DisplayType.DetailAdmin, AccountPageTabs.Location(AccountPageTabs.Overview, "5"));
     }
 
     public override async Task<IDisplayResult> EditAsync(AccountMembersPart part, BuildPartEditorContext context)
@@ -140,7 +162,7 @@ internal sealed class AccountMembersPartDisplayDriver : ContentPartDisplayDriver
             {
                 model.Members.Add(new AccountMemberRowViewModel());
             }
-        });
+        }).Location(AccountPageTabs.EditorLocation(AccountPageTabs.Members));
 
     private async Task<bool> CanManageAsync()
         => _httpContextAccessor.HttpContext?.User is { } user &&

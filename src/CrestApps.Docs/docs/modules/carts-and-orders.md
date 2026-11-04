@@ -105,6 +105,8 @@ The carts and wishlists indexes hold no dates, so these data sets have no main d
 
 This video shows the order screens in the admin:
 
+<YouTube video="orders" title="Video overview of orders" />
+
 ### Checking out
 
 The cart page shows **Checkout** when the Orders feature is enabled. Checking out:
@@ -412,6 +414,13 @@ The widget has these options: the **first window** (7 days) and **second window*
 ### Automation recipes
 
 Orders adds the recipes **Automation: thank-you email** (on) and **Automation: canceled order alert** (added off), and Inventory adds **Automation: low stock alert** (added off). Each turns on Workflows and Email and adds a `WorkflowType` with stable ids: `OrderPaidEvent`, `OrderCanceledEvent` or `LowStockEvent` leading to an `EmailTask` in Liquid over `Workflow.Input`.
+
+## The account page
+
+With [Accounts](accounts.md) on, an account's page gets an **Orders** tab: the latest 25 orders placed for the account
+(`OrderQuery.AccountId`), with their status, buyer, date and total, linked to each order. It needs `ManageOrders`. An
+order is placed for an account when one of its members buys for it as a business, through
+[Accounts B2B](accounts-b2b.md).
 
 ## Wishlists
 

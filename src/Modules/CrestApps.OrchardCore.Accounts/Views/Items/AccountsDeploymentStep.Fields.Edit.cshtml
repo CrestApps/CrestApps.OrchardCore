@@ -1,0 +1,13 @@
+@using CrestApps.OrchardCore.Accounts.ViewModels
+
+@model AccountsDeploymentStepViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="IncludeRecords" type="checkbox" class="form-check-input" />
+            <label asp-for="IncludeRecords" class="form-check-label">@T["Also export the records the accounts hold"]</label>
+            <span class="hint dashed">@T["Such as their contacts and opportunities. Every account is exported with its members, locations and the other parts on it."]</span>
+        </div>
+    </div>
+</div>

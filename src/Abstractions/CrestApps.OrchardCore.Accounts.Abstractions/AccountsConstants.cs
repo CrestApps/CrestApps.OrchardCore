@@ -58,6 +58,18 @@ public static class AccountsConstants
     }
 
     /// <summary>
+    /// The reference types that name an account on records kept outside the content store.
+    /// </summary>
+    public static class ReferenceTypes
+    {
+        /// <summary>
+        /// Names an account, such as on a transaction's parent reference: the account the record ultimately
+        /// belongs to.
+        /// </summary>
+        public const string Account = "Account";
+    }
+
+    /// <summary>
     /// The names of the routes the Accounts module maps.
     /// </summary>
     public static class RouteNames

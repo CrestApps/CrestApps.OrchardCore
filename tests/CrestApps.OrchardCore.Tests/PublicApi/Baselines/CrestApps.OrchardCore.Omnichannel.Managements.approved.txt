@@ -1423,6 +1423,61 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Tools
 }
 namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
 {
+    public class AccountActivitiesTabViewModel
+    {
+        public AccountActivitiesTabViewModel() { }
+        public string AccountContentItemId { get; set; }
+        public int CompletedCount { get; set; }
+        public System.DateTime? LastCompletedUtc { get; set; }
+        public System.DateTime? NextScheduledUtc { get; set; }
+        public int ScheduledCount { get; set; }
+    }
+    public sealed class AccountContactRow : System.IEquatable<CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.AccountContactRow>
+    {
+        public AccountContactRow(OrchardCore.ContentManagement.ContentItem Contact, string Email, string Phone) { }
+        public OrchardCore.ContentManagement.ContentItem Contact { get; init; }
+        public string Email { get; init; }
+        public string Phone { get; init; }
+    }
+    public class AccountContactsTabViewModel
+    {
+        public AccountContactsTabViewModel() { }
+        public OrchardCore.ContentManagement.ContentItem Account { get; set; }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.AccountContactRow> Contacts { get; set; }
+        public int Count { get; set; }
+        public System.Collections.Generic.IReadOnlyList<OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition> CreatableTypes { get; set; }
+    }
+    public sealed class AccountLeadRow : System.IEquatable<CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.AccountLeadRow>
+    {
+        public AccountLeadRow(OrchardCore.ContentManagement.ContentItem Lead, string ContactContentItemId, System.DateTime? ConvertedUtc) { }
+        public string ContactContentItemId { get; init; }
+        public System.DateTime? ConvertedUtc { get; init; }
+        public OrchardCore.ContentManagement.ContentItem Lead { get; init; }
+    }
+    public class AccountLeadsTabViewModel
+    {
+        public AccountLeadsTabViewModel() { }
+        public int Count { get; set; }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.AccountLeadRow> Leads { get; set; }
+    }
+    public class AccountOpportunitiesTabViewModel
+    {
+        public AccountOpportunitiesTabViewModel() { }
+        public OrchardCore.ContentManagement.ContentItem Account { get; set; }
+        public int Count { get; set; }
+        public System.Collections.Generic.IReadOnlyList<OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition> CreatableTypes { get; set; }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.AccountOpportunityRow> Opportunities { get; set; }
+    }
+    public sealed class AccountOpportunityRow : System.IEquatable<CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.AccountOpportunityRow>
+    {
+        public AccountOpportunityRow(OrchardCore.ContentManagement.ContentItem Opportunity, string Stage, decimal? Amount, System.DateTime? CloseDate, bool IsClosed, bool IsWon) { }
+        public decimal? Amount { get; init; }
+        public System.DateTime? CloseDate { get; init; }
+        public bool IsClosed { get; init; }
+        public bool IsWon { get; init; }
+        public OrchardCore.ContentManagement.ContentItem Opportunity { get; init; }
+        public string Stage { get; init; }
+    }
     public class ActivityHandlerViewModel
     {
         public ActivityHandlerViewModel() { }

@@ -19,11 +19,15 @@ A **content field** is one box on a content item's form, such as a title, a date
 
 <AskYourAdmin />
 
+<YouTube video="content-fields" title="Video overview of the phone and address fields" />
+
 <YouTube video="site-administration-walkthroughs" title="Video of enabling Content Fields, adding the Phone Field, and using the country-aware phone input" start={7} end={42} />
 
 ## Add a phone field to a content type
 
 1. Open **Design > Content Definition > Content Types** and edit the content type.
+<YouTube video="content-fields" title="Video of adding a phone field to a content type" start={104} end={156} />
+
 
 1. Open **Content > Content Definition > Content Types** and edit the content type.
 2. Click **Add Field**.
@@ -62,6 +66,8 @@ If the number is not a valid phone number, the item is not saved and the form sh
 
 ## Add an address field to a content type
 
+<YouTube video="content-fields" title="Video of adding an address field to a content type" start={156} end={203} />
+
 
 Turn on the **Address Field** feature first. It also turns on **Addresses**.
 
@@ -79,6 +85,8 @@ Turn on the **Address Field** feature first. It also turns on **Addresses**.
 
 ## Enter an address
 
+<YouTube video="content-fields" title="Video of entering a phone number and an address" start={203} end={269} />
+
 
 1. Choose the **Country** first. The rest of the form follows it: the fields that country uses, in its order, with its names, such as **State** and **ZIP code** for the United States, **Province** and **Postal code** for Canada, or **Post town** and **Postcode** for the United Kingdom. Where a country has a list of states or provinces, you pick one from it.
 2. Fill in the address and save the item.
@@ -88,6 +96,8 @@ The address is checked against its country: the fields marked * are required, a 
 On the saved item, the address is shown the way its country's post writes it.
 
 ## Manage the countries
+
+<YouTube video="content-fields" title="Video of managing the list of countries and setting up address suggestions" start={269} end={320} />
 
 When the **Address Countries** feature is on, each country the address field can offer is a content item of the type **Country**. They are added the first time the feature is turned on, from the standard list of countries.
 

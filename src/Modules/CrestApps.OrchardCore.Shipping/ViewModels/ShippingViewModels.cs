@@ -354,6 +354,11 @@ public class ShippingAddressSummary
 
     public string Label { get; set; }
 
+    /// <summary>
+    /// Gets or sets where the address comes from when it isn't in the buyer's address book, such as their account.
+    /// </summary>
+    public string Description { get; set; }
+
     public IReadOnlyList<string> Lines { get; set; } = [];
 
     public bool IsDefault { get; set; }

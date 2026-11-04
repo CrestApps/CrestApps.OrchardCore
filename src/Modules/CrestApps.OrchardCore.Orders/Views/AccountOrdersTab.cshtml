@@ -1,0 +1,31 @@
+@using CrestApps.OrchardCore.Products.Core.Services
+@model AccountOrdersTabViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T.Plural(Model.Count, "1 order", "{0} orders")</div>
+    @if (Model.Orders.Count == 0)
+    {
+        <div class="card-body text-body-secondary">@T["No orders placed for the account yet. An order is placed for an account when one of its members buys for it as a business."]</div>
+    }
+    else
+    {
+        <ul class="list-group list-group-flush">
+            @foreach (var order in Model.Orders)
+            {
+                <li class="list-group-item d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <span class="d-flex flex-wrap align-items-center gap-2">
+                        <a class="fw-semibold" href="@Url.RouteUrl("OrdersDetail", new { area = "CrestApps.OrchardCore.Orders", orderId = order.ItemId })">@T["Order {0}", order.OrderNumber]</a>
+                        <partial name="_OrderStatus" model="order.Status" />
+                        <span class="text-body-secondary small">@order.CustomerName</span>
+                        <span class="text-body-secondary small">@await DisplayAsync(await New.DateTime(Utc: order.CreatedUtc, Format: "d"))</span>
+                    </span>
+                    <span class="fw-semibold text-nowrap">@ProductPriceFormatter.Format(order.Total ?? order.Subtotal, order.Currency)</span>
+                </li>
+            }
+        </ul>
+        @if (Model.Count > Model.Orders.Count)
+        {
+            <div class="card-footer small text-body-secondary">@T["Showing the latest {0} of {1}.", Model.Orders.Count, Model.Count]</div>
+        }
+    }
+</div>

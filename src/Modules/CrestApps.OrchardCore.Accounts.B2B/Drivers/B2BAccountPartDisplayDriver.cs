@@ -141,7 +141,7 @@ internal sealed class B2BAccountPartDisplayDriver : ContentPartDisplayDriver<B2B
             model.PunchoutKeyCreatedUtc = source.PunchoutKeyCreatedUtc;
             model.PunchoutUrl = source.PunchoutUrl;
             model.Prefix = Prefix;
-        });
+        }).Location(AccountPageTabs.EditorLocation(AccountPageTabs.Business));
     }
 
     // Checks the form and copies it onto the part. The order limits and the punchout buyer are kept by user id; a

@@ -19,11 +19,11 @@ public sealed class AccountTermsService
     // The most an account with no credit limit can put on account, to stand for "no limit" in the ledger's sums.
     internal const decimal Unlimited = 1_000_000_000m;
 
-    private readonly ITransactionManager _transactions;
+    private readonly ITransactionStore _transactions;
     private readonly B2BAccountService _accounts;
     private readonly ISiteService _siteService;
 
-    public AccountTermsService(ITransactionManager transactions, B2BAccountService accounts, ISiteService siteService)
+    public AccountTermsService(ITransactionStore transactions, B2BAccountService accounts, ISiteService siteService)
     {
         _transactions = transactions;
         _accounts = accounts;
@@ -31,36 +31,35 @@ public sealed class AccountTermsService
     }
 
     /// <summary>
-    /// Returns what an account owes on its terms, across its buyers, in the store's currency.
+    /// Returns what an account owes on its terms, in the store's currency: the outstanding invoices whose parent
+    /// reference is the account, whichever of its buyers placed the order, and whether or not they are still a member.
     /// </summary>
     public async Task<(decimal Owed, string Currency)> GetOwedAsync(B2BAccount account, CancellationToken cancellationToken = default)
     {
         var currency = (await _siteService.GetSettingsAsync<CheckoutSettings>()).Currency;
-        var owed = 0m;
 
-        foreach (var buyer in account?.Buyers ?? [])
-        {
-            for (var page = 1; ; page++)
-            {
-                var result = await _transactions.PageAsync(page, 100, new TransactionQuery
-                {
-                    OwnerId = buyer.UserId,
-                    Source = B2BAccountsConstants.TransactionSource,
-                    OutstandingOnly = true,
-                }, cancellationToken);
-
-                owed += result.Entries
-                    .Where(transaction => string.Equals(transaction.Currency, currency, StringComparison.OrdinalIgnoreCase))
-                    .Sum(transaction => transaction.OutstandingAmount);
-
-                if (result.Entries.Count < 100)
-                {
-                    break;
-                }
-            }
-        }
+        var owed = (await ListInvoicesAsync(account, cancellationToken))
+            .Where(transaction =>
+                transaction.Status is TransactionStatus.Outstanding or TransactionStatus.PartiallyPaid &&
+                string.Equals(transaction.Currency, currency, StringComparison.OrdinalIgnoreCase))
+            .Sum(transaction => transaction.OutstandingAmount);
 
         return (owed, currency);
+    }
+
+    /// <summary>
+    /// Returns the invoices an account was given for what it bought on its terms, newest first.
+    /// </summary>
+    public async Task<IReadOnlyList<Transaction>> ListInvoicesAsync(B2BAccount account, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(account?.AccountId))
+        {
+            return [];
+        }
+
+        return [.. (await _transactions.GetByParentReferenceAsync(AccountsConstants.ReferenceTypes.Account, account.AccountId, cancellationToken))
+            .Where(transaction => string.Equals(transaction.Source, B2BAccountsConstants.TransactionSource, StringComparison.Ordinal))
+            .OrderByDescending(transaction => transaction.CreatedUtc)];
     }
 
     /// <summary>

@@ -135,16 +135,18 @@ public sealed class ShippingCheckoutFlowDisplayDriver : CheckoutFlowDisplayDrive
                 // they change their mind.
                 model.PickupLocationId = step?.PickupLocationId;
 
+                // A business buyer with no default address of their own starts with their account's first location.
                 var defaultAddress = customer?.GetDefaultShippingAddress();
+                var sourcedDefault = defaultAddress is null && await _step.GetSourcedAddressesAsync(session) is { Count: > 0 } sourced ? sourced[0] : null;
 
-                model.AddressId = defaultAddress?.AddressId;
+                model.AddressId = defaultAddress?.AddressId ?? sourcedDefault?.AddressId;
                 model.SaveAddress = customer is not null;
-                model.Address = await _addressEditor.BuildAsync(defaultAddress is null ? GetBillingAddress(session) : null, options);
-                known = defaultAddress?.ToAddress() ?? GetBillingAddress(session);
+                model.Address = await _addressEditor.BuildAsync(defaultAddress is null && sourcedDefault is null ? GetBillingAddress(session) : null, options);
+                known = defaultAddress?.ToAddress() ?? sourcedDefault?.Address ?? GetBillingAddress(session);
             }
 
             model.IsSignedIn = !string.IsNullOrEmpty(session.OwnerId);
-            model.SavedAddresses = await SummarizeAsync(customer);
+            model.SavedAddresses = await SummarizeAsync(customer, session);
 
             if (model.SavedAddresses.Count > 0)
             {
@@ -170,24 +172,32 @@ public sealed class ShippingCheckoutFlowDisplayDriver : CheckoutFlowDisplayDrive
             }
         }).Location("Content");
 
-    private async Task<IReadOnlyList<ShippingAddressSummary>> SummarizeAsync(Customer customer)
+    private async Task<IReadOnlyList<ShippingAddressSummary>> SummarizeAsync(Customer customer, ICheckoutFlowSession session)
     {
-        if (customer?.Addresses is not { Count: > 0 } addresses)
-        {
-            return [];
-        }
-
         var summaries = new List<ShippingAddressSummary>();
+        var formatOptions = new AddressFormatOptions { IncludeCountry = true };
 
         // The default shipping address first.
-        foreach (var entry in addresses.OrderByDescending(entry => entry.AddressId == customer.DefaultShippingAddressId))
+        foreach (var entry in (customer?.Addresses ?? []).OrderByDescending(entry => entry.AddressId == customer.DefaultShippingAddressId))
         {
             summaries.Add(new ShippingAddressSummary
             {
                 AddressId = entry.AddressId,
                 Label = entry.Label,
-                Lines = await _addressFormatter.GetLinesAsync(entry.ToAddress(), new AddressFormatOptions { IncludeCountry = true }),
+                Lines = await _addressFormatter.GetLinesAsync(entry.ToAddress(), formatOptions),
                 IsDefault = entry.AddressId == customer.DefaultShippingAddressId,
+            });
+        }
+
+        // Then the addresses from other sources, such as the locations of the account the buyer buys for.
+        foreach (var option in await _step.GetSourcedAddressesAsync(session))
+        {
+            summaries.Add(new ShippingAddressSummary
+            {
+                AddressId = option.AddressId,
+                Label = option.Label,
+                Description = option.Description,
+                Lines = await _addressFormatter.GetLinesAsync(option.Address, formatOptions),
             });
         }
 

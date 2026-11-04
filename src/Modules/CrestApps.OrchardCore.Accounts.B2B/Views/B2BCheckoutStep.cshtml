@@ -15,7 +15,7 @@
             <div class="form-check mb-0">
                 <input asp-for="RequestApproval" type="checkbox" class="form-check-input" />
                 <label asp-for="RequestApproval" class="form-check-label">@T["Ask for approval"]</label>
-                <span class="hint dashed">@T["Your account's admins are emailed. Once one approves, pay the order from your orders."]</span>
+                <div class="form-text mt-0">@T["Your account's admins are emailed. Once one approves, pay the order from your orders."]</div>
             </div>
         }
         <span asp-validation-for="RequestApproval" class="text-danger d-block"></span>

@@ -19,6 +19,8 @@ user_manual:
   - user-manual/reports
 ---
 
+<YouTube video="omnichannel-contacts" title="Video overview of omnichannel contacts" />
+
 | | |
 | --- | --- |
 | **Feature Name** | Omnichannel Management |
@@ -418,6 +420,7 @@ The bulk actions apply either to the activities selected on the current page or 
 ## Reports
 
 
+<YouTube video="omnichannel-reports" title="Video overview of the omnichannel reports: which report answers which question" />
 When the **Reports** feature (`CrestApps.OrchardCore.Reports`) is enabled, Omnichannel Management contributes 26 reports to the admin **Reports** area, and the Omnichannel CRM feature adds three more (**Lead funnel**, **Lead conversion by source and list** and **Opportunity pipeline**), 29 in all. They are grouped by category: **Operations**, **Queue & Routing**, **Agent Performance**, **CRM & Campaigns**, **Compliance & Audit**, and **Technical & IT**. They include activity summary, campaign performance, disposition breakdown, dialer call detail, AI handoff and containment, backlog and aging, source, channel, kind, assignment, urgency, attempt and address performance, customer and contact type workload, scheduled completion, per-user productivity, completion time, overdue workload and creation, and campaign source, channel, disposition, and attempt mixes. The user manual lists each one under [Omnichannel reports](../user-manual/reports.md#omnichannel-reports).
 
 Every Omnichannel activity report can be narrowed by **Campaign group**, **Campaign**, **Channel**, **Source**, **Status**, and **Disposition**, which takes several dispositions at once; the three CRM reports (lead funnel, lead conversion and opportunity pipeline) take the date range only. The filters are read into an `OmnichannelReportCriteria` (`DispositionIds` is the set picked, or `null` for every disposition) and applied by the shared activity filter, so every report that goes through it honors them. The **Source** filter offers *Automatic*, *Callback*, *Dialer*, *Inbound* and *Manual*; *Dialer* matches every dialer mode (`PreviewDial`, `PowerDial`, `ProgressiveDial` and `PredictiveDial`), which the report rows show as stored. Reports export to CSV, to Excel (`.xlsx`) when the **Reports (OpenXml)** feature is enabled, and to PDF when **Reports (PDF)** is enabled. Viewing them requires the **View Omnichannel reports** permission, which **Manage activities** implies and which administrators and supervisors have by default. See [Reports](../user-manual/reports.md) in the user manual.
@@ -427,6 +430,7 @@ Every Omnichannel activity report can be narrowed by **Campaign group**, **Campa
 ### Report Builder data sets
 
 
+<YouTube video="omnichannel-reports" title="Video of the omnichannel and messaging data sets in the Report Builder" start={322} end={373} />
 The **Omnichannel Activities** feature also exposes the Omnichannel records to the Report Builder and to Orchard Core data pipelines as the `Omnichannel` data source, registered when Data Pipelines Core (`OrchardCore.DataPipelines.Core`) is enabled. Every data set needs **View Omnichannel reports** (`ViewOmnichannelReports`); a principal without it, or no principal, sees no data set and reads no row.
 
 | Data set (technical name) | One row per | Main date | Fields |

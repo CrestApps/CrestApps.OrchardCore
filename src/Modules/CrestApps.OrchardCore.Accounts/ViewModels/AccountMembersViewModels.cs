@@ -60,3 +60,11 @@ public class AccountLocationRowViewModel
     [BindNever]
     public IShape AddressEditor { get; set; }
 }
+
+/// <summary>
+/// The Accounts deployment step's editor.
+/// </summary>
+public class AccountsDeploymentStepViewModel
+{
+    public bool IncludeRecords { get; set; }
+}

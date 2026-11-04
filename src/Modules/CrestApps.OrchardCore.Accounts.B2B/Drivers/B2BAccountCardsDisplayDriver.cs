@@ -1,8 +1,7 @@
 using CrestApps.OrchardCore.Accounts.B2B.Models;
 using CrestApps.OrchardCore.Accounts.B2B.Services;
 using CrestApps.OrchardCore.Checkout.Models;
-using CrestApps.OrchardCore.Orders.Core.Models;
-using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Transactions.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using OrchardCore;
@@ -15,26 +14,22 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Accounts.B2B.Drivers;
 
 /// <summary>
-/// Shows an account's business buying on its page: its terms and what it owes, its buyers, and its latest orders.
+/// Adds the Business and Invoices tabs to an account's page: its terms, what it owes and its buyers, and the invoices
+/// it was given for what it bought on its terms. The orders placed for it are in the Orders tab, from the Orders module.
 /// </summary>
 internal sealed class B2BAccountCardsDisplayDriver : ContentDisplayDriver
 {
-    private const int MaxOrders = 10;
-
-    private readonly IOrderStore _orders;
     private readonly AccountTermsService _terms;
     private readonly ISiteService _siteService;
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     public B2BAccountCardsDisplayDriver(
-        IOrderStore orders,
         AccountTermsService terms,
         ISiteService siteService,
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor)
     {
-        _orders = orders;
         _terms = terms;
         _siteService = siteService;
         _authorizationService = authorizationService;
@@ -53,18 +48,21 @@ internal sealed class B2BAccountCardsDisplayDriver : ContentDisplayDriver
             return null;
         }
 
-        return Initialize<B2BAccountCardsViewModel>("B2BAccountCards", async model =>
-        {
-            var account = new B2BAccount(contentItem);
-            var (owed, currency) = await _terms.GetOwedAsync(account);
-            var (count, orders) = await _orders.PageAsync(new OrderQuery { AccountId = account.AccountId }, 0, MaxOrders);
+        var account = new B2BAccount(contentItem);
 
-            model.Account = account;
-            model.Owed = owed;
-            model.Currency = currency ?? (await _siteService.GetSettingsAsync<CheckoutSettings>()).Currency;
-            model.OrderCount = count;
-            model.Orders = orders;
-        }).Location(OrchardCoreConstants.DisplayType.DetailAdmin, "Content:20");
+        return Combine(
+            Initialize<B2BAccountCardsViewModel>("B2BAccountCards", async model =>
+            {
+                var (owed, currency) = await _terms.GetOwedAsync(account);
+
+                model.Account = account;
+                model.Owed = owed;
+                model.Currency = currency ?? (await _siteService.GetSettingsAsync<CheckoutSettings>()).Currency;
+            }).Location(OrchardCoreConstants.DisplayType.DetailAdmin, AccountPageTabs.Location(AccountPageTabs.Business)),
+            Initialize<B2BAccountInvoicesViewModel>("B2BAccountInvoices", async model =>
+            {
+                model.Invoices = await _terms.ListInvoicesAsync(account);
+            }).Location(OrchardCoreConstants.DisplayType.DetailAdmin, AccountPageTabs.Location(AccountPageTabs.Invoices)));
     }
 }
 
@@ -78,8 +76,12 @@ public class B2BAccountCardsViewModel
     public decimal Owed { get; set; }
 
     public string Currency { get; set; }
+}
 
-    public int OrderCount { get; set; }
-
-    public IReadOnlyList<Order> Orders { get; set; } = [];
+/// <summary>
+/// The invoices an account was given for what it bought on its terms, on its page.
+/// </summary>
+public class B2BAccountInvoicesViewModel
+{
+    public IReadOnlyList<Transaction> Invoices { get; set; } = [];
 }
