@@ -51,7 +51,7 @@ public sealed class Startup : StartupBase
 /// Registers the <c>WebhookSubscriptions</c> recipe step.
 /// </summary>
 [Feature(WebhooksConstants.Feature.Webhooks)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class RecipesStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -63,7 +63,7 @@ public sealed class RecipesStartup : StartupBase
 /// Registers the webhook subscriptions deployment step.
 /// </summary>
 [Feature(WebhooksConstants.Feature.Webhooks)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class DeploymentStartup : StartupBase
 {
     /// <inheritdoc/>
