@@ -98,6 +98,15 @@ public sealed class SupervisorAgentViewModel
     /// backs -- so the board can warn the supervisor and offer to free the agent. Empty when there is none.
     /// </summary>
     public IList<SupervisorStaleWorkViewModel> StaleWork { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the activity the agent is working on: the one of their live call, or else the one routing or the
+    /// dialer assigned or reserved for them. An agent must complete dialer work before they are available again, so the
+    /// board links it for a supervisor who may complete it for them. It is <see langword="null"/> when there is none or
+    /// the supervisor may not complete activities.
+    /// </summary>
+    public string CurrentActivityId { get; set; }
+
     /// <summary>
     /// Gets or sets the agent's own phone call -- a number they dialed from the keypad, or an extension call -- when they
     /// are on one and on no Contact Center interaction. <see cref="ActiveInteractionId"/> then names it with a phone call

@@ -366,6 +366,7 @@ import { createSupervisorInterventions } from './supervisor-interventions.js';
                         '<span class="cc-agent__state badge ta-badge text-bg-secondary">' + escapeHtml(detail) + '</span>' +
                         idleHtml(agent) +
                         staleHtml(agent) +
+                        activityHtml(agent, state) +
                         signedInHtml(agent, state, status) +
                     '</span>' +
                     '<span class="cc-badge-count" title="' + escapeHtml(label('activeInteractions', 'Active interactions')) + '">' + agent.activeInteractions + '</span>' +
@@ -390,6 +391,19 @@ import { createSupervisorInterventions } from './supervisor-interventions.js';
 
             return '<span class="cc-agent__stale badge ta-badge text-bg-warning" role="note" data-cc-stale title="' + escapeHtml(label('staleHint', 'This agent holds work nothing backs. Use Free agent in the More menu to release it.')) + '">' +
                 '<i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> ' + escapeHtml(summary) + '</span>';
+        }
+
+        // A link to the activity the agent is working on, for a supervisor who may complete it for them: dialer work must be
+        // completed before the agent is available again, so completing a stuck one lets the agent go.
+        function activityHtml(agent, state) {
+            if (!agent.currentActivityId || !state.canCompleteActivities || !config.completeActivityUrl) {
+                return '';
+            }
+
+            var href = config.completeActivityUrl.replace('__activityId__', encodeURIComponent(agent.currentActivityId));
+
+            return '<a class="cc-agent__meta" data-cc-current-activity href="' + escapeHtml(href) + '" title="' + escapeHtml(label('openActivityHint', 'Open the activity this agent is working on.')) + '">' +
+                '<i class="fa-solid fa-clipboard-check" aria-hidden="true"></i> ' + escapeHtml(label('openActivity', 'Open activity')) + '</a>';
         }
 
         // How long an Available agent has been waiting for work. The text is filled in by updateIdleTimes, so the card's
