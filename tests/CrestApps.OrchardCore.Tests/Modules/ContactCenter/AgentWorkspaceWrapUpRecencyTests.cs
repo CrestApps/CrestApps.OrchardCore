@@ -55,6 +55,47 @@ public sealed class AgentWorkspaceWrapUpRecencyTests
         var model = Assert.IsType<AgentWorkspaceStateViewModel>(GetValue(result));
 
         Assert.Null(model.ActiveInteraction);
+        Assert.Null(model.HeldActivity);
+    }
+
+    // The call ended long ago, or the site restarted under it, but the dialer's work is still assigned to the agent and
+    // holds them until they complete it: the bar keeps it in reach so the agent can let themselves go.
+    [Fact]
+    public async Task WorkspacePoll_KeepsTheAssignedActivityInReach_WhenTheAgentIsStillHeldPastTheWrapUpWindow()
+    {
+        var probe = new WrapUpProbe(endedUtc: ClockNow.AddHours(-2), presence: AgentPresenceStatus.Busy, assignedWork: true);
+
+        var result = await probe.PollAsync();
+        var model = Assert.IsType<AgentWorkspaceStateViewModel>(GetValue(result));
+
+        Assert.Null(model.ActiveInteraction);
+        Assert.NotNull(model.HeldActivity);
+        Assert.Equal("activity-0001", model.HeldActivity.ActivityItemId);
+    }
+
+    [Fact]
+    public async Task WorkspacePoll_DoesNotLookForAssignedWork_WhenTheAgentIsNotHeld()
+    {
+        var probe = new WrapUpProbe(endedUtc: ClockNow.AddHours(-2), presence: AgentPresenceStatus.Available, assignedWork: true);
+
+        var result = await probe.PollAsync();
+        var model = Assert.IsType<AgentWorkspaceStateViewModel>(GetValue(result));
+
+        Assert.Null(model.HeldActivity);
+        probe.QueueItems.Verify(
+            manager => manager.GetOpenByAgentIdsAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task WorkspacePoll_ShowsNoAssignedActivity_WhenItIsAlreadyCompleted()
+    {
+        var probe = new WrapUpProbe(endedUtc: ClockNow.AddHours(-2), presence: AgentPresenceStatus.WrapUp, assignedWork: true, activityStatus: ActivityStatus.Completed);
+
+        var result = await probe.PollAsync();
+        var model = Assert.IsType<AgentWorkspaceStateViewModel>(GetValue(result));
+
+        Assert.Null(model.HeldActivity);
     }
 
     private static object GetValue(IResult result)
@@ -77,14 +118,28 @@ public sealed class AgentWorkspaceWrapUpRecencyTests
         private readonly Mock<IContentManager> _contentManager = new();
         private readonly Mock<IDisplayNameProvider> _displayNameProvider = new();
 
-        public WrapUpProbe(DateTime endedUtc)
+        public Mock<IQueueItemManager> QueueItems => _queueItemManager;
+
+        public WrapUpProbe(
+            DateTime endedUtc,
+            AgentPresenceStatus presence = AgentPresenceStatus.Offline,
+            bool assignedWork = false,
+            ActivityStatus activityStatus = ActivityStatus.InProgress)
         {
             var profile = new AgentProfile
             {
                 ItemId = "agent-0001",
                 UserId = "user-0001",
                 DisplayName = "Agent One",
+                PresenceStatus = presence,
             };
+
+            // The work routing or the dialer assigned to the agent for the activity.
+            _queueItemManager
+                .Setup(manager => manager.GetOpenByAgentIdsAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(assignedWork
+                    ? [new QueueItem { ItemId = "queue-item-0001", AgentId = "agent-0001", ActivityItemId = "activity-0001", QueueId = "__campaign-queue__renewals" }.RestorePersistedStatus(QueueItemStatus.Assigned)]
+                    : []);
 
             _agentManager
                 .Setup(manager => manager.FindByUserIdAsync("user-0001", It.IsAny<CancellationToken>()))
@@ -116,7 +171,7 @@ public sealed class AgentWorkspaceWrapUpRecencyTests
             var activity = new OmnichannelActivity
             {
                 ItemId = "activity-0001",
-                Status = ActivityStatus.InProgress,
+                Status = activityStatus,
                 AssignedToId = "user-0001",
             };
 
