@@ -95,6 +95,10 @@ Alerts appear only while the dashboard is open: a supervisor who opens it later 
 
 An agent can look busy while nothing backs it: a call the provider has already ended, a reservation nothing holds, or work still assigned with no call in progress. Their card then shows a warning badge, with a tooltip that says to use **Free agent** in the **⋮** menu. Choose **Free agent…** there: the panel asks *Release what (agent) is holding that nothing backs?*, lists what is held (for example *Marked busy with no call in progress*, *Holds a reservation that nothing backs* or *Work is still assigned with no call in progress*), and releases it when you click **Free agent**. A call the provider confirms is still alive is never ended; if there is one, nothing is released. The action needs the permission to take over calls, and it is recorded in the audit trail.
 
+## Open an agent's activity
+
+An agent who is reserved, on a call or wrapping up shows **Open activity** on their card. The link opens the activity they are working on, on its **Complete** screen: the activity of their live call, or else the newest one routing or the dialer reserved or assigned to them. Dialer work must be completed before the agent is available again. When an agent is stuck on one, complete it for them: choose a disposition and save. Their work ends, and the dialer can give them the next activity. You return to the dashboard afterwards. The link shows only if you have the **Complete activity** permission for other users' activities.
+
 ## Listen, whisper or barge
 
 <YouTube video="contact-center-live-dashboard" title="Video describing how to listen, whisper and barge into a live call" start={156} end={196} />

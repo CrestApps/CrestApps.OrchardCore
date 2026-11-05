@@ -12,6 +12,7 @@
         ["engageUrl"] = Model.EngageUrl,
         ["dispatchUrl"] = Model.DispatchUrl,
         ["interventionUrls"] = Model.InterventionUrls,
+        ["completeActivityUrl"] = Model.CompleteActivityUrl,
         ["antiForgeryToken"] = antiForgeryToken,
 
         // Each agent's state reads as it does on the agent's own screens: "On a call", not the stored "Busy".
@@ -70,6 +71,8 @@
             ["freeAgentConfirm"] = T["Release what {0} is holding that nothing backs?"].Value,
             ["freeAgentNote"] = T["A call the provider confirms is still alive is never ended; if there is one, nothing is released."].Value,
             ["staleHint"] = T["This agent holds work nothing backs. Use Free agent in the More menu to release it."].Value,
+            ["openActivity"] = T["Open activity"].Value,
+            ["openActivityHint"] = T["Open the activity this agent is working on. Completing it for them ends their work, so the dialer can give them the next one."].Value,
             ["staleMore"] = T["{0} (+{1} more)"].Value,
             ["stale.TelephonyCall"] = T["A phone call is still open that nothing confirms is alive."].Value,
             ["stale.ProviderInteraction"] = T["A call is still open that the provider reports ended."].Value,

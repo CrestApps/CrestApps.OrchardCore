@@ -29,6 +29,12 @@ public sealed class SupervisorDashboardIndexViewModel
     public string DialerUrl { get; set; }
 
     /// <summary>
+    /// Gets or sets the address of an activity's Complete screen, with <c>__activityId__</c> where the activity id goes,
+    /// returning to the dashboard.
+    /// </summary>
+    public string CompleteActivityUrl { get; set; }
+
+    /// <summary>
     /// Gets or sets the dialer banner the page opens with, or <see langword="null"/> when the Paced Dialing feature is off.
     /// </summary>
     public DialerPacingBanner DialerBanner { get; set; }

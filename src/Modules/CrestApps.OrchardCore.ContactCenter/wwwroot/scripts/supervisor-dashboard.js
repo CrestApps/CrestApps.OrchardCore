@@ -889,7 +889,7 @@
 					}, config.presenceLabels);
 					var actions = interventions ? interventions.actionsHtml(agent, state) : "";
 					var menu = interventions ? interventions.menuHtml(agent, state) : "";
-					return "<div class=\"cc-agent\"><span class=\"cc-presence__dot is-" + status.toLowerCase() + "\"></span><span class=\"cc-agent__body\"><span class=\"cc-agent__name\">" + escapeHtml(agent.displayName || agent.userId) + "</span><span class=\"cc-agent__state badge ta-badge text-bg-secondary\">" + escapeHtml(detail) + "</span>" + idleHtml(agent) + staleHtml(agent) + signedInHtml(agent, state, status) + "</span><span class=\"cc-badge-count\" title=\"" + escapeHtml(label("activeInteractions", "Active interactions")) + "\">" + agent.activeInteractions + "</span>" + menu + actions + "</div>";
+					return "<div class=\"cc-agent\"><span class=\"cc-presence__dot is-" + status.toLowerCase() + "\"></span><span class=\"cc-agent__body\"><span class=\"cc-agent__name\">" + escapeHtml(agent.displayName || agent.userId) + "</span><span class=\"cc-agent__state badge ta-badge text-bg-secondary\">" + escapeHtml(detail) + "</span>" + idleHtml(agent) + staleHtml(agent) + activityHtml(agent, state) + signedInHtml(agent, state, status) + "</span><span class=\"cc-badge-count\" title=\"" + escapeHtml(label("activeInteractions", "Active interactions")) + "\">" + agent.activeInteractions + "</span>" + menu + actions + "</div>";
 				}).join("");
 				setRegionHtml(refs.board, "board", boardHtml);
 				updateIdleTimes();
@@ -898,6 +898,10 @@
 				var summary = staleWorkSummary(agent, strings);
 				if (!summary) return "";
 				return "<span class=\"cc-agent__stale badge ta-badge text-bg-warning\" role=\"note\" data-cc-stale title=\"" + escapeHtml(label("staleHint", "This agent holds work nothing backs. Use Free agent in the More menu to release it.")) + "\"><i class=\"fa-solid fa-triangle-exclamation\" aria-hidden=\"true\"></i> " + escapeHtml(summary) + "</span>";
+			}
+			function activityHtml(agent, state) {
+				if (!agent.currentActivityId || !state.canCompleteActivities || !config.completeActivityUrl) return "";
+				return "<a class=\"cc-agent__meta\" data-cc-current-activity href=\"" + escapeHtml(config.completeActivityUrl.replace("__activityId__", encodeURIComponent(agent.currentActivityId))) + "\" title=\"" + escapeHtml(label("openActivityHint", "Open the activity this agent is working on.")) + "\"><i class=\"fa-solid fa-clipboard-check\" aria-hidden=\"true\"></i> " + escapeHtml(label("openActivity", "Open activity")) + "</a>";
 			}
 			function idleHtml(agent) {
 				if (!agent.idleSinceUtc) return "";
