@@ -310,15 +310,28 @@
             return;
         }
 
-        target.classList.add('is-loading');
+        // Only the latest preview counts: the one still running is cancelled, so its answer can't replace a newer one and
+        // the server stops running a design that changed. A report over a lot of data can take a while; the preview
+        // waits for it and says how long it has been running.
+        if (previewRun) {
+            previewRun.stop();
+        }
 
+        var run = startPreviewRun(target);
         var payload = app.payload();
 
         payload.filterValues = app.filterValues;
         payload.selections = app.previewSelections;
 
-        ui.request(app.url('preview') + (app.isView() ? '?view=true' : ''), { body: payload, html: true }).then(function (html) {
-            target.classList.remove('is-loading');
+        previewRun = run;
+
+        ui.request(app.url('preview') + (app.isView() ? '?view=true' : ''), { body: payload, html: true, signal: run.signal }).then(function (html) {
+            if (previewRun !== run) {
+                return;
+            }
+
+            run.stop();
+            previewRun = null;
             target.innerHTML = html;
             ui.initPickers(target);
             app.bindPreview(target);
@@ -326,12 +339,67 @@
             if (root.CrestAppsReportCharts) {
                 root.CrestAppsReportCharts.render(target);
             }
-        }).catch(function () {
-            target.classList.remove('is-loading');
+        }).catch(function (error) {
+            if (previewRun !== run) {
+                return;
+            }
+
+            run.stop();
+            previewRun = null;
             ui.clear(target);
-            target.appendChild(h('div', { className: 'alert alert-danger' }, app.t('The preview could not be loaded.')));
+            target.appendChild(previewError(error));
         });
     };
+
+    var previewRun = null;
+
+    // Marks the preview busy, with the seconds it has been running, until stopped; stopping it cancels its request.
+    function startPreviewRun(target) {
+        var controller = typeof root.AbortController === 'function' ? new root.AbortController() : null;
+        var started = Date.now();
+        var status = h('div', { className: 'rd-preview-progress', role: 'status', 'aria-live': 'polite' },
+            h('span', { className: 'spinner-border spinner-border-sm', 'aria-hidden': 'true' }),
+            h('span', { className: 'rd-preview-progress-text' }, app.t('Running the report…')));
+        var text = status.lastChild;
+        var timer = root.setInterval(function () {
+            text.textContent = app.t('Running the report…') + ' ' + Math.round((Date.now() - started) / 1000) + ' s';
+        }, 1000);
+
+        target.classList.add('is-loading');
+        target.appendChild(status);
+
+        return {
+            signal: controller ? controller.signal : undefined,
+            stop: function () {
+                root.clearInterval(timer);
+                status.remove();
+                target.classList.remove('is-loading');
+
+                if (controller) {
+                    controller.abort();
+                }
+            }
+        };
+    }
+
+    // Says why the preview failed, with a button that runs it again.
+    function previewError(error) {
+        var status = error && error.status;
+        var timedOut = status === 502 || status === 503 || status === 504 || status === 524;
+        var message = timedOut
+            ? app.t('The server stopped waiting for the report to run. Run it again, or narrow its filters.')
+            : app.t('The preview could not be loaded.');
+
+        return h('div', { className: 'alert alert-danger d-flex align-items-center gap-2 flex-wrap' },
+            h('span', null, message, status ? ' (' + status + ')' : ''),
+            h('button', {
+                type: 'button',
+                className: 'btn btn-sm btn-outline-danger',
+                onclick: function () {
+                    app.refreshPreview();
+                }
+            }, ui.icon('fa-rotate'), ' ', app.t('Try again')));
+    }
 
     // The preview renders the exposed filters as a form; submitting it re-runs the preview with those values. Clicking a
     // row or a chart of a visual that filters others re-runs it with the values picked.

@@ -198,6 +198,86 @@ public sealed class ReportDesignRunnerTests : IDisposable
         Assert.Equal([100d, 350d, 95d], Assert.Single(run.Document.Sections[1].Chart.Datasets).Values);
     }
 
+    [Fact]
+    public async Task RunAsync_ARowPicked_FiltersAChartWhoseQueryReadsTheFieldWithoutShowingIt()
+    {
+        // Arrange: the chart's query groups by month and copies the main query's calculated fields and viewer filter,
+        // like a dashboard whose queries are copies of one another, and never shows the customer.
+        var design = Dashboard();
+        var calculated = new ReportCalculatedField { Name = "Big", Expression = "IF([o.Total] > 60, 'yes', 'no')" };
+        design.Query.CalculatedFields = [calculated];
+        design.Query.Filters = [Placed()];
+        design.Queries[0].Query.CalculatedFields = [calculated];
+        design.Queries[0].Query.Filters = [Placed()];
+        design.Visuals[0].Action = new ReportVisualAction { ColumnId = "customer", Targets = [new ReportActionTarget { VisualId = "byMonth" }] };
+        var options = Picked("byCustomer", "c1");
+        options.VisualIds = new HashSet<string>(["byMonth"], StringComparer.Ordinal);
+
+        // Act
+        var run = await Runner().RunAsync(design, filterValues: null, period: null, options, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(run.Warnings);
+        var chart = Assert.Single(run.Document.Sections);
+        Assert.Equal("byMonth", chart.Id);
+        Assert.Equal(2, chart.Chart.Labels.Count);
+        Assert.Equal([100d, 50d], Assert.Single(chart.Chart.Datasets).Values);
+    }
+
+    [Fact]
+    public async Task RunAsync_AClickTargetOfARemovedVisual_IsAWarning()
+    {
+        // Arrange
+        var design = Dashboard();
+        design.Visuals[0].Action = new ReportVisualAction
+        {
+            ColumnId = "customer",
+            Targets = [new ReportActionTarget { VisualId = "byMonth" }, new ReportActionTarget { VisualId = "removed" }],
+        };
+
+        // Act
+        var run = await Runner().RunAsync(design, filterValues: null, period: null, Picked("byCustomer", "c1"), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Contains(run.Warnings, warning => warning.Contains("'removed'", StringComparison.Ordinal));
+        Assert.Equal([100d, 50d], Assert.Single(run.Document.Sections[1].Chart.Datasets).Values);
+    }
+
+    [Fact]
+    public async Task RunAsync_QueriesOverTheSameDataSetAndFilters_ReadItOnce()
+    {
+        // Arrange
+        var data = SalesData();
+        var design = Dashboard();
+
+        // Act
+        var run = await Runner(data).RunAsync(design, filterValues: null, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(run.Errors);
+        Assert.Equal([100d, 350d, 95d], Assert.Single(run.Document.Sections[1].Chart.Datasets).Values);
+
+        // One read asks for every field either query reads.
+        var query = Assert.Single(data.Queries);
+        Assert.Equal(["CustomerId", "PlacedUtc", "Total"], query.Fields.Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task RunAsync_AClickFilteredRun_ReadsTheRowsTheUnfilteredRunRead()
+    {
+        // Arrange: the chart's run filtered by the click adds a condition to the unfiltered read of the table.
+        var data = SalesData();
+        var design = Dashboard();
+        design.Visuals[0].Action = new ReportVisualAction { ColumnId = "customer", Targets = [new ReportActionTarget { VisualId = "byMonth" }] };
+
+        // Act
+        var run = await Runner(data).RunAsync(design, filterValues: null, period: null, Picked("byCustomer", "c1"), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Single(data.Queries);
+        Assert.Equal([100d, 50d], Assert.Single(run.Document.Sections[1].Chart.Datasets).Values);
+    }
+
     private static ReportRunOptions Picked(string visualId, params string[] keys)
     {
         var options = new ReportRunOptions();
@@ -257,7 +337,11 @@ public sealed class ReportDesignRunnerTests : IDisposable
 
     internal static ReportDesignRunner Runner()
     {
-        var data = SalesData();
+        return Runner(SalesData());
+    }
+
+    internal static ReportDesignRunner Runner(InMemoryReportDataSource data)
+    {
         var clock = new Mock<IClock>();
         clock.SetupGet(value => value.UtcNow).Returns(_now);
 
