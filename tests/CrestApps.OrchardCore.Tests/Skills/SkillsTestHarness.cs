@@ -37,6 +37,8 @@ internal sealed class SkillsTestHarness : IAsyncDisposable
 
     public IStore Store { get; }
 
+    public IServiceProvider Services => _provider;
+
     public static DateTime Now { get; } = new(2026, 11, 2, 12, 0, 0, DateTimeKind.Utc);
 
     public static DateOnly Today { get; } = new(2026, 11, 2);
