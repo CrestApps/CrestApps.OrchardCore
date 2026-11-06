@@ -19,7 +19,8 @@ public sealed class AIDeploymentRecipeSchemaPricingTests
             { "Meter": "CacheWriteInputTokens", "Amount": 3.75, "Per": 1000000 },
             { "Meter": "InputTokens", "Amount": 6, "Per": 1000000, "AboveInputTokens": 200000 },
             { "Meter": "AudioSeconds", "Amount": 0.006, "Per": 60, "Increment": 15 },
-            { "Meter": "AdditionalCount", "Amount": 0.05, "Per": 1, "CountName": "CodeExecutionSeconds" }
+            { "Meter": "AdditionalCount", "Amount": 0.05, "Per": 1, "CountName": "CodeExecutionSeconds" },
+            { "Meter": "OutputTokens", "Amount": 10, "Per": 1000000, "CountName": null, "AboveInputTokens": null, "Increment": 0 }
             """);
 
         Assert.True(result.IsValid);

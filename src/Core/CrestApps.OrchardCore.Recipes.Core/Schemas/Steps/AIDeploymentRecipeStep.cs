@@ -139,7 +139,7 @@ public sealed class AIDeploymentRecipeStep : IRecipeStep
                     .Description("The billed unit. Cached, cache-write, audio, and image tokens are taken out of the input and output tokens when they have their own price.")),
                 ("Amount", new JsonSchemaBuilder().Type(SchemaValueType.Number).Minimum(0).Description("What Per units cost, in the pricing's currency.")),
                 ("Per", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Minimum(1).Description("How many of the meter's base units Amount pays for, such as 1000000 for a price per million tokens, or 60 for a price per minute of audio (AudioSeconds).")),
-                ("CountName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("For the AdditionalCount meter: the name of the count the provider reports, as shown in the usage report.")),
+                ("CountName", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("For the AdditionalCount meter: the name of the count the provider reports, as shown in the usage report.")),
                 ("AboveInputTokens", new JsonSchemaBuilder().Type(SchemaValueType.Integer | SchemaValueType.Null).Minimum(1).Description("Long-context price: applies instead of the meter's regular price to requests with more input tokens than this.")),
                 ("Increment", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Minimum(0).Description("Rounds each request's quantity up to a multiple of this many base units, such as 15 for audio billed in 15-second increments. 0 bills the exact quantity.")))
             .Required("Meter", "Amount", "Per")

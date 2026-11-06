@@ -41,12 +41,13 @@ public sealed class AIDeploymentDeploymentSourcePricingTests
 
         // Assert
         var step = Assert.IsType<JsonObject>(Assert.Single(result.Steps));
-        var deployments = Assert.IsType<JsonArray>(step["deployments"]);
+        var deployments = Assert.IsType<JsonArray>(step["Deployments"]);
         var exported = Assert.IsType<JsonObject>(deployments[0]);
 
         Assert.Equal("USD", exported["Pricing"]?["Currency"]?.GetValue<string>());
         Assert.Equal(2, exported["Pricing"]?["Prices"]?.AsArray().Count);
         Assert.Equal(200_000, exported["Pricing"]?["Prices"]?[1]?["AboveInputTokens"]?.GetValue<long>());
+        Assert.False(exported["Pricing"]?["Prices"]?[0]?.AsObject().ContainsKey(nameof(AIDeploymentPrice.CountName)));
         Assert.Null(exported["Properties"]?[nameof(AIDeploymentPricing)]);
         Assert.Null(deployments[1]?["Pricing"]);
     }

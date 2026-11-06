@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
@@ -9,6 +10,12 @@ namespace CrestApps.OrchardCore.AI.Deployments.Sources;
 
 internal sealed class AIDeploymentDeploymentSource : DeploymentSourceBase<AIDeploymentDeploymentStep>
 {
+    // Prices are exported without their empty options, so an exported plan reads cleanly and imports as written.
+    private static readonly JsonSerializerOptions _pricingSerializerOptions = new()
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+    };
+
     private readonly INamedSourceCatalog<AIDeployment> _deploymentCatalog;
 
     /// <summary>
@@ -57,7 +64,7 @@ internal sealed class AIDeploymentDeploymentSource : DeploymentSourceBase<AIDepl
 
             if (deployment.GetPricing() is { } pricing)
             {
-                deploymentInfo["Pricing"] = JsonSerializer.SerializeToNode(pricing);
+                deploymentInfo["Pricing"] = JsonSerializer.SerializeToNode(pricing, _pricingSerializerOptions);
             }
 
             deploymentData.Add(deploymentInfo);
@@ -66,7 +73,8 @@ internal sealed class AIDeploymentDeploymentSource : DeploymentSourceBase<AIDepl
         result.Steps.Add(new JsonObject
         {
             ["name"] = step.Name,
-            ["deployments"] = deploymentData,
+            // The recipe schema names the list "Deployments"; the step reads either spelling.
+            ["Deployments"] = deploymentData,
         });
     }
 }

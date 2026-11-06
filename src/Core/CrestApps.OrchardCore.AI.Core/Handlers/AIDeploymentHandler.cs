@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Text.Json.Settings;
 using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Connections;
@@ -188,7 +189,12 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
             deployment.Properties ??= new Dictionary<string, object>();
 
             var currentJson = JsonSerializer.SerializeToNode(deployment.Properties)?.AsObject() ?? [];
-            currentJson.Merge(properties);
+            // A list in the payload replaces the stored one. Concatenating them would repeat every capability each
+            // time the same deployment is imported again.
+            currentJson.Merge(properties, new JsonMergeSettings
+            {
+                MergeArrayHandling = MergeArrayHandling.Replace,
+            });
             deployment.Properties = JsonSerializer.Deserialize<Dictionary<string, object>>(currentJson) ?? [];
         }
 

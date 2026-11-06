@@ -49,6 +49,24 @@ public sealed class AIDeploymentHandlerTests
     }
 
     [Fact]
+    public async Task PopulateAsync_WhenTheSameCapabilitiesAreImportedAgain_ShouldNotRepeatThem()
+    {
+        // Arrange
+        var deployment = new AIDeployment();
+        var data = JsonNode.Parse("""
+            { "Properties": { "AIDeploymentMetadata": { "Features": [ "textGeneration", "streaming" ] } } }
+            """)!.AsObject();
+
+        // Act
+        await InvokePopulateAsync(deployment, data);
+        await InvokePopulateAsync(deployment, data.DeepClone().AsObject());
+
+        // Assert
+        Assert.True(deployment.TryGet<AIDeploymentMetadata>(out var metadata));
+        Assert.Equal(["textGeneration", "streaming"], metadata.Features);
+    }
+
+    [Fact]
     public async Task PopulateAsync_ReadsThePricingSection()
     {
         // Arrange
