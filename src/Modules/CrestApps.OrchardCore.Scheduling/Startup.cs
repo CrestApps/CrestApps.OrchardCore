@@ -42,6 +42,10 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<Appointment, AppointmentDisplayDriver>();
         services.AddDisplayDriver<AppointmentType, AppointmentTypeDisplayDriver>();
         services.AddDisplayDriver<SchedulingResource, SchedulingResourceDisplayDriver>();
+
+        // The editors are built by drivers, so other modules add sections to them with drivers of their own.
+        services.AddDisplayDriver<AppointmentType, AppointmentTypeFieldsDisplayDriver>();
+        services.AddDisplayDriver<SchedulingResource, SchedulingResourceFieldsDisplayDriver>();
         services.AddDisplayDriver<WaitlistEntry, WaitlistEntryDisplayDriver>();
         services.AddPermissionProvider<SchedulingPermissionsProvider>();
         services.AddNavigationProvider<SchedulingAdminMenu>();
