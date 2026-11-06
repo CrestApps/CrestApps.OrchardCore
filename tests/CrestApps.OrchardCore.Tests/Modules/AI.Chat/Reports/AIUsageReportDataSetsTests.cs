@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CrestApps.Core.AI.Completions;
+using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Data.YesSql;
@@ -535,6 +536,7 @@ public sealed class AIUsageReportDataSetsTests : IAsyncLifetime
 
         services.AddSingleton(session);
         services.AddSingleton(ProfileManager().Object);
+        services.AddSingleton(DeploymentStore());
         services.AddSingleton(Authorization(canViewAnalytics: true));
         services.AddSingleton(_storeOptions);
         services.AddSingleton(typeof(IStringLocalizer<>), typeof(PassThroughStringLocalizer<>));
@@ -555,9 +557,20 @@ public sealed class AIUsageReportDataSetsTests : IAsyncLifetime
 
         return new AIChatReportDataSource(
             [
-                new AICompletionUsageReportDataSet(session, ProfileManager().Object, authorizationService, _storeOptions, new PassThroughStringLocalizer<AICompletionUsageReportDataSet>()),
+                new AICompletionUsageReportDataSet(session, ProfileManager().Object, DeploymentStore(), authorizationService, _storeOptions, new PassThroughStringLocalizer<AICompletionUsageReportDataSet>()),
                 new AIVoiceUsageReportDataSet(session, authorizationService, _storeOptions, new PassThroughStringLocalizer<AIVoiceUsageReportDataSet>()),
             ]);
+    }
+
+    private static IAIDeploymentStore DeploymentStore()
+    {
+        var deploymentStore = new Mock<IAIDeploymentStore>();
+
+        deploymentStore
+            .Setup(store => store.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<AIDeployment>());
+
+        return deploymentStore.Object;
     }
 
     private static IAuthorizationService Authorization(bool canViewAnalytics)

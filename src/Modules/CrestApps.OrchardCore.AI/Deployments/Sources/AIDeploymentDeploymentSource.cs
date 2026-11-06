@@ -37,6 +37,10 @@ internal sealed class AIDeploymentDeploymentSource : DeploymentSourceBase<AIDepl
                 continue;
             }
 
+            // Pricing is exported on its own, readable section rather than inside Properties.
+            var properties = JsonSerializer.SerializeToNode(deployment.Properties)?.AsObject();
+            properties?.Remove(nameof(AIDeploymentPricing));
+
             var deploymentInfo = new JsonObject()
             {
                 { "ItemId", deployment.ItemId },
@@ -48,8 +52,13 @@ internal sealed class AIDeploymentDeploymentSource : DeploymentSourceBase<AIDepl
                 { "Author", deployment.Author },
                 { "OwnerId", deployment.OwnerId },
                 { "CreatedUtc" , deployment.CreatedUtc },
-                { "Properties", JsonSerializer.SerializeToNode(deployment.Properties) },
+                { "Properties", properties },
             };
+
+            if (deployment.GetPricing() is { } pricing)
+            {
+                deploymentInfo["Pricing"] = JsonSerializer.SerializeToNode(pricing);
+            }
 
             deploymentData.Add(deploymentInfo);
         }

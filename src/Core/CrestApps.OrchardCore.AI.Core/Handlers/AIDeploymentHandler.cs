@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Connections;
@@ -20,6 +21,13 @@ namespace CrestApps.OrchardCore.AI.Core.Handlers;
 /// </summary>
 public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
 {
+    // Recipes are written by hand, so the pricing section is read without regard to case and accepts numbers as text.
+    private static readonly JsonSerializerOptions _pricingSerializerOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        NumberHandling = JsonNumberHandling.AllowReadingFromString,
+    };
+
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAIProviderConnectionStore _connectionStore;
     private readonly AIOptions _aiOptions;
@@ -130,6 +138,12 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
 
     private static Task PopulateAsync(AIDeployment deployment, JsonNode data)
     {
+        // An update that carries no payload, such as one made in code, changes nothing here.
+        if (data is null)
+        {
+            return Task.CompletedTask;
+        }
+
         var name = data[nameof(AIDeployment.Name)]?.GetValue<string>()?.Trim();
 
         if (!string.IsNullOrEmpty(name))
@@ -178,6 +192,8 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
             deployment.Properties = JsonSerializer.Deserialize<Dictionary<string, object>>(currentJson) ?? [];
         }
 
+        PopulatePricing(deployment, data);
+
         // Runs after the properties merge so the already-declared features are visible to the rule. This is
         // the recipe, configuration, and API half of the read-time normalization; the store deserialization
         // half is AIDeployment.OnDeserialized. It goes through LegacyAIDeploymentCapabilities rather than
@@ -186,6 +202,43 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
         LegacyAIDeploymentCapabilities.Normalize(deployment, legacyPurposes);
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Reads the deployment's prices from the <c>Pricing</c> section a recipe or API payload carries. Prices given
+    /// under <c>Properties.AIDeploymentPricing</c> are read the same way, so they are normalized too. A <c>Pricing</c>
+    /// section set to <see langword="null"/> removes the deployment's prices; one that is left out keeps them.
+    /// </summary>
+    private static void PopulatePricing(AIDeployment deployment, JsonNode data)
+    {
+        if (data is not JsonObject payload)
+        {
+            return;
+        }
+
+        JsonNode pricingNode;
+
+        if (payload.TryGetPropertyValue("Pricing", out pricingNode))
+        {
+            if (pricingNode is null)
+            {
+                deployment.SetPricing(null, []);
+
+                return;
+            }
+        }
+        else if (payload[nameof(AIDeployment.Properties)]?[nameof(AIDeploymentPricing)] is not { } propertiesPricing)
+        {
+            return;
+        }
+        else
+        {
+            pricingNode = propertiesPricing;
+        }
+
+        var pricing = pricingNode.Deserialize<AIDeploymentPricing>(_pricingSerializerOptions);
+
+        deployment.SetPricing(pricing?.Currency, pricing?.Prices);
     }
 
     private static void PopulateContainedConnectionAliases(AIDeployment deployment, JsonNode data)

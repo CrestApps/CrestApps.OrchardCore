@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CrestApps.Core.AI.Completions;
+using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Chat.Controllers;
@@ -99,6 +100,11 @@ public sealed class UsageAnalyticsControllerTests
                     new AIProfile { ItemId = "profile-2", Name = "sales", DisplayText = "Sales follow-up" },
                 ]);
 
+            var deploymentStore = new Mock<IAIDeploymentStore>();
+            deploymentStore
+                .Setup(store => store.GetAllAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Array.Empty<AIDeployment>());
+
             var authorizationService = new Mock<IAuthorizationService>();
             authorizationService
                 .Setup(service => service.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
@@ -116,6 +122,7 @@ public sealed class UsageAnalyticsControllerTests
                 usageService.Object,
                 voiceStore.Object,
                 profileStore.Object,
+                deploymentStore.Object,
                 authorizationService.Object,
                 localClock.Object,
                 clock.Object)

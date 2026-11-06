@@ -65,4 +65,15 @@ public sealed class AICompletionUsageSummaryViewModel
     /// Gets or sets the average response latency ms.
     /// </summary>
     public double AverageResponseLatencyMs { get; set; }
+
+    /// <summary>
+    /// Gets or sets the currency of <see cref="EstimatedCost"/>, or <see langword="null"/> when the requests'
+    /// deployments have no price.
+    /// </summary>
+    public string Currency { get; set; }
+
+    /// <summary>
+    /// Gets or sets the estimated cost from the prices set on the requests' deployments.
+    /// </summary>
+    public decimal? EstimatedCost { get; set; }
 }

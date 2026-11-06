@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Data.YesSql;
@@ -440,6 +441,7 @@ public sealed class AIChatReportDataSourceTests : IAsyncLifetime
 
         services.AddSingleton(session);
         services.AddSingleton(ProfileManager().Object);
+        services.AddSingleton(DeploymentStore());
         services.AddSingleton(Authorization(canViewAnalytics: true));
         services.AddSingleton(_storeOptions);
         services.AddSingleton(typeof(IStringLocalizer<>), typeof(PassThroughStringLocalizer<>));
@@ -479,6 +481,17 @@ public sealed class AIChatReportDataSourceTests : IAsyncLifetime
                     : AuthorizationResult.Failed());
 
         return authorizationService.Object;
+    }
+
+    private static IAIDeploymentStore DeploymentStore()
+    {
+        var deploymentStore = new Mock<IAIDeploymentStore>();
+
+        deploymentStore
+            .Setup(store => store.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<AIDeployment>());
+
+        return deploymentStore.Object;
     }
 
     private static Mock<IAIProfileManager> ProfileManager()

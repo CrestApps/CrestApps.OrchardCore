@@ -102,6 +102,11 @@ public sealed class UsageAnalyticsIndexViewModel
     public IReadOnlyList<AIUsageReportRow> MeteringRows { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the estimated cost of the metered usage, per currency.
+    /// </summary>
+    public IReadOnlyList<(string Currency, decimal Cost)> EstimatedCosts { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the speech-to-text and text-to-speech usage grouped by <see cref="AudioGroupBy"/>.
     /// </summary>
     [BindNever]

@@ -1,4 +1,5 @@
 using CrestApps.Core.AI.Completions;
+using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Services;
@@ -25,6 +26,7 @@ public sealed class UsageAnalyticsController : Controller
     private readonly IAICompletionUsageService _usageService;
     private readonly IAIVoiceSessionSummaryStore _voiceSessionStore;
     private readonly IAIProfileStore _profileStore;
+    private readonly IAIDeploymentStore _deploymentStore;
     private readonly IAuthorizationService _authorizationService;
     private readonly ILocalClock _localClock;
     private readonly IClock _clock;
@@ -35,6 +37,7 @@ public sealed class UsageAnalyticsController : Controller
     /// <param name="usageService">The usage service.</param>
     /// <param name="voiceSessionStore">The per-call AI voice session summaries.</param>
     /// <param name="profileStore">The AI profile store, for the profile filter and profile names.</param>
+    /// <param name="deploymentStore">The AI deployment store, whose prices estimate the cost of the usage.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="localClock">The local clock for timezone conversions.</param>
     /// <param name="clock">The clock, for converting call times to the site's time zone.</param>
@@ -42,6 +45,7 @@ public sealed class UsageAnalyticsController : Controller
         IAICompletionUsageService usageService,
         IAIVoiceSessionSummaryStore voiceSessionStore,
         IAIProfileStore profileStore,
+        IAIDeploymentStore deploymentStore,
         IAuthorizationService authorizationService,
         ILocalClock localClock,
         IClock clock)
@@ -49,6 +53,7 @@ public sealed class UsageAnalyticsController : Controller
         _usageService = usageService;
         _voiceSessionStore = voiceSessionStore;
         _profileStore = profileStore;
+        _deploymentStore = deploymentStore;
         _authorizationService = authorizationService;
         _localClock = localClock;
         _clock = clock;
@@ -99,12 +104,14 @@ public sealed class UsageAnalyticsController : Controller
         var records = await _usageService.GetAsync(startDateUtc, endDateUtc);
         var voiceSessions = await _voiceSessionStore.GetAsync(startDateUtc, endDateUtc);
         var timeZone = await _localClock.GetLocalTimeZoneAsync();
+        var pricing = await _deploymentStore.GetPricingByDeploymentAsync(HttpContext.RequestAborted);
 
         ApplyReport(
             model,
             records,
             voiceSessions,
             profileNames,
+            pricing,
             utc => _clock.ConvertToTimeZone(new DateTimeOffset(DateTime.SpecifyKind(utc, DateTimeKind.Utc)), timeZone).DateTime);
 
         return View("Index", model);
@@ -115,6 +122,7 @@ public sealed class UsageAnalyticsController : Controller
         IReadOnlyList<AICompletionUsageRecord> records,
         IReadOnlyList<AIVoiceSessionSummaryIndex> voiceSessions,
         IReadOnlyDictionary<string, string> profileNames,
+        IReadOnlyDictionary<string, AIDeploymentPricing> pricing,
         Func<DateTime, DateTime> toLocal)
     {
         model.ShowReport = true;
@@ -126,8 +134,9 @@ public sealed class UsageAnalyticsController : Controller
             : records.Where(record => string.Equals(record.ProfileId, model.ProfileId, StringComparison.Ordinal)).ToList();
 
         model.TotalMeteredRequests = meteredRecords.Count;
-        model.MeteringRows = AIUsageReport.Build(meteredRecords, model.MeteringGroupBy);
-        model.AudioRows = AIAudioUsageReport.Build(meteredRecords, model.AudioGroupBy);
+        model.MeteringRows = AIUsageReport.Build(meteredRecords, model.MeteringGroupBy, pricing);
+        model.AudioRows = AIAudioUsageReport.Build(meteredRecords, model.AudioGroupBy, pricing);
+        model.EstimatedCosts = AICompletionUsageReport.SumCosts(model.MeteringRows.Select(row => (row.Currency, row.EstimatedCost)));
 
         var relevantRecords = AICompletionUsageReport.Relevant(records, model.ProfileId);
 
@@ -143,7 +152,7 @@ public sealed class UsageAnalyticsController : Controller
             .Distinct(StringComparer.Ordinal)
             .Count();
         model.TotalTokens = relevantRecords.Sum(record => (long)record.TotalTokenCount);
-        model.Rows = AICompletionUsageReport.BuildRows(relevantRecords, model.GroupBy, profileNames);
+        model.Rows = AICompletionUsageReport.BuildRows(relevantRecords, model.GroupBy, profileNames, pricing);
 
         // A call's text tokens are the completions recorded against its chat session: the turn-based replies and
         // the review that concludes every call.
