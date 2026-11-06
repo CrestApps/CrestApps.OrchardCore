@@ -57,6 +57,12 @@ public sealed class SupervisorDashboardController : Controller
             DispatchUrl = Url.RouteUrl(SupervisorDashboardEndpoints.DispatchRouteName),
             DialerUrl = dialerBanner is null ? null : Url.RouteUrl(SupervisorDashboardEndpoints.DialerRouteName),
             DialerBanner = dialerBanner,
+            CompleteActivityUrl = Url.Action("Complete", "Activities", new
+            {
+                area = "CrestApps.OrchardCore.Omnichannel.Managements",
+                id = "__activityId__",
+                returnUrl = Url.Action(nameof(Index)),
+            }),
             InterventionUrls = new Dictionary<string, string>(StringComparer.Ordinal)
             {
                 ["stop"] = Url.RouteUrl(SupervisorInterventionEndpoints.StopRouteName),

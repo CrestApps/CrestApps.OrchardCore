@@ -316,7 +316,10 @@ public sealed class ReportDesignerController : Controller
         design.Queries = view ? [] : ReportDesignNormalizer.Normalize(design.Queries);
 
         var filterValues = payload.FilterValues?.ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.Ordinal);
-        var options = new ReportRunOptions();
+        var options = new ReportRunOptions
+        {
+            Source = ReportRunOptions.PreviewSource,
+        };
 
         foreach (var (visualId, keys) in payload.Selections ?? [])
         {

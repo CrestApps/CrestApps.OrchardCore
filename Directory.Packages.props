@@ -2,8 +2,8 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-    <OrchardCoreVersion>4.0.0-preview-19214</OrchardCoreVersion>
-    <CrestAppsCoreVersion>2.0.0-preview.355</CrestAppsCoreVersion>
+    <OrchardCoreVersion>4.0.0-preview-19216</OrchardCoreVersion>
+    <CrestAppsCoreVersion>2.0.0-preview.358</CrestAppsCoreVersion>
     <ModelContextProtocolVersion>2.3.1</ModelContextProtocolVersion>
   </PropertyGroup>
   <ItemGroup>
@@ -12,7 +12,7 @@
     <PackageVersion Include="CrestApps.AgentSkills.Mcp.OrchardCore" Version="1.3.1" />
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.5.1" />
     <PackageVersion Include="Elastic.Clients.Elasticsearch" Version="[8.19.27,9.0.0)" />
-    <PackageVersion Include="Fluid.Core" Version="2.40.0" />
+    <PackageVersion Include="Fluid.Core" Version="3.0.0-beta.9" />
     <PackageVersion Include="Google.OrTools" Version="9.15.6755" />
     <PackageVersion Include="libphonenumber-csharp" Version="9.0.42" />
     <PackageVersion Include="JsonSchema.Net" Version="8.0.5" />
@@ -29,11 +29,11 @@
     <PackageVersion Include="PdfPig" Version="0.1.16" />
     <PackageVersion Include="Stripe.net" Version="53.1.0" />
     <PackageVersion Include="ZString" Version="2.6.0" />
-    <PackageVersion Include="YesSql.Abstractions" Version="6.0.0" />
-    <PackageVersion Include="YesSql.Core" Version="6.0.0" />
-    <PackageVersion Include="YesSql.Provider.PostgreSql" Version="6.0.0" />
-    <PackageVersion Include="YesSql.Provider.Sqlite" Version="6.0.0" />
-    <PackageVersion Include="YesSql.Provider.SqlServer" Version="6.0.0" />
+    <PackageVersion Include="YesSql.Abstractions" Version="6.1.0" />
+    <PackageVersion Include="YesSql.Core" Version="6.1.0" />
+    <PackageVersion Include="YesSql.Provider.PostgreSql" Version="6.1.0" />
+    <PackageVersion Include="YesSql.Provider.Sqlite" Version="6.1.0" />
+    <PackageVersion Include="YesSql.Provider.SqlServer" Version="6.1.0" />
   </ItemGroup>
   <ItemGroup>
     <!-- OrchardCore Packages -->
@@ -218,8 +218,8 @@
   </ItemGroup>
   <ItemGroup>
     <!-- Sample Packages -->
-    <PackageVersion Include="A2A" Version="1.0.0-preview2" />
-    <PackageVersion Include="A2A.AspNetCore" Version="1.0.0-preview2" />
+    <PackageVersion Include="A2A" Version="1.0.0-preview4" />
+    <PackageVersion Include="A2A.AspNetCore" Version="1.0.0-preview4" />
     <PackageVersion Include="ModelContextProtocol" Version="$(ModelContextProtocolVersion)" />
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="$(ModelContextProtocolVersion)" />
     <PackageVersion Include="ModelContextProtocol.Core" Version="$(ModelContextProtocolVersion)" />

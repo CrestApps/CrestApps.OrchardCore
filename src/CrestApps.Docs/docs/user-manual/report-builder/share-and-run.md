@@ -33,7 +33,7 @@ On the **Settings** tab:
 | **Report title** | Shown at the top of the report and in the report list. |
 | **Description** | Shown above the report. |
 | **Group** | The [report group](#organize-reports-into-groups) the report is listed under, in the admin menu and the report list. Nested groups show their path, such as *Sales / Regional*. Choose **No group** to leave it out of any group. |
-| **Show in the admin menu** | Adds the report under **Reports**, inside its group, for everyone who can open it. A report in no group is added directly under **Reports**. |
+| **Show in the admin menu** | Adds the report under **Reports**, inside its group, for everyone who can open it. A report in no group is added directly under **Reports**. Clicking it runs the report and shows its results; people who may change it open the builder from there with **Edit design**. |
 | **Let people the report is shared with export it** | Turn it off to let them view the report but not download it. |
 
 Publish the report to apply the settings.

@@ -55,7 +55,7 @@ public sealed class TelnyxRecordingIngestJobStore : ITelnyxRecordingIngestJobSto
         // means a second enqueue must not create a duplicate job or reset the progress of an in-flight ingestion.
         // The query runs on the ambient session, so it also sees a job this same request has just enqueued.
         var existing = await _session
-            .Query<TelnyxRecordingIngestJob, TelnyxRecordingIngestJobIndex>(index =>
+            .QueryIndex<TelnyxRecordingIngestJobIndex>(index =>
                 index.RecordingId == recordingId)
             .FirstOrDefaultAsync(cancellationToken);
 

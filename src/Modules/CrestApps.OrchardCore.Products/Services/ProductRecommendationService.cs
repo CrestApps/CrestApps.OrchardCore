@@ -156,8 +156,8 @@ public sealed class ProductRecommendationService
 
         var search = query?.Trim();
         var items = string.IsNullOrEmpty(search)
-            ? await _session.Query<ContentItem, ContentItemIndex>(index => index.Latest && index.ContentType.IsIn(types)).OrderBy(index => index.DisplayText).Take(take).ListAsync()
-            : await _session.Query<ContentItem, ContentItemIndex>(index => index.Latest && index.ContentType.IsIn(types) && index.DisplayText.Contains(search)).OrderBy(index => index.DisplayText).Take(take).ListAsync();
+            ? await _session.QueryIndex<ContentItemIndex>(index => index.Latest && index.ContentType.IsIn(types)).OrderBy(index => index.DisplayText).Take(take).ListAsync()
+            : await _session.QueryIndex<ContentItemIndex>(index => index.Latest && index.ContentType.IsIn(types) && index.DisplayText.Contains(search)).OrderBy(index => index.DisplayText).Take(take).ListAsync();
 
         return [.. items.Select(item => (item.ContentItemId, item.DisplayText, item.ContentType))];
     }
@@ -174,7 +174,7 @@ public sealed class ProductRecommendationService
             return [];
         }
 
-        var found = (await _session.Query<ContentItem, ContentItemIndex>(index => index.Latest && index.ContentItemId.IsIn(wanted)).ListAsync())
+        var found = (await _session.QueryIndex<ContentItemIndex>(index => index.Latest && index.ContentItemId.IsIn(wanted)).ListAsync())
             .ToDictionary(item => item.ContentItemId, StringComparer.Ordinal);
 
         return [.. wanted.Select(id => (id, found.TryGetValue(id, out var item) ? item.DisplayText : id))];

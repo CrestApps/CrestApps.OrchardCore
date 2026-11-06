@@ -8,7 +8,6 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Users.Indexes;
-using OrchardCore.Users.Models;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
@@ -106,7 +105,7 @@ internal sealed class SubjectActionHandler : CatalogEntryHandlerBase<SubjectActi
             return;
         }
 
-        if (await _session.Query<User, UserIndex>(x => x.NormalizedUserName == owner).FirstOrDefaultAsync() is null)
+        if (await _session.QueryIndex<UserIndex>(x => x.NormalizedUserName == owner).FirstOrDefaultAsync() is null)
         {
             context.Result.Fail(new ValidationResult(S["The selected user does not exist."], [nameof(NewActivityActionMetadata.NormalizedUserName)]));
         }

@@ -1845,7 +1845,8 @@ See [Transactions](modules/transactions.md#links-in-messages) and [Test payments
 Keys: `MaxRowsPerDataSet` (default `50000`), `MaxJoinedRows` (`250000`), `MaxResultRows` (`10000`),
 `MaxFilterOptions` (`500`), `MaxJoinKeys` (`10000`), `JoinKeyBatchSize` (`500`), `MemoryLimitMegabytes` (`16`, the rows
 one join, grouping or sort keeps in memory before it writes the others to temporary files), `TemporaryDirectory` (the
-system's temporary directory) and `MaxConcurrentRuns` (`4`, the reports a tenant runs at once).
+system's temporary directory), `MaxConcurrentRuns` (`4`, the reports a tenant runs at once) and `MaxSharedReadRows`
+(`50000`, the rows of one data set a run keeps to share between its queries; `0` reads it once per query).
 
 ```json
 {

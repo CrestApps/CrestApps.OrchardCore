@@ -57,10 +57,9 @@
             selectedValues = string.IsNullOrEmpty(Model.UserId) ? Array.Empty<string>() : new[] { Model.UserId },
             valueType = "userId",
             multiple = false,
-            buttonText = T["Choose a user"].Value,
+            buttonText = T["Select a user"].Value,
             searchPlaceholder = T["Search users"].Value,
             smallButton = false,
-            required = true,
         })
         <span asp-validation-for="UserId" class="text-danger"></span>
     </div>

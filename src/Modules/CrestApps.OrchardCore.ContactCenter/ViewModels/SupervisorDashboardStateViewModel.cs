@@ -47,4 +47,10 @@ public sealed class SupervisorDashboardStateViewModel
     /// Gets or sets a value indicating whether the viewing supervisor can message agents.
     /// </summary>
     public bool CanMessage { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the viewing supervisor may complete the activities of other users, so the
+    /// board links each agent's current activity.
+    /// </summary>
+    public bool CanCompleteActivities { get; set; }
 }

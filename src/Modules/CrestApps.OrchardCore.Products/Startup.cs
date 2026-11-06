@@ -274,29 +274,6 @@ public sealed class ListingStartup : StartupBase
         services.AddDataMigration<ProductListingMigrations>();
 
         services.AddNavigationProvider<ProductListingsAdminMenu>();
-
-        // Every listing and product page shape can be overridden in Liquid as well as Razor.
-        services.Configure<TemplateOptions>(options =>
-        {
-            options.MemberAccessStrategy.Register<ProductListingViewModel>();
-            options.MemberAccessStrategy.Register<ProductListingShapeViewModel>();
-            options.MemberAccessStrategy.Register<ProductFacetViewModel>();
-            options.MemberAccessStrategy.Register<ProductFacetOptionViewModel>();
-            options.MemberAccessStrategy.Register<ProductActiveFilterViewModel>();
-            options.MemberAccessStrategy.Register<ProductSortOptionViewModel>();
-            options.MemberAccessStrategy.Register<ProductPageLinkViewModel>();
-            options.MemberAccessStrategy.Register<ProductCardViewModel>();
-            options.MemberAccessStrategy.Register<ProductPriceDisplayViewModel>();
-            options.MemberAccessStrategy.Register<ProductSpecificationViewModel>();
-            options.MemberAccessStrategy.Register<ProductBreadcrumbViewModel>();
-            options.MemberAccessStrategy.Register<ProductBreadcrumbItemViewModel>();
-            options.MemberAccessStrategy.Register<ProductDetailsViewModel>();
-            options.MemberAccessStrategy.Register<ProductDetailsShapeViewModel>();
-            options.MemberAccessStrategy.Register<ProductImageViewModel>();
-            options.MemberAccessStrategy.Register<ProductSearchDocument>();
-            options.MemberAccessStrategy.Register<ProductAttributeValue>();
-            options.MemberAccessStrategy.Register<ProductListingPart>();
-        });
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

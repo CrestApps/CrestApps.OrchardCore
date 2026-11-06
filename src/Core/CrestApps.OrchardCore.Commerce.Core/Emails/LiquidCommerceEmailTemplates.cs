@@ -22,7 +22,7 @@ namespace CrestApps.OrchardCore.Commerce.Core.Emails;
 public sealed partial class LiquidCommerceEmailTemplates : ICommerceEmailTemplates
 {
     private static readonly JsonSerializerOptions _json = new() { PropertyNamingPolicy = null, Converters = { new JsonStringEnumConverter() } };
-    private static readonly TemplateOptions _options = new();
+    private static readonly TemplateOptions _options = TemplateOptions.Default;
 
     private readonly IServiceProvider _serviceProvider;
     private readonly ISiteService _siteService;
@@ -67,9 +67,9 @@ public sealed partial class LiquidCommerceEmailTemplates : ICommerceEmailTemplat
         {
             var values = new Dictionary<string, FluidValue>(StringComparer.Ordinal)
             {
-                ["Content"] = new StringValue(context.Html ?? string.Empty, false),
-                ["Subject"] = new StringValue(context.Subject ?? string.Empty),
-                ["StoreName"] = new StringValue(site.SiteName ?? string.Empty),
+                ["Content"] = StringValue.Create(context.Html ?? string.Empty, encode: false),
+                ["Subject"] = StringValue.Create(context.Subject ?? string.Empty),
+                ["StoreName"] = StringValue.Create(site.SiteName ?? string.Empty),
             };
 
             foreach (var (name, model) in context.Models ?? new Dictionary<string, object>())
@@ -79,7 +79,7 @@ public sealed partial class LiquidCommerceEmailTemplates : ICommerceEmailTemplat
 
             foreach (var (name, value) in context.Values ?? new Dictionary<string, string>())
             {
-                values[name] = new StringValue(value ?? string.Empty);
+                values[name] = StringValue.Create(value ?? string.Empty);
             }
 
             var subject = context.Subject;
@@ -95,7 +95,7 @@ public sealed partial class LiquidCommerceEmailTemplates : ICommerceEmailTemplat
                 if (!string.IsNullOrWhiteSpace(template.Body))
                 {
                     html = await liquid.RenderStringAsync(template.Body, HtmlEncoder.Default, values);
-                    values["Content"] = new StringValue(html, false);
+                    values["Content"] = StringValue.Create(html, encode: false);
                 }
             }
 

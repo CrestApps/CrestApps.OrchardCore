@@ -70,6 +70,9 @@ public sealed class DesignedReportPresenter
 
         var filterValues = ReportFilterValueBinder.Bind(query, design.GetFilters());
         var options = ReportFilterValueBinder.BindSelections(query);
+
+        options.Source = source?.ToString();
+
         var run = await _runner.RunAsync(design, filterValues, period: null, options, cancellationToken);
 
         if (run.Document is not null)
@@ -124,6 +127,7 @@ public sealed class DesignedReportPresenter
 
         // An export holds every visual, filtered by the values picked on the page it was exported from.
         options.VisualIds = null;
+        options.Source = source?.ToString();
 
         var file = await ExportAsync(design, filterValues, format, options, cancellationToken);
 

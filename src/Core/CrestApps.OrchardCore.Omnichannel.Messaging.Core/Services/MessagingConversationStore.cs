@@ -201,13 +201,14 @@ public sealed class MessagingConversationStore : DocumentCatalog<MessagingConver
     {
         var open = ConversationStatus.Open.ToString();
 
-        var conversation = await Session.Query<MessagingConversation, MessagingConversationIndex>(
+        // Only the deadline is needed and the index row carries it, so the conversation document is not read.
+        var row = await Session.QueryIndex<MessagingConversationIndex>(
             index => index.Status == open && index.FirstResponseDueUtc != null && index.FirstResponseDueUtc > nowUtc,
             collection: MessagingStorage.CollectionName)
             .OrderBy(index => index.FirstResponseDueUtc)
             .FirstOrDefaultAsync(cancellationToken);
 
-        return conversation?.FirstResponseDueUtc;
+        return row?.FirstResponseDueUtc;
     }
 
     /// <inheritdoc/>

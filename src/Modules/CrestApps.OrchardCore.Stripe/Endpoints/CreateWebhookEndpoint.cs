@@ -142,7 +142,7 @@ public static class CreateWebhookEndpoint
         await using (locker)
         {
             var alreadyProcessed = await session
-                .Query<ProcessedStripeWebhookEvent, ProcessedStripeWebhookEventIndex>(x => x.EventId == stripeEvent.Id)
+                .QueryIndex<ProcessedStripeWebhookEventIndex>(x => x.EventId == stripeEvent.Id)
                 .FirstOrDefaultAsync(cancellationToken);
 
             if (alreadyProcessed != null)

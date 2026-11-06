@@ -127,6 +127,9 @@ internal sealed class InMemoryReportDataSource : IDataSource
 
     public bool ApplyConditions { get; set; }
 
+    // How long each read waits before its rows arrive, like a remote data source does.
+    public TimeSpan ReadDelay { get; set; }
+
     public InMemoryReportDataSource Add(string dataSet, IEnumerable<DataField> fields, params object[][] rows)
     {
         var schema = new DataSetSchema
@@ -170,6 +173,11 @@ internal sealed class InMemoryReportDataSource : IDataSource
         await Task.Yield();
 
         Queries.Add(query);
+
+        if (ReadDelay > TimeSpan.Zero)
+        {
+            await Task.Delay(ReadDelay, cancellationToken);
+        }
 
         var (schema, rows) = _dataSets[query.DataSet];
         IEnumerable<object[]> selected = rows;

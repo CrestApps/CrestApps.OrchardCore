@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Antiforgery;
@@ -199,6 +200,15 @@ internal static partial class SupervisorDashboardEndpoints
         // Work an agent is wrongly holding -- a call that is over but still on their line -- is looked for once for the
         // whole scoped set; the provider's answers about calls are reused for a short time between polls.
         var staleWork = await staleWorkService.DetectAsync(scopedAgents, httpContext.RequestAborted);
+
+        // The activity each working agent holds is linked for a supervisor who may complete it for them: dialer work must
+        // be completed before the agent is available again, so completing a stuck one is how the agent is let go.
+        model.CanCompleteActivities = await authorizationService.AuthorizeAsync(httpContext.User, OmnichannelConstants.Permissions.CompleteActivity);
+
+        var heldActivities = model.CanCompleteActivities
+            ? await ResolveHeldActivitiesAsync(queueItemManager, scopedAgents, activeInteractionsByAgent, httpContext.RequestAborted)
+            : new Dictionary<string, string>(StringComparer.Ordinal);
+
         foreach (var agent in scopedAgents)
         {
             activeInteractionsByAgent.TryGetValue(agent.ItemId, out var activeInteraction);
@@ -239,6 +249,7 @@ internal static partial class SupervisorDashboardEndpoints
                 AvailableMonitoringModes = availableMonitoringModes
                     .Select(mode => mode.ToString())
                     .ToArray(),
+                CurrentActivityId = heldActivities.TryGetValue(agent.ItemId, out var heldActivityId) ? heldActivityId : null,
             };
 
             if (staleWork.TryGetValue(agent.ItemId, out var stale))
@@ -271,6 +282,53 @@ internal static partial class SupervisorDashboardEndpoints
         model.Campaigns = await ResolveCampaignsAsync(model.Agents, httpContext.RequestServices, httpContext.RequestAborted);
 
         return TypedResults.Ok(model);
+    }
+
+    // The activity each agent is working on: their live call's, or else, for an agent who is reserved, busy or wrapping
+    // up with no live call, the newest work routing or the dialer reserved or assigned to them. The open work is read in
+    // one query for all of those agents, and only for them.
+    internal static async Task<Dictionary<string, string>> ResolveHeldActivitiesAsync(
+        IQueueItemManager queueItemManager,
+        IReadOnlyCollection<AgentProfile> agents,
+        IReadOnlyDictionary<string, Interaction> activeInteractions,
+        CancellationToken cancellationToken)
+    {
+        var held = new Dictionary<string, string>(StringComparer.Ordinal);
+        var withoutCall = new List<string>();
+
+        foreach (var agent in agents)
+        {
+            if (activeInteractions.TryGetValue(agent.ItemId, out var interaction) && !string.IsNullOrEmpty(interaction?.ActivityItemId))
+            {
+                held[agent.ItemId] = interaction.ActivityItemId;
+
+                continue;
+            }
+
+            if (agent.PresenceStatus is AgentPresenceStatus.Reserved or AgentPresenceStatus.Busy or AgentPresenceStatus.WrapUp)
+            {
+                withoutCall.Add(agent.ItemId);
+            }
+        }
+
+        if (withoutCall.Count == 0)
+        {
+            return held;
+        }
+
+        var openWork = await queueItemManager.GetOpenByAgentIdsAsync(withoutCall, cancellationToken) ?? [];
+
+        foreach (var group in openWork
+            .Where(item => !string.IsNullOrEmpty(item?.AgentId) && !string.IsNullOrEmpty(item.ActivityItemId))
+            .GroupBy(item => item.AgentId, StringComparer.Ordinal))
+        {
+            held[group.Key] = group
+                .OrderByDescending(item => item.ModifiedUtc ?? item.QueueEnteredUtc)
+                .First()
+                .ActivityItemId;
+        }
+
+        return held;
     }
 
     // The queues a campaign agent's outbound work runs under: one per campaign they are signed in to, whether sign-in

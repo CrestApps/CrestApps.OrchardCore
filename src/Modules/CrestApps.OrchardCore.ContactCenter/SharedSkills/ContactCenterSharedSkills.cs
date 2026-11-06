@@ -37,6 +37,8 @@ internal static class ContactCenterSharedSkills
     public static IServiceCollection AddAgentSync(IServiceCollection services)
     {
         services.TryAddScoped<AgentSkillsSync>();
+        services.TryAddScoped<AgentSkillsSyncRunner>();
+        services.TryAddScoped<IAgentSkillsSyncScheduler, DeferredAgentSkillsSyncScheduler>();
         services.TryAddScoped<SharedAgentSkillsBackfill>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<AgentProfile>, AgentSkillsToSharedHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ISkillAssignmentHandler, SharedAgentSkillsHandler>());

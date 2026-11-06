@@ -186,16 +186,6 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIProfileVersionEntry, AIProfileVersionEntryDisplayDriver>()
             .AddDataMigration<AIProfileVersionIndexMigrations>();
         services.AddScoped<IOrchestrationContextBuilderHandler, ChatConversationStartingOrchestrationHandler>();
-        services.Configure<TemplateOptions>(options =>
-        {
-            options.MemberAccessStrategy.Register<AIConversationTemplateModel>();
-            options.MemberAccessStrategy.Register<AIConversationTurn>();
-            options.MemberAccessStrategy.Register<AIConversationEvaluation>();
-            options.MemberAccessStrategy.Register<AIConversationCriterionResult>();
-            options.MemberAccessStrategy.Register<AIConversationIssue>();
-            options.MemberAccessStrategy.Register<AIChatSession>();
-            options.MemberAccessStrategy.Register<AIProfile>();
-        });
 
         services.AddDataMigration<AIProfileDefaultContextMigrations>();
         services.AddDataMigration<AIProfileDocumentMigrations>();

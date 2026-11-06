@@ -29,7 +29,7 @@ How people use the builder is described in the User Manual, starting at [Report 
 | [Built-in data sources](data-sources.md) | Every data source and data set the builder offers, when each is registered, and the permission each asks for. |
 | [Add your own data source](custom-data-sources.md) | Extending the builder with an Orchard Core data source: `IDataSource`, `RecordDataSource` and `RecordDataSet<T>`, grouping in the source, join keys, relationships, and more content parts and fields. |
 | [Formula reference](formulas.md) | The formula language of Orchard Core as reports use it: syntax, operators, types, aggregate formulas, and every built-in function. |
-| [Large data](large-data.md) | Row limits, date push-down, grouping in the source, join key narrowing, and scheduled views. |
+| [Large data](large-data.md) | Row limits, date push-down, grouping in the source, join key narrowing, shared reads, scheduled views, and OpenTelemetry spans and metrics. |
 | [Interactive dashboards](interactive-dashboards.md) | Several queries in one report, containers that frame and scroll visuals, and click actions that filter visuals. |
 | [Drafts, versions and real time](drafts-versions-and-real-time.md) | Autosave, revisions and conflicts, publishing, versions, and SignalR presence. |
 | [Workflows and report events](workflows.md) | The workflow events and tasks, and `IReportEventHandler`. |
@@ -100,7 +100,8 @@ The size limits of one run and the number of versions kept can be changed in the
             "JoinKeyBatchSize": 500,
             "MemoryLimitMegabytes": 16,
             "TemporaryDirectory": null,
-            "MaxConcurrentRuns": 4
+            "MaxConcurrentRuns": 4,
+            "MaxSharedReadRows": 50000
           },
           "Versions": {
             "MaxVersions": 50
@@ -123,6 +124,7 @@ OrchardCore__CrestApps__Reports__Builder__Limits__MaxJoinKeys=10000
 OrchardCore__CrestApps__Reports__Builder__Limits__JoinKeyBatchSize=500
 OrchardCore__CrestApps__Reports__Builder__Limits__MemoryLimitMegabytes=16
 OrchardCore__CrestApps__Reports__Builder__Limits__MaxConcurrentRuns=4
+OrchardCore__CrestApps__Reports__Builder__Limits__MaxSharedReadRows=50000
 OrchardCore__CrestApps__Reports__Builder__Versions__MaxVersions=50
 ```
 
@@ -137,6 +139,7 @@ OrchardCore__CrestApps__Reports__Builder__Versions__MaxVersions=50
 | `MemoryLimitMegabytes` | `16` | Megabytes of rows one operation of a run (a join, a grouping, a sort) keeps in memory before it writes the others to temporary files. |
 | `TemporaryDirectory` | the system's | Where runs write their temporary files. Each run uses a folder of its own and deletes it when it ends. |
 | `MaxConcurrentRuns` | `4` | Reports a tenant runs at once; the others wait. A report that reads a view runs the view within its own run. |
+| `MaxSharedReadRows` | `50000` | Rows of one data set a run keeps in memory to share between its queries that read it (see [Queries that read the same data set](large-data.md#queries-that-read-the-same-data-set)). `0` reads the data set once per query. |
 | `Versions:MaxVersions` | `50` | Published versions kept per report; the oldest are deleted. `0` keeps them all. |
 
 The sections are also listed in [Configuration](../../configuration.md).

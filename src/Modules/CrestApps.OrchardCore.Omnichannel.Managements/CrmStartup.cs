@@ -80,6 +80,7 @@ public sealed class CrmStartup : StartupBase
             .AddIndexProvider<LeadImportIndexProvider>()
             .AddIndexProvider<OpportunityIndexProvider>()
             .AddDataMigration<CrmMigrations>()
+            .AddDataMigration<LeadImportLookupIndexMigrations>()
             .AddDataMigration<CrmAccountsFeatureMigrations>();
 
         services.AddScoped<ICatalogEntryHandler<LeadStatus>, LeadStatusHandler>();

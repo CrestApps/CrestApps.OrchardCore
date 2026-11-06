@@ -66,8 +66,8 @@ internal static class AccountSearchEndpoints
         var search = query?.Trim();
 
         var accountQuery = string.IsNullOrEmpty(search)
-            ? session.Query<ContentItem, ContentItemIndex>(index => index.Latest && index.ContentType.IsIn(accountTypes))
-            : session.Query<ContentItem, ContentItemIndex>(index => index.Latest && index.ContentType.IsIn(accountTypes) && index.DisplayText.Contains(search));
+            ? session.QueryIndex<ContentItemIndex>(index => index.Latest && index.ContentType.IsIn(accountTypes))
+            : session.QueryIndex<ContentItemIndex>(index => index.Latest && index.ContentType.IsIn(accountTypes) && index.DisplayText.Contains(search));
 
         var items = await accountQuery
             .OrderBy(index => index.DisplayText)

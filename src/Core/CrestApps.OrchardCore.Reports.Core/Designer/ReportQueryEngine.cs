@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DataSources;
@@ -86,40 +87,88 @@ public sealed partial class ReportQueryEngine
             throw new ReportQueryException([.. plan.Errors]);
         }
 
-        await using var lease = await _gate.EnterAsync(context, cancellationToken);
-        using var run = new QueryRun(plan, context, groupings: true);
+        using var activity = ReportTelemetry.Start("report.query", context);
+        var started = Stopwatch.GetTimestamp();
+        ReportQueryResult result;
 
-        var grouped = await TryAggregateAsync(run, cancellationToken);
-        var rows = grouped is null ? ReadFilteredRowsAsync(run, cancellationToken) : ToAsync(grouped, cancellationToken);
-        var maxResultRows = Math.Max(1, context.Limits.MaxResultRows);
-
-        run.Weighted = grouped is not null;
-
-        var kept = await TakeAsync(ReadResultRowsAsync(run, rows, cancellationToken), maxResultRows + 1, drain: run.ReadsOnlyWhatItKeeps && run.ListsOptions, cancellationToken);
-
-        if (kept.Count > maxResultRows)
+        try
         {
-            run.Warnings.Add(S["The result has more than {0} rows, so only the first {0} are shown.", maxResultRows]);
-            kept.RemoveRange(maxResultRows, kept.Count - maxResultRows);
+            await using var lease = await _gate.EnterAsync(context, cancellationToken);
+            using var run = new QueryRun(plan, context, groupings: true);
+
+            run.Activity = activity;
+            activity?.SetTag("crestapps.report.gate_wait_ms", Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+
+            var grouped = await TryAggregateAsync(run, cancellationToken);
+            var rows = grouped is null ? ReadFilteredRowsAsync(run, cancellationToken) : ToAsync(grouped, cancellationToken);
+            var maxResultRows = Math.Max(1, context.Limits.MaxResultRows);
+
+            run.Weighted = grouped is not null;
+
+            var kept = await TakeAsync(ReadResultRowsAsync(run, rows, cancellationToken), maxResultRows + 1, drain: run.ReadsOnlyWhatItKeeps && run.ListsOptions, cancellationToken);
+
+            if (kept.Count > maxResultRows)
+            {
+                run.Warnings.Add(S["The result has more than {0} rows, so only the first {0} are shown.", maxResultRows]);
+                kept.RemoveRange(maxResultRows, kept.Count - maxResultRows);
+            }
+
+            using (ReportTelemetry.Start("report.result", context))
+            {
+                result = await CreateResultAsync(run, kept, cancellationToken);
+            }
+
+            result.SourceRowCount = (int)Math.Min(int.MaxValue, run.SourceRows);
+            result.FilteredRowCount = (int)Math.Min(int.MaxValue, run.FilteredRows);
+            result.GroupedBySource = grouped is not null;
+
+            foreach (var (filterId, options) in run.Options)
+            {
+                result.FilterOptions[filterId] = options
+                    .Take(Math.Max(1, context.Limits.MaxFilterOptions))
+                    .Select(value => new ReportFilterOption(DataValues.ToText(value), _formatter.Format(value, run.OptionTypes[filterId])))
+                    .ToArray();
+            }
+
+            foreach (var warning in run.Warnings.Distinct(StringComparer.Ordinal))
+            {
+                result.Warnings.Add(warning);
+            }
+
+            if (activity is not null)
+            {
+                activity.SetTag("crestapps.report.rows.source", run.SourceRows);
+                activity.SetTag("crestapps.report.rows.filtered", run.FilteredRows);
+                activity.SetTag("crestapps.report.rows.returned", result.Rows.Count);
+                activity.SetTag("crestapps.report.row_calculations", plan.RowCalculations.Count);
+                activity.SetTag("crestapps.report.calculate_ms", Stopwatch.GetElapsedTime(0, run.CalculationTicks).TotalMilliseconds);
+                activity.SetTag("crestapps.report.grouped", plan.IsAggregated);
+                activity.SetTag("crestapps.report.grouped_by_source", grouped is not null);
+                activity.SetTag("crestapps.report.sorted", plan.Sorts.Count > 0);
+            }
+
+            if (ReportTelemetry.RowsReturned.Enabled)
+            {
+                ReportTelemetry.RowsReturned.Add(result.Rows.Count, ReportTelemetry.Tags(context));
+            }
         }
-
-        var result = await CreateResultAsync(run, kept, cancellationToken);
-
-        result.SourceRowCount = (int)Math.Min(int.MaxValue, run.SourceRows);
-        result.FilteredRowCount = (int)Math.Min(int.MaxValue, run.FilteredRows);
-        result.GroupedBySource = grouped is not null;
-
-        foreach (var (filterId, options) in run.Options)
+        catch (Exception exception)
         {
-            result.FilterOptions[filterId] = options
-                .Take(Math.Max(1, context.Limits.MaxFilterOptions))
-                .Select(value => new ReportFilterOption(DataValues.ToText(value), _formatter.Format(value, run.OptionTypes[filterId])))
-                .ToArray();
+            ReportTelemetry.Fail(activity, exception);
+
+            if (exception is not OperationCanceledException && ReportTelemetry.Failures.Enabled)
+            {
+                ReportTelemetry.Failures.Add(1, ReportTelemetry.Tags(context));
+            }
+
+            throw;
         }
-
-        foreach (var warning in run.Warnings.Distinct(StringComparer.Ordinal))
+        finally
         {
-            result.Warnings.Add(warning);
+            if (ReportTelemetry.QueryDuration.Enabled)
+            {
+                ReportTelemetry.QueryDuration.Record(Stopwatch.GetElapsedTime(started).TotalSeconds, ReportTelemetry.Tags(context));
+            }
         }
 
         return result;
@@ -235,11 +284,19 @@ public sealed partial class ReportQueryEngine
         {
             if (plan.RowCalculations.Count > 0)
             {
+                // The time spent on calculations is measured only while a span records it.
+                var started = run.Activity is null ? 0 : Stopwatch.GetTimestamp();
+
                 expressionContext.Row = row;
 
                 foreach (var calculation in plan.RowCalculations)
                 {
                     row[calculation.Slot] = SafeEvaluate(calculation.Expression, expressionContext);
+                }
+
+                if (started != 0)
+                {
+                    run.CalculationTicks += Stopwatch.GetTimestamp() - started;
                 }
             }
 
@@ -275,6 +332,13 @@ public sealed partial class ReportQueryEngine
             : keys.Values.Chunk(Math.Max(1, limits.JoinKeyBatchSize)).ToList();
         var read = 0L;
         var truncated = false;
+        var sharedBefore = run.Context.SharedReads?.SharedCount ?? 0;
+        using var activity = ReportTelemetry.Start("report.read", run.Context);
+
+        activity?.SetTag(ReportTelemetry.DataSourceTag, dataSet.Reference.Source);
+        activity?.SetTag(ReportTelemetry.DataSetTag, dataSet.Reference.DataSet);
+        activity?.SetTag("crestapps.report.fields", dataSet.UsedFields.Count);
+        activity?.SetTag("crestapps.report.join_key_batches", keys is null ? 0 : batches.Count);
 
         try
         {
@@ -299,7 +363,11 @@ public sealed partial class ReportQueryEngine
                 IReadOnlyList<DataField> fields = null;
                 (int Slot, int SourceIndex, DataFieldType DataType)[] mappings = [];
 
-                await foreach (var source in dataSet.Source.ReadAsync(query, cancellationToken).WithCancellation(cancellationToken))
+                var batchesRead = run.Context.SharedReads is { } sharedReads
+                    ? sharedReads.ReadAsync(dataSet, query, cancellationToken)
+                    : dataSet.Source.ReadAsync(query, cancellationToken);
+
+                await foreach (var source in batchesRead.WithCancellation(cancellationToken))
                 {
                     if (!ReferenceEquals(source.Fields, fields))
                     {
@@ -333,6 +401,30 @@ public sealed partial class ReportQueryEngine
         finally
         {
             run.SourceRows += read;
+
+            var shared = (run.Context.SharedReads?.SharedCount ?? 0) > sharedBefore;
+
+            activity?.SetTag("crestapps.report.rows.read", read);
+            activity?.SetTag("crestapps.report.read_shared", shared);
+            activity?.SetTag("crestapps.report.truncated", truncated);
+
+            if (ReportTelemetry.RowsRead.Enabled && !shared)
+            {
+                var tags = ReportTelemetry.Tags(run.Context);
+
+                tags.Add(ReportTelemetry.DataSourceTag, dataSet.Reference.Source);
+                tags.Add(ReportTelemetry.DataSetTag, dataSet.Reference.DataSet);
+                ReportTelemetry.RowsRead.Add(read, tags);
+            }
+
+            if (shared && ReportTelemetry.SharedReads.Enabled)
+            {
+                var tags = ReportTelemetry.Tags(run.Context);
+
+                tags.Add(ReportTelemetry.DataSourceTag, dataSet.Reference.Source);
+                tags.Add(ReportTelemetry.DataSetTag, dataSet.Reference.DataSet);
+                ReportTelemetry.SharedReads.Add(1, tags);
+            }
 
             if (truncated)
             {
@@ -441,6 +533,11 @@ public sealed partial class ReportQueryEngine
         var keyField = FindKeyField(join, run.Context.Limits);
         var keys = keyField is null ? null : new Dictionary<string, object>(StringComparer.Ordinal);
         var maxJoinKeys = run.Context.Limits.MaxJoinKeys;
+        using var activity = ReportTelemetry.Start("report.join", run.Context);
+
+        activity?.SetTag(ReportTelemetry.DataSourceTag, join.DataSet.Reference.Source);
+        activity?.SetTag(ReportTelemetry.DataSetTag, join.DataSet.Reference.DataSet);
+        activity?.SetTag("crestapps.report.join_type", join.Type.ToString());
 
         using var leftRows = new DataRowBuffer(run.CreateSpillOptions());
 
@@ -484,11 +581,14 @@ public sealed partial class ReportQueryEngine
         var maxRows = Math.Max(1, run.Context.Limits.MaxJoinedRows);
         var produced = 0L;
 
+        activity?.SetTag("crestapps.report.join_keys", keys?.Count ?? -1);
+
         await foreach (var pair in joined.WithCancellation(cancellationToken))
         {
             if (produced++ >= maxRows)
             {
                 run.Warnings.Add(S["The joins produced more than {0} rows, so the result is incomplete. Add filters or change the joins.", maxRows]);
+                activity?.SetTag("crestapps.report.truncated", true);
 
                 yield break;
             }
@@ -505,6 +605,8 @@ public sealed partial class ReportQueryEngine
 
             yield return row;
         }
+
+        activity?.SetTag("crestapps.report.rows.joined", produced);
     }
 
     // The rows of a joined data set with only the values of its fields, followed by their key values.
@@ -745,6 +847,12 @@ public sealed partial class ReportQueryEngine
 
         public DataRowBuffer GroupedRows { get; }
 
+        // The span of the run, or null when no listener records it.
+        public Activity Activity { get; set; }
+
+        // The time spent on row calculations, in stopwatch ticks, measured only while a span records it.
+        public long CalculationTicks { get; set; }
+
         // The spellings of the text the run groups, so its regroupings show the same ones.
         public TextSpellings Spellings { get; } = new();
 
@@ -787,6 +895,19 @@ public sealed partial class ReportQueryEngine
             {
                 if (Directory.Exists(_directory))
                 {
+                    // A buffer writes to its own subdirectory only when its rows don't fit in memory.
+                    var spills = Directory.EnumerateFiles(_directory, "*", SearchOption.AllDirectories).LongCount();
+
+                    if (spills > 0)
+                    {
+                        Activity?.SetTag("crestapps.report.spills", spills);
+
+                        if (ReportTelemetry.Spills.Enabled)
+                        {
+                            ReportTelemetry.Spills.Add(spills, ReportTelemetry.Tags(Context));
+                        }
+                    }
+
                     Directory.Delete(_directory, recursive: true);
                 }
             }

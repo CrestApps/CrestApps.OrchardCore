@@ -309,7 +309,7 @@ import { activityToAutoOpen, autoOpenWorkKey, readPoppedActivities, rememberPopp
                     autoOpenedWorkId = workKey;
                     collapsed = false;
                 }
-            } else if (!(state && (state.offer || state.activeInteraction || state.pendingDial)) && !barNotice) {
+            } else if (!(state && (state.offer || state.activeInteraction || state.pendingDial || state.heldActivity)) && !barNotice) {
                 // A refusal the agent has not dismissed keeps the bar open: collapsed, it hid the reason nothing rang.
                 autoOpenedWorkId = null;
                 collapsed = true;
@@ -477,6 +477,7 @@ import { activityToAutoOpen, autoOpenWorkKey, readPoppedActivities, rememberPopp
             var offer = state.offer;
             var active = state.activeInteraction;
             var pendingDial = state.pendingDial;
+            var held = state.heldActivity;
 
             if (barNotice && offer && offer.reservationId !== barNotice.reservationId) {
                 barNotice = null;
@@ -489,6 +490,7 @@ import { activityToAutoOpen, autoOpenWorkKey, readPoppedActivities, rememberPopp
                 offer ? offer.reservationId : '',
                 active ? active.interactionId + ':' + active.status : '',
                 pendingDial ? pendingDial.interactionId + ':' + (showsDialProgress(pendingDial) ? normalizeDialPhase(pendingDial) : 'Waiting') : '',
+                held ? held.activityItemId : '',
                 isPhoneMissing() ? 'no-phone' : ''
             ].join('|');
 
@@ -511,7 +513,7 @@ import { activityToAutoOpen, autoOpenWorkKey, readPoppedActivities, rememberPopp
                 '</div>' +
                 renderPhoneMissing() +
                 renderBarNotice() +
-                '<div class="cc-bar__context" data-cc-context>' + renderContext(offer, active, pendingDial) + '</div>';
+                '<div class="cc-bar__context" data-cc-context>' + renderContext(offer, active, pendingDial, held) + '</div>';
 
             bindEvents();
         }
@@ -584,7 +586,7 @@ import { activityToAutoOpen, autoOpenWorkKey, readPoppedActivities, rememberPopp
             '</div>';
         }
 
-        function renderContext(offer, active, pendingDial) {
+        function renderContext(offer, active, pendingDial, held) {
             if (offer) {
                 return renderOffer(offer);
             }
@@ -598,6 +600,12 @@ import { activityToAutoOpen, autoOpenWorkKey, readPoppedActivities, rememberPopp
 
             if (pendingDial && normalizeDialPhase(pendingDial)) {
                 return renderPendingDial(pendingDial);
+            }
+
+            // Work assigned to the agent that no call shows any more -- the call ended long ago, or the site restarted
+            // under it -- is still theirs to complete before they are available again, so it stays in reach.
+            if (held) {
+                return renderHeld(held);
             }
 
             // Idle renders nothing so the bar shrinks to the status chip; a call/assignment expands it again.
@@ -698,6 +706,26 @@ import { activityToAutoOpen, autoOpenWorkKey, readPoppedActivities, rememberPopp
                 '</div>' +
                 '<div class="cc-bar__offer-details">' + rows + '</div>' +
                 (actions ? '<div class="cc-bar__offer-actions">' + actions + '</div>' : '') +
+            '</div>';
+        }
+
+        // An activity assigned to the agent with no call showing it: the same card as a call that ended, with the one
+        // action that lets them go -- completing it.
+        function renderHeld(held) {
+            var contactRaw = held.customerLabel || '';
+            var contact = contactRaw
+                ? (/[a-z]/i.test(contactRaw) ? contactRaw : formatPhone(contactRaw))
+                : '';
+            var rows = (contact ? detailRow(label('contact', 'Contact'), contact) : '') +
+                (held.queueName ? detailRow(label('queue', 'Queue'), held.queueName) : '');
+
+            return '<div class="cc-bar__offer cc-bar__active is-expanded is-ended" data-cc-held>' +
+                '<div class="cc-bar__offer-head">' + escapeHtml(label('heldActivity', 'Activity to complete')) + '</div>' +
+                '<div class="cc-bar__pending-hint">' + escapeHtml(label('heldActivityHint', 'Complete this activity to receive your next one.')) + '</div>' +
+                (rows ? '<div class="cc-bar__offer-details">' + rows + '</div>' : '') +
+                '<div class="cc-bar__offer-actions">' +
+                    '<button type="button" class="btn btn-primary btn-sm" data-cc-open-activity="' + escapeHtml(held.activityItemId) + '"><i class="fa-solid fa-up-right-from-square" aria-hidden="true"></i> ' + escapeHtml(label('completeActivity', 'Complete activity')) + '</button>' +
+                '</div>' +
             '</div>';
         }
 
@@ -1017,7 +1045,7 @@ import { activityToAutoOpen, autoOpenWorkKey, readPoppedActivities, rememberPopp
         // missed still appears, with no polling cost the rest of the time.
         window.setInterval(function () {
             // Also while the agent is told no phone is open, so the warning clears once they open one.
-            if (state && (state.activeInteraction || state.pendingDial || presenceStatus() === 'Busy' || presenceStatus() === 'Reserved' || isPhoneMissing())) {
+            if (state && (state.activeInteraction || state.pendingDial || state.heldActivity || presenceStatus() === 'Busy' || presenceStatus() === 'Reserved' || isPhoneMissing())) {
                 refresh();
             }
         }, 12000);

@@ -49,14 +49,14 @@ public sealed partial class VoiceAgentConversationLoop
 
         var templateContext = new Dictionary<string, FluidValue>
         {
-            ["Activity"] = new ObjectValue(activity),
-            ["Profile"] = new ObjectValue(profile),
-            ["Session"] = new ObjectValue(session),
+            ["Activity"] = ObjectValue.Create(activity),
+            ["Profile"] = ObjectValue.Create(profile),
+            ["Session"] = ObjectValue.Create(session),
         };
 
         if (contact is not null)
         {
-            templateContext["Contact"] = new ObjectValue(contact);
+            templateContext["Contact"] = ObjectValue.Create(contact);
         }
 
         var rendered = await _liquidTemplateManager.RenderStringAsync(pattern, NullEncoder.Default, templateContext);

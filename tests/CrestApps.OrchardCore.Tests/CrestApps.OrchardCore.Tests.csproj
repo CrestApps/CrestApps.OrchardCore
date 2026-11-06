@@ -134,6 +134,7 @@
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Telnyx/CrestApps.OrchardCore.Telnyx.csproj" />
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Omnichannel.Messaging.Abstractions/CrestApps.OrchardCore.Omnichannel.Messaging.Abstractions.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Omnichannel.Messaging.Core/CrestApps.OrchardCore.Omnichannel.Messaging.Core.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Omnichannel/CrestApps.OrchardCore.Omnichannel.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/CrestApps.OrchardCore.Omnichannel.Messaging.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Core/CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Core.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging.Sms/CrestApps.OrchardCore.Omnichannel.Messaging.Sms.csproj" />

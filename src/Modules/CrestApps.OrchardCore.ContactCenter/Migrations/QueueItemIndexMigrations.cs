@@ -381,6 +381,30 @@ internal sealed class QueueItemIndexMigrations : DataMigration
         return 9;
     }
 
+    /// <summary>
+    /// Adds the indexes the routing reads find their rows from alone. The head of a queue is read on every routing
+    /// pass ordered by priority and enqueue time, and the waiting-queue index held neither, so each read looked up
+    /// every waiting item of the queue to sort it. The list of queues with waiting items reads only the queue, which
+    /// no index led by the status carried.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom9Async()
+    {
+        await IndexTableIndexCreation.CreateIfMissingAsync<QueueItemIndex>(
+            SchemaBuilder,
+            "IDX_QueueItemIndex_Head",
+            ContactCenterStorage.CollectionName,
+            "QueueId", "Status", "Priority", "EnqueuedUtc", "DocumentId");
+
+        await IndexTableIndexCreation.CreateIfMissingAsync<QueueItemIndex>(
+            SchemaBuilder,
+            "IDX_QueueItemIndex_StatusQueue",
+            ContactCenterStorage.CollectionName,
+            "Status", "QueueId", "DocumentId");
+
+        return 10;
+    }
+
     private Task<bool> CreateReportIndexAsync()
     {
         return IndexTableIndexCreation.CreateIfMissingAsync<QueueItemIndex>(

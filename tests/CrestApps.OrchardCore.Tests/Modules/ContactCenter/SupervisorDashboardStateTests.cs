@@ -208,9 +208,43 @@ public sealed class SupervisorDashboardStateTests
         Assert.Equal("A phone call is still open although the provider no longer has it.", item.Reason);
         Assert.Empty(Assert.Single(model.Agents, agent => agent.AgentId == "agent-fine").StaleWork);
     }
+
+    // Dialer work must be completed before the agent is available again, so the board links the activity an agent holds
+    // with no call in progress, and a supervisor can complete a stuck one for them.
+    [Fact]
+    public async Task StatePoll_AnAgentHoldingDialerWorkWithNoCall_LinksTheirNewestActivity()
+    {
+        // Arrange
+        var probe = new DashboardProbe();
+        probe.AddQueue("support");
+        probe.AddAgent(new AgentProfile { ItemId = "agent-stuck", UserId = "user-stuck", PresenceStatus = AgentPresenceStatus.Busy, QueueIds = ["support"] });
+        probe.AddAgent(new AgentProfile { ItemId = "agent-fine", UserId = "user-fine", PresenceStatus = AgentPresenceStatus.Available, QueueIds = ["support"] });
+        probe.AddOpenWork(new QueueItem { AgentId = "agent-stuck", ActivityItemId = "activity-older", QueueEnteredUtc = new DateTime(2026, 11, 4, 10, 0, 0, DateTimeKind.Utc) });
+        probe.AddOpenWork(new QueueItem { AgentId = "agent-stuck", ActivityItemId = "activity-newer", QueueEnteredUtc = new DateTime(2026, 11, 4, 11, 0, 0, DateTimeKind.Utc) });
+        probe.Authorize("support");
+
+        // Act
+        var model = await probe.PollAsync();
+
+        // Assert
+        Assert.True(model.CanCompleteActivities);
+        Assert.Equal("activity-newer", Assert.Single(model.Agents, agent => agent.AgentId == "agent-stuck").CurrentActivityId);
+        Assert.Null(Assert.Single(model.Agents, agent => agent.AgentId == "agent-fine").CurrentActivityId);
+        probe.QueueItems.Verify(
+            manager => manager.GetOpenByAgentIdsAsync(It.Is<IReadOnlyCollection<string>>(ids => ids.SequenceEqual(new[] { "agent-stuck" })), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     private sealed class DashboardProbe
     {
         private readonly List<AgentProfile> _agents = [];
+        private readonly List<QueueItem> _openWork = [];
+
+        public Mock<IQueueItemManager> QueueItems { get; } = new();
+
+        // Work routing or the dialer reserved or assigned to an agent, as the open work query returns it.
+        public void AddOpenWork(QueueItem item)
+            => _openWork.Add(item);
         private readonly Dictionary<string, StaleAgentWork> _staleWork = new(StringComparer.Ordinal);
         private readonly List<ActivityQueue> _queues = [];
         private readonly HashSet<string> _authorizedQueueIds = new(StringComparer.OrdinalIgnoreCase);
@@ -246,10 +280,13 @@ public sealed class SupervisorDashboardStateTests
                 .Setup(manager => manager.GetEnabledAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(_queues);
 
-            var queueItemManager = new Mock<IQueueItemManager>();
+            var queueItemManager = QueueItems;
             queueItemManager
                 .Setup(manager => manager.CountWaitingByQueueIdsAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Dictionary<string, int>(StringComparer.Ordinal));
+            queueItemManager
+                .Setup(manager => manager.GetOpenByAgentIdsAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(() => _openWork);
 
             var interactionManager = new Mock<IInteractionManager>();
             interactionManager

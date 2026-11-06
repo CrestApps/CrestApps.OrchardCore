@@ -931,6 +931,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations
         public System.Threading.Tasks.Task<int> UpdateFrom3Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom4Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom5Async() { }
+        public System.Threading.Tasks.Task<int> UpdateFrom6Async() { }
     }
     public sealed class OmnichannelContactsMigrations : CrestApps.OrchardCore.Omnichannel.Managements.Migrations.OmnichannelIndexMigration
     {
@@ -956,7 +957,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations
         protected Microsoft.Extensions.Logging.ILogger Logger { get; }
         protected YesSql.IStore Store { get; }
         protected System.Threading.Tasks.Task ApplyIsolatedSchemaChangeAsync(System.Func<YesSql.Sql.ISchemaBuilder, System.Threading.Tasks.Task> schemaChange, string operation) { }
-        protected System.Threading.Tasks.Task EnsureColumnExistsAsync<TIndex>(string collection, string columnName, System.Action<YesSql.Sql.Schema.IAlterTableCommand> addColumn, string operation) { }
+        protected System.Threading.Tasks.Task<bool> EnsureColumnExistsAsync<TIndex>(string collection, string columnName, System.Action<YesSql.Sql.Schema.IAlterTableCommand> addColumn, string operation) { }
         protected System.Threading.Tasks.Task<bool> IndexTableExistsAsync<TIndex>(string collection) { }
         protected System.Threading.Tasks.Task<System.Exception> TryApplyIsolatedAsync(System.Func<YesSql.Sql.ISchemaBuilder, System.Threading.Tasks.Task> work) { }
     }

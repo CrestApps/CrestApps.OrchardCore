@@ -12,14 +12,14 @@ internal sealed class SharedAgentSkillsBackfill
     private const int MaxScanned = 100_000;
 
     private readonly IAgentProfileStore _agentProfileStore;
-    private readonly IAgentProfileManager _agentProfileManager;
+    private readonly AgentSkillsSyncRunner _runner;
 
     public SharedAgentSkillsBackfill(
         IAgentProfileStore agentProfileStore,
-        IAgentProfileManager agentProfileManager)
+        AgentSkillsSyncRunner runner)
     {
         _agentProfileStore = agentProfileStore;
-        _agentProfileManager = agentProfileManager;
+        _runner = runner;
     }
 
     /// <summary>
@@ -46,8 +46,8 @@ internal sealed class SharedAgentSkillsBackfill
                     continue;
                 }
 
-                // Saving through the manager runs AgentSkillsToSharedHandler, which pushes and marks the profile.
-                await _agentProfileManager.UpdateAsync(profile, cancellationToken: cancellationToken);
+                // The runner pushes the profile's skills and saves it marked as synced.
+                await _runner.RunAsync(profile, cancellationToken);
                 pushed++;
             }
 

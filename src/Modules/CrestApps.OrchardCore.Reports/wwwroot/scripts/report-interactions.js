@@ -122,6 +122,9 @@
 						return;
 					}
 					var node = root.document.importNode(fresh, true);
+					section.querySelectorAll("canvas[data-report-chart]").forEach(function(canvas) {
+						if (canvas.reportChart && canvas.reportChart.destroy) canvas.reportChart.destroy();
+					});
 					section.replaceWith(node);
 					if (root.CrestAppsReportCharts) root.CrestAppsReportCharts.render(node);
 				});
@@ -130,6 +133,13 @@
 				sections.forEach(function(section) {
 					section.classList.remove("is-refreshing");
 					section.removeAttribute("aria-busy");
+					if (!section.querySelector(":scope > .report-refresh-failed")) {
+						var alert = root.document.createElement("div");
+						alert.className = "alert alert-warning py-1 px-2 small report-refresh-failed";
+						alert.setAttribute("role", "alert");
+						alert.textContent = form.getAttribute("data-report-refresh-failed-text") || "This visual could not be filtered. Reload the page to try again.";
+						section.insertBefore(alert, section.firstChild);
+					}
 				});
 			});
 		}

@@ -86,6 +86,8 @@ A new report starts filtered on the last 30 days of its first data set's main da
 
 The **Preview** runs the report as you build it, with your own access to the data. When something is not right, a message above the preview says what to fix, such as a join that still needs matching columns.
 
+A report over a lot of data can take a while to run. While it runs, the preview is dimmed and shows **Running the report…** with the seconds it has been running; wait for it. When you change the report before it finishes, the builder stops that run and starts a new one. If the preview cannot be loaded, the message says why and has a **Try again** button.
+
 When you publish, the builder checks the report. If it still has problems, it is published anyway and lists them, so you can come back and fix them; until then, the report shows the problems instead of running. See [Publish and versions](publish-and-versions.md).
 
 Next: [Columns and formulas](columns-and-formulas.md).

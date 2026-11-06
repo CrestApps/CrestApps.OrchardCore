@@ -19,6 +19,7 @@ using CrestApps.OrchardCore.ContactCenter.Workflows.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony.Core.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -279,6 +280,7 @@ public sealed class Startup : StartupBase
             .AddScoped<IContactCenterRetentionPolicy, ContactCenterWorkStateRetentionPolicy>()
             .AddScoped<IContactCenterWorkStateManager, ContactCenterWorkStateManager>()
             .AddScoped<IContactCenterWorkStateService, ContactCenterWorkStateService>()
+            .AddScoped<IAuthorizationHandler, ContactCenterActivityOwnershipAuthorizationHandler>()
             .AddIndexProvider<ContactCenterWorkStateIndexProvider>()
             .AddDataMigration<ContactCenterWorkStateIndexMigrations>();
 

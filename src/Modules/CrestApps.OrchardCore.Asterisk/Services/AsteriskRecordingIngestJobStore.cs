@@ -39,7 +39,7 @@ public sealed class AsteriskRecordingIngestJobStore : IAsteriskRecordingIngestJo
         // Enqueue is idempotent per recording: a stop can be retried, and the deterministic recording name means
         // a second enqueue must not create a duplicate job or reset the progress of an in-flight ingestion.
         var existing = await session
-            .Query<AsteriskRecordingIngestJob, AsteriskRecordingIngestJobIndex>(index =>
+            .QueryIndex<AsteriskRecordingIngestJobIndex>(index =>
                 index.RecordingName == recordingName)
             .FirstOrDefaultAsync(cancellationToken);
 

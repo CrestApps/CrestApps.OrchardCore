@@ -6613,6 +6613,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public static class QueueItemQueries
     {
         public static string BuildWaitingCountByQueueSql(YesSql.IConfiguration configuration, int queueIdCount) { }
+        public static string BuildWaitingQueueIdsSql(YesSql.IConfiguration configuration) { }
         public static string QueueIdParameterName(int index) { }
     }
     public sealed class QueueItemStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem, CrestApps.OrchardCore.ContactCenter.Core.Indexes.QueueItemIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemStore

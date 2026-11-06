@@ -330,12 +330,12 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
         {
             var upperCountry = countryCode.ToUpperInvariant();
 
-            return await _session.Query<LocalDncList, LocalDncListIndex>(
+            return await _session.QueryIndex<LocalDncListIndex>(
                 i => i.CountryCode == upperCountry, collection: DncRegistryConstants.CollectionName)
                 .CountAsync(cancellationToken);
         }
 
-        return await _session.Query<LocalDncList, LocalDncListIndex>(collection: DncRegistryConstants.CollectionName)
+        return await _session.QueryIndex<LocalDncListIndex>(collection: DncRegistryConstants.CollectionName)
             .CountAsync(cancellationToken);
     }
 

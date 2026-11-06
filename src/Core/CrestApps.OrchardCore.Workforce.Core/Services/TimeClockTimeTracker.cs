@@ -446,7 +446,8 @@ internal sealed class TimeClockTrackerBackfill
             return 0;
         }
 
-        var workers = await _session.Query<WorkerProfile, WorkerIndex>(index => index.UserId != null, collection: WorkforceConstants.CollectionName)
+        // Only the worker ids are needed, so the index rows are enough.
+        var workers = await _session.QueryIndex<WorkerIndex>(index => index.UserId != null, collection: WorkforceConstants.CollectionName)
             .OrderBy(index => index.ItemId)
             .Skip(state.Done)
             .Take(batchSize)

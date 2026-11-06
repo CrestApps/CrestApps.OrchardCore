@@ -387,15 +387,11 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                 }
             }
 
-            if (string.IsNullOrEmpty(model.UserId))
+            var assignedUser = string.IsNullOrEmpty(model.UserId) ? null : await _userManager.FindByIdAsync(model.UserId);
+
+            if (assignedUser is null)
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.UserId), S["Choose the user to assign the activity to."]);
-            }
-            else if (await _userManager.FindByIdAsync(model.UserId) is null)
-            {
-                // The user picker searches on the server, so the posted value is no longer limited to a list the page
-                // rendered; an unknown user is refused here.
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.UserId), S["The user to assign the activity to was not found."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.UserId), S["Select the user to assign the activity to."]);
             }
 
             if (!model.ScheduleAt.HasValue)
@@ -420,7 +416,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                     !activity.AssignedToUtc.HasValue)
             {
                 activity.AssignedToUtc = _clock.UtcNow;
-                activity.AssignedToUsername = (await _userManager.FindByIdAsync(model.UserId))?.UserName;
+                activity.AssignedToUsername = assignedUser?.UserName;
                 activity.AssignedToId = model.UserId;
             }
 

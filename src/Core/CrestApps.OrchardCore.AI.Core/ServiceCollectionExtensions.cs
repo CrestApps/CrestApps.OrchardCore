@@ -59,20 +59,6 @@ public static class ServiceCollectionExtensions
             .AddScoped<IAuthorizationHandler, AIToolAuthorizationHandler>()
             .AddTransient<IConfigureOptions<StoreCollectionOptions>, StoreCollectionOptionsConfiguration>();
 
-        services.Configure<TemplateOptions>(o =>
-        {
-            o.MemberAccessStrategy.Register<AIProfile>();
-            o.MemberAccessStrategy.Register<AIChatSession>();
-            o.MemberAccessStrategy.Register<AIChatSessionPrompt>();
-            o.MemberAccessStrategy.Register<ExtractedFieldState>();
-            o.MemberAccessStrategy.Register<PostSessionResult>();
-            o.MemberAccessStrategy.Register<AICompletionReference>();
-            o.MemberAccessStrategy.Register<AIToolDefinitionEntry>();
-            o.MemberAccessStrategy.Register<ChatDocumentInfo>();
-            o.MemberAccessStrategy.Register<ConversionGoalResult>();
-            o.MemberAccessStrategy.Register<AIResponseMessage>();
-        });
-
         return services;
     }
 
