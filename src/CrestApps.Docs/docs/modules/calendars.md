@@ -96,6 +96,20 @@ What a user can do with one calendar is a `CalendarAccessLevel`, worked out by `
 
 The rules, in order: `ManageAllCalendars` gives **Manage**; `ViewAllCalendars` gives at least **Read**; without `AccessCalendars` nothing more applies. The owner of a user-owned calendar gets **Manage**, members of a team calendar's role get **Write**, each matching `CalendarShare` (a user or a role) adds its level, and the calendar's `Visibility` raises everyone signed in to **Read** (`Public`) or **FreeBusy** (`Shared`). `Private` adds nothing. A caller with **FreeBusy** only gets occurrences with `BusyOnly` set and no title or details.
 
+## Dashboard widget
+
+With Orchard Core's **Admin Dashboard** enabled next to **Calendars**, a **Calendar** widget can be added to the admin dashboard. There is no feature of its own to turn on: the widget appears when both are enabled. Add it from **Manage Dashboard > Add Widget > Calendar** and choose:
+
+- **Calendars to show**:
+  - **The viewer's own calendars** (the default): each person sees their personal calendar and the calendars they may add events to, the same ones the calendar page ticks first.
+  - **Every calendar of a type**, such as every Team or Room calendar: each person sees the calendars of that type they may open, including ones added later.
+  - **Chosen calendars**: any calendars the person editing the widget may open. Each viewer sees the chosen calendars they may open.
+- **Open on**: the agenda (the week's events, the default and the best fit for a small widget), day, week or month. Viewers can switch views and move through the dates inside the widget.
+
+A dashboard can hold as many Calendar widgets as you like, for example the viewer's own calendars next to every meeting room. Disabled calendars are left out, and a calendar the viewer may only see as free or busy shows its events as busy blocks without titles. The widget only shows events: clicking one opens its editor when the viewer may change it, and **Open the calendar** opens the full calendar page with the widget's calendars ticked. People without the **Use calendars** permission see a short message instead.
+
+The widget is the `CalendarWidget` content type (stereotype `DashboardWidget`) with a `TitlePart` and a `CalendarWidgetPart` that stores `Source` (`MyCalendars`, `Type` or `Calendars`), `CalendarType`, `CalendarIds` and `View` (`Agenda`, `Day`, `Week` or `Month`). Widgets are content items, so they are exported and imported with the content deployment and recipe steps.
+
 ## Calendar types
 
 A calendar type is a `CalendarTypeDescriptor`, registered with `services.AddCalendarType(name, builder)` and kept in `CalendarOptions`. `ICalendarTypeManager` lists and finds the types and their event types. Calling `AddCalendarType` again with the same name extends the type, so one feature can add event types to a type another feature registered.
