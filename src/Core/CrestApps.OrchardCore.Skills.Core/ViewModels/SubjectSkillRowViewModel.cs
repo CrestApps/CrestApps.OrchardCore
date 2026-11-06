@@ -1,9 +1,9 @@
-namespace CrestApps.OrchardCore.Skills.ViewModels;
+namespace CrestApps.OrchardCore.Skills.Core.ViewModels;
 
 /// <summary>
-/// One skill in the Skills section of the user editor.
+/// One skill in the Skills section of an editor.
 /// </summary>
-public class UserSkillRowViewModel
+public class SubjectSkillRowViewModel
 {
     /// <summary>
     /// Gets or sets the skill id.
@@ -21,7 +21,7 @@ public class UserSkillRowViewModel
     public string Category { get; set; }
 
     /// <summary>
-    /// Gets or sets the proficiency the user holds it at, or 0 when they don't hold it.
+    /// Gets or sets the proficiency the subject holds the skill at, or 0 when it doesn't hold it.
     /// </summary>
     public int Proficiency { get; set; }
 }

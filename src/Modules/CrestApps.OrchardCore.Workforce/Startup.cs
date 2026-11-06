@@ -41,6 +41,8 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<Team, WorkforceTeamRowDisplayDriver>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAuthorizationHandler, WorkforceTeamsAuthorizationHandler>());
         services.AddDisplayDriver<WorkerProfile, WorkerRowDisplayDriver>();
+        services.AddDisplayDriver<WorkerProfile, WorkerProfileDisplayDriver>();
+        services.AddDisplayDriver<WorkerProfile, WorkerSkillsDisplayDriver>();
         services.AddDisplayDriver<User, UserWorkforceDisplayDriver>();
         services.AddScoped<IUserEventHandler, WorkerUserEventHandler>();
         services.AddDisplayDriver<ActivityCode, ActivityCodeRowDisplayDriver>();
