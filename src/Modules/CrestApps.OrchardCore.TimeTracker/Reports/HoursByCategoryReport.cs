@@ -6,13 +6,15 @@ using CrestApps.OrchardCore.TimeTracker.Models;
 using CrestApps.OrchardCore.TimeTracker.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Localization;
+using OrchardCore.Modules;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.TimeTracker.Reports;
 
 /// <summary>
 /// The hours of each category: a row for each person, or each person and day, and a column for each enabled
-/// category, for the time tracked in the period.
+/// category, for the time tracked in the period. It starts on this week, Monday to Sunday, and reads the bounds of the
+/// period in the site's time zone, as the time tracker counts its days.
 /// </summary>
 public sealed class HoursByCategoryReport : IReport
 {
@@ -29,6 +31,7 @@ public sealed class HoursByCategoryReport : IReport
     private readonly ITimeTrackerService _tracker;
     private readonly TimeCategoryStore _categories;
     private readonly TimeTrackerTimeZone _timeZone;
+    private readonly ILocalClock _localClock;
 
     internal readonly IStringLocalizer S;
 
@@ -38,12 +41,19 @@ public sealed class HoursByCategoryReport : IReport
     /// <param name="tracker">The time tracker service, which totals the time.</param>
     /// <param name="categories">The category store, for the report's columns.</param>
     /// <param name="timeZone">The time zone days are counted in.</param>
+    /// <param name="localClock">The local clock the date range was picked in.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public HoursByCategoryReport(ITimeTrackerService tracker, TimeCategoryStore categories, TimeTrackerTimeZone timeZone, IStringLocalizer<HoursByCategoryReport> stringLocalizer)
+    public HoursByCategoryReport(
+        ITimeTrackerService tracker,
+        TimeCategoryStore categories,
+        TimeTrackerTimeZone timeZone,
+        ILocalClock localClock,
+        IStringLocalizer<HoursByCategoryReport> stringLocalizer)
     {
         _tracker = tracker;
         _categories = categories;
         _timeZone = timeZone;
+        _localClock = localClock;
         S = stringLocalizer;
     }
 
@@ -72,6 +82,11 @@ public sealed class HoursByCategoryReport : IReport
     /// </summary>
     public static Permission Permission => TimeTrackerPermissions.ViewTimeEntries;
 
+    /// <summary>
+    /// Gets the date range the report starts on: this week, Monday to Sunday, as the time report did.
+    /// </summary>
+    public static ReportDefaultDateRange DefaultDateRange { get; } = ReportDefaultDateRange.ThisWeek(DayOfWeek.Monday);
+
     /// <inheritdoc/>
     public async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
@@ -81,20 +96,29 @@ public sealed class HoursByCategoryReport : IReport
         var byDay = context.Filter.GetOrDefault<bool>(ByDayFilterKey);
         var search = context.Filter.GetOrDefault<string>(SearchFilterKey)?.Trim();
         var zone = await _timeZone.GetAsync();
+        var fromUtc = await InSiteTimeZoneAsync(range.FromUtc, zone);
 
         // The time tracker reads a period up to an exclusive end, and the date range ends on the last second of its
         // last day.
-        DateTime? toUtc = range.ToUtc is { } end
+        DateTime? toUtc = await InSiteTimeZoneAsync(range.ToUtc, zone) is { } end
             ? new DateTime(end.Ticks - (end.Ticks % TimeSpan.TicksPerSecond), DateTimeKind.Utc).AddSeconds(1)
             : null;
 
-        var rows = (await _tracker.GetTotalsAsync(new TimeEntryQuery { FromUtc = range.FromUtc, ToUtc = toUtc }, zone, byDay, cancellationToken))
+        var rows = (await _tracker.GetTotalsAsync(new TimeEntryQuery { FromUtc = fromUtc, ToUtc = toUtc }, zone, byDay, cancellationToken))
             .Where(row => string.IsNullOrEmpty(search) || (row.UserName ?? string.Empty).Contains(search, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         if (rows.Count == 0)
         {
-            return new ReportDocument();
+            if (context.Mode == ReportRunMode.Export)
+            {
+                return new ReportDocument();
+            }
+
+            var empty = ReportSection.ForTable(S["Hours by category ({0})", zone].Value, [], []);
+            empty.EmptyMessage = S["No time in these days."].Value;
+
+            return new ReportDocument().Add(empty);
         }
 
         var categories = (await _categories.GetAllAsync(cancellationToken))
@@ -119,7 +143,10 @@ public sealed class HoursByCategoryReport : IReport
 
             if (byDay)
             {
-                cells.Add(row.Date?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+                // On screen the day reads as the time report showed it; an export keeps a date that sorts and parses.
+                cells.Add(context.Mode == ReportRunMode.Export
+                    ? row.Date?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+                    : row.Date?.ToString("ddd d MMM", CultureInfo.CurrentCulture));
             }
 
             cells.AddRange(categories.Select(category => TimeTrackerTimeZone.Hours(row.MinutesByCategory.GetValueOrDefault(category.ItemId))));
@@ -149,5 +176,19 @@ public sealed class HoursByCategoryReport : IReport
                 new ReportMetric(S["Total hours"].Value, TimeTrackerTimeZone.Hours(rows.Sum(row => row.TotalMinutes))),
             ]))
             .Add(section);
+    }
+
+    // The date range is picked in the time zone of the person; the time tracker counts its days in the site's time zone,
+    // as its own pages do, so the same wall-clock bound is read in the site's time zone.
+    private async Task<DateTime?> InSiteTimeZoneAsync(DateTime? utc, string zone)
+    {
+        if (utc is not { } value)
+        {
+            return null;
+        }
+
+        var wallClock = (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(value, DateTimeKind.Utc))).DateTime;
+
+        return TimeTrackerTimeZone.ToUtc(DateTime.SpecifyKind(wallClock, DateTimeKind.Unspecified), zone);
     }
 }

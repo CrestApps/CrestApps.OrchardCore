@@ -1,3 +1,4 @@
+using System.Globalization;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
@@ -10,6 +11,7 @@ using CrestApps.OrchardCore.TimeTracker.Reports;
 using CrestApps.OrchardCore.TimeTracker.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using OrchardCore.Modules;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Tests.TimeTracker;
@@ -311,14 +313,18 @@ public sealed class TimeTrackerTests
     }
 
     [Fact]
-    public async Task TheHoursByCategoryReport_WithoutTime_IsEmpty()
+    public async Task TheHoursByCategoryReport_WithoutTime_SaysSo_AndItsExportIsEmpty()
     {
         await using var kit = await Kit.CreateAsync();
         await kit.CategoryAsync("Payable");
 
         var document = await kit.ReportAsync(_nine.Date, _nine.Date.AddDays(1).AddTicks(-1));
+        var export = await kit.ReportAsync(_nine.Date, _nine.Date.AddDays(1).AddTicks(-1), mode: ReportRunMode.Export);
 
-        Assert.False(document.HasContent);
+        var section = Assert.Single(document.Sections);
+        Assert.Equal("Hours by category (America/New_York)", section.Title);
+        Assert.Equal("No time in these days.", section.EmptyMessage);
+        Assert.False(export.HasContent);
     }
 
     [Fact]
@@ -357,12 +363,49 @@ public sealed class TimeTrackerTests
         kit.Now = _nine.AddMinutes(60);
 
         var byDay = await kit.ReportAsync(_nine.Date, _nine.Date.AddDays(1).AddTicks(-1), byDay: true);
+        var exported = await kit.ReportAsync(_nine.Date, _nine.Date.AddDays(1).AddTicks(-1), byDay: true, mode: ReportRunMode.Export);
         var nobody = await kit.ReportAsync(_nine.Date, _nine.Date.AddDays(1).AddTicks(-1), search: "bob");
 
         var table = byDay.Sections.Single(section => section.Rows.Count > 0);
         Assert.Equal(["Person", "Day", "Payable", "Total"], table.Columns.Select(column => column.Label));
-        Assert.Equal("2026-11-02", table.Rows[0].Cells[1]);
-        Assert.False(nobody.HasContent);
+
+        // On screen the day reads as the time report showed it; an export keeps a date that sorts.
+        Assert.Equal(new DateTime(2026, 11, 2).ToString("ddd d MMM", CultureInfo.CurrentCulture), table.Rows[0].Cells[1]);
+        Assert.Equal("2026-11-02", exported.Sections.Single(section => section.Rows.Count > 0).Rows[0].Cells[1]);
+        Assert.Empty(nobody.Sections.SelectMany(section => section.Rows));
+    }
+
+    [Fact]
+    public void TheHoursByCategoryReport_StartsOnThisWeek_MondayToSunday()
+    {
+        var range = ReportDescriptor.Create<HoursByCategoryReport>().DefaultDateRange;
+
+        // Thursday 5 November 2026.
+        var (from, to) = range.Resolve(new DateTime(2026, 11, 5, 10, 0, 0));
+
+        Assert.Equal(ReportDateRangePeriod.ThisWeek, range.Period);
+        Assert.Equal(new DateTime(2026, 11, 2), from);
+        Assert.Equal(new DateTime(2026, 11, 9).AddTicks(-1), to);
+    }
+
+    [Fact]
+    public async Task TheHoursByCategoryReport_ReadsItsPeriod_InTheSiteTimeZone()
+    {
+        await using var kit = await Kit.CreateAsync();
+        var payable = await kit.CategoryAsync("Payable");
+        var work = await kit.StageAsync("Work", payable);
+
+        // Monday 22:00 to 23:00 in New York, which is Tuesday 3:00 to 4:00 UTC.
+        await kit.SwitchAsync(work, 780);
+        kit.Now = _nine.AddMinutes(840);
+
+        // The person picks whole days in their own time zone, UTC. The time tracker counts days in New York, as the
+        // time report did, so Monday holds the hour and Tuesday doesn't, although in UTC the hour is on Tuesday.
+        var monday = await kit.ReportAsync(_nine.Date, _nine.Date.AddDays(1).AddTicks(-1), personTimeZone: TimeZoneInfo.Utc);
+        var tuesday = await kit.ReportAsync(_nine.Date.AddDays(1), _nine.Date.AddDays(2).AddTicks(-1), personTimeZone: TimeZoneInfo.Utc);
+
+        Assert.Equal("1:00", monday.Sections.Single(section => section.Rows.Count > 0).Rows[0].Cells[^1]);
+        Assert.Empty(tuesday.Sections.SelectMany(section => section.Rows));
     }
 
     private sealed class Kit : IAsyncDisposable
@@ -483,8 +526,9 @@ public sealed class TimeTrackerTests
         public Task<IReadOnlyList<TimeTotalsRow>> TotalsAsync(bool byDay, DateTime? from = null, DateTime? to = null)
             => Harness.RunAsync(services => services.GetRequiredService<ITimeTrackerService>().GetTotalsAsync(new TimeEntryQuery { UserIds = ["ana"], FromUtc = from, ToUtc = to }, "America/New_York", byDay), commit: false);
 
-        // The report in New York, the site's time zone; the date range is in UTC, like the Reports date range filter's.
-        public Task<ReportDocument> ReportAsync(DateTime fromUtc, DateTime toUtc, bool byDay = false, string search = null)
+        // The report in New York, the site's time zone; the date range is in UTC, like the Reports date range filter's,
+        // picked by a person in New York unless another time zone is given.
+        public Task<ReportDocument> ReportAsync(DateTime fromUtc, DateTime toUtc, bool byDay = false, string search = null, ReportRunMode mode = ReportRunMode.Display, TimeZoneInfo personTimeZone = null)
             => Harness.RunAsync(services =>
             {
                 var site = new Mock<ISite>();
@@ -498,13 +542,20 @@ public sealed class TimeTrackerTests
                 filter.Set<bool?>(HoursByCategoryReport.ByDayFilterKey, byDay ? true : null);
                 filter.Set(HoursByCategoryReport.SearchFilterKey, search);
 
+                var zone = personTimeZone ?? TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
+                var localClock = new Mock<ILocalClock>();
+                localClock
+                    .Setup(value => value.ConvertToLocalAsync(It.IsAny<DateTimeOffset>()))
+                    .ReturnsAsync((DateTimeOffset value) => TimeZoneInfo.ConvertTime(value, zone));
+
                 var report = new HoursByCategoryReport(
                     services.GetRequiredService<ITimeTrackerService>(),
                     services.GetRequiredService<TimeCategoryStore>(),
                     new TimeTrackerTimeZone(siteService.Object),
+                    localClock.Object,
                     new PassThroughStringLocalizer<HoursByCategoryReport>());
 
-                return report.RunAsync(new ReportContext(filter));
+                return report.RunAsync(new ReportContext(filter, mode));
             }, commit: false);
 
         public ValueTask DisposeAsync() => Harness.DisposeAsync();
