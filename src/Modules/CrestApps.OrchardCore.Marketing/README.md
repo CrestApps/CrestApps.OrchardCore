@@ -17,6 +17,8 @@ Enabling a feature of this module enables the features it depends on:
 - [`CrestApps.OrchardCore.Commerce`](../CrestApps.OrchardCore.Commerce/README.md)
 - [`CrestApps.OrchardCore.Customers`](../CrestApps.OrchardCore.Customers/README.md)
 - [`CrestApps.OrchardCore.Orders`](../CrestApps.OrchardCore.Orders/README.md)
+- `OrchardCore.Email`, which sends the campaigns
+- [`CrestApps.OrchardCore.Outreach`](../CrestApps.OrchardCore.Outreach/README.md), the engine campaigns are sent through
 
 ## Documentation
 

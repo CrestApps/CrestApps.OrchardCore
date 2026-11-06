@@ -110,5 +110,8 @@ internal sealed class MarketingCampaignsStep : CatalogStoreRecipeStep<Campaign>
         campaign.Sent = 0;
         campaign.Skipped = 0;
         campaign.Failed = 0;
+
+        // The outreach run belongs to the site that sent the campaign; it never exists here.
+        campaign.OutreachRunId = null;
     }
 }

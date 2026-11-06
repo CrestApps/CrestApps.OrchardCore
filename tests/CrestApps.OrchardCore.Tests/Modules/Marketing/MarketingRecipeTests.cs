@@ -38,6 +38,7 @@ public sealed class MarketingRecipeTests
             Status = CampaignStatus.Sent,
             Cursor = "after-500",
             Sent = 480,
+            OutreachRunId = "run-on-the-source-site",
             Failed = 20,
         });
 
@@ -60,6 +61,7 @@ public sealed class MarketingRecipeTests
         Assert.Empty(errors);
         Assert.Equal(["MarketingSegments", "MarketingCampaigns"], steps.Select(step => step["name"].GetValue<string>()));
         Assert.False(steps[1]["Campaigns"][0].AsObject().ContainsKey("Sent"));
+        Assert.False(steps[1]["Campaigns"][0].AsObject().ContainsKey("OutreachRunId"));
 
         var segment = Assert.Single(targetSegments.Entries);
         var campaign = Assert.Single(targetCampaigns.Entries);
@@ -72,6 +74,7 @@ public sealed class MarketingRecipeTests
         Assert.Equal(CampaignStatus.Draft, campaign.Status);
         Assert.Equal(0, campaign.Sent);
         Assert.Null(campaign.Cursor);
+        Assert.Null(campaign.OutreachRunId);
     }
 
     [Fact]

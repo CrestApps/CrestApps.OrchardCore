@@ -24,6 +24,7 @@ internal sealed class MarketingDeploymentSource : DeploymentSourceBase<Marketing
         nameof(Campaign.Sent),
         nameof(Campaign.Skipped),
         nameof(Campaign.Failed),
+        nameof(Campaign.OutreachRunId),
     ];
 
     private readonly ISegmentStore _segmentStore;
