@@ -11,3 +11,10 @@
 <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Failed"]">
     <i class="fa-solid fa-triangle-exclamation text-secondary me-1" aria-hidden="true"></i>@Model.Value.FailedCount
 </span>
+
+@if (Model.Value.SkippedCount > 0)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Skipped: opted out of the channel"]">
+        <i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@Model.Value.SkippedCount
+    </span>
+}

@@ -259,11 +259,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models
         public int FailedCount { get; set; }
         public System.DateTime? ModifiedUtc { get; set; }
         public string Name { get; set; }
+        public string OutreachRunId { get; set; }
         public string OwnerAgentId { get; set; }
         public System.Collections.Generic.IList<string> ProcessedRecipients { get; set; }
         public System.Collections.Generic.IList<string> Recipients { get; set; }
         public int SentCount { get; set; }
         public string ServiceAddress { get; set; }
+        public int SkippedCount { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Messaging.Models.MessagingBroadcastStatus Status { get; set; }
     }
     public sealed class MessagingConversation : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel
@@ -420,6 +422,33 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models
         public bool IsQuietHours { get; init; }
         public string Reason { get; init; }
         public static CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.QuietHoursDecision Open { get; }
+    }
+}
+namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Outreach
+{
+    public sealed class MessagingBroadcastAudienceSource : CrestApps.OrchardCore.Outreach.IOutreachAudienceSource
+    {
+        public MessagingBroadcastAudienceSource(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingBroadcastStore broadcastStore) { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Outreach.Models.OutreachAudiencePage> GetPageAsync(CrestApps.OrchardCore.Outreach.Models.OutreachRun run, string cursor, int pageSize, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class MessagingBroadcastRunObserver : CrestApps.OrchardCore.Outreach.IOutreachRunObserver
+    {
+        public MessagingBroadcastRunObserver(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingBroadcastStore broadcastStore) { }
+        public System.Threading.Tasks.Task RunUpdatedAsync(CrestApps.OrchardCore.Outreach.Models.OutreachRun run, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class MessagingOutreachChannelSender : CrestApps.OrchardCore.Outreach.IOutreachChannelSender
+    {
+        public MessagingOutreachChannelSender(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingConversationService conversationService, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingChannelResolver channelResolver) { }
+        public string Name { get; }
+        public bool ObservesQuietHours(CrestApps.OrchardCore.Outreach.Models.OutreachRun run) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Outreach.Models.OutreachSendResult> SendAsync(CrestApps.OrchardCore.Outreach.Models.OutreachRun run, CrestApps.OrchardCore.Outreach.Models.OutreachRecipient recipient, CrestApps.OrchardCore.Outreach.Models.OutreachContent content, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class MessagingOutreachConstants
+    {
+        public const string BroadcastAudienceSource = "MessagingBroadcastRecipients";
+        public const string BroadcastOwnerType = "MessagingBroadcast";
+        public const string Sender = "Messaging";
     }
 }
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services
@@ -581,7 +610,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services
     }
     public sealed class MessagingBroadcastService : CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingBroadcastService
     {
-        public MessagingBroadcastService(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingBroadcastStore broadcastStore, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingConversationService conversationService, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingBroadcastService> logger) { }
+        public MessagingBroadcastService(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingBroadcastStore broadcastStore, CrestApps.OrchardCore.Outreach.IOutreachEngine outreachEngine, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingBroadcastService> logger) { }
         public System.Threading.Tasks.Task ProcessAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingBroadcast broadcast, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task ProcessPendingAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }

@@ -36,6 +36,8 @@ public sealed class MessagingBroadcastsRecipeTests
             ProcessedRecipients = ["+12025550101"],
             Status = MessagingBroadcastStatus.Queued,
             SentCount = 1,
+            SkippedCount = 1,
+            OutreachRunId = "4bc00000000000000000000run",
         });
 
         var target = new InMemoryBroadcastManager();
@@ -51,6 +53,8 @@ public sealed class MessagingBroadcastsRecipeTests
         Assert.Empty(second);
         Assert.Equal("MessagingBroadcasts", exported["name"].GetValue<string>());
         Assert.False(exported["Broadcasts"][0].AsObject().ContainsKey("ProcessedRecipients"));
+        Assert.False(exported["Broadcasts"][0].AsObject().ContainsKey("SkippedCount"));
+        Assert.False(exported["Broadcasts"][0].AsObject().ContainsKey("OutreachRunId"));
 
         var imported = Assert.Single(target.Entries);
 
@@ -60,6 +64,8 @@ public sealed class MessagingBroadcastsRecipeTests
         Assert.Equal(MessagingBroadcastStatus.Draft, imported.Status);
         Assert.Empty(imported.ProcessedRecipients);
         Assert.Equal(0, imported.SentCount);
+        Assert.Equal(0, imported.SkippedCount);
+        Assert.Null(imported.OutreachRunId);
     }
 
     [Fact]

@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Deployments.Sources;
 
 /// <summary>
 /// Writes every messaging broadcast into a <c>MessagingBroadcasts</c> recipe step, without its delivery: the status, the
-/// recipients already sent to and the counts belong to the site that sent it.
+/// recipients already sent to, the counts and the outreach run belong to the site that sent it.
 /// </summary>
 internal sealed class MessagingBroadcastsDeploymentSource : CatalogDeploymentSource<MessagingBroadcastsDeploymentStep, MessagingBroadcast>
 {
@@ -19,6 +19,8 @@ internal sealed class MessagingBroadcastsDeploymentSource : CatalogDeploymentSou
         nameof(MessagingBroadcast.ProcessedRecipients),
         nameof(MessagingBroadcast.SentCount),
         nameof(MessagingBroadcast.FailedCount),
+        nameof(MessagingBroadcast.SkippedCount),
+        nameof(MessagingBroadcast.OutreachRunId),
         nameof(MessagingBroadcast.CompletedUtc),
     ];
 
