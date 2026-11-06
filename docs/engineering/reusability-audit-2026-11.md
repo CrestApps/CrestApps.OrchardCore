@@ -1,6 +1,6 @@
 # Reusability and code-quality audit (November 2026)
 
-Status: findings recorded 2026-11-03 against `main` at `5af617880`. The improvement plan in section 8 is proposed, not started. The binding rules that came out of this audit are in `AGENTS.md` (*Building Blocks and Reuse*), and the catalog of building blocks is [`building-blocks.md`](building-blocks.md).
+Status: findings recorded 2026-11-03 against `main` at `5af617880`. The plan in section 8 was carried out in November 2026; section 0 says what is done and what is left. The binding rules that came out of this audit are in `AGENTS.md` (*Building Blocks and Reuse*), and the catalog of building blocks is [`building-blocks.md`](building-blocks.md).
 
 Paths are relative to `src/`. `M/X` is `Modules/CrestApps.OrchardCore.X`, `C/X` is `Core/CrestApps.OrchardCore.X`, and `A/X` is `Abstractions/CrestApps.OrchardCore.X`.
 
@@ -17,6 +17,75 @@ The solution has 119 modules (331 features), 48 `.Core` libraries and 33 `.Abstr
 - Admin index pages are on `<admin-list>`, `IClock` is used almost everywhere, and the commerce slice has 107 `[RequireFeatures]` integrations.
 
 **Where it was not applied, the same concept was built again.** Section 2 lists about 80 duplicated concepts. They fall into recurring themes: organizations, people, phones, named locations, time zones, business hours, holidays, skills, teams, money, document numbers, webhooks, durable work queues, retention, file storage, CSV, secrets, audit stamping and recipe/deployment plumbing. Several of those copies have already drifted into live defects (section 1). Dependencies also run the wrong way in places: `.Core` libraries reference module projects, channel and carrier modules reference Contact Center's implementation, and the platform `Abstractions` and `Recipes` projects know their consumers (section 4). Many editors are plain controller forms, so other modules cannot extend them through drivers, and that is why some modules copied a concept instead of extending it (section 5).
+
+## 0. Implementation status (November 2026)
+
+The plan below was carried out on branch `claude/modular-reusability-audit-ab2aa5`. This section records what is done and what is left. The tables after it keep the original findings so the reasoning stays visible.
+
+### Guardrails (phase 0)
+
+| Guard | Test | State |
+| --- | --- | --- |
+| `.Core`/`.Abstractions` reference no module; module code uses no type from another module assembly | `LayeringRatchetTests` (compiled assemblies, every module built for the scan) | Allowlists empty |
+| No new copies of known duplicates (`EscapeCsv`, `new BlobFileStore(`, serializer copies, `GetTimeZones()` pickers, `DateTime.UtcNow`, `ConvertTimeToUtc`, private `FixedTimeEquals`, blocking `GetResult()`) | `DuplicatePatternRatchetTests` | `DateTime` and serializer lists empty; the rest only shrink |
+| Feature ids as constants | `FeatureIdLiteralRatchetTests` (`OrchardCoreFeatureIds` for Orchard ids) | 47 literals left, listed in the test |
+| No silent empty `catch` | `EmptyCatchRatchetTests` | None left |
+| Time-zone pickers and user lists | `TimeZonePickerArchitectureTests`, `UserListLoadArchitectureTests` | Pass |
+
+### Defects (section 1)
+
+All 23 are fixed, each with regression tests. Partly done items say what is left.
+
+| # | Fix |
+| --- | --- |
+| 1 | Stable Stripe idempotency key from vendor, order and earnings; payout provider chosen by name |
+| 2 | `IRoleGrantService` keeps a role while any source still grants it (Subscriptions, Memberships) |
+| 3 | B2B tax profile handler feeds the account's tax id |
+| 4 | User search behind `SearchUsers`; one `IUserSearchService` for the pickers |
+| 5 | Business Hours building block answers `IServiceHoursProvider`; SLA editor has an hours-calendar picker |
+| 6 | Skill readers merge a worker and its user (`ISkillSubjectLinkProvider`); subject kinds are open strings. Left: Contact Center routing still reads its `SkillProficiencies` mirror |
+| 7 | Twilio and Event Grid SMS go through the durable provider inbox |
+| 8 | STOP from an unknown number is recorded (`ContactAddressOptOut`, read through `IConsentService`) |
+| 9 | One keyword policy for both paths |
+| 10 | Serializer copies deleted |
+| 11 | `ODataFilter` escapes filter values in the three forks |
+| 12 | `CsvWriter`/`CsvReader` with a formula guard everywhere |
+| 13 | `CurrencyScale` is the only precision table, including Products |
+| 14 | Scheduling and Calendars share `CalendarLockKeys` and the calendar conflict check |
+| 15 | Records authorized by id |
+| 16 | `INumberSequence` for orders, returns, purchase orders, visits, work orders and agreements; `ReadableCodes`. Left: the financial document generator keeps its own store |
+| 17 | One outbound Webhooks building block behind `EgressNetwork`, with retention |
+| 18 | `CalendarTime` everywhere a local time becomes UTC |
+| 19 | `IPersonalDataService` with contributors in every module the audit named. Left: Contact Center's data-governance catalog is not unified |
+| 20 | Shift reminders logged before sending, under a lock |
+| 21 | Grants read the purchased version (`OrderLineGrantHandlerBase`, `GetPurchasedAsync`) |
+| 22 | Payment issues list for money failures; migration skips kept and shown to administrators |
+| 23 | Request paths count and page in SQL. Left: a few small settings lists still page in memory |
+
+### Building blocks (section 3)
+
+| Block | State |
+| --- | --- |
+| P1 tabular files, P6 number sequence, P7 secret fields, P11 transition tables, P12 balance ledger, P14 catalog admin controller, P15 `LockAllAsync` | Done |
+| P2 tenant file store | Done; the five `.Azure` modules are thin features over `AddTenantFileStore` with unchanged feature ids and settings |
+| P3 outbound webhooks, P4 provider inbox | Done (`Webhooks.Abstractions`/`.Core`); AI and Commerce are event providers |
+| P5 leased work queue | Done; the Contact Center outbox and the provider inbox run on it. Left: `ProviderCommand`, recording ingest, Messaging outbound state |
+| P8 setup guide | Not started |
+| P9 search index schema | Partly: one embedding index-profile base. Left: the search service forks wait for client-factory overloads in CrestApps.Core |
+| P10 connections | Partly: AI external data sources can use a `DataConnection`. Left: FTP/SFTP and carriers |
+| P13 retention | Done for the platform runner and several purges. Left: a few ad hoc purges |
+| D1 parties, D2 contact info, D4 named addresses and store profile, D5 team membership, D6 business hours, D7 time windows, D8 consent, D9 outreach, D10 money, D11 order-line grants, D12 role grants, D13 balance tenders, D14 commerce e-mails, D15 personal data, D16 open skill subjects, D19 ContentFields.Abstractions | Done, with the gaps the catalog notes |
+| D20 Commerce.Abstractions | Partly: commerce e-mails, store profile and commerce webhooks moved out. Left: `IStoreSetupStep` and `CustomerAdminPageAttribute` in the platform Abstractions, `CommerceReportDataSets` in Reports.Abstractions |
+| D18 Contact Center distribution contracts | Partly: Messaging.Sms and the SMS inbox no longer use `ContactCenter.Core`. Left: Omnichannel.Messaging, Messaging.Core and Telnyx still read stored Contact Center records |
+| D3 contacts abstraction, D17 recording ingest and call control | Not started |
+
+### Phases 2 to 5
+
+- **Phase 2 (platform DRY):** done. Catalog recipe steps, deployment sources, audit stamping, store timestamps, small helpers and AI clones are on shared bases. Left: one shared `escapeHtml` script helper.
+- **Phase 3 (re-layering):** done; the layering ratchet allowlists are empty. AI tools in Calendars, Scheduling, Workforce and Seo use the CrestApps.Core.AI package; AI recipe schemas live in the AI modules. Left: `Omnichannel.Core` still references `AI.Core`.
+- **Phase 4 (building blocks):** see the table above.
+- **Phase 5 (larger refactors):** item 7 (driver-based editors) done for workers, work orders, assets, scheduling resources and appointment types, and visits take panels; item 9 (analytics on Reports) done for AI chat, usage, QA and Time Tracker; item 3 (outreach) done. Left: Customer linked to Account and Vendor as an Account (2), Messaging routing on the Contact Center pipeline (4), the Telnyx split (5), Subscriptions through Orders (8), and god-class splits (11). Items 4 and 5 change live call and message routing and need live-call testing.
+- **Quality sweep:** `DateTime.UtcNow` gone outside tests, one blocking call left (documented), 22 classes sealed or made static or abstract, every module has a README, missing recipe and deployment steps added for the records in section 6.
 
 ## 1. Defects and risks found (fix first)
 
