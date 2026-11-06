@@ -23,7 +23,7 @@ public sealed class RecipesSchemaStartup : StartupBase
 /// <summary>
 /// Describes the part of the Calendar dashboard widget to CrestApps Recipes when the admin dashboard is on.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Recipes", "OrchardCore.AdminDashboard")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area, OrchardCoreFeatureIds.AdminDashboard)]
 public sealed class DashboardRecipesSchemaStartup : StartupBase
 {
     /// <inheritdoc />

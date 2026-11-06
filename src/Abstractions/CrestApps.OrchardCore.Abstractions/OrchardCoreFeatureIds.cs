@@ -8,6 +8,8 @@ public static class OrchardCoreFeatureIds
 {
     public const string Admin = "OrchardCore.Admin";
 
+    public const string AdminDashboard = "OrchardCore.AdminDashboard";
+
     public const string AdminMenu = "OrchardCore.AdminMenu";
 
     public const string Alias = "OrchardCore.Alias";
