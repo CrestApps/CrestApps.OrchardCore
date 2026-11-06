@@ -82,6 +82,10 @@
                                                 {
                                                     <user-display-name user-name="@userName" display-type="Report" cache-id="report-user-display-name" />
                                                 }
+                                                else if (ReportValueHtml.TryCreateLink(cell, out var link))
+                                                {
+                                                    @link
+                                                }
                                                 else
                                                 {
                                                     @cell

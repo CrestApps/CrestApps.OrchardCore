@@ -8,6 +8,13 @@
     var sectionWidth = Math.Clamp(reportSection.Width, 1, 12);
     var selection = reportSection.Selection;
     var selectedKeys = selection?.SelectedKeys ?? [];
+
+    // A section with nothing to show says why, in place of an empty table, chart or list.
+    var showEmptyMessage = !string.IsNullOrEmpty(reportSection.EmptyMessage) &&
+        reportSection.Metrics.Count == 0 &&
+        reportSection.Rows.Count == 0 &&
+        reportSection.Bars.Count == 0 &&
+        (reportSection.Chart is null || reportSection.Chart.Labels.Count == 0);
     var chartData = reportSection.Chart is null
         ? null
         : JsonSerializer.Serialize(new
@@ -44,8 +51,12 @@
 {
     <p class="text-muted small">@reportSection.Description</p>
 }
+@if (showEmptyMessage)
+{
+    <p class="text-muted mb-0">@reportSection.EmptyMessage</p>
+}
 
-@switch (reportSection.Kind)
+@switch (showEmptyMessage ? (ReportSectionKind?)null : reportSection.Kind)
 {
     case ReportSectionKind.Metrics:
         <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xxl-5 g-3">
@@ -54,7 +65,14 @@
                 <div class="col">
                     <div class="card h-100 border-0 shadow-sm text-bg-theme">
                         <div class="card-body">
-                            <div class="text-muted small text-uppercase">@metric.Label</div>
+                            <div class="text-muted small text-uppercase">
+                                @metric.Label
+                                @if (!string.IsNullOrEmpty(metric.Description))
+                                {
+                                    <i class="fa-solid fa-circle-info ms-1" title="@metric.Description" data-bs-toggle="tooltip" aria-hidden="true"></i>
+                                    <span class="visually-hidden">@metric.Description</span>
+                                }
+                            </div>
                             <div class="display-6 fw-semibold">@metric.Value</div>
                             @if (!string.IsNullOrEmpty(metric.Hint))
                             {
@@ -121,6 +139,10 @@
                                         @if (ReportValue.TryGetUserName(cell, out var userName))
                                         {
                                             <user-display-name user-name="@userName" display-type="Report" cache-id="report-user-display-name" />
+                                        }
+                                        else if (ReportValueHtml.TryCreateLink(cell, out var link))
+                                        {
+                                            @link
                                         }
                                         else
                                         {

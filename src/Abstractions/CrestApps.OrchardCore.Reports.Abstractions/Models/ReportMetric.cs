@@ -39,4 +39,22 @@ public sealed class ReportMetric
     /// Gets or sets an optional secondary hint shown under the value.
     /// </summary>
     public string Hint { get; set; }
+
+    /// <summary>
+    /// Gets or sets an optional explanation of what the metric measures, shown as a tooltip on an information icon
+    /// beside the label in the browser. Exports leave it out.
+    /// </summary>
+    public string Description { get; set; }
+
+    /// <summary>
+    /// Sets the explanation of what the metric measures.
+    /// </summary>
+    /// <param name="description">The explanation, shown as a tooltip beside the label.</param>
+    /// <returns>The metric.</returns>
+    public ReportMetric WithDescription(string description)
+    {
+        Description = description;
+
+        return this;
+    }
 }
