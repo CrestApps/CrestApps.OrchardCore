@@ -36,7 +36,7 @@ and how each figure is measured.
 
 | Filter | Applies to | What it does |
 | --- | --- | --- |
-| **Date range** | All | The dates to report on, picked from presets such as Today or Last 30 Days, or set as a custom range, in the site's time zone. Completions are matched on when they were recorded; voice calls on when their summary was written, which is when the assistant's part of the call ended. |
+| **Date range** | All Time | The dates to report on, picked from presets such as Today or Last 30 Days, or set as a custom range, in the site's time zone. The report starts on **All Time**, as the old page did, and takes a single bound as "on or after" or "on or before". Completions are matched on when they were recorded; voice calls on when their summary was written, which is when the assistant's part of the call ended. |
 | **AI profile** | All | Limits the report to one chat profile. Metered requests that belong to no profile, such as indexing, are left out while a profile is chosen. |
 | **Group metered usage by** | Metered usage | **Model**, **Model and category** or **Model and purpose**. |
 | **Group audio usage by** | Audio usage | **Model**, **Model and voice** or **Model and language**. |

@@ -12,7 +12,7 @@ The AI reports answer the questions a manager asks about an assistant: How many 
 | | |
 | --- | --- |
 | **Menu** | Reports > Artificial Intelligence Reports |
-| **Permission** | View AI Chat Analytics, to see and export the reports |
+| **Permission** | View AI Chat Analytics, to see the reports; Export AI Chat Analytics as well, to export Session Analytics, Extracted Data and Conversion Goals |
 | **Feature** | AI Chat Session Analytics, AI Usage Analytics |
 
 <AskYourAdmin />
@@ -46,10 +46,12 @@ A chat counts as finished when it ends naturally or when nobody writes for the p
 <YouTube video="ai-chat-analytics" title="Video of the AI Chat Session Analytics report" start={95} end={177} />
 
 1. Open **Reports > Artificial Intelligence Reports > AI Chat Session Analytics**.
-2. Choose a **Date range**, such as **Last 30 Days** or dates of your own, and optionally one profile (or **Any profile**).
+2. Choose a **Date range**, such as **Last 30 Days** or dates of your own, and optionally one profile (or **Any profile**). The report starts on **All Time**, every chat; **On or after** and **On or before** leave the other end open.
 3. Click **Show**.
 
-To download the report with a row for each chat behind it, click **Export** (CSV, or Excel when **Reports (OpenXml)** is on).
+Point at the **i** beside a figure to read what it measures. A section with no data says how to start collecting it, for example to turn on resolution detection.
+
+To download a row for each chat, click **Export** (CSV, or Excel when **Reports (OpenXml)** is on). It needs the **Export AI Chat Analytics** permission; without it the button is hidden. The file is one table with the columns `SessionId`, `ProfileId`, `VisitorId`, `UserId`, `IsAuthenticated`, `SessionStartedUtc`, `SessionEndedUtc`, `MessageCount`, `HandleTimeSeconds` and `IsResolved`, the same as the old **Export as CSV**, so scripts that read it keep working.
 
 ### Conversation & Usage
 
@@ -109,8 +111,8 @@ Lists the details an assistant collected with data extraction, such as names, em
 
 1. Open **Reports > Artificial Intelligence Reports > AI Chat Extracted Data**.
 2. Pick the **AI Profile** (required), and optionally a **Date range**.
-3. Click **Show**. The table has **Session started (UTC)**, **Session** and one column per extracted detail.
-4. Click **Export** to download it, for example to import leads into another system.
+3. Click **Show**. The table has **Session started (UTC)**, **Session** and one column per extracted detail. The report starts on **All Time**.
+4. Click **Export** to download it, for example to import leads into another system. It needs the **Export AI Chat Analytics** permission. The file has the columns `SessionStartedUtc`, `SessionId` and one per extracted detail.
 
 ## AI Chat Conversion Goals
 
@@ -120,8 +122,8 @@ Shows how each finished chat scored against the profile's conversion goals.
 
 1. Open **Reports > Artificial Intelligence Reports > AI Chat Conversion Goals**.
 2. Pick the **AI Profile** (required), and optionally a **Date range**.
-3. Click **Show**. The table has **Session started (UTC)**, **Session**, **Total points** and one column per goal.
-4. Click **Export** to download it.
+3. Click **Show**. The table has **Session started (UTC)**, **Session**, **Total points** and one column per goal. The report starts on **All Time**.
+4. Click **Export** to download it. It needs the **Export AI Chat Analytics** permission. The file has the columns `SessionStartedUtc`, `SessionId`, `TotalPoints` and one per goal.
 
 ## AI Usage Analytics
 
@@ -134,7 +136,7 @@ Shows what AI used across the whole site: every request sent to an AI service, t
 <YouTube video="ai-usage-analytics" title="Video of running the AI Usage Analytics report" start={92} end={188} />
 
 1. Open **Reports > Billing & Usage > AI Usage Analytics**. It needs the **AI Usage Analytics** feature, not **AI Chat Session Analytics**.
-2. Choose a **Date range**, and optionally an **AI profile**.
+2. Choose a **Date range**, and optionally an **AI profile**. The report starts on **All Time**.
 3. Choose how to group the figures:
    - **Group metered usage by**: **Model**, **Model and category** (which feature made the request: chat, SMS, voice calls, the API, workflows) or **Model and purpose** (why: answering, searching, indexing documents, transcribing, and so on).
    - **Group audio usage by**: **Model**, **Model and voice** or **Model and language**.

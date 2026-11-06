@@ -35,7 +35,7 @@ Running and reading the reports is described in the User Manual under [Analytics
 
 ## Analytics Report
 
-The **AI Chat Session Analytics** report (`AIChatSessionAnalyticsReport`) gives a view of your AI chat performance in sections: the overview, sessions by time of day and by day of week (in the site's time zone), who chats, performance, resolution and conversion, and feedback. It is filtered by the Reports date range (today at first; relative ranges such as *Last 30 Days*, or custom dates), which applies to the session start, and an optional AI profile. The extracted data and conversion goals reports need an AI profile, since each profile extracts its own fields and has its own goals. The User Manual page [Analytics](../user-manual/ai/analytics.md#ai-chat-session-analytics) walks through the report with a screencast.
+The **AI Chat Session Analytics** report (`AIChatSessionAnalyticsReport`) gives a view of your AI chat performance in sections: the overview, sessions by time of day and by day of week (in the site's time zone), who chats, performance, resolution and conversion, and feedback. It is filtered by the Reports date range, which applies to the session start, and an optional AI profile. The three reports start on **All Time**, every session, as the old pages did (`DefaultDateRange => ReportDefaultDateRange.AllTime`), and take a single bound as "on or after" or "on or before"; relative ranges such as *Last 30 Days*, or custom dates, are a click away. Each section says what it measures, each figure has a tooltip, and a section with no data says how to start collecting it, such as turning on resolution detection. The performance section shows the average total, input and output tokens per session. The extracted data and conversion goals reports need an AI profile, since each profile extracts its own fields and has its own goals. The User Manual page [Analytics](../user-manual/ai/analytics.md#ai-chat-session-analytics) walks through the report with a screencast.
 
 ---
 
@@ -160,7 +160,13 @@ When session metrics are enabled, thumbs up (👍) and thumbs down (👎) button
 
 ## Export
 
-Every report exports through the Reports export formats: CSV, and Excel when **Reports (OpenXml)** is enabled. The export of **AI Chat Session Analytics** adds a **Sessions** table with a row per session.
+Every report exports through the Reports export formats: CSV, and Excel when **Reports (OpenXml)** is enabled. An export of these three reports is one flat table, the only section of the document in `ReportRunMode.Export`, with the invariant column names of the old pages' CSV, so scripts that parse it keep working:
+
+- **AI Chat Session Analytics**: a row per session, with the columns below.
+- **AI Chat Conversion Goals**: `SessionStartedUtc`, `SessionId`, `TotalPoints`, then a column per goal, named after it.
+- **AI Chat Extracted Data**: `SessionStartedUtc`, `SessionId`, then a column per extracted field, named after it.
+
+The CSV starts with a UTF-8 byte order mark, as every report CSV does, and guards values that start like a formula.
 
 ### Session Fields
 
@@ -181,8 +187,8 @@ Every report exports through the Reports export formats: CSV, and Excel when **R
 
 | Permission | Description |
 | --- | --- |
-| **View Chat Analytics** | Run and export the AI chat reports. |
-| **Export Chat Analytics** | Kept for existing roles. The reports export with **View Chat Analytics**, since the Reports framework authorizes a report's page and its exports with one permission. |
+| **View Chat Analytics** | Run the AI chat reports and the AI usage report, and export the AI usage report. |
+| **Export Chat Analytics** | Export **AI Chat Session Analytics**, **AI Chat Conversion Goals** and **AI Chat Extracted Data**, with **View Chat Analytics**: their `ExportPermission`. Without it the export buttons are hidden, the export is refused, and a report subscription can't attach their file. |
 
 ---
 
