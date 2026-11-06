@@ -39,4 +39,6 @@ internal sealed class DateRangePickerViewModel
     public int WeekStart { get; set; }
 
     public bool HasInitialValue { get; set; }
+
+    public bool AllowAllTime { get; set; }
 }

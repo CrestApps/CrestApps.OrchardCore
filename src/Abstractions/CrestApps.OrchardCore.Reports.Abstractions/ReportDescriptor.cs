@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
@@ -71,6 +72,18 @@ public sealed class ReportDescriptor
     public Permission Permission { get; }
 
     /// <summary>
+    /// Gets the permission required, beside <see cref="Permission"/>, to export the report, or
+    /// <see langword="null"/> when <see cref="Permission"/> is enough.
+    /// </summary>
+    public Permission ExportPermission { get; init; }
+
+    /// <summary>
+    /// Gets the date range the report starts on before a person picks one, or <see langword="null"/> for today. A
+    /// report that declares one also accepts open-ended ranges.
+    /// </summary>
+    public ReportDefaultDateRange DefaultDateRange { get; init; }
+
+    /// <summary>
     /// Gets the class that runs the report.
     /// </summary>
     public Type Type { get; }
@@ -95,7 +108,11 @@ public sealed class ReportDescriptor
             TReport.Category,
             TReport.Permission,
             typeof(TReport),
-            static services => services.GetRequiredService<TReport>());
+            static services => services.GetRequiredService<TReport>())
+        {
+            ExportPermission = TReport.ExportPermission,
+            DefaultDateRange = TReport.DefaultDateRange,
+        };
     }
 }
 

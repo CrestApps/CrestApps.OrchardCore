@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Reports.Models;
+using CrestApps.OrchardCore.Reports.Services;
 using CrestApps.OrchardCore.Reports.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -12,22 +13,31 @@ namespace CrestApps.OrchardCore.Reports.Drivers;
 /// resolved period is stored in the report filter property bag like any other filter, so a report that
 /// does not need a date range can be built without one.
 /// </summary>
+/// <remarks>
+/// A report that declares a <see cref="ReportDescriptor.DefaultDateRange"/> starts on it, accepts open-ended ranges
+/// ("on or after", "on or before") as they were picked, and offers <em>All Time</em>, which sets neither bound. A
+/// report that declares none starts on today, and an empty bound is filled with today's.
+/// </remarks>
 public sealed class ReportDateRangeFilterDisplayDriver : DisplayDriver<ReportFilter>
 {
     private readonly IClock _clock;
     private readonly ILocalClock _localClock;
+    private readonly IReportManager _reportManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReportDateRangeFilterDisplayDriver"/> class.
     /// </summary>
     /// <param name="clock">The clock used to compute the default reporting period.</param>
     /// <param name="localClock">The tenant local clock.</param>
+    /// <param name="reportManager">The report manager, which describes the default range of each report.</param>
     public ReportDateRangeFilterDisplayDriver(
         IClock clock,
-        ILocalClock localClock)
+        ILocalClock localClock,
+        IReportManager reportManager)
     {
         _clock = clock;
         _localClock = localClock;
+        _reportManager = reportManager;
     }
 
     /// <inheritdoc/>
@@ -44,6 +54,7 @@ public sealed class ReportDateRangeFilterDisplayDriver : DisplayDriver<ReportFil
                 ? (await _localClock.ConvertToLocalAsync(range.ToUtc.Value)).DateTime
                 : null;
             model.Range = range.Key;
+            model.AllowAllTime = GetDefaultRange(filter.ReportName) is not null;
         }).Location("Content:1");
     }
 
@@ -67,35 +78,69 @@ public sealed class ReportDateRangeFilterDisplayDriver : DisplayDriver<ReportFil
             ? await _localClock.ConvertToUtcAsync(toLocal.Value)
             : (DateTime?)null;
 
-        var range = await NormalizeAsync(fromUtc, toUtc, model.Range);
+        var range = await NormalizeAsync(filter.ReportName, fromUtc, toUtc, model.Range);
 
         filter.SetDateRange(range);
 
         return Edit(filter, context);
     }
 
-    private async Task<ReportDateRange> NormalizeAsync(DateTime? fromUtc, DateTime? toUtc, string key)
+    /// <summary>
+    /// Resolves the range a report runs on from the bounds that were picked.
+    /// </summary>
+    /// <param name="reportName">The technical name of the report.</param>
+    /// <param name="fromUtc">The lower bound that was picked, in UTC, or <see langword="null"/>.</param>
+    /// <param name="toUtc">The upper bound that was picked, in UTC, or <see langword="null"/>.</param>
+    /// <param name="key">The key of the date range choice that was picked.</param>
+    /// <returns>The range the report runs on.</returns>
+    internal async Task<ReportDateRange> NormalizeAsync(string reportName, DateTime? fromUtc, DateTime? toUtc, string key)
     {
-        var localNow = await _localClock.ConvertToLocalAsync(_clock.UtcNow);
-        var localDate = localNow.Date;
-        var defaultFromLocal = DateTime.SpecifyKind(localDate, DateTimeKind.Unspecified);
-        var defaultToLocal = DateTime.SpecifyKind(localDate.AddDays(1).AddTicks(-1), DateTimeKind.Unspecified);
-        var defaultFromUtc = await _localClock.ConvertToUtcAsync(defaultFromLocal);
-        var defaultToUtc = await _localClock.ConvertToUtcAsync(defaultToLocal);
-        var to = toUtc ?? defaultToUtc;
-        var from = fromUtc ?? defaultFromUtc;
+        var defaultRange = GetDefaultRange(reportName);
 
-        if (from > to)
+        if (defaultRange is null)
         {
-            (from, to) = (to, from);
+            // A report that declares no default starts on today, and runs on a full range.
+            var (todayFromUtc, todayToUtc) = await ResolveUtcAsync(ReportDefaultDateRange.Today);
+
+            fromUtc ??= todayFromUtc;
+            toUtc ??= todayToUtc;
+        }
+        else if (string.Equals(key, ReportDefaultDateRange.AllTimeKey, StringComparison.Ordinal))
+        {
+            fromUtc = null;
+            toUtc = null;
+        }
+        else if (fromUtc is null && toUtc is null)
+        {
+            (fromUtc, toUtc) = await ResolveUtcAsync(defaultRange);
+            key = defaultRange.Key;
+        }
+
+        // A single bound is "on or after" or "on or before", so only a full range can be inverted.
+        if (fromUtc.HasValue && toUtc.HasValue && fromUtc > toUtc)
+        {
+            (fromUtc, toUtc) = (toUtc, fromUtc);
         }
 
         return new ReportDateRange
         {
-            FromUtc = DateTime.SpecifyKind(from, DateTimeKind.Utc),
-            ToUtc = DateTime.SpecifyKind(to, DateTimeKind.Utc),
+            FromUtc = fromUtc.HasValue ? DateTime.SpecifyKind(fromUtc.Value, DateTimeKind.Utc) : null,
+            ToUtc = toUtc.HasValue ? DateTime.SpecifyKind(toUtc.Value, DateTimeKind.Utc) : null,
             Key = key,
         };
+    }
+
+    private ReportDefaultDateRange GetDefaultRange(string reportName)
+        => _reportManager.GetDescriptor(reportName)?.DefaultDateRange;
+
+    private async Task<(DateTime? FromUtc, DateTime? ToUtc)> ResolveUtcAsync(ReportDefaultDateRange range)
+    {
+        var localNow = (await _localClock.ConvertToLocalAsync(_clock.UtcNow)).DateTime;
+        var (fromLocal, toLocal) = range.Resolve(localNow);
+
+        return (
+            fromLocal.HasValue ? await _localClock.ConvertToUtcAsync(DateTime.SpecifyKind(fromLocal.Value, DateTimeKind.Unspecified)) : null,
+            toLocal.HasValue ? await _localClock.ConvertToUtcAsync(DateTime.SpecifyKind(toLocal.Value, DateTimeKind.Unspecified)) : null);
     }
 
     private static DateTime NormalizeUpperBound(DateTime value)
