@@ -31,6 +31,41 @@ public sealed class CommerceContactInfoTests
     public void APhone_IsKeptInE164_WhenItParses_AndAsTypedWhenItDoesnt(string typed, string region, string expected)
         => Assert.Equal(expected, PhoneNumberNormalization.ToE164OrTrimmed(typed, _phoneNumbers, region));
 
+    [Theory]
+    [InlineData("(702) 499-3350 x12", "US")]
+    [InlineData("+1 702-499-3350 ext. 12", null)]
+    [InlineData("+1 702 499 3350 #12", null)]
+    [InlineData("702-499-3350, ext 12", "US")]
+    [InlineData("+1 702 499 3350;ext=12", null)]
+    [InlineData("702 499 3350 / 702 499 3351", "US")]
+    [InlineData("011 44 20 7946 0958", "US")]
+    public void APhone_IsKeptAsTyped_WhenNormalizingWouldLoseAnExtensionOrOtherDigits(string typed, string region)
+        => Assert.Equal(typed, PhoneNumberNormalization.ToE164OrTrimmed(typed, _phoneNumbers, region));
+
+    [Theory]
+    [InlineData("020 7946 0958", "GB", "+442079460958")]
+    [InlineData("00 44 20 7946 0958", "GB", "+442079460958")]
+    [InlineData("06 1234 5678", "IT", "+390612345678")]
+    public void APhone_WithATrunkOrInternationalPrefix_IsStillNormalized(string typed, string region, string expected)
+        => Assert.Equal(expected, PhoneNumberNormalization.ToE164OrTrimmed(typed, _phoneNumbers, region));
+
+    [Fact]
+    public async Task ACustomersPhone_WithAnExtension_IsSavedAsTyped()
+    {
+        var store = new CustomerStore(Mock.Of<ISession>(), [], [_phoneNumbers]);
+        var customer = new Customer
+        {
+            ItemId = "c1",
+            Phone = "(702) 499-3350 x12",
+            Addresses = [new CustomerAddress { AddressId = "a1", Address = new Address { Country = "US" } }],
+            DefaultBillingAddressId = "a1",
+        };
+
+        await store.CreateAsync(customer, TestContext.Current.CancellationToken);
+
+        Assert.Equal("(702) 499-3350 x12", customer.Phone);
+    }
+
     [Fact]
     public void WithoutThePhoneNumbersFeature_APhoneIsOnlyTrimmed()
         => Assert.Equal("(702) 499-3350", PhoneNumberNormalization.ToE164OrTrimmed(" (702) 499-3350 ", phoneNumberService: null, "US"));
