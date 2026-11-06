@@ -1,0 +1,52 @@
+@model CalendarWidgetViewModel
+
+@* Calendars on the admin dashboard. A dashboard can hold several of these; calendar-widget.js draws each one. The
+   dashboard's card has no padding of its own, so the widget sets it. *@
+
+<div class="p-3">
+    @if (!Model.CanView)
+    {
+        <p class="text-muted mb-0">@T["You can't view calendars."]</p>
+    }
+    else if (!Model.IsConfigured)
+    {
+        <p class="text-muted mb-0">@T["Choose the calendars this widget shows by editing it."]</p>
+    }
+    else if (Model.Calendars.Count == 0)
+    {
+        <p class="text-muted mb-0">@T["There are no calendars here you can view."]</p>
+    }
+    else
+    {
+        <style asp-name="CrestApps.OrchardCore.Calendars.View"></style>
+        <script asp-name="fullcalendar-locales" at="Foot"></script>
+        <script asp-name="CrestApps.OrchardCore.Calendars.Widget" at="Foot"></script>
+
+        <div class="calendar-widget"
+             data-calendar-widget
+             data-config="@Model.ConfigurationJson"
+             data-today-text="@T["Today"]"
+             data-day-text="@T["Day"]"
+             data-week-text="@T["Week"]"
+             data-month-text="@T["Month"]"
+             data-agenda-text="@T["Agenda"]"
+             data-busy-text="@T["Busy"]"
+             data-empty-text="@T["No events."]">
+            <div data-calendar></div>
+        </div>
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2 small">
+            <span class="d-flex flex-wrap gap-2">
+                @foreach (var calendar in Model.Calendars.Take(6))
+                {
+                    <span class="text-nowrap" title="@calendar.TypeName"><span class="calendar-swatch me-1" style="background-color: @calendar.Color"></span>@calendar.Name</span>
+                }
+                @if (Model.Calendars.Count > 6)
+                {
+                    <span class="text-muted">@T["and {0} more", Model.Calendars.Count - 6]</span>
+                }
+            </span>
+            <a asp-route="CalendarView" asp-route-view="@Model.PageView" asp-route-calendars="@string.Join(',', Model.Calendars.Select(calendar => calendar.Id))">@T["Open the calendar"]</a>
+        </div>
+    }
+</div>

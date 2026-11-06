@@ -19,3 +19,16 @@ public sealed class RecipesSchemaStartup : StartupBase
         services.AddDeploymentStepSchema<CalendarsDeploymentStepSchema>();
     }
 }
+
+/// <summary>
+/// Describes the part of the Calendar dashboard widget to CrestApps Recipes when the admin dashboard is on.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.Recipes", "OrchardCore.AdminDashboard")]
+public sealed class DashboardRecipesSchemaStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentSchemaDefinition, CalendarWidgetPartSchemaDefinition>();
+    }
+}
