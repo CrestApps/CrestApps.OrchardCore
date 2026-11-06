@@ -1,3 +1,5 @@
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Telephony")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
 namespace CrestApps.OrchardCore.Telephony.Core.Indexes
 {
     public sealed class TelephonyExtensionIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
@@ -162,6 +164,14 @@ namespace CrestApps.OrchardCore.Telephony.Core.Services
 }
 namespace CrestApps.OrchardCore.Telephony.Services
 {
+    public sealed class LocalEncryptedRecordingMediaStore : CrestApps.OrchardCore.Telephony.IRecordingMediaStore, CrestApps.OrchardCore.Telephony.ISupportsTenantMediaPurge
+    {
+        public LocalEncryptedRecordingMediaStore(OrchardCore.FileStorage.IFileStore fileStore, Microsoft.AspNetCore.DataProtection.IDataProtectionProvider dataProtectionProvider) { }
+        public System.Threading.Tasks.Task<bool> DeleteAsync(string storageReference, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.IO.Stream> OpenReadAsync(string storageReference, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<string> StoreAsync(CrestApps.OrchardCore.Telephony.Models.RecordingMediaWriteRequest request, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> TryPurgeAllAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class VoiceAgentMediaProviderResolver : CrestApps.OrchardCore.Telephony.Services.IVoiceAgentMediaProviderResolver
     {
         public VoiceAgentMediaProviderResolver(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Telephony.Services.IVoiceAgentMediaProvider> providers) { }

@@ -447,14 +447,6 @@ namespace CrestApps.OrchardCore.Telephony.Services
         System.Threading.Tasks.Task PersistCurrentUserAsync(System.Func<OrchardCore.Users.IUser, bool> mutate);
         System.Threading.Tasks.Task<OrchardCore.Users.IUser> ReloadCurrentUserAsync();
     }
-    public sealed class LocalEncryptedRecordingMediaStore : CrestApps.OrchardCore.Telephony.IRecordingMediaStore, CrestApps.OrchardCore.Telephony.ISupportsTenantMediaPurge
-    {
-        public LocalEncryptedRecordingMediaStore(OrchardCore.FileStorage.IFileStore fileStore, Microsoft.AspNetCore.DataProtection.IDataProtectionProvider dataProtectionProvider) { }
-        public System.Threading.Tasks.Task<bool> DeleteAsync(string storageReference, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.IO.Stream> OpenReadAsync(string storageReference, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<string> StoreAsync(CrestApps.OrchardCore.Telephony.Models.RecordingMediaWriteRequest request, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<bool> TryPurgeAllAsync(System.Threading.CancellationToken cancellationToken = default) { }
-    }
     public sealed class SoftPhoneClientNotifier : CrestApps.OrchardCore.Telephony.ISoftPhoneClientNotifier
     {
         public SoftPhoneClientNotifier(Microsoft.AspNetCore.SignalR.IHubContext<CrestApps.OrchardCore.Telephony.Hubs.TelephonyHub, CrestApps.OrchardCore.Telephony.ITelephonyClient> hubContext, OrchardCore.Environment.Shell.ShellSettings shellSettings) { }

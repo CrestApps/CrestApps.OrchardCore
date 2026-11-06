@@ -364,15 +364,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Services
         public static string For(string key) { }
         public static string Initials(string name) { }
     }
-    public sealed class LocalEncryptedMessagingAttachmentStore : CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.IMessagingAttachmentStore
-    {
-        public const string FolderName = "MessagingAttachments";
-        public const string ProtectorPurpose = "CrestApps.Omnichannel.Messaging.Attachments";
-        public LocalEncryptedMessagingAttachmentStore(OrchardCore.FileStorage.IFileStore fileStore, Microsoft.AspNetCore.DataProtection.IDataProtectionProvider dataProtectionProvider) { }
-        public System.Threading.Tasks.Task<bool> DeleteAsync(string attachmentId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<byte[]> ReadAsync(string attachmentId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task StoreAsync(string attachmentId, System.ReadOnlyMemory<byte> content, System.Threading.CancellationToken cancellationToken = default) { }
-    }
     public sealed class MessagingAdminMenu : OrchardCore.Navigation.AdminNavigationProvider
     {
         public MessagingAdminMenu(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Messaging.Services.MessagingAdminMenu> stringLocalizer) { }

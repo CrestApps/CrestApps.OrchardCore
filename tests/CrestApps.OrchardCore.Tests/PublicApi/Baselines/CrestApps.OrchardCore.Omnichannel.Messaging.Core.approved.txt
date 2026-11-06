@@ -881,3 +881,15 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.Routing
         public System.Threading.Tasks.Task<string> SelectAgentAsync(string queueId, string excludeAgentId = null, System.Threading.CancellationToken cancellationToken = default) { }
     }
 }
+namespace CrestApps.OrchardCore.Omnichannel.Messaging.Services
+{
+    public sealed class LocalEncryptedMessagingAttachmentStore : CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.IMessagingAttachmentStore
+    {
+        public const string FolderName = "MessagingAttachments";
+        public const string ProtectorPurpose = "CrestApps.Omnichannel.Messaging.Attachments";
+        public LocalEncryptedMessagingAttachmentStore(OrchardCore.FileStorage.IFileStore fileStore, Microsoft.AspNetCore.DataProtection.IDataProtectionProvider dataProtectionProvider) { }
+        public System.Threading.Tasks.Task<bool> DeleteAsync(string attachmentId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<byte[]> ReadAsync(string attachmentId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task StoreAsync(string attachmentId, System.ReadOnlyMemory<byte> content, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+}
