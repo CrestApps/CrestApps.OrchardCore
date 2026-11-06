@@ -57,6 +57,13 @@ public sealed class ReportSubscription : CatalogItem
     public DateTime CreatedUtc { get; set; }
 
     public DateTime? ModifiedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the user name of the person who last saved the subscription. A subscription that attaches the
+    /// export of a report with an export permission sends it only while this person, or the person who created it
+    /// when it was never changed, has that permission.
+    /// </summary>
+    public string ModifiedBy { get; set; }
 }
 
 public enum ReportSubscriptionFrequency

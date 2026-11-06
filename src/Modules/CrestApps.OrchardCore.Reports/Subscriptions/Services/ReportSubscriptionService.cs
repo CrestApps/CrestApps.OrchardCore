@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.AspNetCore.Authorization;
 using CrestApps.OrchardCore.Reports.Designer.Services;
 using CrestApps.OrchardCore.Reports.Designer.Workflows;
 using CrestApps.OrchardCore.Reports.Models;
@@ -27,6 +28,8 @@ public sealed class ReportSubscriptionService
     private readonly ISiteService _siteService;
     private readonly IEmailService _emailService;
     private readonly IClock _clock;
+    private readonly IAuthorizationService _authorizationService;
+    private readonly ReportOwnerPrincipalResolver _owners;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -39,6 +42,8 @@ public sealed class ReportSubscriptionService
         IStringLocalizerFactory localizerFactory,
         ISiteService siteService,
         IClock clock,
+        IAuthorizationService authorizationService,
+        ReportOwnerPrincipalResolver owners,
         ILogger<ReportSubscriptionService> logger,
         IStringLocalizer<ReportSubscriptionService> stringLocalizer,
         IEmailService emailService = null)
@@ -51,6 +56,8 @@ public sealed class ReportSubscriptionService
         _siteService = siteService;
         _emailService = emailService;
         _clock = clock;
+        _authorizationService = authorizationService;
+        _owners = owners;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -134,17 +141,21 @@ public sealed class ReportSubscriptionService
             return S["The report {0} isn't available; its feature may be off.", subscription.ReportName];
         }
 
+        var format = string.IsNullOrWhiteSpace(subscription.AttachmentFormat) ? null : _exports.GetDescriptor(subscription.AttachmentFormat);
+
+        // A report that needs a permission to export is attached only while the person who saved the subscription has it.
+        if (format is not null && descriptor.ExportPermission is not null && !await CanExportAsync(subscription, descriptor))
+        {
+            return S["The file can't be attached, because {0} may not export this report. Choose no file format, or give them the permission to export it.", subscription.ModifiedBy ?? subscription.CreatedBy];
+        }
+
         var (fromUtc, toUtc) = ReportSubscriptionSchedule.GetPeriod(subscription, runUtc, timeZone);
-        var filter = new ReportFilter { ReportName = descriptor.Name };
-
-        filter.SetDateRange(new ReportDateRange { FromUtc = fromUtc, ToUtc = toUtc });
-
-        var hasAttachment = !string.IsNullOrWhiteSpace(subscription.AttachmentFormat);
-        var document = await _reports.GetReport(descriptor.Name).RunAsync(new ReportContext(filter, hasAttachment ? ReportRunMode.Export : ReportRunMode.Display), cancellationToken);
         var title = _localizerFactory.Localize(descriptor.DisplayName).Value;
 
-        document.Title = title;
-        await _displayValues.ResolveAsync(document);
+        // The email shows the report as it looks on screen; an attachment gets the document made for an export, which
+        // can be shaped differently, such as a row per record.
+        var document = await RunAsync(descriptor, fromUtc, toUtc, ReportRunMode.Display, title, cancellationToken);
+        var exportDocument = format is null ? null : await RunAsync(descriptor, fromUtc, toUtc, ReportRunMode.Export, title, cancellationToken);
 
         var fromLocal = TimeZoneInfo.ConvertTimeFromUtc(fromUtc, timeZone);
         var toLocal = TimeZoneInfo.ConvertTimeFromUtc(toUtc, timeZone).AddDays(-1);
@@ -168,9 +179,9 @@ public sealed class ReportSubscriptionService
 
         try
         {
-            if (hasAttachment && _exports.GetDescriptor(subscription.AttachmentFormat) is { } format)
+            if (format is not null)
             {
-                attachment = new MemoryStream(_exports.GetFormat(format.Name).Serialize(document));
+                attachment = new MemoryStream(_exports.GetFormat(format.Name).Serialize(exportDocument));
                 message.Attachments.Add(new MailMessageAttachment
                 {
                     Filename = $"{descriptor.Name}-{fromLocal:yyyyMMdd}-to-{toLocal:yyyyMMdd}{format.Extension}",
@@ -186,5 +197,26 @@ public sealed class ReportSubscriptionService
         {
             attachment?.Dispose();
         }
+    }
+
+    private async Task<ReportDocument> RunAsync(ReportDescriptor descriptor, DateTime fromUtc, DateTime toUtc, ReportRunMode mode, string title, CancellationToken cancellationToken)
+    {
+        var filter = new ReportFilter { ReportName = descriptor.Name };
+
+        filter.SetDateRange(new ReportDateRange { FromUtc = fromUtc, ToUtc = toUtc });
+
+        var document = await _reports.GetReport(descriptor.Name).RunAsync(new ReportContext(filter, mode), cancellationToken);
+
+        document.Title = title;
+        await _displayValues.ResolveAsync(document);
+
+        return document;
+    }
+
+    private async Task<bool> CanExportAsync(ReportSubscription subscription, ReportDescriptor descriptor)
+    {
+        var owner = await _owners.ResolveByUserNameAsync(subscription.ModifiedBy ?? subscription.CreatedBy);
+
+        return owner is not null && await _authorizationService.AuthorizeAsync(owner, descriptor.ExportPermission);
     }
 }

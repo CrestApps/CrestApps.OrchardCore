@@ -1,6 +1,8 @@
+using CrestApps.OrchardCore.Reports.Designer.Services;
 using CrestApps.OrchardCore.Reports.Subscriptions.Models;
 using CrestApps.OrchardCore.Reports.Subscriptions.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
@@ -30,6 +32,9 @@ public sealed class SubscriptionsStartup : StartupBase
             .AddIndexProvider<ReportSubscriptionIndexProvider>();
         services.AddScoped<IReportSubscriptionStore, ReportSubscriptionStore>();
         services.AddScoped<ReportSubscriptionService>();
+
+        // A subscription that attaches an export checks the export permission of the person who saved it.
+        services.TryAddScoped<ReportOwnerPrincipalResolver>();
         services.AddSingleton<IBackgroundTask, ReportSubscriptionsBackgroundTask>();
         services.AddPermissionProvider<ReportSubscriptionPermissionProvider>();
         services.AddNavigationProvider<ReportSubscriptionsAdminMenu>();
