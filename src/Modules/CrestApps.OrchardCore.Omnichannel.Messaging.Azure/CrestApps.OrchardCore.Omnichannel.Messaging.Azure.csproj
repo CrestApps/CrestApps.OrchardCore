@@ -33,4 +33,8 @@
     <ProjectReference Include="../CrestApps.OrchardCore.Omnichannel.Messaging/CrestApps.OrchardCore.Omnichannel.Messaging.csproj" PrivateAssets="none" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.Omnichannel.Messaging.Core/CrestApps.OrchardCore.Omnichannel.Messaging.Core.csproj" />
+  </ItemGroup>
+
 </Project>

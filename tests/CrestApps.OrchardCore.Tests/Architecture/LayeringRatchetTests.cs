@@ -35,12 +35,6 @@ public sealed class LayeringRatchetTests
     /// </summary>
     private static readonly HashSet<string> _knownModuleUses = new(StringComparer.Ordinal)
     {
-        "CrestApps.OrchardCore.AI.Documents.Azure -> CrestApps.OrchardCore.AI.Documents",
-
-        // The local file stores the Azure storage modules fall back to; the tenant file store (audit P2) replaces them.
-        "CrestApps.OrchardCore.DncRegistry.Azure -> CrestApps.OrchardCore.DncRegistry",
-        "CrestApps.OrchardCore.Omnichannel.Messaging.Azure -> CrestApps.OrchardCore.Omnichannel.Messaging",
-        "CrestApps.OrchardCore.Telephony.Azure -> CrestApps.OrchardCore.Telephony",
     };
 
     private static readonly Lazy<List<ModuleUse>> _moduleUses = new(ReadModuleUses);

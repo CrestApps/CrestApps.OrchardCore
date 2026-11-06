@@ -33,4 +33,8 @@
     <ProjectReference Include="../CrestApps.OrchardCore.Telephony/CrestApps.OrchardCore.Telephony.csproj" PrivateAssets="none" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.Telephony.Core/CrestApps.OrchardCore.Telephony.Core.csproj" />
+  </ItemGroup>
+
 </Project>

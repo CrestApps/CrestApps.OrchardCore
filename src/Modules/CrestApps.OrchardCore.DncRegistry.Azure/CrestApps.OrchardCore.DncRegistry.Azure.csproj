@@ -28,4 +28,8 @@
     <ProjectReference Include="../CrestApps.OrchardCore.DncRegistry/CrestApps.OrchardCore.DncRegistry.csproj" PrivateAssets="none" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.DncRegistry.Abstractions/CrestApps.OrchardCore.DncRegistry.Abstractions.csproj" />
+  </ItemGroup>
+
 </Project>
