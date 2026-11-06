@@ -262,6 +262,7 @@ When Assets is on:
 - `IFieldFileStore`: keep the technician app's photos and signatures somewhere other than the media library.
 - `IFieldStockSource`: stock locations for parts used from somewhere other than Inventory.
 - `WorkOrderPanels` (Work Orders): a display driver for it adds a panel to the work order's page; Dispatch adds the visits.
+- `DisplayDriver<ServiceVisit>`: adds a panel to a visit's page (`dispatch/visits/{id}`), which builds `IDisplayManager<ServiceVisit>` with the `Detail` display type and shows the Content zone after the scheduling cards. Return a shape from `Display`, placed in `Content`, and register the driver with `services.AddDisplayDriver<ServiceVisit, TDriver>()`. The visit's own cards and its actions (assign, unschedule, pin, status) stay as they are; a visit has no editor form.
 
 ## Getting started and the sample
 
