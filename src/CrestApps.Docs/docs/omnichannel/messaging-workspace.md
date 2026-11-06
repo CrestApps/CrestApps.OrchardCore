@@ -105,7 +105,7 @@ The SMS channel applies the carrier keywords, whatever the workspace is doing:
 | **START** | UNSTOP, YES | Reverses an opt-out and confirms. It is ignored when the contact is not opted out, so an ordinary "Yes" stays part of the conversation. | *You have been resubscribed and will receive messages again. Reply STOP to unsubscribe.* |
 | **HELP** | INFO | Answers with the help reply. | *Reply STOP to unsubscribe. Message and data rates may apply.* |
 
-A keyword is the whole message: it is trimmed, trailing punctuation (`. ! ? , ; :`) is removed, and the rest is compared without regard to case, as the carriers (CTIA) expect. "STOP" and "stop." are keywords; "STOP please" and "stop by later" are not. SMS automation uses the same policy (`OmnichannelSmsComplianceHelper`), so a text means the same thing on both paths.
+The message is trimmed, trailing punctuation (`. ! ? , ; :`) is removed, and the rest is compared without regard to case. An opt-out errs on the side of the person texting: a message opts out when it is an opt-out keyword or its first word is one, so "STOP", "stop." and "STOP please" all opt out, while "stopping by" and "please stop" do not. HELP and START must be the whole message, so "help me find my order" is an ordinary reply. SMS automation uses the same policy (`OmnichannelSmsComplianceHelper`), so a text means the same thing on both paths.
 
 A keyword silences the entry point's auto-reply for that message. Replies can be customised under the `CrestApps:Omnichannel:Messaging:Sms:KeywordReplies` configuration section (`StopMessage`, `HelpMessage`, `StartMessage`).
 

@@ -7,10 +7,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
 /// </summary>
 /// <remarks>
 /// <para>
-/// A keyword is the whole message. The message is trimmed, trailing punctuation (<c>. ! ? , ; :</c>) is removed, and
-/// the rest is compared with each keyword without regard to case. This follows carrier (CTIA) practice for the
-/// standard keywords. Matching a keyword as a prefix opted people out of a service they were in the middle of asking
-/// about ("stop by the shop later", "cancel my appointment"), so a keyword inside a longer message is not one.
+/// The message is trimmed, trailing punctuation (<c>. ! ? , ; :</c>) is removed, and the rest is compared with each
+/// keyword without regard to case. An opt-out is the safe side of a doubt, so a message opts out when it is an opt-out
+/// keyword or starts with one followed by a space or punctuation: "STOP", "stop." and "STOP please" all opt out, while
+/// "stopping by" and "please stop" do not. A request for help and an opt-in must be the whole message, so "help me
+/// find my order" or "start of the month" is an ordinary reply.
 /// </para>
 /// <para>
 /// The standard opt-out keywords (<see cref="DefaultOptOutKeywords"/>) always opt out. Keywords a tenant configures
@@ -87,8 +88,8 @@ public static class OmnichannelSmsComplianceHelper
     }
 
     /// <summary>
-    /// Determines whether an inbound SMS message is an opt-out request: the whole message is one of the standard
-    /// opt-out keywords or one of the configured keywords.
+    /// Determines whether an inbound SMS message is an opt-out request: the message is, or starts with, one of the
+    /// standard opt-out keywords or one of the configured keywords, followed by a space or punctuation.
     /// </summary>
     /// <param name="message">The inbound message body.</param>
     /// <param name="keywords">The keywords a tenant configured in addition to the standard ones, if any.</param>
@@ -101,8 +102,8 @@ public static class OmnichannelSmsComplianceHelper
             return false;
         }
 
-        return Matches(normalized, DefaultOptOutKeywords) ||
-            (keywords is not null && Matches(normalized, NormalizeOptOutKeywords(keywords)));
+        return StartsWithKeyword(normalized, DefaultOptOutKeywords) ||
+            (keywords is not null && StartsWithKeyword(normalized, NormalizeOptOutKeywords(keywords)));
     }
 
     /// <summary>
@@ -145,4 +146,11 @@ public static class OmnichannelSmsComplianceHelper
 
     private static bool Matches(string normalized, IEnumerable<string> keywords)
         => keywords.Any(keyword => string.Equals(normalized, keyword, StringComparison.OrdinalIgnoreCase));
+
+    // The message is the keyword, or starts with it and the keyword ends there: "STOP please" and "STOP, thanks" match
+    // STOP, while "STOPPING" does not.
+    private static bool StartsWithKeyword(string normalized, IEnumerable<string> keywords)
+        => keywords.Any(keyword =>
+            normalized.StartsWith(keyword, StringComparison.OrdinalIgnoreCase) &&
+            (normalized.Length == keyword.Length || !char.IsLetterOrDigit(normalized[keyword.Length])));
 }
