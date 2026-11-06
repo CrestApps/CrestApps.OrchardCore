@@ -1,0 +1,74 @@
+@model CalendarWidgetEditViewModel
+
+@{
+    var sourceId = Html.IdFor(m => m.Source);
+}
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="mb-3" id="@(sourceId)-choices">
+    <label class="form-label">@T["Calendars to show"]</label>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" asp-for="Source" value="@CalendarWidgetSource.MyCalendars" id="@(sourceId)-mine" />
+        <label class="form-check-label" for="@(sourceId)-mine">@T["The viewer's own calendars"]</label>
+        <span class="hint dashed">@T["Each person sees their personal calendar and the calendars they may add events to, like the calendar page shows first."]</span>
+    </div>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" asp-for="Source" value="@CalendarWidgetSource.Type" id="@(sourceId)-type" />
+        <label class="form-check-label" for="@(sourceId)-type">@T["Every calendar of a type"]</label>
+        <span class="hint dashed">@T["Each person sees the calendars of the type they may open, including ones added later."]</span>
+    </div>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" asp-for="Source" value="@CalendarWidgetSource.Calendars" id="@(sourceId)-calendars" />
+        <label class="form-check-label" for="@(sourceId)-calendars">@T["Chosen calendars"]</label>
+        <span class="hint dashed">@T["Each person sees the chosen calendars they may open."]</span>
+    </div>
+</div>
+
+<div class="mb-3" data-calendar-widget-for="@CalendarWidgetSource.Type">
+    <label asp-for="CalendarType" class="form-label">@T["Calendar type"]</label>
+    <select asp-for="CalendarType" asp-items="Model.Types" class="form-select">
+        <option value="">@T["Choose a calendar type"]</option>
+    </select>
+    <span asp-validation-for="CalendarType" class="text-danger"></span>
+</div>
+
+<div class="mb-3" data-calendar-widget-for="@CalendarWidgetSource.Calendars">
+    <label asp-for="CalendarIds" class="form-label">@T["Calendars"]</label>
+    <select asp-for="CalendarIds" asp-items="Model.AvailableCalendars" class="form-select selectpicker" multiple data-live-search="true" data-actions-box="true" data-selected-text-format="count > 3" title="@T["Choose calendars"]"></select>
+    <span asp-validation-for="CalendarIds" class="text-danger"></span>
+    <span class="hint">@T["The calendars you may open."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="View" class="form-label">@T["Open on"]</label>
+    <select asp-for="View" asp-items="Model.Views" class="form-select"></select>
+    <span class="hint">@T["The view the widget opens on. The agenda fits a small widget best; viewers can switch views in the widget."]</span>
+</div>
+
+<script at="Foot">
+    (function () {
+        const choices = document.getElementById('@(sourceId)-choices');
+
+        if (!choices) {
+            return;
+        }
+
+        const form = choices.closest('form') || document;
+        const update = function () {
+            const checked = choices.querySelector('input[type="radio"]:checked');
+            const source = checked ? checked.value : '';
+
+            form.querySelectorAll('[data-calendar-widget-for]').forEach(function (element) {
+                element.classList.toggle('d-none', element.getAttribute('data-calendar-widget-for') !== source);
+            });
+        };
+
+        choices.querySelectorAll('input[type="radio"]').forEach(function (radio) {
+            radio.addEventListener('change', update);
+        });
+
+        update();
+    })();
+</script>
