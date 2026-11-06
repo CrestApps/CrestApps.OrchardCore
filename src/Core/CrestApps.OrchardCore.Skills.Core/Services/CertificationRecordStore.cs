@@ -21,10 +21,12 @@ internal sealed class CertificationRecordStore : DocumentCatalog<CertificationRe
     public async Task<IReadOnlyList<CertificationRecord>> ListForSubjectAsync(SkillSubject subject, CancellationToken cancellationToken = default)
     {
         var kind = subject.Kind;
+        var legacyKind = SkillSubjectKind.ToLegacyValue(kind);
         var id = subject.Id;
 
+        // A row the deferred re-index has not reached yet only has the number the kind was stored as.
         var records = await Session.Query<CertificationRecord, CertificationRecordIndex>(
-            index => index.SubjectKindName == kind && index.SubjectId == id,
+            index => (index.SubjectKindName == kind || (index.SubjectKindName == null && index.SubjectKind == legacyKind)) && index.SubjectId == id,
             collection: CollectionName)
             .OrderByDescending(index => index.ExpiresOn)
             .ListAsync(cancellationToken);
@@ -34,9 +36,11 @@ internal sealed class CertificationRecordStore : DocumentCatalog<CertificationRe
 
     public async Task<IReadOnlyList<string>> ListValidSubjectIdsAsync(string certificationId, string kind, int dateKey, CancellationToken cancellationToken = default)
     {
+        var legacyKind = SkillSubjectKind.ToLegacyValue(kind);
+
         var rows = await Session.QueryIndex<CertificationRecordIndex>(
             index => index.CertificationId == certificationId
-                && index.SubjectKindName == kind
+                && (index.SubjectKindName == kind || (index.SubjectKindName == null && index.SubjectKind == legacyKind))
                 && index.Status == CertificationStatus.Valid
                 && (index.IssuedOn == null || index.IssuedOn <= dateKey)
                 && (index.ExpiresOn == null || index.ExpiresOn >= dateKey),
@@ -89,9 +93,10 @@ internal sealed class CertificationRecordStore : DocumentCatalog<CertificationRe
         if (query is not null && !query.Subject.IsEmpty)
         {
             var kind = query.Subject.Kind;
+            var legacyKind = SkillSubjectKind.ToLegacyValue(kind);
             var id = query.Subject.Id;
 
-            results = results.Where(index => index.SubjectKindName == kind && index.SubjectId == id);
+            results = results.Where(index => (index.SubjectKindName == kind || (index.SubjectKindName == null && index.SubjectKind == legacyKind)) && index.SubjectId == id);
         }
 
         var count = await results.CountAsync(cancellationToken);

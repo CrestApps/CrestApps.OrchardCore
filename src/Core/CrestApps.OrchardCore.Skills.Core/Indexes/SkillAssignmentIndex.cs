@@ -15,8 +15,8 @@ public sealed class SkillAssignmentIndex : CatalogItemIndex
 
     /// <summary>
     /// Gets or sets the kind of record that holds it, by name: one of the <see cref="SkillSubjectKind"/> constants or a
-    /// kind another module adds. Queries use this column; <see cref="SubjectKind"/> keeps the number older rows were
-    /// written with.
+    /// kind another module adds. Queries use this column, and fall back to <see cref="SubjectKind"/>, the number older
+    /// rows were written with, while this column is still empty on a row the deferred re-index has not reached.
     /// </summary>
     public string SubjectKindName { get; set; }
 
