@@ -72,10 +72,17 @@ public sealed class ReportDashboardScaleTests : IDisposable
         Assert.Equal(["calls", "trend"], run.Document.Sections.Select(section => section.Id));
         Assert.Equal(Calls / Agents, run.Document.Sections[0].Rows.Count);
 
-        // The trend chart shows the agent's average by day, not every agent's.
+        // The trend chart shows the agent's average by day, not every agent's: the same values as the calls of the
+        // agent, averaged by day.
         var trend = run.Document.Sections[1].Chart;
         var allTrend = all.Document.Sections[3].Chart;
         Assert.NotEqual(Assert.Single(allTrend.Datasets).Values, Assert.Single(trend.Datasets).Values);
+
+        var agentOnly = Scorecard();
+        agentOnly.Queries[2].Query.Filters.Add(new ReportFilterDefinition { Id = "agent", Field = "t.AgentName", Operator = DataFilterOperator.Equals, Values = ["Agent 3"] });
+        var expected = await ReportDesignRunnerTests.Runner(Transcripts()).RunAsync(agentOnly, filterValues: null, TestContext.Current.CancellationToken);
+        Assert.Equal(expected.Document.Sections[3].Chart.Labels, trend.Labels);
+        Assert.Equal(Assert.Single(expected.Document.Sections[3].Chart.Datasets).Values, Assert.Single(trend.Datasets).Values);
 
         // The calls and the trend share one read of the agent's calls.
         Assert.Single(data.Queries);
@@ -233,7 +240,7 @@ public sealed class ReportDashboardScaleTests : IDisposable
     {
         var calculated = new List<ReportCalculatedField>
         {
-            new() { Name = "CallDay", Expression = "DATE([t.CallDate])" },
+            new() { Name = "CallDay", Expression = "DATETRUNC('day', [t.CallDate])" },
         };
 
         for (var index = 1; index <= 16; index++)
@@ -266,9 +273,10 @@ public sealed class ReportDashboardScaleTests : IDisposable
             CalculatedFields = calculated,
             Filters =
             [
-                new ReportFilterDefinition { Id = "f1", Field = "t.CallDate", Operator = DataFilterOperator.InLastDays, Values = ["30"], Exposed = true, Label = "Call date", Control = ReportFilterControl.RelativeDate },
-                new ReportFilterDefinition { Id = "f3", Field = "t.Queue", Operator = DataFilterOperator.In, Exposed = true, Label = "Queue" },
-                new ReportFilterDefinition { Id = "f4", Field = "t.AgentName", Operator = DataFilterOperator.In, Exposed = true, Label = "Agent Name" },
+                new ReportFilterDefinition { Id = "f1", Field = "t.CallDate", Operator = DataFilterOperator.Between, Values = ["30"], Exposed = true, Label = "Call date", Control = ReportFilterControl.DateRange },
+                new ReportFilterDefinition { Id = "f2", Field = "t.Disposition", Operator = DataFilterOperator.Contains },
+                new ReportFilterDefinition { Id = "f3", Field = "t.Queue", Operator = DataFilterOperator.Contains, Exposed = true, Label = "Queue" },
+                new ReportFilterDefinition { Id = "f4", Field = "t.AgentName", Operator = DataFilterOperator.Contains, Exposed = true, Label = "Agent Name" },
             ],
             Columns = columns,
             Sorts = sorts,
