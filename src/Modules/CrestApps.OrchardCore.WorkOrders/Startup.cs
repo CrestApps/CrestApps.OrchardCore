@@ -15,6 +15,7 @@ using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Drivers;
 using CrestApps.OrchardCore.WorkOrders.Integrations;
 using CrestApps.OrchardCore.WorkOrders.Migrations;
+using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.WorkOrders.Navigation;
 using CrestApps.OrchardCore.WorkOrders.Services;
 using CrestApps.OrchardCore.WorkOrders.ViewModels;
@@ -60,6 +61,7 @@ public sealed class Startup : StartupBase
             .AddDataMigration<WorkOrdersMigrations>();
 
         services.AddDisplayDriver<WorkOrderRow, WorkOrderRowDisplayDriver>();
+        services.AddDisplayDriver<WorkOrder, WorkOrderDisplayDriver>();
         services.AddDisplayDriver<WorkOrderSettingRow, WorkOrderSettingRowDisplayDriver>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, SlaMonitorBackgroundTask>());
         services.AddScoped<WorkOrderLookups>();

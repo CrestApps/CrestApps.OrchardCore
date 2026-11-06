@@ -99,6 +99,7 @@ Work Orders links up with three other features when they are on.
 - `IWorkOrderPartsService` and `IWorkOrderBilling`: take parts off stock and invoice, in place of Inventory and Transactions.
 - `IServiceHoursProvider`: give the open hours of a policy's calendar, and list the calendars you know (`ListCalendarsAsync`, returning `ServiceHoursCalendar(Id, Name)` records) so the service level editor offers them in its **Hours calendar** picker. The picker appears when a provider lists a calendar; WorkOrders merges every provider's calendars through `ServiceHoursCalendars.ListAsync` and never uses the provider's own types.
 - `WorkOrderPanels`: a display driver for it adds a panel, placed in the Content zone, to the work order's page.
+- `DisplayDriver<WorkOrder>`: adds a section to the work order editor (**New work order** and **Edit**), which is built with `IDisplayManager<WorkOrder>`. The built-in fields are one driver, `WorkOrderFields_Edit` at `Content:1`. Register yours with `services.AddDisplayDriver<WorkOrder, TDriver>()`, place it after (`Content:5`), bind your own view model with the driver's `Prefix`, and report errors under it (`$"{Prefix}.Field"`): any error keeps the work order from being saved, and the editor cancels the session, so records your driver wrote while the editor was updated are not kept either.
 
 ## Recipes and deployment
 

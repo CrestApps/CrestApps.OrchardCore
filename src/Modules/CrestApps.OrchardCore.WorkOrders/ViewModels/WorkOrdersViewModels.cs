@@ -519,18 +519,23 @@ public class WorkOrderSubStatusEditViewModel
 }
 
 /// <summary>
-/// The work order editor.
+/// The main section of the work order editor, the <c>WorkOrderFields_Edit</c> shape.
 /// </summary>
+/// <remarks>
+/// It is the model of a shape, so it has no member named like one of <c>IShape</c>'s (such as <c>Id</c>).
+/// </remarks>
 public class WorkOrderEditViewModel
 {
     /// <summary>
     /// Gets or sets the id, or <see langword="null"/> for a new work order.
     /// </summary>
-    public string Id { get; set; }
+    [BindNever]
+    public string WorkOrderId { get; set; }
 
     /// <summary>
     /// Gets or sets the type.
     /// </summary>
+    [BindNever]
     public string TypeId { get; set; }
 
     /// <summary>
