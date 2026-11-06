@@ -1,9 +1,12 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
+using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Deployments;
+using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Recipes.Models;
 
 namespace CrestApps.OrchardCore.Core.Recipes;
@@ -106,13 +109,32 @@ public abstract class CatalogRecipeStep<TEntry> : CatalogRecipeStepBase<TEntry>
         => NewEntryAsync(token);
 
     /// <inheritdoc/>
-    /// <remarks>The JSON is applied onto a detached copy, which is validated; the stored entry is not changed yet.</remarks>
-    protected sealed override ValueTask<TEntry> PrepareUpdateAsync(TEntry entry, JsonObject token)
+    /// <remarks>
+    /// The JSON is applied onto a detached copy, which is validated; the stored entry is not changed yet. The copy goes
+    /// through the entry's own handlers (<see cref="ICatalogEntryHandler{T}.UpdatingAsync"/>) exactly as the update will,
+    /// so a handler that resolves values while it applies the JSON (a user name to the local user, for example) is
+    /// validated on what will really be saved. <see cref="Populate"/> is used only when the shell has no handlers.
+    /// </remarks>
+    protected sealed override async ValueTask<TEntry> PrepareUpdateAsync(TEntry entry, JsonObject token)
     {
         var candidate = CreateDetachedCopy(entry);
-        Populate(candidate, token);
+        var handlers = ShellScope.Services?.GetServices<ICatalogEntryHandler<TEntry>>()?.ToArray() ?? [];
 
-        return ValueTask.FromResult(candidate);
+        if (handlers.Length == 0)
+        {
+            Populate(candidate, token);
+
+            return candidate;
+        }
+
+        var updating = new UpdatingContext<TEntry>(candidate, token);
+
+        foreach (var handler in handlers)
+        {
+            await handler.UpdatingAsync(updating);
+        }
+
+        return candidate;
     }
 
     /// <inheritdoc/>
