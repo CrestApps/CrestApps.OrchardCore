@@ -65,6 +65,19 @@ public sealed class OutreachRun : CatalogItem, IModifiedUtcAwareModel
     public OutreachTemplate Template { get; set; } = new();
 
     /// <summary>
+    /// Gets or sets the consent channel the engine asks the consent service about before each send, such as
+    /// <c>Email</c> or <c>SMS</c>; <see langword="null"/> when the run's sender checks consent itself. A recipient who
+    /// opted out of it is skipped.
+    /// </summary>
+    public string ConsentChannel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the kind of person the recipients' <see cref="OutreachRecipient.ContactId"/> names, such as
+    /// <c>Customer</c> or <c>Contact</c>, for the consent check; optional.
+    /// </summary>
+    public string ConsentContactKind { get; set; }
+
+    /// <summary>
     /// Gets or sets the business hours schedule the run may send in, for channels that observe quiet hours; optional.
     /// Outside it, batches wait for the schedule to open.
     /// </summary>

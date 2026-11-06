@@ -1,9 +1,11 @@
 using CrestApps.OrchardCore.BusinessHours.Services;
+using CrestApps.OrchardCore.Consent;
 using CrestApps.OrchardCore.Outreach;
 using CrestApps.OrchardCore.Outreach.Core.Services;
 using CrestApps.OrchardCore.Outreach.Models;
 using CrestApps.OrchardCore.WorkQueues;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Outreach;
 
@@ -240,6 +242,58 @@ public sealed class OutreachEngineTests
         var stored = await harness.GetRunAsync(run.ItemId);
         Assert.Equal(["+15550000003", "+15550000004"], sender.Sent.Select(send => send.Address));
         Assert.Equal(4, stored.Sent);
+    }
+
+    [Fact]
+    public async Task ARecipientWhoOptedOutOfTheRunsConsentChannel_IsSkipped_ThroughTheConsentService()
+    {
+        // Arrange
+        var source = new ListAudienceSource(
+            new OutreachRecipient { Key = "c-1", Address = "sam@example.com", ContactId = "c-1" },
+            new OutreachRecipient { Key = "c-2", Address = "kim@example.com", ContactId = "c-2" });
+        var sender = new RecordingSender();
+        var consent = new Mock<IConsentService>();
+        consent
+            .Setup(service => service.GetAsync(It.Is<ConsentQuery>(query => query.ContactId == "c-2"), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ConsentStatus.OptedOutBy("customer-marketing"));
+        consent
+            .Setup(service => service.GetAsync(It.Is<ConsentQuery>(query => query.ContactId != "c-2"), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ConsentStatus.NotOptedOut);
+        await using var harness = await CreateAsync(source, sender, services => services.AddSingleton(consent.Object));
+        var run = NewRun();
+        run.ConsentChannel = ConsentChannels.Email;
+        run.ConsentContactKind = ConsentContactKinds.Customer;
+        run = await harness.StartAsync(run);
+
+        // Act
+        await harness.ProcessDueAsync();
+
+        // Assert
+        var stored = await harness.GetRunAsync(run.ItemId);
+        Assert.Equal(["sam@example.com"], sender.Sent.Select(send => send.Address));
+        Assert.Equal((1, 1, 0), (stored.Sent, stored.Skipped, stored.Failed));
+        consent.Verify(
+            service => service.GetAsync(
+                It.Is<ConsentQuery>(query => query.Channel == ConsentChannels.Email && query.Address == "kim@example.com" && query.ContactKind == ConsentContactKinds.Customer),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ARunWithoutAConsentChannel_DoesNotAskTheConsentService()
+    {
+        // Arrange
+        var source = new ListAudienceSource(ListAudienceSource.Recipient("+15550000001"));
+        var sender = new RecordingSender();
+        var consent = new Mock<IConsentService>(MockBehavior.Strict);
+        await using var harness = await CreateAsync(source, sender, services => services.AddSingleton(consent.Object));
+        var run = await harness.StartAsync(NewRun());
+
+        // Act
+        await harness.ProcessDueAsync();
+
+        // Assert
+        Assert.Equal(1, (await harness.GetRunAsync(run.ItemId)).Sent);
     }
 
     private static Task<OutreachTestHarness> CreateAsync(ListAudienceSource source, RecordingSender sender, Action<IServiceCollection> configure = null)

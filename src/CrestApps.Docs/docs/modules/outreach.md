@@ -28,6 +28,7 @@ applies the policies, sends, retries and keeps count.
 | How it is sent | `Sender`, `Channel`, `SenderAddress`, `ActorId` | An `IOutreachChannelSender` (`Email`, `Messaging`, …) |
 | What is sent | `Template` (`Subject`, `Body`, `IsHtml`), `Renderer` | An `IOutreachTemplateRenderer`; without one the template is sent as it is (`Text`) |
 | When it may send | `SendingHoursScheduleId` | A Business Hours schedule, for senders that observe quiet hours |
+| Whose consent it needs | `ConsentChannel`, `ConsentContactKind` | The consent channel (`Email`, `SMS`, …) and the kind of person recipients are (`Customer`, `Contact`) |
 | How far it got | `Status`, `Cursor`, `BatchesCompleted`, `Sent`, `Skipped`, `Failed` | The engine |
 
 `IOutreachEngine.StartAsync(run)` stores the run and queues its first batch in the caller's unit of work, so starting a
@@ -45,8 +46,9 @@ scope. A batch:
    observes quiet hours (`IOutreachChannelSender.ObservesQuietHours`) and the run's sending hours are closed: the batch
    is due again when the schedule next opens.
 3. Reads one page from the audience source at its cursor (`PageSize`, 50 by default).
-4. For each recipient: skips it when the source marked it (`SkipReason`), it has no address, or an
-   `IOutreachRecipientPolicy` gives a reason (opted out, no consent); otherwise renders the template and sends. The
+4. For each recipient: skips it when the source marked it (`SkipReason`), it has no address, the consent service says
+   it opted out of the run's `ConsentChannel`, or another `IOutreachRecipientPolicy` gives a reason; otherwise renders
+   the template and sends. The
    batch saves the recipient's key after each one, together with what the sender stored, so a retried batch never
    sends twice to the same recipient.
 5. When the page is done, adds its counts to the run, queues the next page and notifies the
@@ -75,14 +77,23 @@ services
   recipient a stable `Key` within the run.
 - A **channel sender** returns `OutreachSendResult.Success()` or `Failure(error)`, and throws when the failure is
   transient. The e-mail sender (`EmailOutreachChannelSender`, name `Email`) adds a plain-text part to HTML messages.
-- A **recipient policy** returns a skip reason (`OutreachConstants.SkipReasons`) or `null`. Policies decide
-  do-not-contact questions; reuse `IContactOptOutResolver` for opt-outs rather than reading contact flags.
+- A **recipient policy** returns a skip reason (`OutreachConstants.SkipReasons`) or `null`. Consent is already
+  covered (see below); add a policy only for a rule the consent service does not know.
 - A **run observer** copies the run's counters and status onto your record. It runs in the batch's transaction and
   must not commit.
+
+## Consent and opt-outs
+
+The engine asks [`IConsentService`](../omnichannel/management.md#consent-may-we-reach-them) about every recipient of a
+run that names a `ConsentChannel`, just before it is sent, with the run's `ConsentContactKind` and the recipient's
+`ContactId`. A recipient any consent source reports as opted out (a STOP keyword, a do-not-text flag on any record that
+holds the number, an unsubscribe link, a customer who doesn't accept marketing) is counted as skipped. Because the
+question is asked at send time, an opt-out recorded after the run started still stops the message. A run without a
+`ConsentChannel` leaves consent to its sender, and no check is made while no feature registers the consent service.
 
 ## The two built-in senders of runs
 
 | Record | Source | Sender | Renderer | Policies |
 | --- | --- | --- | --- | --- |
-| Messaging broadcast | `MessagingBroadcastRecipients`: the broadcast's recipient list, by position | `Messaging`: each recipient in their own 1:1 thread, quiet hours where the channel observes them | `Text` | Opt-outs through `IContactOptOutResolver` |
-| Marketing campaign | `MarketingSegment`: the segment's customers, by document id; customers who don't accept marketing are skipped | `Email` | `MarketingCampaign`: the campaign's Liquid and the customer's unsubscribe link | |
+| Messaging broadcast | `MessagingBroadcastRecipients`: the broadcast's recipient list, by position | `Messaging`: each recipient in their own 1:1 thread, quiet hours where the channel observes them | `Text` | Consent on the broadcast's channel, as a CRM contact |
+| Marketing campaign | `MarketingSegment`: the segment's customers, by document id; customers who don't accept marketing are skipped | `Email` | `MarketingCampaign`: the campaign's Liquid and the customer's unsubscribe link | Consent on `Email`, as a commerce customer |

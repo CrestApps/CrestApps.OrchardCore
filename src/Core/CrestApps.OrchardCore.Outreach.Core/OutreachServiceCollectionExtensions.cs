@@ -26,6 +26,7 @@ public static class OutreachServiceCollectionExtensions
         services.TryAddScoped<OutreachQuietHours>();
         services.TryAddScoped<IOutreachScopeExecutor, OutreachScopeExecutor>();
         services.AddOutreachTemplateRenderer<TextOutreachTemplateRenderer>();
+        services.AddOutreachRecipientPolicy<ConsentOutreachRecipientPolicy>();
 
         return services;
     }
