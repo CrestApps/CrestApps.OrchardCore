@@ -137,7 +137,7 @@ public sealed class WebhooksAdminController : Controller
             return Forbid();
         }
 
-        if (await _subscriptions.FindByIdAsync(itemId) is not { } subscription)
+        if (await FindSubscriptionAsync(itemId) is not { } subscription)
         {
             return NotFound();
         }
@@ -161,7 +161,7 @@ public sealed class WebhooksAdminController : Controller
             return Forbid();
         }
 
-        if (await _subscriptions.FindByIdAsync(itemId) is not { } subscription)
+        if (await FindSubscriptionAsync(itemId) is not { } subscription)
         {
             return NotFound();
         }
@@ -188,7 +188,7 @@ public sealed class WebhooksAdminController : Controller
             return Forbid();
         }
 
-        if (await _subscriptions.FindByIdAsync(itemId) is not { } subscription)
+        if (await FindSubscriptionAsync(itemId) is not { } subscription)
         {
             return NotFound();
         }
@@ -209,7 +209,7 @@ public sealed class WebhooksAdminController : Controller
             return Forbid();
         }
 
-        if (await _subscriptions.FindByIdAsync(itemId) is not { } subscription)
+        if (await FindSubscriptionAsync(itemId) is not { } subscription)
         {
             return NotFound();
         }
@@ -251,7 +251,7 @@ public sealed class WebhooksAdminController : Controller
             return Forbid();
         }
 
-        if (await _subscriptions.FindByIdAsync(itemId) is { } subscription)
+        if (await FindSubscriptionAsync(itemId) is { } subscription)
         {
             await _subscriptions.DeleteAsync(subscription);
 
@@ -275,7 +275,7 @@ public sealed class WebhooksAdminController : Controller
             return Forbid();
         }
 
-        if (await _subscriptions.FindByIdAsync(itemId) is not { } subscription)
+        if (await FindSubscriptionAsync(itemId) is not { } subscription)
         {
             return NotFound();
         }
@@ -406,4 +406,8 @@ public sealed class WebhooksAdminController : Controller
 
         return model;
     }
+
+    // A missing or empty id (a hand-edited URL) is a page that does not exist, not a server error.
+    private async Task<WebhookSubscription> FindSubscriptionAsync(string itemId)
+        => string.IsNullOrWhiteSpace(itemId) ? null : await _subscriptions.FindByIdAsync(itemId);
 }
