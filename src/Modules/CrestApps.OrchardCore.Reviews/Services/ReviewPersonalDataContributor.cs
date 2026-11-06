@@ -19,6 +19,12 @@ public sealed class ReviewPersonalDataContributor : ICommercePersonalDataContrib
     /// </summary>
     public const string RecordKind = "ProductReview";
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The guest retention expiry never reached these records, so only an explicit erasure request does.
+    /// </remarks>
+    public bool TakesPartInRetentionExpiry => false;
+
     private readonly ISession _session;
 
     /// <summary>

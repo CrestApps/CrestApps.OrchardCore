@@ -13,6 +13,13 @@ public interface IPersonalDataContributor
     int Order => 0;
 
     /// <summary>
+    /// Gets a value indicating whether the contributor takes part when a retention window runs out, such as the nightly
+    /// expiry of inactive guests. It is <see langword="false"/> unless the contributor opts in, so a retention expiry
+    /// only reaches the records it was built for; an explicit erasure request always runs every contributor.
+    /// </summary>
+    bool TakesPartInRetentionExpiry => false;
+
+    /// <summary>
     /// Adds what the contributor's records know about the person to the subject (more user IDs, emails, phone numbers or
     /// names), so the other contributors find their records too. It runs until nothing new is found, before anything is
     /// exported or anonymized.

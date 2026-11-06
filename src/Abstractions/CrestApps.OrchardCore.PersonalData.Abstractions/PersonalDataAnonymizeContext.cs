@@ -12,6 +12,18 @@ public sealed class PersonalDataAnonymizeContext
     /// <param name="replacementText">The text names are replaced with, or <see langword="null"/> to clear them.</param>
     /// <param name="result">The result the changes are counted in.</param>
     public PersonalDataAnonymizeContext(PersonalDataSubject subject, string replacementText, PersonalDataAnonymizeResult result)
+        : this(subject, replacementText, result, PersonalDataRequestKind.Erasure)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PersonalDataAnonymizeContext"/> class.
+    /// </summary>
+    /// <param name="subject">The person the request is about.</param>
+    /// <param name="replacementText">The text names are replaced with, or <see langword="null"/> to clear them.</param>
+    /// <param name="result">The result the changes are counted in.</param>
+    /// <param name="kind">Why the records are anonymized.</param>
+    public PersonalDataAnonymizeContext(PersonalDataSubject subject, string replacementText, PersonalDataAnonymizeResult result, PersonalDataRequestKind kind)
     {
         ArgumentNullException.ThrowIfNull(subject);
         ArgumentNullException.ThrowIfNull(result);
@@ -19,7 +31,13 @@ public sealed class PersonalDataAnonymizeContext
         Subject = subject;
         ReplacementText = string.IsNullOrWhiteSpace(replacementText) ? null : replacementText;
         Result = result;
+        Kind = kind;
     }
+
+    /// <summary>
+    /// Gets why the records are anonymized: an explicit erasure request, or a retention window that ran out.
+    /// </summary>
+    public PersonalDataRequestKind Kind { get; }
 
     /// <summary>
     /// Gets the person the request is about.

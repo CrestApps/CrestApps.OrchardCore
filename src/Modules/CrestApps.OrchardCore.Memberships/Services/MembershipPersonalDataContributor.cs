@@ -15,6 +15,12 @@ public sealed class MembershipPersonalDataContributor : ICommercePersonalDataCon
     /// </summary>
     public const string RecordKind = "Membership";
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The guest retention expiry never reached these records, so only an explicit erasure request does.
+    /// </remarks>
+    public bool TakesPartInRetentionExpiry => false;
+
     private readonly IMembershipStore _memberships;
 
     /// <summary>

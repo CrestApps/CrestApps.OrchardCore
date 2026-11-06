@@ -21,6 +21,8 @@ public interface IPersonalDataService
     Task<PersonalDataExport> ExportAsync(PersonalDataSubject subject, CancellationToken cancellationToken = default);
 
     Task<PersonalDataAnonymizeResult> AnonymizeAsync(PersonalDataSubject subject, string replacementText, CancellationToken cancellationToken = default);
+
+    Task<PersonalDataAnonymizeResult> ExpireAsync(PersonalDataSubject subject, CancellationToken cancellationToken = default);
 }
 ```
 
@@ -31,6 +33,8 @@ The person is a **`PersonalDataSubject`**, made from a user ID, an email and/or 
 
 - **`ExportAsync`** returns a `PersonalDataExport`: when it was made, the user IDs, emails and phone numbers the person was found by, the `Records`, and `Warnings` for anything that could not be read.
 - **`AnonymizeAsync`** removes or replaces the person's data and returns a `PersonalDataAnonymizeResult` with how many records of each kind changed (`Records`, `Total`) and `Warnings` for anything that must be done by hand. A removed name becomes `replacementText`, or is cleared when it is `null`. Records the business must keep (orders, time worked, amounts, dates and states) stay; only the personal data in them goes.
+
+- **`ExpireAsync`** anonymizes because a retention window ran out, such as the nightly expiry of inactive guests. Only the contributors whose **`TakesPartInRetentionExpiry`** is `true` identify the person and anonymize their records, names are cleared, and `PersonalDataAnonymizeContext.Kind` is `PersonalDataRequestKind.RetentionExpiry` (`Erasure` for `AnonymizeAsync`). `TakesPartInRetentionExpiry` is `false` by default, so only the commerce bridge takes part: a guest's CRM contacts, activities, worker profile, appointments, bookings and the other modules' records are only erased by an explicit erasure request.
 
 Each record is open: a `Kind` the module names (such as `Booking` or `WorkerProfile`), a `Title`, the record's `Id`, when it was made, and its `Fields` by name. A new module adds records of its own kinds; nothing in the building block lists them.
 
@@ -85,6 +89,7 @@ services.AddPersonalDataContributor<MyPersonalDataContributor>();
 - Keep `IdentifyAsync` safe to call more than once, and never follow an email found on a record to someone else's records.
 - `context.Scrub(text)` replaces the person's emails, phone numbers and names in free text; `subject.ScrubJson(node, replacement)` does the same in every string of a JSON document, such as a content item's content, and clears values that are one of the person's phone numbers written another way.
 - Give the contributor a lower `Order` when it finds records through links another contributor erases.
+- Leave `TakesPartInRetentionExpiry` at `false` unless the records belong to the retention window the request comes from (commerce records for the guest expiry). Opting in means the nightly expiry anonymizes them without anyone asking.
 - Find records through an indexed column. When the index has no column for the person, add one with an additive migration and fill it in for older records with `CatalogIndexBackfill.ReindexAsync<TRecord, TIndex>()` from a deferred task, as Bookings and Point of Sale do.
 
 ## Contributors that ship
@@ -107,6 +112,7 @@ services.AddPersonalDataContributor<MyPersonalDataContributor>();
 ## Upgrading
 
 - The Customers privacy export now adds a `personalData` section (the records of every module) in place of the `commerce` section. The commerce records are in it, each with its `kind`, `title` and `fields`.
-- `CommercePersonalDataCustomerPrivacyHandler` is now `PersonalDataCustomerPrivacyHandler`, and it calls `IPersonalDataService`.
+- `CommercePersonalDataCustomerPrivacyHandler` is now `PersonalDataCustomerPrivacyHandler`, and it calls `IPersonalDataService`. Erasing a customer calls `AnonymizeAsync`; the guest retention expiry calls `ExpireAsync`, which reaches the commerce records only, exactly as the guest expiry did before. `CustomerPrivacyContext.Action` tells a handler which of the two it is.
+- `ICommercePersonalDataContributor.TakesPartInRetentionExpiry` is `true` by default, so the commerce contributors the guest expiry always reached keep taking part in `ICommercePersonalDataService.ExpireAsync`. The Fundraising, Memberships, Marketplace and Reviews contributors return `false`: the guest expiry never reached them, and only an explicit erasure does.
 - `ICommercePersonalDataContributor` still works: commerce contributors keep it, and the commerce bridge brings their records into the service. New contributors implement `IPersonalDataContributor`.
 - Bookings adds the `UserId` and `CustomerEmail` columns to `BookingIndex`, and Point of Sale adds `OpenedByUserId` and `ClosedByUserId` to `RegisterShiftIndex`. Both migrations are additive, and the records saved before them are indexed again in the background after the tenant starts.

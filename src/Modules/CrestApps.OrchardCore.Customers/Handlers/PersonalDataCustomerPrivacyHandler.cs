@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.PersonalData;
 
@@ -8,7 +9,8 @@ namespace CrestApps.OrchardCore.Customers.Handlers;
 /// Erases and exports the personal data every other module keeps about a customer, through
 /// <see cref="IPersonalDataService"/>: their commerce records (checkouts, transactions, payments, refunds,
 /// subscriptions, installment plans, coupon redemptions, payment-provider customers and the verticals' records), and
-/// the records of every other module with a personal-data contributor, such as the CRM, Workforce and Scheduling.
+/// the records of every other module with a personal-data contributor, such as the CRM, Workforce and Scheduling. The
+/// guest retention expiry only reaches the contributors that take part in it, which are the commerce records.
 /// </summary>
 /// <remarks>
 /// The customer is identified by their account, when they have one, by their email, which is what ties their guest
@@ -48,6 +50,15 @@ public sealed class PersonalDataCustomerPrivacyHandler : ICustomerPrivacyHandler
 
         if (subject is null)
         {
+            return;
+        }
+
+        // The guest retention expiry reaches only the commerce records, as it always has; the CRM, Workforce, Scheduling
+        // and the other modules' records are only erased when an admin erases the customer.
+        if (context.Action == CustomerPrivacyAction.Expired)
+        {
+            await _personalDataService.ExpireAsync(subject, cancellationToken);
+
             return;
         }
 

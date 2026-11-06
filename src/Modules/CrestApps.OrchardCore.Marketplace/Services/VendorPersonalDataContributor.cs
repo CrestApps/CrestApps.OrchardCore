@@ -15,6 +15,12 @@ public sealed class VendorPersonalDataContributor : ICommercePersonalDataContrib
     /// </summary>
     public const string RecordKind = "Vendor";
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The guest retention expiry never reached these records, so only an explicit erasure request does.
+    /// </remarks>
+    public bool TakesPartInRetentionExpiry => false;
+
     private readonly IVendorStore _vendors;
 
     /// <summary>

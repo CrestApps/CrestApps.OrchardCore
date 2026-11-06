@@ -21,4 +21,14 @@ public interface IPersonalDataService
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>How many records of each kind changed.</returns>
     Task<PersonalDataAnonymizeResult> AnonymizeAsync(PersonalDataSubject subject, string replacementText, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Anonymizes the person's records because a retention window ran out, such as the nightly expiry of inactive
+    /// guests. Only the contributors whose <see cref="IPersonalDataContributor.TakesPartInRetentionExpiry"/> is
+    /// <see langword="true"/> identify the person and anonymize their records; names are cleared.
+    /// </summary>
+    /// <param name="subject">The person the expiry is about.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>How many records of each kind changed.</returns>
+    Task<PersonalDataAnonymizeResult> ExpireAsync(PersonalDataSubject subject, CancellationToken cancellationToken = default);
 }

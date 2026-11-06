@@ -63,6 +63,12 @@ public sealed class CommercePersonalDataContributor : IPersonalDataContributor
     public int Order => -100;
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// The guest retention expiry has always erased the commerce records, so commerce takes part in it.
+    /// </remarks>
+    public bool TakesPartInRetentionExpiry => true;
+
+    /// <inheritdoc/>
     public async Task ExportAsync(PersonalDataExportContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -110,7 +116,9 @@ public sealed class CommercePersonalDataContributor : IPersonalDataContributor
             return;
         }
 
-        var result = await _commercePersonalDataService.AnonymizeAsync(owner, email, context.ReplacementText, cancellationToken);
+        var result = context.Kind == PersonalDataRequestKind.RetentionExpiry
+            ? await _commercePersonalDataService.ExpireAsync(owner, email, cancellationToken)
+            : await _commercePersonalDataService.AnonymizeAsync(owner, email, context.ReplacementText, cancellationToken);
 
         context.Result.Count(TransactionKind, result.Transactions);
         context.Result.Count(PaymentKind, result.Payments);

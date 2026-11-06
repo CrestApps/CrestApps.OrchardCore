@@ -32,7 +32,7 @@ public sealed class DefaultPersonalDataService : IPersonalDataService
     {
         ArgumentNullException.ThrowIfNull(subject);
 
-        await IdentifyAsync(subject, cancellationToken);
+        await IdentifyAsync(_contributors, subject, cancellationToken);
 
         var export = new PersonalDataExport
         {
@@ -53,18 +53,40 @@ public sealed class DefaultPersonalDataService : IPersonalDataService
     }
 
     /// <inheritdoc/>
-    public async Task<PersonalDataAnonymizeResult> AnonymizeAsync(PersonalDataSubject subject, string replacementText, CancellationToken cancellationToken = default)
+    public Task<PersonalDataAnonymizeResult> AnonymizeAsync(PersonalDataSubject subject, string replacementText, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(subject);
 
+        return AnonymizeAsync(_contributors, subject, replacementText, PersonalDataRequestKind.Erasure, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Task<PersonalDataAnonymizeResult> ExpireAsync(PersonalDataSubject subject, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(subject);
+
+        // A retention window only reaches the contributors that opted in, such as commerce: the CRM, Workforce,
+        // Scheduling and the other modules' records are only ever erased by an explicit request.
+        var contributors = _contributors.Where(contributor => contributor.TakesPartInRetentionExpiry).ToArray();
+
+        return AnonymizeAsync(contributors, subject, replacementText: null, PersonalDataRequestKind.RetentionExpiry, cancellationToken);
+    }
+
+    private static async Task<PersonalDataAnonymizeResult> AnonymizeAsync(
+        IPersonalDataContributor[] contributors,
+        PersonalDataSubject subject,
+        string replacementText,
+        PersonalDataRequestKind kind,
+        CancellationToken cancellationToken)
+    {
         // Everything is identified before anything changes: a contributor that anonymized first would remove the very
         // email another contributor finds its records by.
-        await IdentifyAsync(subject, cancellationToken);
+        await IdentifyAsync(contributors, subject, cancellationToken);
 
         var result = new PersonalDataAnonymizeResult();
-        var context = new PersonalDataAnonymizeContext(subject, replacementText, result);
+        var context = new PersonalDataAnonymizeContext(subject, replacementText, result, kind);
 
-        foreach (var contributor in _contributors)
+        foreach (var contributor in contributors)
         {
             await contributor.AnonymizeAsync(context, cancellationToken);
         }
@@ -72,13 +94,13 @@ public sealed class DefaultPersonalDataService : IPersonalDataService
         return result;
     }
 
-    private async Task IdentifyAsync(PersonalDataSubject subject, CancellationToken cancellationToken)
+    private static async Task IdentifyAsync(IPersonalDataContributor[] contributors, PersonalDataSubject subject, CancellationToken cancellationToken)
     {
         for (var round = 0; round < MaxIdentificationRounds; round++)
         {
             var version = subject.Version;
 
-            foreach (var contributor in _contributors)
+            foreach (var contributor in contributors)
             {
                 await contributor.IdentifyAsync(subject, cancellationToken);
             }

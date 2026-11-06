@@ -34,4 +34,16 @@ public interface ICommercePersonalDataService
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <exception cref="ArgumentException">Neither an owner nor an email is given.</exception>
     Task<CommercePersonalDataAnonymizeResult> AnonymizeAsync(CustomerOwner owner, string email, string replacementText, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Anonymizes the person's commerce records because the guest retention window ran out. Only the contributors whose
+    /// <see cref="ICommercePersonalDataContributor.TakesPartInRetentionExpiry"/> is <see langword="true"/> take part,
+    /// and names are cleared.
+    /// </summary>
+    /// <param name="owner">The person's account or guest owner, or <see langword="null"/> to find them by email only.</param>
+    /// <param name="email">The person's email, or <see langword="null"/> to find them by owner only.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <exception cref="ArgumentException">Neither an owner nor an email is given.</exception>
+    Task<CommercePersonalDataAnonymizeResult> ExpireAsync(CustomerOwner owner, string email, CancellationToken cancellationToken = default)
+        => AnonymizeAsync(owner, email, replacementText: null, cancellationToken);
 }

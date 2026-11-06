@@ -14,6 +14,12 @@ public sealed class DonationPersonalDataContributor : ICommercePersonalDataContr
     /// </summary>
     public const string RecordKind = "Donation";
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The guest retention expiry never reached these records, so only an explicit erasure request does.
+    /// </remarks>
+    public bool TakesPartInRetentionExpiry => false;
+
     private readonly IDonationStore _donations;
 
     /// <summary>
