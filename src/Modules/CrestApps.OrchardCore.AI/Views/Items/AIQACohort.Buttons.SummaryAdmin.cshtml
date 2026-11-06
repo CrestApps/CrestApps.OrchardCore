@@ -3,12 +3,15 @@
 @using CrestApps.OrchardCore.Reports
 @using Microsoft.Extensions.Options
 @using OrchardCore.DisplayManagement.Views
+@using OrchardCore.Modules
 @inject IOptions<ReportOptions> ReportOptions
+@inject ILocalClock LocalClock
 
 @model ShapeViewModel<AIQACohort>
 
 @if (ReportOptions.Value.Reports.Any(report => report.Name == AIQualityReport.Name))
 {
-    <a href="@Url.Action("Display", "Reports", new { area = ReportsConstants.Feature, id = AIQualityReport.Name, QACohortId = Model.Value.ItemId })" class="btn btn-sm btn-primary">@T["Dashboard"]</a>
+    @* The dashboard of a cohort opens on its last 7 days, as the QA dashboard did. *@
+    <a href="@Url.Action("Display", "Reports", AIQualityReport.GetDashboardRouteValues(Model.Value.ItemId, (await LocalClock.GetLocalNowAsync()).DateTime))" class="btn btn-sm btn-primary">@T["Dashboard"]</a>
 }
 <a asp-action="Edit" asp-controller="AIQACohorts" asp-route-id="@Model.Value.ItemId" class="btn btn-sm btn-secondary">@T["Edit"]</a>

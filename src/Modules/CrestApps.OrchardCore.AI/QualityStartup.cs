@@ -67,15 +67,13 @@ public sealed class QualityStartup : StartupBase
 }
 
 /// <summary>
-/// Maps the AI tests API when both the AI Quality and the AI Chat WebAPI features are on.
-/// </summary>
-/// <summary>
 /// Publishes the QA dashboard as a report, with its QA cohort filter, while Reports is enabled.
 /// </summary>
 [Feature(AIConstants.Feature.Quality)]
 [RequireFeatures(ReportsConstants.Feature)]
 public sealed class QualityReportsStartup : StartupBase
 {
+    /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
         services
@@ -84,6 +82,9 @@ public sealed class QualityReportsStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Maps the AI tests API when both the AI Quality and the AI Chat WebAPI features are on.
+/// </summary>
 [RequireFeatures(AIConstants.Feature.Quality, AIConstants.Feature.ChatApi)]
 public sealed class QualityApiStartup : StartupBase
 {
