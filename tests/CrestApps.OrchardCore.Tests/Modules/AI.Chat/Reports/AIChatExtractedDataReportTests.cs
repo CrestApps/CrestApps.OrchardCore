@@ -59,9 +59,60 @@ public sealed class AIChatExtractedDataReportTests
             .Setup(store => store.GetAsync(profileId, It.IsAny<DateTime?>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(records);
 
-    private Task<ReportDocument> RunAsync(ReportFilter filter)
+    [Fact]
+    public async Task TheExport_IsOneFlatTable_WithTheColumnsOfTheOldCsv_AndAColumnPerField()
+    {
+        Setup("profile-1",
+            Record("s1", _day.AddHours(9), ("Email", ["ana@example.com"]), ("Topics", ["Billing", "Refund"])),
+            Record("s2", _day.AddHours(10), ("Email", ["bob@example.com"])));
+
+        var document = await RunAsync(Filter("profile-1"), ReportRunMode.Export);
+
+        Assert.Single(document.Sections);
+        Assert.Equal(
+        [
+            "SessionStartedUtc,SessionId,Email,Topics",
+            "2026-11-02T10:00:00.0000000Z,s2,bob@example.com,",
+            "2026-11-02T09:00:00.0000000Z,s1,ana@example.com,\"Billing, Refund\"",
+        ], AIChatSessionAnalyticsReportTests.CsvLines(document));
+    }
+
+    [Fact]
+    public async Task TheExport_WithoutRecords_KeepsItsHeader()
+    {
+        Setup("profile-1");
+
+        var document = await RunAsync(Filter("profile-1"), ReportRunMode.Export);
+
+        Assert.Equal(["SessionStartedUtc,SessionId"], AIChatSessionAnalyticsReportTests.CsvLines(document));
+    }
+
+    [Fact]
+    public async Task AnAllTimeRange_ReachesTheStore_WithoutBounds()
+    {
+        Setup("profile-1");
+
+        var filter = new ReportFilter { ReportName = AIChatExtractedDataReport.Name };
+        filter.SetDateRange(new ReportDateRange { Key = ReportDefaultDateRange.AllTimeKey });
+        filter.Set(AIChatReportFilters.ProfileId, "profile-1");
+
+        await RunAsync(filter);
+
+        _store.Verify(store => store.GetAsync("profile-1", null, null, It.IsAny<CancellationToken>()));
+    }
+
+    [Fact]
+    public void TheReport_StartsOnAllTime_AndExportsWithTheExportPermission()
+    {
+        var descriptor = ReportDescriptor.Create<AIChatExtractedDataReport>();
+
+        Assert.Equal(ReportDateRangePeriod.AllTime, descriptor.DefaultDateRange.Period);
+        Assert.Equal("ExportChatAnalytics", descriptor.ExportPermission.Name);
+    }
+
+    private Task<ReportDocument> RunAsync(ReportFilter filter, ReportRunMode mode = ReportRunMode.Display)
         => new AIChatExtractedDataReport(_store.Object, new PassThroughStringLocalizer<AIChatExtractedDataReport>())
-            .RunAsync(new ReportContext(filter), TestContext.Current.CancellationToken);
+            .RunAsync(new ReportContext(filter, mode), TestContext.Current.CancellationToken);
 
     private static ReportFilter Filter(string profileId)
     {

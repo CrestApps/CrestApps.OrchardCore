@@ -11,7 +11,9 @@ namespace CrestApps.OrchardCore.AI.Chat.Reports;
 
 /// <summary>
 /// How an AI profile's chat sessions scored against its conversion goals: a row per scored session that started in
-/// the period, with the total and a column per goal. It needs an AI profile, since each profile has its own goals.
+/// the period, with the total and a column per goal. It needs an AI profile, since each profile has its own goals. It
+/// starts on every session, and its export is that table alone, with invariant column names, and needs the export
+/// permission.
 /// </summary>
 public sealed class AIChatConversionGoalsReport : IReport, IReportFilterMetadata
 {
@@ -51,9 +53,19 @@ public sealed class AIChatConversionGoalsReport : IReport, IReportFilterMetadata
     public static string Category => ReportsConstants.Categories.AIReports;
 
     /// <summary>
-    /// Gets the permission that runs and exports the report.
+    /// Gets the permission that runs the report.
     /// </summary>
     public static Permission Permission => ChatAnalyticsPermissionProvider.ViewChatAnalytics;
+
+    /// <summary>
+    /// Gets the permission that exports the report, beside the one that runs it.
+    /// </summary>
+    public static Permission ExportPermission => ChatAnalyticsPermissionProvider.ExportChatAnalytics;
+
+    /// <summary>
+    /// Gets the date range the report starts on: every session, as the conversion goals page did.
+    /// </summary>
+    public static ReportDefaultDateRange DefaultDateRange => ReportDefaultDateRange.AllTime;
 
     /// <inheritdoc/>
     public IReadOnlyCollection<string> FilterNames { get; } = [AIChatReportFilters.RequiredProfile];
@@ -83,17 +95,31 @@ public sealed class AIChatConversionGoalsReport : IReport, IReportFilterMetadata
             .OrderByDescending(evt => evt.SessionStartedUtc)
             .ToList();
 
-        if (scored.Count == 0)
-        {
-            return new ReportDocument();
-        }
-
         var goals = scored
             .SelectMany(evt => evt.ConversionGoalResults.Select(result => result.Name))
             .Where(name => !string.IsNullOrEmpty(name))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
             .ToList();
+
+        // An export is one flat table, with the invariant columns of the conversion goals page's CSV and a column per
+        // goal, as scripts read it, even when it has no rows.
+        if (context.Mode == ReportRunMode.Export)
+        {
+            return new ReportDocument().Add(ReportSection.ForTable("ConversionGoals",
+            [
+                new ReportColumn("SessionStartedUtc"),
+                new ReportColumn("SessionId"),
+                new ReportColumn("TotalPoints", ReportColumnAlign.End),
+                .. goals.Select(goal => new ReportColumn(goal, ReportColumnAlign.End)),
+            ],
+            scored.Select(evt => Row(evt, goals))));
+        }
+
+        if (scored.Count == 0)
+        {
+            return new ReportDocument();
+        }
 
         return new ReportDocument()
             .Add(ReportSection.ForMetrics(S["Summary"].Value,

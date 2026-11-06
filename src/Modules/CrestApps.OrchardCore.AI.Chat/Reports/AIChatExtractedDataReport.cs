@@ -11,7 +11,8 @@ namespace CrestApps.OrchardCore.AI.Chat.Reports;
 
 /// <summary>
 /// The data an AI profile extracted from its chat sessions: a row per session that started in the period, with a
-/// column per extracted field. It needs an AI profile, since each profile extracts its own fields.
+/// column per extracted field. It needs an AI profile, since each profile extracts its own fields. It starts on every
+/// session, and its export is that table alone, with invariant column names, and needs the export permission.
 /// </summary>
 public sealed class AIChatExtractedDataReport : IReport, IReportFilterMetadata
 {
@@ -51,9 +52,19 @@ public sealed class AIChatExtractedDataReport : IReport, IReportFilterMetadata
     public static string Category => ReportsConstants.Categories.AIReports;
 
     /// <summary>
-    /// Gets the permission that runs and exports the report.
+    /// Gets the permission that runs the report.
     /// </summary>
     public static Permission Permission => ChatAnalyticsPermissionProvider.ViewChatAnalytics;
+
+    /// <summary>
+    /// Gets the permission that exports the report, beside the one that runs it.
+    /// </summary>
+    public static Permission ExportPermission => ChatAnalyticsPermissionProvider.ExportChatAnalytics;
+
+    /// <summary>
+    /// Gets the date range the report starts on: every session, as the extracted data page did.
+    /// </summary>
+    public static ReportDefaultDateRange DefaultDateRange => ReportDefaultDateRange.AllTime;
 
     /// <inheritdoc/>
     public IReadOnlyCollection<string> FilterNames { get; } = [AIChatReportFilters.RequiredProfile];
@@ -73,11 +84,6 @@ public sealed class AIChatExtractedDataReport : IReport, IReportFilterMetadata
         var range = context.Filter.GetDateRange();
         var records = await _store.GetAsync(profileId, range.FromUtc, range.ToUtc, cancellationToken);
 
-        if (records.Count == 0)
-        {
-            return new ReportDocument();
-        }
-
         var rows = records
             .OrderByDescending(record => record.SessionStartedUtc)
             .Select(record => (record.SessionId, record.SessionStartedUtc, Values: record.Values.ToDictionary(
@@ -90,6 +96,30 @@ public sealed class AIChatExtractedDataReport : IReport, IReportFilterMetadata
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
             .ToList();
+        var tableRows = rows.Select(row => new ReportRow(
+        [
+            row.SessionStartedUtc.ToString("o", CultureInfo.InvariantCulture),
+            row.SessionId,
+            .. fields.Select(field => row.Values.GetValueOrDefault(field)),
+        ]));
+
+        // An export is one flat table, with the invariant columns of the extracted data page's CSV and a column per
+        // field, as scripts read it, even when it has no rows.
+        if (context.Mode == ReportRunMode.Export)
+        {
+            return new ReportDocument().Add(ReportSection.ForTable("ExtractedData",
+            [
+                new ReportColumn("SessionStartedUtc"),
+                new ReportColumn("SessionId"),
+                .. fields.Select(field => new ReportColumn(field)),
+            ],
+            tableRows));
+        }
+
+        if (rows.Count == 0)
+        {
+            return new ReportDocument();
+        }
 
         return new ReportDocument()
             .Add(ReportSection.ForMetrics(S["Summary"].Value,
@@ -103,11 +133,6 @@ public sealed class AIChatExtractedDataReport : IReport, IReportFilterMetadata
                 new ReportColumn(S["Session"].Value),
                 .. fields.Select(field => new ReportColumn(field)),
             ],
-            rows.Select(row => new ReportRow(
-            [
-                row.SessionStartedUtc.ToString("o", CultureInfo.InvariantCulture),
-                row.SessionId,
-                .. fields.Select(field => row.Values.GetValueOrDefault(field)),
-            ]))));
+            tableRows));
     }
 }

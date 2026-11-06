@@ -81,6 +81,11 @@ public sealed class AIUsageAnalyticsReport : IReport, IReportFilterMetadata
     /// </summary>
     public static Permission Permission => ChatAnalyticsPermissionProvider.ViewChatAnalytics;
 
+    /// <summary>
+    /// Gets the date range the report starts on: all usage, as the usage analytics page did.
+    /// </summary>
+    public static ReportDefaultDateRange DefaultDateRange => ReportDefaultDateRange.AllTime;
+
     /// <inheritdoc/>
     public IReadOnlyCollection<string> FilterNames { get; } = [AIChatReportFilters.Profile, AIChatReportFilters.UsageGrouping];
 
@@ -204,19 +209,14 @@ public sealed class AIUsageAnalyticsReport : IReport, IReportFilterMetadata
             return new ReportRow(cells);
         }));
 
-        section.Description = S["{0} requests sent to AI providers, of every kind and from every feature. Each round trip to a model is one request. Cached input, reasoning and audio tokens are part of the input and output totals.", ReportFormat.Number(records.Count)].Value;
+        section.Description = S["{0} requests. Every request sent to an AI provider, of every kind and from every feature. Each round trip to a model is one request, so a reply that plans, searches and calls tools counts each of those calls. Units a model is not billed in are shown as a dash. Cached input, reasoning and audio tokens are part of the input and output totals; providers bill them at their own rates. Audio minutes are measured up to where the last recognized speech ended.", ReportFormat.Number(records.Count)].Value;
+        section.EmptyMessage = S["No metered usage was found for the selected filters."].Value;
         document.Add(section);
     }
 
     private void AddAudio(ReportDocument document, IReadOnlyCollection<AICompletionUsageRecord> records, AIAudioUsageReportGrouping groupBy)
     {
         var rows = AIAudioUsageReport.Build(records, groupBy);
-
-        if (rows.Count == 0)
-        {
-            return;
-        }
-
         var breakdown = groupBy switch
         {
             AIAudioUsageReportGrouping.ModelAndVoice => S["Voice"].Value,
@@ -281,7 +281,8 @@ public sealed class AIUsageAnalyticsReport : IReport, IReportFilterMetadata
             return new ReportRow(cells);
         }));
 
-        section.Description = S["Speech-to-text and text-to-speech requests. An asterisk means some requests did not report an audio length, so the hours are a minimum."].Value;
+        section.Description = S["{0} requests. Speech-to-text and text-to-speech requests, with the hours of audio, characters, audio size and tokens each model was billed for. An asterisk means some requests did not report an audio length, so the hours are a minimum. Speech-to-text hours run to where the last recognized speech ended; speech hours leave out the silence before the first word. Text-to-speech length is known only when the provider reports it or the audio is WAV.", ReportFormat.Number(rows.Sum(row => (long)row.RequestCount))].Value;
+        section.EmptyMessage = S["No speech-to-text or text-to-speech usage was found for the selected filters."].Value;
         document.Add(section);
     }
 
@@ -293,6 +294,10 @@ public sealed class AIUsageAnalyticsReport : IReport, IReportFilterMetadata
     {
         if (records.Count == 0)
         {
+            var empty = ReportSection.ForMetrics(S["Chat completions"].Value, []);
+            empty.EmptyMessage = S["No usage data was found for the selected filters."].Value;
+            document.Add(empty);
+
             return;
         }
 
@@ -372,6 +377,11 @@ public sealed class AIUsageAnalyticsReport : IReport, IReportFilterMetadata
     {
         if (calls.Count == 0)
         {
+            var empty = ReportSection.ForMetrics(S["Voice"].Value, []);
+            empty.Description = VoiceDescription();
+            empty.EmptyMessage = S["No automated voice calls were recorded for the selected filters."].Value;
+            document.Add(empty);
+
             return;
         }
 
@@ -422,9 +432,12 @@ public sealed class AIUsageAnalyticsReport : IReport, IReportFilterMetadata
             row.AudioTokens.HasValue ? ReportFormat.Number(row.AudioTokens.Value) : "-",
         ])));
 
-        section.Description = S["Automated voice calls held by an AI profile, measured from the call audio. Figures a call's engine cannot measure are left out rather than counted as zero."].Value;
+        section.Description = VoiceDescription();
         document.Add(section);
     }
+
+    private string VoiceDescription()
+        => S["Automated voice calls held by an AI profile, measured from the call audio: how long the caller heard the assistant, how long the caller spoke, and how long neither did. Figures a call's engine cannot measure are left out of that figure rather than counted as zero. Text tokens are the text tokens recorded against each call's chat session: turn-based replies, the text part of realtime responses, and the review that concludes the call. Audio tokens are the audio tokens the realtime provider reported for the call."].Value;
 
     private string GroupName(AICompletionUsageGroupBy groupBy)
         => groupBy switch

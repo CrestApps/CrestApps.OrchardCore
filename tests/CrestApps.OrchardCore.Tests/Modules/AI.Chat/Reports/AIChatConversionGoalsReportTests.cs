@@ -55,9 +55,45 @@ public sealed class AIChatConversionGoalsReportTests
         Assert.Equal("profile-1", _reader.LastQuery.ProfileId);
     }
 
-    private Task<ReportDocument> RunAsync(ReportFilter filter)
+    [Fact]
+    public async Task TheExport_IsOneFlatTable_WithTheColumnsOfTheOldCsv_AndAColumnPerGoal()
+    {
+        var scored = new AIChatSessionEvent { SessionId = "s1", ProfileId = "profile-1", SessionStartedUtc = _day.AddHours(9), ConversionScore = 7, ConversionMaxScore = 10 };
+        scored.ConversionGoalResults.Add(new() { Name = "Email", Score = 2, MaxScore = 5 });
+        scored.ConversionGoalResults.Add(new() { Name = "Booked", Score = 5, MaxScore = 5 });
+        var unscored = new AIChatSessionEvent { SessionId = "s2", ProfileId = "profile-1", SessionStartedUtc = _day.AddHours(10) };
+        _reader.Events.AddRange([scored, unscored]);
+
+        var document = await RunAsync(Filter("profile-1"), ReportRunMode.Export);
+
+        Assert.Single(document.Sections);
+        Assert.Equal(
+        [
+            "SessionStartedUtc,SessionId,TotalPoints,Booked,Email",
+            "2026-11-02T09:00:00.0000000Z,s1,7 / 10,5 / 5,2 / 5",
+        ], AIChatSessionAnalyticsReportTests.CsvLines(document));
+    }
+
+    [Fact]
+    public async Task TheExport_WithoutScoredSessions_KeepsItsHeader()
+    {
+        var document = await RunAsync(Filter("profile-1"), ReportRunMode.Export);
+
+        Assert.Equal(["SessionStartedUtc,SessionId,TotalPoints"], AIChatSessionAnalyticsReportTests.CsvLines(document));
+    }
+
+    [Fact]
+    public void TheReport_StartsOnAllTime_AndExportsWithTheExportPermission()
+    {
+        var descriptor = ReportDescriptor.Create<AIChatConversionGoalsReport>();
+
+        Assert.Equal(ReportDateRangePeriod.AllTime, descriptor.DefaultDateRange.Period);
+        Assert.Equal("ExportChatAnalytics", descriptor.ExportPermission.Name);
+    }
+
+    private Task<ReportDocument> RunAsync(ReportFilter filter, ReportRunMode mode = ReportRunMode.Display)
         => new AIChatConversionGoalsReport(_reader, new PassThroughStringLocalizer<AIChatConversionGoalsReport>())
-            .RunAsync(new ReportContext(filter), TestContext.Current.CancellationToken);
+            .RunAsync(new ReportContext(filter, mode), TestContext.Current.CancellationToken);
 
     private static ReportFilter Filter(string profileId)
     {

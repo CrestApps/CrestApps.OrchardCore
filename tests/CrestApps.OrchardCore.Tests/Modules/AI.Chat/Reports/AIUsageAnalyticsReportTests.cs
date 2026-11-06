@@ -65,6 +65,31 @@ public sealed class AIUsageAnalyticsReportTests
         Assert.Contains(document.Sections, section => section.Title == "Chat completions by user and model");
     }
 
+    [Fact]
+    public async Task EachTable_KeepsItsFullFootnote_AndASectionWithoutUsageSaysSo()
+    {
+        var document = await RunAsync(Filter(), Records(), calls: []);
+
+        var metered = document.Sections.Single(section => section.Title == "Metered usage");
+        Assert.Contains("Units a model is not billed in are shown as a dash.", metered.Description);
+        Assert.Contains("providers bill them at their own rates", metered.Description);
+        Assert.Contains("Audio minutes are measured up to where the last recognized speech ended.", metered.Description);
+
+        var audio = document.Sections.Single(section => section.Title == "Audio usage");
+        Assert.Empty(audio.Rows);
+        Assert.Contains("Text-to-speech length is known only when the provider reports it or the audio is WAV.", audio.Description);
+        Assert.Equal("No speech-to-text or text-to-speech usage was found for the selected filters.", audio.EmptyMessage);
+
+        var voice = document.Sections.Single(section => section.Title == "Voice");
+        Assert.Empty(voice.Metrics);
+        Assert.Contains("Audio tokens are the audio tokens the realtime provider reported for the call.", voice.Description);
+        Assert.Equal("No automated voice calls were recorded for the selected filters.", voice.EmptyMessage);
+    }
+
+    [Fact]
+    public void TheReport_StartsOnAllTime()
+        => Assert.Equal(ReportDateRangePeriod.AllTime, ReportDescriptor.Create<AIUsageAnalyticsReport>().DefaultDateRange.Period);
+
     private static Task<ReportDocument> RunAsync(ReportFilter filter, AICompletionUsageRecord[] records, AIVoiceSessionSummaryIndex[] calls)
     {
         var usageService = new Mock<IAICompletionUsageService>();
