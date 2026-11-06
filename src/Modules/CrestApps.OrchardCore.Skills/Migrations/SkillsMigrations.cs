@@ -1,18 +1,16 @@
 using CrestApps.OrchardCore.Skills.Core.Indexes;
+using CrestApps.OrchardCore.Skills.Models;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Data.Migration;
+using OrchardCore.Environment.Shell.Scope;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Skills.Migrations;
 
 internal sealed class SkillsMigrations : DataMigration
 {
-    private readonly IStore _store;
-
-    public SkillsMigrations(IStore store)
-    {
-        _store = store;
-    }
-
     public async Task<int> CreateAsync()
     {
         await SkillsIndexSchema.CreateAsync(SchemaBuilder);
@@ -22,14 +20,35 @@ internal sealed class SkillsMigrations : DataMigration
 
     /// <summary>
     /// Makes the kind of record that holds a skill an open string: adds the <c>SubjectKindName</c> column to the
-    /// assignment and certification record indexes and fills it in from the number older rows hold. The number column
-    /// stays, so nothing is dropped.
+    /// assignment and certification record indexes. The number column stays, so nothing is dropped.
     /// </summary>
+    /// <remarks>
+    /// The new column is filled by mapping the stored records again after this step commits, not by a SQL update inside
+    /// the migration: a failed statement aborts the whole migration transaction on some databases, and the records'
+    /// own reader already understands the number older records hold. A failure is logged and leaves the tenant running;
+    /// a record that was not mapped again gets its column the next time it is saved.
+    /// </remarks>
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom1Async()
     {
         await SkillsIndexSchema.AddSubjectKindNameColumnsAsync(SchemaBuilder);
-        await SkillsIndexSchema.BackfillSubjectKindNamesAsync(SchemaBuilder, _store);
+
+        ShellScope.AddDeferredTask(async scope =>
+        {
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<SkillsMigrations>>();
+
+            try
+            {
+                var session = scope.ServiceProvider.GetRequiredService<ISession>();
+
+                await CatalogIndexBackfill.ReindexAsync<SkillAssignment, SkillAssignmentIndex>(session, SkillsConstants.CollectionName);
+                await CatalogIndexBackfill.ReindexAsync<CertificationRecord, CertificationRecordIndex>(session, SkillsConstants.CollectionName);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "The skill assignments and certification records could not be indexed again by subject kind. Records saved before the upgrade are indexed again when they are next saved.");
+            }
+        });
 
         return 2;
     }

@@ -117,34 +117,4 @@ public static class SkillsIndexSchema
             table.CreateIndex("IDX_CertificationRecordIndex_SubjectName", "SubjectKindName", "SubjectId"),
             collection: collection);
     }
-
-    /// <summary>
-    /// Fills in <c>SubjectKindName</c> for the rows indexed while the kind was a number (0 for a user, 1 for a worker).
-    /// It only updates rows whose name is missing, so running it again changes nothing.
-    /// </summary>
-    /// <param name="schemaBuilder">The schema builder.</param>
-    /// <param name="store">The store, for the schema the tables live in.</param>
-    /// <returns>A task.</returns>
-    public static async Task BackfillSubjectKindNamesAsync(ISchemaBuilder schemaBuilder, IStore store)
-    {
-        ArgumentNullException.ThrowIfNull(schemaBuilder);
-        ArgumentNullException.ThrowIfNull(store);
-
-        foreach (var indexType in new[] { typeof(SkillAssignmentIndex), typeof(CertificationRecordIndex) })
-        {
-            var tableName = schemaBuilder.TablePrefix + schemaBuilder.TableNameConvention.GetIndexTable(indexType, SkillsConstants.CollectionName);
-            var table = schemaBuilder.Dialect.QuoteForTableName(tableName, store.Configuration.Schema);
-            var name = schemaBuilder.Dialect.QuoteForColumnName("SubjectKindName");
-            var number = schemaBuilder.Dialect.QuoteForColumnName("SubjectKind");
-
-            await using var command = schemaBuilder.Connection.CreateCommand();
-
-            command.Transaction = schemaBuilder.Transaction;
-            command.CommandText =
-                $"UPDATE {table} SET {name} = CASE {number} WHEN 0 THEN '{SkillSubjectKind.User}' WHEN 1 THEN '{SkillSubjectKind.Worker}' END " +
-                $"WHERE {name} IS NULL AND {number} IN (0, 1)";
-
-            await command.ExecuteNonQueryAsync();
-        }
-    }
 }

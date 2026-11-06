@@ -3,9 +3,9 @@ using CrestApps.OrchardCore.Skills;
 using CrestApps.OrchardCore.Skills.Core.Indexes;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using YesSql;
-using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Tests.Skills;
 
@@ -55,10 +55,15 @@ public sealed class OpenSkillSubjectKindTests
     }
 
     [Fact]
-    public async Task TheUpgrade_FillsTheKindNameOfRowsIndexedWhenTheKindWasANumber()
+    public async Task TheUpgrade_FillsTheKindNameOfRecordsIndexedBeforeTheColumnExisted()
     {
         // Arrange
         await using var harness = await SkillsTestHarness.CreateAsync();
+        var spanish = await harness.AddSkillAsync("Spanish");
+
+        await SkillsTests.AssignAsync(harness, SkillSubject.User("u1"), spanish.ItemId, 3);
+        await SkillsTests.AssignAsync(harness, SkillSubject.Worker("w1"), spanish.ItemId, 3);
+
         var store = harness.Store;
         var table = store.Configuration.TableNameConvention.GetIndexTable(typeof(SkillAssignmentIndex), SkillsConstants.CollectionName);
 
@@ -68,26 +73,23 @@ public sealed class OpenSkillSubjectKindTests
 
             await using var command = connection.CreateCommand();
 
-            // Rows as the index held them before the upgrade: a number, and no name.
-            command.CommandText = $"INSERT INTO {table} (DocumentId, ItemId, SubjectKind, SubjectId, SkillId, Proficiency) VALUES (1, 'a1', 0, 'u1', 'k1', 3), (2, 'a2', 1, 'w1', 'k1', 3)";
+            // Rows as an upgraded database holds them right after the column is added: no name yet.
+            command.CommandText = $"UPDATE {table} SET SubjectKindName = NULL";
             await command.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
         }
 
         // Act
         await using (var session = store.CreateSession())
         {
-            var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
-
-            await SkillsIndexSchema.BackfillSubjectKindNamesAsync(new SchemaBuilder(store.Configuration, transaction), store);
-
-            await transaction.CommitAsync(TestContext.Current.CancellationToken);
+            await CatalogIndexBackfill.ReindexAsync<SkillAssignment, SkillAssignmentIndex>(session, SkillsConstants.CollectionName);
+            await session.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         // Assert
         await using var reading = store.CreateSession();
-        var rows = (await reading.QueryIndex<SkillAssignmentIndex>(collection: SkillsConstants.CollectionName).ListAsync(TestContext.Current.CancellationToken)).ToDictionary(row => row.ItemId);
+        var rows = await reading.QueryIndex<SkillAssignmentIndex>(collection: SkillsConstants.CollectionName).ListAsync(TestContext.Current.CancellationToken);
 
-        Assert.Equal(SkillSubjectKind.User, rows["a1"].SubjectKindName);
-        Assert.Equal(SkillSubjectKind.Worker, rows["a2"].SubjectKindName);
+        Assert.Contains(rows, row => row.SubjectId == "u1" && row.SubjectKindName == SkillSubjectKind.User);
+        Assert.Contains(rows, row => row.SubjectId == "w1" && row.SubjectKindName == SkillSubjectKind.Worker);
     }
 }
