@@ -31,10 +31,10 @@ public sealed class AppointmentPersonalDataContributor : IPersonalDataContributo
     {
         ArgumentNullException.ThrowIfNull(subject);
 
+        // Only the name, for scrubbing free text: an email or a phone number on a record may be shared by other people,
+        // so adding it would lead the other contributors to their records.
         foreach (var appointment in await ListAsync(subject, cancellationToken))
         {
-            subject.AddEmail(appointment.CustomerEmail);
-            subject.AddPhoneNumber(appointment.CustomerPhone);
             subject.AddName(appointment.CustomerName);
         }
     }

@@ -70,10 +70,12 @@ public sealed class BookingPersonalDataContributorTests : IAsyncLifetime
         await using (var session = _store.CreateSession())
         {
             var contributor = CreateContributor(session);
-            var subject = new PersonalDataSubject(userId: "user-1");
+            var subject = new PersonalDataSubject(userId: "user-1", email: "ann@example.com");
 
-            // The account's booking tells the contributor the person's email, which finds the guest booking.
+            // The account finds the account's booking and the email finds the guest booking. The bookings add nothing
+            // to the person: an email typed on a booking may be a shared inbox.
             await contributor.IdentifyAsync(subject, cancellationToken);
+            Assert.Equal(["ann@example.com"], subject.Emails);
             export = new PersonalDataExport();
             await contributor.ExportAsync(new PersonalDataExportContext(subject, export), cancellationToken);
 

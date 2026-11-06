@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 
 /// <summary>
 /// Exports and anonymizes the CRM activities of a person: those of their contacts and leads, and those addressed to their
-/// email or phone number. An activity keeps its channel, times, outcome and disposition, which the contact center's
+/// email or phone number that belong to no other contact. An activity keeps its channel, times, outcome and disposition, which the contact center's
 /// reports need; the address it went to is removed, and the person's details are scrubbed from its notes and
 /// instructions.
 /// </summary>
@@ -79,7 +79,9 @@ internal sealed class CrmActivityPersonalDataContributor : IPersonalDataContribu
     private async Task<IReadOnlyList<OmnichannelActivity>> ListAsync(PersonalDataSubject subject, CancellationToken cancellationToken)
     {
         var found = new Dictionary<string, OmnichannelActivity>(StringComparer.Ordinal);
-        var contactIds = (await _contacts.FindAsync(subject, cancellationToken)).Select(contact => contact.ContentItemId).ToArray();
+        var match = await _contacts.MatchAsync(subject, cancellationToken);
+        var contactIds = match.Contacts.Select(contact => contact.ContentItemId).ToArray();
+        var personsContacts = new HashSet<string>(contactIds, StringComparer.Ordinal);
 
         foreach (var chunk in contactIds.Chunk(500))
         {
@@ -91,8 +93,9 @@ internal sealed class CrmActivityPersonalDataContributor : IPersonalDataContribu
             }
         }
 
+        // A number several contacts share is nobody's in particular, so it finds no activity.
         var destinations = subject.Emails
-            .Concat(_contacts.NormalizePhoneNumbers(subject))
+            .Concat(_contacts.NormalizePhoneNumbers(subject).Except(match.SharedPhoneNumbers, StringComparer.Ordinal))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
@@ -102,10 +105,20 @@ internal sealed class CrmActivityPersonalDataContributor : IPersonalDataContribu
                 .Take(MaxActivities)
                 .ListAsync(cancellationToken))
             {
-                found.TryAdd(activity.ItemId, activity);
+                if (IsPersonsActivity(activity, personsContacts))
+                {
+                    found.TryAdd(activity.ItemId, activity);
+                }
             }
         }
 
         return [.. found.Values.OrderBy(activity => activity.ScheduledUtc)];
     }
+
+    /// <summary>
+    /// Returns whether an activity addressed to one of the person's emails or numbers is the person's: an activity of
+    /// another contact belongs to that contact, even when it went to the same inbox or number.
+    /// </summary>
+    internal static bool IsPersonsActivity(OmnichannelActivity activity, IReadOnlySet<string> personsContacts)
+        => string.IsNullOrEmpty(activity.ContactContentItemId) || personsContacts.Contains(activity.ContactContentItemId);
 }

@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.PersonalData;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
@@ -63,7 +64,7 @@ public sealed class CrmPersonalDataContributorTests : IAsyncLifetime
         var subject = new PersonalDataSubject(phoneNumber: "+1 (702) 555-0100");
 
         // Act
-        await contributor.IdentifyAsync(subject, cancellationToken);
+        await ((IPersonalDataContributor)contributor).IdentifyAsync(subject, cancellationToken);
         var export = new PersonalDataExport();
         await contributor.ExportAsync(new PersonalDataExportContext(subject, export), cancellationToken);
         var result = new PersonalDataAnonymizeResult();
@@ -74,11 +75,91 @@ public sealed class CrmPersonalDataContributorTests : IAsyncLifetime
         Assert.Equal(CrmContactPersonalDataContributor.ContactKind, record.Kind);
         Assert.Equal(contact.ContentItemId, record.Id);
         Assert.Contains("+17025550100", record.Fields["PhoneNumbers"], StringComparison.Ordinal);
-        Assert.Contains("Ann Lee", subject.Names);
+
+        // The contact does not add what it holds to the person: a shared inbox or number would pull in other people.
+        Assert.Empty(subject.Names);
+        Assert.Single(subject.PhoneNumbers);
 
         Assert.Equal(1, result.Records[CrmContactPersonalDataContributor.ContactKind]);
         Assert.NotNull(updated);
         Assert.Equal("Anonymized contact", updated.DisplayText);
         Assert.DoesNotContain("5550100", ((JsonObject)updated.Content).ToJsonString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ASharedPhone_DoesNotPullInASecondContact()
+    {
+        // Arrange
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var ann = CrmPersonalDataTestContacts.Create("Ann Lee", ["ann@example.com"], ["+17025550100"]);
+        var bob = CrmPersonalDataTestContacts.Create("Bob Ray", ["bob@example.com"], ["+17025550100"]);
+
+        await ContactPhoneTestStore.SaveAsync(_store, ann, bob);
+
+        var updated = new List<string>();
+        await using var session = _store.CreateSession();
+        var contributor = CreateContributor(session, updated);
+        var subject = new PersonalDataSubject(email: "ann@example.com");
+
+        // Act
+        await ((IPersonalDataContributor)contributor).IdentifyAsync(subject, cancellationToken);
+        var export = new PersonalDataExport();
+        await contributor.ExportAsync(new PersonalDataExportContext(subject, export), cancellationToken);
+        await contributor.AnonymizeAsync(new PersonalDataAnonymizeContext(subject, null, new PersonalDataAnonymizeResult()), cancellationToken);
+
+        // Assert
+        Assert.Empty(subject.PhoneNumbers);
+        Assert.Equal([ann.ContentItemId], export.Records.Select(record => record.Id));
+        Assert.Equal([ann.ContentItemId], updated);
+    }
+
+    [Fact]
+    public async Task APhoneSharedByTwoContacts_ErasesNeitherByThatNumber_AndWarns()
+    {
+        // Arrange
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var ann = CrmPersonalDataTestContacts.Create("Ann Lee", ["ann@example.com"], ["+17025550100"]);
+        var bob = CrmPersonalDataTestContacts.Create("Bob Ray", ["bob@example.com"], ["+17025550100"]);
+
+        await ContactPhoneTestStore.SaveAsync(_store, ann, bob);
+
+        var updated = new List<string>();
+        await using var session = _store.CreateSession();
+        var contributor = CreateContributor(session, updated);
+        var subject = new PersonalDataSubject(phoneNumber: "+1 (702) 555-0100");
+        var result = new PersonalDataAnonymizeResult();
+
+        // Act
+        await contributor.AnonymizeAsync(new PersonalDataAnonymizeContext(subject, null, result), cancellationToken);
+
+        // Assert
+        Assert.Empty(updated);
+        Assert.Equal(0, result.Total);
+        Assert.Contains(result.Warnings, warning => warning.Contains("+17025550100", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void AnActivityOfAnotherContact_IsNotThePersons_EvenAtTheSameNumber()
+    {
+        var persons = new HashSet<string>(["ann"], StringComparer.Ordinal);
+
+        Assert.True(CrmActivityPersonalDataContributor.IsPersonsActivity(new OmnichannelActivity { ContactContentItemId = "ann" }, persons));
+        Assert.True(CrmActivityPersonalDataContributor.IsPersonsActivity(new OmnichannelActivity { ContactContentItemId = null }, persons));
+        Assert.False(CrmActivityPersonalDataContributor.IsPersonsActivity(new OmnichannelActivity { ContactContentItemId = "bob" }, persons));
+    }
+
+    private static CrmContactPersonalDataContributor CreateContributor(ISession session, List<string> updated)
+    {
+        var contentManager = new Mock<IContentManager>();
+        contentManager
+            .Setup(manager => manager.UpdateAsync(It.IsAny<ContentItem>()))
+            .Callback<ContentItem>(item => updated.Add(item.ContentItemId))
+            .Returns(Task.CompletedTask);
+
+        return new CrmContactPersonalDataContributor(
+            new CrmPersonalDataContacts(session, new DefaultPhoneNumberService()),
+            TestContactMethods.Accessor,
+            contentManager.Object,
+            new PassThroughStringLocalizer<CrmContactPersonalDataContributor>());
     }
 }

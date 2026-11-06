@@ -52,8 +52,9 @@ public sealed class ModulePersonalDataContributorTests
         await contributor.AnonymizeAsync(new PersonalDataAnonymizeContext(subject, null, result), TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Contains("ann@example.com", subject.Emails);
-        Assert.Contains("+17025550100", subject.PhoneNumbers);
+        // The profile adds nothing to the person: a work email or phone may be shared with others.
+        Assert.Empty(subject.Emails);
+        Assert.Empty(subject.PhoneNumbers);
 
         var record = Assert.Single(export.Records);
         Assert.Equal(WorkerProfilePersonalDataContributor.WorkerProfileKind, record.Kind);

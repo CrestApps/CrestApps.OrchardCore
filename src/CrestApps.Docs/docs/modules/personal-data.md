@@ -28,7 +28,7 @@ public interface IPersonalDataService
 
 The person is a **`PersonalDataSubject`**, made from a user ID, an email and/or a phone number (one is required): `new PersonalDataSubject(userId, email, phoneNumber)`. Emails match without case sensitivity, and phone numbers match by their digits, so `+1 (702) 555-0100` matches `+17025550100`.
 
-1. **Identify.** Every contributor's `IdentifyAsync` adds what its records reveal (more emails, phone numbers, user IDs or names) to the subject. The rounds repeat until a round adds nothing, at most five times. This comes first, because anonymizing in the same pass would remove the very email the next module looks for.
+1. **Identify.** Every contributor's `IdentifyAsync` may add what its records reveal to the subject. The rounds repeat until a round adds nothing, at most five times. This comes first, because anonymizing in the same pass would remove the very email the next module looks for. The contributors that ship add names only (for scrubbing free text), never an email or a phone number found on a record: a shared inbox (`info@`), a switchboard or a household line would otherwise lead every module to other people's records. The commerce contributors keep following a checkout email to its guest owner and a transaction to its checkout, as they always have.
 2. **Export or anonymize.** Every contributor then runs in order of its `Order` (lowest first).
 
 - **`ExportAsync`** returns a `PersonalDataExport`: when it was made, the user IDs, emails and phone numbers the person was found by, the `Records`, and `Warnings` for anything that could not be read.
@@ -47,10 +47,10 @@ public sealed class MyPersonalDataContributor : IPersonalDataContributor
 {
     public async Task IdentifyAsync(PersonalDataSubject subject, CancellationToken cancellationToken = default)
     {
-        // Optional: add what your records know about the person.
+        // Optional: add the names your records know, so other modules can scrub them from free text. Never add an
+        // email or a phone number typed on a record: it may be shared by other people.
         foreach (var record in await FindAsync(subject, cancellationToken))
         {
-            subject.AddEmail(record.Email);
             subject.AddName(record.Name);
         }
     }
@@ -86,7 +86,8 @@ Register it in the startup of the feature that owns the records, so a feature th
 services.AddPersonalDataContributor<MyPersonalDataContributor>();
 ```
 
-- Keep `IdentifyAsync` safe to call more than once, and never follow an email found on a record to someone else's records.
+- Keep `IdentifyAsync` safe to call more than once, and add only what belongs to the person beyond doubt. Prefer adding nothing but names: an email or a phone number found on a record may belong to several people.
+- When you find records by phone number, do not take a number that several people share as the person's. The CRM skips a number more than one contact has and adds a warning to the export or the result instead.
 - `context.Scrub(text)` replaces the person's emails, phone numbers and names in free text; `subject.ScrubJson(node, replacement)` does the same in every string of a JSON document, such as a content item's content, and clears values that are one of the person's phone numbers written another way.
 - Give the contributor a lower `Order` when it finds records through links another contributor erases.
 - Leave `TakesPartInRetentionExpiry` at `false` unless the records belong to the retention window the request comes from (commerce records for the guest expiry). Opting in means the nightly expiry anonymizes them without anyone asking.
@@ -97,8 +98,8 @@ services.AddPersonalDataContributor<MyPersonalDataContributor>();
 | Feature | Contributor | What it covers |
 | --- | --- | --- |
 | Commerce | `CommercePersonalDataContributor` | Runs every commerce contributor through `ICommercePersonalDataService` (see [Commerce: personal data requests](commerce#personal-data-requests)) and turns its export into records: transactions, payments, refunds, installment plans, subscriptions, checkout sessions, coupon redemptions, payment-provider customers, stock alerts, and the records of Fundraising, Memberships, Marketplace and Reviews. It runs first (`Order` `-100`). |
-| Omnichannel Activities | `CrmContactPersonalDataContributor` | CRM contacts and leads found by their primary email or any of their phone numbers. Exports every field; anonymizing replaces the name and removes the person's emails, phone numbers and name from every field, keeping the contact for its activities. |
-| Omnichannel Activities | `CrmActivityPersonalDataContributor` | Activities of those contacts and activities addressed to the person's email or phone number. Anonymizing removes the destination and scrubs the notes and instructions; channel, times, outcome and disposition stay. |
+| Omnichannel Activities | `CrmContactPersonalDataContributor` | CRM contacts and leads found by their primary email, or by one of their phone numbers when no other contact has it (a number several contacts share finds none of them and adds a warning, and a converted lead does not count as another contact). It adds nothing to the subject. Exports every field; anonymizing replaces the name and removes the person's emails, phone numbers and name from every field, keeping the contact for its activities. |
+| Omnichannel Activities | `CrmActivityPersonalDataContributor` | Activities of those contacts, and activities addressed to the person's email or phone number that belong to no other contact (a shared number finds none). Anonymizing removes the destination and scrubs the notes and instructions; channel, times, outcome and disposition stay. |
 | Workforce | `WorkerProfilePersonalDataContributor` | The worker profile of the person's account. Anonymizing replaces the name and removes the email, phone number, date of birth and home base; the employee number, employment dates and teams stay. |
 | Workforce Time Clock | `TimePunchPersonalDataContributor` | The worker's punches. Anonymizing removes the coordinates and the device and scrubs correction reasons; the time and kind stay. |
 | Workforce Time Off | `TimeOffRequestPersonalDataContributor` | The worker's time-off requests. Anonymizing removes the reason given and scrubs the manager's note; dates, type, amount and decision stay. |

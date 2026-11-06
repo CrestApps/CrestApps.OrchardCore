@@ -36,9 +36,10 @@ public sealed class DonationPersonalDataContributor : ICommercePersonalDataContr
     {
         ArgumentNullException.ThrowIfNull(subject);
 
+        // Only the name, for scrubbing free text: an email or a phone number on a record may be shared by other people,
+        // so adding it would lead the other contributors to their records.
         foreach (var donation in await FindAsync(subject, cancellationToken))
         {
-            subject.AddEmail(donation.DonorEmail);
             subject.AddName(donation.DonorName);
         }
     }

@@ -31,10 +31,10 @@ internal sealed class WorkerProfilePersonalDataContributor : IPersonalDataContri
     {
         ArgumentNullException.ThrowIfNull(subject);
 
+        // Only the name, for scrubbing free text: an email or a phone number on a record may be shared by other people,
+        // so adding it would lead the other contributors to their records.
         foreach (var worker in await FindWorkersAsync(_workers, subject, cancellationToken))
         {
-            subject.AddEmail(worker.Email);
-            subject.AddPhoneNumber(worker.Phone);
             subject.AddName(worker.DisplayName);
         }
     }

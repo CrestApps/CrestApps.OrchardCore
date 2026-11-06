@@ -75,6 +75,22 @@ public sealed class VerticalPersonalDataContributorTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ADonationsEmail_IsNotAddedToThePerson()
+    {
+        // A donation made from the account with an office inbox must not pull in everyone else who used that inbox.
+        var donation = new Donation { ItemId = "d1", DonorUserId = UserId, DonorName = "Ann Lee", DonorEmail = "office@example.com", Amount = 25m };
+        var store = new Mock<IDonationStore>();
+        store.Setup(value => value.ListByDonorAsync(UserId, It.IsAny<CancellationToken>())).ReturnsAsync([donation]);
+
+        var contributor = new DonationPersonalDataContributor(store.Object);
+        var subject = Subject();
+
+        await contributor.IdentifyAsync(subject, TestContext.Current.CancellationToken);
+
+        Assert.Equal(["ann@example.com"], subject.Emails);
+    }
+
+    [Fact]
     public async Task AMembersMemberships_AreExported_AndTheirUserNameIsAnonymized()
     {
         var membership = new Membership { ItemId = "m1", UserId = UserId, UserName = "ann", Title = "Gold", RoleNames = ["Gold"], Status = MembershipStatus.Active };

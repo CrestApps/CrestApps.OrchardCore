@@ -20,10 +20,14 @@ public interface IPersonalDataContributor
     bool TakesPartInRetentionExpiry => false;
 
     /// <summary>
-    /// Adds what the contributor's records know about the person to the subject (more user IDs, emails, phone numbers or
-    /// names), so the other contributors find their records too. It runs until nothing new is found, before anything is
-    /// exported or anonymized.
+    /// Adds what the contributor's records know about the person to the subject, so the other contributors find their
+    /// records too. It runs until nothing new is found, before anything is exported or anonymized.
     /// </summary>
+    /// <remarks>
+    /// Add only what belongs to the person beyond doubt, and prefer adding nothing but names. An email or a phone number
+    /// typed on a record may be a shared inbox, a switchboard or a household line, and adding it would lead every other
+    /// contributor to the records of the other people who share it.
+    /// </remarks>
     /// <param name="subject">The person the request is about.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     Task IdentifyAsync(PersonalDataSubject subject, CancellationToken cancellationToken = default)

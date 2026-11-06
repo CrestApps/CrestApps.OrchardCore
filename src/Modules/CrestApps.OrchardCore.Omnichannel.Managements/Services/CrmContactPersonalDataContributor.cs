@@ -9,9 +9,10 @@ using OrchardCore.ContentManagement;
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 
 /// <summary>
-/// Exports and anonymizes the CRM contacts and leads of a person, found by their email or phone number. Erasing keeps
-/// the contact, so its activities and the reports built on them still add up, but replaces its name and removes the
-/// person's emails, phone numbers and name from every field.
+/// Exports and anonymizes the CRM contacts and leads of a person, found by their email or a phone number no other contact
+/// has. It adds nothing to the person it is asked about, because an inbox or a number on a contact may be shared.
+/// Erasing keeps the contact, so its activities and the reports built on them still add up, but replaces its name and
+/// removes the person's emails, phone numbers and name from every field.
 /// </summary>
 internal sealed class CrmContactPersonalDataContributor : IPersonalDataContributor
 {
@@ -37,33 +38,18 @@ internal sealed class CrmContactPersonalDataContributor : IPersonalDataContribut
         S = stringLocalizer;
     }
 
-    public async Task IdentifyAsync(PersonalDataSubject subject, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(subject);
-
-        foreach (var contact in await _contacts.FindAsync(subject, cancellationToken))
-        {
-            var methods = _contactMethods.Get(contact);
-
-            foreach (var email in methods.EmailAddresses)
-            {
-                subject.AddEmail(email?.Email);
-            }
-
-            foreach (var phoneNumber in methods.PhoneNumbers)
-            {
-                subject.AddPhoneNumber(phoneNumber?.PhoneNumber);
-            }
-
-            subject.AddName(contact.DisplayText);
-        }
-    }
-
     public async Task ExportAsync(PersonalDataExportContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        foreach (var contact in await _contacts.FindAsync(context.Subject, cancellationToken))
+        var match = await _contacts.MatchAsync(context.Subject, cancellationToken);
+
+        foreach (var phoneNumber in match.SharedPhoneNumbers)
+        {
+            context.Export.Warnings.Add(SharedPhoneNumberWarning(phoneNumber));
+        }
+
+        foreach (var contact in match.Contacts)
         {
             var isLead = contact.TryGet<LeadPart>(out var lead);
             var methods = _contactMethods.Get(contact);
@@ -89,7 +75,14 @@ internal sealed class CrmContactPersonalDataContributor : IPersonalDataContribut
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        foreach (var contact in await _contacts.FindAsync(context.Subject, cancellationToken))
+        var match = await _contacts.MatchAsync(context.Subject, cancellationToken);
+
+        foreach (var phoneNumber in match.SharedPhoneNumbers)
+        {
+            context.Result.Warnings.Add(SharedPhoneNumberWarning(phoneNumber));
+        }
+
+        foreach (var contact in match.Contacts)
         {
             context.Subject.ScrubJson((JsonObject)contact.Content, context.ReplacementText);
             contact.DisplayText = context.ReplacementText ?? S["Anonymized contact"].Value;
@@ -98,4 +91,7 @@ internal sealed class CrmContactPersonalDataContributor : IPersonalDataContribut
             context.Result.Count(contact.Has<LeadPart>() ? LeadKind : ContactKind);
         }
     }
+
+    private string SharedPhoneNumberWarning(string phoneNumber)
+        => S["The phone number {0} belongs to more than one CRM contact, so no contact was found by it. Review those contacts by hand.", phoneNumber].Value;
 }
