@@ -56,6 +56,28 @@ public sealed class ReportDesignerAdminMenuTests
     }
 
     [Fact]
+    public async Task APinnedReport_OpensItsRunPage()
+    {
+        // Arrange
+        var designs = Catalog(Report("top", "Top customers", null));
+        var urls = new List<UrlRouteContext>();
+
+        // Act
+        var menu = await BuildAsync(designs, Catalog<ReportGroup>(), urls);
+
+        // Assert
+        var reports = Assert.Single(menu, item => item.Text.Value == "Reports");
+        var item = Child(reports, "Top customers");
+        Assert.Equal("Run", item.RouteValues["action"]);
+        Assert.Equal("ReportDesigns", item.RouteValues["controller"]);
+        Assert.Equal("top", item.RouteValues["id"]);
+        Assert.Equal("/admin/reports/designs/top", item.Href);
+        var links = urls.Select(url => new RouteValueDictionary(url.Values)).ToList();
+        Assert.Contains(links, values => Equals(values["action"], "Run") && Equals(values["id"], "top"));
+        Assert.DoesNotContain(links, values => Equals(values["controller"], "ReportDesigner"));
+    }
+
+    [Fact]
     public async Task WithoutPinnedReports_NoGroupIsShown()
     {
         // Arrange
@@ -94,7 +116,8 @@ public sealed class ReportDesignerAdminMenuTests
 
     private static async Task<IEnumerable<MenuItem>> BuildAsync(
         CrestApps.Core.Services.ICatalog<ReportDesign> designs,
-        CrestApps.Core.Services.ICatalog<ReportGroup> groups)
+        CrestApps.Core.Services.ICatalog<ReportGroup> groups,
+        List<UrlRouteContext> urls = null)
     {
         // The designer may design and manage groups, and run every report but the hidden one.
         var authorizationService = new FakeAuthorizationService(
@@ -110,7 +133,17 @@ public sealed class ReportDesignerAdminMenuTests
             new PassThroughStringLocalizer<ReportDesignerAdminMenu>());
 
         var urlHelper = new Mock<IUrlHelper>();
-        urlHelper.Setup(helper => helper.RouteUrl(It.IsAny<UrlRouteContext>())).Returns("/admin/report");
+        // A designed report's run page is reports/designs/{id}; every other link is the same placeholder.
+        urlHelper.Setup(helper => helper.RouteUrl(It.IsAny<UrlRouteContext>())).Returns((UrlRouteContext context) =>
+        {
+            urls?.Add(context);
+
+            var values = new RouteValueDictionary(context.Values);
+
+            return Equals(values["controller"], "ReportDesigns") && Equals(values["action"], "Run")
+                ? $"/admin/reports/designs/{values["id"]}"
+                : "/admin/report";
+        });
         urlHelper.Setup(helper => helper.Content(It.IsAny<string>())).Returns((string path) => path);
         var urlHelperFactory = new Mock<IUrlHelperFactory>();
         urlHelperFactory.Setup(factory => factory.GetUrlHelper(It.IsAny<ActionContext>())).Returns(urlHelper.Object);

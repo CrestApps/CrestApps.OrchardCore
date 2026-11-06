@@ -991,6 +991,7 @@
 				credentials: "same-origin"
 			};
 			if (settings.keepalive) init.keepalive = true;
+			if (settings.signal) init.signal = settings.signal;
 			if (settings.body !== void 0) {
 				init.method = settings.method || "POST";
 				init.body = JSON.stringify(settings.body);
@@ -1387,25 +1388,70 @@
 				target.appendChild(h("div", { className: "report-designer-empty text-muted" }, app.t("Add a data set, then drag fields to Columns to see a preview.")));
 				return;
 			}
-			target.classList.add("is-loading");
+			if (previewRun) previewRun.stop();
+			var run = startPreviewRun(target);
 			var payload = app.payload();
 			payload.filterValues = app.filterValues;
 			payload.selections = app.previewSelections;
+			previewRun = run;
 			ui.request(app.url("preview") + (app.isView() ? "?view=true" : ""), {
 				body: payload,
-				html: true
+				html: true,
+				signal: run.signal
 			}).then(function(html) {
-				target.classList.remove("is-loading");
+				if (previewRun !== run) return;
+				run.stop();
+				previewRun = null;
 				target.innerHTML = html;
 				ui.initPickers(target);
 				app.bindPreview(target);
 				if (root.CrestAppsReportCharts) root.CrestAppsReportCharts.render(target);
-			}).catch(function() {
-				target.classList.remove("is-loading");
+			}).catch(function(error) {
+				if (previewRun !== run) return;
+				run.stop();
+				previewRun = null;
 				ui.clear(target);
-				target.appendChild(h("div", { className: "alert alert-danger" }, app.t("The preview could not be loaded.")));
+				target.appendChild(previewError(error));
 			});
 		};
+		var previewRun = null;
+		function startPreviewRun(target) {
+			var controller = typeof root.AbortController === "function" ? new root.AbortController() : null;
+			var started = Date.now();
+			var status = h("div", {
+				className: "rd-preview-progress",
+				role: "status",
+				"aria-live": "polite"
+			}, h("span", {
+				className: "spinner-border spinner-border-sm",
+				"aria-hidden": "true"
+			}), h("span", { className: "rd-preview-progress-text" }, app.t("Running the report…")));
+			var text = status.lastChild;
+			var timer = root.setInterval(function() {
+				text.textContent = app.t("Running the report…") + " " + Math.round((Date.now() - started) / 1e3) + " s";
+			}, 1e3);
+			target.classList.add("is-loading");
+			target.appendChild(status);
+			return {
+				signal: controller ? controller.signal : void 0,
+				stop: function() {
+					root.clearInterval(timer);
+					status.remove();
+					target.classList.remove("is-loading");
+					if (controller) controller.abort();
+				}
+			};
+		}
+		function previewError(error) {
+			var status = error && error.status;
+			return h("div", { className: "alert alert-danger d-flex align-items-center gap-2 flex-wrap" }, h("span", null, status === 502 || status === 503 || status === 504 || status === 524 ? app.t("The server stopped waiting for the report to run. Run it again, or narrow its filters.") : app.t("The preview could not be loaded."), status ? " (" + status + ")" : ""), h("button", {
+				type: "button",
+				className: "btn btn-sm btn-outline-danger",
+				onclick: function() {
+					app.refreshPreview();
+				}
+			}, ui.icon("fa-rotate"), " ", app.t("Try again")));
+		}
 		app.bindPreview = function(target) {
 			if (!target.dataset.selectionBound) {
 				target.dataset.selectionBound = "true";

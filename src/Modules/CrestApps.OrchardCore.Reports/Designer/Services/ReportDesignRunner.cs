@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Security.Claims;
 using System.Text.Json;
 using CrestApps.OrchardCore.Reports.Designer.Models;
@@ -181,8 +182,83 @@ public sealed class ReportDesignRunner
     {
         ArgumentNullException.ThrowIfNull(design);
 
+        var selections = options?.Selections ?? new Dictionary<string, IList<string>>(StringComparer.Ordinal);
+        var only = options?.VisualIds;
+        var source = string.IsNullOrEmpty(options?.Source) ? ReportRunOptions.OtherSource : options.Source;
+        using var activity = ReportTelemetry.Start("report.run");
+        var started = Stopwatch.GetTimestamp();
+
+        activity?.SetTag(ReportTelemetry.ReportIdTag, design.ItemId);
+        activity?.SetTag(ReportTelemetry.ReportTitleTag, design.DisplayText);
+        activity?.SetTag(ReportTelemetry.RunSourceTag, source);
+        activity?.SetTag(ReportTelemetry.SelectionTag, selections.Values.Any(keys => keys?.Count > 0));
+        activity?.SetTag("crestapps.report.refreshed_visuals", only is null ? null : string.Join(',', only));
+
+        var outcome = "failure";
+
+        try
+        {
+            var result = await RunCoreAsync(design, dataUser, filterValues, period, selections, only, source, cancellationToken);
+
+            outcome = result.Errors.Count > 0 ? "failure" : "success";
+
+            activity?.SetTag("crestapps.report.rows.returned", result.RowCount);
+            activity?.SetTag("crestapps.report.warnings", result.Warnings.Count);
+
+            if (result.Errors.Count > 0)
+            {
+                activity?.SetStatus(ActivityStatusCode.Error, string.Join(' ', result.Errors));
+            }
+
+            return result;
+        }
+        catch (Exception exception)
+        {
+            outcome = exception is OperationCanceledException ? "canceled" : "failure";
+            ReportTelemetry.Fail(activity, exception);
+
+            throw;
+        }
+        finally
+        {
+            activity?.SetTag(ReportTelemetry.OutcomeTag, outcome);
+
+            if (ReportTelemetry.RunDuration.Enabled || ReportTelemetry.Failures.Enabled)
+            {
+                var tags = new TagList
+                {
+                    { ReportTelemetry.ReportIdTag, design.ItemId },
+                    { ReportTelemetry.RunSourceTag, source },
+                    { ReportTelemetry.OutcomeTag, outcome },
+                };
+
+                ReportTelemetry.RunDuration.Record(Stopwatch.GetElapsedTime(started).TotalSeconds, tags);
+
+                if (outcome == "failure")
+                {
+                    ReportTelemetry.Failures.Add(1, tags);
+                }
+            }
+        }
+    }
+
+    private async Task<ReportRunResult> RunCoreAsync(
+        ReportDesign design,
+        ClaimsPrincipal dataUser,
+        IDictionary<string, IList<string>> filterValues,
+        ReportRunPeriod period,
+        IDictionary<string, IList<string>> selections,
+        ISet<string> only,
+        string source,
+        CancellationToken cancellationToken)
+    {
         var result = new ReportRunResult();
         var context = await _contextFactory.CreateAsync(dataUser);
+
+        context.Source = source;
+        context.ReportId = design.ItemId;
+        context.ReportTitle = design.DisplayText;
+        context.SharedReads = new ReportSharedReads(context.Limits.MaxSharedReadRows);
 
         foreach (var (filterId, values) in filterValues ?? new Dictionary<string, IList<string>>())
         {
@@ -192,10 +268,9 @@ public sealed class ReportDesignRunner
         var visuals = (design.Visuals ?? []).Where(visual => visual is not null).ToList();
         var queries = design.GetQueries().ToList();
         var sections = new List<ReportSection>();
-        var selections = options?.Selections ?? new Dictionary<string, IList<string>>(StringComparer.Ordinal);
-        var only = options?.VisualIds;
         var shown = only is null ? visuals : visuals.Where(visual => only.Contains(visual.Id)).ToList();
         var selectionFilters = GetSelectionFilters(queries, visuals, selections, result);
+        var jobs = new List<QueryJob>();
 
         foreach (var visual in visuals.Where(visual => !queries.Any(query => SameQuery(query.Id, visual.QueryId))))
         {
@@ -227,44 +302,76 @@ public sealed class ReportDesignRunner
                 runs.Add((null, []));
             }
 
-            try
+            for (var index = 0; index < runs.Count; index++)
             {
-                foreach (var (filters, runVisuals) in runs)
+                var (filters, runVisuals) = runs[index];
+
+                jobs.Add(new QueryJob
                 {
-                    var run = filters is null ? query : WithFilters(query, filters);
-                    var queryResult = await RunQueryAsync(run, runVisuals, isMain && visuals.Count == 0, context, period, result, sections, selections, cancellationToken);
+                    Query = query,
+                    Run = filters is null ? query : WithFilters(query, filters),
+                    Visuals = runVisuals,
+                    IsMain = isMain,
 
                     // The report's rows are those of the main query's first run: the unfiltered one, when it has one.
-                    if (isMain && runVisuals == runs[0].Visuals)
-                    {
-                        if (queryResult is null)
-                        {
-                            return result;
-                        }
+                    GivesRows = isMain && index == 0,
+                });
+            }
+        }
 
-                        result.Columns = queryResult.Columns;
-                        result.RowCount = queryResult.Rows.Count;
-                        result.Rows = queryResult.Rows;
-                    }
+        // Every query is planned before any runs, so the queries that read the same data sets read them once: the first
+        // one keeps the rows and asks for the fields all of them need.
+        foreach (var job in jobs)
+        {
+            try
+            {
+                job.Plan = await PlanQueryAsync(job.Run, context, period, result, cancellationToken);
+            }
+            catch (ReportQueryException exception)
+            {
+                if (AddErrors(job, exception, result))
+                {
+                    return result;
+                }
+            }
+
+            if (job.Plan is null)
+            {
+                if (job.IsMain)
+                {
+                    return result;
+                }
+
+                continue;
+            }
+
+            context.SharedReads.Register(job.Plan);
+        }
+
+        foreach (var job in jobs.Where(job => job.Plan is not null && !job.Skipped))
+        {
+            try
+            {
+                var queryResult = await RunQueryAsync(job, job.IsMain && visuals.Count == 0, context, result, sections, selections, cancellationToken);
+
+                if (job.GivesRows)
+                {
+                    result.Columns = queryResult.Columns;
+                    result.RowCount = queryResult.Rows.Count;
+                    result.Rows = queryResult.Rows;
                 }
             }
             catch (ReportQueryException exception)
             {
-                foreach (var error in exception.Errors)
-                {
-                    if (isMain)
-                    {
-                        result.Errors.Add(error);
-                    }
-                    else
-                    {
-                        result.Warnings.Add(S["{0}: {1}", query.Name ?? query.Id, error]);
-                    }
-                }
-
-                if (isMain)
+                if (AddErrors(job, exception, result))
                 {
                     return result;
+                }
+
+                // The other runs of a query that can't run are skipped, like before.
+                foreach (var other in jobs.Where(other => other.Query == job.Query))
+                {
+                    other.Skipped = true;
                 }
             }
         }
@@ -295,22 +402,44 @@ public sealed class ReportDesignRunner
         return result;
     }
 
-    // Runs one query of a report for the visuals that show it, or as one table, adding their sections, its warnings, and its viewer
-    // filters (a filter of an earlier query with the same identifier keeps its control). Returns null when the query
-    // cannot run: the main query's problems are errors, another query's are warnings that name it.
-    private async Task<ReportQueryResult> RunQueryAsync(
+    // Adds the problems of a query that can't run: the main query's are errors, another query's are warnings that name it.
+    // Returns whether the report can't run.
+    private bool AddErrors(QueryJob job, ReportQueryException exception, ReportRunResult result)
+    {
+        foreach (var error in exception.Errors)
+        {
+            if (job.IsMain)
+            {
+                result.Errors.Add(error);
+            }
+            else
+            {
+                result.Warnings.Add(S["{0}: {1}", job.Query.Name ?? job.Query.Id, error]);
+            }
+        }
+
+        return job.IsMain;
+    }
+
+    // Plans one run of a query of a report. Returns null when the query cannot run: the main query's problems are
+    // errors, another query's are warnings that name it.
+    private async Task<ReportQueryPlan> PlanQueryAsync(
         ReportNamedQuery query,
-        List<ReportVisualDefinition> visuals,
-        bool showAsTable,
         ReportQueryExecutionContext context,
         ReportRunPeriod period,
         ReportRunResult result,
-        List<ReportSection> sections,
-        IDictionary<string, IList<string>> selections,
         CancellationToken cancellationToken)
     {
         var isMain = string.IsNullOrEmpty(query.Id);
+
+        context.QueryId = query.Id ?? string.Empty;
+
+        using var activity = ReportTelemetry.Start("report.plan", context);
         var plan = await _planner.PlanAsync(query.Query ?? new ReportQueryDefinition(), context.DataSourceContext, cancellationToken);
+
+        activity?.SetTag("crestapps.report.row_calculations", plan.RowCalculations.Count);
+        activity?.SetTag("crestapps.report.calculated_fields", query.Query?.CalculatedFields?.Count ?? 0);
+        activity?.SetTag("crestapps.report.errors", plan.Errors.Count);
 
         if (!plan.IsValid)
         {
@@ -357,6 +486,26 @@ public sealed class ReportDesignRunner
             }
         }
 
+        return plan;
+    }
+
+    // Runs one planned run of a query of a report for the visuals that show it, or as one table, adding their sections,
+    // its warnings, and its viewer filters (a filter of an earlier query with the same identifier keeps its control).
+    private async Task<ReportQueryResult> RunQueryAsync(
+        QueryJob job,
+        bool showAsTable,
+        ReportQueryExecutionContext context,
+        ReportRunResult result,
+        List<ReportSection> sections,
+        IDictionary<string, IList<string>> selections,
+        CancellationToken cancellationToken)
+    {
+        var query = job.Query;
+        var plan = job.Plan;
+        var visuals = job.Visuals;
+
+        context.QueryId = query.Id ?? string.Empty;
+
         // The rows behind a grouped result aren't kept, so the totals, subtotals, charts and pivots of the visuals are
         // grouped while the query runs.
         context.Groupings.Clear();
@@ -370,7 +519,7 @@ public sealed class ReportDesignRunner
 
         foreach (var error in _documentBuilder.Validate(visuals, queryResult.Columns))
         {
-            result.Warnings.Add(isMain ? error : S["{0}: {1}", query.Name ?? query.Id, error]);
+            result.Warnings.Add(job.IsMain ? error : S["{0}: {1}", query.Name ?? query.Id, error]);
         }
 
         foreach (var warning in queryResult.Warnings)
@@ -381,6 +530,10 @@ public sealed class ReportDesignRunner
         // A report without visuals shows its main query's result as one table.
         if (visuals.Count > 0 || showAsTable)
         {
+            using var activity = ReportTelemetry.Start("report.render", context);
+
+            activity?.SetTag("crestapps.report.visuals", string.Join(',', visuals.Select(visual => visual.Id)));
+
             foreach (var section in _documentBuilder.Build(null, visuals, queryResult, selections.AsReadOnly()).Sections)
             {
                 sections.Add(section);
@@ -443,7 +596,18 @@ public sealed class ReportDesignRunner
             {
                 var visual = visuals.FirstOrDefault(candidate => candidate.Id == target?.VisualId);
 
-                if (visual is null || visual == source)
+                if (visual is null)
+                {
+                    // A visual removed or replaced since the click was set up: nothing it names is filtered.
+                    if (!string.IsNullOrEmpty(target?.VisualId))
+                    {
+                        result.Warnings.Add(S["Clicking '{0}' cannot filter the visual '{1}': the report no longer has it. Pick the visuals it filters again.", name, target.VisualId]);
+                    }
+
+                    continue;
+                }
+
+                if (visual == source)
                 {
                     continue;
                 }
@@ -521,6 +685,25 @@ public sealed class ReportDesignRunner
     private static bool SameQuery(string queryId, string visualQueryId)
     {
         return string.Equals(queryId ?? string.Empty, visualQueryId ?? string.Empty, StringComparison.Ordinal);
+    }
+
+    // One run of a query of a report: the query as saved, the copy that runs (with the filters values picked in other
+    // visuals set), the visuals it shows, and its plan.
+    private sealed class QueryJob
+    {
+        public ReportNamedQuery Query { get; set; }
+
+        public ReportNamedQuery Run { get; set; }
+
+        public List<ReportVisualDefinition> Visuals { get; set; }
+
+        public bool IsMain { get; set; }
+
+        public bool GivesRows { get; set; }
+
+        public ReportQueryPlan Plan { get; set; }
+
+        public bool Skipped { get; set; }
     }
 
     /// <summary>
