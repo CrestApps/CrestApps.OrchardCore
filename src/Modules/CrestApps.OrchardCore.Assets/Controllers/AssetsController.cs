@@ -1,9 +1,9 @@
-using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Assets.Core.Indexes;
 using CrestApps.OrchardCore.Assets.Core.Services;
-using CrestApps.OrchardCore.Assets.Fleet;
 using CrestApps.OrchardCore.Assets.Models;
 using CrestApps.OrchardCore.Assets.ViewModels;
+using CrestApps.OrchardCore.Core.Models;
+using CrestApps.OrchardCore.Core.Validation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -25,8 +26,6 @@ namespace CrestApps.OrchardCore.Assets.Controllers;
 /// </summary>
 public sealed class AssetsController : Controller
 {
-    private static readonly AssetCategory[] _fleetCategories = [AssetCategory.Vehicle, AssetCategory.Equipment, AssetCategory.Tool];
-
     private readonly IAuthorizationService _authorizationService;
     private readonly AssetManager _manager;
     private readonly AssetTypeManager _typeManager;
@@ -35,7 +34,8 @@ public sealed class AssetsController : Controller
     private readonly IClock _clock;
     private readonly INotifier _notifier;
     private readonly AssetOwnerDirectory _owners;
-    private readonly bool _fleet;
+    private readonly IDisplayManager<Asset> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
 
@@ -49,7 +49,9 @@ public sealed class AssetsController : Controller
     /// <param name="session">The session.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="notifier">The notifier.</param>
-    /// <param name="fleet">The Fleet feature, when it is on.</param>
+    /// <param name="owners">The directory of asset owners.</param>
+    /// <param name="displayManager">The display manager that builds the asset editor from its drivers.</param>
+    /// <param name="updateModelAccessor">The accessor of the model updater.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     public AssetsController(
         IAuthorizationService authorizationService,
@@ -60,7 +62,8 @@ public sealed class AssetsController : Controller
         IClock clock,
         INotifier notifier,
         AssetOwnerDirectory owners,
-        IEnumerable<FleetFeature> fleet,
+        IDisplayManager<Asset> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<AssetsController> htmlLocalizer)
     {
         _authorizationService = authorizationService;
@@ -71,7 +74,8 @@ public sealed class AssetsController : Controller
         _clock = clock;
         _notifier = notifier;
         _owners = owners;
-        _fleet = fleet.Any();
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
     }
 
@@ -224,11 +228,13 @@ public sealed class AssetsController : Controller
     }
 
     /// <summary>
-    /// Shows the editor.
+    /// Shows the editor, built by the display drivers of <see cref="Asset"/>.
     /// </summary>
     /// <param name="id">The asset, or <see langword="null"/> for a new one.</param>
     /// <param name="assetTypeId">The type of a new asset.</param>
     /// <param name="parentAssetId">The asset a new asset is part of.</param>
+    /// <param name="ownerKind">The kind of owner of a new asset.</param>
+    /// <param name="ownerId">The owner of a new asset.</param>
     /// <returns>The page.</returns>
     [Admin("assets/edit/{id?}", "AssetsEdit")]
     public async Task<IActionResult> Edit(string id, string assetTypeId, string parentAssetId, AssetOwnerKind? ownerKind, string ownerId)
@@ -238,118 +244,70 @@ public sealed class AssetsController : Controller
             return Forbid();
         }
 
-        var item = string.IsNullOrEmpty(id) ? await _manager.NewAsync() : await _manager.FindByIdAsync(id);
+        var isNew = string.IsNullOrEmpty(id);
+        var item = isNew ? await _manager.NewAsync() : await _manager.FindByIdAsync(id);
 
         if (item is null)
         {
             return NotFound();
         }
 
-        var isNew = string.IsNullOrEmpty(id);
-        var model = new AssetEditViewModel
+        if (isNew)
         {
-            Id = id,
-            AssetTypeId = isNew ? assetTypeId : item.AssetTypeId,
-            Number = item.Number,
-            Name = item.Name,
-            SerialNumber = item.SerialNumber,
-            Manufacturer = item.Manufacturer,
-            Model = item.Model,
-            Status = item.Status,
-            OwnerKind = isNew && ownerKind is { } newKind && !string.IsNullOrEmpty(ownerId) ? newKind : item.OwnerKind,
-            OwnerId = isNew && ownerKind is not null && !string.IsNullOrEmpty(ownerId) ? ownerId : item.OwnerId,
-            ParentAssetId = isNew ? parentAssetId : item.ParentAssetId,
-            InstallDate = item.InstallDate,
-            AddressLine1 = item.Location?.AddressLine1,
-            City = item.Location?.City,
-            Region = item.Location?.Region,
-            PostalCode = item.Location?.PostalCode,
-            Country = item.Location?.Country,
-            WarrantyStart = item.Warranty?.StartDate,
-            WarrantyEnd = item.Warranty?.EndDate,
-            WarrantyProvider = item.Warranty?.Provider,
-            Attributes = new Dictionary<string, string>(item.Attributes, StringComparer.OrdinalIgnoreCase),
-            Documents = string.Join(Environment.NewLine, item.Documents),
-            Schedulable = item.Fleet?.Schedulable ?? false,
-            CarriesStock = item.Fleet?.CarriesStock ?? false,
-            Plate = item.Fleet?.Plate,
-            Vin = item.Fleet?.Vin,
-            Capacity = item.Fleet?.Capacity,
-            FuelType = item.Fleet?.FuelType,
-        };
+            item.AssetTypeId = assetTypeId;
+            item.ParentAssetId = parentAssetId;
 
-        await PopulateAsync(model);
+            if (ownerKind is { } newKind && !string.IsNullOrEmpty(ownerId))
+            {
+                item.OwnerKind = newKind;
+                item.OwnerId = ownerId;
+            }
+        }
 
-        return View(model);
+        return View(new EditCatalogEntryViewModel
+        {
+            DisplayName = isNew ? null : item.Name,
+            Editor = await _displayManager.BuildEditorAsync(item, _updateModelAccessor.ModelUpdater, isNew),
+        });
     }
 
     /// <summary>
     /// Saves the editor.
     /// </summary>
-    /// <param name="form">The form.</param>
+    /// <param name="id">The asset, or <see langword="null"/> for a new one.</param>
     /// <returns>The asset's page, or the editor with its errors.</returns>
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("assets/edit/{id?}", "AssetsEdit")]
-    public async Task<IActionResult> EditPost(AssetEditViewModel form)
+    public async Task<IActionResult> EditPost(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AssetsPermissions.ManageAssets))
         {
             return Forbid();
         }
 
-        var isNew = string.IsNullOrEmpty(form.Id);
-        var item = isNew ? await _manager.NewAsync() : await _manager.FindByIdAsync(form.Id);
+        var isNew = string.IsNullOrEmpty(id);
+        var item = isNew ? await _manager.NewAsync() : await _manager.FindByIdAsync(id);
 
         if (item is null)
         {
             return NotFound();
         }
 
-        var type = string.IsNullOrEmpty(form.AssetTypeId) ? null : await _typeManager.FindByIdAsync(form.AssetTypeId);
+        var displayName = isNew ? null : item.Name;
+        var editor = await _displayManager.UpdateEditorAsync(item, _updateModelAccessor.ModelUpdater, isNew);
+        var isValid = await CatalogEntryValidation.ValidateAsync(_manager, item, _updateModelAccessor.ModelUpdater, nameof(Asset), HttpContext.RequestAborted);
 
-        item.AssetTypeId = type?.ItemId;
-        item.Number = string.IsNullOrWhiteSpace(form.Number) ? null : form.Number.Trim();
-        item.Name = form.Name?.Trim();
-        item.SerialNumber = Blank(form.SerialNumber);
-        item.Manufacturer = Blank(form.Manufacturer);
-        item.Model = Blank(form.Model);
-        item.Status = form.Status;
-        item.OwnerKind = form.OwnerKind;
-        item.OwnerId = form.OwnerKind == AssetOwnerKind.Internal ? null : Blank(form.OwnerIds?.GetValueOrDefault(form.OwnerKind.ToString()) ?? form.OwnerId);
-        form.OwnerId = item.OwnerId;
-        item.ParentAssetId = Blank(form.ParentAssetId);
-        item.InstallDate = form.InstallDate;
-        item.Location = MakeAddress(form, item.Location);
-        item.Warranty = new AssetWarranty { StartDate = form.WarrantyStart, EndDate = form.WarrantyEnd, Provider = Blank(form.WarrantyProvider), Terms = item.Warranty?.Terms };
-        item.Attributes = new Dictionary<string, string>(
-            (type?.Attributes ?? []).Select(attribute => (attribute.Name, Value: form.Attributes?.GetValueOrDefault(attribute.Name))).Where(entry => !string.IsNullOrWhiteSpace(entry.Value)).Select(entry => KeyValuePair.Create(entry.Name, entry.Value.Trim())),
-            StringComparer.OrdinalIgnoreCase);
-        item.Documents = [.. (form.Documents ?? string.Empty).Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
-
-        if (_fleet && type is not null && _fleetCategories.Contains(type.Category) && form.OwnerKind == AssetOwnerKind.Internal)
+        if (!isValid || !ModelState.IsValid)
         {
-            item.Fleet ??= new AssetFleet();
-            item.Fleet.Schedulable = form.Schedulable;
-            item.Fleet.CarriesStock = form.CarriesStock;
-            item.Fleet.Plate = Blank(form.Plate);
-            item.Fleet.Vin = Blank(form.Vin);
-            item.Fleet.Capacity = Blank(form.Capacity);
-            item.Fleet.FuelType = Blank(form.FuelType);
-        }
+            // What a section's driver wrote while the editor was updated is not kept.
+            await _session.CancelAsync();
 
-        var validation = await _manager.ValidateAsync(item);
-
-        foreach (var error in validation.Errors)
-        {
-            ModelState.AddModelError(error.MemberNames.FirstOrDefault() ?? string.Empty, error.ErrorMessage);
-        }
-
-        if (!ModelState.IsValid)
-        {
-            await PopulateAsync(form);
-
-            return View(form);
+            return View(new EditCatalogEntryViewModel
+            {
+                DisplayName = displayName,
+                Editor = editor,
+            });
         }
 
         if (isNew)
@@ -421,45 +379,4 @@ public sealed class AssetsController : Controller
             OwnerName = asset.OwnerKind == AssetOwnerKind.Internal ? null : await _owners.GetNameAsync(asset.OwnerKind, asset.OwnerId, HttpContext.RequestAborted) ?? asset.OwnerId,
         };
     }
-
-    private async Task PopulateAsync(AssetEditViewModel model)
-    {
-        var types = (await _typeManager.GetAllAsync(HttpContext.RequestAborted)).OrderBy(type => type.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
-
-        model.Type = types.FirstOrDefault(type => type.ItemId == model.AssetTypeId);
-        model.TypeOptions = [.. types.Select(type => new SelectListItem(type.Name, type.ItemId, type.ItemId == model.AssetTypeId))];
-        model.ParentOptions = [.. (await _session.QueryIndex<AssetIndex>(index => index.ItemId != model.Id, collection: AssetsConstants.CollectionName).ListAsync(HttpContext.RequestAborted))
-            .Where(index => index.ItemId != model.Id)
-            .OrderBy(index => index.Name, StringComparer.CurrentCultureIgnoreCase)
-            .Select(index => new SelectListItem($"{index.Name} ({index.Number})", index.ItemId, index.ItemId == model.ParentAssetId))];
-        model.OwnerKinds = [.. _owners.Kinds.Union(model.OwnerKind == AssetOwnerKind.Internal ? [] : [model.OwnerKind])];
-        model.OwnerName = model.OwnerKind == AssetOwnerKind.Internal ? null : await _owners.GetNameAsync(model.OwnerKind, model.OwnerId, HttpContext.RequestAborted) ?? model.OwnerId;
-        model.ShowFleet = _fleet && model.Type is not null && _fleetCategories.Contains(model.Type.Category);
-    }
-
-    private static Address MakeAddress(AssetEditViewModel form, Address existing)
-    {
-        if (string.IsNullOrWhiteSpace(form.AddressLine1) && string.IsNullOrWhiteSpace(form.City) && string.IsNullOrWhiteSpace(form.PostalCode))
-        {
-            return null;
-        }
-
-        // A moved address loses its old coordinates.
-        var same = existing is not null && existing.AddressLine1 == Blank(form.AddressLine1) && existing.City == Blank(form.City) && existing.PostalCode == Blank(form.PostalCode) && existing.Country == Blank(form.Country);
-
-        return new Address
-        {
-            AddressLine1 = Blank(form.AddressLine1),
-            City = Blank(form.City),
-            Region = Blank(form.Region),
-            PostalCode = Blank(form.PostalCode),
-            Country = Blank(form.Country)?.ToUpperInvariant(),
-            Latitude = same ? existing.Latitude : null,
-            Longitude = same ? existing.Longitude : null,
-            GeocodedUtc = same ? existing.GeocodedUtc : null,
-            GeocodeSource = same ? existing.GeocodeSource : null,
-        };
-    }
-
-    private static string Blank(string value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

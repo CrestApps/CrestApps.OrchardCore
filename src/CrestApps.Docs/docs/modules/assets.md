@@ -54,6 +54,10 @@ For a vehicle, equipment or tool the business owns, `AssetFleet` keeps `Schedula
 - `StockMovement` gains `ReferenceType` and `ReferenceId` (indexed) beside `OrderId`, and the `Consumed` kind.
 - `IInventoryService.ConsumeAsync(stockItemId, locationId, quantity, referenceType, referenceId, reason, actor)` uses units up at a location, refusing more than it has available, and records what they were for.
 
+## Extending
+
+- `DisplayDriver<Asset>`: adds a section to the asset editor (`assets/edit/{id?}`), which is built with `IDisplayManager<Asset>`. The built-in fields are one driver, `AssetFields_Edit` at `Content:1`. Register yours with `services.AddDisplayDriver<Asset, TDriver>()`, bind your own view model with the driver's `Prefix`, and report errors under it (`$"{Prefix}.Field"`). The asset's own rules (`AssetManager.ValidateAsync`) run after every section and are reported under the `Asset` prefix. When anything fails the asset isn't saved and the editor cancels the session, so records a section wrote are not kept either.
+
 ## Recipes and deployment
 
 The `Assets` recipe step creates or updates asset types (`Types`) and assets (`Assets`, parents first) by `ItemId`, with the editor's checks. The **Asset types and assets** deployment step exports the types, and the assets unless told not to. Meter readings stay where they were taken.

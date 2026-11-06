@@ -47,6 +47,7 @@ public sealed class Startup : StartupBase
 
         services.AddDisplayDriver<AssetTypeRow, AssetTypeRowDisplayDriver>();
         services.AddDisplayDriver<AssetRow, AssetRowDisplayDriver>();
+        services.AddDisplayDriver<Asset, AssetDisplayDriver>();
         services.AddNavigationProvider<AssetsAdminMenu>();
     }
 
