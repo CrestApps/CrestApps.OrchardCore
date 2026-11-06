@@ -803,13 +803,13 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Migrations/OmnichannelIndexMigration.cs",
             "OmnichannelIndexMigration",
             "ColumnExistsAsync",
-            "5dd4461e73751eb6",
+            "64cd2bd40c01ec80",
             "Read-only column existence probe. Both branches only read metadata to test whether a column is present: SQLite runs 'PRAGMA table_info' and every other dialect runs a parameterized 'SELECT COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS'. Neither statement can create, alter, or drop any object."),
         new ReviewedDynamicSqlEntry(
             "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Migrations/OmnichannelIndexMigration.cs",
             "OmnichannelIndexMigration",
             "TableExistsAsync",
-            "5dd4461e73751eb6",
+            "64cd2bd40c01ec80",
             "Read-only table existence probe. Both branches only read metadata to test whether a table is present: SQLite runs a parameterized 'SELECT COUNT(1) FROM sqlite_master' and every other dialect runs a parameterized 'SELECT COUNT(1) FROM INFORMATION_SCHEMA.TABLES'. Neither statement can create, alter, or drop any object."),
     ];
 
