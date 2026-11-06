@@ -30,7 +30,7 @@ public static class LiquidDoubles
     private static async Task<string> RenderAsync(string source, TextEncoder encoder, object model, IEnumerable<KeyValuePair<string, FluidValue>> properties)
     {
         var template = _parser.Parse(source);
-        var context = new TemplateContext(model ?? new object(), new TemplateOptions());
+        var context = new TemplateContext(model ?? new object(), TemplateOptions.Default);
 
         foreach (var (name, value) in properties ?? [])
         {
