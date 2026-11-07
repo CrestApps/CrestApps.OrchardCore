@@ -76,6 +76,66 @@ public sealed class MessagingBroadcastOutreachTests
     }
 
     [Fact]
+    public async Task ABroadcastMidSendOnUpgrade_ResumesWithoutReSendingOrSkipping_AndKeepsItsCounts()
+    {
+        // Arrange: a broadcast the old fan-out stopped after 60 of 120 recipients (a whole first page and part of the
+        // second), 58 sent and 2 failed.
+        var recipients = Enumerable.Range(0, 120).Select(index => $"+1555222{index:0000}").ToList();
+        var broadcast = NewBroadcast(recipients);
+        broadcast.ProcessedRecipients = [.. recipients.Take(60)];
+        broadcast.SentCount = 58;
+        broadcast.FailedCount = 2;
+        broadcast.Status = MessagingBroadcastStatus.Running;
+        var sentTo = new List<string>();
+        await using var harness = await CreateAsync(broadcast, sentTo);
+
+        // Act: the background sweep picks the running broadcast up.
+        await ProcessPendingAsync(harness, broadcast);
+        await harness.ProcessDueAsync();
+
+        // Assert
+        Assert.Equal(recipients.Skip(60), sentTo);
+        Assert.Equal((118, 2, MessagingBroadcastStatus.Completed), (broadcast.SentCount, broadcast.FailedCount, broadcast.Status));
+    }
+
+    [Fact]
+    public async Task AQueuedBroadcast_IsStartedByTheSweep_AndSent()
+    {
+        // Arrange
+        var broadcast = NewBroadcast(["+15551110001", "+15551110002"]);
+        var sentTo = new List<string>();
+        await using var harness = await CreateAsync(broadcast, sentTo);
+
+        // Act
+        await ProcessPendingAsync(harness, broadcast);
+        await harness.ProcessDueAsync();
+
+        // Assert
+        Assert.Equal(["+15551110001", "+15551110002"], sentTo);
+        Assert.Equal(MessagingBroadcastStatus.Completed, broadcast.Status);
+    }
+
+    [Fact]
+    public async Task ARecipientListedTwice_IsSentOnce_EvenAcrossPages()
+    {
+        // Arrange: the old fan-out sent a number listed twice only once.
+        var recipients = Enumerable.Range(0, 60).Select(index => $"+1555333{index:0000}").ToList();
+        recipients.Add(recipients[5]);
+        recipients.Add(recipients[55].ToLowerInvariant());
+        var broadcast = NewBroadcast(recipients);
+        var sentTo = new List<string>();
+        await using var harness = await CreateAsync(broadcast, sentTo);
+
+        // Act
+        await StartAsync(harness, broadcast);
+        await harness.ProcessDueAsync();
+
+        // Assert
+        Assert.Equal(recipients.Take(60), sentTo);
+        Assert.Equal(60, broadcast.SentCount);
+    }
+
+    [Fact]
     public async Task ARecipientWhoOptedOut_IsSkipped_NotSent()
     {
         // Arrange
@@ -185,10 +245,23 @@ public sealed class MessagingBroadcastOutreachTests
         await scope.ServiceProvider.GetRequiredService<ISession>().SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
+    private static async Task ProcessPendingAsync(OutreachTestHarness harness, MessagingBroadcast broadcast)
+    {
+        await using var scope = harness.Services.CreateAsyncScope();
+
+        await scope.ServiceProvider.GetRequiredService<IMessagingBroadcastService>().ProcessPendingAsync(TestContext.Current.CancellationToken);
+        await scope.ServiceProvider.GetRequiredService<ISession>().SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        Assert.False(string.IsNullOrEmpty(broadcast.OutreachRunId));
+    }
+
     private static Task<OutreachTestHarness> CreateAsync(MessagingBroadcast broadcast, List<string> sentTo, IConsentService consent = null, string refuse = null)
     {
         var store = new Mock<IMessagingBroadcastStore>();
         store.Setup(value => value.FindByIdAsync(broadcast.ItemId, It.IsAny<CancellationToken>())).ReturnsAsync(broadcast);
+        store
+            .Setup(value => value.GetByStatusAsync(It.IsAny<MessagingBroadcastStatus>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((MessagingBroadcastStatus status, CancellationToken _) => broadcast.Status == status ? new[] { broadcast } : Array.Empty<MessagingBroadcast>());
         store.Setup(value => value.UpdateAsync(It.IsAny<MessagingBroadcast>(), It.IsAny<CancellationToken>())).Returns(ValueTask.CompletedTask);
 
         var conversations = new Mock<IMessagingConversationService>();

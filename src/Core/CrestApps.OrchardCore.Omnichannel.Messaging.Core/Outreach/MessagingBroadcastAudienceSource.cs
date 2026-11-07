@@ -7,7 +7,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Outreach;
 
 /// <summary>
 /// Pages a broadcast's recipient list, with the position in the list as the cursor. Recipients the broadcast processed
-/// before it was sent through the outreach engine are left out, so a half-sent broadcast never sends to them again.
+/// before it was sent through the outreach engine are left out, so a half-sent broadcast never sends to them again, and
+/// a recipient listed more than once is only in the page of its first place in the list.
 /// </summary>
 public sealed class MessagingBroadcastAudienceSource : IOutreachAudienceSource
 {
@@ -44,11 +45,23 @@ public sealed class MessagingBroadcastAudienceSource : IOutreachAudienceSource
         var processed = new HashSet<string>(broadcast.ProcessedRecipients ?? [], StringComparer.OrdinalIgnoreCase);
         var page = new List<OutreachRecipient>(end - offset);
 
+        // A number listed more than once is sent to once, at its first place in the list, as the old fan-out did, even
+        // when its copies fall on different pages.
+        var listedBefore = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        for (var index = 0; index < offset; index++)
+        {
+            if (!string.IsNullOrWhiteSpace(recipients[index]))
+            {
+                listedBefore.Add(recipients[index].Trim());
+            }
+        }
+
         for (var index = offset; index < end; index++)
         {
             var address = recipients[index];
 
-            if (string.IsNullOrWhiteSpace(address) || processed.Contains(address))
+            if (string.IsNullOrWhiteSpace(address) || processed.Contains(address) || !listedBefore.Add(address.Trim()))
             {
                 continue;
             }
