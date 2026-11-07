@@ -589,6 +589,9 @@ public sealed partial class ContactCenterConfigurationPortabilityTests
         // The generic seeder fills every string with a marker value, but the caller id is validated as a real
         // phone number parsed against the profile's region, so both properties need values the validator accepts.
         (ContactCenterDeploymentSteps.DialerProfile, nameof(DialerProfile.CallerId), JsonValue.Create("+16502530000")),
+        // The preview offer time is validated against a range, so the generic marker number (7) is rejected; use a value
+        // inside it that still differs from the default so the round trip proves the setting is carried.
+        (ContactCenterDeploymentSteps.DialerProfile, nameof(DialerProfile.PreviewOfferTimeoutSeconds), JsonValue.Create(DialerProfile.DefaultPreviewOfferTimeoutSeconds + 60)),
         (ContactCenterDeploymentSteps.DialerProfile, nameof(DialerProfile.DefaultRegionCode), JsonValue.Create("US")),
         // A preview offer must last long enough to review a record, which the seeder's small default number is not.
         (ContactCenterDeploymentSteps.DialerProfile, nameof(DialerProfile.PreviewOfferTimeoutSeconds), JsonValue.Create(DialerProfile.MinimumPreviewOfferTimeoutSeconds + 15)),
