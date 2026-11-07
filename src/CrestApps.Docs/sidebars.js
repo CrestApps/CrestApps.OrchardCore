@@ -131,6 +131,7 @@ const sidebars = {
                 'user-manual/call-recordings',
                 'user-manual/messaging',
                 'user-manual/live-dashboard',
+                'user-manual/contact-center-ai-assistant',
                 'user-manual/reports',
                 {
                     type: 'category',
@@ -429,6 +430,7 @@ const sidebars = {
                 'contact-center/live-call-topology',
                 'contact-center/workflows',
                 'contact-center/report-catalog',
+                'contact-center/ai-tools',
                 {
                     type: 'category',
                     label: 'Operations',
