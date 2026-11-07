@@ -545,7 +545,7 @@ public sealed class ActivityAssignmentServiceTests
             NullLogger<ActivityAssignmentService>.Instance,
             Mock.Of<IQueuedDialerWorkGate>(),
             (decisionLog ?? new Mock<IDialerDecisionLog>()).Object,
-            dialerProfileReader);
+            dialerProfileReader ?? Mock.Of<IDialerProfileReader>());
     }
 
     private static Mock<IDistributedLock> CreateDistributedLock(bool locked)

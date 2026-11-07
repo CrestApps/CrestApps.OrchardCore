@@ -74,7 +74,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         ILogger<ActivityAssignmentService> logger,
         IQueuedDialerWorkGate dialerWorkGate,
         IDialerDecisionLog decisionLog,
-        IDialerProfileReader dialerProfileReader = null)
+        IDialerProfileReader dialerProfileReader)
     {
         _dialerProfileReader = dialerProfileReader;
         _queueItemManager = queueItemManager;
@@ -368,8 +368,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         // A campaign's queue is never stored, so its offers always had the thirty-second default, which a preview
         // agent reviewing a record outlasts. The profile the record is dialed under says how long its offer lasts.
         if (ContactCenterConstants.IsCampaignQueue(queueId) &&
-            !string.IsNullOrEmpty(topItem.DialerProfileId) &&
-            _dialerProfileReader is not null)
+            !string.IsNullOrEmpty(topItem.DialerProfileId))
         {
             var profile = await _dialerProfileReader.FindByIdAsync(topItem.DialerProfileId, cancellationToken);
 
