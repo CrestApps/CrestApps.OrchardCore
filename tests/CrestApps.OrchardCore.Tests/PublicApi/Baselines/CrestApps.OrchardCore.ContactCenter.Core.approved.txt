@@ -3818,7 +3818,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
                     Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.ActivityAssignmentService> logger,
                     CrestApps.OrchardCore.ContactCenter.Core.Services.IQueuedDialerWorkGate dialerWorkGate,
                     CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerDecisionLog decisionLog,
-                    CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerProfileReader dialerProfileReader = null) { }
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerProfileReader dialerProfileReader) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation> AssignNextAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> AssignQueueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation> AssignSpecificAsync(string activityItemId, string queueId, string agentId, int? ringTimeoutSeconds = default, System.Threading.CancellationToken cancellationToken = default) { }
@@ -5754,6 +5754,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public interface IOrphanedActivityRecoveryService
     {
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Services.OrphanedActivity>> FindAsync(System.TimeSpan gracePeriod, int maxToFind, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<int> RecoverAsync(System.TimeSpan gracePeriod, int maxToRecover, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IPendingIncomingCallOfferService
@@ -6377,9 +6378,19 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task HandleAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent interactionEvent, System.Threading.CancellationToken cancellationToken = default) { }
         public static string GetDeadlineKey(string reservationId) { }
     }
+    public sealed class OrphanedActivity : System.IEquatable<CrestApps.OrchardCore.ContactCenter.Core.Services.OrphanedActivity>
+    {
+        public OrphanedActivity(string ActivityItemId, string CampaignId, string Status, System.DateTime? ReservedUtc, bool WouldRequeue) { }
+        public string ActivityItemId { get; init; }
+        public string CampaignId { get; init; }
+        public System.DateTime? ReservedUtc { get; init; }
+        public string Status { get; init; }
+        public bool WouldRequeue { get; init; }
+    }
     public sealed class OrphanedActivityRecoveryService : CrestApps.OrchardCore.ContactCenter.Core.Services.IOrphanedActivityRecoveryService
     {
         public OrphanedActivityRecoveryService(YesSql.ISession session, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityReservationManager reservationManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterActivityWriter activityWriter, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterWorkStateService workStateService, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueService queueService, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.OrphanedActivityRecoveryService> logger, CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerAttemptFinalizer dialerAttemptFinalizer, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionEventStore eventStore) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Services.OrphanedActivity>> FindAsync(System.TimeSpan gracePeriod, int maxToFind, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> RecoverAsync(System.TimeSpan gracePeriod, int maxToRecover, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class OutboundLineOwnNumberSource : CrestApps.OrchardCore.ContactCenter.IContactCenterOwnNumberSource
