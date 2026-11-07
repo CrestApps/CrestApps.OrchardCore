@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
@@ -12,6 +13,12 @@ namespace CrestApps.OrchardCore.AI.Deployments.Sources;
 /// </summary>
 internal sealed class AIDeploymentDeploymentSource : CatalogDeploymentSourceBase<AIDeploymentDeploymentStep, AIDeployment>
 {
+    // Prices are exported without their empty options, so an exported plan reads cleanly and imports as written.
+    private static readonly JsonSerializerOptions _pricingSerializerOptions = new()
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+    };
+
     private readonly INamedSourceCatalog<AIDeployment> _deploymentCatalog;
 
     /// <summary>
@@ -19,7 +26,8 @@ internal sealed class AIDeploymentDeploymentSource : CatalogDeploymentSourceBase
     /// </summary>
     /// <param name="deploymentCatalog">The deployment catalog.</param>
     public AIDeploymentDeploymentSource(INamedSourceCatalog<AIDeployment> deploymentCatalog)
-        : base("deployments")
+        // The recipe schema names the list "Deployments"; the step reads either spelling.
+        : base("Deployments")
     {
         _deploymentCatalog = deploymentCatalog;
     }
@@ -31,7 +39,12 @@ internal sealed class AIDeploymentDeploymentSource : CatalogDeploymentSourceBase
         => IsSelectedByKey(step.IncludeAll, step.DeploymentNames, entry.Name);
 
     protected override JsonObject Export(AIDeployment entry)
-        => new()
+    {
+        // Pricing is exported on its own, readable section rather than inside Properties.
+        var properties = JsonSerializer.SerializeToNode(entry.Properties)?.AsObject();
+        properties?.Remove(nameof(AIDeploymentPricing));
+
+        var deploymentInfo = new JsonObject()
         {
             { "ItemId", entry.ItemId },
             { "Name", entry.Name },
@@ -42,6 +55,14 @@ internal sealed class AIDeploymentDeploymentSource : CatalogDeploymentSourceBase
             { "Author", entry.Author },
             { "OwnerId", entry.OwnerId },
             { "CreatedUtc", entry.CreatedUtc },
-            { "Properties", JsonSerializer.SerializeToNode(entry.Properties) },
+            { "Properties", properties },
         };
+
+        if (entry.GetPricing() is { } pricing)
+        {
+            deploymentInfo["Pricing"] = JsonSerializer.SerializeToNode(pricing, _pricingSerializerOptions);
+        }
+
+        return deploymentInfo;
+    }
 }

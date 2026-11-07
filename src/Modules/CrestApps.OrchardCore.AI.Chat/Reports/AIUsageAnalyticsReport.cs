@@ -1,5 +1,6 @@
 using System.Globalization;
 using CrestApps.Core.AI.Completions;
+using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Services;
@@ -26,6 +27,7 @@ public sealed class AIUsageAnalyticsReport : IReport, IReportFilterMetadata
     private readonly IAICompletionUsageService _usageService;
     private readonly IAIVoiceSessionSummaryStore _voiceSessionStore;
     private readonly IAIProfileStore _profileStore;
+    private readonly IAIDeploymentStore _deploymentStore;
     private readonly ILocalClock _localClock;
     private readonly IClock _clock;
 
@@ -37,6 +39,7 @@ public sealed class AIUsageAnalyticsReport : IReport, IReportFilterMetadata
     /// <param name="usageService">The usage service.</param>
     /// <param name="voiceSessionStore">The per-call AI voice session summaries.</param>
     /// <param name="profileStore">The AI profile store, for profile names.</param>
+    /// <param name="deploymentStore">The AI deployment store, whose prices estimate the cost of the usage.</param>
     /// <param name="localClock">The local clock, for the site's time zone.</param>
     /// <param name="clock">The clock, for converting call times to the site's time zone.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
@@ -44,6 +47,7 @@ public sealed class AIUsageAnalyticsReport : IReport, IReportFilterMetadata
         IAICompletionUsageService usageService,
         IAIVoiceSessionSummaryStore voiceSessionStore,
         IAIProfileStore profileStore,
+        IAIDeploymentStore deploymentStore,
         ILocalClock localClock,
         IClock clock,
         IStringLocalizer<AIUsageAnalyticsReport> stringLocalizer)
@@ -51,6 +55,7 @@ public sealed class AIUsageAnalyticsReport : IReport, IReportFilterMetadata
         _usageService = usageService;
         _voiceSessionStore = voiceSessionStore;
         _profileStore = profileStore;
+        _deploymentStore = deploymentStore;
         _localClock = localClock;
         _clock = clock;
         S = stringLocalizer;
@@ -119,15 +124,16 @@ public sealed class AIUsageAnalyticsReport : IReport, IReportFilterMetadata
 
         var profileNames = await AIChatReportProfiles.GetNamesAsync(_profileStore);
         var timeZone = await _localClock.GetLocalTimeZoneAsync();
+        var pricing = await _deploymentStore.GetPricingByDeploymentAsync(cancellationToken);
 
         DateTime ToLocal(DateTime utc)
             => _clock.ConvertToTimeZone(new DateTimeOffset(DateTime.SpecifyKind(utc, DateTimeKind.Utc)), timeZone).DateTime;
 
         var document = new ReportDocument();
 
-        AddMetering(document, meteredRecords, meteringGroupBy);
-        AddAudio(document, meteredRecords, audioGroupBy);
-        AddCompletions(document, AICompletionUsageReport.Relevant(records, profileId), groupBy, profileNames);
+        AddMetering(document, meteredRecords, meteringGroupBy, pricing);
+        AddAudio(document, meteredRecords, audioGroupBy, pricing);
+        AddCompletions(document, AICompletionUsageReport.Relevant(records, profileId), groupBy, profileNames, pricing);
 
         // A call's text tokens are the completions recorded against its chat session: the turn-based replies and
         // the review that concludes every call.
@@ -143,9 +149,25 @@ public sealed class AIUsageAnalyticsReport : IReport, IReportFilterMetadata
         return document;
     }
 
-    private void AddMetering(ReportDocument document, IReadOnlyCollection<AICompletionUsageRecord> records, AIUsageReportGrouping groupBy)
+    private void AddMetering(
+        ReportDocument document,
+        IReadOnlyCollection<AICompletionUsageRecord> records,
+        AIUsageReportGrouping groupBy,
+        IReadOnlyDictionary<string, AIDeploymentPricing> pricing)
     {
-        var rows = AIUsageReport.Build(records, groupBy);
+        var rows = AIUsageReport.Build(records, groupBy, pricing);
+        var estimatedCosts = AICompletionUsageReport.SumCosts(rows.Select(row => (row.Currency, row.EstimatedCost)));
+
+        if (estimatedCosts.Count > 0)
+        {
+            var costs = ReportSection.ForMetrics(S["Estimated cost"].Value, estimatedCosts
+                .Select(entry => new ReportMetric(entry.Currency, Cost(entry.Currency, entry.Cost)))
+                .ToList());
+
+            costs.Description = S["From the prices set on each AI deployment. Requests to deployments without prices have no cost."].Value;
+            document.Add(costs);
+        }
+
         var breakdown = groupBy switch
         {
             AIUsageReportGrouping.ModelAndCategory => S["Category"].Value,
@@ -170,6 +192,7 @@ public sealed class AIUsageAnalyticsReport : IReport, IReportFilterMetadata
             new(S["Requests"].Value, ReportColumnAlign.End),
             new(S["Input"].Value, ReportColumnAlign.End),
             new(S["Cached input"].Value, ReportColumnAlign.End),
+            new(S["Cache writes"].Value, ReportColumnAlign.End),
             new(S["Output"].Value, ReportColumnAlign.End),
             new(S["Reasoning"].Value, ReportColumnAlign.End),
             new(S["Audio in"].Value, ReportColumnAlign.End),
@@ -178,7 +201,9 @@ public sealed class AIUsageAnalyticsReport : IReport, IReportFilterMetadata
             new(S["Audio minutes"].Value, ReportColumnAlign.End),
             new(S["Characters"].Value, ReportColumnAlign.End),
             new(S["Images"].Value, ReportColumnAlign.End),
+            new(S["Other usage"].Value),
             new(S["Avg latency"].Value, ReportColumnAlign.End),
+            new(S["Est. cost"].Value, ReportColumnAlign.End),
         ]);
 
         var section = ReportSection.ForTable(S["Metered usage"].Value, columns, rows.Select(row =>
@@ -195,6 +220,7 @@ public sealed class AIUsageAnalyticsReport : IReport, IReportFilterMetadata
                 ReportFormat.Number(row.RequestCount),
                 Count(row.InputTokenCount),
                 Count(row.CachedInputTokenCount),
+                Count(row.CacheWriteInputTokenCount),
                 Count(row.OutputTokenCount),
                 Count(row.ReasoningTokenCount),
                 Count(row.InputAudioTokenCount),
@@ -203,20 +229,26 @@ public sealed class AIUsageAnalyticsReport : IReport, IReportFilterMetadata
                 row.AudioDurationMs > 0 ? (row.AudioDurationMs / 60000d).ToString("N1", CultureInfo.InvariantCulture) : "-",
                 Count(row.CharacterCount),
                 Count(row.ImageCount),
+                OtherUsage(row),
                 Latency(row.AverageResponseLatencyMs),
+                Cost(row.Currency, row.EstimatedCost),
             ]);
 
             return new ReportRow(cells);
         }));
 
-        section.Description = S["{0} requests. Every request sent to an AI provider, of every kind and from every feature. Each round trip to a model is one request, so a reply that plans, searches and calls tools counts each of those calls. Units a model is not billed in are shown as a dash. Cached input, reasoning and audio tokens are part of the input and output totals; providers bill them at their own rates. Audio minutes are measured up to where the last recognized speech ended.", ReportFormat.Number(records.Count)].Value;
+        section.Description = S["{0} requests. Every request sent to an AI provider, of every kind and from every feature. Each round trip to a model is one request, so a reply that plans, searches and calls tools counts each of those calls. Units a model is not billed in are shown as a dash. Cached input, cache writes, reasoning, audio and image tokens are part of the input and output totals; providers bill them at their own rates. Audio minutes are measured up to where the last recognized speech ended. Estimated costs use the prices set on each AI deployment.", ReportFormat.Number(records.Count)].Value;
         section.EmptyMessage = S["No metered usage was found for the selected filters."].Value;
         document.Add(section);
     }
 
-    private void AddAudio(ReportDocument document, IReadOnlyCollection<AICompletionUsageRecord> records, AIAudioUsageReportGrouping groupBy)
+    private void AddAudio(
+        ReportDocument document,
+        IReadOnlyCollection<AICompletionUsageRecord> records,
+        AIAudioUsageReportGrouping groupBy,
+        IReadOnlyDictionary<string, AIDeploymentPricing> pricing)
     {
-        var rows = AIAudioUsageReport.Build(records, groupBy);
+        var rows = AIAudioUsageReport.Build(records, groupBy, pricing);
         var breakdown = groupBy switch
         {
             AIAudioUsageReportGrouping.ModelAndVoice => S["Voice"].Value,
@@ -247,6 +279,7 @@ public sealed class AIUsageAnalyticsReport : IReport, IReportFilterMetadata
             new(S["Segments"].Value, ReportColumnAlign.End),
             new(S["Tokens"].Value, ReportColumnAlign.End),
             new(S["Avg latency"].Value, ReportColumnAlign.End),
+            new(S["Est. cost"].Value, ReportColumnAlign.End),
         ]);
 
         var section = ReportSection.ForTable(S["Audio usage"].Value, columns, rows.Select(row =>
@@ -276,6 +309,7 @@ public sealed class AIUsageAnalyticsReport : IReport, IReportFilterMetadata
                 Count(row.SegmentCount),
                 Count(row.TotalTokenCount),
                 Latency(row.AverageResponseLatencyMs),
+                Cost(row.Currency, row.EstimatedCost),
             ]);
 
             return new ReportRow(cells);
@@ -290,7 +324,8 @@ public sealed class AIUsageAnalyticsReport : IReport, IReportFilterMetadata
         ReportDocument document,
         IReadOnlyList<AICompletionUsageRecord> records,
         AICompletionUsageGroupBy groupBy,
-        IReadOnlyDictionary<string, string> profileNames)
+        IReadOnlyDictionary<string, string> profileNames,
+        IReadOnlyDictionary<string, AIDeploymentPricing> pricing)
     {
         if (records.Count == 0)
         {
@@ -340,10 +375,11 @@ public sealed class AIUsageAnalyticsReport : IReport, IReportFilterMetadata
             new(S["Output"].Value, ReportColumnAlign.End),
             new(S["Tokens"].Value, ReportColumnAlign.End),
             new(S["Avg latency"].Value, ReportColumnAlign.End),
+            new(S["Est. cost"].Value, ReportColumnAlign.End),
         ]);
 
         document.Add(ReportSection.ForTable(S["Chat completions by {0}", GroupName(groupBy)].Value, columns,
-            AICompletionUsageReport.BuildRows(records, groupBy, profileNames).Select(row => CompletionRow(row, byUser))));
+            AICompletionUsageReport.BuildRows(records, groupBy, profileNames, pricing).Select(row => CompletionRow(row, byUser))));
     }
 
     private ReportRow CompletionRow(AICompletionUsageSummaryViewModel row, bool byUser)
@@ -361,6 +397,7 @@ public sealed class AIUsageAnalyticsReport : IReport, IReportFilterMetadata
             ReportFormat.Number(row.TotalOutputTokens),
             ReportFormat.Number(row.TotalTokens),
             Latency(row.AverageResponseLatencyMs),
+            Cost(row.Currency, row.EstimatedCost),
         ]);
 
         return new ReportRow(cells);
@@ -481,6 +518,38 @@ public sealed class AIUsageAnalyticsReport : IReport, IReportFilterMetadata
             AIUsageReport.Unspecified => S["Unspecified"].Value,
             _ => value,
         };
+
+    private string OtherUsage(AIUsageReportRow row)
+    {
+        var parts = new List<string>();
+
+        void Add(string label, long value)
+        {
+            if (value > 0)
+            {
+                parts.Add(label + ": " + ReportFormat.Number(value));
+            }
+        }
+
+        Add(S["Cached audio in"].Value, row.CachedInputAudioTokenCount);
+        Add(S["Image in"].Value, row.InputImageTokenCount);
+        Add(S["Image out"].Value, row.OutputImageTokenCount);
+        Add(S["Rejected prediction"].Value, row.RejectedPredictionTokenCount);
+        Add(S["Web searches"].Value, row.WebSearchCount);
+        Add(S["Web fetches"].Value, row.WebFetchCount);
+
+        foreach (var (name, value) in row.AdditionalCounts.OrderBy(entry => entry.Key, StringComparer.Ordinal))
+        {
+            Add(name, value);
+        }
+
+        return parts.Count > 0 ? string.Join(", ", parts) : "-";
+    }
+
+    private static string Cost(string currency, decimal? cost)
+        => cost is null || string.IsNullOrEmpty(currency)
+            ? "-"
+            : currency + " " + cost.Value.ToString(cost.Value > 0 && cost.Value < 1 ? "N4" : "N2", CultureInfo.InvariantCulture);
 
     private static string Count(long value)
         => value > 0 ? ReportFormat.Number(value) : "-";

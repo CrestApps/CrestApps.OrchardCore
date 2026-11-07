@@ -1,4 +1,5 @@
 using CrestApps.Core.AI.Completions;
+using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Chat.Models;
@@ -87,10 +88,48 @@ public sealed class AIUsageAnalyticsReportTests
     }
 
     [Fact]
+    public async Task PricedDeployments_EstimateTheCostOfEveryTable()
+    {
+        var priced = new AIDeployment { Name = "chat-main" };
+        priced.SetPricing("USD",
+        [
+            new AIDeploymentPrice { Meter = AIUsageMeters.InputTokens, Amount = 2m, Per = 1_000 },
+            new AIDeploymentPrice { Meter = AIUsageMeters.OutputTokens, Amount = 4m, Per = 1_000 },
+        ]);
+
+        var records = new[]
+        {
+            new AICompletionUsageRecord { SessionId = "session-1", ProfileId = "profile-1", ClientName = "OpenAI", ModelName = "gpt", DeploymentName = "chat-main", OperationType = AIUsageOperationTypes.Chat, InputTokenCount = 1_000, OutputTokenCount = 500, TotalTokenCount = 1_500 },
+            new AICompletionUsageRecord { SessionId = "session-2", ProfileId = "profile-2", ClientName = "OpenAI", ModelName = "gpt-mini", DeploymentName = "chat-small", OperationType = AIUsageOperationTypes.Chat, InputTokenCount = 100, OutputTokenCount = 50, TotalTokenCount = 150 },
+        };
+
+        var document = await RunAsync(Filter(), records, calls: [], deployments: [priced]);
+
+        // 1,000 input tokens at 2 per 1,000 and 500 output tokens at 4 per 1,000; the unpriced deployment costs nothing.
+        Assert.Equal("USD 4.00", Metrics(document, "Estimated cost")["USD"]);
+
+        var metered = document.Sections.Single(section => section.Title == "Metered usage");
+        Assert.Equal("Est. cost", metered.Columns[^1].Label);
+        Assert.Contains(metered.Rows, row => row.Cells[^1] == "USD 4.00");
+        Assert.Contains(metered.Rows, row => row.Cells[^1] == "-");
+
+        var completions = document.Sections.Single(section => section.Title == "Chat completions by user and model");
+        Assert.Contains(completions.Rows, row => row.Cells[^1] == "USD 4.00");
+    }
+
+    [Fact]
+    public async Task WithoutPrices_ThereIsNoEstimatedCost()
+    {
+        var document = await RunAsync(Filter(), Records(), calls: []);
+
+        Assert.DoesNotContain(document.Sections, section => section.Title == "Estimated cost");
+    }
+
+    [Fact]
     public void TheReport_StartsOnAllTime()
         => Assert.Equal(ReportDateRangePeriod.AllTime, ReportDescriptor.Create<AIUsageAnalyticsReport>().DefaultDateRange.Period);
 
-    private static Task<ReportDocument> RunAsync(ReportFilter filter, AICompletionUsageRecord[] records, AIVoiceSessionSummaryIndex[] calls)
+    private static Task<ReportDocument> RunAsync(ReportFilter filter, AICompletionUsageRecord[] records, AIVoiceSessionSummaryIndex[] calls, AIDeployment[] deployments = null)
     {
         var usageService = new Mock<IAICompletionUsageService>();
         usageService
@@ -111,10 +150,16 @@ public sealed class AIUsageAnalyticsReportTests
                 new AIProfile { ItemId = "profile-2", Name = "sales", DisplayText = "Sales follow-up" },
             ]);
 
+        var deploymentStore = new Mock<IAIDeploymentStore>();
+        deploymentStore
+            .Setup(store => store.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(deployments ?? []);
+
         var report = new AIUsageAnalyticsReport(
             usageService.Object,
             voiceStore.Object,
             profileStore.Object,
+            deploymentStore.Object,
             ReportTestClocks.LocalClock(),
             ReportTestClocks.Clock(),
             new PassThroughStringLocalizer<AIUsageAnalyticsReport>());

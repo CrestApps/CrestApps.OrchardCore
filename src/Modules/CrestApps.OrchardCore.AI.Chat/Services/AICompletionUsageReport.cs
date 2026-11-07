@@ -36,13 +36,14 @@ internal static class AICompletionUsageReport
     public static IReadOnlyList<AICompletionUsageSummaryViewModel> BuildRows(
         IReadOnlyCollection<AICompletionUsageRecord> records,
         AICompletionUsageGroupBy groupBy,
-        IReadOnlyDictionary<string, string> profileNames)
+        IReadOnlyDictionary<string, string> profileNames,
+        IReadOnlyDictionary<string, AIDeploymentPricing> pricing = null)
     {
         if (groupBy == AICompletionUsageGroupBy.UserAndModel)
         {
             return records
-                .GroupBy(record => (UserLabel: GetUserLabel(record), record.IsAuthenticated, ClientName: record.ClientName ?? Unknown, ModelName: GetModelLabel(record)))
-                .Select(group => Summarize(group, row =>
+                .GroupBy(record => (UserLabel: GetUserLabel(record), record.IsAuthenticated, ClientName: record.ClientName ?? Unknown, ModelName: GetModelLabel(record), AIUsageCostEstimator.GetPricing(pricing, record)?.Currency))
+                .Select(group => Summarize(group, pricing, row =>
                 {
                     row.UserLabel = group.Key.UserLabel;
                     row.IsAuthenticated = group.Key.IsAuthenticated;
@@ -56,8 +57,8 @@ internal static class AICompletionUsageReport
         }
 
         return records
-            .GroupBy(record => Label(record, groupBy, profileNames), StringComparer.Ordinal)
-            .Select(group => Summarize(group, row => row.GroupLabel = group.Key))
+            .GroupBy(record => (Label: Label(record, groupBy, profileNames), AIUsageCostEstimator.GetPricing(pricing, record)?.Currency))
+            .Select(group => Summarize(group, pricing, row => row.GroupLabel = group.Key.Label))
             .OrderByDescending(row => row.TotalTokens)
             .ThenByDescending(row => row.TotalCalls)
             .ThenBy(row => row.GroupLabel, StringComparer.OrdinalIgnoreCase)
@@ -114,7 +115,18 @@ internal static class AICompletionUsageReport
             _ => Unknown,
         };
 
-    private static AICompletionUsageSummaryViewModel Summarize(IEnumerable<AICompletionUsageRecord> group, Action<AICompletionUsageSummaryViewModel> label)
+    /// <summary>
+    /// Adds up estimated costs per currency, the currencies in alphabetical order.
+    /// </summary>
+    public static IReadOnlyList<(string Currency, decimal Cost)> SumCosts(IEnumerable<(string Currency, decimal? Cost)> costs)
+        => costs
+            .Where(entry => entry.Cost is not null && !string.IsNullOrEmpty(entry.Currency))
+            .GroupBy(entry => entry.Currency, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(group => (group.Key, group.Sum(entry => entry.Cost.Value)))
+            .ToList();
+
+    private static AICompletionUsageSummaryViewModel Summarize(IEnumerable<AICompletionUsageRecord> group, IReadOnlyDictionary<string, AIDeploymentPricing> pricing, Action<AICompletionUsageSummaryViewModel> label)
     {
         var records = group.ToList();
         var latencySamples = records.Where(record => record.ResponseLatencyMs > 0).ToList();
@@ -130,6 +142,10 @@ internal static class AICompletionUsageReport
             AverageResponseLatencyMs = latencySamples.Count > 0
                 ? Math.Round(latencySamples.Average(record => record.ResponseLatencyMs), 0)
                 : 0,
+            Currency = records.Count > 0
+                ? AIUsageCostEstimator.GetPricing(pricing, records[0])?.Currency
+                : null,
+            EstimatedCost = AIUsageCostEstimator.Estimate(records, pricing),
         };
 
         label(row);

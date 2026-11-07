@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CrestApps.Core.AI.Completions;
+using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Data.YesSql;
@@ -340,6 +341,40 @@ public sealed class AIUsageReportDataSetsTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Query_CompletionUsage_PricesEachRequestAtItsDeploymentsPrices()
+    {
+        // Arrange
+        var priced = new AIDeployment { Name = "gpt-4o-deployment" };
+        priced.SetPricing("USD",
+        [
+            new AIDeploymentPrice { Meter = AIUsageMeters.InputTokens, Amount = 2.5m, Per = 1_000_000 },
+            new AIDeploymentPrice { Meter = AIUsageMeters.CachedInputTokens, Amount = 1.25m, Per = 1_000_000 },
+            new AIDeploymentPrice { Meter = AIUsageMeters.OutputTokens, Amount = 10m, Per = 1_000_000 },
+        ]);
+
+        var deploymentStore = new Mock<IAIDeploymentStore>();
+        deploymentStore
+            .Setup(store => store.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { priced });
+
+        await using var session = _store.CreateSession();
+        var source = Source(session, deploymentStore: deploymentStore.Object);
+
+        // Act
+        var rows = Rows(await ReportDesignerTestServices.ReadAsync(source, Query(AIChatReportDataSource.CompletionUsageDataSet), TestContext.Current.CancellationToken));
+
+        // Assert
+        // 80 uncached and 20 cached input tokens, and 50 output tokens.
+        var chat = rows[3];
+        Assert.Equal((80 * 2.5m + 20 * 1.25m + 50 * 10m) / 1_000_000m, chat["EstimatedCost"]);
+        Assert.Equal("USD", chat["CostCurrency"]);
+
+        var embedding = rows[2];
+        Assert.Null(embedding["EstimatedCost"]);
+        Assert.Null(embedding["CostCurrency"]);
+    }
+
+    [Fact]
     public async Task Aggregate_CompletionUsage_SumsTokensByDeploymentInTheDatabase_AndDeclinesTheProfileName()
     {
         // Arrange
@@ -535,6 +570,7 @@ public sealed class AIUsageReportDataSetsTests : IAsyncLifetime
 
         services.AddSingleton(session);
         services.AddSingleton(ProfileManager().Object);
+        services.AddSingleton(DeploymentStore());
         services.AddSingleton(Authorization(canViewAnalytics: true));
         services.AddSingleton(_storeOptions);
         services.AddSingleton(typeof(IStringLocalizer<>), typeof(PassThroughStringLocalizer<>));
@@ -549,15 +585,26 @@ public sealed class AIUsageReportDataSetsTests : IAsyncLifetime
         return services.BuildServiceProvider();
     }
 
-    private static AIChatReportDataSource Source(ISession session, bool canViewAnalytics = true)
+    private static AIChatReportDataSource Source(ISession session, bool canViewAnalytics = true, IAIDeploymentStore deploymentStore = null)
     {
         var authorizationService = Authorization(canViewAnalytics);
 
         return new AIChatReportDataSource(
             [
-                new AICompletionUsageReportDataSet(session, ProfileManager().Object, authorizationService, _storeOptions, new PassThroughStringLocalizer<AICompletionUsageReportDataSet>()),
+                new AICompletionUsageReportDataSet(session, ProfileManager().Object, deploymentStore ?? DeploymentStore(), authorizationService, _storeOptions, new PassThroughStringLocalizer<AICompletionUsageReportDataSet>()),
                 new AIVoiceUsageReportDataSet(session, authorizationService, _storeOptions, new PassThroughStringLocalizer<AIVoiceUsageReportDataSet>()),
             ]);
+    }
+
+    private static IAIDeploymentStore DeploymentStore()
+    {
+        var deploymentStore = new Mock<IAIDeploymentStore>();
+
+        deploymentStore
+            .Setup(store => store.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<AIDeployment>());
+
+        return deploymentStore.Object;
     }
 
     private static IAuthorizationService Authorization(bool canViewAnalytics)

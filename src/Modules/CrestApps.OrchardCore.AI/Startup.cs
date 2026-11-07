@@ -126,6 +126,7 @@ public sealed class Startup : StartupBase
             .AddPermissionProvider<AIDeploymentPermissionProvider>()
             .AddDisplayDriver<AIDeployment, AIDeploymentDisplayDriver>()
             .AddDisplayDriver<AIDeployment, AIDeploymentModelCapabilitiesDisplayDriver>()
+            .AddDisplayDriver<AIDeployment, AIDeploymentPricingDisplayDriver>()
             .AddDisplayDriver<AIDeployment, AIDeploymentCascadedRealtimeDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileDeploymentDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileModelParametersDisplayDriver>()
@@ -136,6 +137,7 @@ public sealed class Startup : StartupBase
             .AddNavigationProvider<AIDeploymentAdminMenu>()
             .AddDataMigration<AIDeploymentTypeMigrations>()
             .AddDataMigration<AIDeploymentV1DocumentMigrations>()
+            .AddDataMigration<AIDeploymentPricingMigrations>()
             .AddSiteDisplayDriver<DefaultAIDeploymentSettingsDisplayDriver>()
             .AddSiteDisplayDriver<AICostSettingsDisplayDriver>()
             .AddSiteDisplayDriver<AIContactMemorySettingsDisplayDriver>();

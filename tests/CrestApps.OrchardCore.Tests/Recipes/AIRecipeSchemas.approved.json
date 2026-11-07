@@ -348,10 +348,177 @@
                   },
                   "additionalProperties": true,
                   "description": "Declared model capabilities for the deployment: the trained features it supports and the configurable model parameters it exposes."
+                },
+                "AIDeploymentPricing": {
+                  "type": "object",
+                  "properties": {
+                    "Currency": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z]{3}$",
+                      "description": "The ISO currency code the prices are in, such as USD. Defaults to USD."
+                    },
+                    "Prices": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "Meter": {
+                            "type": "string",
+                            "enum": [
+                              "InputTokens",
+                              "CachedInputTokens",
+                              "CacheWriteInputTokens",
+                              "OutputTokens",
+                              "InputAudioTokens",
+                              "CachedInputAudioTokens",
+                              "OutputAudioTokens",
+                              "InputImageTokens",
+                              "OutputImageTokens",
+                              "AudioSeconds",
+                              "Characters",
+                              "Images",
+                              "Requests",
+                              "WebSearches",
+                              "WebFetches",
+                              "AdditionalCount"
+                            ],
+                            "description": "The billed unit. Cached, cache-write, audio, and image tokens are taken out of the input and output tokens when they have their own price."
+                          },
+                          "Amount": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "What Per units cost, in the pricing\u0027s currency."
+                          },
+                          "Per": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "description": "How many of the meter\u0027s base units Amount pays for, such as 1000000 for a price per million tokens, or 60 for a price per minute of audio (AudioSeconds)."
+                          },
+                          "CountName": {
+                            "type": [
+                              "null",
+                              "string"
+                            ],
+                            "description": "For the AdditionalCount meter: the name of the count the provider reports, as shown in the usage report."
+                          },
+                          "AboveInputTokens": {
+                            "type": [
+                              "null",
+                              "integer"
+                            ],
+                            "minimum": 1,
+                            "description": "Long-context price: applies instead of the meter\u0027s regular price to requests with more input tokens than this."
+                          },
+                          "Increment": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Rounds each request\u0027s quantity up to a multiple of this many base units, such as 15 for audio billed in 15-second increments. 0 bills the exact quantity."
+                          }
+                        },
+                        "required": [
+                          "Meter",
+                          "Amount",
+                          "Per"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "The prices, one per billed unit. Several prices for the same meter add up."
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "What the deployment costs with its provider."
                 }
               },
               "additionalProperties": true,
               "description": "Contained provider connection properties stored directly on the deployment."
+            },
+            "Pricing": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "Currency": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z]{3}$",
+                      "description": "The ISO currency code the prices are in, such as USD. Defaults to USD."
+                    },
+                    "Prices": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "Meter": {
+                            "type": "string",
+                            "enum": [
+                              "InputTokens",
+                              "CachedInputTokens",
+                              "CacheWriteInputTokens",
+                              "OutputTokens",
+                              "InputAudioTokens",
+                              "CachedInputAudioTokens",
+                              "OutputAudioTokens",
+                              "InputImageTokens",
+                              "OutputImageTokens",
+                              "AudioSeconds",
+                              "Characters",
+                              "Images",
+                              "Requests",
+                              "WebSearches",
+                              "WebFetches",
+                              "AdditionalCount"
+                            ],
+                            "description": "The billed unit. Cached, cache-write, audio, and image tokens are taken out of the input and output tokens when they have their own price."
+                          },
+                          "Amount": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "What Per units cost, in the pricing\u0027s currency."
+                          },
+                          "Per": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "description": "How many of the meter\u0027s base units Amount pays for, such as 1000000 for a price per million tokens, or 60 for a price per minute of audio (AudioSeconds)."
+                          },
+                          "CountName": {
+                            "type": [
+                              "null",
+                              "string"
+                            ],
+                            "description": "For the AdditionalCount meter: the name of the count the provider reports, as shown in the usage report."
+                          },
+                          "AboveInputTokens": {
+                            "type": [
+                              "null",
+                              "integer"
+                            ],
+                            "minimum": 1,
+                            "description": "Long-context price: applies instead of the meter\u0027s regular price to requests with more input tokens than this."
+                          },
+                          "Increment": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Rounds each request\u0027s quantity up to a multiple of this many base units, such as 15 for audio billed in 15-second increments. 0 bills the exact quantity."
+                          }
+                        },
+                        "required": [
+                          "Meter",
+                          "Amount",
+                          "Per"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "The prices, one per billed unit. Several prices for the same meter add up."
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "What the deployment costs with its provider."
+                },
+                {
+                  "type": "null",
+                  "description": "Removes the deployment\u0027s prices."
+                }
+              ],
+              "description": "What the deployment costs with its provider, used to estimate the cost of its usage in the AI usage reports. Leave it out to keep the deployment\u0027s current prices."
             },
             "Purpose": {
               "anyOf": [

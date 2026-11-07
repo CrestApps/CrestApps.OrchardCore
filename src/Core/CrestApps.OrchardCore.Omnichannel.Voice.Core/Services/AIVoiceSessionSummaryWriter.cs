@@ -164,9 +164,8 @@ internal sealed class AIVoiceSessionSummaryWriter
 
         AICallMetrics.ApplyLatencies(summary, measured?.ResponseLatenciesMs, measured?.ModelLatenciesMs, measured?.DetectorWaitsMs);
 
-        var costs = _siteService is null ? null : (await _siteService.GetSiteSettingsAsync()).GetOrCreate<AICostSettings>();
-        summary.EstimatedCost = AICallMetrics.EstimateCost(summary, costs);
-        summary.CostCurrency = summary.EstimatedCost is null ? null : costs?.Currency;
+        var carrier = _siteService is null ? null : (await _siteService.GetSiteSettingsAsync()).GetOrCreate<AICostSettings>();
+        (summary.EstimatedCost, summary.CostCurrency) = AICallMetrics.EstimateCost(summary, carrier, deployment?.GetPricing());
 
         await _summaries.SaveAsync(summary, cancellationToken);
 

@@ -143,11 +143,6 @@ public class AICostSettingsViewModel
     /// Gets or sets the carrier's price of a text message.
     /// </summary>
     public decimal SmsPerMessage { get; set; }
-
-    /// <summary>
-    /// Gets or sets the deployment prices, one per line.
-    /// </summary>
-    public string DeploymentPrices { get; set; }
 }
 
 /// <summary>
