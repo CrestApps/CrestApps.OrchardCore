@@ -41,6 +41,9 @@ public sealed class AnalyticsStartup : StartupBase
         services.AddScoped<DialerRecordClassifier>();
         services.AddScoped<IDialerQueueInventoryService, DialerQueueInventoryService>();
 
+        // Says why an agent is or is not getting calls, for the agent availability report and the AI tools alike.
+        services.TryAddScoped<AgentAvailabilityReader>();
+
         services.AddDisplayDriver<ReportFilter, ContactCenterReportFilterDisplayDriver>();
 
         services

@@ -1,19 +1,15 @@
 using CrestApps.OrchardCore.ContactCenter.Core;
 using OrchardCore.Localization;
 using System.Security.Claims;
-using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Reports.Models;
 using CrestApps.OrchardCore.ContactCenter.Reports.Services;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Options;
-using OrchardCore.Modules;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
@@ -41,21 +37,9 @@ public sealed class AgentAvailabilityReportProvider : ContactCenterReportBase, I
     private const string FlagColor = "#B42318";
 
     private readonly IAgentProfileManager _agentManager;
-    private readonly IAgentSessionManager _sessionManager;
-    private readonly IInteractionManager _interactionManager;
-    private readonly IInteractionEventStore _eventStore;
-    private readonly IActivityQueueManager _queueManager;
-    private readonly IQueueItemManager _queueItemManager;
-    private readonly IBusinessHoursService _businessHours;
-    private readonly IAgentAvailabilityService _availabilityService;
-    private readonly IActivityRoutingService _routingService;
+    private readonly AgentAvailabilityReader _reader;
     private readonly ISupervisorQueueAuthorizationService _supervisorQueueAuthorization;
-    private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
-    private readonly IStaleAgentWorkService _staleWorkService;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly AgentAvailabilityOptions _availabilityOptions;
-    private readonly IClock _clock;
-    private readonly ILocalClock _localClock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AgentAvailabilityReportProvider"/> class.
@@ -63,60 +47,24 @@ public sealed class AgentAvailabilityReportProvider : ContactCenterReportBase, I
     /// <param name="reportingService">The Contact Center reporting service.</param>
     /// <param name="capabilityGuard">The guard that decides whether the producing capabilities are enabled.</param>
     /// <param name="agentManager">The agent profiles.</param>
-    /// <param name="sessionManager">The agents' live sessions.</param>
-    /// <param name="interactionManager">The interactions, for each agent's active count.</param>
-    /// <param name="eventStore">The event log, for each agent's recorded state history.</param>
-    /// <param name="queueManager">The stored queues.</param>
-    /// <param name="queueItemManager">The items waiting in each queue.</param>
-    /// <param name="businessHours">The business hours that pause a closed queue.</param>
-    /// <param name="availabilityService">The availability gate routing reads its candidates from.</param>
-    /// <param name="routingService">The routing service, asked about each queue's next waiting item.</param>
+    /// <param name="reader">The reader that diagnoses each agent, shared with the Contact Center AI tools.</param>
     /// <param name="supervisorQueueAuthorization">The check the live dashboard scopes its queues and agents with.</param>
-    /// <param name="campaignManager">The campaigns, for their names.</param>
-    /// <param name="staleWorkServices">The stale-work detection, registered only with the live dashboard.</param>
     /// <param name="httpContextAccessor">The accessor of the request, for who is running the report.</param>
-    /// <param name="availabilityOptions">The availability policy, whose heartbeat timeout decides a live session.</param>
-    /// <param name="clock">The clock.</param>
-    /// <param name="localClock">The tenant's clock, whose time zone the day is in.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AgentAvailabilityReportProvider(
         IContactCenterReportingService reportingService,
         IContactCenterReportCapabilityGuard capabilityGuard,
         IAgentProfileManager agentManager,
-        IAgentSessionManager sessionManager,
-        IInteractionManager interactionManager,
-        IInteractionEventStore eventStore,
-        IActivityQueueManager queueManager,
-        IQueueItemManager queueItemManager,
-        IBusinessHoursService businessHours,
-        IAgentAvailabilityService availabilityService,
-        IActivityRoutingService routingService,
+        AgentAvailabilityReader reader,
         ISupervisorQueueAuthorizationService supervisorQueueAuthorization,
-        ICatalogManager<OmnichannelCampaign> campaignManager,
-        IEnumerable<IStaleAgentWorkService> staleWorkServices,
         IHttpContextAccessor httpContextAccessor,
-        IOptions<AgentAvailabilityOptions> availabilityOptions,
-        IClock clock,
-        ILocalClock localClock,
         IStringLocalizer<AgentAvailabilityReportProvider> stringLocalizer)
         : base(reportingService, capabilityGuard, stringLocalizer)
     {
         _agentManager = agentManager;
-        _sessionManager = sessionManager;
-        _interactionManager = interactionManager;
-        _eventStore = eventStore;
-        _queueManager = queueManager;
-        _queueItemManager = queueItemManager;
-        _businessHours = businessHours;
-        _availabilityService = availabilityService;
-        _routingService = routingService;
+        _reader = reader;
         _supervisorQueueAuthorization = supervisorQueueAuthorization;
-        _campaignManager = campaignManager;
-        _staleWorkService = staleWorkServices?.FirstOrDefault();
         _httpContextAccessor = httpContextAccessor;
-        _availabilityOptions = availabilityOptions.Value;
-        _clock = clock;
-        _localClock = localClock;
     }
 
     /// <inheritdoc/>
@@ -147,10 +95,6 @@ public sealed class AgentAvailabilityReportProvider : ContactCenterReportBase, I
     /// <inheritdoc/>
     protected override async Task<ReportDocument> RunCoreAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
-        var now = _clock.UtcNow;
-        var timeZone = await ReportTimeZone.ResolveAsync(_localClock);
-        var startOfDay = timeZone.StartOfDayUtc(now);
-        var liveAfter = now - _availabilityOptions.HeartbeatTimeout;
         var criteria = ContactCenterReportFilter.GetCriteria(context.Filter);
         var allAgents = (await _agentManager.GetAllAsync(cancellationToken))
             .Where(agent => agent is not null && !string.IsNullOrEmpty(agent.ItemId))
@@ -191,70 +135,9 @@ public sealed class AgentAvailabilityReportProvider : ContactCenterReportBase, I
             _ => allAgents,
         };
 
-        var userIds = agents
-            .Where(agent => !string.IsNullOrEmpty(agent.UserId))
-            .Select(agent => agent.UserId)
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
-        var agentIds = agents.Select(agent => agent.ItemId).ToArray();
-        var sessions = new Dictionary<string, AgentSession>(StringComparer.Ordinal);
+        var reading = await _reader.ReadAsync(agents, overseen, cancellationToken);
 
-        if (userIds.Length > 0)
-        {
-            foreach (var session in await _sessionManager.GetByUserIdsAsync(userIds, cancellationToken) ?? [])
-            {
-                if (session is not null && !string.IsNullOrEmpty(session.UserId))
-                {
-                    sessions[session.UserId] = session;
-                }
-            }
-        }
-
-        var activeCounts = agentIds.Length == 0
-            ? new Dictionary<string, int>(StringComparer.Ordinal)
-            : await _interactionManager.CountActiveByAgentIdsAsync(agentIds, cancellationToken);
-
-        var staleWork = _staleWorkService is null || agents.Length == 0
-            ? new Dictionary<string, StaleAgentWork>(StringComparer.Ordinal)
-            : await _staleWorkService.DetectAsync(agents, cancellationToken);
-
-        var timelines = agentIds.Length == 0
-            ? new Dictionary<string, AgentStateTimeline>(StringComparer.Ordinal)
-            : AgentStateTimeline.Build(await AgentStateEventReader.ReadAsync(
-                _eventStore,
-                agentIds,
-                onlyTheseAgents: true,
-                startOfDay,
-                now,
-                [],
-                cancellationToken))
-                .ToDictionary(timeline => timeline.AgentId, StringComparer.Ordinal);
-
-        var queues = await ReadQueuesAsync(agents, sessions, activeCounts, now, liveAfter, cancellationToken);
-
-        // The dashboard shows an agent under a stored queue only while the queue is enabled; a campaign's queue is never
-        // stored, so it is shown whenever it is overseen.
-        var dashboardQueueIds = overseen
-            .Where(queueId => ContactCenterConstants.IsCampaignQueue(queueId) ||
-                (queues.TryGetValue(queueId, out var queue) && queue.Blocker is not (AgentQueueBlocker.Missing or AgentQueueBlocker.Disabled)))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        var diagnoses = agents
-            .Select(agent => AgentAvailabilityDiagnostics.Diagnose(
-                agent,
-                sessions.TryGetValue(agent.UserId ?? string.Empty, out var session) ? session : null,
-                activeCounts.TryGetValue(agent.ItemId, out var activeCount) ? activeCount : 0,
-                staleWork.TryGetValue(agent.ItemId, out var stale) ? stale : null,
-                _staleWorkService is not null,
-                timelines.TryGetValue(agent.ItemId, out var timeline) ? timeline : null,
-                queues,
-                dashboardQueueIds,
-                now,
-                startOfDay,
-                liveAfter))
-            .ToArray();
-
-        return Build(diagnoses, now, startOfDay, timeZone.Name, scope);
+        return Build(reading.Diagnoses, reading.NowUtc, reading.StartOfDayUtc, reading.TimeZoneName, scope);
     }
 
     /// <summary>
@@ -620,106 +503,4 @@ public sealed class AgentAvailabilityReportProvider : ContactCenterReportBase, I
     // nothing either way; neither is a stale state.
     private static bool IsStale(AgentAvailabilityFlag flag)
         => flag.Kind is not (AgentAvailabilityFlagKind.HoldsReservation or AgentAvailabilityFlagKind.StaleWorkNotChecked);
-
-    private async Task<Dictionary<string, AgentAvailabilityQueueContext>> ReadQueuesAsync(
-        IReadOnlyCollection<AgentProfile> agents,
-        IReadOnlyDictionary<string, AgentSession> sessions,
-        IReadOnlyDictionary<string, int> activeCounts,
-        DateTime now,
-        DateTime liveAfter,
-        CancellationToken cancellationToken)
-    {
-        var result = new Dictionary<string, AgentAvailabilityQueueContext>(StringComparer.OrdinalIgnoreCase);
-        var queueIds = agents
-            .SelectMany(AgentAvailabilityDiagnostics.GetQueueIds)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-
-        if (queueIds.Length == 0)
-        {
-            return result;
-        }
-
-        var storedQueues = new Dictionary<string, ActivityQueue>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var queue in await _queueManager.GetAllAsync(cancellationToken) ?? [])
-        {
-            if (queue is not null && !string.IsNullOrEmpty(queue.ItemId))
-            {
-                storedQueues[queue.ItemId] = queue;
-            }
-        }
-
-        var campaignNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var campaign in await _campaignManager.GetAllAsync(cancellationToken) ?? [])
-        {
-            if (campaign is not null && !string.IsNullOrEmpty(campaign.ItemId))
-            {
-                campaignNames[campaign.ItemId] = string.IsNullOrWhiteSpace(campaign.DisplayText) ? campaign.ItemId : campaign.DisplayText;
-            }
-        }
-
-        var waitingCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var (queueId, count) in await _queueItemManager.CountWaitingByQueueIdsAsync(queueIds, cancellationToken) ?? new Dictionary<string, int>())
-        {
-            waitingCounts[queueId] = count;
-        }
-
-        foreach (var queueId in queueIds)
-        {
-            var campaignId = ContactCenterConstants.CampaignQueue.GetCampaignId(queueId);
-            var queue = campaignId is not null
-                ? CampaignRoutingQueue.Create(queueId)
-                : storedQueues.GetValueOrDefault(queueId);
-            var name = campaignId is not null
-                ? campaignNames.GetValueOrDefault(campaignId) ?? campaignId
-                : queue?.Name ?? queueId;
-
-            // The checks assignment makes before it looks at any agent, in its order.
-            var blocker = queue is null
-                ? AgentQueueBlocker.Missing
-                : !queue.Enabled
-                    ? AgentQueueBlocker.Disabled
-                    : !await _businessHours.IsOpenAsync(queue.BusinessHoursCalendarId, now, cancellationToken)
-                        ? AgentQueueBlocker.Closed
-                        : AgentQueueBlocker.None;
-            var waiting = waitingCounts.GetValueOrDefault(queueId);
-            ActivityRoutingDecision decision = null;
-
-            // Routing is asked only when its answer can matter for an agent listed here: something is waiting and one of
-            // them passes the availability gate. It is asked exactly as assignment asks it, with the same candidates.
-            if (blocker == AgentQueueBlocker.None &&
-                waiting > 0 &&
-                agents.Any(agent => AgentRoutingEligibility.Evaluate(
-                    agent,
-                    sessions.GetValueOrDefault(agent.UserId ?? string.Empty),
-                    queueId,
-                    activeCounts.GetValueOrDefault(agent.ItemId),
-                    liveAfter) == AgentRoutingIneligibility.None))
-            {
-                var head = await _queueItemManager.FindNextWaitingAsync(queue, now, cancellationToken);
-
-                if (head is not null)
-                {
-                    var availability = await _availabilityService.GetForQueueAsync(queueId, cancellationToken);
-
-                    decision = await _routingService.SelectAgentAsync(queue, head, availability, cancellationToken);
-                }
-            }
-
-            result[queueId] = new AgentAvailabilityQueueContext
-            {
-                QueueId = queueId,
-                Name = name,
-                IsCampaign = campaignId is not null,
-                Blocker = blocker,
-                WaitingCount = waiting,
-                Decision = decision,
-            };
-        }
-
-        return result;
-    }
 }
