@@ -62,7 +62,7 @@ public sealed class AIWebhookImporterTests
             .Returns(ValueTask.CompletedTask);
 
         var dispatcher = new WebhookDispatcher(Mock.Of<CrestApps.OrchardCore.Webhooks.IWebhookSender>(), deliveries.Object, subscriptions.Object, protection, Clock(), NullLogger<WebhookDispatcher>.Instance);
-        var importer = new AIWebhookImporter(aiSubscriptions.Object, aiDeliveries.Object, subscriptions.Object, deliveries.Object, dispatcher, protection, Clock(), NullLogger<AIWebhookImporter>.Instance);
+        var importer = new AIWebhookImporter(aiSubscriptions.Object, aiDeliveries.Object, subscriptions.Object, deliveries.Object, dispatcher, protection, Clock(), NullLogger<AIWebhookImporter>.Instance, Mock.Of<global::YesSql.ISession>());
 
         // Act
         var (movedSubscriptions, movedDeliveries) = await importer.ImportAsync(TestContext.Current.CancellationToken);
@@ -85,7 +85,7 @@ public sealed class AIWebhookImporterTests
         Assert.Equal(2, delivery.Attempts);
         Assert.Equal(_now.AddMinutes(5), delivery.NextAttemptUtc);
 
-        // The old records are settled, not deleted, so nothing is sent twice and the old log ages out.
+        // The old records are settled, not deleted, so nothing is sent twice and the old log stays.
         Assert.False(aiSubscription.Enabled);
         Assert.Equal(AIWebhookDeliveryStatus.Failed, aiDelivery.Status);
         Assert.Equal(AIWebhookImporter.MovedError, aiDelivery.Error);
@@ -106,7 +106,7 @@ public sealed class AIWebhookImporterTests
         subscriptions.Setup(store => store.FindByIdAsync("ai-sub-1", It.IsAny<CancellationToken>())).ReturnsAsync(new WebhookSubscription { ItemId = "ai-sub-1" });
         var deliveries = new Mock<IWebhookDeliveryStore>();
         var dispatcher = new WebhookDispatcher(Mock.Of<CrestApps.OrchardCore.Webhooks.IWebhookSender>(), deliveries.Object, subscriptions.Object, protection, Clock(), NullLogger<WebhookDispatcher>.Instance);
-        var importer = new AIWebhookImporter(aiSubscriptions.Object, aiDeliveries.Object, subscriptions.Object, deliveries.Object, dispatcher, protection, Clock(), NullLogger<AIWebhookImporter>.Instance);
+        var importer = new AIWebhookImporter(aiSubscriptions.Object, aiDeliveries.Object, subscriptions.Object, deliveries.Object, dispatcher, protection, Clock(), NullLogger<AIWebhookImporter>.Instance, Mock.Of<global::YesSql.ISession>());
 
         // Act
         var (movedSubscriptions, _) = await importer.ImportAsync(TestContext.Current.CancellationToken);

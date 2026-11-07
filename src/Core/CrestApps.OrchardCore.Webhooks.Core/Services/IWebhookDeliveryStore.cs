@@ -38,6 +38,17 @@ public interface IWebhookDeliveryStore : ICatalog<WebhookDelivery>
     Task<int> DeleteOlderThanAsync(DateTime createdBeforeUtc, int take, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Deletes settled deliveries (delivered or failed) created before a time, except the deliveries of the events that
+    /// are kept. Pending deliveries are kept.
+    /// </summary>
+    /// <param name="createdBeforeUtc">Deliveries created before this time are deleted.</param>
+    /// <param name="take">The most one call deletes.</param>
+    /// <param name="keptEventNames">The events whose deliveries are never deleted.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>How many were deleted.</returns>
+    Task<int> DeleteOlderThanAsync(DateTime createdBeforeUtc, int take, IReadOnlyCollection<string> keptEventNames, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Deletes a subscription's deliveries.
     /// </summary>
     /// <param name="subscriptionId">The subscription.</param>

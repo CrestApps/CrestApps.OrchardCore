@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Webhooks.Core;
 using CrestApps.OrchardCore.Webhooks.Core.Models;
 using CrestApps.OrchardCore.Webhooks.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Modules;
 
@@ -13,7 +14,7 @@ namespace CrestApps.OrchardCore.Webhooks.BackgroundTasks;
 [BackgroundTask(
     Title = "Webhook deliveries",
     Schedule = "* * * * *",
-    Description = "Sends webhook deliveries that failed again, with backoff, and deletes delivered and failed ones after 30 days.",
+    Description = "Sends webhook deliveries that failed again, with backoff, and deletes delivered and failed ones after 30 days, except the deliveries of events a feature keeps (AI events).",
     LockTimeout = 3_000,
     LockExpiration = 600_000)]
 public sealed class WebhookDeliveriesBackgroundTask : IBackgroundTask
@@ -41,7 +42,13 @@ public sealed class WebhookDeliveriesBackgroundTask : IBackgroundTask
             }
         }
 
-        // The log is kept for a month; one batch a minute keeps up with any store.
-        await store.DeleteOlderThanAsync(now - WebhookStorage.DeliveryRetention, BatchSize, cancellationToken);
+        // The log is kept for a month by default; one batch a minute keeps up with any store. The deliveries of the
+        // events a feature keeps (AI Webhooks keeps every AI event) are never purged.
+        var retention = serviceProvider.GetService<IOptions<WebhookDeliveryRetentionOptions>>()?.Value ?? new WebhookDeliveryRetentionOptions();
+
+        if (retention.DeliveryRetention > TimeSpan.Zero)
+        {
+            await store.DeleteOlderThanAsync(now - retention.DeliveryRetention, BatchSize, [.. retention.KeptEventNames], cancellationToken);
+        }
     }
 }

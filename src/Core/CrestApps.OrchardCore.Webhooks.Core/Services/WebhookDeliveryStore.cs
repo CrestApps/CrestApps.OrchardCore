@@ -66,10 +66,23 @@ public sealed class WebhookDeliveryStore : DocumentCatalog<WebhookDelivery, Webh
     }
 
     /// <inheritdoc/>
-    public async Task<int> DeleteOlderThanAsync(DateTime createdBeforeUtc, int take, CancellationToken cancellationToken = default)
+    public Task<int> DeleteOlderThanAsync(DateTime createdBeforeUtc, int take, CancellationToken cancellationToken = default)
+        => DeleteOlderThanAsync(createdBeforeUtc, take, [], cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<int> DeleteOlderThanAsync(DateTime createdBeforeUtc, int take, IReadOnlyCollection<string> keptEventNames, CancellationToken cancellationToken = default)
     {
         var pending = WebhookDeliveryStatus.Pending;
-        var old = await Session.Query<WebhookDelivery, WebhookDeliveryIndex>(index => index.Status != pending && index.CreatedUtc < createdBeforeUtc, collection: CollectionName)
+        var query = Session.Query<WebhookDelivery, WebhookDeliveryIndex>(index => index.Status != pending && index.CreatedUtc < createdBeforeUtc, collection: CollectionName);
+
+        if (keptEventNames is { Count: > 0 })
+        {
+            var kept = keptEventNames.ToArray();
+
+            query = query.Where(index => index.EventName.IsNotIn(kept));
+        }
+
+        var old = await query
             .Take(take)
             .ListAsync(cancellationToken);
         var count = 0;

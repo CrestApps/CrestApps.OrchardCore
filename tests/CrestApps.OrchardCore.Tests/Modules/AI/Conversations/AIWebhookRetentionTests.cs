@@ -9,8 +9,8 @@ using YesSql.Sql;
 namespace CrestApps.OrchardCore.Tests.Modules.AI.Conversations;
 
 /// <summary>
-/// Bug: AI webhook deliveries were never purged, so the delivery table grew forever. Settled deliveries older than the
-/// retention window are now deleted, as commerce webhook deliveries are; pending ones are kept so none is lost.
+/// The legacy AI delivery store can delete settled deliveries older than a cutoff while keeping pending ones. Nothing
+/// calls it by default: the AI delivery log is kept, as it always was (see <c>AIWebhookDeliveryHistoryTests</c>).
 /// </summary>
 public sealed class AIWebhookRetentionTests
 {

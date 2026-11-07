@@ -7,13 +7,15 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Services;
 
 /// <summary>
-/// Moves the AI webhook subscriptions and their pending deliveries into the Webhooks building block, where AI events
-/// are now sent from. Nothing is deleted: each moved subscription is turned off and each moved delivery is settled, so
-/// nothing is sent twice and the old delivery log ages out with its 30-day purge.
+/// Moves the AI webhook subscriptions and their deliveries into the Webhooks building block, where AI events are now
+/// sent from and shown. Nothing is deleted: each moved subscription is turned off and each moved pending delivery is
+/// settled, so nothing is sent twice, and the delivered and failed deliveries are copied as they are, so their history
+/// stays readable on the shared Deliveries page. The old rows are kept.
 /// </summary>
 internal sealed class AIWebhookImporter
 {
@@ -21,6 +23,9 @@ internal sealed class AIWebhookImporter
     /// The error a moved AI delivery is settled with.
     /// </summary>
     internal const string MovedError = "Moved to the Webhooks delivery outbox.";
+
+    // The history is copied a page at a time, and each page is written before the next is read.
+    internal const int HistoryPageSize = 200;
 
     private readonly IAIWebhookSubscriptionStore _aiSubscriptions;
     private readonly IAIWebhookDeliveryStore _aiDeliveries;
@@ -30,6 +35,7 @@ internal sealed class AIWebhookImporter
     private readonly IDataProtector _aiProtector;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly ISession _session;
 
     public AIWebhookImporter(
         IAIWebhookSubscriptionStore aiSubscriptions,
@@ -39,7 +45,8 @@ internal sealed class AIWebhookImporter
         WebhookDispatcher dispatcher,
         IDataProtectionProvider dataProtectionProvider,
         IClock clock,
-        ILogger<AIWebhookImporter> logger)
+        ILogger<AIWebhookImporter> logger,
+        ISession session)
     {
         _aiSubscriptions = aiSubscriptions;
         _aiDeliveries = aiDeliveries;
@@ -49,6 +56,7 @@ internal sealed class AIWebhookImporter
         _aiProtector = dataProtectionProvider.CreateProtector(AIWebhookPublisher.ProtectorPurpose);
         _clock = clock;
         _logger = logger;
+        _session = session;
     }
 
     /// <summary>
@@ -119,6 +127,73 @@ internal sealed class AIWebhookImporter
         }
 
         return (movedSubscriptions, movedDeliveries);
+    }
+
+    /// <summary>
+    /// Copies the delivered and failed AI deliveries into the Webhooks delivery log, as they are, so their history shows
+    /// on the shared Deliveries page. The pending deliveries <see cref="ImportAsync"/> moved are left out, since they
+    /// were copied then, and the old rows are neither changed nor deleted.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>How many deliveries were copied.</returns>
+    public async Task<int> ImportHistoryAsync(CancellationToken cancellationToken = default)
+    {
+        var copied = 0;
+        var skip = 0;
+
+        while (true)
+        {
+            var page = await _aiDeliveries.ListSettledAsync(skip, HistoryPageSize, cancellationToken);
+
+            if (page.Count == 0)
+            {
+                break;
+            }
+
+            skip += page.Count;
+
+            foreach (var aiDelivery in page)
+            {
+                if (aiDelivery.Status == AIWebhookDeliveryStatus.Failed && string.Equals(aiDelivery.Error, MovedError, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                var delivered = aiDelivery.Status == AIWebhookDeliveryStatus.Delivered;
+
+                await _deliveries.CreateAsync(new WebhookDelivery
+                {
+                    ItemId = IdGenerator.GenerateId(),
+                    SubscriptionId = aiDelivery.SubscriptionId,
+                    EventId = aiDelivery.ItemId,
+                    EventName = aiDelivery.EventName,
+                    Payload = aiDelivery.Payload,
+                    Status = delivered ? WebhookDeliveryStatus.Delivered : WebhookDeliveryStatus.Failed,
+                    Attempts = aiDelivery.Attempts,
+                    LastStatusCode = aiDelivery.StatusCode,
+                    LastError = aiDelivery.Error,
+                    CreatedUtc = aiDelivery.CreatedUtc,
+                    LastAttemptUtc = aiDelivery.CompletedUtc,
+                    DeliveredUtc = delivered ? aiDelivery.CompletedUtc : null,
+                }, cancellationToken);
+
+                copied++;
+            }
+
+            await _session.FlushAsync(cancellationToken);
+
+            if (page.Count < HistoryPageSize)
+            {
+                break;
+            }
+        }
+
+        if (copied > 0 && _logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Copied {Deliveries} AI webhook delivery(ies) to the Webhooks delivery log.", copied);
+        }
+
+        return copied;
     }
 
     // The secret is read with the AI purpose and protected again with the Webhooks purpose, so receivers keep checking

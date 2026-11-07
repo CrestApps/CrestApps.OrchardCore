@@ -84,8 +84,27 @@ AI Webhooks:
 - The admin moved from **Commerce > Webhooks** (`/Admin/commerce/webhooks`) to **Configuration > Webhooks**
   (`/Admin/webhooks`). The permission keeps its name, `ManageCommerceWebhooks`, so the roles that had it keep it.
 - The AI webhook subscriptions and their pending deliveries are moved into the Webhooks feature once (the
-  `AIWebhookIndexMigrations` step 2), with their ids and secrets; the old rows are settled, not deleted, and purged after
-  30 days. The old **Artificial Intelligence > Webhooks** page and its **Manage AI webhooks** permission are gone.
+  `AIWebhookIndexMigrations` step 2), with their ids and secrets, and the old pending rows are settled so they are never
+  sent twice. The delivered and failed AI deliveries are copied as they are (step 4), so the whole AI delivery history
+  shows on the shared **Deliveries** page. The old rows are kept, never deleted. The old **Artificial Intelligence >
+  Webhooks** page and its **Manage AI webhooks** permission are gone.
+
+### Delivery log retention
+
+`WebhookDeliveriesBackgroundTask` deletes delivered and failed deliveries older than
+`WebhookDeliveryRetentionOptions.DeliveryRetention` (30 days by default; zero or less keeps them all). Pending deliveries
+are never deleted, and neither are the deliveries of the events in `WebhookDeliveryRetentionOptions.KeptEventNames`.
+The AI Webhooks feature adds every AI event (`AIWebhookEvents.All`) to it, so AI deliveries, the ones copied from the
+old log and the new ones, are kept, as the AI delivery log always was, while commerce deliveries keep their 30 days.
+Change either in a startup:
+
+```csharp
+services.Configure<WebhookDeliveryRetentionOptions>(options =>
+{
+    options.DeliveryRetention = TimeSpan.FromDays(90);
+    options.KeptEventNames.Add("order.refunded");
+});
+```
 
 ## Provider webhook inbox
 

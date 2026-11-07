@@ -100,7 +100,7 @@ Customers made by the `Customers` recipe step aren't published.
 - A `2xx` answer marks it `Delivered`. Any other answer, a timeout or a connection error schedules the next attempt from `WebhookDispatcher.Backoff`: 1 minute, 5 minutes, 30 minutes, 2 hours, 6 hours, 12 hours and 24 hours after the attempts so far. After the eighth attempt fails it's `Failed`.
 - A delivery fails at once, without being sent, when its subscription was deleted (*The webhook was deleted.*), is turned off (*The webhook was turned off.*), or has a secret Data Protection can't unprotect (*The webhook's signing secret can't be read. Give it a new secret, then send it again.*).
 
-`WebhookDeliveriesBackgroundTask` runs every minute, under a 10-minute lock. It sends up to 20 pending deliveries whose `NextAttemptUtc` has come (`IWebhookDeliveryStore.ListDueAsync`, oldest first), loading each afresh and saving it as soon as it's sent, so a run that stops half way, or the next run, never sends it again. It then deletes up to 20 delivered or failed deliveries created more than 30 days ago.
+`WebhookDeliveriesBackgroundTask` runs every minute, under a 10-minute lock. It sends up to 20 pending deliveries whose `NextAttemptUtc` has come (`IWebhookDeliveryStore.ListDueAsync`, oldest first), loading each afresh and saving it as soon as it's sent, so a run that stops half way, or the next run, never sends it again. It then deletes up to 20 delivered or failed deliveries created more than 30 days ago, leaving out the events a feature keeps (AI Webhooks keeps every AI event); see [Delivery log retention](webhooks#delivery-log-retention).
 
 **Send again** in the admin (`WebhookDispatcher.ResendAsync`) resets a delivery to pending with no attempts and sends it at once.
 

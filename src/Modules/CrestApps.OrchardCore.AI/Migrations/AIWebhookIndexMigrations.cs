@@ -11,8 +11,8 @@ using OrchardCore.Environment.Shell.Scope;
 namespace CrestApps.OrchardCore.AI.Migrations;
 
 /// <summary>
-/// Creates the index tables of the AI webhook records, and moves the subscriptions and pending deliveries those records
-/// hold into the Webhooks building block, which sends AI events now.
+/// Creates the index tables of the AI webhook records, and moves the subscriptions and deliveries those records hold
+/// into the Webhooks building block, which sends AI events now.
 /// </summary>
 internal sealed class AIWebhookIndexMigrations : DataMigration
 {
@@ -44,7 +44,7 @@ internal sealed class AIWebhookIndexMigrations : DataMigration
     {
         await AIWebhookIndexSchema.CreateAsync(SchemaBuilder, _options);
 
-        return 3;
+        return 4;
     }
 
     /// <summary>
@@ -73,5 +73,17 @@ internal sealed class AIWebhookIndexMigrations : DataMigration
             scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger<AIWebhookIndexMigrations>()));
 
         return 3;
+    }
+
+    /// <summary>
+    /// Copies the delivered and failed AI deliveries into the Webhooks delivery log, so their history shows on the shared
+    /// Deliveries page as it did on the AI delivery pages. The old rows are kept, so the step is additive.
+    /// </summary>
+    /// <returns>The migration version.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await _importer.ImportHistoryAsync();
+
+        return 4;
     }
 }
