@@ -57,6 +57,32 @@ public sealed class ImportFilesBackgroundTaskTests
         Assert.Equal([2], progressPart.ErrorCategories["Test reason"]);
     }
 
+    [Theory]
+    [InlineData("NULL")]
+    [InlineData("null")]
+    [InlineData("Null")]
+    [InlineData(" NULL ")]
+    public void NormalizeCellValue_ReadsANullCellAsNoValue(string cell)
+    {
+        Assert.Null(ImportFilesBackgroundTask.NormalizeCellValue(cell));
+    }
+
+    [Theory]
+    [InlineData("Nullable")]
+    [InlineData("NULL value")]
+    [InlineData("")]
+    [InlineData("Acme")]
+    public void NormalizeCellValue_KeepsEveryOtherValueAsItIs(string cell)
+    {
+        Assert.Equal(cell, ImportFilesBackgroundTask.NormalizeCellValue(cell));
+    }
+
+    [Fact]
+    public void NormalizeCellValue_KeepsANullReference()
+    {
+        Assert.Null(ImportFilesBackgroundTask.NormalizeCellValue(null));
+    }
+
     [Fact]
     public void GetImportContentItemId_ShouldReturnContentItemId()
     {
