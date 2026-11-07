@@ -51,7 +51,7 @@ public sealed class ContactCenterHubSecurityTests
         var harness = new HubHarness();
         harness.Grant(ContactCenterPermissions.SignIntoQueues);
         harness.SessionService.SessionQueueIds = ["sales"];
-        harness.SessionService.SnapshotQueueIds = ["sales"];
+        harness.ProfileQueueIds = ["sales"];
 
         // Act
         await harness.Hub.OnConnectedAsync();
@@ -79,7 +79,7 @@ public sealed class ContactCenterHubSecurityTests
         var harness = new HubHarness();
         harness.Grant(ContactCenterPermissions.MonitorContactCenter);
         harness.SessionService.SessionQueueIds = ["sales"];
-        harness.SessionService.SnapshotQueueIds = ["sales"];
+        harness.ProfileQueueIds = ["sales"];
 
         // Act
         await harness.Hub.OnConnectedAsync();
@@ -97,13 +97,14 @@ public sealed class ContactCenterHubSecurityTests
     }
 
     [Fact]
-    public async Task OnConnectedAsync_ReconcilesQueueGroupsAgainstTheFreshSnapshot()
+    public async Task OnConnectedAsync_ReconcilesQueueGroupsAgainstTheQueuesTheProfileEntitles()
     {
         // Arrange
         var harness = new HubHarness();
         harness.Grant(ContactCenterPermissions.SignIntoQueues);
         harness.SessionService.SessionQueueIds = ["sales", "support"];
-        harness.SessionService.SnapshotQueueIds = ["support", "billing"];
+        harness.ProfileAllowedQueueIds = ["sales", "support", "billing"];
+        harness.ProfileQueueIds = ["support", "billing"];
 
         // Act
         await harness.Hub.OnConnectedAsync();
@@ -118,6 +119,57 @@ public sealed class ContactCenterHubSecurityTests
                 $"add:{sales}",
                 $"add:{support}",
                 $"add:{billing}",
+                $"remove:{sales}",
+                $"add:{TenantSignalRGroupName.ForUser(TenantName, UserId)}",
+            ],
+            harness.Groups.Operations);
+    }
+
+    [Fact]
+    public async Task OnConnectedAsync_ReadsTheProfileOnceAndBuildsNoDesktopSnapshot()
+    {
+        // Every page an agent opens connects the agent bar again, so each read here repeats on every navigation. The
+        // registration used to build a full desktop snapshot (a profile read and a session read) only to learn the
+        // queues, then read the profile a third time for the supervisor groups; the client fetches the snapshot itself
+        // the moment it connects. Registration reads the profile once and nothing else.
+
+        // Arrange
+        var harness = new HubHarness();
+        harness.Grant(ContactCenterPermissions.SignIntoQueues);
+        harness.Grant(ContactCenterPermissions.MonitorContactCenter);
+        harness.SessionService.SessionQueueIds = ["sales"];
+        harness.ProfileQueueIds = ["sales"];
+
+        // Act
+        await harness.Hub.OnConnectedAsync();
+
+        // Assert
+        Assert.Equal(0, harness.Context.AbortCount);
+        Assert.Equal(1, harness.ProfileReads);
+        Assert.Equal(0, harness.SessionService.SnapshotBuilds);
+    }
+
+    [Fact]
+    public async Task OnConnectedAsync_WhenTheAgentHasNoProfile_LeavesTheQueueGroupsTheSessionNamed()
+    {
+        // An agent with no profile is entitled to no queue, whatever an older session still lists, so the connection
+        // leaves every queue group it just joined from that session, as it did when the snapshot decided it.
+
+        // Arrange
+        var harness = new HubHarness();
+        harness.Grant(ContactCenterPermissions.SignIntoQueues);
+        harness.HasProfile = false;
+        harness.SessionService.SessionQueueIds = ["sales"];
+
+        // Act
+        await harness.Hub.OnConnectedAsync();
+
+        // Assert
+        var sales = TenantSignalRGroupName.ForGroup(TenantName, ContactCenterHub.QueueGroup("sales"));
+
+        Assert.Equal(
+            [
+                $"add:{sales}",
                 $"remove:{sales}",
                 $"add:{TenantSignalRGroupName.ForUser(TenantName, UserId)}",
             ],
@@ -228,7 +280,8 @@ public sealed class ContactCenterHubSecurityTests
         harness.Grant(ContactCenterPermissions.SignIntoQueues);
         harness.Grant(ContactCenterPermissions.MonitorContactCenter);
         harness.SessionService.SessionQueueIds = ["sales", "support"];
-        harness.SessionService.SnapshotQueueIds = ["sales", "support"];
+        harness.ProfileAllowedQueueIds = ["sales", "support"];
+        harness.ProfileQueueIds = ["sales", "support"];
 
         await harness.Context.ConnectionAbortedSource.CancelAsync();
 
@@ -244,6 +297,7 @@ public sealed class ContactCenterHubSecurityTests
                 $"add:{TenantSignalRGroupName.ForGroup(TenantName, ContactCenterHub.QueueGroup("sales"))}",
                 $"add:{TenantSignalRGroupName.ForGroup(TenantName, ContactCenterHub.QueueGroup("support"))}",
                 $"add:{TenantSignalRGroupName.ForGroup(TenantName, ContactCenterHub.SupervisorQueueGroup("sales"))}",
+                $"add:{TenantSignalRGroupName.ForGroup(TenantName, ContactCenterHub.SupervisorQueueGroup("support"))}",
                 $"add:{TenantSignalRGroupName.ForUser(TenantName, UserId)}",
             ],
             harness.Groups.Operations);
@@ -259,7 +313,8 @@ public sealed class ContactCenterHubSecurityTests
         var harness = new HubHarness();
         harness.Grant(ContactCenterPermissions.SignIntoQueues);
         harness.SessionService.SessionQueueIds = ["sales", "support", "billing"];
-        harness.SessionService.SnapshotQueueIds = ["sales", "support", "billing"];
+        harness.ProfileAllowedQueueIds = ["sales", "support", "billing"];
+        harness.ProfileQueueIds = ["sales", "support", "billing"];
         harness.Groups.CancelAfterOperations(harness.Context.ConnectionAbortedSource, 1);
 
         // Act
@@ -313,7 +368,7 @@ public sealed class ContactCenterHubSecurityTests
                 .AddSingleton<IAgentSessionService>(SessionService)
                 .AddSingleton(Mock.Of<IAgentPresenceManager>())
                 .AddSingleton(Mock.Of<ISupervisorQueueAuthorizationService>())
-                .AddSingleton(SupervisorProfiles())
+                .AddSingleton(AgentProfiles())
                 .AddSingleton(MockUserManager())
                 .AddSingleton(Mock.Of<IDisplayNameProvider>())
                 .AddSingleton<IQueuedVoiceWorkOfferService>(new NoQueuedVoiceWorkOfferService())
@@ -357,18 +412,51 @@ public sealed class ContactCenterHubSecurityTests
 
         public bool WorkLeaseGranted { get; set; } = true;
 
+        /// <summary>
+        /// Gets or sets whether the user has an agent profile.
+        /// </summary>
+        public bool HasProfile { get; set; } = true;
+
+        /// <summary>
+        /// Gets or sets the queues the profile is signed in to.
+        /// </summary>
+        public IList<string> ProfileQueueIds { get; set; } = [];
+
+        /// <summary>
+        /// Gets or sets the queues the profile may serve and oversee. By default the sales queue only, so a supervising
+        /// connection joins that queue's supervisor group.
+        /// </summary>
+        public IList<string> ProfileAllowedQueueIds { get; set; } = ["sales"];
+
+        /// <summary>
+        /// Gets the number of times the agent profile was read.
+        /// </summary>
+        public int ProfileReads { get; private set; }
+
         public void Grant(Permission permission)
         {
             AuthorizationService.GrantedPermissions.Add(permission.Name);
         }
 
-        // The supervisor oversees the sales queue only, so a supervising connection joins that queue's supervisor group.
-        private static IAgentProfileManager SupervisorProfiles()
+        private IAgentProfileManager AgentProfiles()
         {
             var profiles = new Mock<IAgentProfileManager>();
             profiles
                 .Setup(manager => manager.FindByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new AgentProfile { ItemId = "supervisor-agent", UserId = UserId, AllowedQueueIds = ["sales"] });
+                .ReturnsAsync(() =>
+                {
+                    ProfileReads++;
+
+                    return HasProfile
+                        ? new AgentProfile
+                        {
+                            ItemId = "agent",
+                            UserId = UserId,
+                            QueueIds = ProfileQueueIds,
+                            AllowedQueueIds = ProfileAllowedQueueIds,
+                        }
+                        : null;
+                });
 
             return profiles.Object;
         }
@@ -548,7 +636,7 @@ public sealed class ContactCenterHubSecurityTests
 
         public IList<string> SessionQueueIds { get; set; } = [];
 
-        public IList<string> SnapshotQueueIds { get; set; } = [];
+        public int SnapshotBuilds { get; private set; }
 
         public Exception ConnectException { get; set; }
 
@@ -588,11 +676,11 @@ public sealed class ContactCenterHubSecurityTests
         public Task<AgentDesktopSnapshot> BuildSnapshotAsync(string userId, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            SnapshotBuilds++;
 
             return Task.FromResult(new AgentDesktopSnapshot
             {
                 UserId = userId,
-                QueueIds = SnapshotQueueIds,
             });
         }
 
