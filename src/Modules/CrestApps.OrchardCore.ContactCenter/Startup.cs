@@ -282,6 +282,7 @@ public sealed class Startup : StartupBase
             .AddScoped<IContactCenterWorkStateManager, ContactCenterWorkStateManager>()
             .AddScoped<IContactCenterWorkStateService, ContactCenterWorkStateService>()
             .AddScoped<IAuthorizationHandler, ContactCenterActivityOwnershipAuthorizationHandler>()
+            .AddScoped<IActivityOfferKeepAlive, PreviewOfferKeepAlive>()
             .AddIndexProvider<ContactCenterWorkStateIndexProvider>()
             .AddDataMigration<ContactCenterWorkStateIndexMigrations>();
 

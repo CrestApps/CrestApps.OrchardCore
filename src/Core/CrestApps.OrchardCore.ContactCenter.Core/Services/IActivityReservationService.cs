@@ -18,6 +18,18 @@ public interface IActivityReservationService
     Task<ActivityReservation> ReserveAsync(QueueItem queueItem, AgentProfile agent, int timeoutSeconds, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Extends the pending reservation of an activity held by the agent with the given user identifier, so it runs out
+    /// no sooner than the given number of seconds from now. A reservation that is no longer pending, is held by someone
+    /// else, or already runs out later is left as it is.
+    /// </summary>
+    /// <param name="activityItemId">The activity identifier.</param>
+    /// <param name="userId">The user identifier of the agent working on the activity.</param>
+    /// <param name="seconds">The seconds from now the reservation must last at least.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>When the reservation now runs out, or <see langword="null"/> when the agent holds no pending reservation for it.</returns>
+    Task<DateTime?> ExtendPendingAsync(string activityItemId, string userId, int seconds, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Accepts a pending reservation and converts it into an assignment.
     /// </summary>
     /// <param name="reservationId">The reservation identifier.</param>

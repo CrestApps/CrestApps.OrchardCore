@@ -1564,6 +1564,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDispositionResult> ApplyAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDispositionRequest request, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IActivityOfferKeepAlive
+    {
+        System.Threading.Tasks.Task<System.DateTime?> KeepAliveAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, string userId, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IActivityOutcomeCompleter
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDispositionResult> CompleteAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityOutcomeCompletionRequest request, System.Threading.CancellationToken cancellationToken = default);
