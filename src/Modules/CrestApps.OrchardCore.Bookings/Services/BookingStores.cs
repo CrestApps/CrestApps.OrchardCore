@@ -100,10 +100,22 @@ public interface IBookingStore : ICatalog<Booking>
     Task<IReadOnlyList<Booking>> ListRequestedAsync(int take, CancellationToken cancellationToken = default);
 
     Task<(int Count, IReadOnlyList<Booking> Bookings)> PageAsync(BookingQuery query, DateTime utcNow, int skip, int take, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists every booking a person made, with their account or as a guest with their email, for a privacy request.
+    /// </summary>
+    /// <param name="userIds">The person's user IDs.</param>
+    /// <param name="emails">The person's emails.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The person's bookings.</returns>
+    Task<IReadOnlyList<Booking>> ListForPersonAsync(IEnumerable<string> userIds, IEnumerable<string> emails, CancellationToken cancellationToken = default);
 }
 
 public sealed class BookingStore : DocumentCatalog<Booking, BookingIndex>, IBookingStore
 {
+    // A privacy request reads at most this many bookings for each identifier of the person.
+    private const int MaxBookingsPerPerson = 1000;
+
     private readonly IServiceProvider _serviceProvider;
 
     private IBookingHandler[] _handlers;
@@ -151,6 +163,38 @@ public sealed class BookingStore : DocumentCatalog<Booking, BookingIndex>, IBook
         {
             await handler.DeletingAsync(model);
         }
+    }
+
+    public async Task<IReadOnlyList<Booking>> ListForPersonAsync(IEnumerable<string> userIds, IEnumerable<string> emails, CancellationToken cancellationToken = default)
+    {
+        var users = (userIds ?? []).Where(userId => !string.IsNullOrEmpty(userId)).Distinct(StringComparer.Ordinal).ToArray();
+        var addresses = (emails ?? []).Select(BookingIndex.NormalizeEmail).Where(email => email is not null).Distinct(StringComparer.Ordinal).ToArray();
+        var found = new Dictionary<string, Booking>(StringComparer.Ordinal);
+
+        // One query per kind of identifier: an "a or b" filter over two optional lists does not translate well to SQL.
+        if (users.Length > 0)
+        {
+            foreach (var booking in await Session.Query<Booking, BookingIndex>(index => index.UserId.IsIn(users), collection: CollectionName)
+                .OrderBy(index => index.CreatedUtc)
+                .Take(MaxBookingsPerPerson)
+                .ListAsync(cancellationToken))
+            {
+                found.TryAdd(booking.ItemId, booking);
+            }
+        }
+
+        if (addresses.Length > 0)
+        {
+            foreach (var booking in await Session.Query<Booking, BookingIndex>(index => index.CustomerEmail.IsIn(addresses), collection: CollectionName)
+                .OrderBy(index => index.CreatedUtc)
+                .Take(MaxBookingsPerPerson)
+                .ListAsync(cancellationToken))
+            {
+                found.TryAdd(booking.ItemId, booking);
+            }
+        }
+
+        return [.. found.Values.OrderBy(booking => booking.CreatedUtc)];
     }
 
     public async Task<IReadOnlyList<Booking>> ListByOrderAsync(string orderId, CancellationToken cancellationToken = default)

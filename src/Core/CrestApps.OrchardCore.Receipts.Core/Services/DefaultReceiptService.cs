@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Commerce.Stores;
 using CrestApps.OrchardCore.Receipts.Models;
 using OrchardCore.Settings;
 
@@ -11,14 +12,18 @@ namespace CrestApps.OrchardCore.Receipts.Core.Services;
 public sealed class DefaultReceiptService : IReceiptService
 {
     private readonly ISiteService _siteService;
+    private readonly IStoreLocationService _storeLocations;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultReceiptService"/> class.
     /// </summary>
     /// <param name="siteService">The site service used to read the receipt settings and the site name fallback.</param>
-    public DefaultReceiptService(ISiteService siteService)
+    /// <param name="storeLocations">The store's places, which write the store's address when the receipt settings have
+    /// none; or <see langword="null"/>.</param>
+    public DefaultReceiptService(ISiteService siteService, IStoreLocationService storeLocations = null)
     {
         _siteService = siteService;
+        _storeLocations = storeLocations;
     }
 
     /// <inheritdoc/>
@@ -29,18 +34,21 @@ public sealed class DefaultReceiptService : IReceiptService
         var site = await _siteService.GetSiteSettingsAsync();
         var settings = site.GetOrCreate<ReceiptSettings>();
 
-        var businessName = string.IsNullOrWhiteSpace(settings.BusinessName)
-            ? site.SiteName
-            : settings.BusinessName;
+        // Each of the receipt's own settings falls back to the store profile when it's empty.
+        var profile = site.GetOrCreate<StoreProfileSettings>() ?? new StoreProfileSettings();
+        var businessName = FirstOf(settings.BusinessName, profile.Name, site.SiteName);
+        var businessAddress = string.IsNullOrWhiteSpace(settings.BusinessAddress) && _storeLocations is not null
+            ? await _storeLocations.GetAddressTextAsync()
+            : settings.BusinessAddress;
 
         return new ReceiptDocument
         {
             HeaderTitle = settings.HeaderTitle,
             BusinessName = businessName,
-            LogoUrl = settings.LogoUrl,
-            BusinessAddress = settings.BusinessAddress,
-            ContactEmail = settings.ContactEmail,
-            ContactPhone = settings.ContactPhone,
+            LogoUrl = FirstOf(settings.LogoUrl, profile.LogoUrl),
+            BusinessAddress = businessAddress,
+            ContactEmail = FirstOf(settings.ContactEmail, profile.Email),
+            ContactPhone = FirstOf(settings.ContactPhone, profile.Phone),
             Website = settings.Website,
             FooterText = settings.FooterText,
             ShowTestBadge = settings.ShowTestPaymentBadge,
@@ -61,4 +69,7 @@ public sealed class DefaultReceiptService : IReceiptService
             Notes = request.Notes,
         };
     }
+
+    private static string FirstOf(params string[] values)
+        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
 }

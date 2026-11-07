@@ -1,4 +1,6 @@
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Telnyx.Models;
+using CrestApps.OrchardCore.Telnyx.Services;
 using CrestApps.OrchardCore.Telnyx.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -7,11 +9,10 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using CrestApps.OrchardCore.Telnyx.Services;
 using OrchardCore.Environment.Options;
-using OrchardCore.Sms;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
+using OrchardCore.Sms;
 
 namespace CrestApps.OrchardCore.Telnyx.Drivers;
 
@@ -56,9 +57,9 @@ public sealed class TelnyxSmsSettingsDisplayDriver : SiteDisplayDriver<TelnyxSms
         return Initialize<TelnyxSmsSettingsViewModel>("TelnyxSmsSettings_Edit", model =>
             {
                 model.IsEnabled = settings.IsEnabled;
-                model.HasApiKey = !string.IsNullOrEmpty(settings.ApiKey);
+                model.HasApiKey = ProtectedSettingExtensions.HasSecret(settings.ApiKey);
                 model.MessagingProfileId = settings.MessagingProfileId;
-                model.HasWebhookPublicKey = !string.IsNullOrEmpty(settings.WebhookPublicKey);
+                model.HasWebhookPublicKey = ProtectedSettingExtensions.HasSecret(settings.WebhookPublicKey);
                 model.ApiBaseUrl = settings.ApiBaseUrl;
                 model.WebhookUrl = BuildWebhookUrl(site);
             })
@@ -108,19 +109,9 @@ public sealed class TelnyxSmsSettingsDisplayDriver : SiteDisplayDriver<TelnyxSms
         settings.MessagingProfileId = model.MessagingProfileId?.Trim();
         settings.ApiBaseUrl = model.ApiBaseUrl?.Trim();
 
-        var apiKeyProtector = _dataProtectionProvider.CreateProtector(TelnyxConstants.SmsApiKeyProtectorName);
-        var webhookProtector = _dataProtectionProvider.CreateProtector(TelnyxConstants.SmsWebhookProtectorName);
-
         // Only overwrite a stored secret when the operator entered a new value.
-        if (!string.IsNullOrWhiteSpace(model.ApiKey))
-        {
-            settings.ApiKey = apiKeyProtector.Protect(model.ApiKey.Trim());
-        }
-
-        if (!string.IsNullOrWhiteSpace(model.WebhookPublicKey))
-        {
-            settings.WebhookPublicKey = webhookProtector.Protect(model.WebhookPublicKey.Trim());
-        }
+        settings.ApiKey = _dataProtectionProvider.ApplySecret(TelnyxConstants.SmsApiKeyProtectorName, settings.ApiKey, model.ApiKey);
+        settings.WebhookPublicKey = _dataProtectionProvider.ApplySecret(TelnyxConstants.SmsWebhookProtectorName, settings.WebhookPublicKey, model.WebhookPublicKey);
 
         // Validate: an enabled provider needs an API key (stored or newly entered).
         if (settings.IsEnabled && string.IsNullOrEmpty(settings.ApiKey))

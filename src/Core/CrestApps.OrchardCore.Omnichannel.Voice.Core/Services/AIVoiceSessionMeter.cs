@@ -26,6 +26,7 @@ internal sealed class AIVoiceSessionMeter
 {
     private readonly Lock _lock = new();
     private readonly bool _measuresCallerSpeech;
+    private readonly TimeProvider _timeProvider;
     private readonly List<(long Start, long End)> _assistant = [];
     private readonly List<(long Start, long End)> _caller = [];
 
@@ -48,9 +49,12 @@ internal sealed class AIVoiceSessionMeter
     /// </summary>
     /// <param name="measuresCallerSpeech">Whether the engine reports when the caller starts and stops speaking. When
     /// it does not, caller speaking time and the silence between the two sides are reported as unknown.</param>
-    public AIVoiceSessionMeter(bool measuresCallerSpeech)
+    /// <param name="timeProvider">The clock a running meter is measured up to when no end is given; the system clock
+    /// when omitted.</param>
+    public AIVoiceSessionMeter(bool measuresCallerSpeech, TimeProvider timeProvider = null)
     {
         _measuresCallerSpeech = measuresCallerSpeech;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     /// <summary>
@@ -285,8 +289,8 @@ internal sealed class AIVoiceSessionMeter
     /// <summary>
     /// What was measured, or <see langword="null"/> when the assistant never took the call.
     /// </summary>
-    /// <param name="endTicks">Where to measure to when the meter has not been stopped; the machine clock's now
-    /// when omitted.</param>
+    /// <param name="endTicks">Where to measure to when the meter has not been stopped, on the clock the meter's
+    /// readings come from; now on the meter's clock when omitted.</param>
     public AIVoiceSessionMeasurements Measure(long? endTicks = null)
     {
         lock (_lock)
@@ -296,7 +300,7 @@ internal sealed class AIVoiceSessionMeter
                 return null;
             }
 
-            var end = Math.Max(start, _stopTicks ?? endTicks ?? DateTime.UtcNow.Ticks);
+            var end = Math.Max(start, _stopTicks ?? endTicks ?? _timeProvider.GetUtcNow().UtcTicks);
 
             var assistant = Clip(Closed(_assistant, _assistantOpenedTicks, end), start, end);
             var caller = Clip(Closed(_caller, _callerOpenedTicks, end), start, end);

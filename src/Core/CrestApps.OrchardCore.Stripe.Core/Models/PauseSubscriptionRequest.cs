@@ -3,7 +3,7 @@ namespace CrestApps.OrchardCore.Stripe.Core.Models;
 /// <summary>
 /// Represents a request to suspend or resume collection on a Stripe subscription without ending it.
 /// </summary>
-public class PauseSubscriptionRequest : StripeWriteRequest
+public sealed class PauseSubscriptionRequest : StripeWriteRequest
 {
     /// <summary>
     /// Gets or sets the Stripe subscription identifier.

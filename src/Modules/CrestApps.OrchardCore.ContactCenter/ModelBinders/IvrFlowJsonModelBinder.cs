@@ -1,6 +1,6 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using CrestApps.OrchardCore.ContactCenter.Deployments;
+using CrestApps.OrchardCore.Core.Deployments;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Localization;
 
@@ -52,7 +52,7 @@ public sealed class IvrFlowJsonModelBinder : IModelBinder
 
         try
         {
-            var flow = JsonSerializer.Deserialize<IvrFlow>(json, ContactCenterDeploymentSerializer.Options);
+            var flow = JsonSerializer.Deserialize<IvrFlow>(json, CatalogDeploymentSerializer.Options);
             bindingContext.Result = ModelBindingResult.Success(flow);
         }
         catch (JsonException exception)

@@ -3,13 +3,14 @@ using System.Text.Json.Serialization;
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 /// <summary>
 /// Represents the omnichannel disposition.
 /// </summary>
-public sealed class OmnichannelDisposition : CatalogItem, INameAwareModel, IModifiedUtcAwareModel, ICloneable<OmnichannelDisposition>
+public sealed class OmnichannelDisposition : CatalogItem, INameAwareModel, IAuditedModel, ICloneable<OmnichannelDisposition>
 {
     private string _displayText;
 

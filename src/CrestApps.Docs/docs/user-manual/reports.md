@@ -43,7 +43,7 @@ To build your own reports with drag and drop, see [Report Builder](report-builde
 <YouTube video="contact-center-reports" title="Video of running a report and choosing the date range" start={108} end={161} />
 
 1. Open **Reports** and pick a category, then a report.
-2. Set the **Date range**. It starts on **today** (from the start to the end of the day), in the site's time zone. Pick a preset or a custom range (see [Date range choices](#date-range-choices)). A Contact Center report covers up to 400 days, and a report on agents' time up to 31 days (see [Agent time over long periods](#agent-time-over-long-periods)).
+2. Set the **Date range**. It starts on **today** (from the start to the end of the day), in the site's time zone, unless the report starts on a period of its own: the AI chat and usage reports start on **All Time**, the AI QA Dashboard on the last 7 days, and Hours by Category on this week. Pick a preset or a custom range (see [Date range choices](#date-range-choices)). A Contact Center report covers up to 400 days, and a report on agents' time up to 31 days (see [Agent time over long periods](#agent-time-over-long-periods)).
 3. Set the filters the report offers, such as **Queue group**, **Queue**, **Agent**, **Channel**, **Direction**, **Campaign group**, **Campaign**, **Source**, **Status**, **Interaction type**, **Dialer profile**, **Queue state**, **Disposition**, **Activity ID** or **Reason**. Each report shows only the filters it uses. In **Disposition** you can tick several dispositions at once.
 4. Click **Show**.
 5. To keep a copy, click **Export CSV**. When the Reports (OpenXml) or Reports (PDF) feature is on, the button becomes an **Export** menu with **Export CSV**, **Export Excel (.xlsx)** and **Export PDF**. Excel puts each section of the report on its own worksheet. PDF lays the report out as it looks on screen, with its charts, and numbers the pages; a wide table turns the pages sideways.
@@ -56,7 +56,9 @@ How the filters work:
 - A filter left on *All* (for example *All queues*) does not narrow the report.
 - Filters combine: picking a queue, an agent, the Voice channel and the Inbound direction shows only what matches all four.
 - Every number, total, percentage and average is worked out again from the filtered records, so it always matches what you picked.
-- An export uses the same date range and filters as the report on screen. It keeps the detail, subtotal and grand-total rows, in the order shown. The file is named after the report and the first and last day of the period, for example `contact-center-call-insights-20260929-to-20261029.csv`.
+- An export uses the same date range and filters as the report on screen. It keeps the detail, subtotal and grand-total rows, in the order shown. The file is named after the report and the first and last day of the period, for example `contact-center-call-insights-20260929-to-20261029.csv`; an open-ended period names the day it has (`-from-20260929` or `-to-20261029`), and **All Time** ends in `-all-time`.
+- A report can need a permission of its own to export, such as **Export AI Chat Analytics** for the AI chat reports. Without it, the export button is hidden, and a subscription can't attach the file.
+- A link in a table, such as the session of a conversation in the AI QA Dashboard, opens what it names. An export writes its text.
 - If a report needs a feature your site does not use (for example call transfers or recording), it shows the notice *Capability not enabled*, which names that feature, instead of showing zeroes. A report that still has real figures leaves out only the columns that feature would fill.
 
 <YouTube video="reports-run-and-export" title="Video of exporting a report to CSV, Excel and PDF" start={237} end={313} />
@@ -166,12 +168,13 @@ Reports of agents' time over many days are quick because the site keeps a summar
 
 | Choice | What it covers |
 | --- | --- |
-| **Relative days** | **Today**, **Yesterday**, **Last 7 Days**, **Last 30 Days**, **Last 90 Days**. |
+| **Relative days** | **Today**, **Yesterday**, **Last 24 Hours**, **Last 7 Days**, **Last 30 Days**, **Last 90 Days**. |
 | **Calendar periods** | **This Week**, **Last Week**, **This Month**, **Last Month**, **This Quarter**, **Last Quarter**, **This Year**, **Last Year**. |
 | **Rolling months** | **Last 3 Months**, **Last 6 Months**, **Last 12 Months**. |
 | **Custom Range** | A start and an end date and time that you pick. Empty, they default to today from 00:00 to 23:59. |
-| **On or before** | Everything up to a date and time, with no start. |
-| **On or after** | Everything from a date and time, with no end. |
+| **On or before** | Everything up to a date and time, with no start. A report that starts on today reads it from today instead. |
+| **On or after** | Everything from a date and time, with no end. A report that starts on today reads it up to today instead. |
+| **All Time** | Every date. Offered by the reports that start on a period of their own, such as the AI chat reports. |
 
 The button always shows the range you picked in words, for example *From Jan 1, 2026 to Jan 31, 2026*. Weeks start on the first day of the week for your language settings.
 

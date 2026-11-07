@@ -36,7 +36,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         TelnyxConstants.Feature.Area,
-        "OrchardCore.Sms",
+        OrchardCoreFeatureIds.Sms,
     ]
 )]
 

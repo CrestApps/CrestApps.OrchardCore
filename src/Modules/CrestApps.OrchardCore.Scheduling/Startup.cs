@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Scheduling.BackgroundTasks;
 using CrestApps.OrchardCore.Scheduling.Core;
 using CrestApps.OrchardCore.Scheduling.Core.Indexes;
@@ -35,11 +36,16 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<WaitlistEntryIndexProvider>();
 
         services.AddSchedulingCore();
+        services.AddPersonalDataContributor<AppointmentPersonalDataContributor>();
         services.AddScoped<SchedulingResourceCalendars>();
         services.AddScoped<SchedulingPageService>();
         services.AddDisplayDriver<Appointment, AppointmentDisplayDriver>();
         services.AddDisplayDriver<AppointmentType, AppointmentTypeDisplayDriver>();
         services.AddDisplayDriver<SchedulingResource, SchedulingResourceDisplayDriver>();
+
+        // The editors are built by drivers, so other modules add sections to them with drivers of their own.
+        services.AddDisplayDriver<AppointmentType, AppointmentTypeFieldsDisplayDriver>();
+        services.AddDisplayDriver<SchedulingResource, SchedulingResourceFieldsDisplayDriver>();
         services.AddDisplayDriver<WaitlistEntry, WaitlistEntryDisplayDriver>();
         services.AddPermissionProvider<SchedulingPermissionsProvider>();
         services.AddNavigationProvider<SchedulingAdminMenu>();

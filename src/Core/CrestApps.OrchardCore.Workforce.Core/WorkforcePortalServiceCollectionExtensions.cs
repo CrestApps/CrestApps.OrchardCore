@@ -33,6 +33,7 @@ public static class WorkforcePortalServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkforceNotificationChannel, WebPushNotificationChannel>());
         services.Replace(ServiceDescriptor.Scoped<IWorkforceNotifier, DefaultWorkforceNotifier>());
         services.TryAddScoped<PortalNotices>();
+        services.TryAddScoped<ShiftReminderLogStore>();
         services.TryAddScoped<ShiftReminderService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ISchedulePublishHandler, PortalNotices>(provider => provider.GetRequiredService<PortalNotices>()));
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IScheduleChangeHandler, PortalNotices>(provider => provider.GetRequiredService<PortalNotices>()));

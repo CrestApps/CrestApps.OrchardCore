@@ -176,14 +176,18 @@ public class MeterEditModel
 }
 
 /// <summary>
-/// The asset editor.
+/// The main section of the asset editor, the <c>AssetFields_Edit</c> shape.
 /// </summary>
+/// <remarks>
+/// It is the model of a shape, so it has no member named like one of <c>IShape</c>'s (<c>Id</c>, <c>Attributes</c>).
+/// </remarks>
 public class AssetEditViewModel
 {
     /// <summary>
     /// Gets or sets the identifier, or <see langword="null"/> for a new asset.
     /// </summary>
-    public string Id { get; set; }
+    [BindNever]
+    public string AssetId { get; set; }
 
     /// <summary>
     /// Gets or sets the type.
@@ -300,7 +304,7 @@ public class AssetEditViewModel
     /// <summary>
     /// Gets or sets the attribute values, by name.
     /// </summary>
-    public Dictionary<string, string> Attributes { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, string> AttributeValues { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Gets or sets the documents, one media path a line.

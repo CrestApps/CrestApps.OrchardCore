@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Bookings.Models;
 using CrestApps.OrchardCore.Bookings.Services;
+using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.Extensions.Localization;

@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.Commerce.Webhooks;
+using CrestApps.OrchardCore.Webhooks;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.Commerce;
+using CrestApps.OrchardCore.Commerce.Core;
 using CrestApps.OrchardCore.Inventory.Handlers;
 using CrestApps.OrchardCore.Inventory.ContentTransfer;
 using CrestApps.OrchardCore.Inventory.BackgroundTasks;
@@ -26,6 +28,10 @@ using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Transfer;
 using CrestApps.OrchardCore.Inventory.Api;
+using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Deployments;
+using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,6 +43,7 @@ using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
@@ -63,6 +70,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IInventoryService, DefaultInventoryService>();
 
         services.AddScoped<StockLocationStore>();
+        services.AddScoped<ICatalog<StockLocation>>(serviceProvider => serviceProvider.GetRequiredService<StockLocationStore>());
         services.AddScoped<InventoryLocationService>();
         services.AddScoped<IInventoryLocationService>(serviceProvider => serviceProvider.GetRequiredService<InventoryLocationService>());
         services.AddScoped<IFulfillmentLocationProvider>(serviceProvider => serviceProvider.GetRequiredService<InventoryLocationService>());
@@ -155,7 +163,7 @@ public sealed class ListingStartup : StartupBase
 /// <summary>
 /// Notifies the chosen roles when a product runs low or sells out.
 /// </summary>
-[RequireFeatures("OrchardCore.Notifications")]
+[RequireFeatures(OrchardCoreFeatureIds.Notifications)]
 public sealed class NotificationsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -164,7 +172,7 @@ public sealed class NotificationsStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class WorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -174,21 +182,25 @@ public sealed class WorkflowsStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class RecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddRecipeExecutionStep<StockStep>();
+        services.AddRecipeExecutionStep<StockLocationsStep>();
+        services.AddScoped<IRecipeStep, StockLocationsRecipeStepSchema>();
     }
 }
 
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class DeploymentStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDeployment<StockDeploymentSource, StockDeploymentStep, StockDeploymentStepDisplayDriver>();
+        services.AddDeployment<StockLocationsDeploymentSource, StockLocationsDeploymentStep, SummaryDeploymentStepDisplayDriver<StockLocationsDeploymentStep>>();
+        services.AddDeploymentStepSchema<StockLocationsDeploymentStepSchema>();
     }
 }
 
@@ -216,6 +228,8 @@ public sealed class StockAlertsStartup : StartupBase
         services.AddDataMigration<StockAlertMigrations>()
             .AddIndexProvider<StockAlertIndexProvider>();
         services.AddScoped<StockAlertService>();
+        services.AddCommerceEmailSender()
+            .AddCommerceEmailKind(StockAlertService.EmailKind, LocalizationSource.Create<StockAlertsStartup>("Back in stock"), LocalizationSource.Create<StockAlertsStartup>("{{ StockItem.Title }} and {{ ProductUrl }}."));
         services.AddScoped<IStockLevelHandler, BackInStockAlertHandler>();
         services.AddScoped<CrestApps.OrchardCore.Customers.PersonalData.ICommercePersonalDataContributor, StockAlertPersonalDataContributor>();
         services.AddContentPart<ProductPart>()
@@ -233,6 +247,7 @@ public sealed class PurchaseOrdersStartup : StartupBase
     {
         services.AddDataMigration<PurchaseOrderMigrations>()
             .AddIndexProvider<PurchaseOrderIndexProvider>();
+        services.AddNumberSequence();
         services.AddScoped<IPurchaseOrderStore, PurchaseOrderStore>();
         services.AddScoped<PurchaseOrderReceiver>();
         services.AddDisplayDriver<PurchaseOrder, PurchaseOrderDisplayDriver>();
@@ -262,8 +277,8 @@ public sealed class WebhooksStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IStockLevelHandler, StockWebhookHandler>();
-        services.AddCommerceWebhookEvent(CommerceWebhookEvents.StockChanged, "Stock changed", "Stock");
-        services.AddCommerceWebhookEvent(CommerceWebhookEvents.StockLow, "Stock running low", "Stock");
-        services.AddCommerceWebhookEvent(CommerceWebhookEvents.StockSoldOut, "Stock sold out", "Stock");
+        services.AddWebhookEvent(CommerceWebhookEvents.StockChanged, "Stock changed", "Stock");
+        services.AddWebhookEvent(CommerceWebhookEvents.StockLow, "Stock running low", "Stock");
+        services.AddWebhookEvent(CommerceWebhookEvents.StockSoldOut, "Stock sold out", "Stock");
     }
 }

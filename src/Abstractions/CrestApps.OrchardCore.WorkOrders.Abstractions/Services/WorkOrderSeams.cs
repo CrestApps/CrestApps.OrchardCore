@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.WorkOrders.Models;
 
 namespace CrestApps.OrchardCore.WorkOrders.Services;
@@ -16,7 +17,15 @@ public interface IServiceHoursProvider
     /// <param name="toUtc">The end.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The open stretches, in order, or <see langword="null"/> when the provider doesn't know the calendar.</returns>
-    Task<IReadOnlyList<(DateTime StartUtc, DateTime EndUtc)>> GetOpenAsync(string calendarId, string timeZoneId, DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TimeWindow>> GetOpenAsync(string calendarId, string timeZoneId, DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists the calendars the provider knows, so the service level policy editor can offer them.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The calendars, or none.</returns>
+    Task<IReadOnlyList<ServiceHoursCalendar>> ListCalendarsAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<ServiceHoursCalendar>>([]);
 }
 
 /// <summary>

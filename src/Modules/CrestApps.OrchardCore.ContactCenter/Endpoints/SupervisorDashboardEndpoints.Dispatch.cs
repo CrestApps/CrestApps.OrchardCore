@@ -23,7 +23,7 @@ internal static partial class SupervisorDashboardEndpoints
     // Diagnosing a campaign reads its pending records and the dispatcher's recent decisions, which costs far more than the
     // state poll; a supervisor's polls, and every supervisor's, share one reading for this long. The reading is kept in the
     // distributed cache, keyed by tenant, so every node serves the same one and tenants never see each other's.
-    private static readonly JsonSerializerOptions _dispatchSerializerOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions _dispatchSerializerOptions = JsonSerializerOptions.Web;
 
     private static readonly DistributedCacheEntryOptions _dispatchCacheOptions = new()
     {

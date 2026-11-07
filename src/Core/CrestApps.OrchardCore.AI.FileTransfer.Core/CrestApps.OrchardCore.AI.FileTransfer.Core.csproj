@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Title>CrestApps OrchardCore AI File Transfer Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      The FTP and SFTP connection editors the AI file sources and the MCP FTP and SFTP resources share.
+    </Description>
+    <PackageTags>$(PackageTags) AI FTP SFTP</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="CrestApps.Core.AI.Ftp" />
+    <PackageReference Include="CrestApps.Core.AI.Sftp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
+  </ItemGroup>
+
+</Project>

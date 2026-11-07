@@ -36,7 +36,7 @@ public sealed class DefaultCommercePersonalDataService : ICommercePersonalDataSe
     /// <inheritdoc/>
     public async Task<CommercePersonalDataExport> ExportAsync(CustomerOwner owner, string email, CancellationToken cancellationToken = default)
     {
-        var subject = await IdentifyAsync(owner, email, cancellationToken);
+        var subject = await IdentifyAsync(_contributors, owner, email, cancellationToken);
 
         var export = new CommercePersonalDataExport
         {
@@ -56,16 +56,34 @@ public sealed class DefaultCommercePersonalDataService : ICommercePersonalDataSe
     }
 
     /// <inheritdoc/>
-    public async Task<CommercePersonalDataAnonymizeResult> AnonymizeAsync(CustomerOwner owner, string email, string replacementText, CancellationToken cancellationToken = default)
+    public Task<CommercePersonalDataAnonymizeResult> AnonymizeAsync(CustomerOwner owner, string email, string replacementText, CancellationToken cancellationToken = default)
+        => AnonymizeAsync(_contributors, owner, email, replacementText, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<CommercePersonalDataAnonymizeResult> ExpireAsync(CustomerOwner owner, string email, CancellationToken cancellationToken = default)
+    {
+        // The guest expiry reaches only the commerce records it always reached; the contributors that opted out are
+        // left to an explicit erasure request.
+        var contributors = _contributors.Where(contributor => contributor.TakesPartInRetentionExpiry).ToArray();
+
+        return AnonymizeAsync(contributors, owner, email, replacementText: null, cancellationToken);
+    }
+
+    private static async Task<CommercePersonalDataAnonymizeResult> AnonymizeAsync(
+        IEnumerable<ICommercePersonalDataContributor> contributors,
+        CustomerOwner owner,
+        string email,
+        string replacementText,
+        CancellationToken cancellationToken)
     {
         // Everything is identified before anything changes: a contributor that anonymized first would remove the very
         // email another contributor finds its records by.
-        var subject = await IdentifyAsync(owner, email, cancellationToken);
+        var subject = await IdentifyAsync(contributors, owner, email, cancellationToken);
 
         var result = new CommercePersonalDataAnonymizeResult();
         var context = new CommercePersonalDataAnonymizeContext(subject, replacementText, result);
 
-        foreach (var contributor in _contributors)
+        foreach (var contributor in contributors)
         {
             await contributor.AnonymizeAsync(context, cancellationToken);
         }
@@ -73,7 +91,11 @@ public sealed class DefaultCommercePersonalDataService : ICommercePersonalDataSe
         return result;
     }
 
-    private async Task<CommercePersonalDataSubject> IdentifyAsync(CustomerOwner owner, string email, CancellationToken cancellationToken)
+    private static async Task<CommercePersonalDataSubject> IdentifyAsync(
+        IEnumerable<ICommercePersonalDataContributor> contributors,
+        CustomerOwner owner,
+        string email,
+        CancellationToken cancellationToken)
     {
         var subject = new CommercePersonalDataSubject(owner, email);
 
@@ -81,7 +103,7 @@ public sealed class DefaultCommercePersonalDataService : ICommercePersonalDataSe
         {
             var version = subject.Version;
 
-            foreach (var contributor in _contributors)
+            foreach (var contributor in contributors)
             {
                 await contributor.IdentifyAsync(subject, cancellationToken);
             }

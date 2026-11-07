@@ -1,11 +1,11 @@
-using Microsoft.AspNetCore.Mvc.ModelBinding;
+using CrestApps.OrchardCore.AI.FileTransfer.Core.ViewModels;
 
 namespace CrestApps.OrchardCore.AI.FileSources.Ftp.ViewModels;
 
 /// <summary>
-/// View model for the FTP/FTPS connector settings.
+/// View model for the FTP/FTPS connector settings: the shared connection fields and the folder to read.
 /// </summary>
-public class FtpFileSourceViewModel
+public class FtpFileSourceViewModel : FtpConnectionFieldsViewModel
 {
     /// <summary>
     /// Gets or sets the folder on the server to read.
@@ -21,60 +21,4 @@ public class FtpFileSourceViewModel
     /// Gets or sets the most files one listing will take on. Empty uses the host default.
     /// </summary>
     public int? RemoteMaxItems { get; set; }
-
-    /// <summary>
-    /// Gets or sets the host.
-    /// </summary>
-    public string Host { get; set; }
-
-    /// <summary>
-    /// Gets or sets the port. Empty uses 21.
-    /// </summary>
-    public int? Port { get; set; }
-
-    /// <summary>
-    /// Gets or sets the username.
-    /// </summary>
-    public string Username { get; set; }
-
-    /// <summary>
-    /// Gets or sets the password. Left blank on the way out, and a blank submission keeps the stored one.
-    /// </summary>
-    public string Password { get; set; }
-
-    /// <summary>
-    /// Gets or sets the encryption mode.
-    /// </summary>
-    public string EncryptionMode { get; set; }
-
-    /// <summary>
-    /// Gets or sets the data connection type.
-    /// </summary>
-    public string DataConnectionType { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether any certificate is accepted.
-    /// </summary>
-    public bool ValidateAnyCertificate { get; set; }
-
-    /// <summary>
-    /// Gets or sets the connect timeout, in milliseconds.
-    /// </summary>
-    public int? ConnectTimeout { get; set; }
-
-    /// <summary>
-    /// Gets or sets the read timeout, in milliseconds.
-    /// </summary>
-    public int? ReadTimeout { get; set; }
-
-    /// <summary>
-    /// Gets or sets how many times a failed operation is retried.
-    /// </summary>
-    public int? RetryAttempts { get; set; }
-
-    /// <summary>
-    /// Gets or sets whether a password is already stored, so the editor can say so without sending it.
-    /// </summary>
-    [BindNever]
-    public bool HasPassword { get; set; }
 }

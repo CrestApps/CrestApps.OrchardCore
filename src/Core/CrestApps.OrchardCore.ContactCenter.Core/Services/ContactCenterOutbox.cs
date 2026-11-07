@@ -1,6 +1,8 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
+using CrestApps.OrchardCore.WorkQueues;
+using CrestApps.OrchardCore.YesSql.Core.WorkQueues;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
@@ -16,7 +18,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// Provides the default <see cref="IContactCenterOutbox"/> implementation. Every event is persisted as a
 /// pending <see cref="ContactCenterOutboxMessage"/> before dispatch. Registered
 /// <see cref="IContactCenterEventHandler"/> instances are tracked individually and incomplete handlers are
-/// redelivered with exponential back-off.
+/// redelivered with exponential back-off. Claiming, fencing, retrying and dead-lettering the messages is the shared
+/// leased work queue's job (<see cref="ILeasedWorkQueue{T}"/>); this class runs the handlers.
 /// </summary>
 public sealed class ContactCenterOutbox : IContactCenterOutbox
 {
@@ -30,16 +33,23 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
     /// </summary>
     public const int MaxBatchSize = 100;
 
-    private const int BaseBackoffSeconds = 30;
-    private const int MaxBackoffSeconds = 1800;
     private static readonly TimeSpan _claimLease = TimeSpan.FromMinutes(5);
+    private static readonly Func<int, TimeSpan> _backoff = LeasedWorkBackoff.Exponential(TimeSpan.FromSeconds(30), TimeSpan.FromMinutes(30));
+
+    // Completed messages are removed: nothing reads the completed state as domain data.
+    private static readonly LeasedWorkQueueOptions _queueOptions = new()
+    {
+        CollectionName = ContactCenterStorage.CollectionName,
+        MaxAttempts = MaxAttempts,
+        RemoveCompletedItems = true,
+    };
 
     private readonly IReadOnlyList<IContactCenterEventHandler> _handlers;
     private readonly IContactCenterOutboxStore _outboxStore;
+    private readonly CatalogLeasedWorkQueue<ContactCenterOutboxMessage> _queue;
     private readonly IInteractionEventStore _eventStore;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IContactCenterFeatureWorkManager _workManager;
-    private readonly ISession _session;
     private readonly IClock _clock;
     private readonly ILogger _logger;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -69,10 +79,13 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
     {
         _handlers = ValidateHandlers(handlers);
         _outboxStore = outboxStore;
+
+        // Each message runs in an isolated scope with a session of its own (see the scope executor), so the queue
+        // commits claims and settlements in that session.
+        _queue = new CatalogLeasedWorkQueue<ContactCenterOutboxMessage>(outboxStore, session, clock, _queueOptions, outboxStore.GetDueAsync);
         _eventStore = eventStore;
         _scopeExecutor = scopeExecutor;
         _workManager = workManager;
-        _session = session;
         _clock = clock;
         _logger = logger;
         _httpContextAccessor = httpContextAccessor;
@@ -132,9 +145,13 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
             return;
         }
 
+        ContactCenterOutboxMessage claimed;
+
         try
         {
-            if (!await TryClaimAsync(message, cancellationToken))
+            claimed = await TryClaimAsync(message, cancellationToken);
+
+            if (claimed is null)
             {
                 return;
             }
@@ -154,13 +171,11 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
             return;
         }
 
-        var ownerToken = message.OwnerToken;
-        var fenceToken = message.FenceToken;
-        (var firstError, var handlerUnavailable) = await RunHandlersAsync(interactionEvent, message, cancellationToken);
+        (var firstError, var handlerUnavailable) = await RunHandlersAsync(interactionEvent, claimed, cancellationToken);
         await SettleInFreshScopeAsync(
-            message,
-            ownerToken,
-            fenceToken,
+            claimed,
+            claimed.OwnerToken,
+            claimed.FenceToken,
             firstError,
             handlerUnavailable,
             cancellationToken);
@@ -239,9 +254,10 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
     {
         ArgumentException.ThrowIfNullOrEmpty(messageId);
 
-        var message = await _outboxStore.FindByIdAsync(messageId, cancellationToken);
+        // A message that does not exist or is not due is left as it is.
+        var message = await _queue.TryClaimAsync(messageId, _claimLease, cancellationToken);
 
-        if (message is null || !await TryClaimAsync(message, cancellationToken))
+        if (message is null)
         {
             return false;
         }
@@ -311,27 +327,58 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         ArgumentException.ThrowIfNullOrEmpty(ownerToken);
         ArgumentNullException.ThrowIfNull(completedHandlerIds);
 
-        var message = await _outboxStore.FindByIdAsync(messageId, cancellationToken);
-
-        if (message is null ||
-            message.Status != OutboxMessageStatus.Claimed ||
-            !string.Equals(message.OwnerToken, ownerToken, StringComparison.Ordinal) ||
-            message.FenceToken != fenceToken)
+        // The queue settles only while this worker still holds the claim; a lost claim surfaces as the concurrency
+        // failure the caller's isolated scope already expects.
+        var claim = new ContactCenterOutboxMessage
         {
-            throw new ConcurrencyException(new Document());
-        }
-
-        message.CompletedHandlerTypes = completedHandlerIds.ToArray();
+            ItemId = messageId,
+            OwnerToken = ownerToken,
+            FenceToken = fenceToken,
+        };
 
         if (error is null)
         {
-            await CompleteAsync(message, cancellationToken);
+            // Removal is a single unit of work. If this transaction fails the message stays claimed and claim expiry
+            // redelivers it. The per-handler checkpoint is not persisted on this path, so that redelivery replays every
+            // handler and is safe only because handlers are required to be idempotent; the checkpoint exists to avoid
+            // replay after a *failed* dispatch, which is persisted.
+            if (!await _queue.CompleteAsync(claim, cancellationToken: cancellationToken))
+            {
+                throw new ConcurrencyException(new Document());
+            }
 
             return true;
         }
 
-        await ScheduleRetryAsync(message, error, !handlerUnavailable, cancellationToken);
-        await _session.SaveChangesAsync(cancellationToken);
+        ContactCenterOutboxMessage settled = null;
+        var status = await _queue.RetryAsync(
+            claim,
+            error,
+            _backoff,
+            countAttempt: !handlerUnavailable,
+            update: message =>
+            {
+                message.CompletedHandlerTypes = completedHandlerIds.ToArray();
+                settled = message;
+            },
+            cancellationToken: cancellationToken);
+
+        if (status is null)
+        {
+            throw new ConcurrencyException(new Document());
+        }
+
+        if (status == LeasedWorkItemStatus.DeadLettered)
+        {
+            ContactCenterDiagnostics.RecordOutboxDeadLettered("retry_exhausted");
+
+            _logger.LogError(
+                "Dead-lettered Contact Center event '{EventType}' ({EventId}) after {Attempts} failed dispatch attempts: {Error}",
+                settled.EventType,
+                settled.EventId.SanitizeLogValue(),
+                settled.AttemptCount,
+                error.SanitizeLogValue());
+        }
 
         return false;
     }
@@ -360,33 +407,22 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
             ModifiedUtc = now,
         };
 
-        await _outboxStore.CreateAsync(message, cancellationToken);
+        await _queue.EnqueueAsync(message, cancellationToken);
 
         return message;
     }
 
-    private async Task<bool> TryClaimAsync(
+    private async Task<ContactCenterOutboxMessage> TryClaimAsync(
         ContactCenterOutboxMessage message,
         CancellationToken cancellationToken)
     {
-        var now = _clock.UtcNow;
-
-        if ((message.Status != OutboxMessageStatus.Pending &&
-                message.Status != OutboxMessageStatus.Claimed) ||
-            message.NextAttemptUtc > now)
+        // Check the copy in hand first, so a message that is not due costs no write.
+        if (!LeasedWorkQueueBase<ContactCenterOutboxMessage>.IsClaimable(message, _clock.UtcNow))
         {
-            return false;
+            return null;
         }
 
-        message.Status = OutboxMessageStatus.Claimed;
-        message.OwnerToken = Guid.NewGuid().ToString("N");
-        message.FenceToken++;
-        message.NextAttemptUtc = now.Add(_claimLease);
-        message.ModifiedUtc = now;
-        await _outboxStore.UpdateAsync(message, cancellationToken);
-        await _session.SaveChangesAsync(cancellationToken);
-
-        return true;
+        return await _queue.TryClaimAsync(message.ItemId, _claimLease, cancellationToken);
     }
 
     private async Task<(string Error, bool HandlerUnavailable)> RunHandlersAsync(
@@ -552,76 +588,15 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         return false;
     }
 
-    private async Task ScheduleRetryAsync(
-        ContactCenterOutboxMessage message,
-        string error,
-        bool countAttempt,
-        CancellationToken cancellationToken)
-    {
-        if (countAttempt)
-        {
-            message.AttemptCount++;
-        }
-
-        message.LastError = error;
-        message.ModifiedUtc = _clock.UtcNow;
-        message.OwnerToken = null;
-
-        if (message.AttemptCount >= MaxAttempts)
-        {
-            message.Status = OutboxMessageStatus.DeadLettered;
-            ContactCenterDiagnostics.RecordOutboxDeadLettered("retry_exhausted");
-
-            _logger.LogError(
-                "Dead-lettered Contact Center event '{EventType}' ({EventId}) after {Attempts} failed dispatch attempts: {Error}",
-                message.EventType,
-                message.EventId.SanitizeLogValue(),
-                message.AttemptCount,
-                error.SanitizeLogValue());
-        }
-        else
-        {
-            message.Status = OutboxMessageStatus.Pending;
-            message.NextAttemptUtc = _clock.UtcNow.Add(GetBackoff(Math.Max(1, message.AttemptCount)));
-        }
-
-        await _outboxStore.UpdateAsync(message, cancellationToken);
-    }
-
-    private async Task CompleteAsync(
-        ContactCenterOutboxMessage message,
-        CancellationToken cancellationToken)
-    {
-        // Removal is a single unit of work. Persisting the completed status first and deleting afterwards detaches
-        // the message from the session identity map when the intermediate save commits, so the delete then fails and
-        // the row survives as a completed message nothing ever reaps. Nothing consumes the completed status as
-        // domain state either: the only readers count it as a store-reachability probe. If this transaction fails
-        // the message stays claimed and claim expiry redelivers it. The per-handler checkpoint is not persisted on
-        // this path, so that redelivery replays every handler and is safe only because handlers are required to be
-        // idempotent; the checkpoint exists to avoid replay after a *failed* dispatch, which is persisted.
-        await _outboxStore.DeleteAsync(message, cancellationToken);
-        await _session.SaveChangesAsync(cancellationToken);
-    }
-
     private async Task DeadLetterAsync(ContactCenterOutboxMessage message, string reason, CancellationToken cancellationToken)
     {
-        message.Status = OutboxMessageStatus.DeadLettered;
-        message.LastError = reason;
-        message.ModifiedUtc = _clock.UtcNow;
-        message.OwnerToken = null;
+        if (!await _queue.AbandonAsync(message, reason, cancellationToken: cancellationToken))
+        {
+            return;
+        }
+
         ContactCenterDiagnostics.RecordOutboxDeadLettered("unrecoverable");
 
-        await _outboxStore.UpdateAsync(message, cancellationToken);
-        await _session.SaveChangesAsync(cancellationToken);
-
         _logger.LogError("Dead-lettered Contact Center outbox message '{MessageId}': {Reason}", message.ItemId.SanitizeLogValue(), reason);
-    }
-
-    private static TimeSpan GetBackoff(int attempt)
-    {
-        var exponent = Math.Min(attempt - 1, 30);
-        var seconds = Math.Min(BaseBackoffSeconds * Math.Pow(2, exponent), MaxBackoffSeconds);
-
-        return TimeSpan.FromSeconds(seconds);
     }
 }

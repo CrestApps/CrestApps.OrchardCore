@@ -45,7 +45,7 @@ This video shows the shipping screens in the admin:
 
 - **`ShippingCheckoutHandler`** adds the **Shipping** step (`ShippingConstants.CheckoutStepKey`, order 2, after Contact) to an order's checkout when a line is a good (`ProductType.Good`). On completion it adds a signed-in buyer's new address to their address book when they asked, as their default shipping address if they had none.
 - **`ShippingCheckoutFlowDisplayDriver`** renders and posts the step.
-  - The address comes from the customer's address book (Customers, optional), from an `IShippingAddressSource`, or the address editor, with the recipient's name and phone.
+  - The address comes from the buyer's address book, from an `IShippingAddressSource`, or the address editor, with the recipient's name and phone. Shipping reads and saves the address book through **`IShippingAddressBook`** (`CrestApps.OrchardCore.Addresses.Abstractions`: `GetAsync(userId)` returns a `ShippingAddressBook` with the saved addresses and defaults, and `AddAsync(userId, address)` saves a new one unless the book is full or already holds it). The Customers feature implements it on the customer record (`CustomerShippingAddressBook`); without it, buyers have no address book, and Shipping never references Customers.
   - An `IShippingAddressSource` offers a signed-in buyer more addresses to ship to, such as the locations of the business account they buy for ([Accounts B2B](accounts-b2b.md)). They are listed after the address book with where they come from, shipped to as they are, and never saved to the address book. A buyer with no default address of their own starts with the first of them.
 
     ```csharp

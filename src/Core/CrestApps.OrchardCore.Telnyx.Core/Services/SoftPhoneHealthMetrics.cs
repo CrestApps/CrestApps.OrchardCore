@@ -1,4 +1,5 @@
 using System.Threading;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Telnyx.Services;
 
@@ -86,11 +87,22 @@ public interface ISoftPhoneHealthMetrics
 /// </summary>
 public sealed class SoftPhoneHealthMetrics : ISoftPhoneHealthMetrics
 {
-    private readonly DateTimeOffset _since = DateTimeOffset.UtcNow;
+    private readonly DateTimeOffset _since;
     private long _credentialsIssued;
     private long _credentialFailures;
     private long _webhooksProcessed;
     private long _webhookFailures;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SoftPhoneHealthMetrics"/> class.
+    /// </summary>
+    /// <param name="clock">The clock the counters' start is read from.</param>
+    public SoftPhoneHealthMetrics(IClock clock)
+    {
+        ArgumentNullException.ThrowIfNull(clock);
+
+        _since = new DateTimeOffset(DateTime.SpecifyKind(clock.UtcNow, DateTimeKind.Utc));
+    }
 
     /// <inheritdoc/>
     public void RecordCredentialIssued()

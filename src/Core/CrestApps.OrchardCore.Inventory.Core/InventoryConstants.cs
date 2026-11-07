@@ -22,6 +22,11 @@ public static class InventoryConstants
     /// </summary>
     public const string StockRecipeStep = "Stock";
 
+    /// <summary>
+    /// The name of the recipe and deployment step that adds or updates the store's own stock locations.
+    /// </summary>
+    public const string StockLocationsRecipeStep = "StockLocations";
+
     public static class Features
     {
         public const string Inventory = "CrestApps.OrchardCore.Inventory";

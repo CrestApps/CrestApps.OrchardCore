@@ -1,5 +1,5 @@
 using CrestApps.Core.AI.Memory;
-using CrestApps.OrchardCore.AI.Memory.Models;
+using CrestApps.OrchardCore.AI.Core.Models;
 using OrchardCore.Elasticsearch;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;

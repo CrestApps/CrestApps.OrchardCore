@@ -1,8 +1,9 @@
 @model ShapeViewModel<TimeEntryRow>
+@inject OrchardCore.Modules.IClock Clock
 
 @{
     var entry = Model.Value.Entry;
-    var minutes = (int)Math.Round(((entry.EndUtc ?? DateTime.UtcNow) - entry.StartUtc).TotalMinutes);
+    var minutes = (int)Math.Round(((entry.EndUtc ?? Clock.UtcNow) - entry.StartUtc).TotalMinutes);
 }
 <span class="badge fw-normal" style="background-color: @(Model.Value.Stage?.Color ?? "#6c757d")">@(Model.Value.Stage?.Name ?? T["No stage"].Value)</span>
 <span class="badge ta-badge fw-normal">@TimeTrackerTimeZone.Hours(minutes)</span>

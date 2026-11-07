@@ -1,8 +1,6 @@
-using System.Globalization;
 using CrestApps.OrchardCore.Calendars.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
-using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Calendars.Services;
 
@@ -11,32 +9,6 @@ namespace CrestApps.OrchardCore.Calendars.Services;
 /// </summary>
 internal static class CalendarSelectLists
 {
-    /// <summary>
-    /// Builds the time zone list, labelled by each zone's standard offset. A saved zone missing from the list stays listed.
-    /// </summary>
-    /// <param name="clock">The clock, which lists the time zones.</param>
-    /// <param name="selected">The selected time zone id.</param>
-    /// <returns>The options.</returns>
-    public static List<SelectListItem> TimeZones(IClock clock, string selected)
-    {
-        var options = clock.GetTimeZones()
-            .Select(zone => (zone.TimeZoneId, Offset: TimeZoneInfo.TryFindSystemTimeZoneById(zone.TimeZoneId, out var info) ? info.BaseUtcOffset : TimeSpan.Zero))
-            .OrderBy(zone => zone.Offset)
-            .ThenBy(zone => zone.TimeZoneId, StringComparer.Ordinal)
-            .Select(zone => new SelectListItem(
-                $"(UTC{(zone.Offset < TimeSpan.Zero ? "-" : "+")}{zone.Offset.Duration().ToString(@"hh\:mm", CultureInfo.InvariantCulture)}) {zone.TimeZoneId}",
-                zone.TimeZoneId,
-                string.Equals(zone.TimeZoneId, selected, StringComparison.OrdinalIgnoreCase)))
-            .ToList();
-
-        if (!string.IsNullOrWhiteSpace(selected) && !options.Any(option => option.Selected))
-        {
-            options.Insert(0, new SelectListItem(selected, selected, true));
-        }
-
-        return options;
-    }
-
     /// <summary>
     /// Builds the calendar visibility list.
     /// </summary>

@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Currencies;
+
 namespace CrestApps.OrchardCore.Payments;
 
 /// <summary>

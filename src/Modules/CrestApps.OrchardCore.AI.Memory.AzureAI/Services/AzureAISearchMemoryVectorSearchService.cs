@@ -4,6 +4,7 @@ using Azure.Search.Documents.Models;
 using CrestApps.Core.AI.Memory;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Infrastructure.Indexing.Models;
+using CrestApps.OrchardCore.AI.Core.Search;
 using Microsoft.Extensions.Logging;
 using OrchardCore.AzureAI.Services;
 
@@ -29,6 +30,13 @@ public sealed class AzureAISearchMemoryVectorSearchService : IMemoryVectorSearch
         _clientFactory = clientFactory;
         _logger = logger;
     }
+
+    /// <summary>
+    /// Builds the filter that limits the search to one user's memories, with the user identifier escaped.
+    /// </summary>
+    /// <param name="userId">The user identifier.</param>
+    internal static string BuildFilter(string userId)
+        => ODataFilter.Equal(MemoryConstants.ColumnNames.UserId, userId);
 
     /// <summary>
     /// Searches for async.
@@ -63,7 +71,7 @@ public sealed class AzureAISearchMemoryVectorSearchService : IMemoryVectorSearch
 
             var options = new SearchOptions
             {
-                Filter = $"{MemoryConstants.ColumnNames.UserId} eq '{userId}'",
+                Filter = BuildFilter(userId),
                 Size = topN,
                 Select =
                 {

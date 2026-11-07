@@ -12,7 +12,7 @@ namespace CrestApps.OrchardCore.AI.Core.Conversations;
 /// <summary>
 /// The figures of the QA dashboard, read from the conversation evaluations of a period.
 /// </summary>
-public sealed partial class AIQADashboardService
+public sealed partial class AIQADashboardService : IAIQADashboardService
 {
     /// <summary>
     /// The most evaluations one dashboard reads.
@@ -41,14 +41,7 @@ public sealed partial class AIQADashboardService
         _promptStore = promptStore;
     }
 
-    /// <summary>
-    /// Builds the dashboard of a period.
-    /// </summary>
-    /// <param name="label">The evaluations' label, such as a QA cohort's, or <see langword="null"/> for every evaluation.</param>
-    /// <param name="fromUtc">The start of the period.</param>
-    /// <param name="toUtc">The end of the period.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The figures.</returns>
+    /// <inheritdoc/>
     public async Task<AIQADashboard> BuildAsync(string label, DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default)
     {
         var query = string.IsNullOrEmpty(label)

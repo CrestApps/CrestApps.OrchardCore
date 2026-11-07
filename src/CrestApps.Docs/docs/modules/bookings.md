@@ -236,6 +236,18 @@ The handler writes with `SkipConflictCheck` (Bookings checks capacity itself) an
 
 The `BookingDates` recipe step adds dates to booking products: each with `ContentItemId`, `Date` (or `DaysFromToday`), an optional `Time`, `Capacity` and `Price`. A date the product has already is left as it is.
 
+The **Booking dates** deployment step (`BookingDatesDeploymentStep`, *Commerce*) writes the upcoming open dates in that shape, so they import into another site with the same products. Past and closed dates, and the places held or sold on a date, stay on the site.
+
+```json
+{
+  "name": "BookingDates",
+  "Dates": [
+    { "ContentItemId": "4tour00000000000000000001", "Date": "2026-11-02", "Capacity": 12, "Price": 89.5 },
+    { "ContentItemId": "4class0000000000000000001", "Date": "2026-11-03", "Time": "09:30", "Capacity": 6 }
+  ]
+}
+```
+
 ## Report Builder data source
 
 With **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) on, which the Report Builder needs, Bookings adds the **Bookings** data source (`Bookings`) to the Report Builder and to Orchard Core data pipelines. Its data sets need **Manage bookings** (`ManageBookings`), the permission of **Commerce > Bookings**. The travelers' details, the reason a booking was canceled, the cancellation policy, the card a balance is charged to and the payment provider's error messages are never exposed.

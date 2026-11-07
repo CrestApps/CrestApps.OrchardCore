@@ -1,4 +1,5 @@
 using System.Globalization;
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
@@ -55,10 +56,12 @@ public sealed class WorkOrderSettingsController : Controller
     private readonly WorkOrderSettingManager<ServiceLevelPolicy> _policies;
     private readonly WorkOrderSettingManager<WorkOrderSubStatus> _subStatuses;
     private readonly WorkOrderLookups _lookups;
+    private readonly WorkOrderStore _workOrderStore;
     private readonly ISession _session;
-    private readonly IClock _clock;
+    private readonly ITimeZoneSelectListProvider _timeZoneSelectListProvider;
     private readonly ISiteService _siteService;
     private readonly INotifier _notifier;
+    private readonly IEnumerable<IServiceHoursProvider> _serviceHoursProviders;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -72,10 +75,12 @@ public sealed class WorkOrderSettingsController : Controller
     /// <param name="policies">The service level policies.</param>
     /// <param name="subStatuses">The sub-statuses.</param>
     /// <param name="lookups">The lookups.</param>
+    /// <param name="workOrderStore">The work order store.</param>
     /// <param name="session">The session.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeZoneSelectListProvider">The time zone list provider.</param>
     /// <param name="siteService">The site service.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="serviceHoursProviders">The providers of the hours calendars a service level can run in.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public WorkOrderSettingsController(
@@ -85,10 +90,12 @@ public sealed class WorkOrderSettingsController : Controller
         WorkOrderSettingManager<ServiceLevelPolicy> policies,
         WorkOrderSettingManager<WorkOrderSubStatus> subStatuses,
         WorkOrderLookups lookups,
+        WorkOrderStore workOrderStore,
         ISession session,
-        IClock clock,
+        ITimeZoneSelectListProvider timeZoneSelectListProvider,
         ISiteService siteService,
         INotifier notifier,
+        IEnumerable<IServiceHoursProvider> serviceHoursProviders,
         IHtmlLocalizer<WorkOrderSettingsController> htmlLocalizer,
         IStringLocalizer<WorkOrderSettingsController> stringLocalizer)
     {
@@ -98,10 +105,12 @@ public sealed class WorkOrderSettingsController : Controller
         _policies = policies;
         _subStatuses = subStatuses;
         _lookups = lookups;
+        _workOrderStore = workOrderStore;
         _session = session;
-        _clock = clock;
+        _timeZoneSelectListProvider = timeZoneSelectListProvider;
         _siteService = siteService;
         _notifier = notifier;
+        _serviceHoursProviders = serviceHoursProviders;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -411,6 +420,7 @@ public sealed class WorkOrderSettingsController : Controller
             Id = id,
             Name = item.Name,
             TimeZoneId = item.TimeZoneId ?? (string.IsNullOrEmpty(id) ? (await _siteService.GetSiteSettingsAsync()).TimeZoneId : null),
+            HoursCalendarId = item.HoursCalendarId,
             BusinessHoursOnly = weekly is not null,
             Days = weekly is null ? WeeklyHours.Weekdays() : [.. weekly.Days],
             Opens = (weekly ?? new WeeklyHours()).Opens,
@@ -422,7 +432,7 @@ public sealed class WorkOrderSettingsController : Controller
                 : new TargetEditModel { Priority = priority })],
         };
 
-        Populate(model);
+        await PopulateAsync(model);
 
         return View(model);
     }
@@ -452,6 +462,7 @@ public sealed class WorkOrderSettingsController : Controller
 
         item.Name = form.Name?.Trim();
         item.TimeZoneId = string.IsNullOrEmpty(form.TimeZoneId) ? null : form.TimeZoneId;
+        item.HoursCalendarId = string.IsNullOrWhiteSpace(form.HoursCalendarId) ? null : form.HoursCalendarId.Trim();
         item.WeeklyHours = form.BusinessHoursOnly ? new WeeklyHours { Days = [.. (form.Days ?? []).Distinct().Order()], Opens = form.Opens, Closes = form.Closes } : null;
         item.WarningPercent = form.WarningPercent;
         item.PauseStatuses = [.. (form.PauseStatuses ?? []).Distinct()];
@@ -476,7 +487,7 @@ public sealed class WorkOrderSettingsController : Controller
 
         if (!ModelState.IsValid)
         {
-            Populate(form);
+            await PopulateAsync(form);
 
             return View(form);
         }
@@ -643,11 +654,12 @@ public sealed class WorkOrderSettingsController : Controller
     private async Task<List<WorkOrderSettingRow>> TypeRowsAsync()
     {
         var policies = (await _policies.GetAllAsync()).ToDictionary(policy => policy.ItemId, policy => policy.Name, StringComparer.Ordinal);
-        var counts = (await _session.QueryIndex<WorkOrderIndex>(collection: WorkOrdersConstants.CollectionName).ListAsync(HttpContext.RequestAborted))
-            .GroupBy(index => index.TypeId ?? string.Empty, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
+        var types = await _types.GetAllAsync();
 
-        return [.. (await _types.GetAllAsync()).OrderBy(type => type.Name, StringComparer.CurrentCultureIgnoreCase).Select(type => new WorkOrderSettingRow
+        // Counted in the database, type by type, instead of loading every work order's index row.
+        var counts = await _workOrderStore.CountByTypeAsync(types.Select(type => type.ItemId), HttpContext.RequestAborted);
+
+        return [.. types.OrderBy(type => type.Name, StringComparer.CurrentCultureIgnoreCase).Select(type => new WorkOrderSettingRow
         {
             Kind = Types,
             Id = type.ItemId,
@@ -735,9 +747,31 @@ public sealed class WorkOrderSettingsController : Controller
         }
     }
 
-    private void Populate(ServiceLevelPolicyEditViewModel model)
+    /// <summary>
+    /// Returns the hours calendars a service level can run in as picker options, keeping a selected calendar that no
+    /// provider lists any more so saving the policy doesn't lose it.
+    /// </summary>
+    /// <param name="calendars">The calendars the providers list.</param>
+    /// <param name="selectedId">The calendar the policy runs in, or <see langword="null"/>.</param>
+    /// <returns>The options.</returns>
+    internal static IList<SelectListItem> HoursCalendarOptions(IReadOnlyList<ServiceHoursCalendar> calendars, string selectedId)
     {
-        model.TimeZoneOptions = [.. _clock.GetTimeZones().Select(zone => zone.TimeZoneId).Order(StringComparer.Ordinal).Select(zoneId => new SelectListItem(zoneId, zoneId, string.Equals(zoneId, model.TimeZoneId, StringComparison.OrdinalIgnoreCase)))];
+        var options = calendars
+            .Select(calendar => new SelectListItem(calendar.Name, calendar.Id, string.Equals(calendar.Id, selectedId, StringComparison.Ordinal)))
+            .ToList();
+
+        if (!string.IsNullOrEmpty(selectedId) && !options.Any(option => option.Selected))
+        {
+            options.Add(new SelectListItem(selectedId, selectedId, true));
+        }
+
+        return options;
+    }
+
+    private async Task PopulateAsync(ServiceLevelPolicyEditViewModel model)
+    {
+        model.TimeZoneOptions = await _timeZoneSelectListProvider.GetTimeZoneOptionsAsync(model.TimeZoneId, HttpContext.RequestAborted);
+        model.HoursCalendarOptions = HoursCalendarOptions(await ServiceHoursCalendars.ListAsync(_serviceHoursProviders, HttpContext.RequestAborted), model.HoursCalendarId);
 
         foreach (var priority in Enum.GetValues<WorkOrderPriority>().OrderDescending())
         {

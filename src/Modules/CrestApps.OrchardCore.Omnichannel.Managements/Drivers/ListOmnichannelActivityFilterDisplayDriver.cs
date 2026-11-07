@@ -2,6 +2,7 @@ using System.Globalization;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -56,7 +57,7 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
             model.SubjectContentType = filter.SubjectContentType;
             model.AttemptFilter = filter.AttemptFilter;
             model.Channel = filter.Channel;
-            model.TimeZoneId = NormalizeTimeZoneId(filter.TimeZoneId);
+            model.TimeZoneId = TimeZoneIds.Normalize(filter.TimeZoneId);
             model.ScheduledFrom = filter.ScheduledFrom;
             model.ScheduledTo = filter.ScheduledTo;
             model.ScheduledRange = filter.ScheduledRange;
@@ -119,7 +120,7 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
         filter.SubjectContentType = model.SubjectContentType;
         filter.UrgencyLevel = model.UrgencyLevel;
         filter.Channel = model.Channel;
-        filter.TimeZoneId = NormalizeTimeZoneId(model.TimeZoneId);
+        filter.TimeZoneId = TimeZoneIds.Normalize(model.TimeZoneId);
         filter.AttemptFilter = model.AttemptFilter;
         filter.ScheduledFrom = model.ScheduledFrom;
         filter.ScheduledTo = model.ScheduledTo;
@@ -168,16 +169,6 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
         }
 
         return Edit(filter, context);
-    }
-
-    private static string NormalizeTimeZoneId(string timeZoneId)
-    {
-        if (string.IsNullOrWhiteSpace(timeZoneId))
-        {
-            return null;
-        }
-
-        return NodaTime.DateTimeZoneProviders.Tzdb.GetZoneOrNull(timeZoneId.Trim())?.Id;
     }
 
     private async Task<IEnumerable<SelectListItem>> GetTimeZoneOptionsAsync(LocalizedString emptyOptionText, string selectedTimeZoneId)

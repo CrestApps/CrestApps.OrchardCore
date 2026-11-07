@@ -15,7 +15,7 @@ public abstract class CalendarAIToolBase : AIFunction
     /// <summary>
     /// The options the tools write their results with.
     /// </summary>
-    protected static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    protected static readonly JsonSerializerOptions JsonOptions = JsonSerializerOptions.Web;
 
     /// <inheritdoc />
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>

@@ -100,7 +100,7 @@ public sealed class MessagingConversationService : IMessagingConversationService
         }
 
         // Enforce the contact's opt-out of this channel on every send.
-        if (await IsOptedOutAsync(channel, conversation))
+        if (await channel.IsConversationOptedOutAsync(conversation, _contentManager, cancellationToken))
         {
             return MessagingSendResult.Failed($"The contact has opted out of {channel.DisplayName.Value}.");
         }
@@ -224,7 +224,7 @@ public sealed class MessagingConversationService : IMessagingConversationService
             };
         }
 
-        if (await IsOptedOutAsync(messagingChannel, conversation))
+        if (await messagingChannel.IsConversationOptedOutAsync(conversation, _contentManager, cancellationToken))
         {
             return MessagingSendResult.Failed($"The contact has opted out of {messagingChannel.DisplayName.Value}.");
         }
@@ -314,16 +314,11 @@ public sealed class MessagingConversationService : IMessagingConversationService
         {
             // A provider that reports a receipt before the send recorded its id (or one that reports none at all)
             // still has to land somewhere, so fall back to the newest outbound message with no id yet.
-            var outbound = (await _session.Query<OmnichannelMessage, OmnichannelMessageIndex>(
-                    index => index.ConversationId == conversation.ItemId && !index.IsInbound,
-                    collection: OmnichannelConstants.CollectionName)
-                .OrderByDescending(index => index.CreatedUtc)
-                .ListAsync(cancellationToken))
-                .ToArray();
-
-            message = !string.IsNullOrEmpty(receipt.ProviderMessageId)
-                ? outbound.FirstOrDefault(m => string.IsNullOrEmpty(m.ProviderMessageId))
-                : outbound.FirstOrDefault();
+            message = await FindNewestOutboundAsync(
+                _session,
+                conversation.ItemId,
+                withoutProviderMessageId: !string.IsNullOrEmpty(receipt.ProviderMessageId),
+                cancellationToken);
         }
 
         if (message is null)
@@ -544,16 +539,33 @@ public sealed class MessagingConversationService : IMessagingConversationService
         return await _authorizationService.AuthorizeConversationAsync(principal, conversation, operation);
     }
 
-    private async Task<bool> IsOptedOutAsync(IMessagingChannel channel, MessagingConversation conversation)
+    /// <summary>
+    /// Finds a conversation's newest outbound message in one indexed query, instead of loading the whole outbound
+    /// history to pick the first.
+    /// </summary>
+    /// <param name="session">The session.</param>
+    /// <param name="conversationId">The conversation.</param>
+    /// <param name="withoutProviderMessageId">Whether only a message that has no provider message id yet is wanted.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    internal static Task<OmnichannelMessage> FindNewestOutboundAsync(
+        ISession session,
+        string conversationId,
+        bool withoutProviderMessageId,
+        CancellationToken cancellationToken)
     {
-        if (string.IsNullOrEmpty(conversation.ContactContentItemId))
-        {
-            return false;
-        }
+        var query = withoutProviderMessageId
+            ? session.Query<OmnichannelMessage, OmnichannelMessageIndex>(
+                index => index.ConversationId == conversationId &&
+                    !index.IsInbound &&
+                    (index.ProviderMessageId == null || index.ProviderMessageId == string.Empty),
+                collection: OmnichannelConstants.CollectionName)
+            : session.Query<OmnichannelMessage, OmnichannelMessageIndex>(
+                index => index.ConversationId == conversationId && !index.IsInbound,
+                collection: OmnichannelConstants.CollectionName);
 
-        var contact = await _contentManager.GetAsync(conversation.ContactContentItemId, VersionOptions.Latest);
-
-        return channel.IsOptedOut(contact);
+        return query
+            .OrderByDescending(index => index.CreatedUtc)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     // Records what the provider said about one attempt. An accepted message stores the provider's own id so a

@@ -19,6 +19,7 @@ using CrestApps.OrchardCore.Stripe.Services;
 using CrestApps.OrchardCore.Stripe.Workflows;
 using CrestApps.OrchardCore.Stripe.Workflows.Drivers;
 using CrestApps.OrchardCore.Stripe.Workflows.Events;
+using CrestApps.OrchardCore.Webhooks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -139,7 +140,7 @@ public sealed class Startup : StartupBase
 /// secrets: the standard step would copy the encrypted values, which no other environment can decrypt, and its import
 /// replaces the stored settings whole, which would erase the destination's credentials.
 /// </remarks>
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class DeploymentStartup : StartupBase
 {
     /// <summary>
@@ -155,7 +156,7 @@ public sealed class DeploymentStartup : StartupBase
 /// <summary>
 /// Registers the recipe step that imports the Stripe settings and protects the secrets it carries.
 /// </summary>
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class RecipesStartup : StartupBase
 {
     /// <summary>
@@ -199,7 +200,7 @@ public sealed class CheckoutStartup : StartupBase
 /// Registers the Stripe workflow events and the payment-event bridge that raises them, so operators can
 /// react to Stripe payment lifecycle events and connection failures with custom workflows.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class StripeWorkflowsStartup : StartupBase
 {
     /// <summary>
@@ -248,4 +249,16 @@ public sealed class TerminalStartup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
         => routes.MapStripeTerminalApi();
+}
+
+/// <summary>
+/// Processes verified Stripe events from the provider webhook inbox: the webhook endpoint stores each event and answers
+/// Stripe at once, and the payment handlers run from storage with retries.
+/// </summary>
+[RequireFeatures(WebhooksConstants.Feature.ProviderInbox)]
+public sealed class ProviderInboxStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddScoped<IProviderWebhookInboxHandler, StripeWebhookInboxHandler>();
 }

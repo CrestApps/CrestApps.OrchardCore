@@ -438,8 +438,7 @@ public sealed class VoicemailOwnershipEndpointTests : IAsyncLifetime
             callSessionManager.Object,
             CreateAgentProfileManager().Object,
             CreateInteractionStore(session),
-            hubContext.Object,
-            new ShellSettings { Name = "Default" },
+            new SoftPhoneClientNotifier(hubContext.Object, new ShellSettings { Name = "Default" }),
             Mock.Of<IOmnichannelActivityStore>(),
             NullLogger<ContactCenterSoftPhoneEventHandler>.Instance);
 

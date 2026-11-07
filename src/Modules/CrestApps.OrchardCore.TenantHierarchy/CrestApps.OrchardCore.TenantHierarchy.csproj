@@ -26,12 +26,17 @@
     <PackageReference Include="OrchardCore.Roles.Abstractions" />
     <PackageReference Include="OrchardCore.Setup.Core" />
     <PackageReference Include="OrchardCore.Users.Core" />
+    <PackageReference Include="OrchardCore.Recipes.Abstractions" />
+    <PackageReference Include="OrchardCore.Deployment.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.TenantHierarchy.Abstractions/CrestApps.OrchardCore.TenantHierarchy.Abstractions.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.TenantHierarchy.Core/CrestApps.OrchardCore.TenantHierarchy.Core.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Users.Abstractions/CrestApps.OrchardCore.Users.Abstractions.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.Recipes.Core/CrestApps.OrchardCore.Recipes.Core.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

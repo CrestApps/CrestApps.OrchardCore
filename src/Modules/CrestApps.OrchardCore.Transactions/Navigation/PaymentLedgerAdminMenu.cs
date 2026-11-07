@@ -6,7 +6,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.Transactions.Navigation;
 
 /// <summary>
-/// Adds the payments and refunds ledgers to the Commerce admin menu.
+/// Adds the payments and refunds ledgers, and the payment issues to finish by hand, to the Commerce admin menu.
 /// </summary>
 /// <remarks>
 /// These entries are registered only alongside the Checkout feature, because the ledgers they open are
@@ -26,6 +26,13 @@ public sealed class PaymentLedgerAdminMenu : AdminNavigationProvider
     {
         { "area", TransactionsConstants.Features.Area },
         { "controller", "RefundsAdmin" },
+        { "action", "Index" },
+    };
+
+    private static readonly RouteValueDictionary _issuesRouteValues = new()
+    {
+        { "area", TransactionsConstants.Features.Area },
+        { "controller", "PaymentIssuesAdmin" },
         { "action", "Index" },
     };
 
@@ -54,6 +61,12 @@ public sealed class PaymentLedgerAdminMenu : AdminNavigationProvider
                 .Add(S["Refunds"], S["Refunds"].PrefixPosition("8"), refunds => refunds
                     .Id("refunds")
                     .Action("Index", "RefundsAdmin", _refundsRouteValues)
+                    .Permission(TransactionsPermissions.ManageRefunds)
+                    .LocalNav()
+                )
+                .Add(S["Payment issues"], S["Payment issues"].PrefixPosition("8.5"), issues => issues
+                    .Id("paymentIssues")
+                    .Action("Index", "PaymentIssuesAdmin", _issuesRouteValues)
                     .Permission(TransactionsPermissions.ManageRefunds)
                     .LocalNav()
                 )

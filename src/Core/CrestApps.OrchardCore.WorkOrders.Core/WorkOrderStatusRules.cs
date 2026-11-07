@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.WorkOrders.Models;
+using CrestApps.OrchardCore.StateMachines;
 
 namespace CrestApps.OrchardCore.WorkOrders.Core;
 
@@ -7,7 +8,7 @@ namespace CrestApps.OrchardCore.WorkOrders.Core;
 /// </summary>
 public static class WorkOrderStatusRules
 {
-    private static readonly Dictionary<WorkOrderStatus, WorkOrderStatus[]> _next = new()
+    private static readonly TransitionTable<WorkOrderStatus> _next = new(new Dictionary<WorkOrderStatus, WorkOrderStatus[]>
     {
         [WorkOrderStatus.New] = [WorkOrderStatus.Ready, WorkOrderStatus.Scheduled, WorkOrderStatus.InProgress, WorkOrderStatus.OnHold, WorkOrderStatus.Canceled],
         [WorkOrderStatus.Ready] = [WorkOrderStatus.Scheduled, WorkOrderStatus.InProgress, WorkOrderStatus.OnHold, WorkOrderStatus.Canceled],
@@ -17,14 +18,14 @@ public static class WorkOrderStatusRules
         [WorkOrderStatus.Completed] = [WorkOrderStatus.Closed, WorkOrderStatus.InProgress],
         [WorkOrderStatus.Closed] = [],
         [WorkOrderStatus.Canceled] = [],
-    };
+    });
 
     /// <summary>
     /// Gives the statuses a work order can move to.
     /// </summary>
     /// <param name="from">Its status.</param>
     /// <returns>The statuses.</returns>
-    public static IReadOnlyList<WorkOrderStatus> Next(WorkOrderStatus from) => _next.GetValueOrDefault(from, []);
+    public static IReadOnlyList<WorkOrderStatus> Next(WorkOrderStatus from) => _next.Next(from);
 
     /// <summary>
     /// Tells whether a work order can move from one status to another.
@@ -32,7 +33,7 @@ public static class WorkOrderStatusRules
     /// <param name="from">Its status.</param>
     /// <param name="to">The new status.</param>
     /// <returns><see langword="true"/> when it can.</returns>
-    public static bool CanMove(WorkOrderStatus from, WorkOrderStatus to) => Next(from).Contains(to);
+    public static bool CanMove(WorkOrderStatus from, WorkOrderStatus to) => _next.CanMove(from, to);
 
     /// <summary>
     /// Tells whether a work order in a status is still open.

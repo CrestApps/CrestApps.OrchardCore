@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Handlers;
 using CrestApps.OrchardCore.Transactions.Core.Indexes;
 using CrestApps.OrchardCore.Checkout.Core.Services;
+using CrestApps.OrchardCore.Transactions.Core;
 using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Indexes;
@@ -55,6 +56,11 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICheckoutSessionAnonymizer, CheckoutSessionAnonymizer>();
         services.AddScoped<IPaymentAttemptStore, PaymentAttemptStore>();
         services.AddScoped<IPaymentRefundStore, PaymentRefundStore>();
+
+        // Money operations that failed and must be finished by hand, listed under Commerce > Payment issues.
+        services.AddPaymentIssues();
+        services.AddDataMigration<PaymentIssueMigrations>()
+            .AddIndexProvider<PaymentIssueIndexProvider>();
         services.AddScoped<ICheckoutReconciliationService, CheckoutReconciliationService>();
         services.AddScoped<ICheckoutEngine, DefaultCheckoutEngine>();
         services.AddScoped<ICheckoutPaymentProviderResolver, CheckoutPaymentProviderResolver>();
@@ -146,7 +152,7 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Sets coupons from a recipe.
 /// </summary>
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class CouponRecipesStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -157,7 +163,7 @@ public sealed class CouponRecipesStartup : StartupBase
 /// <summary>
 /// Exports coupons in a deployment plan.
 /// </summary>
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class CouponDeploymentStartup : StartupBase
 {
     /// <inheritdoc/>

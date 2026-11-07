@@ -1,4 +1,5 @@
 using System.Text.Encodings.Web;
+using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Orders.Services;

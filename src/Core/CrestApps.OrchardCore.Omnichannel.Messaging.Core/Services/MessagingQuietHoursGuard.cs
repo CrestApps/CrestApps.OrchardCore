@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
+using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
@@ -22,6 +23,8 @@ public sealed class MessagingQuietHoursGuard
     private readonly IMessagingContactTimeZoneResolver _timeZoneResolver;
     private readonly IClock _clock;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="MessagingQuietHoursGuard"/> class.
     /// </summary>
@@ -29,12 +32,14 @@ public sealed class MessagingQuietHoursGuard
         IBusinessHoursGate businessHoursGate,
         IMessagingQueuePolicyReader queuePolicyReader,
         IMessagingContactTimeZoneResolver timeZoneResolver,
-        IClock clock)
+        IClock clock,
+        IStringLocalizer<MessagingQuietHoursGuard> stringLocalizer)
     {
         _businessHoursGate = businessHoursGate;
         _queuePolicyReader = queuePolicyReader;
         _timeZoneResolver = timeZoneResolver;
         _clock = clock;
+        S = stringLocalizer;
     }
 
     /// <summary>
@@ -70,6 +75,6 @@ public sealed class MessagingQuietHoursGuard
 
         return open
             ? QuietHoursDecision.Open
-            : new QuietHoursDecision(true, "It is currently outside this queue's business hours in the contact's local time.");
+            : new QuietHoursDecision(true, S["It is currently outside this queue's business hours in the contact's local time."]);
     }
 }

@@ -1,5 +1,5 @@
 using System.Globalization;
-using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Dispatch.Controllers;
 using CrestApps.OrchardCore.Dispatch.Core.Services;
 using CrestApps.OrchardCore.Dispatch.Services;
@@ -89,8 +89,8 @@ internal static partial class FieldServiceApiEndpoints
                 id = worker.ItemId,
                 name = worker.DisplayName,
                 onShift = availability.HasShift,
-                open = availability.Open.Select(span => new { startUtc = span.Start, endUtc = span.End }),
-                timeOff = availability.TimeOff.Select(span => new { startUtc = span.Start, endUtc = span.End }),
+                open = availability.Open.Select(span => new { startUtc = span.StartUtc, endUtc = span.EndUtc }),
+                timeOff = availability.TimeOff.Select(span => new { startUtc = span.StartUtc, endUtc = span.EndUtc }),
             });
         }
 

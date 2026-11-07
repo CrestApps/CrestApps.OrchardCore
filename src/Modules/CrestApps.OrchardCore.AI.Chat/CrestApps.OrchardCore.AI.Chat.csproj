@@ -45,6 +45,8 @@
       This guarantees the module functions correctly and resolves the feature dependency.
     -->
     <ProjectReference Include="../CrestApps.OrchardCore.AI/CrestApps.OrchardCore.AI.csproj" PrivateAssets="none" />
+    <!-- The analytics features depend on the Reports feature, which renders and exports their reports. -->
+    <ProjectReference Include="../CrestApps.OrchardCore.Reports/CrestApps.OrchardCore.Reports.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>

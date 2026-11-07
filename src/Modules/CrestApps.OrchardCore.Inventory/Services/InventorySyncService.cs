@@ -109,7 +109,7 @@ public sealed class InventorySyncService
 
     private async Task<HashSet<string>> GetTrackedTypesAsync()
         => (await _contentDefinitionManager.ListTypeDefinitionsAsync())
-            .Where(type => type.Parts.Any(part => part.PartDefinition.Name == InventoryConstants.Parts.InventoryPart))
+            .Where(type => type.HasPart(InventoryConstants.Parts.InventoryPart))
             .Select(type => type.Name)
             .ToHashSet(StringComparer.Ordinal);
 }

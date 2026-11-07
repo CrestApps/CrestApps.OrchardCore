@@ -1,16 +1,19 @@
 using System.Text.Json.Nodes;
-using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Recipes;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Recipes.Models;
-using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.AI.Recipes;
 
-internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
+/// <summary>
+/// Imports AI provider connections. A connection is matched by its item id, then by its name and source.
+/// </summary>
+internal sealed class AIProviderConnectionsStep : CatalogRecipeStepBase<AIProviderConnection>
 {
     /// <summary>
     /// The recipe step key used to identify this handler.
@@ -32,105 +35,55 @@ internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
         INamedSourceCatalogManager<AIProviderConnection> manager,
         IOptions<AIOptions> aiOptions,
         IStringLocalizer<AIProfileStep> stringLocalizer)
-    : base(StepKey)
+        : base(StepKey, "Connections")
     {
         _manager = manager;
         _aiOptions = aiOptions.Value;
         S = stringLocalizer;
     }
 
-    protected override async Task HandleAsync(RecipeExecutionContext context)
-    {
-        var model = context.Step.ToObject<AIProviderConnectionStepModel>();
-        var tokens = model.Connections.Cast<JsonObject>() ?? [];
+    protected override ValueTask<AIProviderConnection> FindByIdAsync(string id)
+        => _manager.FindByIdAsync(id);
 
-        foreach (var token in tokens)
+    protected override async ValueTask<CatalogRecipeLookup<AIProviderConnection>> FindExistingAsync(JsonObject token, RecipeExecutionContext context)
+    {
+        var source = GetSource(token);
+
+        if (string.IsNullOrEmpty(source))
         {
-            AIProviderConnection connection = null;
-            var isNew = false;
+            context.Errors.Add(S["Could not find connection-source value. The profile will not be imported."]);
 
-            var id = token[nameof(AIProviderConnection.ItemId)]?.GetValue<string>();
-
-            var hasId = !string.IsNullOrEmpty(id);
-
-            if (!string.IsNullOrEmpty(id))
-            {
-                connection = await _manager.FindByIdAsync(id);
-            }
-
-            var sourceName = token[nameof(AIProviderConnection.Source)]?.GetValue<string>();
-            var hasSource = !string.IsNullOrEmpty(sourceName);
-
-            if (connection is null)
-            {
-                if (!hasSource)
-                {
-                    context.Errors.Add(S["Could not find connection-source value. The profile will not be imported."]);
-
-                    continue;
-                }
-
-                var name = token[nameof(AIProviderConnection.Name)]?.GetValue<string>()?.Trim();
-
-                if (!string.IsNullOrEmpty(name))
-                {
-                    connection = await _manager.GetAsync(name, sourceName);
-                }
-            }
-
-            if (connection is not null)
-            {
-                await _manager.UpdateAsync(connection, token);
-            }
-            else
-            {
-                isNew = true;
-                if (!hasSource)
-                {
-                    context.Errors.Add(S["Could not find connection-source value. The profile will not be imported."]);
-
-                    continue;
-                }
-
-                if (!_aiOptions.ConnectionSources.TryGetValue(sourceName, out _))
-                {
-                    context.Errors.Add(S["Unable to find a connection-source that can handle the source '{0}'.", sourceName]);
-
-                    return;
-                }
-
-                connection = await _manager.NewAsync(sourceName, token);
-
-                if (hasId && UniqueId.IsValid(id))
-                {
-                    connection.ItemId = id;
-                }
-            }
-
-            var validationResult = await _manager.ValidateAsync(connection);
-
-            if (!validationResult.Succeeded)
-            {
-                foreach (var error in validationResult.Errors)
-                {
-                    context.Errors.Add(error.ErrorMessage);
-                }
-
-                continue;
-            }
-
-            if (isNew)
-            {
-                await _manager.CreateAsync(connection);
-            }
+            return CatalogRecipeLookup<AIProviderConnection>.Skip;
         }
+
+        var name = token[nameof(AIProviderConnection.Name)]?.GetValue<string>()?.Trim();
+
+        return CatalogRecipeLookup<AIProviderConnection>.Found(string.IsNullOrEmpty(name) ? null : await _manager.GetAsync(name, source));
     }
 
-    private sealed class AIProviderConnectionStepModel
+    protected override ValueTask UpdateAsync(AIProviderConnection entry, JsonObject token)
+        => _manager.UpdateAsync(entry, token);
+
+    protected override async ValueTask<AIProviderConnection> NewAsync(JsonObject token, RecipeExecutionContext context)
     {
-        /// <summary>
-        /// Gets or sets the collection of AI provider connection definitions to import.
-        /// </summary>
-        public JsonArray Connections { get; set; }
+        var source = GetSource(token);
+
+        if (!_aiOptions.ConnectionSources.TryGetValue(source, out _))
+        {
+            context.Errors.Add(S["Unable to find a connection-source that can handle the source '{0}'.", source]);
+
+            return null;
+        }
+
+        return await _manager.NewAsync(source, token);
     }
+
+    protected override ValueTask<ValidationResultDetails> ValidateAsync(AIProviderConnection entry)
+        => _manager.ValidateAsync(entry);
+
+    protected override ValueTask CreateAsync(AIProviderConnection entry)
+        => _manager.CreateAsync(entry);
+
+    private static string GetSource(JsonObject token)
+        => token[nameof(AIProviderConnection.Source)]?.GetValue<string>();
 }

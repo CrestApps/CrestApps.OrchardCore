@@ -1,5 +1,5 @@
 using System.Globalization;
-using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Dispatch.Core;
 using CrestApps.OrchardCore.Dispatch.Core.Indexes;
 using CrestApps.OrchardCore.Dispatch.Core.Services;
@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 using OrchardCore.Settings;
@@ -27,7 +28,8 @@ using IClock = OrchardCore.Modules.IClock;
 namespace CrestApps.OrchardCore.Dispatch.Controllers;
 
 /// <summary>
-/// The visits list and each visit's page, where a visit is assigned, moved and moved along.
+/// The visits list and each visit's page, where a visit is assigned, moved and moved along. Other modules add panels to a
+/// visit's page with display drivers of <see cref="ServiceVisit"/>.
 /// </summary>
 public sealed class VisitsController : Controller
 {
@@ -52,6 +54,8 @@ public sealed class VisitsController : Controller
     private readonly ISession _session;
     private readonly IClock _clock;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<ServiceVisit> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
 
@@ -70,6 +74,8 @@ public sealed class VisitsController : Controller
         ISession session,
         IClock clock,
         INotifier notifier,
+        IDisplayManager<ServiceVisit> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<VisitsController> htmlLocalizer)
     {
         _authorizationService = authorizationService;
@@ -83,6 +89,8 @@ public sealed class VisitsController : Controller
         _session = session;
         _clock = clock;
         _notifier = notifier;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
     }
 
@@ -234,6 +242,8 @@ public sealed class VisitsController : Controller
 
         var zone = await _timeZone.GetAsync();
         var model = await BuildDetailsAsync(visit, zone, day);
+
+        model.Panels = await _displayManager.BuildDisplayAsync(visit, _updateModelAccessor.ModelUpdater, "Detail");
 
         if (find && model.CanManage && DateOnly.TryParseExact(model.Day, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
         {

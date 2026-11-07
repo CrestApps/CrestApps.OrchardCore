@@ -57,7 +57,7 @@ public sealed class BookingsController : Controller
             var toDate = BookingSchedule.TryParseDate(to, out var parsedTo) && parsedTo > fromDate ? parsedTo : fromDate.AddDays(1);
             var timeZone = await capacity.GetTimeZoneAsync();
             var types = (await contentDefinitionManager.ListTypeDefinitionsAsync())
-                .Where(type => type.Parts.Any(part => part.PartDefinition.Name == nameof(BookingPart)))
+                .Where(type => type.HasPart(nameof(BookingPart)))
                 .Select(type => type.Name)
                 .ToArray();
             var items = types.Length == 0

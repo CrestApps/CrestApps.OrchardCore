@@ -26,6 +26,15 @@ and `OrchardCore.ContentTypes`.
 How administrators add a phone field to a content type, what each setting does, and what editors see is described
 in the User Manual: [Content Fields](../user-manual/administration/content-fields.md).
 
+## Using the fields from code
+
+The field classes and their settings (`PhoneField`, `AddressField`, `PhoneFieldSettings`, `InitialCountryMode` and
+`AddressFieldSettings`) live in the `CrestApps.OrchardCore.ContentFields.Abstractions` package, in the
+`CrestApps.OrchardCore.ContentFields.Fields` and `CrestApps.OrchardCore.ContentFields.Settings` namespaces. Reference
+that package to read or write the fields from another module or library; the module itself holds the editors, views,
+drivers and the `AddressFieldIndex`. Orchard Core resolves content fields and their settings by class name, so the
+stored content definitions and content items are the same as before the classes moved.
+
 ## Included fields
 
 ### PhoneField

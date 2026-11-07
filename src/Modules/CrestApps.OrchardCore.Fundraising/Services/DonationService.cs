@@ -2,10 +2,12 @@ using System.Globalization;
 using System.Text;
 using System.Text.Encodings.Web;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Fundraising.Indexes;
 using CrestApps.OrchardCore.Fundraising.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.YesSql.Core.Services;
@@ -65,6 +67,12 @@ public sealed record CampaignProgress(decimal Raised, decimal Goal, int Donors, 
 /// </summary>
 public sealed class DonationService
 {
+    /// <summary>
+    /// The kind of the donation receipt email, which the store can write its own template of. The template reads the
+    /// donation as <c>{{ Donation }}</c>.
+    /// </summary>
+    public const string ReceiptEmailKind = "donation-receipt";
+
     private readonly IDonationStore _donations;
     private readonly IContentManager _contentManager;
     private readonly ISiteService _siteService;
@@ -113,7 +121,7 @@ public sealed class DonationService
 
         foreach (var line in order.Lines ?? [])
         {
-            var campaign = await _contentManager.GetAsync(line.ContentItemId, VersionOptions.Latest);
+            var campaign = await _contentManager.GetPurchasedAsync(line);
 
             if (campaign?.TryGet<FundraisingCampaignPart>(out var part) != true)
             {
@@ -173,7 +181,7 @@ public sealed class DonationService
 
         foreach (var donation in donations)
         {
-            var share = paid <= 0m ? 0m : Math.Round(donation.Amount * Math.Min(1m, refund.Amount / paid), 2, MidpointRounding.AwayFromZero);
+            var share = paid <= 0m ? 0m : Money.Round(donation.Amount * Math.Min(1m, refund.Amount / paid), order.Currency);
 
             donation.Refunded = Math.Min(donation.Amount, donation.Refunded + share);
             await _donations.UpdateAsync(donation, cancellationToken);
@@ -193,13 +201,15 @@ public sealed class DonationService
         var currency = campaign.TryGet<ProductPart>(out var product) ? product.Currency : null;
         int? daysLeft = part?.EndsUtc is { } ends ? Math.Max(0, (int)Math.Ceiling((ends - _clock.UtcNow).TotalDays)) : null;
 
-        return new CampaignProgress(Math.Round(raised, 2, MidpointRounding.AwayFromZero), part?.Goal ?? 0m, donors, currency, daysLeft);
+        return new CampaignProgress(Money.Round(raised, currency), part?.Goal ?? 0m, donors, currency, daysLeft);
     }
 
     private Task<bool> SendReceiptAsync(Donation donation, FundraisingSettings settings, CancellationToken cancellationToken)
         => _emailSender.SendAsync(new CommerceEmail
         {
+            Kind = ReceiptEmailKind,
             To = donation.DonorEmail,
+            Models = new Dictionary<string, object>(StringComparer.Ordinal) { ["Donation"] = donation },
             Reference = donation.ItemId,
         }, _ => BuildReceiptAsync(donation, settings), cancellationToken);
 

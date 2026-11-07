@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.BusinessHours.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -36,15 +37,16 @@ public sealed class OmnichannelWithoutContactCenterActivationTests
         // Assert
         Assert.False(contactCenterEnabled);
         Assert.NotEmpty(drivers);
-        Assert.IsType<AlwaysOpenBusinessHoursGate>(gate);
+        Assert.IsType<OpenHoursBusinessHoursGate>(gate);
+        Assert.True(await gate.IsOpenAsync("any-calendar", DateTime.UtcNow, timeZoneId: null, TestContext.Current.CancellationToken));
     }
 
     [Fact]
-    public async Task WithBusinessHours_TheCalendarGateReplacesTheAlwaysOpenDefault()
+    public async Task WithBusinessHours_TheGateReadsTheContactCenterCalendars()
     {
         // Arrange
         // The business hours feature has no dependency on Omnichannel, so its registration may run before or after
-        // the default's; the calendar gate must win either way.
+        // the gate's; either way the gate reads the shared business hours, and the calendars are one of its sources.
         await using var host = await ContactCenterFeatureActivationHost.StartAsync();
         var tenant = await host.CreateTenantAsync(Profile(
             "crm-with-business-hours",
@@ -52,11 +54,12 @@ public sealed class OmnichannelWithoutContactCenterActivationTests
             ContactCenterConstants.Feature.BusinessHours));
 
         // Act
-        var gate = await host.ExecuteInTenantScopeAsync(tenant, services =>
-            Task.FromResult(services.GetRequiredService<IBusinessHoursGate>()));
+        var (gate, sources) = await host.ExecuteInTenantScopeAsync(tenant, services =>
+            Task.FromResult((services.GetRequiredService<IBusinessHoursGate>(), services.GetServices<IHoursScheduleSource>().ToArray())));
 
         // Assert
-        Assert.IsType<BusinessHoursGate>(gate);
+        Assert.IsType<OpenHoursBusinessHoursGate>(gate);
+        Assert.Single(sources, source => source is BusinessHoursCalendarScheduleSource);
     }
 
     [Fact]

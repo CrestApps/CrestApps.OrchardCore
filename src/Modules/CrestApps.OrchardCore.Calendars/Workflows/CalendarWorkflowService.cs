@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Net.Mail;
-using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
 using OrchardCore.Workflows.Models;
 using OrchardCore.Workflows.Services;

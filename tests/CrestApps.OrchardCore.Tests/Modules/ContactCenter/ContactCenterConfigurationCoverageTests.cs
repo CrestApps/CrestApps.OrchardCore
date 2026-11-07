@@ -1,6 +1,7 @@
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Deployments;
+using CrestApps.OrchardCore.Webhooks.Core.Models;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -44,7 +45,6 @@ public sealed class ContactCenterConfigurationCoverageTests
         ["IntervalStatisticsState"] = "Runtime state. The interval statistics roller's last run and the rebuild an administrator of this tenant asked for.",
         ["InteractionEvent"] = "Communication history. The append-only event stream behind an interaction.",
         ["ProviderCommand"] = "Runtime state. Commands issued to a telephony provider for a live call.",
-        ["ProviderWebhookInboxMessage"] = "Runtime state. Provider callbacks awaiting processing.",
         ["QueueItem"] = "Runtime state. Work currently waiting in a queue.",
         ["SecureCaptureSession"] = "Runtime state. One bounded capture of sensitive data a customer entered on a secure page; it is produced by traffic, holds no raw value, and must never travel between environments.",
     };

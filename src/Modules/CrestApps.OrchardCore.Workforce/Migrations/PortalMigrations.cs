@@ -9,6 +9,13 @@ internal sealed class PortalMigrations : DataMigration
     {
         await PortalIndexSchema.CreateAsync(SchemaBuilder);
 
-        return 1;
+        return 2;
+    }
+
+    public async Task<int> UpdateFrom1Async()
+    {
+        await PortalIndexSchema.CreateShiftReminderLogAsync(SchemaBuilder);
+
+        return 2;
     }
 }

@@ -1,8 +1,8 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.Infrastructure;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Handlers;
-using CrestApps.OrchardCore.AI.Core;
 using Elastic.Clients.Elasticsearch.Mapping;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Elasticsearch;
@@ -60,15 +60,15 @@ public sealed class AIDocumentElasticsearchIndexProfileHandler : AIDocumentIndex
 
         var embeddingDimensions = await GetEmbeddingDimensionsAsync(indexProfile);
 
-        metadata.IndexMappings.KeyFieldName = AIConstants.ColumnNames.ChunkId;
-        metadata.IndexMappings.Mapping.Properties[AIConstants.ColumnNames.ChunkId] = new KeywordProperty();
-        metadata.IndexMappings.Mapping.Properties[AIConstants.ColumnNames.DocumentId] = new KeywordProperty();
-        metadata.IndexMappings.Mapping.Properties[AIConstants.ColumnNames.Content] = new TextProperty();
-        metadata.IndexMappings.Mapping.Properties[AIConstants.ColumnNames.FileName] = new KeywordProperty();
-        metadata.IndexMappings.Mapping.Properties[AIConstants.ColumnNames.ReferenceId] = new KeywordProperty();
-        metadata.IndexMappings.Mapping.Properties[AIConstants.ColumnNames.ReferenceType] = new KeywordProperty();
-        metadata.IndexMappings.Mapping.Properties[AIConstants.ColumnNames.ChunkIndex] = new IntegerNumberProperty();
-        metadata.IndexMappings.Mapping.Properties[AIConstants.ColumnNames.Embedding] = new DenseVectorProperty
+        metadata.IndexMappings.KeyFieldName = DocumentIndexConstants.ColumnNames.ChunkId;
+        metadata.IndexMappings.Mapping.Properties[DocumentIndexConstants.ColumnNames.ChunkId] = new KeywordProperty();
+        metadata.IndexMappings.Mapping.Properties[DocumentIndexConstants.ColumnNames.DocumentId] = new KeywordProperty();
+        metadata.IndexMappings.Mapping.Properties[DocumentIndexConstants.ColumnNames.Content] = new TextProperty();
+        metadata.IndexMappings.Mapping.Properties[DocumentIndexConstants.ColumnNames.FileName] = new KeywordProperty();
+        metadata.IndexMappings.Mapping.Properties[DocumentIndexConstants.ColumnNames.ReferenceId] = new KeywordProperty();
+        metadata.IndexMappings.Mapping.Properties[DocumentIndexConstants.ColumnNames.ReferenceType] = new KeywordProperty();
+        metadata.IndexMappings.Mapping.Properties[DocumentIndexConstants.ColumnNames.ChunkIndex] = new IntegerNumberProperty();
+        metadata.IndexMappings.Mapping.Properties[DocumentIndexConstants.ColumnNames.Embedding] = new DenseVectorProperty
         {
             Dims = embeddingDimensions,
             Index = true,
@@ -91,7 +91,7 @@ public sealed class AIDocumentElasticsearchIndexProfileHandler : AIDocumentIndex
         {
             metadata.DefaultSearchFields =
             [
-                AIConstants.ColumnNames.Content,
+                DocumentIndexConstants.ColumnNames.Content,
             ];
 
             indexProfile.Put(metadata);

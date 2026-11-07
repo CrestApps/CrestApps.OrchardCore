@@ -103,10 +103,10 @@ public sealed class GeoProviderTests
     }
 
     private static AzureMapsProvider Azure(RecordedHttp http, string key)
-        => new(Factory(http, "https://atlas.microsoft.com/"), Site(new AzureMapsSettings { Key = key is null ? null : _protection.CreateProtector(AzureMapsSettings.ProtectionPurpose).Protect(key) }), _protection);
+        => new(Factory(http, "https://atlas.microsoft.com/"), Site(new AzureMapsSettings { Key = key is null ? null : _protection.CreateProtector(AzureMapsSettings.ProtectionPurpose).Protect(key) }), _protection, new CrestApps.OrchardCore.Tests.Telephony.Doubles.StubClock(DateTime.UtcNow));
 
     private static GoogleMapsProvider Google(RecordedHttp http, string key)
-        => new(Factory(http, "https://maps.googleapis.com/"), Site(new GoogleMapsSettings { Key = key is null ? null : _protection.CreateProtector(GoogleMapsSettings.ProtectionPurpose).Protect(key) }), _protection);
+        => new(Factory(http, "https://maps.googleapis.com/"), Site(new GoogleMapsSettings { Key = key is null ? null : _protection.CreateProtector(GoogleMapsSettings.ProtectionPurpose).Protect(key) }), _protection, new CrestApps.OrchardCore.Tests.Telephony.Doubles.StubClock(DateTime.UtcNow));
 
     private static OsrmProvider Osrm(RecordedHttp http, string baseUrl)
         => new(Factory(http, null), Site(new OsrmSettings { BaseUrl = baseUrl }));

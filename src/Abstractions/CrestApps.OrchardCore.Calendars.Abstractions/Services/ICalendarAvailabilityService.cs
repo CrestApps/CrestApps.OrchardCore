@@ -25,5 +25,5 @@ public interface ICalendarAvailabilityService
     /// <param name="maxResults">The most windows to return.</param>
     /// <param name="cancellationToken">A token to cancel the query.</param>
     /// <returns>The free windows, ordered by start.</returns>
-    Task<IReadOnlyList<CalendarTimeWindow>> FindFreeWindowsAsync(CalendarBusyQuery query, TimeSpan duration, IEnumerable<CalendarTimeWindow> within = null, int maxResults = 20, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TimeWindow>> FindFreeWindowsAsync(CalendarBusyQuery query, TimeSpan duration, IEnumerable<TimeWindow> within = null, int maxResults = 20, CancellationToken cancellationToken = default);
 }

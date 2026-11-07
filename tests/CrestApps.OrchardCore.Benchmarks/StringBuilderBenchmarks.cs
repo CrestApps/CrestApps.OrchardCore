@@ -204,7 +204,8 @@ public class StringBuilderBenchmarks
 
     // ──────────────────────────────────────────────────────────────
     //  4. CSV export (structured row-by-row append)
-    //     Simulates ChatAnalyticsController.GenerateCsvContent()
+    //     Simulates the session rows of the AI Chat Session Analytics
+    //     report's CSV export (CsvReportExportFormat)
     // ──────────────────────────────────────────────────────────────
 
     [Benchmark(Description = "CsvExport_StringBuilder")]

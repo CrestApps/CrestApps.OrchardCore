@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Skills.Models;
+using YesSql;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Skills.Core.Indexes;
@@ -48,7 +49,7 @@ public static class SkillsIndexSchema
 
         await schemaBuilder.CreateMapIndexTableAsync<SkillAssignmentIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<SkillSubjectKind>("SubjectKind")
+            .Column<int>("SubjectKind")
             .Column<string>("SubjectId", column => column.WithLength(50))
             .Column<string>("SkillId", column => column.WithLength(26))
             .Column<int>("Proficiency")
@@ -65,7 +66,7 @@ public static class SkillsIndexSchema
 
         await schemaBuilder.CreateMapIndexTableAsync<CertificationRecordIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<SkillSubjectKind>("SubjectKind")
+            .Column<int>("SubjectKind")
             .Column<string>("SubjectId", column => column.WithLength(50))
             .Column<string>("SubjectName", column => column.Nullable().WithLength(255))
             .Column<string>("CertificationId", column => column.WithLength(26))
@@ -82,5 +83,38 @@ public static class SkillsIndexSchema
             table.CreateIndex("IDX_CertificationRecordIndex_Expiry", "Status", "ExpiresOn");
             table.CreateIndex("IDX_CertificationRecordIndex_Certification", "CertificationId", "Status");
         }, collection: collection);
+
+        await AddSubjectKindNameColumnsAsync(schemaBuilder);
+    }
+
+    /// <summary>
+    /// Adds the <c>SubjectKindName</c> column, the open string kind of the record that holds a skill or certification,
+    /// to the assignment and certification record indexes, with the indexes the queries seek through.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static async Task AddSubjectKindNameColumnsAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        const string collection = SkillsConstants.CollectionName;
+
+        await schemaBuilder.AlterIndexTableAsync<SkillAssignmentIndex>(table =>
+            table.AddColumn<string>("SubjectKindName", column => column.Nullable().WithLength(50)),
+            collection: collection);
+
+        await schemaBuilder.AlterIndexTableAsync<SkillAssignmentIndex>(table =>
+        {
+            table.CreateIndex("IDX_SkillAssignmentIndex_SubjectName", "SubjectKindName", "SubjectId");
+            table.CreateIndex("IDX_SkillAssignmentIndex_SkillKind", "SkillId", "SubjectKindName", "Proficiency");
+        }, collection: collection);
+
+        await schemaBuilder.AlterIndexTableAsync<CertificationRecordIndex>(table =>
+            table.AddColumn<string>("SubjectKindName", column => column.Nullable().WithLength(50)),
+            collection: collection);
+
+        await schemaBuilder.AlterIndexTableAsync<CertificationRecordIndex>(table =>
+            table.CreateIndex("IDX_CertificationRecordIndex_SubjectName", "SubjectKindName", "SubjectId"),
+            collection: collection);
     }
 }

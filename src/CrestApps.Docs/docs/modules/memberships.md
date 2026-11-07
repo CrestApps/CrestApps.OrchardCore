@@ -25,7 +25,7 @@ This video shows the Membership part and the Memberships list:
 `Membership` (collection `Memberships`, store `IMembershipStore`) holds the following:
 
 - The member (`UserId`, `UserName`), the product and its title.
-- `RoleNames`, and `AddedRoleNames`: the roles it put the member in that they weren't in already.
+- `RoleNames`, and `AddedRoleNames`: the roles a membership made before role grants were recorded put the member in. New memberships leave `AddedRoleNames` empty, because the role grants record it.
 - The orders that bought or extended it.
 - `StartsUtc`, and `EndsUtc` (`null` for one that doesn't end).
 - `MembershipStatus`: Active, Expired or Revoked.
@@ -33,10 +33,12 @@ This video shows the Membership part and the Memberships list:
 `MembershipService` does the work:
 
 - **`GrantAsync`** runs when a paid order has membership lines. It makes a membership, or extends the member's active one for that product, by `MembershipPeriods.Extend`: the part's days for each unit, from the current end when it hasn't passed, else from now. A guest's order makes none.
-- **`EndAsync`** takes the member out of the roles the membership added that no other active membership of theirs gives. It then updates their security stamp, so a sign-in that still carries the roles is checked again.
+- **`EndAsync`** revokes the membership's role grants. The member leaves a role only when the membership put them in it and nothing else, such as another membership or a subscription, still grants it. Their security stamp is then updated, so a sign-in that still carries the role is checked again.
+
+Roles go through `IRoleGrantService` (`CrestApps.OrchardCore.Users.Abstractions`, registered with `services.AddRoleGrants()` from `CrestApps.OrchardCore.Users.Core`), which records each grant on the user by source (`Membership`) and source ID (the membership). `MembershipRoleGrantSource` reports the grants of memberships made before grants were recorded, the first time the service touches a member, so their roles are kept and removed as before.
 - **`ExpireAsync`** ends memberships past their end date. `MembershipsBackgroundTask` calls it hourly.
 
-`MembershipOrderEventHandler` derives from `OrderGrantHandlerBase` (Orders.Core) and does the following on each order event:
+`MembershipOrderEventHandler` derives from `OrderLineGrantHandlerBase<MembershipPart>` (Orders.Core), which reads each line's roles and length from the product version the order bought, and does the following on each order event:
 
 - **Paid:** grants the memberships. When the buyer is the one signed in on the request, it refreshes their sign-in, so the roles apply at once.
 - **Canceled:** ends the memberships the order bought.
@@ -47,6 +49,19 @@ This video shows the Membership part and the Memberships list:
 ## Gating content
 
 Content Access Control restricts a content type's items to the roles chosen on their **RolePickerPart**, when the part's settings restrict content. `RoleBasedContentItemAuthorizationHandler` refuses **View content** on such an item to whoever isn't in one of its roles, even when the permission was granted to everyone, anonymous visitors included. Administrators see every item.
+
+## Recipes and deployment
+
+The `Memberships` recipe step (`MembershipsStep`) creates or updates memberships. The member is named by `UserName`, which must exist on the site; the member's id there is stored with the membership. A membership is matched by its `ItemId`, then by its member, its product (`ContentItemId`) and `StartsUtc`, so running a recipe twice changes nothing. An active membership grants its `RoleNames` through the role grants, as a bought one does. The **Memberships** deployment step (`MembershipsDeploymentStep`, *Commerce*) writes every membership; the member's user id and the roles a membership put its member in (`AddedRoleNames`) belong to the site, so they are left out.
+
+```json
+{
+  "name": "Memberships",
+  "Memberships": [
+    { "ItemId": "4ms00000000000000000000001", "UserName": "ana", "ContentItemId": "4gold0000000000000000000001", "Title": "Gold", "RoleNames": [ "Member" ], "StartsUtc": "2026-01-01T00:00:00Z", "EndsUtc": "2027-01-01T00:00:00Z", "Status": "Active" }
+  ]
+}
+```
 
 ## Pages
 

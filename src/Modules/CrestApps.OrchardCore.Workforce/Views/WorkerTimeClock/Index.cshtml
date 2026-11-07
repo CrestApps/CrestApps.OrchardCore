@@ -1,5 +1,6 @@
 @model WorkerTimeClockViewModel
 @inject OrchardCore.Modules.ILocalClock LocalClock
+@inject OrchardCore.Modules.IClock Clock
 
 <zone Name="Title">
     <breadcrumb name="WorkforceWorkerTimeClock" title="@T["{0}'s Time Clock", Model.Worker.DisplayName]">
@@ -41,7 +42,7 @@
         else
         {
             <p class="text-muted small">@T["At a kiosk, {0} enters badge number {1} and their PIN.", Model.Worker.DisplayName, Model.Worker.EmployeeNumber] @(Model.HasPin ? T["They have a PIN."] : T["They have no PIN yet."])</p>
-            @if (Model.LockedUntilUtc.HasValue && Model.LockedUntilUtc > DateTime.UtcNow)
+            @if (Model.LockedUntilUtc.HasValue && Model.LockedUntilUtc > Clock.UtcNow)
             {
                 <div class="alert alert-warning small">@T["Too many wrong PINs: the kiosk refuses theirs until {0}. Setting a new PIN unlocks it.", (await LocalClock.ConvertToLocalAsync(Model.LockedUntilUtc.Value)).ToString("t")]</div>
             }

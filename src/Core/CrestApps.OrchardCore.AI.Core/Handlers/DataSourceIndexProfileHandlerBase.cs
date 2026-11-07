@@ -1,83 +1,28 @@
 using CrestApps.Core.AI.Clients;
-using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
-using CrestApps.Core.AI.Resilience;
 using CrestApps.Core.Infrastructure;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Indexing.Core.Handlers;
-using OrchardCore.Indexing.Models;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
 /// <summary>
-/// Represents the data source index profile handler base.
+/// The base of an index profile handler for the data source knowledge base index of one provider.
 /// </summary>
-public abstract class DataSourceIndexProfileHandlerBase : IndexProfileHandlerBase
+public abstract class DataSourceIndexProfileHandlerBase : EmbeddingIndexProfileHandlerBase
 {
-    protected string ProviderName { get; }
-
-    private readonly IAIDeploymentManager _deploymentManager;
-    private readonly IAIClientFactory _aiClientFactory;
-    private readonly ILogger _logger;
-
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DataSourceIndexProfileHandlerBase"/> class.
+    /// </summary>
+    /// <param name="providerName">The name of the indexing provider the handler manages.</param>
+    /// <param name="deploymentManager">The deployment manager for resolving AI deployments.</param>
+    /// <param name="aiClientFactory">The factory for creating AI clients.</param>
+    /// <param name="logger">The logger instance.</param>
     protected DataSourceIndexProfileHandlerBase(
         string providerName,
         IAIDeploymentManager deploymentManager,
         IAIClientFactory aiClientFactory,
         ILogger logger)
+        : base(DataSourceConstants.IndexingTaskType, providerName, deploymentManager, aiClientFactory, logger)
     {
-        ProviderName = providerName;
-        _deploymentManager = deploymentManager;
-        _aiClientFactory = aiClientFactory;
-        _logger = logger;
-    }
-
-    protected async Task<int> GetEmbeddingDimensionsAsync(IndexProfile indexProfile)
-    {
-        const int defaultDimensions = 1536;
-        var metadata = IndexProfileEmbeddingMetadataAccessor.GetMetadata(indexProfile);
-
-        try
-        {
-            var embeddingDeploymentName = metadata.GetEmbeddingDeploymentName();
-
-            if (string.IsNullOrWhiteSpace(embeddingDeploymentName))
-            {
-                return defaultDimensions;
-            }
-
-            var deployment = await _deploymentManager.FindByNameAsync(embeddingDeploymentName);
-
-            if (deployment == null)
-            {
-                return defaultDimensions;
-            }
-
-            var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(deployment, builder => builder.UseDefaultResilience().UseUsageLabels(purpose: AIUsagePurposes.Indexing));
-
-            if (embeddingGenerator == null)
-            {
-                return defaultDimensions;
-            }
-
-            var embedding = await embeddingGenerator.GenerateAsync(["Sample"]);
-
-            if (embedding?.Count > 0 && embedding[0].Vector.Length > 0)
-            {
-                return embedding[0].Vector.Length;
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to determine embedding dimensions dynamically for index profile '{IndexProfileId}'. Falling back to default dimensions ({DefaultDimensions}).", indexProfile.Id, defaultDimensions);
-        }
-
-        return defaultDimensions;
-    }
-
-    protected bool CanHandle(IndexProfile indexProfile)
-    {
-        return string.Equals(DataSourceConstants.IndexingTaskType, indexProfile.Type, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(ProviderName, indexProfile.ProviderName, StringComparison.OrdinalIgnoreCase);
     }
 }

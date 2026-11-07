@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Commerce;
+using CrestApps.OrchardCore.Commerce.Core;
 using CrestApps.OrchardCore.Receipts.Core;
 using CrestApps.OrchardCore.Receipts.Core.Services;
 using CrestApps.OrchardCore.Receipts.Drivers;
@@ -22,6 +23,7 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IReceiptService, DefaultReceiptService>();
+        services.AddStoreLocations();
         services.AddScoped<IStoreSetupStep, StoreDetailsSetupStep>();
         services.AddScoped<IReceiptHtmlRenderer, DefaultReceiptHtmlRenderer>();
 

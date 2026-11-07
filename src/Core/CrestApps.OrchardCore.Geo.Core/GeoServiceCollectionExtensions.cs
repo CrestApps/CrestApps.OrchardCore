@@ -27,6 +27,7 @@ public static class GeoServiceCollectionExtensions
         services.TryAddScoped<ServiceTerritoryStore>();
         services.TryAddScoped<ServiceTerritoryManager>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ServiceTerritory>, ServiceTerritoryHandler>());
+        services.TryAddScoped<ServiceTerritoryScopeCache>();
         services.TryAddScoped<ITerritoryResolver, DefaultTerritoryResolver>();
 
         services.TryAddScoped<GeocodeRequestStore>();

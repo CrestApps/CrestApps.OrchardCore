@@ -173,6 +173,7 @@ public sealed class ReportSubscriptionsController : Controller
 
         await _service.ScheduleAsync(subscription);
         subscription.ModifiedUtc = _clock.UtcNow;
+        subscription.ModifiedBy = User.Identity?.Name;
         await _store.UpdateAsync(subscription);
 
         return await AfterSaveAsync(subscription, submit);
@@ -247,6 +248,13 @@ public sealed class ReportSubscriptionsController : Controller
         if (!string.IsNullOrWhiteSpace(model.AttachmentFormat) && _exports.GetDescriptor(model.AttachmentFormat) is null)
         {
             ModelState.AddModelError(nameof(model.AttachmentFormat), S["Choose a file format, or none."]);
+        }
+        else if (!string.IsNullOrWhiteSpace(model.AttachmentFormat) &&
+            descriptor?.ExportPermission is not null &&
+            !await _authorizationService.AuthorizeAsync(User, descriptor.ExportPermission))
+        {
+            // Attaching the file is exporting the report, which this report allows only with its export permission.
+            ModelState.AddModelError(nameof(model.AttachmentFormat), S["You may not export this report, so no file can be attached. Choose no file format."]);
         }
 
         if (!ModelState.IsValid)

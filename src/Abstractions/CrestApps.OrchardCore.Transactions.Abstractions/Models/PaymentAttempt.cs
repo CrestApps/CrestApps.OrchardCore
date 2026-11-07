@@ -1,4 +1,5 @@
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Taxation.Models;
 
@@ -11,7 +12,7 @@ namespace CrestApps.OrchardCore.Transactions.Models;
 /// provider call, and updating it with the provider's returned reference immediately after, is what
 /// guarantees no orphaned charges when a multi-obligation checkout partially fails or a node crashes.
 /// </summary>
-public sealed class PaymentAttempt : CatalogItem
+public sealed class PaymentAttempt : CatalogItem, ITimestampedModel
 {
     /// <summary>
     /// The YesSql document identifier.

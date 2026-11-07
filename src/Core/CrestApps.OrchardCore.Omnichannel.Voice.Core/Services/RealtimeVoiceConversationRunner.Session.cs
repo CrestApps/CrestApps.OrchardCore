@@ -199,7 +199,7 @@ public sealed partial class RealtimeVoiceConversationRunner
         try
         {
             conversation = await StartConversationAsync(context, conversationSoFar: null, cancellationToken);
-            sessionOpenedTicks = DateTime.UtcNow.Ticks;
+            sessionOpenedTicks = UtcNowTicks;
 
             if (conversation is not null)
             {
@@ -230,7 +230,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                     transport?.TurnDetectionType.SanitizeLogValue() ?? "(default)",
                     transport?.TurnDetectionEagerness.SanitizeLogValue() ?? "(default)",
                     (sessionOpenedTicks - answeredTicks) / TimeSpan.TicksPerMillisecond,
-                    (DateTime.UtcNow.Ticks - answeredTicks) / TimeSpan.TicksPerMillisecond);
+                    (UtcNowTicks - answeredTicks) / TimeSpan.TicksPerMillisecond);
             }
 
             return (media, conversation);

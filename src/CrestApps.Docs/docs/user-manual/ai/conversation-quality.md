@@ -132,13 +132,15 @@ A cohort starts with the conversations that close after it is saved, and scores 
 
 ### The QA dashboard
 
-**Artificial Intelligence > QA** shows, for one cohort or for every scored conversation, over the last 1, 7, 30 or 90 days:
+The QA dashboard is the **AI QA Dashboard** report, under **Reports > Artificial Intelligence Reports**, so it needs the **Reports** feature. Open it from **Artificial Intelligence > QA** with **QA dashboard**, or with **Dashboard** on a cohort to see only that cohort's last 7 days. It shows, for one cohort or for every scored conversation, over the date range you choose (the last 7 days at first; **Last 24 Hours**, **Last 30 Days** and **Last 90 Days** are one click away in the **Date range**, beside the other choices):
 
 - how many conversations were scored, their average score, and the share that passed and that were resolved;
 - the scores day by day;
 - the issues found, by kind, and the customers' sentiment at the end;
 - the most frequent opening questions, with the share of them resolved;
-- the lowest-scored conversations, each with a link to open it.
+- the lowest-scored conversations, with the AI profile of each and its session, which opens the conversation.
+
+Like every report, it exports as CSV, and as Excel when **Reports (OpenXml)** is on. **Artificial Intelligence > QA** now opens the cohorts list.
 
 ## Reports
 

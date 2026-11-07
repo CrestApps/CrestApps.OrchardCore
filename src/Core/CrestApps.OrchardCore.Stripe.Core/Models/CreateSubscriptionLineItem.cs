@@ -4,7 +4,7 @@ namespace CrestApps.OrchardCore.Stripe.Core.Models;
 /// <summary>
 /// Represents one Stripe price and quantity pair to include in a subscription.
 /// </summary>
-public class CreateSubscriptionLineItem
+public sealed class CreateSubscriptionLineItem
 {
     /// <summary>
     /// Gets or sets the number of price units to include in the subscription item.
@@ -35,7 +35,7 @@ public class CreateSubscriptionLineItem
 /// <summary>
 /// A recurring price defined at subscription time rather than looked up from a pre-created Stripe price.
 /// </summary>
-public class SubscriptionInlinePrice
+public sealed class SubscriptionInlinePrice
 {
     /// <summary>
     /// Gets or sets the recurring amount for one unit, in major currency units.

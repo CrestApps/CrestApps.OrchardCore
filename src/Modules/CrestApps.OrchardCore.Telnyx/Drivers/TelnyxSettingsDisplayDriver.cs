@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
@@ -97,9 +98,9 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
             model.TtsVoice = settings.TtsVoice;
             model.TtsLanguage = settings.TtsLanguage;
             model.ApiBaseUrl = settings.ApiBaseUrl;
-            model.HasApiKey = !string.IsNullOrEmpty(settings.ApiKey);
-            model.HasWebhookPublicKey = !string.IsNullOrEmpty(settings.WebhookPublicKey);
-            model.HasTurnCredential = !string.IsNullOrEmpty(settings.TurnCredential);
+            model.HasApiKey = ProtectedSettingExtensions.HasSecret(settings.ApiKey);
+            model.HasWebhookPublicKey = ProtectedSettingExtensions.HasSecret(settings.WebhookPublicKey);
+            model.HasTurnCredential = ProtectedSettingExtensions.HasSecret(settings.TurnCredential);
             model.WebhookPath = "/" + TelnyxConstants.WebhookPath;
         }).Location("Content:10#Telnyx;1")
         .RenderWhen(CanManageAsync)
@@ -186,9 +187,9 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
             settings.ApiBaseUrl = Trim(model.ApiBaseUrl);
             settings.CredentialLifetimeMinutes = NormalizeLifetime(model.CredentialLifetimeMinutes);
 
-            hasChanges |= ProtectInto(model.ApiKey, TelnyxConstants.ProtectorName, value => settings.ApiKey = value, settings.ApiKey);
-            hasChanges |= ProtectInto(model.WebhookPublicKey, TelnyxConstants.WebhookProtectorName, value => settings.WebhookPublicKey = value, settings.WebhookPublicKey);
-            hasChanges |= ProtectInto(model.TurnCredential, TelnyxConstants.ProtectorName, value => settings.TurnCredential = value, settings.TurnCredential);
+            hasChanges |= ApplySecret(TelnyxConstants.ProtectorName, settings.ApiKey, model.ApiKey, value => settings.ApiKey = value);
+            hasChanges |= ApplySecret(TelnyxConstants.WebhookProtectorName, settings.WebhookPublicKey, model.WebhookPublicKey, value => settings.WebhookPublicKey = value);
+            hasChanges |= ApplySecret(TelnyxConstants.ProtectorName, settings.TurnCredential, model.TurnCredential, value => settings.TurnCredential = value);
 
             ValidateActiveSettings(settings, model, context);
         }
@@ -230,17 +231,12 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
         }
     }
 
-    private bool ProtectInto(string newValue, string protectorName, Action<string> setter, string currentValue)
+    private bool ApplySecret(string purpose, string existing, string posted, Action<string> setter)
     {
-        if (string.IsNullOrWhiteSpace(newValue))
-        {
-            return false;
-        }
+        var value = _dataProtectionProvider.ApplySecret(purpose, existing, posted);
+        setter(value);
 
-        var protectedValue = _dataProtectionProvider.CreateProtector(protectorName).Protect(newValue.Trim());
-        setter(protectedValue);
-
-        return protectedValue != currentValue;
+        return value != existing;
     }
 
     private static string Trim(string value)

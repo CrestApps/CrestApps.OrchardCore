@@ -263,6 +263,20 @@ A step-by-step build guide for AI agents and developers, with the naming, creden
 
 When a tenant becomes a parent, a parent-wide grant gives the parent's **Administrator** role the child role **Administrator** in every child.
 
+## Access grants in recipes and deployment plans
+
+On a parent, the `TenantHierarchyAccessGrants` recipe step (`AccessGrantsStep`) adds or updates access grants through `AccessGrantManager`, as the **Access** screen does: a user is found by user name or email, a role must exist, and a grant for the same user or role and child is updated instead of added again. A grant without a child covers every child; a child is named by its registry `ChildEntryId`, or by its `ChildSlug` when that entry id isn't known on the site. The **Child tenant access** deployment step (`AccessGrantsDeploymentStep`, *Tenants*) writes every grant in that shape, with the user or role by name. Grants carry no secret; user ids, codes and sessions stay on the site.
+
+```json
+{
+  "name": "TenantHierarchyAccessGrants",
+  "Grants": [
+    { "PrincipalType": "Role", "Principal": "Administrator", "ChildRoles": [ "Administrator" ] },
+    { "PrincipalType": "User", "Principal": "ana", "ChildEntryId": "4entry0000000000000000001", "ChildSlug": "north", "ChildRoles": [ "Editor" ] }
+  ]
+}
+```
+
 ## Deployment
 
 - Give every tenant its own host name, never a path prefix: `{firm}.platform.com` for parents and `{business}.{firm}.platform.com` for children. This needs wildcard DNS, a certificate for `*.platform.com` and one for `*.{firm}.platform.com` per parent.

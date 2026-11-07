@@ -6,14 +6,13 @@ using OrchardCore.BackgroundTasks;
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.BackgroundTasks;
 
 /// <summary>
-/// Periodically fans out queued broadcasts. Each recipient becomes an individual 1:1 thread; progress is
-/// persisted after every recipient so a restart resumes without re-sending. The sweep is a no-op when there
-/// are no queued or in-progress broadcasts.
+/// Periodically hands queued broadcasts to the outreach engine, which sends each recipient an individual 1:1 thread and
+/// keeps its progress, so a restart resumes without re-sending. The sweep is a no-op when no broadcast is waiting.
 /// </summary>
 [BackgroundTask(
     Title = "Messaging Broadcast Fan-out",
     Schedule = "* * * * *",
-    Description = "Sends queued broadcasts to their recipients as individual 1:1 threads, resuming safely after a restart.",
+    Description = "Starts sending queued broadcasts through the outreach engine, each recipient in an individual 1:1 thread.",
     LockTimeout = 5_000,
     LockExpiration = 300_000)]
 public sealed class MessagingBroadcastBackgroundTask : IBackgroundTask

@@ -164,11 +164,8 @@ public sealed class CampaignsAdminController : Controller
         // A campaign that's sending or sent only cancels.
         if (submit == "cancel")
         {
-            if (campaign.Status is CampaignStatus.Scheduled or CampaignStatus.Sending)
+            if (await _campaignService.CancelAsync(campaign, HttpContext.RequestAborted))
             {
-                campaign.Status = CampaignStatus.Canceled;
-                campaign.ModifiedUtc = _clock.UtcNow;
-                await _campaigns.UpdateAsync(campaign);
                 await _notifier.InformationAsync(H["The campaign was canceled. {0} emails had gone out.", campaign.Sent]);
             }
 
@@ -235,7 +232,7 @@ public sealed class CampaignsAdminController : Controller
         }
         else if (submit == "send")
         {
-            if (string.IsNullOrWhiteSpace((await _siteService.GetSiteSettingsAsync()).BaseUrl) || !_campaignService.CanSend)
+            if (string.IsNullOrWhiteSpace((await _siteService.GetSiteSettingsAsync()).BaseUrl) || !await _campaignService.CanSendAsync())
             {
                 await _notifier.ErrorAsync(H["Campaigns need the site's email set up and its base URL, for the unsubscribe link. It was saved as a draft."]);
             }
@@ -301,7 +298,7 @@ public sealed class CampaignsAdminController : Controller
     {
         model.ItemId = campaign?.ItemId;
         model.Campaign = campaign;
-        model.CanEmail = _campaignService.CanSend;
+        model.CanEmail = await _campaignService.CanSendAsync();
         model.HasBaseUrl = !string.IsNullOrWhiteSpace((await _siteService.GetSiteSettingsAsync()).BaseUrl);
         model.Segments = [.. (await _segments.ListAllAsync(HttpContext.RequestAborted)).Select(segment => new SelectListItem(segment.Name, segment.ItemId, segment.ItemId == model.SegmentId))];
 

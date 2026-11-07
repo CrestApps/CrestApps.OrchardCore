@@ -60,6 +60,10 @@
 						from: yesterday,
 						to: endOfDay(yesterday)
 					};
+				case "last24Hours": return {
+					from: /* @__PURE__ */ new Date(now.getTime() - 864e5),
+					to: endOfDay(now)
+				};
 				case "thisWeek":
 					var weekStartDate = startOfWeek(now, weekStart);
 					return {
@@ -309,6 +313,13 @@
 					return;
 				}
 				showPanel(null);
+				if (key === "all") {
+					clearInput(fromInput, fromPicker);
+					clearInput(toInput, toPicker);
+					label.textContent = labelForRadio(radio);
+					closeMenu();
+					return;
+				}
 				var range = computePreset(key, weekStart);
 				applyRange(range);
 				var presetName = labelForRadio(radio);

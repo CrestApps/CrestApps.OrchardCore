@@ -51,7 +51,7 @@ public sealed class EntryPointsStartup : StartupBase
 /// Registers the deployment steps that export the entry points owned by the entry points feature.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.EntryPoints)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class EntryPointsDeploymentStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -65,7 +65,7 @@ public sealed class EntryPointsDeploymentStartup : StartupBase
 /// Registers the recipe steps that import the entry points owned by the entry points feature.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.EntryPoints)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class EntryPointsRecipesStartup : StartupBase
 {
     /// <inheritdoc/>

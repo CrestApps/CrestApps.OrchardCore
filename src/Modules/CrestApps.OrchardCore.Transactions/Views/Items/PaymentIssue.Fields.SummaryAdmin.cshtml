@@ -1,0 +1,23 @@
+@using CrestApps.OrchardCore.Currencies
+@using CrestApps.OrchardCore.Payments
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<PaymentIssue>
+
+@{
+    var issue = Model.Value;
+    var title = issue.Kind switch
+    {
+        PaymentIssueKinds.RefundFailed => T["A refund failed"],
+        PaymentIssueKinds.GatewaySubscriptionChangeFailed => T["The payment provider did not change a subscription"],
+        PaymentIssueKinds.DiscountRedemptionFailed => T["A promotion code's use was not recorded"],
+        _ => T["A payment operation failed"],
+    };
+}
+
+@* What failed is the title of the row. An issue has no page of its own, so it is plain text. *@
+<span>@title</span>
+@if (issue.Amount.HasValue)
+{
+    <span class="text-muted">@issue.Currency @CurrencyScale.Format(issue.Amount.Value, issue.Currency)</span>
+}

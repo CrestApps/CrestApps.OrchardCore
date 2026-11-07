@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using CrestApps.OrchardCore.AI.Workflows.ViewModels;
+using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -43,7 +44,7 @@ public sealed class SendSignedWebhookTaskDisplayDriver : ActivityDisplayDriver<S
         model.EventName = activity.EventName;
         model.Body = activity.Body;
         model.MaxAttempts = activity.MaxAttempts;
-        model.HasSecret = !string.IsNullOrEmpty(activity.ProtectedSecret);
+        model.HasSecret = ProtectedSettingExtensions.HasSecret(activity.ProtectedSecret);
     }
 
     /// <inheritdoc/>
@@ -81,10 +82,7 @@ public sealed class SendSignedWebhookTaskDisplayDriver : ActivityDisplayDriver<S
         activity.Body = model.Body;
         activity.MaxAttempts = model.MaxAttempts;
 
-        if (!string.IsNullOrWhiteSpace(model.Secret))
-        {
-            activity.ProtectedSecret = _dataProtectionProvider.CreateProtector(SendSignedWebhookTask.ProtectorPurpose).Protect(model.Secret.Trim());
-        }
+        activity.ProtectedSecret = _dataProtectionProvider.ApplySecret(SendSignedWebhookTask.ProtectorPurpose, activity.ProtectedSecret, model.Secret);
 
         return Edit(activity, context);
     }

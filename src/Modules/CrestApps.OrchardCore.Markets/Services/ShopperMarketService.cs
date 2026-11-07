@@ -1,5 +1,6 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Checkout.Models;
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Markets.Models;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Products.Core.Services;

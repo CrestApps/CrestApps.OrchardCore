@@ -5,6 +5,8 @@ using CrestApps.OrchardCore.Telnyx;
 using CrestApps.OrchardCore.Telnyx.Endpoints;
 using CrestApps.OrchardCore.Telnyx.Models;
 using CrestApps.OrchardCore.Telnyx.Services;
+using CrestApps.OrchardCore.Webhooks;
+using CrestApps.OrchardCore.Webhooks.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;

@@ -1,5 +1,5 @@
-using System.Collections.Frozen;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.StateMachines;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 
@@ -14,38 +14,39 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 /// </summary>
 public static class QueueItemLifecycle
 {
-    private static readonly FrozenDictionary<QueueItemStatus, FrozenSet<QueueItemStatus>> _transitions =
-        new Dictionary<QueueItemStatus, FrozenSet<QueueItemStatus>>
+    private static readonly TransitionTable<QueueItemStatus> _transitions = new(
+        new Dictionary<QueueItemStatus, QueueItemStatus[]>
         {
-            [QueueItemStatus.Waiting] = FrozenSet.ToFrozenSet(
+            [QueueItemStatus.Waiting] =
             [
                 QueueItemStatus.Reserved,
                 QueueItemStatus.Assigned,
                 QueueItemStatus.Completed,
                 QueueItemStatus.Removed,
-            ]),
+            ],
 
             // A reservation that is rejected, expires, or is cancelled returns the item to the queue for the
             // next agent, which is why Reserved reaches Waiting.
-            [QueueItemStatus.Reserved] = FrozenSet.ToFrozenSet(
+            [QueueItemStatus.Reserved] =
             [
                 QueueItemStatus.Waiting,
                 QueueItemStatus.Assigned,
                 QueueItemStatus.Completed,
                 QueueItemStatus.Removed,
-            ]),
+            ],
 
             // An agent whose client disappears mid-assignment releases the item back to the queue rather than
             // stranding it, so Assigned reaches Waiting too.
-            [QueueItemStatus.Assigned] = FrozenSet.ToFrozenSet(
+            [QueueItemStatus.Assigned] =
             [
                 QueueItemStatus.Waiting,
                 QueueItemStatus.Completed,
                 QueueItemStatus.Removed,
-            ]),
-            [QueueItemStatus.Completed] = FrozenSet<QueueItemStatus>.Empty,
-            [QueueItemStatus.Removed] = FrozenSet<QueueItemStatus>.Empty,
-        }.ToFrozenDictionary();
+            ],
+            [QueueItemStatus.Completed] = [],
+            [QueueItemStatus.Removed] = [],
+        },
+        allowStaying: true);
 
     /// <summary>
     /// Determines whether a queue item in one status may move to another.
@@ -54,14 +55,7 @@ public static class QueueItemLifecycle
     /// <param name="to">The status the item would move to.</param>
     /// <returns><see langword="true"/> when the transition is admitted; otherwise <see langword="false"/>.</returns>
     public static bool CanTransition(QueueItemStatus from, QueueItemStatus to)
-    {
-        if (from == to)
-        {
-            return true;
-        }
-
-        return _transitions.TryGetValue(from, out var allowed) && allowed.Contains(to);
-    }
+        => _transitions.CanMove(from, to);
 
     /// <summary>
     /// Determines whether a queue-item status is settled, meaning the item has left the queue for good.

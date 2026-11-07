@@ -25,6 +25,7 @@
     <PackageReference Include="OrchardCore.ContentManagement" />
     <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />
     <PackageReference Include="OrchardCore.Contents.Core" />
+    <PackageReference Include="OrchardCore.Deployment.Abstractions" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.Indexing.Abstractions" />
     <PackageReference Include="OrchardCore.Indexing.Core" />
@@ -39,6 +40,7 @@
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Seo.Abstractions/CrestApps.OrchardCore.Seo.Abstractions.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.NLWeb.Core/CrestApps.OrchardCore.NLWeb.Core.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.Recipes.Core/CrestApps.OrchardCore.Recipes.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

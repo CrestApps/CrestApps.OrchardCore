@@ -4,6 +4,7 @@ using System.Text.Json;
 using CrestApps.OrchardCore.Geo.Models;
 using CrestApps.OrchardCore.Geo.Services;
 using Microsoft.AspNetCore.DataProtection;
+using OrchardCore.Modules;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Geo.AzureMaps;
@@ -29,6 +30,7 @@ public sealed class AzureMapsProvider : IGeocodingProvider, ITravelTimeProvider,
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ISiteService _siteService;
     private readonly IDataProtector _protector;
+    private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AzureMapsProvider"/> class.
@@ -36,8 +38,10 @@ public sealed class AzureMapsProvider : IGeocodingProvider, ITravelTimeProvider,
     /// <param name="httpClientFactory">The HTTP client factory.</param>
     /// <param name="siteService">The site service.</param>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
-    public AzureMapsProvider(IHttpClientFactory httpClientFactory, ISiteService siteService, IDataProtectionProvider dataProtectionProvider)
+    /// <param name="clock">The clock that tells a departure in the future from one that is now.</param>
+    public AzureMapsProvider(IHttpClientFactory httpClientFactory, ISiteService siteService, IDataProtectionProvider dataProtectionProvider, IClock clock)
     {
+        _clock = clock;
         _httpClientFactory = httpClientFactory;
         _siteService = siteService;
         _protector = dataProtectionProvider.CreateProtector(AzureMapsSettings.ProtectionPurpose);
@@ -88,7 +92,7 @@ public sealed class AzureMapsProvider : IGeocodingProvider, ITravelTimeProvider,
 
         var rows = new List<IReadOnlyList<TravelLeg>>();
         var perRequest = Math.Max(1, MaxCells / Math.Max(1, destinations.Count));
-        var departAt = departureUtc > DateTime.UtcNow ? departureUtc.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture) : "now";
+        var departAt = departureUtc > _clock.UtcNow ? departureUtc.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture) : "now";
 
         foreach (var chunk in origins.Chunk(perRequest))
         {

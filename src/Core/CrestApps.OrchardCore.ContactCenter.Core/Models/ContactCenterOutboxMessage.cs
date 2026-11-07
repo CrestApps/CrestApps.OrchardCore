@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.WorkQueues;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 
@@ -8,7 +9,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 /// The interaction event itself remains the immutable audit record; this message carries the mutable
 /// delivery state so application restarts and transient failures cannot silently drop a domain event.
 /// </summary>
-public sealed class ContactCenterOutboxMessage : CatalogItem, IModifiedUtcAwareModel
+/// <remarks>
+/// It is an item of the shared leased work queue. Its stored <see cref="Status"/> keeps its own enum, whose values match
+/// <see cref="LeasedWorkItemStatus"/>, so existing messages read unchanged.
+/// </remarks>
+public sealed class ContactCenterOutboxMessage : CatalogItem, IModifiedUtcAwareModel, ILeasedWorkItem
 {
     /// <summary>
     /// Gets or sets the identifier of the <see cref="InteractionEvent"/> this message retries.
@@ -24,6 +29,13 @@ public sealed class ContactCenterOutboxMessage : CatalogItem, IModifiedUtcAwareM
     /// Gets or sets the dispatch state of the message.
     /// </summary>
     public OutboxMessageStatus Status { get; set; }
+
+    /// <inheritdoc/>
+    LeasedWorkItemStatus ILeasedWorkItem.Status
+    {
+        get => (LeasedWorkItemStatus)Status;
+        set => Status = (OutboxMessageStatus)value;
+    }
 
     /// <summary>
     /// Gets or sets the opaque token identifying the worker that owns the current claim.

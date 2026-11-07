@@ -1,6 +1,6 @@
 using System.Globalization;
 using CrestApps.Core;
-using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Localization;
@@ -55,6 +55,11 @@ internal sealed class DefaultAttendanceService : IAttendanceService
         ArgumentNullException.ThrowIfNull(query);
 
         return _exceptionStore.PageAsync(query, skip, take, cancellationToken);
+    }
+
+    public async Task<AttendanceException> FindByIdAsync(string id, CancellationToken cancellationToken = default)
+    {
+        return string.IsNullOrEmpty(id) ? null : await _exceptionStore.FindByIdAsync(id, cancellationToken);
     }
 
     public Task<PlanningResult<AttendanceException>> ExcuseAsync(string id, string note, string actor, CancellationToken cancellationToken = default)

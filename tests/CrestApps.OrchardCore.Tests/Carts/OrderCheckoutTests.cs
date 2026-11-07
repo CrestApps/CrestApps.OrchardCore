@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Taxation.Models;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -377,7 +378,7 @@ public sealed class OrderCheckoutTests
             .Callback<OrderCanceledContext, CancellationToken>((context, _) => _canceled.Add(context))
             .Returns(Task.CompletedTask);
 
-        return new(_orders, [handler.Object], Clock(), NullLogger<OrderService>.Instance);
+        return new(_orders, [handler.Object], new InMemoryNumberSequence(), Clock(), NullLogger<OrderService>.Instance);
     }
 
     private OrderCheckoutHandler CreateHandler()

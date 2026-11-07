@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Security.Claims;
 using System.Text.Json;
-using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Scheduling.Core.Services;
 using CrestApps.OrchardCore.Scheduling.Models;
 using CrestApps.OrchardCore.Scheduling.Services;

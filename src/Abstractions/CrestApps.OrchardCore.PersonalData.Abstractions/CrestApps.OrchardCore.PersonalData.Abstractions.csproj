@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.PersonalData</RootNamespace>
+    <Title>CrestApps OrchardCore Personal Data Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Public contracts for privacy requests: the person a request is about (a user ID, an email and/or a phone number),
+      the personal-data contributor every module that stores personal data implements to export and anonymize it, and
+      the personal-data service that runs every contributor.
+    </Description>
+    <PackageTags>$(PackageTags) PersonalData Privacy GDPR Abstractions</PackageTags>
+  </PropertyGroup>
+
+</Project>

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
+using CrestApps.OrchardCore.Commerce.Core;
 using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Products.Core.Listing;
@@ -21,6 +22,8 @@ using CrestApps.OrchardCore.Subscriptions.Tasks;
 using CrestApps.OrchardCore.Subscriptions.Workflows.Drivers;
 using CrestApps.OrchardCore.Transactions.Core;
 using CrestApps.OrchardCore.Transactions.Services;
+using CrestApps.OrchardCore.Users;
+using CrestApps.OrchardCore.Users.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -123,7 +126,7 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Registers subscription settings that depend on the Orchard Core roles feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Roles")]
+[RequireFeatures(OrchardCoreFeatureIds.Roles)]
 public sealed class RolesStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -135,6 +138,8 @@ public sealed class RolesStartup : StartupBase
         // long as a subscription is current is what makes member-only access enforceable without any of
         // those gates knowing subscriptions exist.
         services.AddScoped<ISubscriptionEntitlementApplier, RoleSubscriptionEntitlementApplier>();
+        services.AddRoleGrants();
+        services.AddScoped<IRoleGrantSource, SubscriptionRoleGrantSource>();
 
         services.AddDataMigration<SubscriptionEntitlementPartMigrations>()
             .AddContentPart<SubscriptionEntitlementPart>()
@@ -194,7 +199,7 @@ public sealed class ReportsStartup : StartupBase
 /// that differ from site to site. Raising a workflow event lets the site owner build the one they want
 /// instead of picking from settings that could never cover every case.
 /// </remarks>
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class SubscriptionWorkflowsStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -260,7 +265,7 @@ public sealed class TenantProvisioningStartup : StartupBase
 /// Registers feature profile selection for the sites a subscription provisions.
 /// </summary>
 [Feature(SubscriptionConstants.Features.Tenants)]
-[RequireFeatures("OrchardCore.Tenants.FeatureProfiles")]
+[RequireFeatures(OrchardCoreFeatureIds.TenantsFeatureProfiles)]
 public sealed class FeatureProfileTenantProvisioningStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -294,6 +299,8 @@ public sealed class InstallmentPlansStartup : StartupBase
 
         services.AddScoped<IInstallmentPlanStore, InstallmentPlanStore>();
         services.AddScoped<IInstallmentPlanService, DefaultInstallmentPlanService>();
+        services.AddCommerceEmailSender()
+            .AddCommerceEmailKind(InstallmentPlanEmailKinds.Notice, LocalizationSource.Create<InstallmentPlansStartup>("Installment plan notice"), LocalizationSource.Create<InstallmentPlansStartup>("{{ InstallmentPlan }}: the plan."));
         services.AddScoped<ITransactionPaymentHandler, InstallmentPlanTransactionPaymentHandler>();
         services.AddScoped<ICommercePersonalDataContributor, InstallmentPlanPersonalDataContributor>();
 

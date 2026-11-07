@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Classifieds.Indexes;
 using CrestApps.OrchardCore.Classifieds.Models;
+using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
@@ -338,6 +339,7 @@ public sealed class ClassifiedService
 
         await _emailSender.SendAsync(new CommerceEmail
         {
+            Kind = ClassifiedsConstants.ListingEmailKind,
             To = user.Email,
             Reference = item.ContentItemId,
         }, async _ =>

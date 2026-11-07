@@ -20,6 +20,19 @@ public sealed class BookingScheduleTests
     }
 
     [Fact]
+    public void GetStartUtc_WhenTheSlotIsSkippedBySpringForward_MovesForwardByTheGapInsteadOfThrowing()
+    {
+        // Arrange: 02:30 on Sunday 14 March 2027 doesn't exist in New York; clocks jump from 02:00 to 03:00.
+        var zone = TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
+
+        // Act
+        var start = BookingSchedule.GetStartUtc("2027-03-14T02:30", zone);
+
+        // Assert: 03:30 EDT.
+        Assert.Equal(new DateTime(2027, 3, 14, 7, 30, 0, DateTimeKind.Utc), start);
+    }
+
+    [Fact]
     public void TimeSlots_RunFromOpeningToClosing_EverySlotsLength()
     {
         var part = new BookingPart

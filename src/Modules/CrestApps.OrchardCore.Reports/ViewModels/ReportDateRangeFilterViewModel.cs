@@ -19,4 +19,10 @@ public class ReportDateRangeFilterViewModel
     /// Gets or sets the selected date-range preset key used to restore the picker option on reload.
     /// </summary>
     public string Range { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the selector offers <em>All Time</em>, for a report that accepts
+    /// open-ended ranges.
+    /// </summary>
+    public bool AllowAllTime { get; set; }
 }

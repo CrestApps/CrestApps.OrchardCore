@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -43,7 +44,7 @@ internal sealed class OmnichannelContactPartDisplayDriver : ContentPartDisplayDr
             model.UseDoNotCall = settings.UseDoNotCall;
             model.UseDoNotSms = settings.UseDoNotSms;
             model.UseDoNotEmail = settings.UseDoNotEmail;
-            model.TimeZoneId = NormalizeTimeZoneId(part.TimeZoneId);
+            model.TimeZoneId = TimeZoneIds.Normalize(part.TimeZoneId);
             model.AvailableTimeZones = await GetTimeZoneOptionsAsync(model.TimeZoneId);
             model.DoNotCall = part.DoNotCall;
             model.DoNotCallUtc = part.DoNotCallUtc;
@@ -62,7 +63,7 @@ internal sealed class OmnichannelContactPartDisplayDriver : ContentPartDisplayDr
 
         var settings = context.TypePartDefinition.GetSettings<OmnichannelContactPartSettings>();
 
-        part.TimeZoneId = NormalizeTimeZoneId(model.TimeZoneId);
+        part.TimeZoneId = TimeZoneIds.Normalize(model.TimeZoneId);
 
         // When auto detect is enabled, the time zone is derived from the contact's phone number on
         // save by OmnichannelContactTimeZoneHandler, so it is never required here. It is only enforced
@@ -90,16 +91,6 @@ internal sealed class OmnichannelContactPartDisplayDriver : ContentPartDisplayDr
         }
 
         return Edit(part, context);
-    }
-
-    private static string NormalizeTimeZoneId(string timeZoneId)
-    {
-        if (string.IsNullOrWhiteSpace(timeZoneId))
-        {
-            return null;
-        }
-
-        return NodaTime.DateTimeZoneProviders.Tzdb.GetZoneOrNull(timeZoneId.Trim())?.Id;
     }
 
     private async Task<IEnumerable<SelectListItem>> GetTimeZoneOptionsAsync(string selectedTimeZoneId)

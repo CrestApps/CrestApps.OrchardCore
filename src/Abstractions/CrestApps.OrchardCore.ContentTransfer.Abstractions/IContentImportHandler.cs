@@ -13,7 +13,7 @@ public interface IContentImportHandler
     /// </summary>
     /// <param name="context">The context containing the content type definition and content item.</param>
     /// <returns>A read-only collection of import column definitions.</returns>
-    IReadOnlyCollection<ImportColumn> GetColumns(ImportContentContext context);
+    Task<IReadOnlyCollection<ImportColumn>> GetColumnsAsync(ImportContentContext context);
 
     /// <summary>
     /// Imports data from a spreadsheet row into the content item.

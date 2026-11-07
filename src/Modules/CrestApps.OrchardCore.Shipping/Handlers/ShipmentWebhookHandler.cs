@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Commerce.Webhooks;
+using CrestApps.OrchardCore.Webhooks;
 using CrestApps.OrchardCore.Shipping.Api;
 using CrestApps.OrchardCore.Shipping.Services;
 
@@ -9,9 +10,9 @@ namespace CrestApps.OrchardCore.Shipping.Handlers;
 /// </summary>
 internal sealed class ShipmentWebhookHandler : ShipmentEventHandlerBase
 {
-    private readonly ICommerceWebhookPublisher _publisher;
+    private readonly IWebhookPublisher _publisher;
 
-    public ShipmentWebhookHandler(ICommerceWebhookPublisher publisher)
+    public ShipmentWebhookHandler(IWebhookPublisher publisher)
     {
         _publisher = publisher;
     }

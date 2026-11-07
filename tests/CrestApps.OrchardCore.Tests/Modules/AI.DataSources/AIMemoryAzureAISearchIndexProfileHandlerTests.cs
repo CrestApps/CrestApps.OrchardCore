@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Memory;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.AzureAI;
 using OrchardCore.AzureAI.Models;
@@ -19,7 +20,8 @@ public sealed class AIMemoryAzureAISearchIndexProfileHandlerTests
     {
         var handler = new CrestApps.OrchardCore.AI.Memory.AzureAI.Handlers.AIMemoryAzureAISearchIndexProfileHandler(
             Mock.Of<IAIDeploymentManager>(),
-            Mock.Of<IAIClientFactory>());
+            Mock.Of<IAIClientFactory>(),
+            NullLogger<CrestApps.OrchardCore.AI.Memory.AzureAI.Handlers.AIMemoryAzureAISearchIndexProfileHandler>.Instance);
         var indexProfile = new IndexProfile
         {
             ProviderName = AzureAISearchConstants.ProviderName,

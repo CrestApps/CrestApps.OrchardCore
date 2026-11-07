@@ -1,11 +1,12 @@
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.Customers.Models;
 
 /// <summary>
 /// The loyalty points a customer has earned and not spent.
 /// </summary>
-public sealed class LoyaltyAccount : CatalogItem
+public sealed class LoyaltyAccount : CatalogItem, ITimestampedModel
 {
     public long Id { get; set; }
 

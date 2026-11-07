@@ -638,7 +638,7 @@ public sealed class SmsPortalAdminControllerTests
                 Mock.Of<IBusinessHoursGate>(),
                 Mock.Of<IMessagingQueuePolicyReader>(),
                 Mock.Of<IMessagingContactTimeZoneResolver>(),
-                clock.Object),
+                clock.Object, new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<MessagingQuietHoursGuard>()),
             Mock.Of<IDisplayManager<MessagingConversation>>(),
             Mock.Of<IUpdateModelAccessor>(),
             session.Object,

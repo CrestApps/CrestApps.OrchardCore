@@ -1,3 +1,4 @@
+using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Models;
 using YesSql.Indexes;
@@ -8,7 +9,7 @@ namespace CrestApps.OrchardCore.Workforce.ContactCenter.Indexes;
 /// <summary>
 /// Indexes adherence rule sets by name.
 /// </summary>
-public sealed class AdherenceRuleSetIndex : CatalogItemIndex
+public sealed class AdherenceRuleSetIndex : CatalogItemIndex, INameAwareIndex
 {
     /// <summary>
     /// Gets or sets the name.

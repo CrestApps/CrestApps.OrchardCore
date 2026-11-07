@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Text;
-using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Scheduling.Core.Services;
 using CrestApps.OrchardCore.Scheduling.Models;
 

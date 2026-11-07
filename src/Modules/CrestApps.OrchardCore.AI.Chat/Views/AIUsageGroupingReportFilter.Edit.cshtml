@@ -1,0 +1,42 @@
+@model CrestApps.OrchardCore.AI.Chat.ViewModels.AIUsageGroupingReportFilterViewModel
+@using CrestApps.Core.AI.Completions
+@using CrestApps.Core.AI.Services
+@using CrestApps.OrchardCore.AI.Chat.Models
+
+<div class="col p-1">
+    <label asp-for="MeteringGroupBy" class="form-label">@T["Group metered usage by"]</label>
+    <select asp-for="MeteringGroupBy" class="form-select">
+        <option value="@AIUsageReportGrouping.Model">@T["Model"]</option>
+        <option value="@AIUsageReportGrouping.ModelAndCategory">@T["Model and category"]</option>
+        <option value="@AIUsageReportGrouping.ModelAndPurpose">@T["Model and purpose"]</option>
+    </select>
+</div>
+<div class="col p-1">
+    <label asp-for="AudioGroupBy" class="form-label">@T["Group audio usage by"]</label>
+    <select asp-for="AudioGroupBy" class="form-select">
+        <option value="@AIAudioUsageReportGrouping.Model">@T["Model"]</option>
+        <option value="@AIAudioUsageReportGrouping.ModelAndVoice">@T["Model and voice"]</option>
+        <option value="@AIAudioUsageReportGrouping.ModelAndLanguage">@T["Model and language"]</option>
+    </select>
+</div>
+<div class="col p-1">
+    <label asp-for="GroupBy" class="form-label">@T["Group completions by"]</label>
+    <select asp-for="GroupBy" class="form-select">
+        <option value="@AICompletionUsageGroupBy.UserAndModel">@T["User and model"]</option>
+        <option value="@AICompletionUsageGroupBy.Model">@T["Model"]</option>
+        <option value="@AICompletionUsageGroupBy.Deployment">@T["Deployment"]</option>
+        <option value="@AICompletionUsageGroupBy.Profile">@T["AI profile"]</option>
+        <option value="@AICompletionUsageGroupBy.Connection">@T["Connection"]</option>
+    </select>
+</div>
+<div class="col p-1">
+    <label asp-for="VoiceGroupBy" class="form-label">@T["Group voice calls by"]</label>
+    <select asp-for="VoiceGroupBy" class="form-select">
+        <option value="@AIVoiceUsageGroupBy.Deployment">@T["Deployment (model)"]</option>
+        <option value="@AIVoiceUsageGroupBy.Profile">@T["AI profile"]</option>
+        <option value="@AIVoiceUsageGroupBy.Campaign">@T["Campaign"]</option>
+        <option value="@AIVoiceUsageGroupBy.Channel">@T["Channel"]</option>
+        <option value="@AIVoiceUsageGroupBy.Engine">@T["Engine"]</option>
+        <option value="@AIVoiceUsageGroupBy.Day">@T["Day"]</option>
+    </select>
+</div>

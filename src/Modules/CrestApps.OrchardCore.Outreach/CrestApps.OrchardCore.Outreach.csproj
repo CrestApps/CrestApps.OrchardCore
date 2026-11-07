@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore Outreach</Title>
+    <Description>
+      $(OCCMSDescription)
+
+      The outreach engine, the one bulk-send engine for broadcasts and campaigns: a run sends to an audience in
+      batches on the leased work queue, skipping opted-out recipients, holding text messages in quiet hours and
+      retrying failures, and the e-mail channel sender.
+    </Description>
+    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Outreach BulkSend Campaigns Broadcasts</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.Data.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Outreach.Abstractions\CrestApps.OrchardCore.Outreach.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Outreach.Core\CrestApps.OrchardCore.Outreach.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
+  </ItemGroup>
+
+</Project>

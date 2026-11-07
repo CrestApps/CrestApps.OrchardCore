@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Encodings.Web;
+using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Services;
@@ -63,7 +64,7 @@ public sealed class OrderReturnEmailSender
         {
             Kind = OrderEmailKinds.Return,
             To = orderReturn.CustomerEmail,
-            Order = order,
+            Models = OrderEmailModels.For(order),
             Culture = order?.Culture,
             Reference = orderReturn.ItemId,
         }, async _ =>

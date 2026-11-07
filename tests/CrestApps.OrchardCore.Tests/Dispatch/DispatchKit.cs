@@ -129,6 +129,7 @@ internal sealed class DispatchKit : IAsyncDisposable
                 services.AddScoped<CrestApps.OrchardCore.Dispatch.Controllers.DispatchTimeZone>();
                 services.TryAddScoped<ServiceTerritoryStore>();
                 services.TryAddScoped<ServiceTerritoryManager>();
+                services.TryAddScoped<ServiceTerritoryScopeCache>();
                 services.TryAddEnumerable(ServiceDescriptor.Scoped<CrestApps.Core.Services.ICatalogEntryHandler<ServiceTerritory>, ServiceTerritoryHandler>());
                 services.AddSingleton(settings.Object);
                 services.AddSingleton(geo.Object);

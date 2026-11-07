@@ -764,23 +764,29 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "0fd9dcb84ea12ee4",
             "Read-only index existence probe. The statement is picked per dialect from four literal, parameterized 'SELECT COUNT(1)' queries over the engine's catalog (sys.indexes, pg_indexes, information_schema.statistics, sqlite_master), so it cannot create, alter, or drop any object."),
         new ReviewedDynamicSqlEntry(
-            "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/ContactCenterMigrationSql.cs",
-            "ContactCenterMigrationSql",
+            "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/IndexMigrationSql.cs",
+            "IndexMigrationSql",
             "ExistsAsync",
-            "4179923c87cc7344",
+            "26bc3e65bc4138e7",
             "Shared existence probe whose statement arrives as a parameter. Every caller in the scanned surface passes a literal SELECT, and the helper only reads a scalar, so it cannot alter schema regardless of the caller."),
+        new ReviewedDynamicSqlEntry(
+            "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/IndexMigrationSql.cs",
+            "IndexMigrationSql",
+            "ExecuteAsync",
+            "26bc3e65bc4138e7",
+            "Shared set-based statement runner whose statement arrives as a parameter. The helper adds nothing to the text it is given, so what it executes is decided at its call sites, and each of those is scanned in its own right."),
+        new ReviewedDynamicSqlEntry(
+            "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/IndexMigrationSql.cs",
+            "IndexMigrationSql",
+            "CreateUniqueIndexAsync",
+            "26bc3e65bc4138e7",
+            "Builds a CREATE UNIQUE INDEX statement from the dialect, table prefix, index name, and column names. The statement is additive by construction: it only ever creates an index and never drops or alters an existing object."),
         new ReviewedDynamicSqlEntry(
             "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/ContactCenterMigrationSql.cs",
             "ContactCenterMigrationSql",
             "ExecuteAsync",
-            "4179923c87cc7344",
-            "Shared set-based statement runner whose statement arrives as a parameter. The helper adds nothing to the text it is given, so what it executes is decided at its call sites, and each of those is scanned in its own right."),
-        new ReviewedDynamicSqlEntry(
-            "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/ContactCenterMigrationSql.cs",
-            "ContactCenterMigrationSql",
-            "CreateUniqueIndexAsync",
-            "4179923c87cc7344",
-            "Builds a CREATE UNIQUE INDEX statement from the dialect, table prefix, index name, and column names. The statement is additive by construction: it only ever creates an index and never drops or alters an existing object."),
+            "f78b7e6872cf8039",
+            "Passes its statement unchanged to the shared IndexMigrationSql.ExecuteAsync runner, bound to the Contact Center collection. It adds nothing to the text it is given, so what it executes is decided at its call sites, and each of those is scanned in its own right."),
         new ReviewedDynamicSqlEntry(
             "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/InteractionDuplicateRepair.cs",
             "InteractionDuplicateRepair",
@@ -788,16 +794,22 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "ac3e01a635593982",
             "Command factory for the duplicate-interaction repair whose statement arrives as a parameter. It adds nothing to the text it is given, and every caller in the same type passes a literal SELECT, UPDATE or DELETE of rows; the two deletes are authorized in the contract register, and none of the statements creates, alters or drops a schema object."),
         new ReviewedDynamicSqlEntry(
+            "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/CatalogIndexBackfill.cs",
+            "CatalogIndexBackfill",
+            "ReindexAsync",
+            "bc3e9128102669bb",
+            "Not SQL text at all: a YesSql LINQ query that pages through a catalog's documents and saves each one again through the session, so YesSql maps its index rows again. It only reads documents and rewrites index rows for them; it never creates, alters or drops a schema object."),
+        new ReviewedDynamicSqlEntry(
             "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Migrations/OmnichannelIndexMigration.cs",
             "OmnichannelIndexMigration",
             "ColumnExistsAsync",
-            "ebed85504e2049b6",
+            "64cd2bd40c01ec80",
             "Read-only column existence probe. Both branches only read metadata to test whether a column is present: SQLite runs 'PRAGMA table_info' and every other dialect runs a parameterized 'SELECT COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS'. Neither statement can create, alter, or drop any object."),
         new ReviewedDynamicSqlEntry(
             "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Migrations/OmnichannelIndexMigration.cs",
             "OmnichannelIndexMigration",
             "TableExistsAsync",
-            "ebed85504e2049b6",
+            "64cd2bd40c01ec80",
             "Read-only table existence probe. Both branches only read metadata to test whether a table is present: SQLite runs a parameterized 'SELECT COUNT(1) FROM sqlite_master' and every other dialect runs a parameterized 'SELECT COUNT(1) FROM INFORMATION_SCHEMA.TABLES'. Neither statement can create, alter, or drop any object."),
     ];
 

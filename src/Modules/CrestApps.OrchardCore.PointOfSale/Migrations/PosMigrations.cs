@@ -1,6 +1,10 @@
 using CrestApps.OrchardCore.PointOfSale.Indexes;
+using CrestApps.OrchardCore.PointOfSale.Models;
 using CrestApps.OrchardCore.YesSql.Core.Migrations;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
+using OrchardCore.Environment.Shell.Scope;
+using YesSql;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.PointOfSale.Migrations;
@@ -41,8 +45,9 @@ internal sealed class PosMigrations : DataMigration
         }, collection: PosConstants.CollectionName);
 
         await CreateReportIndexAsync();
+        await AddUserColumnsAsync();
 
-        return 2;
+        return 3;
     }
 
     /// <summary>
@@ -55,6 +60,37 @@ internal sealed class PosMigrations : DataMigration
         await CreateReportIndexAsync();
 
         return 2;
+    }
+
+    /// <summary>
+    /// Adds the users who opened and closed a shift to the shift index, so a privacy request finds a person's shifts.
+    /// Shifts saved before this step are indexed again once the tenant has started, outside activation.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await AddUserColumnsAsync();
+
+        ShellScope.AddDeferredTask(scope => CatalogIndexBackfill.ReindexAsync<RegisterShift, RegisterShiftIndex>(
+            scope.ServiceProvider.GetRequiredService<ISession>(),
+            PosConstants.CollectionName));
+
+        return 3;
+    }
+
+    private async Task AddUserColumnsAsync()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<RegisterShiftIndex>(table =>
+        {
+            table.AddColumn<string>("OpenedByUserId", column => column.Nullable().WithLength(26));
+            table.AddColumn<string>("ClosedByUserId", column => column.Nullable().WithLength(26));
+        }, collection: PosConstants.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<RegisterShiftIndex>(table =>
+        {
+            table.CreateIndex("IDX_RegisterShiftIndex_OpenedBy", "OpenedByUserId");
+            table.CreateIndex("IDX_RegisterShiftIndex_ClosedBy", "ClosedByUserId");
+        }, collection: PosConstants.CollectionName);
     }
 
     private Task<bool> CreateReportIndexAsync()

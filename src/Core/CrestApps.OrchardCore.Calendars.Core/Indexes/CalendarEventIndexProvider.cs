@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Calendars.Core.Recurrence;
+using CrestApps.OrchardCore.Calendars.Recurrence;
 using CrestApps.OrchardCore.Calendars.Models;
 using YesSql.Indexes;
 

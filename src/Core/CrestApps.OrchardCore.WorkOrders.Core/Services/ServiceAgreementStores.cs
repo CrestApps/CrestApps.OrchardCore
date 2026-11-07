@@ -1,9 +1,9 @@
 using System.ComponentModel.DataAnnotations;
-using System.Globalization;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.Calendars.Core.Recurrence;
+using CrestApps.OrchardCore.Calendars.Recurrence;
+using CrestApps.OrchardCore.Numbering;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.YesSql.Core.Services;
@@ -53,6 +53,7 @@ public sealed class ServiceAgreementManager : CatalogManager<ServiceAgreement>
 internal sealed class ServiceAgreementHandler : CatalogEntryHandlerBase<ServiceAgreement>
 {
     private readonly ISession _session;
+    private readonly INumberSequence _numberSequence;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
@@ -61,11 +62,17 @@ internal sealed class ServiceAgreementHandler : CatalogEntryHandlerBase<ServiceA
     /// Initializes a new instance of the <see cref="ServiceAgreementHandler"/> class.
     /// </summary>
     /// <param name="session">The session.</param>
+    /// <param name="numberSequence">The locked sequence that agreement numbers come from.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public ServiceAgreementHandler(ISession session, IClock clock, IStringLocalizer<ServiceAgreementHandler> stringLocalizer)
+    public ServiceAgreementHandler(
+        ISession session,
+        INumberSequence numberSequence,
+        IClock clock,
+        IStringLocalizer<ServiceAgreementHandler> stringLocalizer)
     {
         _session = session;
+        _numberSequence = numberSequence;
         _clock = clock;
         S = stringLocalizer;
     }
@@ -84,13 +91,15 @@ internal sealed class ServiceAgreementHandler : CatalogEntryHandlerBase<ServiceA
     {
         if (string.IsNullOrWhiteSpace(context.Model.Number))
         {
-            var numbers = await _session.QueryIndex<ServiceAgreementIndex>(index => index.Number.StartsWith(WorkOrdersConstants.AgreementNumberPrefix), collection: WorkOrdersConstants.CollectionName).ListAsync(cancellationToken);
-            var last = numbers
-                .Select(index => int.TryParse(index.Number.AsSpan(WorkOrdersConstants.AgreementNumberPrefix.Length), NumberStyles.None, CultureInfo.InvariantCulture, out var value) ? value : 0)
-                .DefaultIfEmpty(0)
-                .Max();
+            context.Model.Number = await _numberSequence.NextAsync(WorkOrdersConstants.AgreementNumberSeries, WorkOrdersConstants.AgreementNumberPrefix, 5, new NumberSequenceOptions
+            {
+                SeedAsync = async token =>
+                {
+                    var numbers = await _session.QueryIndex<ServiceAgreementIndex>(index => index.Number.StartsWith(WorkOrdersConstants.AgreementNumberPrefix), collection: WorkOrdersConstants.CollectionName).ListAsync(token);
 
-            context.Model.Number = WorkOrdersConstants.AgreementNumberPrefix + (last + 1).ToString("D5", CultureInfo.InvariantCulture);
+                    return NumberSequenceExtensions.HighestNumber(numbers.Select(index => index.Number), WorkOrdersConstants.AgreementNumberPrefix);
+                },
+            }, cancellationToken);
         }
     }
 

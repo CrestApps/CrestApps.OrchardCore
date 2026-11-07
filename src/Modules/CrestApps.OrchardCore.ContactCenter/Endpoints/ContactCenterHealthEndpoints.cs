@@ -40,7 +40,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Endpoints;
 /// </remarks>
 internal static class ContactCenterHealthEndpoints
 {
-    private static readonly JsonSerializerOptions _serializerOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions _serializerOptions = JsonSerializerOptions.Web;
 
     /// <summary>
     /// Maps the Contact Center readiness and dependency probes.

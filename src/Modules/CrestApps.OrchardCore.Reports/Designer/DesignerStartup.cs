@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Reports.Designer.Migrations;
 using CrestApps.OrchardCore.Reports.Designer.Recipes;
 using CrestApps.OrchardCore.Reports.Designer.Services;
 using CrestApps.OrchardCore.Reports.Designer.ViewModels;
+using CrestApps.OrchardCore.Users.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -48,6 +49,7 @@ public sealed class DesignerStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddCatalogs();
+        services.AddUserSearchService();
 
         services.Configure<ReportQueryLimits>(_shellConfiguration.GetSection("CrestApps:Reports:Builder:Limits"));
         services.Configure<ReportDesignVersionOptions>(_shellConfiguration.GetSection("CrestApps:Reports:Builder:Versions"));
@@ -100,7 +102,7 @@ public sealed class DesignerStartup : StartupBase
 /// Registers the recipe step that imports designed reports and views.
 /// </summary>
 [Feature(ReportsConstants.BuilderFeature)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class DesignerRecipesStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -114,7 +116,7 @@ public sealed class DesignerRecipesStartup : StartupBase
 /// Registers the deployment step that exports designed reports and views.
 /// </summary>
 [Feature(ReportsConstants.BuilderFeature)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class DesignerDeploymentStartup : StartupBase
 {
     /// <inheritdoc/>

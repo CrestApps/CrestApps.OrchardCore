@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Commerce.Webhooks;
+using CrestApps.OrchardCore.Webhooks;
 using CrestApps.OrchardCore.Orders.Api;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
@@ -14,11 +15,11 @@ namespace CrestApps.OrchardCore.Orders.Handlers;
 /// </summary>
 internal sealed class OrderWebhookEventHandler : OrderEventHandlerBase
 {
-    private readonly ICommerceWebhookPublisher _publisher;
+    private readonly IWebhookPublisher _publisher;
     private readonly IServiceProvider _serviceProvider;
 
     public OrderWebhookEventHandler(
-        ICommerceWebhookPublisher publisher,
+        IWebhookPublisher publisher,
         IServiceProvider serviceProvider)
     {
         _publisher = publisher;
@@ -40,7 +41,7 @@ internal sealed class OrderWebhookEventHandler : OrderEventHandlerBase
         {
             if (await scope.ServiceProvider.GetRequiredService<IOrderStore>().FindByIdAsync(orderId) is { Status: not OrderStatus.Canceled } order)
             {
-                await scope.ServiceProvider.GetRequiredService<ICommerceWebhookPublisher>()
+                await scope.ServiceProvider.GetRequiredService<IWebhookPublisher>()
                     .PublishAsync(CommerceWebhookEvents.OrderCreated, new { order = await ToApiAsync(scope.ServiceProvider, order) }, $"evt_order-created_{order.ItemId}");
             }
         });

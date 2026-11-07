@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Assets;
 using CrestApps.OrchardCore.Dispatch.Controllers;
 using CrestApps.OrchardCore.Dispatch.Core.Indexes;
 using CrestApps.OrchardCore.Dispatch.Drivers;
@@ -7,6 +8,7 @@ using CrestApps.OrchardCore.Dispatch.RealTime;
 using CrestApps.OrchardCore.Dispatch.Services;
 using CrestApps.OrchardCore.Dispatch.ViewModels;
 using CrestApps.OrchardCore.Dispatch.Workflows;
+using CrestApps.OrchardCore.Scheduling;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -61,7 +63,7 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Texts customers about their visits through the site's SMS provider.
 /// </summary>
-[RequireFeatures("OrchardCore.Sms")]
+[RequireFeatures(OrchardCoreFeatureIds.Sms)]
 public sealed class SmsStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -74,7 +76,7 @@ public sealed class SmsStartup : StartupBase
 /// <summary>
 /// Writes to customers about their visits through the site's email provider.
 /// </summary>
-[RequireFeatures("OrchardCore.Email")]
+[RequireFeatures(OrchardCoreFeatureIds.Email)]
 public sealed class EmailStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -90,7 +92,7 @@ public sealed class EmailStartup : StartupBase
 /// <summary>
 /// Books Fleet's schedulable equipment for visits that need it.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Assets.Fleet")]
+[RequireFeatures(AssetsConstants.Features.Fleet)]
 public sealed class FleetStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -103,7 +105,7 @@ public sealed class FleetStartup : StartupBase
 /// <summary>
 /// Sends visit changes to open dispatch boards over SignalR.
 /// </summary>
-[RequireFeatures("OrchardCore.SignalR")]
+[RequireFeatures(OrchardCoreFeatureIds.SignalR)]
 public sealed class RealTimeStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -123,7 +125,7 @@ public sealed class RealTimeStartup : StartupBase
 /// <summary>
 /// Registers the visit workflow events.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class WorkflowsStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -139,7 +141,7 @@ public sealed class WorkflowsStartup : StartupBase
 /// <summary>
 /// Adds the Field Service report data source: work orders and visits.
 /// </summary>
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class ReportsStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -154,7 +156,7 @@ public sealed class ReportsStartup : StartupBase
 /// <summary>
 /// Adds the asset data sets to the Field Service report data source: assets, meter readings and service history.
 /// </summary>
-[RequireFeatures("OrchardCore.DataPipelines.Core", "CrestApps.OrchardCore.Assets")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore, AssetsConstants.Features.Assets)]
 public sealed class AssetReportsStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -169,7 +171,7 @@ public sealed class AssetReportsStartup : StartupBase
 /// <summary>
 /// Offers the booking slots of appointment types that make work orders only while a technician can take the job.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Scheduling")]
+[RequireFeatures(SchedulingConstants.Features.Scheduling)]
 public sealed class SchedulingStartup : StartupBase
 {
     /// <inheritdoc/>

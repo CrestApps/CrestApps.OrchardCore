@@ -3,6 +3,9 @@ using System.Reflection;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services.Retention;
+using CrestApps.OrchardCore.Webhooks.Core.Indexes;
+using CrestApps.OrchardCore.Webhooks.Core.Models;
+using CrestApps.OrchardCore.Webhooks.Core.Services;
 using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
@@ -187,8 +190,8 @@ public sealed class ContactCenterRetentionCoverageTests
         ],
         ["ProviderWebhookInboxMessage"] =
         [
-            ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ProviderWebhookInbox.cs", "SettleClaimAsync", "message.ProcessedUtc = "),
-            ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ProviderWebhookInbox.cs", "ScheduleRetryAsync", "message.ProcessedUtc = "),
+            ("src/Core/CrestApps.OrchardCore.Webhooks.Core/Services/ProviderWebhookInbox.cs", "SettleClaimAsync", "message.ProcessedUtc = "),
+            ("src/Core/CrestApps.OrchardCore.Webhooks.Core/Services/ProviderWebhookInbox.cs", "ScheduleRetryAsync", "message.ProcessedUtc = "),
         ],
         ["ProviderCommand"] =
         [
@@ -464,12 +467,11 @@ public sealed class ContactCenterRetentionCoverageTests
         // others. Where it is read as a literal, a filter such as "Status" IN (2, 3) compares the constant text
         // "Status" to two numbers, matches nothing, and the statement succeeds having touched zero rows. Nothing
         // fails, so the entire pre-upgrade backlog stays immortal. Every identifier must come from the dialect.
-        var migrationsPath = Path.Combine(RepositoryRoot(), "src", "Modules", "CrestApps.OrchardCore.ContactCenter", "Migrations");
         var rawSqlFiles = new List<string>();
         var failures = new List<string>();
 
         // Act
-        foreach (var file in Directory.EnumerateFiles(migrationsPath, "*.cs"))
+        foreach (var file in EnumerateMigrationFiles("*.cs"))
         {
             var source = File.ReadAllText(file);
 
@@ -512,9 +514,8 @@ public sealed class ContactCenterRetentionCoverageTests
         // The purge selects a batch by settlement time with no ordering, so without an index leading with that
         // column every terminating batch is a full scan. At steady state that is a scan of the largest tables in
         // the schema on every cycle, which is the condition retention exists to prevent.
-        var migrationsPath = Path.Combine(RepositoryRoot(), "src", "Modules", "CrestApps.OrchardCore.ContactCenter", "Migrations");
 
-        var sources = Directory.EnumerateFiles(migrationsPath, "*IndexMigrations.cs")
+        var sources = EnumerateMigrationFiles("*IndexMigrations.cs")
             .Select(File.ReadAllText)
             .ToList();
 
@@ -561,11 +562,10 @@ public sealed class ContactCenterRetentionCoverageTests
         // Every predicate starts by rejecting nulls, which would make the pre-upgrade backlog immortal while the
         // cycle reported success.
         var settlementColumns = _settlementColumns.Values.ToHashSet(StringComparer.Ordinal);
-        var migrationsPath = Path.Combine(RepositoryRoot(), "src", "Modules", "CrestApps.OrchardCore.ContactCenter", "Migrations");
         var failures = new List<string>();
 
         // Act
-        foreach (var file in Directory.EnumerateFiles(migrationsPath, "*IndexMigrations.cs"))
+        foreach (var file in EnumerateMigrationFiles("*IndexMigrations.cs"))
         {
             var source = File.ReadAllText(file);
             var steps = source.Split("public async Task<int> UpdateFrom", StringSplitOptions.None).Skip(1);
@@ -600,10 +600,9 @@ public sealed class ContactCenterRetentionCoverageTests
     {
         // Arrange
         var settlementColumns = _settlementColumns.Values.ToHashSet(StringComparer.Ordinal);
-        var migrationsPath = Path.Combine(RepositoryRoot(), "src", "Modules", "CrestApps.OrchardCore.ContactCenter", "Migrations");
 
         // Act
-        var covered = Directory.EnumerateFiles(migrationsPath, "*IndexMigrations.cs")
+        var covered = EnumerateMigrationFiles("*IndexMigrations.cs")
             .Select(File.ReadAllText)
             .SelectMany(source => source.Split("public async Task<int> UpdateFrom", StringSplitOptions.None).Skip(1))
             .Count(step => settlementColumns.Any(column => AddsColumn(step, column)));
@@ -831,10 +830,19 @@ public sealed class ContactCenterRetentionCoverageTests
         return collector.Members;
     }
 
+    // The provider webhook inbox moved to the Webhooks building block, but its settled rows are still purged by a
+    // Contact Center retention policy, so its index stays under these checks.
+    // The provider webhook inbox's migration moved to the Webhooks module with the inbox; its settled rows are still
+    // purged by a Contact Center retention policy, so its migration is read with the Contact Center ones.
+    private static IEnumerable<string> EnumerateMigrationFiles(string searchPattern)
+        => Directory.EnumerateFiles(Path.Combine(RepositoryRoot(), "src", "Modules", "CrestApps.OrchardCore.ContactCenter", "Migrations"), searchPattern)
+            .Concat(Directory.EnumerateFiles(Path.Combine(RepositoryRoot(), "src", "Modules", "CrestApps.OrchardCore.Webhooks", "Migrations"), searchPattern));
+
     private static List<Type> DiscoverIndexes()
         => typeof(CallSessionIndex).Assembly.GetTypes()
             .Where(type => !type.IsAbstract && typeof(IIndex).IsAssignableFrom(type))
             .Where(type => type.Namespace is not null && type.Namespace.EndsWith("ContactCenter.Core.Indexes", StringComparison.Ordinal))
+            .Append(typeof(ProviderWebhookInboxMessageIndex))
             .OrderBy(type => type.Name, StringComparer.Ordinal)
             .ToList();
 

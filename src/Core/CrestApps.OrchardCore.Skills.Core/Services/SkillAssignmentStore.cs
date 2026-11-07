@@ -19,21 +19,25 @@ internal sealed class SkillAssignmentStore : DocumentCatalog<SkillAssignment, Sk
     public async Task<IReadOnlyList<SkillAssignment>> ListForSubjectAsync(SkillSubject subject, CancellationToken cancellationToken = default)
     {
         var kind = subject.Kind;
+        var legacyKind = SkillSubjectKind.ToLegacyValue(kind);
         var id = subject.Id;
 
+        // A row the deferred re-index has not reached yet only has the number the kind was stored as.
         var assignments = await Session.Query<SkillAssignment, SkillAssignmentIndex>(
-            index => index.SubjectKind == kind && index.SubjectId == id,
+            index => (index.SubjectKindName == kind || (index.SubjectKindName == null && index.SubjectKind == legacyKind)) && index.SubjectId == id,
             collection: CollectionName)
             .ListAsync(cancellationToken);
 
         return assignments.ToArray();
     }
 
-    public async Task<IReadOnlyList<SkillAssignment>> ListHoldersAsync(string skillId, int minimumProficiency, int dateKey, SkillSubjectKind kind, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<SkillAssignment>> ListHoldersAsync(string skillId, int minimumProficiency, int dateKey, string kind, CancellationToken cancellationToken = default)
     {
+        var legacyKind = SkillSubjectKind.ToLegacyValue(kind);
+
         var assignments = await Session.Query<SkillAssignment, SkillAssignmentIndex>(
             index => index.SkillId == skillId
-                && index.SubjectKind == kind
+                && (index.SubjectKindName == kind || (index.SubjectKindName == null && index.SubjectKind == legacyKind))
                 && index.Proficiency >= minimumProficiency
                 && (index.EffectiveFrom == null || index.EffectiveFrom <= dateKey)
                 && (index.EffectiveTo == null || index.EffectiveTo >= dateKey),

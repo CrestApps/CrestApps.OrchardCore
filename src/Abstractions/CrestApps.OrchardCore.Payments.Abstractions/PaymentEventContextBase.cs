@@ -3,7 +3,7 @@ namespace CrestApps.OrchardCore.Payments;
 /// <summary>
 /// Provides common payment gateway information for payment event contexts.
 /// </summary>
-public class PaymentEventContextBase
+public abstract class PaymentEventContextBase
 {
     /// <summary>
     /// Gets or sets the identifier of the payment gateway that raised the event.

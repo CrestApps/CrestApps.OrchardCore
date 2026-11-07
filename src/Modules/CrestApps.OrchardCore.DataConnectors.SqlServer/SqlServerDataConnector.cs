@@ -104,7 +104,7 @@ internal sealed class SqlServerDataConnector : RelationalDataConnector, IDataCon
         _networkOptions = networkOptions.Value;
     }
 
-    public static string Name => "SqlServer";
+    public static string Name => DataConnectorConstants.Connectors.SqlServer;
 
     public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<SqlServerDataConnector>("SQL Server");
 

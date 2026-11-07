@@ -18,7 +18,7 @@ namespace CrestApps.OrchardCore.Asterisk;
 /// secrets: the standard step would copy the encrypted values, which no other environment can decrypt, and its import
 /// replaces the stored settings whole, which would erase the destination's credentials.
 /// </remarks>
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class ConfigurationDeploymentStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -32,7 +32,7 @@ public sealed class ConfigurationDeploymentStartup : StartupBase
 /// <summary>
 /// Registers the recipe step that imports the Asterisk provider settings.
 /// </summary>
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class ConfigurationRecipesStartup : StartupBase
 {
     /// <inheritdoc/>

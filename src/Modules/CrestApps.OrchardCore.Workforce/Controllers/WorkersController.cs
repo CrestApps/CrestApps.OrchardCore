@@ -1,45 +1,42 @@
+using CrestApps.OrchardCore.Core.Validation;
 using CrestApps.OrchardCore.Skills;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
 using CrestApps.OrchardCore.Teams.Services;
-using CrestApps.OrchardCore.Users;
 using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using CrestApps.OrchardCore.Workforce.ViewModels;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
-using OrchardCore.Users;
-using OrchardCore.Users.Models;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Workforce.Controllers;
 
 /// <summary>
-/// The workers of the teams the user manages: the list and the editor, with the worker's teams, availability, skills
-/// and certificates.
+/// The workers of the teams the user manages: the list and the editor, with the worker's certificates. The editor is
+/// built by the display drivers of <see cref="WorkerProfile"/>, so other modules add sections to it, as Skills does.
 /// </summary>
 public sealed class WorkersController : Controller
 {
-    private const int EmptyMembershipRows = 3;
-
     private readonly IAuthorizationService _authorizationService;
     private readonly IWorkerManager _workerManager;
     private readonly ITeamManager _teamManager;
     private readonly IWorkforceScopeService _scopeService;
-    private readonly ISkillManager _skillManager;
-    private readonly ISkillAssignmentService _assignmentService;
+    private readonly IDisplayManager<WorkerProfile> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
+    private readonly ISession _session;
     private readonly ICertificationManager _certificationManager;
     private readonly ICertificationRecordService _recordService;
     private readonly IClock _clock;
@@ -55,8 +52,9 @@ public sealed class WorkersController : Controller
     /// <param name="workerManager">The worker manager.</param>
     /// <param name="teamManager">The team manager.</param>
     /// <param name="scopeService">The workforce scope service.</param>
-    /// <param name="skillManager">The skill manager.</param>
-    /// <param name="assignmentService">The skill assignment service.</param>
+    /// <param name="displayManager">The display manager that builds the worker editor.</param>
+    /// <param name="updateModelAccessor">The accessor of the model updater the editor binds with.</param>
+    /// <param name="session">The session, cancelled when a worker isn't saved.</param>
     /// <param name="certificationManager">The certification manager.</param>
     /// <param name="recordService">The certification record service.</param>
     /// <param name="clock">The clock.</param>
@@ -68,8 +66,9 @@ public sealed class WorkersController : Controller
         IWorkerManager workerManager,
         ITeamManager teamManager,
         IWorkforceScopeService scopeService,
-        ISkillManager skillManager,
-        ISkillAssignmentService assignmentService,
+        IDisplayManager<WorkerProfile> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
+        ISession session,
         ICertificationManager certificationManager,
         ICertificationRecordService recordService,
         IClock clock,
@@ -81,8 +80,9 @@ public sealed class WorkersController : Controller
         _workerManager = workerManager;
         _teamManager = teamManager;
         _scopeService = scopeService;
-        _skillManager = skillManager;
-        _assignmentService = assignmentService;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
+        _session = session;
         _certificationManager = certificationManager;
         _recordService = recordService;
         _clock = clock;
@@ -150,7 +150,8 @@ public sealed class WorkersController : Controller
             return Forbid();
         }
 
-        var worker = string.IsNullOrEmpty(id)
+        var isNew = string.IsNullOrEmpty(id);
+        var worker = isNew
             ? await _workerManager.NewAsync()
             : await _workerManager.FindByIdAsync(id);
 
@@ -159,183 +160,75 @@ public sealed class WorkersController : Controller
             return NotFound();
         }
 
-        if (!string.IsNullOrEmpty(id) && !await _scopeService.ManagesWorkerAsync(User, worker, HttpContext.RequestAborted))
+        if (!isNew && !await _scopeService.ManagesWorkerAsync(User, worker, HttpContext.RequestAborted))
         {
             return Forbid();
         }
 
-        if (string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(teamId))
+        if (isNew && !string.IsNullOrEmpty(teamId))
         {
             worker.TeamMemberships.Add(new TeamMembership { TeamId = teamId });
         }
 
-        var model = new WorkerEditViewModel
+        var model = new WorkerEditorPageViewModel
         {
             Id = id,
             DisplayName = worker.DisplayName,
-            UserId = worker.UserId,
-            Email = worker.Email,
-            NameFromUser = !string.IsNullOrEmpty(worker.UserId),
-            Phone = worker.Phone,
-            EmployeeNumber = worker.EmployeeNumber,
-            ExternalId = worker.ExternalId,
-            JobTitle = worker.JobTitle,
-            EmploymentType = worker.EmploymentType.ToString(),
-            Status = worker.Status.ToString(),
-            HireDate = worker.HireDate,
-            SeniorityDate = worker.SeniorityDate,
-            TerminationDate = worker.TerminationDate,
-            TimeZoneId = worker.TimeZoneId,
-            HomeBase = worker.HomeBase?.Address,
-            ContractedHoursPerWeek = worker.ContractedHoursPerWeek,
-            MinHoursPerWeek = worker.MinHoursPerWeek,
-            MaxHoursPerWeek = worker.MaxHoursPerWeek,
-            MaxHoursPerDay = worker.MaxHoursPerDay,
-            Availability = AvailabilityFormat.Write(worker.Availability),
-            Memberships = worker.TeamMemberships.Select(membership => new TeamMembershipRowViewModel
-            {
-                TeamId = membership.TeamId,
-                Role = membership.Role.ToString(),
-                EffectiveFrom = membership.EffectiveFrom,
-                EffectiveTo = membership.EffectiveTo,
-            }).ToList(),
+            Editor = await _displayManager.BuildEditorAsync(worker, _updateModelAccessor.ModelUpdater, isNew),
         };
 
-        model.CanSeeSensitive = await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.ViewSensitiveWorkerData);
-
-        if (model.CanSeeSensitive)
-        {
-            model.DateOfBirth = worker.DateOfBirth;
-        }
-
-        var held = string.IsNullOrEmpty(id)
-            ? new Dictionary<string, SkillAssignment>(StringComparer.Ordinal)
-            : (await _assignmentService.GetAssignmentsAsync(SkillSubject.Worker(id), HttpContext.RequestAborted)).ToDictionary(assignment => assignment.SkillId, StringComparer.Ordinal);
-
-        model.Skills = (await _skillManager.GetEnabledAsync(HttpContext.RequestAborted)).Select(skill => new WorkerSkillRowViewModel
-        {
-            SkillId = skill.ItemId,
-            Name = skill.Name,
-            Proficiency = held.TryGetValue(skill.ItemId, out var assignment) ? assignment.Proficiency : 0,
-        }).ToList();
-
-        await FillAsync(model);
+        await FillCertificatesAsync(model);
 
         return View(model);
     }
 
     /// <summary>
-    /// Saves a worker, with their skills.
+    /// Saves a worker, with the sections other modules add to the editor, such as their skills.
     /// </summary>
-    /// <param name="model">The fields.</param>
+    /// <param name="id">The worker id, or empty for a new worker.</param>
     /// <returns>A redirect to the list, or the editor with errors.</returns>
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("workforce/workers/edit/{id?}", "WorkersEdit")]
-    public async Task<IActionResult> EditPost(WorkerEditViewModel model)
+    public async Task<IActionResult> EditPost(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.ManageWorkers))
         {
             return Forbid();
         }
 
-        var isNew = string.IsNullOrEmpty(model.Id);
+        var isNew = string.IsNullOrEmpty(id);
         var worker = isNew
             ? await _workerManager.NewAsync()
-            : await _workerManager.FindByIdAsync(model.Id);
+            : await _workerManager.FindByIdAsync(id);
 
         if (worker is null)
         {
             return NotFound();
         }
 
-        var scope = await _scopeService.GetManagedScopeAsync(User, HttpContext.RequestAborted);
-
         if (!isNew && !await _scopeService.ManagesWorkerAsync(User, worker, HttpContext.RequestAborted))
         {
             return Forbid();
         }
 
-        var availabilityErrors = new List<string>();
-        var availability = AvailabilityFormat.Read(model.Availability, availabilityErrors);
+        var displayName = worker.DisplayName;
+        var editor = await _displayManager.UpdateEditorAsync(worker, _updateModelAccessor.ModelUpdater, isNew);
+        var isValid = await CatalogEntryValidation.ValidateAsync(_workerManager, worker, _updateModelAccessor.ModelUpdater, nameof(WorkerProfile), HttpContext.RequestAborted);
 
-        foreach (var error in availabilityErrors)
+        if (!isValid || !ModelState.IsValid)
         {
-            ModelState.AddModelError(nameof(model.Availability), S["This line can't be read: {0}", error]);
-        }
+            // A section may already have written records of its own, such as skills: none of it is kept.
+            await _session.CancelAsync();
 
-        var memberships = (model.Memberships ?? [])
-            .Where(row => !string.IsNullOrEmpty(row.TeamId))
-            .Select(row => new TeamMembership
+            var model = new WorkerEditorPageViewModel
             {
-                TeamId = row.TeamId,
-                Role = Enum.TryParse<TeamMemberRole>(row.Role, out var role) ? role : TeamMemberRole.Member,
-                EffectiveFrom = row.EffectiveFrom,
-                EffectiveTo = row.EffectiveTo,
-            })
-            .ToList();
+                Id = id,
+                DisplayName = displayName,
+                Editor = editor,
+            };
 
-        // A manager can only place workers in the teams they manage.
-        if (!scope.All && memberships.Any(membership => !scope.Covers(membership.TeamId)))
-        {
-            ModelState.AddModelError(nameof(model.Memberships), S["You can only add workers to the teams you manage."]);
-        }
-
-        worker.DisplayName = model.DisplayName;
-        worker.UserId = model.UserId;
-        worker.Email = model.Email;
-
-        // A worker with an account takes its name and email from it, as the user editor does.
-        if (!string.IsNullOrEmpty(model.UserId) && await HttpContext.RequestServices.GetRequiredService<UserManager<IUser>>().FindByIdAsync(model.UserId) is User account)
-        {
-            var names = HttpContext.RequestServices.GetService<IDisplayNameProvider>();
-
-            worker.DisplayName = (names is null ? null : await names.GetAsync(account)) ?? account.UserName;
-            worker.Email = account.Email;
-        }
-        worker.Phone = model.Phone;
-        worker.EmployeeNumber = model.EmployeeNumber;
-        worker.ExternalId = model.ExternalId;
-        worker.JobTitle = model.JobTitle;
-        worker.EmploymentType = Enum.TryParse<EmploymentType>(model.EmploymentType, out var employmentType) ? employmentType : EmploymentType.FullTime;
-        worker.Status = Enum.TryParse<WorkerStatus>(model.Status, out var status) ? status : WorkerStatus.Active;
-        worker.HireDate = model.HireDate;
-        worker.SeniorityDate = model.SeniorityDate;
-        worker.TerminationDate = model.TerminationDate;
-        worker.TimeZoneId = model.TimeZoneId;
-        var homeBaseMoved = !string.Equals(worker.HomeBase?.Address, model.HomeBase?.Trim(), StringComparison.Ordinal);
-
-        // A new address drops the old coordinates, so they are found again for the new one.
-        worker.HomeBase = string.IsNullOrWhiteSpace(model.HomeBase) ? null : new WorkforceLocation
-        {
-            Address = model.HomeBase.Trim(),
-            Latitude = homeBaseMoved ? null : worker.HomeBase?.Latitude,
-            Longitude = homeBaseMoved ? null : worker.HomeBase?.Longitude,
-        };
-        worker.ContractedHoursPerWeek = model.ContractedHoursPerWeek;
-        worker.MinHoursPerWeek = model.MinHoursPerWeek;
-        worker.MaxHoursPerWeek = model.MaxHoursPerWeek;
-        worker.MaxHoursPerDay = model.MaxHoursPerDay;
-        worker.Availability = availability;
-        worker.TeamMemberships = memberships;
-        worker.PrimaryTeamId = memberships.FirstOrDefault()?.TeamId;
-
-        if (await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.ViewSensitiveWorkerData))
-        {
-            worker.DateOfBirth = model.DateOfBirth;
-        }
-
-        var validation = await _workerManager.ValidateAsync(worker);
-
-        foreach (var error in validation.Errors)
-        {
-            ModelState.AddModelError(error.MemberNames.FirstOrDefault() ?? string.Empty, error.ErrorMessage);
-        }
-
-        if (!ModelState.IsValid)
-        {
-            model.CanSeeSensitive = await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.ViewSensitiveWorkerData);
-            await FillAsync(model);
+            await FillCertificatesAsync(model);
 
             return View(model);
         }
@@ -349,7 +242,6 @@ public sealed class WorkersController : Controller
             await _workerManager.UpdateAsync(worker);
         }
 
-        await SaveSkillsAsync(worker, model.Skills);
         await _notifier.SuccessAsync(H["The worker has been saved."]);
 
         return RedirectToAction(nameof(Index));
@@ -441,81 +333,29 @@ public sealed class WorkersController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    private async Task SaveSkillsAsync(WorkerProfile worker, IList<WorkerSkillRowViewModel> rows)
+    private async Task FillCertificatesAsync(WorkerEditorPageViewModel model)
     {
-        if (rows is null || !await _authorizationService.AuthorizeAsync(User, SkillsPermissions.AssignSkills))
-        {
-            return;
-        }
-
-        var subject = SkillSubject.Worker(worker.ItemId);
-        var held = (await _assignmentService.GetAssignmentsAsync(subject, HttpContext.RequestAborted)).ToDictionary(assignment => assignment.SkillId, StringComparer.Ordinal);
-        var enabled = (await _skillManager.GetEnabledAsync(HttpContext.RequestAborted)).Select(skill => skill.ItemId).ToHashSet(StringComparer.Ordinal);
-
-        foreach (var row in rows.Where(row => !string.IsNullOrEmpty(row.SkillId) && enabled.Contains(row.SkillId)))
-        {
-            held.TryGetValue(row.SkillId, out var existing);
-
-            if (!SkillProficiency.IsValid(row.Proficiency))
-            {
-                if (existing is not null)
-                {
-                    await _assignmentService.RemoveAsync(subject, row.SkillId, User.Identity?.Name, HttpContext.RequestAborted);
-                }
-
-                continue;
-            }
-
-            await _assignmentService.AssignAsync(subject, new SkillAssignmentInput
-            {
-                SkillId = row.SkillId,
-                Proficiency = row.Proficiency,
-                EffectiveFrom = existing?.EffectiveFrom,
-                EffectiveTo = existing?.EffectiveTo,
-            }, User.Identity?.Name, HttpContext.RequestAborted);
-        }
-    }
-
-    private async Task FillAsync(WorkerEditViewModel model)
-    {
-        var scope = await _scopeService.GetManagedScopeAsync(User, HttpContext.RequestAborted);
-
-        while (model.Memberships.Count(row => string.IsNullOrEmpty(row.TeamId)) < EmptyMembershipRows)
-        {
-            model.Memberships.Add(new TeamMembershipRowViewModel { Role = nameof(TeamMemberRole.Member) });
-        }
-
-        model.TeamOptions = await TeamOptionsAsync(scope, null);
-        model.EmploymentTypeOptions =
-        [
-            new SelectListItem(S["Full time"], nameof(EmploymentType.FullTime), model.EmploymentType == nameof(EmploymentType.FullTime)),
-            new SelectListItem(S["Part time"], nameof(EmploymentType.PartTime), model.EmploymentType == nameof(EmploymentType.PartTime)),
-            new SelectListItem(S["Seasonal"], nameof(EmploymentType.Seasonal), model.EmploymentType == nameof(EmploymentType.Seasonal)),
-            new SelectListItem(S["Temporary"], nameof(EmploymentType.Temporary), model.EmploymentType == nameof(EmploymentType.Temporary)),
-            new SelectListItem(S["Contractor"], nameof(EmploymentType.Contractor), model.EmploymentType == nameof(EmploymentType.Contractor)),
-            new SelectListItem(S["Subcontractor"], nameof(EmploymentType.Subcontractor), model.EmploymentType == nameof(EmploymentType.Subcontractor)),
-        ];
-        model.StatusOptions = StatusOptions(model.Status);
-        model.TimeZoneOptions = _clock.GetTimeZones().Select(zone => new SelectListItem(zone.TimeZoneId, zone.TimeZoneId, zone.TimeZoneId == model.TimeZoneId)).ToList();
         model.CertificationOptions = (await _certificationManager.GetEnabledAsync(HttpContext.RequestAborted))
             .Select(certification => new SelectListItem(certification.Name, certification.ItemId))
             .ToList();
 
-        if (!string.IsNullOrEmpty(model.Id))
+        if (string.IsNullOrEmpty(model.Id))
         {
-            var certifications = (await _certificationManager.GetAllAsync(HttpContext.RequestAborted)).ToDictionary(certification => certification.ItemId, certification => certification.Name, StringComparer.Ordinal);
-
-            model.Certificates = (await _recordService.GetForSubjectAsync(SkillSubject.Worker(model.Id), HttpContext.RequestAborted))
-                .Select(record => new WorkerCertificateViewModel
-                {
-                    Id = record.ItemId,
-                    CertificationName = certifications.GetValueOrDefault(record.CertificationId ?? string.Empty),
-                    Number = record.Number,
-                    ExpiresOn = record.ExpiresOn,
-                    Status = record.Status.ToString(),
-                })
-                .ToList();
+            return;
         }
+
+        var certifications = (await _certificationManager.GetAllAsync(HttpContext.RequestAborted)).ToDictionary(certification => certification.ItemId, certification => certification.Name, StringComparer.Ordinal);
+
+        model.Certificates = (await _recordService.GetForSubjectAsync(SkillSubject.Worker(model.Id), HttpContext.RequestAborted))
+            .Select(record => new WorkerCertificateViewModel
+            {
+                Id = record.ItemId,
+                CertificationName = certifications.GetValueOrDefault(record.CertificationId ?? string.Empty),
+                Number = record.Number,
+                ExpiresOn = record.ExpiresOn,
+                Status = record.Status.ToString(),
+            })
+            .ToList();
     }
 
     private async Task<IList<SelectListItem>> TeamOptionsAsync(WorkforceScope scope, string selected)

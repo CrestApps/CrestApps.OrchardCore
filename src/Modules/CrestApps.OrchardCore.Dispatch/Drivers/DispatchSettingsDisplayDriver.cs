@@ -130,7 +130,7 @@ public sealed class DispatchSettingsDisplayDriver : SiteDisplayDriver<DispatchSe
             }
         }
 
-        if (!string.IsNullOrWhiteSpace(model.TimeZoneId) && !Calendars.Core.CalendarTime.IsValidZone(model.TimeZoneId.Trim()))
+        if (!string.IsNullOrWhiteSpace(model.TimeZoneId) && !Calendars.CalendarTime.IsValidZone(model.TimeZoneId.Trim()))
         {
             context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.TimeZoneId), S["'{0}' isn't a time zone.", model.TimeZoneId]);
         }

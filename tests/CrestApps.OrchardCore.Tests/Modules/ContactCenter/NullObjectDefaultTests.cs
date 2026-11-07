@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.BusinessHours.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -18,7 +19,7 @@ public sealed class NullObjectDefaultTests
         // Arrange
         // Without a calendar feature there are no closing times, so gating a send on one would stop every send
         // rather than the after-hours ones.
-        var gate = new AlwaysOpenBusinessHoursGate();
+        var gate = new OpenHoursBusinessHoursGate(new DefaultOpenHoursService([]));
 
         // Act
         var open = await gate.IsOpenAsync("any-calendar", DateTime.UtcNow, timeZoneId: null, TestContext.Current.CancellationToken);

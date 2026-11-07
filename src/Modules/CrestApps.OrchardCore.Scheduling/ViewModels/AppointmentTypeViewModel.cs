@@ -8,9 +8,6 @@ namespace CrestApps.OrchardCore.Scheduling.ViewModels;
 /// </summary>
 public class AppointmentTypeViewModel
 {
-    /// <summary>Gets or sets the id.</summary>
-    public string Id { get; set; }
-
     /// <summary>Gets or sets the name.</summary>
     public string Name { get; set; }
 

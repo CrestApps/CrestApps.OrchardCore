@@ -674,14 +674,8 @@ public sealed partial class AnswerProviderCommandTypeExecutor : IProviderCommand
     }
 
     private static bool IsTerminal(VoiceCallState state)
-    {
-        return state is VoiceCallState.Ended or
-            VoiceCallState.Failed or
-            VoiceCallState.NoAnswer or
-            VoiceCallState.Rejected or
-            VoiceCallState.Canceled or
-            VoiceCallState.Transferred;
-    }
+        => VoiceCallStateProjection.IsTerminal(state);
+
 
     private Task PublishAsync(
         string eventType,

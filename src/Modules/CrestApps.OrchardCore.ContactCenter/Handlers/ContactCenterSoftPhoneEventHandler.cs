@@ -5,13 +5,9 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers;
-using CrestApps.OrchardCore.SignalR.Core;
 using CrestApps.OrchardCore.Telephony;
-using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 
@@ -25,10 +21,9 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
     private readonly ICallSessionManager _callSessionManager;
     private readonly IAgentProfileManager _agentProfileManager;
     private readonly ITelephonyInteractionStore _telephonyInteractionStore;
-    private readonly IHubContext<TelephonyHub, ITelephonyClient> _hubContext;
+    private readonly ISoftPhoneClientNotifier _softPhones;
     private readonly IOmnichannelActivityStore _activityStore;
     private readonly ILogger _logger;
-    private readonly string _tenantName;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterSoftPhoneEventHandler"/> class.
@@ -37,8 +32,7 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
     /// <param name="callSessionManager">The call-session manager used to resolve the normalized voice session.</param>
     /// <param name="agentProfileManager">The agent profile manager used to resolve the assigned Orchard user.</param>
     /// <param name="telephonyInteractionStore">The telephony interaction store used by the soft phone's recent-call history.</param>
-    /// <param name="hubContext">The telephony hub context used to push call-state changes to the soft phone.</param>
-    /// <param name="shellSettings">The current Orchard shell settings.</param>
+    /// <param name="softPhones">Pushes call-state changes to the agent's soft phones.</param>
     /// <param name="activityStore">
     /// The activity store, read to tell a system-paced dial (whose call is the dialer's until the agent joins it) from
     /// one the agent placed.
@@ -49,8 +43,7 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
         ICallSessionManager callSessionManager,
         IAgentProfileManager agentProfileManager,
         ITelephonyInteractionStore telephonyInteractionStore,
-        IHubContext<TelephonyHub, ITelephonyClient> hubContext,
-        ShellSettings shellSettings,
+        ISoftPhoneClientNotifier softPhones,
         IOmnichannelActivityStore activityStore,
         ILogger<ContactCenterSoftPhoneEventHandler> logger)
     {
@@ -58,10 +51,9 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
         _callSessionManager = callSessionManager;
         _agentProfileManager = agentProfileManager;
         _telephonyInteractionStore = telephonyInteractionStore;
-        _hubContext = hubContext;
+        _softPhones = softPhones;
         _activityStore = activityStore;
         _logger = logger;
-        _tenantName = shellSettings.Name;
     }
 
     /// <inheritdoc/>
@@ -153,9 +145,7 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
         }
 
         await UpsertTelephonyInteractionAsync(agent, interaction, session, call, isVoicemail, cancellationToken);
-        await _hubContext.Clients
-            .Group(TenantSignalRGroupName.ForUser(_tenantName, agent.UserId))
-            .CallStateChanged(call);
+        await _softPhones.CallStateChangedAsync(agent.UserId, call);
     }
 
     // While the dialer is still reaching the customer of a system-paced dial (Power, Progressive, Predictive), the call is

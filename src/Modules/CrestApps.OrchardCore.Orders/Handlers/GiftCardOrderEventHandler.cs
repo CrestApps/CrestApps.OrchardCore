@@ -120,5 +120,5 @@ internal sealed class GiftCardOrderEventHandler : OrderGrantHandlerBase
     private async Task<bool> IsGiftCardAsync(string contentType)
         => !string.IsNullOrEmpty(contentType) &&
             await _contentDefinitionManager.GetTypeDefinitionAsync(contentType) is { } definition &&
-            definition.Parts.Any(part => string.Equals(part.PartDefinition.Name, nameof(GiftCardPart), StringComparison.Ordinal));
+            definition.HasPart(nameof(GiftCardPart));
 }

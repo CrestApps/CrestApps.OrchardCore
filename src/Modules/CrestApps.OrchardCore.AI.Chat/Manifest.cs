@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Resources;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -16,10 +18,10 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        "OrchardCore.Liquid",
-        "CrestApps.OrchardCore.Resources",
+        OrchardCoreFeatureIds.Liquid,
+        ResourcesConstants.Feature.Area,
         AIConstants.Feature.ChatCore,
-        "OrchardCore.SignalR",
+        OrchardCoreFeatureIds.SignalR,
         AIConstants.Feature.Area,
     ]
 )]
@@ -39,12 +41,13 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = AIConstants.Feature.ChatAnalytics,
     Name = "AI Chat Session Analytics",
-    Description = "Tracks chat session usage metrics (unique visitors, handle time, containment rate, abandonment rate) and provides reporting with extensible display drivers.",
+    Description = "Tracks chat session usage metrics (unique visitors, handle time, containment rate, abandonment rate) and reports them, with the extracted data and conversion goals, under Reports.",
     Category = "Artificial Intelligence",
     Dependencies =
     [
         AIConstants.Feature.Chat,
         AIConstants.Feature.ChatCore,
+        ReportsConstants.Feature,
     ]
 )]
 
@@ -56,5 +59,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         AIConstants.Feature.Chat,
+        ReportsConstants.Feature,
     ]
 )]

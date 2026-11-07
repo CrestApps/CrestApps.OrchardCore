@@ -10,7 +10,7 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
-    Id = "CrestApps.OrchardCore.AI.Chat.Claude",
+    Id = AIConstants.Feature.ChatClaude,
     Name = "AI Claude Orchestrator",
     Description = "Provides a Claude-based orchestrator for AI chat sessions.",
     Category = "Artificial Intelligence - Orchestrators",

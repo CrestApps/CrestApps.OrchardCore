@@ -12,8 +12,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 public sealed class LeadExportFilterHandler : IContentImportHandler
 {
     /// <inheritdoc/>
-    public IReadOnlyCollection<ImportColumn> GetColumns(ImportContentContext context)
-        => [];
+    public Task<IReadOnlyCollection<ImportColumn>> GetColumnsAsync(ImportContentContext context)
+        => Task.FromResult<IReadOnlyCollection<ImportColumn>>([]);
 
     /// <inheritdoc/>
     public Task ImportAsync(ContentImportContext content)

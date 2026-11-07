@@ -110,6 +110,7 @@ internal static class AsteriskRealtimeIngestionDrainer
         }
         catch (OperationCanceledException)
         {
+            // The worker stops by being cancelled; that is how it ends, not a failure.
         }
     }
 }

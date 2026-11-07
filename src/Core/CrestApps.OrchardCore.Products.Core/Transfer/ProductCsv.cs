@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using CrestApps.OrchardCore.Products.Core.Models;
+using CrestApps.OrchardCore.Tabular;
 
 namespace CrestApps.OrchardCore.Products.Core.Transfer;
 
@@ -24,7 +25,7 @@ public static class ProductCsv
     /// </summary>
     public static ProductCsvReadResult Read(string text)
     {
-        var (headers, rows) = CsvTable.Parse(text);
+        var (headers, rows) = CsvReader.Parse(text);
 
         return Read(headers, rows);
     }
@@ -33,7 +34,7 @@ public static class ProductCsv
     /// Reads a product export already split into columns and rows, such as a spreadsheet ContentTransfer opened.
     /// </summary>
     public static ProductCsvReadResult Read(IReadOnlyList<string> headers, IEnumerable<string[]> records)
-        => Read(headers, CsvTable.ToRows(headers, records));
+        => Read(headers, CsvReader.ToRows(headers, records));
 
     /// <summary>
     /// Returns whether columns are those of a Shopify or WooCommerce product export.
@@ -454,189 +455,3 @@ public sealed class ImportedVariant
 /// A product export as read: its format, its products, and what was left out and why.
 /// </summary>
 public sealed record ProductCsvReadResult(string Format, IReadOnlyList<ImportedProduct> Products, IReadOnlyList<string> Problems);
-
-/// <summary>
-/// A row of a CSV file, read by column name. A missing column reads as <see langword="null"/>.
-/// </summary>
-public sealed class CsvRow
-{
-    private readonly Dictionary<string, string> _values;
-
-    public CsvRow(int number, Dictionary<string, string> values)
-    {
-        Number = number;
-        _values = values;
-    }
-
-    /// <summary>
-    /// Gets the row's line in the file, counting the header as 1.
-    /// </summary>
-    public int Number { get; }
-
-    public string this[string column]
-        => _values.GetValueOrDefault(column);
-}
-
-/// <summary>
-/// Reads and writes CSV: comma-separated, with double quotes around values holding commas, quotes or line breaks.
-/// </summary>
-public static class CsvTable
-{
-    /// <summary>
-    /// Turns records under the headers into rows read by column name, skipping empty ones. Row numbers count the
-    /// header as 1.
-    /// </summary>
-    public static IReadOnlyList<CsvRow> ToRows(IReadOnlyList<string> headers, IEnumerable<string[]> records)
-    {
-        var names = (headers ?? []).Select(header => header?.Trim()).ToArray();
-        var rows = new List<CsvRow>();
-        var number = 1;
-
-        foreach (var record in records ?? [])
-        {
-            number++;
-
-            if (record is null || record.All(string.IsNullOrWhiteSpace))
-            {
-                continue;
-            }
-
-            var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-            for (var c = 0; c < names.Length && c < record.Length; c++)
-            {
-                if (!string.IsNullOrEmpty(names[c]))
-                {
-                    values.TryAdd(names[c], record[c]);
-                }
-            }
-
-            rows.Add(new CsvRow(number, values));
-        }
-
-        return rows;
-    }
-
-    public static (IReadOnlyList<string> Headers, IReadOnlyList<CsvRow> Rows) Parse(string text)
-    {
-        var records = ParseRecords(text ?? string.Empty);
-
-        if (records.Count == 0)
-        {
-            return ([], []);
-        }
-
-        var headers = records[0].Select(header => header.Trim()).ToArray();
-        var rows = new List<CsvRow>(records.Count - 1);
-
-        for (var i = 1; i < records.Count; i++)
-        {
-            var record = records[i];
-
-            if (record.All(string.IsNullOrWhiteSpace))
-            {
-                continue;
-            }
-
-            var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-            for (var c = 0; c < headers.Length && c < record.Count; c++)
-            {
-                values.TryAdd(headers[c], record[c]);
-            }
-
-            rows.Add(new CsvRow(i + 1, values));
-        }
-
-        return (headers, rows);
-    }
-
-    public static void AppendRow(StringBuilder csv, IEnumerable<string> values)
-        => csv.AppendJoin(',', values.Select(Escape)).Append("\r\n");
-
-    // Quoted when it holds a separator, quote or line break; a cell a spreadsheet would run as a formula starts with
-    // an apostrophe instead.
-    public static string Escape(string value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return string.Empty;
-        }
-
-        if (value[0] is '=' or '+' or '-' or '@' or '\t' or '\r' && !decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out _))
-        {
-            value = "'" + value;
-        }
-
-        return value.IndexOfAny([',', '"', '\r', '\n']) >= 0
-            ? "\"" + value.Replace("\"", "\"\"") + "\""
-            : value;
-    }
-
-    private static List<List<string>> ParseRecords(string text)
-    {
-        var records = new List<List<string>>();
-        var record = new List<string>();
-        var field = new StringBuilder();
-        var quoted = false;
-        var i = text.Length > 0 && text[0] == '﻿' ? 1 : 0;
-
-        for (; i < text.Length; i++)
-        {
-            var c = text[i];
-
-            if (quoted)
-            {
-                if (c == '"')
-                {
-                    if (i + 1 < text.Length && text[i + 1] == '"')
-                    {
-                        field.Append('"');
-                        i++;
-                    }
-                    else
-                    {
-                        quoted = false;
-                    }
-                }
-                else
-                {
-                    field.Append(c);
-                }
-            }
-            else if (c == '"')
-            {
-                quoted = true;
-            }
-            else if (c == ',')
-            {
-                record.Add(field.ToString());
-                field.Clear();
-            }
-            else if (c is '\r' or '\n')
-            {
-                if (c == '\r' && i + 1 < text.Length && text[i + 1] == '\n')
-                {
-                    i++;
-                }
-
-                record.Add(field.ToString());
-                field.Clear();
-                records.Add(record);
-                record = [];
-            }
-            else
-            {
-                field.Append(c);
-            }
-        }
-
-        if (field.Length > 0 || record.Count > 0)
-        {
-            record.Add(field.ToString());
-            records.Add(record);
-        }
-
-        return records;
-    }
-}

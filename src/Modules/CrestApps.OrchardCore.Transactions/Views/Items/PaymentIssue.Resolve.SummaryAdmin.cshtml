@@ -1,0 +1,16 @@
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<PaymentIssue>
+
+@* The list is rendered outside the page's filter form, so this form is not nested in another. *@
+<form asp-action="Resolve" asp-route-itemId="@Model.Value.ItemId" method="post" class="d-inline-flex gap-1">
+    <input type="text" name="note" class="form-control form-control-sm" placeholder="@T["What you did"]" aria-label="@T["What you did"]" />
+    <button type="submit" class="btn btn-sm btn-secondary text-nowrap"
+            data-url-af="RemoveUrl"
+            data-title="@T["Mark resolved"]"
+            data-message="@T["Record that this was finished by hand? This cannot be undone."]"
+            data-ok-text="@T["Mark resolved"]"
+            data-cancel-text="@T["Cancel"]">
+        @T["Mark resolved"]
+    </button>
+</form>

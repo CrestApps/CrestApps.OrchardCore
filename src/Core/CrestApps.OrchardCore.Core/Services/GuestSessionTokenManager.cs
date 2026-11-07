@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Core.Services;
 
@@ -27,18 +28,22 @@ public sealed class GuestSessionTokenManager
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GuestSessionTokenManager"/> class.
     /// </summary>
     /// <param name="httpContextAccessor">The HTTP context accessor used to read and write the cookie.</param>
     /// <param name="dataProtectionProvider">The provider used to encrypt and integrity-protect the cookie.</param>
+    /// <param name="clock">The clock the cookie's expiry is counted from.</param>
     public GuestSessionTokenManager(
         IHttpContextAccessor httpContextAccessor,
-        IDataProtectionProvider dataProtectionProvider)
+        IDataProtectionProvider dataProtectionProvider,
+        IClock clock)
     {
         _httpContextAccessor = httpContextAccessor;
         _dataProtectionProvider = dataProtectionProvider;
+        _clock = clock;
     }
 
     /// <summary>
@@ -235,7 +240,7 @@ public sealed class GuestSessionTokenManager
             IsEssential = true,
             SameSite = SameSiteMode.Lax,
             Secure = httpContext.Request.IsHttps,
-            Expires = DateTimeOffset.UtcNow.Add(scope.Lifetime),
+            Expires = new DateTimeOffset(DateTime.SpecifyKind(_clock.UtcNow, DateTimeKind.Utc)).Add(scope.Lifetime),
         });
     }
 }

@@ -36,7 +36,7 @@ internal sealed class BookingBalancePaymentHandler : ITransactionPaymentHandler
 
         var transaction = context.Transaction;
 
-        if (!string.Equals(transaction.ObligationId, BookingBalanceTenderProvider.ObligationId, StringComparison.Ordinal) ||
+        if (!string.Equals(transaction.ObligationId, BookingBalanceTenderProvider.BalanceObligationId, StringComparison.Ordinal) ||
             !string.Equals(transaction.Source, BookingsConstants.TransactionSource, StringComparison.Ordinal) ||
             context.Payment.Amount is not > 0m)
         {

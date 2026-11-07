@@ -34,6 +34,7 @@ public sealed class LeadImportProvider
 {
     private readonly ISession _session;
     private readonly ILocalClock _localClock;
+    private readonly IClock _clock;
     private readonly IDocumentManager<OmnichannelBackfillState> _backfillState;
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly LeadImportListCache _importsCache;
@@ -47,6 +48,7 @@ public sealed class LeadImportProvider
     /// </summary>
     /// <param name="session">The YesSql session.</param>
     /// <param name="localClock">The local clock, used to show when each file was imported.</param>
+    /// <param name="clock">The clock, which dates an import whose time was not recorded.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="backfillState">Tells whether the past imports have been recorded on their leads.</param>
     /// <param name="contentDefinitionManager">Names the lead content types.</param>
@@ -54,6 +56,7 @@ public sealed class LeadImportProvider
     public LeadImportProvider(
         ISession session,
         ILocalClock localClock,
+        IClock clock,
         IStringLocalizer<LeadImportProvider> stringLocalizer,
         IDocumentManager<OmnichannelBackfillState> backfillState = null,
         IContentDefinitionManager contentDefinitionManager = null,
@@ -61,6 +64,7 @@ public sealed class LeadImportProvider
     {
         _session = session;
         _localClock = localClock;
+        _clock = clock;
         _backfillState = backfillState;
         _contentDefinitionManager = contentDefinitionManager;
         _importsCache = importsCache;
@@ -206,7 +210,7 @@ public sealed class LeadImportProvider
             imports.Add(new LeadImportSummary(
                 row.EntryId,
                 string.IsNullOrWhiteSpace(named?.FileName) ? null : named.FileName,
-                DateTime.SpecifyKind(named?.ImportedUtc ?? DateTime.UtcNow, DateTimeKind.Utc),
+                DateTime.SpecifyKind(named?.ImportedUtc ?? _clock.UtcNow, DateTimeKind.Utc),
                 row.LeadCount));
         }
 

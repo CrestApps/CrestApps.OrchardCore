@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
-using CrestApps.OrchardCore.Products.Core.Transfer;
+using CrestApps.OrchardCore.Tabular;
 
 namespace CrestApps.OrchardCore.Orders.Services;
 
@@ -73,5 +73,5 @@ public static class OrderCsv
         => amount?.ToString("0.00", CultureInfo.InvariantCulture);
 
     private static void AppendRow(StringBuilder csv, IEnumerable<string> values)
-        => CsvTable.AppendRow(csv, values);
+        => CsvWriter.AppendRow(csv, values);
 }

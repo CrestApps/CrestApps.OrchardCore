@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.Services;
+using CrestApps.OrchardCore.Transactions.Models;
+using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Handlers;
@@ -22,18 +24,22 @@ namespace CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 public sealed class GatewayBillingSubscriptionLifecycleHandler : SubscriptionLifecycleHandlerBase
 {
     private readonly IEnumerable<ICheckoutRecurringPaymentProvider> _providers;
+    private readonly IPaymentIssueRecorder _issues;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GatewayBillingSubscriptionLifecycleHandler"/> class.
     /// </summary>
     /// <param name="providers">The recurring payment providers.</param>
+    /// <param name="issues">Records a change the gateway did not make, for an operator to finish by hand.</param>
     /// <param name="logger">The logger.</param>
     public GatewayBillingSubscriptionLifecycleHandler(
         IEnumerable<ICheckoutRecurringPaymentProvider> providers,
+        IPaymentIssueRecorder issues,
         ILogger<GatewayBillingSubscriptionLifecycleHandler> logger)
     {
         _providers = providers;
+        _issues = issues;
         _logger = logger;
     }
 
@@ -80,6 +86,8 @@ public sealed class GatewayBillingSubscriptionLifecycleHandler : SubscriptionLif
                 "Subscription '{SubscriptionId}' changed to '{Status}' but its provider '{ProviderKey}' is not available, so the agreement may still be billed.",
                 subscription.ItemId, subscription.Status, subscription.ProviderKey);
 
+            await RecordIssueAsync(subscription, "The payment provider is not available.");
+
             return;
         }
 
@@ -99,6 +107,8 @@ public sealed class GatewayBillingSubscriptionLifecycleHandler : SubscriptionLif
                     _logger.LogError(
                         "Provider '{ProviderKey}' refused to change collection on subscription '{ProviderSubscriptionId}': {Error}. The customer may still be billed.",
                         subscription.ProviderKey, subscription.ProviderSubscriptionId, paused.ErrorMessage);
+
+                    await RecordIssueAsync(subscription, paused.ErrorMessage);
                 }
 
                 return;
@@ -122,6 +132,8 @@ public sealed class GatewayBillingSubscriptionLifecycleHandler : SubscriptionLif
                 _logger.LogError(
                     "Provider '{ProviderKey}' refused to cancel subscription '{ProviderSubscriptionId}': {Error}. The customer may still be billed.",
                     subscription.ProviderKey, subscription.ProviderSubscriptionId, result.ErrorMessage);
+
+                await RecordIssueAsync(subscription, result.ErrorMessage);
             }
         }
         catch (Exception exception)
@@ -129,6 +141,29 @@ public sealed class GatewayBillingSubscriptionLifecycleHandler : SubscriptionLif
             _logger.LogError(exception,
                 "Failed to apply the '{Status}' transition of subscription '{ProviderSubscriptionId}' at provider '{ProviderKey}'. The customer may still be billed.",
                 subscription.Status, subscription.ProviderSubscriptionId, subscription.ProviderKey);
+
+            await RecordIssueAsync(subscription, exception.Message);
         }
     }
+
+    // The agreement changed here and not at the gateway, so the customer may still be billed: an operator has to make
+    // the same change in the provider's dashboard.
+    private Task<bool> RecordIssueAsync(Subscription subscription, string error)
+        => _issues.RecordAsync(new PaymentIssue
+        {
+            Kind = PaymentIssueKinds.GatewaySubscriptionChangeFailed,
+            Message = subscription.Status switch
+            {
+                SubscriptionStatus.Canceled => "Cancel this subscription in the payment provider's dashboard: the provider did not cancel it, so the customer may still be billed.",
+                SubscriptionStatus.Paused => "Pause this subscription in the payment provider's dashboard: the provider did not pause it, so the customer may still be billed.",
+                _ => "Resume this subscription in the payment provider's dashboard: the provider did not resume it.",
+            },
+            Error = error,
+            ReferenceType = "Subscription",
+            ReferenceId = subscription.ItemId,
+            ProviderKey = subscription.ProviderKey,
+            ProviderReference = subscription.ProviderSubscriptionId,
+            Amount = subscription.TotalAmount,
+            Currency = subscription.Currency,
+        });
 }

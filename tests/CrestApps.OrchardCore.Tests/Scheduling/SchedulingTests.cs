@@ -413,12 +413,12 @@ public sealed class SchedulingTests
 
     private static DateTime ToLocal(DateTime utc)
     {
-        return CrestApps.OrchardCore.Calendars.Core.CalendarTime.ToLocal(utc, "America/New_York");
+        return CrestApps.OrchardCore.Calendars.CalendarTime.ToLocal(utc, "America/New_York");
     }
 
     private static DateTime Utc(DateTime local)
     {
-        return CrestApps.OrchardCore.Calendars.Core.CalendarTime.ToUtc(local, "America/New_York");
+        return CrestApps.OrchardCore.Calendars.CalendarTime.ToUtc(local, "America/New_York");
     }
 }
 

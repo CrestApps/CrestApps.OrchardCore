@@ -28,4 +28,12 @@ public static class PosConstants
     /// The tag the point-of-sale endpoints are documented under.
     /// </summary>
     public const string ApiTag = "Point of Sale";
+
+    public static class Recipes
+    {
+        /// <summary>
+        /// The recipe step that adds or updates registers.
+        /// </summary>
+        public const string Registers = "Registers";
+    }
 }

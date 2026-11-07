@@ -1,10 +1,21 @@
 using CrestApps.OrchardCore.Accounts;
+using CrestApps.OrchardCore.Assets;
+using CrestApps.OrchardCore.BusinessHours.Core;
 using CrestApps.OrchardCore.Geo.Services;
+using CrestApps.OrchardCore.Geo;
+using CrestApps.OrchardCore.Inventory.Core;
+using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Parties;
+using CrestApps.OrchardCore.Scheduling;
+using CrestApps.OrchardCore.Skills;
+using CrestApps.OrchardCore.Transactions;
 using CrestApps.OrchardCore.WorkOrders.BackgroundTasks;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
+using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Drivers;
 using CrestApps.OrchardCore.WorkOrders.Integrations;
 using CrestApps.OrchardCore.WorkOrders.Migrations;
+using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.WorkOrders.Navigation;
 using CrestApps.OrchardCore.WorkOrders.Services;
 using CrestApps.OrchardCore.WorkOrders.ViewModels;
@@ -31,9 +42,15 @@ public sealed class Startup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddPartyDirectory();
         services.AddScoped<Integrations.WorkOrderCustomers>();
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(WorkOrdersConstants.CollectionName));
         services.AddWorkOrdersCore();
+
+        // A service level policy's clock runs in the hours of the calendar it names, read through the shared business
+        // hours, so any feature that keeps calendars (the Contact Center business hours) feeds it.
+        services.AddOpenHours();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IServiceHoursProvider, OpenHoursServiceHoursProvider>());
         services.AddPermissionProvider<WorkOrdersPermissionsProvider>();
         services
             .AddIndexProvider<WorkOrderIndexProvider>()
@@ -44,6 +61,7 @@ public sealed class Startup : StartupBase
             .AddDataMigration<WorkOrdersMigrations>();
 
         services.AddDisplayDriver<WorkOrderRow, WorkOrderRowDisplayDriver>();
+        services.AddDisplayDriver<WorkOrder, WorkOrderDisplayDriver>();
         services.AddDisplayDriver<WorkOrderSettingRow, WorkOrderSettingRowDisplayDriver>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, SlaMonitorBackgroundTask>());
         services.AddScoped<WorkOrderLookups>();
@@ -60,7 +78,7 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Takes parts used off Inventory locations.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Inventory")]
+[RequireFeatures(InventoryConstants.Features.Inventory)]
 public sealed class InventoryStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -74,7 +92,7 @@ public sealed class InventoryStartup : StartupBase
 /// <summary>
 /// Lets work order types need skills and certifications.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Skills")]
+[RequireFeatures(SkillsConstants.Features.Skills)]
 public sealed class SkillsStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -87,7 +105,7 @@ public sealed class SkillsStartup : StartupBase
 /// <summary>
 /// Lets work orders be for assets.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Assets")]
+[RequireFeatures(AssetsConstants.Features.Assets)]
 public sealed class AssetsStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -100,7 +118,7 @@ public sealed class AssetsStartup : StartupBase
 /// <summary>
 /// Invoices completed work orders through Transactions.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Transactions")]
+[RequireFeatures(TransactionsConstants.Features.Area)]
 public sealed class TransactionsStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -113,7 +131,7 @@ public sealed class TransactionsStartup : StartupBase
 /// <summary>
 /// Gives work orders the territory of their service address and geocodes it.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Geo")]
+[RequireFeatures(GeoConstants.Features.Geo)]
 public sealed class GeoStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -128,7 +146,7 @@ public sealed class GeoStartup : StartupBase
 /// <summary>
 /// Registers the work order workflow events.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class WorkflowsStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -146,7 +164,7 @@ public sealed class WorkflowsStartup : StartupBase
 /// <summary>
 /// Adds the Create work order subject action to Omnichannel dispositions.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Omnichannel.Managements")]
+[RequireFeatures(OmnichannelConstants.Features.Managements)]
 public sealed class OmnichannelStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -193,7 +211,7 @@ public sealed class AccountsStartup : StartupBase
 /// <summary>
 /// Makes work orders from Scheduling bookings of the appointment types a work order type names.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Scheduling")]
+[RequireFeatures(SchedulingConstants.Features.Scheduling)]
 public sealed class SchedulingStartup : StartupBase
 {
     /// <inheritdoc/>

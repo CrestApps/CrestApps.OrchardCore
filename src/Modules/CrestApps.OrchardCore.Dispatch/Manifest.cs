@@ -34,7 +34,7 @@ using OrchardCore.Modules.Manifest;
     [
         DispatchConstants.Features.Dispatch,
         WorkforceConstants.Features.Portal,
-        "OrchardCore.Media",
+        OrchardCoreFeatureIds.Media,
     ]
 )]
 

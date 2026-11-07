@@ -440,7 +440,7 @@ public sealed partial class TelephonyHub : Hub<ITelephonyClient>
                 return;
             }
 
-            await store.MarkVoicemailReadAsync(userId, callId, DateTime.UtcNow, Context.ConnectionAborted);
+            await store.MarkVoicemailReadAsync(userId, callId, scope.ServiceProvider.GetRequiredService<IClock>().UtcNow, Context.ConnectionAborted);
             count = await store.GetUnreadVoicemailCountAsync(userId, Context.ConnectionAborted);
         });
 
@@ -471,7 +471,7 @@ public sealed partial class TelephonyHub : Hub<ITelephonyClient>
                 return;
             }
 
-            await store.MarkAllVoicemailsReadAsync(userId, DateTime.UtcNow, Context.ConnectionAborted);
+            await store.MarkAllVoicemailsReadAsync(userId, scope.ServiceProvider.GetRequiredService<IClock>().UtcNow, Context.ConnectionAborted);
             count = await store.GetUnreadVoicemailCountAsync(userId, Context.ConnectionAborted);
         });
 

@@ -486,7 +486,10 @@ public sealed partial class ReportDesignDocumentBuilder
                 original.Columns,
                 groups.Select(group => group.Values).ToList(),
                 isAggregated: true,
-                positions => original.Regroup(positions.Select(position => original.Columns[position].Id)));
+                positions => original.Regroup(positions.Select(position => original.Columns[position].Id)))
+            {
+                Today = original.Today,
+            };
         }
 
         var indexes = TableIndexes(visual, result);
@@ -500,7 +503,7 @@ public sealed partial class ReportDesignDocumentBuilder
         var withSubtotals = visual.ShowSubtotals && result.IsAggregated;
         var shown = ShownRows(result, indexes, withSubtotals);
         var colorizers = indexes
-            .Select(index => ReportColumnColorizer.Create(ShownColumn(result.Columns[index], IsCalculated(result, index)), shown.Select(values => values[index])))
+            .Select(index => ReportColumnColorizer.Create(ShownColumn(result.Columns[index], IsCalculated(result, index)), shown.Select(values => values[index]), result.Today))
             .ToArray();
 
         var columns = indexes

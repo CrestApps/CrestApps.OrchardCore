@@ -40,8 +40,9 @@ public sealed class Membership : CatalogItem
     public string[] RoleNames { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the roles it put its member in: those they weren't in already, which are the ones taken away when it
-    /// ends.
+    /// Gets or sets the roles it put its member in, for memberships made before role grants were recorded by source
+    /// (<see cref="Users.IRoleGrantService"/>). New memberships leave it empty; the role grants record what each one
+    /// put its member in.
     /// </summary>
     public List<string> AddedRoleNames { get; set; } = [];
 

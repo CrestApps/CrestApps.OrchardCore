@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.Skills;
 /// <summary>
 /// Registers the Skills workflow events and task.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class WorkflowsStartup : StartupBase
 {
     /// <inheritdoc />

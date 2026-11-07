@@ -1,9 +1,9 @@
-﻿using CrestApps.Core.Services;
+using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Core.Validation;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Omnichannel.Managements.Deployments;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -340,7 +340,7 @@ public sealed class ChannelEndpointsController : Controller
             return null;
         }
 
-        var data = OmnichannelDeploymentSerializer.Export(source);
+        var data = CatalogDeploymentSerializer.Export(source);
 
         data.Remove(nameof(OmnichannelChannelEndpoint.Properties));
 

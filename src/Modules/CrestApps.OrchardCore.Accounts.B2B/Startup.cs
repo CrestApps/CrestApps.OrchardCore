@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Carts.Core.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Commerce.Core;
 using CrestApps.OrchardCore.Accounts.B2B.Api;
 using CrestApps.OrchardCore.Accounts.B2B.Drivers;
 using CrestApps.OrchardCore.Accounts.B2B.Handlers;
@@ -17,11 +18,13 @@ using CrestApps.OrchardCore.Shipping.Services;
 using OrchardCore.Deployment;
 using CrestApps.OrchardCore.Accounts.B2B.Services;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
+using OrchardCore.Localization;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Contents.Services;
 using OrchardCore.Data;
@@ -49,6 +52,7 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<B2BAccountIndexProvider>()
             .AddIndexProvider<PriceListIndexProvider>();
         services.AddScoped<IB2BAccountStore, B2BAccountStore>();
+        services.AddPersonalDataContributor<B2BBuyerPersonalDataContributor>();
         services.AddScoped<IPriceListStore, PriceListStore>();
         services.AddScoped<IBuyerPriceProvider, B2BPriceProvider>();
         services.AddScoped<B2BAccountService>();
@@ -62,10 +66,16 @@ public sealed class Startup : StartupBase
         // The Business account step: the purchase order number, before payment.
         services.AddScoped<B2BCheckoutStepService>();
         services.AddScoped<B2BApprovalService>();
+        services.AddCommerceEmailSender()
+            .AddCommerceEmailKind(B2BApprovalService.ApprovalRequestedEmailKind, LocalizationSource.Create<Startup>("Business order needs approval"))
+            .AddCommerceEmailKind(B2BApprovalService.ApprovalDecidedEmailKind, LocalizationSource.Create<Startup>("Business order approved or rejected"));
         services.AddScoped<PunchoutService>();
         services.AddScoped<ICartActionProvider, PunchoutCartActionProvider>();
         services.AddScoped<ICheckoutPaymentGate, B2BApprovalPaymentGate>();
         services.AddScoped<ICheckoutHandler, B2BCheckoutHandler>();
+
+        // An account buyer is taxed as a business, with the account's tax or VAT number.
+        services.AddScoped<ICheckoutTaxProfileHandler, B2BCheckoutTaxProfileHandler>();
         services.AddDisplayDriver<CheckoutFlow, B2BCheckoutStepDisplayDriver>();
 
         services.AddPermissionProvider<B2BAccountsPermissionProvider>();
@@ -95,7 +105,7 @@ public sealed class ApiStartup : StartupBase
 /// <summary>
 /// Registers the price list recipe step.
 /// </summary>
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class RecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -105,7 +115,7 @@ public sealed class RecipesStartup : StartupBase
 /// <summary>
 /// Registers the price list deployment step.
 /// </summary>
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class DeploymentStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -119,7 +129,7 @@ public sealed class DeploymentStartup : StartupBase
 /// Describes the price list recipe and deployment steps to CrestApps Recipes, so they can be checked and written with
 /// help.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class RecipesSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

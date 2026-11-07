@@ -6,6 +6,11 @@ namespace CrestApps.OrchardCore.Workforce.ContactCenter;
 public static class WorkforceContactCenterConstants
 {
     /// <summary>
+    /// The punch source of the clock-ins and clock-outs the contact center's sign-in and sign-out make.
+    /// </summary>
+    public const string PunchSource = "ContactCenter";
+
+    /// <summary>
     /// The feature identifiers.
     /// </summary>
     public static class Features

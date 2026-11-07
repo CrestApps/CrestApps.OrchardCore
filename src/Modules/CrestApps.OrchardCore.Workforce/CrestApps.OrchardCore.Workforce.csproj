@@ -26,6 +26,7 @@
 
   <ItemGroup>
     <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="CrestApps.Core.AI" />
     <PackageReference Include="OrchardCore.Admin.Abstractions" />
     <PackageReference Include="OrchardCore.Deployment.Abstractions" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
@@ -43,10 +44,11 @@
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Teams.Abstractions\CrestApps.OrchardCore.Teams.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Users.Abstractions\CrestApps.OrchardCore.Users.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Workforce.Abstractions\CrestApps.OrchardCore.Workforce.Abstractions.csproj" />
-    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.AI.Core\CrestApps.OrchardCore.AI.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.PersonalData.Core\CrestApps.OrchardCore.PersonalData.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Recipes.Core\CrestApps.OrchardCore.Recipes.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Reports.Core\CrestApps.OrchardCore.Reports.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Skills.Core\CrestApps.OrchardCore.Skills.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Teams.Core\CrestApps.OrchardCore.Teams.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Workforce.Core\CrestApps.OrchardCore.Workforce.Core.csproj" />
   </ItemGroup>

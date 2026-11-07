@@ -129,6 +129,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
             public const string NumberNotInService = "number_not_in_service";
             public static bool IsHandoff(string terminalReasonCode) { }
         }
+        public static class WebhookInboxHandlers
+        {
+            public const string SmsReceived = "sms-inbound";
+        }
     }
     public static class StringExtensions
     {
@@ -147,6 +151,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes
         public System.DateTime CreatedUtc { get; set; }
         public string DisplayText { get; set; }
         public bool Enabled { get; set; }
+    }
+    public sealed class ContactAddressOptOutIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public ContactAddressOptOutIndex() { }
+        public string Address { get; set; }
+        public string Channel { get; set; }
     }
     public interface IOmnichannelContactMatch
     {
@@ -616,6 +626,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string ReturnUrl { get; set; }
         public OrchardCore.DisplayManagement.IShape Subject { get; set; }
     }
+    public sealed class ContactAddressOptOut : CrestApps.Core.Models.CatalogItem
+    {
+        public ContactAddressOptOut() { }
+        public string Address { get; set; }
+        public string Channel { get; set; }
+        public System.DateTime OptedOutUtc { get; set; }
+        public string Source { get; set; }
+    }
     public sealed class ContactEmailAddress
     {
         public ContactEmailAddress() { }
@@ -833,7 +851,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public const string Warm = "Warm";
         public static System.Collections.Generic.IReadOnlyList<string> All { get; }
     }
-    public sealed class LeadStatus : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.LeadStatus>, System.ICloneable
+    public sealed class LeadStatus : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.LeadStatus>, CrestApps.OrchardCore.Models.IAuditedModel, System.ICloneable
     {
         public LeadStatus() { }
         public string Author { get; set; }
@@ -984,7 +1002,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public bool UseCallAmbience { get; set; }
         public bool TryResolveContact(OrchardCore.ContentManagement.ContentItem contact, string resolvedById, string resolvedByUsername, System.DateTime resolvedUtc) { }
     }
-    public sealed class OmnichannelActivityBatch : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IDisplayTextAwareModel, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch>, System.ICloneable
+    public sealed class OmnichannelActivityBatch : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IDisplayTextAwareModel, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch>, CrestApps.OrchardCore.Models.IAuditedModel, System.ICloneable
     {
         public OmnichannelActivityBatch() { }
         public string AIProfileId { get; set; }
@@ -1100,7 +1118,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public int ProcessorLeaseMilliseconds { get; set; }
         public int RetryDelayMinutes { get; set; }
     }
-    public sealed class OmnichannelCampaign : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IDisplayTextAwareModel, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign>, System.ICloneable
+    public sealed class OmnichannelCampaign : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IDisplayTextAwareModel, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign>, CrestApps.OrchardCore.Models.IAuditedModel, System.ICloneable
     {
         public OmnichannelCampaign() { }
         public bool AllowAIToUpdateContact { get; set; }
@@ -1128,7 +1146,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public float? TopP { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign Clone() { }
     }
-    public sealed class OmnichannelCampaignGroup : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IDisplayTextAwareModel, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaignGroup>, System.ICloneable
+    public sealed class OmnichannelCampaignGroup : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IDisplayTextAwareModel, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaignGroup>, CrestApps.OrchardCore.Models.IAuditedModel, System.ICloneable
     {
         public OmnichannelCampaignGroup() { }
         public string Author { get; set; }
@@ -1139,7 +1157,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string OwnerId { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaignGroup Clone() { }
     }
-    public sealed class OmnichannelChannelEndpoint : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IDisplayTextAwareModel, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint>, System.ICloneable
+    public sealed class OmnichannelChannelEndpoint : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IDisplayTextAwareModel, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint>, CrestApps.OrchardCore.Models.IAuditedModel, System.ICloneable
     {
         public OmnichannelChannelEndpoint() { }
         public string AddressType { get; set; }
@@ -1201,7 +1219,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public OmnichannelCrmOptions() { }
         public bool Enabled { get; set; }
     }
-    public sealed class OmnichannelDisposition : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition>, System.ICloneable
+    public sealed class OmnichannelDisposition : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition>, CrestApps.OrchardCore.Models.IAuditedModel, System.ICloneable
     {
         public OmnichannelDisposition() { }
         public string Author { get; set; }
@@ -1341,7 +1359,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public OpportunityPartSettings() { }
         public string[] StageIds { get; set; }
     }
-    public sealed class OpportunityStage : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.OpportunityStage>, System.ICloneable
+    public sealed class OpportunityStage : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.OpportunityStage>, CrestApps.OrchardCore.Models.IAuditedModel, System.ICloneable
     {
         public OpportunityStage() { }
         public string Author { get; set; }
@@ -1481,12 +1499,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         public static System.Collections.Generic.List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> BuildSourceItems(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivitySourceOptions options, string selectedSource) { }
         public static void KeepSelectedValue(System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> items, string selectedValue) { }
     }
-    public sealed class AlwaysOpenBusinessHoursGate : CrestApps.OrchardCore.Omnichannel.Core.Services.IBusinessHoursGate
-    {
-        public AlwaysOpenBusinessHoursGate() { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Services.BusinessHoursCalendarOption>> GetCalendarOptionsAsync(System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<bool> IsOpenAsync(string calendarId, System.DateTime utcInstant, string timeZoneId, System.Threading.CancellationToken cancellationToken = default) { }
-    }
     public sealed class AutomatedActivityScreeningResult
     {
         public AutomatedActivityScreeningResult() { }
@@ -1517,7 +1529,17 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     public sealed class ContactOptOutResolver : CrestApps.OrchardCore.Omnichannel.Core.Services.IContactOptOutResolver
     {
         public ContactOptOutResolver(YesSql.ISession session, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelContactPhoneLookup phoneLookup) { }
+        public System.Threading.Tasks.Task<bool> ClearAddressOptOutAsync(string channel, string address, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> HasAddressOptedOutAsync(string channel, string address, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> HasOptedOutAsync(OrchardCore.ContentManagement.ContentItem contact, string channel, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task RecordAddressOptOutAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.ContactAddressOptOut optOut, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ContactPreferencesConsentSource : CrestApps.OrchardCore.Consent.IConsentSource
+    {
+        public ContactPreferencesConsentSource(CrestApps.OrchardCore.Omnichannel.Core.Services.IContactOptOutResolver optOutResolver, OrchardCore.ContentManagement.IContentManager contentManager, OrchardCore.Modules.IClock clock) { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<bool> HasOptedOutAsync(CrestApps.OrchardCore.Consent.ConsentQuery query, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task RecordAsync(string channel, string address, CrestApps.OrchardCore.Consent.ConsentChange change, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ContentDefinitionOmnichannelContactTypeProvider : CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelContactTypeProvider
     {
@@ -1585,7 +1607,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     {
         CrestApps.OrchardCore.Omnichannel.Core.Services.IAutomatedConversationGeneration Begin(string sessionId, System.Threading.CancellationToken hostToken);
         bool IsGenerating(string sessionId);
-        bool TryClaimInboundMessage(string providerMessageId);
     }
     public interface IAutomatedConversationGeneration : System.IDisposable
     {
@@ -1631,7 +1652,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     }
     public interface IContactOptOutResolver
     {
+        System.Threading.Tasks.Task<bool> ClearAddressOptOutAsync(string channel, string address, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> HasAddressOptedOutAsync(string channel, string address, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> HasOptedOutAsync(OrchardCore.ContentManagement.ContentItem contact, string channel, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task RecordAddressOptOutAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.ContactAddressOptOut optOut, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IFollowUpActivityHandler
     {
@@ -1768,7 +1792,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         public InMemoryAutomatedConversationGate() { }
         public CrestApps.OrchardCore.Omnichannel.Core.Services.IAutomatedConversationGeneration Begin(string sessionId, System.Threading.CancellationToken hostToken) { }
         public bool IsGenerating(string sessionId) { }
-        public bool TryClaimInboundMessage(string providerMessageId) { }
     }
     public static class LeadAIConversion
     {
@@ -1911,6 +1934,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     public static class OmnichannelSmsComplianceHelper
     {
         public static System.Collections.Generic.IReadOnlyList<string> DefaultOptOutKeywords { get; }
+        public static System.Collections.Generic.IReadOnlyList<string> HelpKeywords { get; }
+        public static System.Collections.Generic.IReadOnlyList<string> OptInKeywords { get; }
+        public static bool IsHelpRequest(string message) { }
+        public static bool IsOptInRequest(string message) { }
         public static bool IsOptOutRequest(string message, System.Collections.Generic.IEnumerable<string> keywords = null) { }
         public static System.Collections.Generic.IReadOnlyList<string> NormalizeOptOutKeywords(System.Collections.Generic.IEnumerable<string> keywords) { }
         public static System.Collections.Generic.IReadOnlyList<string> ParseOptOutKeywords(string keywords) { }
@@ -1925,6 +1952,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
                 "Field"})]
         public static System.Collections.Generic.List<System.ValueTuple<string, string>> GetSubjectTextFields(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition typeDefinition) { }
         public static System.Threading.Tasks.Task<bool> TryApplyContactEmailAsync(CrestApps.OrchardCore.Omnichannel.Core.Services.IContactMethodsWriter contactMethodsWriter, OrchardCore.ContentManagement.ContentItem contact, string email) { }
+    }
+    public sealed class OpenHoursBusinessHoursGate : CrestApps.OrchardCore.Omnichannel.Core.Services.IBusinessHoursGate
+    {
+        public OpenHoursBusinessHoursGate(CrestApps.OrchardCore.BusinessHours.Services.IOpenHoursService openHoursService) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Services.BusinessHoursCalendarOption>> GetCalendarOptionsAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> IsOpenAsync(string calendarId, System.DateTime utcInstant, string timeZoneId, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class SmsProviderRefusalScope : System.IDisposable
     {

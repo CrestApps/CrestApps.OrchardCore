@@ -40,7 +40,7 @@ You describe what you want the AI to do (tone, rules, goals), and the AI carries
 ## Enable the feature
 
 1. In Orchard Core Admin, go to `Tools` → `Features`.
-2. Enable `SMS Omnichannel Automation`. It depends on the AI features, Omnichannel Management, Orchard Core SMS, and **Contact Center Business Hours**, which it enables so that background follow-ups can respect business-hours calendars.
+2. Enable `SMS Omnichannel Automation`. It depends on the AI features, Omnichannel Management, Orchard Core SMS, **Contact Center Business Hours**, which it enables so that background follow-ups can respect business-hours calendars, and the **Provider Webhook Inbox**, which stores every inbound text before the provider is answered.
 
 For the step-by-step setup with screencasts, see [Automated AI SMS and voice](../user-manual/automated-ai.md) in the User Manual.
 
@@ -51,6 +51,10 @@ The Twilio settings editor (**Settings > Communication > SMS**, Twilio tab) show
 ### Twilio webhook signature
 
 The Twilio webhook verifies Twilio's `X-Twilio-Signature` header with the auth token from the Twilio SMS settings; a request without a valid signature is refused, and a missing auth token answers `400 Bad Request`. Twilio signs the public URL it was configured with, so when the site runs behind a TLS-terminating proxy or load balancer, set the site's **Base URL** (**Settings > General**) to the public address. The signature is then checked against that URL instead of the internal hop's scheme and host.
+
+### Inbound texts are stored before Twilio is answered
+
+The webhook commits each signed text to the durable provider webhook inbox, keyed on Twilio's `MessageSid`, before it answers Twilio, and starts processing it as soon as the response is sent. The **Provider Webhook Inbox Dispatch** background task finishes any text whose processing did not complete, so a text is not lost when the site restarts. A redelivery of the same `MessageSid` is recognized on every node and is neither stored nor answered twice. When the text cannot be stored, the webhook answers `503 Service Unavailable` so that Twilio sends it again. Telnyx SMS and Azure Event Grid texts take the same path, under the `sms-inbound` inbox handler.
 
 ## Typical setup (high level)
 
@@ -66,7 +70,7 @@ Use the subject-flow SMS automation settings to control:
 
 - **No-response timeout**: fails an automated SMS activity when the contact stops responding.
 - **Response delay**: the minimum wait before each AI SMS reply; replies are paced naturally on top of it. A reply delay chosen on the activity load is saved on each activity when it is loaded and takes precedence; the subject flow's value applies only when the load set none.
-- **Opt-out keywords**: customizes the keywords that stop the SMS conversation and update the contact preference.
+- **Opt-out keywords**: adds keywords that stop the SMS conversation and update the contact preference. The standard keywords (STOP, STOPALL, UNSUBSCRIBE, CANCEL, END and QUIT) always opt out as well. After trimming and removing trailing punctuation, a message opts out when it is a keyword or starts with one followed by a space or punctuation, compared without regard to case: "STOP", "stop." and "STOP please" opt out, "stopping by" and "please stop" do not. The messaging workspace uses the same rule.
 
 ## Handing off to a live agent
 

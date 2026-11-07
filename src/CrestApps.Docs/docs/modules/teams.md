@@ -27,6 +27,7 @@ Each team is a YesSql document in the `Teams` collection (`TeamsConstants.Collec
 | `ITeamManager` | `ICatalogManager<Team>` plus `ListTreeAsync` (each team followed by its sub-teams by name, with its depth), `GetSubtreeIdsAsync`, `GetAncestorsAsync` and `GetDeletionBlockersAsync`. Validation refuses a blank name, a parent that doesn't exist, a parent under the team itself, and a time zone that isn't a known IANA or Windows id (a Windows id is stored as its IANA id). |
 | `TeamStore` | The `DocumentCatalog<Team, TeamIndex>` behind the manager, public so that services of other modules can read teams without running the catalog handlers. Write through `ITeamManager` when the handlers must run. |
 | `TeamTree` | `GetSubtreeIds` and `Order` over a list of teams. |
+| `ITeamMembershipService` | Who is in a team and which teams a person is in: `GetMembersAsync(teamId, includeSubTeams, on)`, `GetMembershipsAsync(userId, on)` and `IsMemberAsync(teamId, userId, on)`. A team's members include the members of its sub-teams. The answers come from the registered `ITeamMemberProvider`s; with none, teams have no members. |
 | `TeamRecipeImport` | Imports teams from recipe JSON: created, or updated by id or name, with the parent by `parentName` in any order. A module's own recipe step passes a callback to copy its settings onto each team. |
 
 Register the services with `services.AddTeamsCore()`. The call is safe to repeat, so a module that builds on teams calls it from its own registration, as `AddWorkforceCore()` does.
@@ -36,6 +37,7 @@ Register the services with `services.AddTeamsCore()`. The call is safe to repeat
 | Contract | When it runs | Use it for |
 | --- | --- | --- |
 | `ICatalogEntryHandler<Team>` | The team manager's lifecycle. | Keeping a module's records in step with a team, as Workforce does for each team's calendar. |
+| `ITeamMemberProvider` | `ITeamMembershipService`. | Giving the members of teams a module keeps, as `TeamMember { TeamId, UserId, Role, EffectiveFrom, EffectiveTo, Source }` (`Role` is an open string; `TeamMemberRoles` names the usual ones). Register it with `services.AddTeamMemberProvider<TProvider>()`. Workforce gives each worker with a user account from its team memberships, and shows a team's workers on the team editor with its own driver. |
 | `ITeamDeletionGuard` | `ITeamManager.GetDeletionBlockersAsync`, which the **Delete** action calls first. | Refusing to delete a team the module still uses. Return the reason, shown to the person deleting it, or `null`. Register it with `services.AddTeamDeletionGuard<TGuard>()`. |
 | `DisplayDriver<Team>` | The team editor, and the rows of the team list. | Adding a section to the editor (a shape in the `Content` zone, after the Teams card at `Content:1`) or actions to a row's menu (between **Add a team under it** at `ActionsMenu:5` and **Delete** at `ActionsMenu:100`). |
 

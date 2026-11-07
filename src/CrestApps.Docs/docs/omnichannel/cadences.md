@@ -39,7 +39,7 @@ The same activity load also has a **Business hours** field (see below), which ev
 
 ## Business hours
 
-Every follow-up is **background-initiated** — the automation sends it on its own, not in response to a live message. Such sends are only made while the activity load's **business-hours calendar** is open, evaluated in the **contact's local time zone**, so a contact is never followed up after hours. Business-hours calendars come from the [Contact Center](../contact-center/index.md) **Business Hours** feature, which the SMS automation feature brings in automatically; when no calendar is set the cadence still runs but is not restricted by hours.
+Every follow-up is **background-initiated** — the automation sends it on its own, not in response to a live message. Such sends are only made while the activity load's **business-hours calendar** is open, evaluated in the **contact's local time zone**, so a contact is never followed up after hours. Business-hours calendars come from the shared [Business Hours](../modules/business-hours.md) building block, which today reads the calendars of the [Contact Center](../contact-center/index.md) **Business Hours** feature; enable that feature to define calendars (the SMS automation feature no longer turns it on by itself). When no calendar is set the cadence still runs but is not restricted by hours.
 
 A **live reply** to a contact who is *actively messaging* is never gated — only the proactive follow-ups a cadence sends are. Likewise, a reply the automation owes to a message the contact just sent is completed normally, not treated as a follow-up.
 

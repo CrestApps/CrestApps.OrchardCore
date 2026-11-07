@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Locking;
 using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
 
@@ -48,30 +49,14 @@ internal sealed class TimeOffLocks
     /// <summary>
     /// Takes the locks, or returns <see langword="null"/> when one is held too long by someone else.
     /// </summary>
-    public async Task<List<ILocker>> LockAsync(IEnumerable<string> keys)
+    public Task<ILocker> LockAsync(IEnumerable<string> keys)
     {
-        var lockers = new List<ILocker>();
-
-        foreach (var key in keys.Where(key => !string.IsNullOrEmpty(key)).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
-        {
-            var (locker, locked) = await _distributedLock.TryAcquireLockAsync(key, _lockTimeout, _lockExpiration);
-
-            if (!locked)
-            {
-                await ReleaseAsync(lockers);
-
-                return null;
-            }
-
-            lockers.Add(locker);
-        }
-
-        return lockers;
+        return _distributedLock.LockAllAsync(keys, _lockTimeout, _lockExpiration);
     }
 
-    public static async Task ReleaseAsync(IEnumerable<ILocker> lockers)
+    public static async Task ReleaseAsync(ILocker locker)
     {
-        foreach (var locker in lockers ?? [])
+        if (locker is not null)
         {
             await locker.DisposeAsync();
         }

@@ -1,0 +1,23 @@
+@using CrestApps.OrchardCore.Skills.Core.ViewModels
+@model SubjectSkillsViewModel
+
+<div class="card text-bg-theme mb-3"><div class="card-header">@T["Skills"]</div><div class="card-body">
+    @for (var i = 0; i < Model.Skills.Count; i++)
+    {
+        var skill = Model.Skills[i];
+        <div class="row g-2 align-items-center mb-1">
+            <input type="hidden" name="@Html.NameFor(m => m.Skills[i].SkillId)" value="@skill.SkillId" />
+            <label class="col-sm-4 col-form-label" for="@Html.IdFor(m => m.Skills[i].Proficiency)">@skill.Name</label>
+            <div class="col-sm-4">
+                <select class="form-select form-select-sm" id="@Html.IdFor(m => m.Skills[i].Proficiency)" name="@Html.NameFor(m => m.Skills[i].Proficiency)">
+                    <option value="0" selected="@(skill.Proficiency == 0)">@T["Doesn't hold it"]</option>
+                    <option value="1" selected="@(skill.Proficiency == 1)">@T["1 - Trainee"]</option>
+                    <option value="2" selected="@(skill.Proficiency == 2)">@T["2 - Basic"]</option>
+                    <option value="3" selected="@(skill.Proficiency == 3)">@T["3 - Competent"]</option>
+                    <option value="4" selected="@(skill.Proficiency == 4)">@T["4 - Advanced"]</option>
+                    <option value="5" selected="@(skill.Proficiency == 5)">@T["5 - Expert"]</option>
+                </select>
+            </div>
+        </div>
+    }
+</div></div>

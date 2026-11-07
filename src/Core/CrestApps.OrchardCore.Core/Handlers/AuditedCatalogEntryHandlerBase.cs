@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using System.Text.Json.Nodes;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
@@ -17,11 +16,9 @@ namespace CrestApps.OrchardCore.Core.Handlers;
 /// A derived handler is left with what is specific to its entry, which is usually only its validation.
 /// </remarks>
 /// <typeparam name="T">The catalog entry type.</typeparam>
-public abstract class AuditedCatalogEntryHandlerBase<T> : CatalogEntryHandlerBase<T>
+public abstract class AuditedCatalogEntryHandlerBase<T> : CatalogEntryAuditHandlerBase<T>
     where T : CatalogItem, IAuditedModel
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="AuditedCatalogEntryHandlerBase{T}"/> class.
     /// </summary>
@@ -30,15 +27,9 @@ public abstract class AuditedCatalogEntryHandlerBase<T> : CatalogEntryHandlerBas
     protected AuditedCatalogEntryHandlerBase(
         IHttpContextAccessor httpContextAccessor,
         IClock clock)
+        : base(httpContextAccessor, clock)
     {
-        _httpContextAccessor = httpContextAccessor;
-        Clock = clock;
     }
-
-    /// <summary>
-    /// Gets the clock the created and modified dates are read from.
-    /// </summary>
-    protected IClock Clock { get; }
 
     /// <inheritdoc/>
     public override Task InitializingAsync(InitializingContext<T> context, CancellationToken cancellationToken = default)
@@ -51,15 +42,7 @@ public abstract class AuditedCatalogEntryHandlerBase<T> : CatalogEntryHandlerBas
     /// <inheritdoc/>
     public override Task InitializedAsync(InitializedContext<T> context, CancellationToken cancellationToken = default)
     {
-        context.Model.CreatedUtc = Clock.UtcNow;
-
-        var user = _httpContextAccessor.HttpContext?.User;
-
-        if (user is not null)
-        {
-            context.Model.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            context.Model.Author = user.Identity?.Name;
-        }
+        StampCreated(context.Model);
 
         return Task.CompletedTask;
     }
@@ -67,11 +50,23 @@ public abstract class AuditedCatalogEntryHandlerBase<T> : CatalogEntryHandlerBas
     /// <inheritdoc/>
     public override Task UpdatingAsync(UpdatingContext<T> context, CancellationToken cancellationToken = default)
     {
-        context.Model.ModifiedUtc = Clock.UtcNow;
+        StampModified(context.Model);
 
         Populate(context.Model, context.Data);
 
         return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    protected override void SetCreated(T entry, DateTime createdUtc, string ownerId, string author, bool hasUser)
+    {
+        entry.CreatedUtc = createdUtc;
+
+        if (hasUser)
+        {
+            entry.OwnerId = ownerId;
+            entry.Author = author;
+        }
     }
 
     /// <summary>

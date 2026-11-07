@@ -108,4 +108,12 @@ public interface ILocalDncListManager
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The matching list or <c>null</c>.</returns>
     Task<LocalDncList> FindByIdAsync(string listId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads the phone numbers a local DNC list holds, in the order they were imported, a page at a time.
+    /// </summary>
+    /// <param name="listId">The list identifier.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The list's phone numbers.</returns>
+    Task<IReadOnlyList<string>> GetPhoneNumbersAsync(string listId, CancellationToken cancellationToken = default);
 }

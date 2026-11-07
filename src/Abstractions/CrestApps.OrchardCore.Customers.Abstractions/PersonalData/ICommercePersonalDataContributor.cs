@@ -14,6 +14,15 @@ namespace CrestApps.OrchardCore.Customers.PersonalData;
 public interface ICommercePersonalDataContributor
 {
     /// <summary>
+    /// Gets a value indicating whether the contributor takes part when the guest retention window runs out, through
+    /// <see cref="ICommercePersonalDataService.ExpireAsync"/>. The commerce records (checkouts, transactions, payments,
+    /// subscriptions, installment plans, coupons, provider customers and stock alerts) take part, as they always have;
+    /// a contributor whose records were never reached by the guest expiry returns <see langword="false"/>, so only an
+    /// explicit erasure request reaches them.
+    /// </summary>
+    bool TakesPartInRetentionExpiry => true;
+
+    /// <summary>
     /// Adds what the module's records reveal about the person to the subject: other owners, checkout sessions, names,
     /// emails and payment-provider customers. It is called once per round, so it must be safe to call again.
     /// </summary>

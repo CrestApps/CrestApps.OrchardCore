@@ -19,10 +19,7 @@ public sealed class CalendarReminderBackgroundTask : IBackgroundTask
     /// <inheritdoc />
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        var reminders = serviceProvider.GetRequiredService<CalendarReminderService>();
-        var clock = serviceProvider.GetRequiredService<IClock>();
-
-        await reminders.RunAsync(cancellationToken);
-        await reminders.PurgeAsync(clock.UtcNow.AddDays(-7));
+        // Old reminder records are removed by the platform retention task (CalendarReminderLogRetentionPolicy).
+        await serviceProvider.GetRequiredService<CalendarReminderService>().RunAsync(cancellationToken);
     }
 }

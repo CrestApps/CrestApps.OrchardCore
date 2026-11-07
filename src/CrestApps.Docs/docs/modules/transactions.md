@@ -485,6 +485,10 @@ It is also the only place a refund starts. **Refund** isn't offered on a payment
 
 **Commerce → Refunds** lists what came of them. A refund against a payment method that has no executable refund operation is recorded as **needing manual settlement** rather than silently dropped, and this screen is where an operator records the reference once they have moved the money by hand. Only a refund in that state can be closed this way; marking a failed gateway refund as done would tell the ledger the customer was paid when they were not.
 
+**Commerce → Payment issues** (`ManageRefunds`) lists the money operations that failed and must be finished by hand, open ones first: a refund the checkout could not issue while undoing a checkout it could not complete, a cancel, pause or resume the payment provider refused for a subscription (so the customer may still be billed), and a promotion code whose use was not counted after a settled payment. Each row says what to do, why it failed, the provider and its reference; **Mark resolved** records what the operator did. The code that hits the failure still logs it.
+
+A module records its own issue through `IPaymentIssueRecorder.RecordAsync(PaymentIssue)` (`Transactions.Abstractions`; `services.AddPaymentIssues()` in `Transactions.Core`, registered by Checkout). The kind is an open string; the built-in kinds are in `PaymentIssueKinds`. Recording never throws, so it is safe inside a failure handler.
+
 Both screens require the **Manage payments and refunds** permission.
 
 ## Report Builder data source

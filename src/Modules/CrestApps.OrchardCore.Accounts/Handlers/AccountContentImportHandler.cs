@@ -48,7 +48,10 @@ internal sealed class AccountContentImportHandler : ContentImportHandlerBase, IC
     }
 
     /// <inheritdoc/>
-    public IReadOnlyCollection<ImportColumn> GetColumns(ImportContentContext context)
+    public Task<IReadOnlyCollection<ImportColumn>> GetColumnsAsync(ImportContentContext context)
+        => Task.FromResult(GetColumns(context));
+
+    private IReadOnlyCollection<ImportColumn> GetColumns(ImportContentContext context)
     {
         if (!_accountContentTypeProvider.IsAccountChildType(context?.ContentTypeDefinition))
         {

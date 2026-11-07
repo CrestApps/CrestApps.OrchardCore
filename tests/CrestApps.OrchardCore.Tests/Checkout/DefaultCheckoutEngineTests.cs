@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Tests.Checkout.Fakes;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
+using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Entities;
@@ -370,6 +371,42 @@ public sealed class DefaultCheckoutEngineTests
     }
 
     /// <summary>
+    /// A refund that fails while undoing a checkout must be done by hand, so an operator sees it as a payment issue,
+    /// not only in the log.
+    /// </summary>
+    [Fact]
+    public async Task TryCompleteAsync_WhenTheCompensatingRefundFails_RecordsAPaymentIssue()
+    {
+        var attemptStore = new InMemoryPaymentAttemptStore();
+        var provider = new RecordingProvider(ProviderKey)
+        {
+            Verification = context => context.Attempt.ObligationId == CheckoutObligations.OneTime
+                ? new PaymentVerificationResult
+                {
+                    Status = PaymentStatus.Succeeded,
+                    TransactionId = "txn-onetime",
+                    ReportsAuthoritativeAmount = true,
+                    Amount = context.Attempt.ExpectedAmount,
+                    Currency = Currency,
+                }
+                : new PaymentVerificationResult { Status = PaymentStatus.Failed, TransactionId = "txn-recurring" },
+        };
+
+        var issues = new RecordingIssueRecorder();
+        var (engine, sessionStore) = CreateEngine(attemptStore, provider, handler: null, new RecordingRefundService { Throws = true }, paymentIssues: issues);
+        sessionStore.Seed(CreateSession(oneTimeAmount: 30m, recurringAmount: 10m));
+
+        await engine.BeginPaymentAsync("session-1", new BeginPaymentOptions { ProviderKey = ProviderKey }, TestContext.Current.CancellationToken);
+        await engine.TryCompleteAsync("session-1", TestContext.Current.CancellationToken);
+
+        var issue = Assert.Single(issues.Issues);
+
+        Assert.Equal(PaymentIssueKinds.RefundFailed, issue.Kind);
+        Assert.Equal(("CheckoutSession", "session-1", "txn-onetime"), (issue.ReferenceType, issue.ReferenceId, issue.ProviderReference));
+        Assert.Equal(30m, issue.Amount);
+    }
+
+    /// <summary>
     /// When one obligation fails the customer must not keep paying for the ones that succeeded. The refund
     /// goes through the durable refund service rather than straight to the gateway, so the gateway's own
     /// refund notification correlates to it instead of being quarantined for an operator.
@@ -674,7 +711,8 @@ public sealed class DefaultCheckoutEngineTests
         RecordingHandler handler = null,
         RecordingRefundService refundService = null,
         bool lockGranted = true,
-        bool supportsRecurring = true)
+        bool supportsRecurring = true,
+        IPaymentIssueRecorder paymentIssues = null)
     {
         var sessionStore = new InMemoryCheckoutSessionStore();
 
@@ -707,7 +745,8 @@ public sealed class DefaultCheckoutEngineTests
             distributedLock.Object,
             new Mock<ISession>().Object,
             new TestClock(DateTime.UtcNow),
-            NullLogger<DefaultCheckoutEngine>.Instance);
+            NullLogger<DefaultCheckoutEngine>.Instance,
+            paymentIssues: paymentIssues);
 
         return (engine, sessionStore);
     }
@@ -832,13 +871,32 @@ public sealed class DefaultCheckoutEngineTests
         }
     }
 
+    private sealed class RecordingIssueRecorder : IPaymentIssueRecorder
+    {
+        public List<PaymentIssue> Issues { get; } = [];
+
+        public Task<bool> RecordAsync(PaymentIssue issue, CancellationToken cancellationToken = default)
+        {
+            Issues.Add(issue);
+
+            return Task.FromResult(true);
+        }
+    }
+
     private sealed class RecordingRefundService : ICheckoutRefundService
     {
         public List<RequestPaymentRefundContext> Requests { get; } = [];
 
+        public bool Throws { get; set; }
+
         public Task<PaymentRefund> RequestRefundAsync(RequestPaymentRefundContext context, CancellationToken cancellationToken = default)
         {
             Requests.Add(context);
+
+            if (Throws)
+            {
+                throw new InvalidOperationException("The gateway is down.");
+            }
 
             return Task.FromResult(new PaymentRefund
             {

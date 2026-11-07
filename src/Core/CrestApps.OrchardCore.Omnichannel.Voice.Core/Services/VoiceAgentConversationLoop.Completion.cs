@@ -154,4 +154,21 @@ public sealed partial class VoiceAgentConversationLoop
 
         return (reply, handoffRequested, _handoffTurn.Reason, endCallRequested);
     }
+
+    /// <summary>
+    /// The name of the person being called, or <see langword="null"/> when the contact has none.
+    /// </summary>
+    /// <param name="activity">The call's activity.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    private async Task<string> ResolveContactNameAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(activity?.ContactContentItemId))
+        {
+            return null;
+        }
+
+        var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+
+        return string.IsNullOrWhiteSpace(contact?.DisplayText) ? null : contact.DisplayText.Trim();
+    }
 }

@@ -393,7 +393,7 @@ public sealed class MessagingEntryPointRoutingTests
         public List<ContactCenterEntryPoint> EntryPoints { get; }
 
         public Task<int> RunAsync()
-            => new MessagingEntryPointMigrations(_entryPointManager.Object, AddressManager.Object, NullLogger<MessagingEntryPointMigrations>.Instance)
+            => new MessagingEntryPointMigrations(_entryPointManager.Object, AddressManager.Object, new CrestApps.OrchardCore.Tests.Telephony.Doubles.StubClock(), NullLogger<MessagingEntryPointMigrations>.Instance)
                 .CreateAsync();
     }
 }

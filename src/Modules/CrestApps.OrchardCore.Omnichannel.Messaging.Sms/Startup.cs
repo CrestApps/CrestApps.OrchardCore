@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Twilio;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Workflows;
+using CrestApps.OrchardCore.Webhooks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
@@ -66,7 +67,7 @@ public sealed class Startup : StartupBase
 
         // Inbound SMS is committed to the durable provider webhook inbox before it is processed, keyed on the
         // provider's own message id, so a redelivered text is absorbed rather than stored and answered twice.
-        services.AddScoped<IProviderWebhookInboxHandler, SmsInboundInboxHandler>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProviderWebhookInboxHandler, SmsInboundInboxHandler>());
 
         // The carrier keywords a contact can text (STOP, START, HELP) and the replies they are owed.
         services.Configure<SmsKeywordReplySettings>(_shellConfiguration.GetSection("CrestApps:Omnichannel:Messaging:Sms:KeywordReplies"));
@@ -114,7 +115,7 @@ public sealed class TwilioSmsStartup : StartupBase
 /// <summary>
 /// Registers the workflow task that sends a text from a chosen number, into the customer's conversation.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class WorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

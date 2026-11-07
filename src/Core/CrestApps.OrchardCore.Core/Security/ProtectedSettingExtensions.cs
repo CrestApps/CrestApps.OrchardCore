@@ -65,6 +65,45 @@ public static class ProtectedSettingExtensions
     }
 
     /// <summary>
+    /// Applies what a settings form posted for a secret: a new value is protected and replaces the stored one, a blank
+    /// value keeps the stored one (the form never shows a stored secret, so leaving the field empty means "no change"),
+    /// and <paramref name="remove"/> clears it. To keep secrets out of deployment plans, export settings with
+    /// <c>ProtectedSettingsDeploymentSerializer</c>, which leaves protected members out.
+    /// </summary>
+    /// <param name="dataProtectionProvider">The tenant's data protection provider.</param>
+    /// <param name="purpose">The purpose the secret is protected for.</param>
+    /// <param name="existing">The stored, protected secret.</param>
+    /// <param name="posted">The value the form posted, in clear text; blank when the user did not enter one.</param>
+    /// <param name="remove">Whether the user asked to remove the stored secret.</param>
+    /// <returns>The protected value to store.</returns>
+    public static string ApplySecret(
+        this IDataProtectionProvider dataProtectionProvider,
+        string purpose,
+        string existing,
+        string posted,
+        bool remove = false)
+    {
+        ArgumentNullException.ThrowIfNull(dataProtectionProvider);
+        ArgumentException.ThrowIfNullOrEmpty(purpose);
+
+        if (remove)
+        {
+            return null;
+        }
+
+        return string.IsNullOrWhiteSpace(posted)
+            ? existing
+            : dataProtectionProvider.ProtectSetting(purpose, posted.Trim());
+    }
+
+    /// <summary>
+    /// Returns whether a secret is stored, for a settings form that shows "a key is saved" instead of the key.
+    /// </summary>
+    /// <param name="storedValue">The stored, protected secret.</param>
+    public static bool HasSecret(string storedValue)
+        => !string.IsNullOrEmpty(storedValue);
+
+    /// <summary>
     /// Reads a protected secret from settings, and logs a warning and treats the secret as not entered when it can't
     /// be read.
     /// </summary>

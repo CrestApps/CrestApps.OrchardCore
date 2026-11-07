@@ -72,7 +72,7 @@ public sealed class ActivityBatchesController : Controller
         IOptions<ActivityBatchSourceOptions> activityBatchSourceOptions,
         IHtmlLocalizer<ActivityBatchesController> htmlLocalizer,
         IStringLocalizer<ActivityBatchesController> stringLocalizer,
-        IClock clock = null)
+        IClock clock)
     {
         _manager = manager;
         _authorizationService = authorizationService;
@@ -571,7 +571,7 @@ public sealed class ActivityBatchesController : Controller
         // so the watchdog can tell it from a load that stalled and resume it as the same user.
         model.ResetLoadProgress();
         model.Status = OmnichannelActivityBatchStatus.Started;
-        model.LoadStartedUtc = _clock?.UtcNow ?? DateTime.UtcNow;
+        model.LoadStartedUtc = _clock.UtcNow;
         model.LoadStartedById = loaderId;
         model.LoadStartedByUsername = loaderUserName;
         await _manager.UpdateAsync(model);

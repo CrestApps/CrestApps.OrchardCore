@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements;
 /// <summary>
 /// Registers recipe schema contributors for the Omnichannel Management feature.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class RecipesSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

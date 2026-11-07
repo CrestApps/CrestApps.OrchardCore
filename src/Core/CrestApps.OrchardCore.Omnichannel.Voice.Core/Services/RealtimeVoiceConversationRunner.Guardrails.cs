@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using CrestApps.Core.AI.Guardrails;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Realtime;
@@ -167,7 +168,7 @@ public sealed partial class RealtimeVoiceConversationRunner
             // Whatever the model has started saying to the refused request stops reaching the caller now.
             Volatile.Write(ref _guardrailMuted, 1);
 
-            var now = DateTime.UtcNow.Ticks;
+            var now = UtcNowTicks;
             Interlocked.Exchange(ref _assistantSpeechEndsTicks, now);
             Interlocked.Exchange(ref _assistantVoiceEndsTicks, Math.Min(Interlocked.Read(ref _assistantVoiceEndsTicks), now));
 
@@ -175,9 +176,9 @@ public sealed partial class RealtimeVoiceConversationRunner
 
             // The refused reply finishes, unheard, before the placeholder is asked for: two responses at once would
             // talk over each other.
-            var waitedUntil = DateTime.UtcNow + SupervisorNoteWait;
+            var waitStarted = Stopwatch.GetTimestamp();
 
-            while (Volatile.Read(ref _responseInFlight) == 1 && DateTime.UtcNow < waitedUntil)
+            while (Volatile.Read(ref _responseInFlight) == 1 && Stopwatch.GetElapsedTime(waitStarted) < SupervisorNoteWait)
             {
                 await Task.Delay(TimeSpan.FromMilliseconds(100), callToken);
             }

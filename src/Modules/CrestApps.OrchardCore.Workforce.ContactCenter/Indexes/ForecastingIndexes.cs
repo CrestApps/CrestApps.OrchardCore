@@ -1,3 +1,4 @@
+using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Models;
 using YesSql.Indexes;
@@ -8,7 +9,7 @@ namespace CrestApps.OrchardCore.Workforce.ContactCenter.Indexes;
 /// <summary>
 /// Indexes planning groups by name and team.
 /// </summary>
-public sealed class PlanningGroupIndex : CatalogItemIndex
+public sealed class PlanningGroupIndex : CatalogItemIndex, INameAwareIndex
 {
     /// <summary>
     /// Gets or sets the name.
@@ -71,7 +72,7 @@ public sealed class ForecastIndex : CatalogItemIndex
 /// <summary>
 /// Indexes capacity plans by name and planning group.
 /// </summary>
-public sealed class CapacityPlanIndex : CatalogItemIndex
+public sealed class CapacityPlanIndex : CatalogItemIndex, INameAwareIndex
 {
     /// <summary>
     /// Gets or sets the name.

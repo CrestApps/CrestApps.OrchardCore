@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Encodings.Web;
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Receipts.Models;
 using Microsoft.Extensions.Localization;

@@ -36,6 +36,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     private readonly IAIConversationTurnNotifier _turnNotifier;
     private readonly CrestApps.Core.AI.Profiles.IAIProfileManager _profileManager;
     private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
     private readonly IShellHost _shellHost;
     private readonly ShellSettings _shellSettings;
@@ -202,36 +203,6 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     internal static readonly TimeSpan IdleResponseInFlightLimit = TimeSpan.FromSeconds(20);
 
     /// <summary>
-    /// How long the caller must be quiet before the session treats their turn as finished. Longer than the
-    /// provider default, because a person on the phone pauses mid-sentence and a call carries noise through those
-    /// pauses; cutting in on them is what makes an assistant feel like it is not listening.
-    /// </summary>
-    /// <remarks>
-    /// Only in effect when the session runs <c>server_vad</c>, which is a tenant setting. Under the default
-    /// semantic detector Core drops it: see <see cref="ApplyTelephonyTurnDetectionAsync"/>.
-    /// </remarks>
-    private const int TelephonySilenceDurationMilliseconds = 900;
-
-    /// <summary>
-    /// How confident the detector must be that it is hearing speech.
-    /// </summary>
-    /// <remarks>
-    /// Left at roughly the provider default on purpose. Raising it to 0.62 to suppress phantom turns seemed to
-    /// suppress them, and a caller's short quiet "yeah" on the same build reached the model as a fragment that came
-    /// back transcribed as "That's causing a fever somewhere." The assistant read that as a brush-off and politely
-    /// ended the call on somebody who had just agreed to talk.
-    /// <para>
-    /// Neither observation can be pinned on this number. Like the silence above, it only applies under
-    /// <c>server_vad</c>, and the tenant these calls run on configures no detector, so it gets the default semantic
-    /// one, which ignores it. It stays at the default all the same: a short affirmative is the most common thing a caller
-    /// says, and a detector made harder to trigger is exactly what clips one. Phantom turns are dealt with before
-    /// the detector instead, by <see cref="CallerEchoGuard"/>, which leaves the caller's audio untouched whenever
-    /// the assistant is not speaking.
-    /// </para>
-    /// </remarks>
-    private const float TelephonyVadThreshold = 0.5f;
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="RealtimeVoiceConversationRunner"/> class.
     /// </summary>
     /// <param name="orchestrator">The realtime orchestrator, which owns tools, the system prompt and data sources.</param>
@@ -247,6 +218,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     /// <param name="shellHost">The shell host, which gives the guardrail check a scope of its own.</param>
     /// <param name="shellSettings">The tenant the call belongs to.</param>
     /// <param name="profileManager">Finds the profile a supervisor switches the call to.</param>
+    /// <param name="timeProvider">The clock the call's audio timings and usage are measured on; the system clock when omitted.</param>
     public RealtimeVoiceConversationRunner(
         IRealtimeOrchestrator orchestrator,
         IContactCenterVoiceMediaProviderResolver mediaResolver,
@@ -260,7 +232,8 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         ILogger<RealtimeVoiceConversationRunner> logger,
         IShellHost shellHost = null,
         ShellSettings shellSettings = null,
-        CrestApps.Core.AI.Profiles.IAIProfileManager profileManager = null)
+        CrestApps.Core.AI.Profiles.IAIProfileManager profileManager = null,
+        TimeProvider timeProvider = null)
     {
         _shellHost = shellHost;
         _shellSettings = shellSettings;
@@ -274,8 +247,14 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         _turnNotifier = turnNotifier;
         _profileManager = profileManager;
         _clock = clock;
+        _timeProvider = timeProvider ?? TimeProvider.System;
         _logger = logger;
     }
+
+    /// <summary>
+    /// Now, in UTC ticks, on the clock the call's audio timings and usage meter are measured on.
+    /// </summary>
+    private long UtcNowTicks => _timeProvider.GetUtcNow().UtcTicks;
 
     /// <inheritdoc/>
     public async Task<bool> RunAsync(RealtimeVoiceConversationContext context, CancellationToken cancellationToken = default)
@@ -304,7 +283,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         CaptureCallScopes(context);
 
         // The call was answered moments ago; the caller's wait for the assistant's first word starts here.
-        var answeredTicks = DateTime.UtcNow.Ticks;
+        var answeredTicks = UtcNowTicks;
         _meter = context.Meter;
 
         var mediaProvider = _mediaResolver.Get(context.ProviderName);
@@ -359,7 +338,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         // Both silence clocks start now rather than at zero. Left unset, "quiet since the beginning of time" is a
         // very long silence indeed, and the watchdog below would speak up a second into the call -- over the top
         // of the opening line it was asked to wait for.
-        var startedTicks = DateTime.UtcNow.Ticks;
+        var startedTicks = UtcNowTicks;
         Interlocked.Exchange(ref _lastAssistantAudioTicks, startedTicks);
         Interlocked.Exchange(ref _lastCallerSpeechTicks, startedTicks);
         Interlocked.Exchange(ref _assistantSpeechEndsTicks, 0);
@@ -445,7 +424,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         }
         finally
         {
-            _meter?.Stop(DateTime.UtcNow.Ticks);
+            _meter?.Stop(UtcNowTicks);
             await callScope.CancelAsync();
             LogVoiceLevel(context);
 
@@ -535,7 +514,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
                     return;
                 }
 
-                var now = DateTime.UtcNow.Ticks;
+                var now = UtcNowTicks;
 
                 // A caller turn the provider opened and has not committed is the caller talking now. Live, a caller
                 // ten seconds into a long question was asked whether they were still there.
@@ -630,7 +609,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     private long ExtendAssistantPlayback(int pcmByteCount)
     {
         var duration = AssistantBargeIn.DurationTicks(pcmByteCount);
-        var now = DateTime.UtcNow.Ticks;
+        var now = UtcNowTicks;
         long queuedUntil;
         long playsUntil;
 
@@ -714,7 +693,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     // Returns whether the call was closed, or ended on its own; false when the customer spoke and took it back.
     private async Task<bool> CloseAfterTheGoodbyeAsync(CancellationTokenSource callScope, Func<bool> reachedVoicemail)
     {
-        var requestedAtTicks = DateTime.UtcNow.Ticks;
+        var requestedAtTicks = UtcNowTicks;
         var closingLineStarted = false;
 
         while (!callScope.IsCancellationRequested)
@@ -728,7 +707,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
                 return true;
             }
 
-            var now = DateTime.UtcNow.Ticks;
+            var now = UtcNowTicks;
             var lastAssistantTicks = Interlocked.Read(ref _lastAssistantAudioTicks);
 
             // Whether the call is being ended on a recording: the model said so as it ended it, or the provider said

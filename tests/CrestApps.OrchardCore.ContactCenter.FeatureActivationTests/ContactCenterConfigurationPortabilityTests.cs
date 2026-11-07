@@ -593,6 +593,8 @@ public sealed partial class ContactCenterConfigurationPortabilityTests
         // inside it that still differs from the default so the round trip proves the setting is carried.
         (ContactCenterDeploymentSteps.DialerProfile, nameof(DialerProfile.PreviewOfferTimeoutSeconds), JsonValue.Create(DialerProfile.DefaultPreviewOfferTimeoutSeconds + 60)),
         (ContactCenterDeploymentSteps.DialerProfile, nameof(DialerProfile.DefaultRegionCode), JsonValue.Create("US")),
+        // A preview offer must last long enough to review a record, which the seeder's small default number is not.
+        (ContactCenterDeploymentSteps.DialerProfile, nameof(DialerProfile.PreviewOfferTimeoutSeconds), JsonValue.Create(DialerProfile.MinimumPreviewOfferTimeoutSeconds + 15)),
         // An entry point answers a channel features register (calls here), and its numbers are addresses from the
         // Omnichannel catalogs, which this group does not import, so it is seeded answering calls on no number yet.
         (ContactCenterDeploymentSteps.EntryPoint, nameof(ContactCenterEntryPoint.Channel), JsonValue.Create("Phone")),

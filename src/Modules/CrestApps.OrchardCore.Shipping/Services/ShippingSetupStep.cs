@@ -3,6 +3,7 @@ using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Commerce;
+using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Shipping.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -100,7 +101,7 @@ internal sealed class ShippingSetupStep : IStoreSetupStep
             Currency = currency,
         };
 
-        method.Put(new FlatRateSettings { Amount = Math.Round(amount, 2, MidpointRounding.AwayFromZero) });
+        method.Put(new FlatRateSettings { Amount = Money.Round(amount, currency) });
         zone.Methods.Add(method);
 
         await _manager.CreateAsync(zone, cancellationToken);

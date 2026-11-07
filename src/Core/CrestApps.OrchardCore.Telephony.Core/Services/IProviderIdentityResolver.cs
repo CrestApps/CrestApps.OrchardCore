@@ -1,12 +1,15 @@
+using CrestApps.OrchardCore.Webhooks;
+
 namespace CrestApps.OrchardCore.Telephony.Core.Services;
 
 /// <summary>
 /// Resolves a provider technical name or alias to its canonical technical identity. Canonicalization
 /// runs before any inbox delivery, event, or call identity key is built so that provider-contributed
 /// aliases (for example a display-named variant of a provider) collapse to a single stable technical
-/// identity.
+/// identity. It is also the provider name normalizer of the provider webhook inbox, so inbound deliveries from an
+/// aliased provider share one idempotency key.
 /// </summary>
-public interface IProviderIdentityResolver
+public interface IProviderIdentityResolver : IWebhookProviderNameNormalizer
 {
     /// <summary>
     /// Resolves the specified provider name or alias to its canonical technical name.
@@ -17,4 +20,7 @@ public interface IProviderIdentityResolver
     /// otherwise the supplied name unchanged. A <see langword="null"/> or empty input is returned as-is.
     /// </returns>
     string Canonicalize(string providerName);
+
+    /// <inheritdoc/>
+    string IWebhookProviderNameNormalizer.Normalize(string providerName) => Canonicalize(providerName);
 }

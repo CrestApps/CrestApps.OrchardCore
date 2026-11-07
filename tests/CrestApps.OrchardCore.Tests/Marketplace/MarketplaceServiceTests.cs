@@ -22,8 +22,9 @@ public sealed class MarketplaceServiceTests
     private readonly List<VendorEarning> _earnings = [];
     private readonly List<VendorPayout> _payouts = [];
     private readonly Vendor _vendor = new() { ItemId = "v1", Name = "Northwind Pottery", PayoutsEnabled = true, StripeAccountId = "acct_1" };
-    private readonly FakePayoutProvider _provider = new();
+    private readonly FakePayoutProvider _provider = new("Test");
     private Order _order;
+    private bool _failNextPayoutSave;
 
     [Fact]
     public async Task ASale_IsRecordedOnce_LessTheCommission_AndHeld()
@@ -73,6 +74,85 @@ public sealed class MarketplaceServiceTests
     }
 
     [Fact]
+    public async Task APayoutRetriedAfterItsSaveFailed_ReusesTheSameIdempotencyKey()
+    {
+        var service = Create(new MarketplaceSettings { CommissionPercent = 10m, HoldDays = 0, ReleaseOnFulfillment = false });
+
+        await service.RecordSaleAsync(_order, TestContext.Current.CancellationToken);
+        await service.ReleaseDueAsync(10, TestContext.Current.CancellationToken);
+
+        // The transfer goes through, then saving the payout fails, so the earnings are still ready to pay out.
+        _failNextPayoutSave = true;
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.PayOutAsync(_vendor, TestContext.Current.CancellationToken));
+
+        var firstKey = _provider.IdempotencyKey;
+
+        await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        Assert.False(string.IsNullOrEmpty(firstKey));
+        Assert.Equal(firstKey, _provider.IdempotencyKey);
+        Assert.Equal(VendorPayoutStatus.Paid, Assert.Single(_payouts).Status);
+    }
+
+    [Fact]
+    public async Task APayoutRetriedAfterTheProviderRefusedIt_UsesANewIdempotencyKey()
+    {
+        var service = Create(new MarketplaceSettings { CommissionPercent = 10m, HoldDays = 0, ReleaseOnFulfillment = false });
+
+        await service.RecordSaleAsync(_order, TestContext.Current.CancellationToken);
+        await service.ReleaseDueAsync(10, TestContext.Current.CancellationToken);
+
+        _provider.Failure = "Insufficient funds.";
+
+        await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        var refusedKey = _provider.IdempotencyKey;
+
+        _provider.Failure = null;
+
+        await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        // The provider keeps a refused request's answer for its key, so the next try must not reuse it.
+        Assert.NotEqual(refusedKey, _provider.IdempotencyKey);
+        Assert.Equal([VendorPayoutStatus.Failed, VendorPayoutStatus.Paid], _payouts.Select(payout => payout.Status));
+    }
+
+    [Fact]
+    public async Task APayout_UsesTheProviderNamedInTheSettings()
+    {
+        var other = new FakePayoutProvider("Other");
+        var service = Create(new MarketplaceSettings { CommissionPercent = 10m, HoldDays = 0, ReleaseOnFulfillment = false, PayoutProvider = "Other" }, other);
+
+        await service.RecordSaleAsync(_order, TestContext.Current.CancellationToken);
+        await service.ReleaseDueAsync(10, TestContext.Current.CancellationToken);
+
+        var (paid, failures) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        Assert.Empty(failures);
+        Assert.Equal(48.6m, paid);
+        Assert.Equal(48.6m, other.Amount);
+        Assert.Null(_provider.Currency);
+    }
+
+    [Fact]
+    public async Task APayout_WithSeveralProvidersAndNoneNamed_IsntSent()
+    {
+        var other = new FakePayoutProvider("Other");
+        var service = Create(new MarketplaceSettings { CommissionPercent = 10m, HoldDays = 0, ReleaseOnFulfillment = false }, other);
+
+        await service.RecordSaleAsync(_order, TestContext.Current.CancellationToken);
+        await service.ReleaseDueAsync(10, TestContext.Current.CancellationToken);
+
+        var (paid, failures) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        Assert.Equal(0m, paid);
+        Assert.Single(failures);
+        Assert.Null(_provider.Currency);
+        Assert.Null(other.Currency);
+    }
+
+    [Fact]
     public async Task AVendorWithoutAPayoutAccount_IsntPaidOut()
     {
         var service = Create(new MarketplaceSettings());
@@ -86,7 +166,7 @@ public sealed class MarketplaceServiceTests
         Assert.Null(_provider.Currency);
     }
 
-    private MarketplaceService Create(MarketplaceSettings settings)
+    private MarketplaceService Create(MarketplaceSettings settings, params IVendorPayoutProvider[] otherProviders)
     {
         var mug = new ContentItem { ContentItemId = "mug" };
 
@@ -128,8 +208,19 @@ public sealed class MarketplaceServiceTests
 
         var payouts = new Mock<IVendorPayoutStore>();
         payouts.Setup(store => store.CreateAsync(It.IsAny<VendorPayout>(), It.IsAny<CancellationToken>()))
-            .Callback((VendorPayout payout, CancellationToken _) => _payouts.Add(payout))
-            .Returns(ValueTask.CompletedTask);
+            .Returns((VendorPayout payout, CancellationToken _) =>
+            {
+                if (_failNextPayoutSave)
+                {
+                    _failNextPayoutSave = false;
+
+                    throw new InvalidOperationException("The save failed.");
+                }
+
+                _payouts.Add(payout);
+
+                return ValueTask.CompletedTask;
+            });
 
         var content = new Mock<IContentManager>();
         content.Setup(manager => manager.GetAsync(It.IsAny<string>(), It.IsAny<VersionOptions>()))
@@ -147,21 +238,33 @@ public sealed class MarketplaceServiceTests
         var clock = new Mock<IClock>();
         clock.Setup(c => c.UtcNow).Returns(_now);
 
-        return new MarketplaceService(vendors.Object, earnings.Object, payouts.Object, content.Object, orders.Object, site.Object, [_provider], clock.Object, NullLogger<MarketplaceService>.Instance);
+        return new MarketplaceService(vendors.Object, earnings.Object, payouts.Object, content.Object, orders.Object, site.Object, [_provider, .. otherProviders], clock.Object, NullLogger<MarketplaceService>.Instance, new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<MarketplaceService>());
     }
 
     private sealed class FakePayoutProvider : IVendorPayoutProvider
     {
+        public FakePayoutProvider(string name)
+        {
+            Name = name;
+        }
+
+        public string Name { get; }
+
         public decimal Amount { get; private set; }
 
         public string Currency { get; private set; }
+
+        public string IdempotencyKey { get; private set; }
+
+        public string Failure { get; set; }
 
         public Task<(string TransferId, string Failure)> PayAsync(Vendor vendor, Order order, decimal amount, string currency, string idempotencyKey, CancellationToken cancellationToken = default)
         {
             Amount = amount;
             Currency = currency;
+            IdempotencyKey = idempotencyKey;
 
-            return Task.FromResult<(string, string)>(("tr_1", null));
+            return Task.FromResult<(string, string)>(Failure is null ? ("tr_1", null) : (null, Failure));
         }
     }
 }

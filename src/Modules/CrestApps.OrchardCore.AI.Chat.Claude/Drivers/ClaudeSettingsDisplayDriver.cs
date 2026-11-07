@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Claude.Services;
 using CrestApps.OrchardCore.AI.Chat.Claude.Services;
 using CrestApps.OrchardCore.AI.Chat.Claude.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
@@ -61,7 +62,7 @@ public sealed class ClaudeSettingsDisplayDriver : SiteDisplayDriver<ClaudeSettin
             model.AuthenticationType = settings.AuthenticationType;
             model.BaseUrl = settings.BaseUrl;
             model.DefaultModel = settings.DefaultModel;
-            model.HasApiKey = !string.IsNullOrWhiteSpace(settings.ProtectedApiKey);
+            model.HasApiKey = ProtectedSettingExtensions.HasSecret(settings.ProtectedApiKey);
             model.AuthenticationTypes =
             [
                 new SelectListItem(S["Not configured"], nameof(ClaudeAuthenticationType.NotConfigured)),
@@ -96,12 +97,9 @@ public sealed class ClaudeSettingsDisplayDriver : SiteDisplayDriver<ClaudeSettin
 
         if (settings.AuthenticationType == ClaudeAuthenticationType.ApiKey)
         {
-            if (!string.IsNullOrWhiteSpace(model.ApiKey))
-            {
-                var protector = _dataProtectionProvider.CreateProtector(ProtectorPurpose);
-                settings.ProtectedApiKey = protector.Protect(model.ApiKey);
-            }
-            else if (string.IsNullOrWhiteSpace(settings.ProtectedApiKey))
+            settings.ProtectedApiKey = _dataProtectionProvider.ApplySecret(ProtectorPurpose, settings.ProtectedApiKey, model.ApiKey);
+
+            if (!ProtectedSettingExtensions.HasSecret(settings.ProtectedApiKey))
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.ApiKey), S["API key is required."]);
             }

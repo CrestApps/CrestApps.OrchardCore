@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.Subscriptions;
 /// and recipes features are enabled.
 /// </summary>
 [Feature(SubscriptionConstants.Features.Tenants)]
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class TenantOnboardingRecipesSchemaStartup : StartupBase
 {
     /// <inheritdoc/>

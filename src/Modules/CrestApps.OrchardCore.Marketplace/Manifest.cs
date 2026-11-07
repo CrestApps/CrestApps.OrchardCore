@@ -2,6 +2,7 @@ using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Marketplace;
 using CrestApps.OrchardCore.Orders.Core;
+using CrestApps.OrchardCore.Stripe.Core;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -31,6 +32,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         MarketplaceConstants.Feature,
-        "CrestApps.OrchardCore.Stripe",
+        StripeConstants.Feature.ModuleId,
     ]
 )]

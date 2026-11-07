@@ -1,7 +1,7 @@
 using System.Text.Json;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
-using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
+using CrestApps.OrchardCore.AI.Recipes.Schemas;
 using Json.Schema;
 using Microsoft.Extensions.Options;
 

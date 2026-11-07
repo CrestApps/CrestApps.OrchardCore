@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.Bookings.Models;
 using CrestApps.OrchardCore.Bookings.Services;
-using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
 using Microsoft.Extensions.Localization;

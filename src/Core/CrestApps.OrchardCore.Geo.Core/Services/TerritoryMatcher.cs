@@ -81,20 +81,38 @@ public static class TerritoryMatcher
 /// <summary>
 /// Finds the territory of a point or postal code among the stored territories.
 /// </summary>
+/// <remarks>
+/// The territories are read once per scope, so a request that resolves many addresses (an import, a dispatch board)
+/// does not load every territory for each one. A territory created, changed or deleted in the scope is read again.
+/// </remarks>
 public sealed class DefaultTerritoryResolver : ITerritoryResolver
 {
     private readonly ServiceTerritoryStore _store;
+    private readonly ServiceTerritoryScopeCache _cache;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultTerritoryResolver"/> class.
     /// </summary>
     /// <param name="store">The store.</param>
-    public DefaultTerritoryResolver(ServiceTerritoryStore store)
+    /// <param name="cache">The territories read in this scope.</param>
+    public DefaultTerritoryResolver(ServiceTerritoryStore store, ServiceTerritoryScopeCache cache)
     {
         _store = store;
+        _cache = cache;
     }
 
     /// <inheritdoc/>
     public async Task<TerritoryMatch> ResolveAsync(GeoPoint? point, string postalCode, CancellationToken cancellationToken = default)
-        => TerritoryMatcher.Match(await _store.GetAllAsync(cancellationToken), point, postalCode);
+        => TerritoryMatcher.Match(_cache.Territories ??= [.. await _store.GetAllAsync(cancellationToken)], point, postalCode);
+}
+
+/// <summary>
+/// The service territories read in the current scope, forgotten when one of them is created, changed or deleted.
+/// </summary>
+public sealed class ServiceTerritoryScopeCache
+{
+    /// <summary>
+    /// Gets or sets the territories, or <see langword="null"/> when they have not been read in this scope.
+    /// </summary>
+    public IReadOnlyList<ServiceTerritory> Territories { get; set; }
 }

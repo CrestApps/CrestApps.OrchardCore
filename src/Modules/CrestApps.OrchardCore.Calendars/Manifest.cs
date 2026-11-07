@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Resources;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -16,16 +17,16 @@ using OrchardCore.Modules.Manifest;
     Category = "Calendar",
     Dependencies =
     [
-        "OrchardCore.Users",
-        "OrchardCore.Roles",
-        "CrestApps.OrchardCore.Resources",
+        OrchardCoreFeatureIds.Users,
+        OrchardCoreFeatureIds.Roles,
+        ResourcesConstants.Feature.Area,
     ]
 )]
 
 [assembly: Feature(
     Id = CalendarsConstants.Features.Teams,
     Name = "Team Calendars",
-    Description = "Calendars that belong to a team (a role), with meetings, on-call duty and time out of office, and a page that shows when the team's members are free.",
+    Description = "Calendars that belong to a team (a role, and with Teams enabled the members of the team linked to it), with meetings, on-call duty and time out of office, and a page that shows when the team's members are free.",
     Category = "Calendar",
     Dependencies = [CalendarsConstants.Features.Calendars]
 )]
@@ -63,7 +64,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         CalendarsConstants.Features.Calendars,
-        "OrchardCore.Email",
+        OrchardCoreFeatureIds.Email,
     ]
 )]
 

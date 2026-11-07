@@ -1,6 +1,4 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
@@ -12,6 +10,9 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.EventGrid;
 using CrestApps.OrchardCore.Omnichannel.EventGrid.Models;
 using CrestApps.OrchardCore.Omnichannel.EventGrid.Services;
+using CrestApps.OrchardCore.Webhooks;
+using CrestApps.OrchardCore.Webhooks.Core.Signatures;
+using CrestApps.OrchardCore.Webhooks.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -29,17 +30,14 @@ using YesSqlSession = YesSql.ISession;
 
 internal static class AzureEventGridEndpoint
 {
+    /// <summary>
+    /// The provider name inbound texts are keyed under in the durable provider webhook inbox.
+    /// </summary>
+    internal const string ProviderName = "AzureEventGrid";
+
     private const long _maximumRequestBodySizeBytes = 1024 * 1024;
 
-    // A concurrency conflict while storing an inbound text is retried in a fresh scope, because Event Grid has
-    // already been answered and will not redeliver it. The delays sit between attempts 1-2 and 2-3.
-    private const int _maximumInboundSmsAttempts = 3;
-
-    private static readonly TimeSpan[] _inboundSmsRetryDelays =
-    [
-        TimeSpan.FromMilliseconds(200),
-        TimeSpan.FromMilliseconds(500),
-    ];
+    private static readonly SharedKeyWebhookSignatureValidator _sharedKeyValidator = new();
 
     /// <summary>
     /// Adds the azure event grid endpoint.
@@ -72,7 +70,11 @@ internal static class AzureEventGridEndpoint
         // Check SAS key
         if (!string.IsNullOrEmpty(eventGridOptions.EventGridSasKey) &&
             context.Request.Headers.TryGetValue("aeg-sas-key", out var headerKey) &&
-            FixedTimeEquals(headerKey.ToString(), eventGridOptions.EventGridSasKey))
+            _sharedKeyValidator.IsValid(new WebhookSignatureValidationContext
+            {
+                Secret = eventGridOptions.EventGridSasKey,
+                Signature = headerKey.ToString(),
+            }))
         {
             isAuthorized = true;
         }
@@ -169,7 +171,12 @@ internal static class AzureEventGridEndpoint
             switch (mapping.Kind)
             {
                 case EventGridEventMappingKind.SmsReceived:
-                    await DispatchInboundSmsAsync(e, mapping, clock, shellHost, shellSettings, logger);
+                    if (!await AcceptInboundSmsAsync(context, e, mapping, handlers, session, clock, shellHost, shellSettings, logger))
+                    {
+                        // The text was not stored, so Event Grid has to deliver the batch again. The texts of this
+                        // batch that were stored are recognised as duplicates then.
+                        return TypedResults.StatusCode(StatusCodes.Status503ServiceUnavailable);
+                    }
 
                     continue;
 
@@ -263,12 +270,26 @@ internal static class AzureEventGridEndpoint
     }
 
     /// <summary>
-    /// Raises an inbound text delivered through Event Grid as the platform's own SMS received event, in the same
+    /// Accepts an inbound text delivered through Event Grid as the platform's own SMS received event, in the same
     /// shape the Twilio and Telnyx webhooks produce, so SMS automation and the Messaging workspace both act on it.
     /// </summary>
-    private static async Task DispatchInboundSmsAsync(
+    /// <remarks>
+    /// An automated reply waits a humanized settle pause, calls the AI model and waits a "typing" pause, which together
+    /// can outlast the 30 seconds Event Grid waits for a response. So the text is committed to the durable provider
+    /// webhook inbox, keyed on the provider's message id, before Event Grid is answered, and processing starts once the
+    /// response is sent. A redelivery is absorbed by the inbox on any node, and processing that fails part-way is
+    /// retried from storage instead of being lost with a discarded background task.
+    /// </remarks>
+    /// <returns>
+    /// <see langword="true"/> when the text is stored (or was already stored); <see langword="false"/> when it was not,
+    /// so Event Grid has to deliver it again.
+    /// </returns>
+    internal static async Task<bool> AcceptInboundSmsAsync(
+        HttpContext context,
         EventGridEvent e,
         EventGridEventMapping mapping,
+        IEnumerable<IOmnichannelEventHandler> handlers,
+        YesSqlSession session,
         IClock clock,
         IShellHost shellHost,
         ShellSettings shellSettings,
@@ -288,24 +309,15 @@ internal static class AzureEventGridEndpoint
             ? e.Id
             : mapping.ProviderMessageId;
 
-        // A retry must not reuse objects a failed attempt's handlers may have changed, so each attempt builds its
-        // own message and event from the mapped values.
-        OmnichannelEvent CreateEvent() => new()
+        var message = new OmnichannelMessage
         {
-            Id = providerMessageId,
-            EventType = mapping.EventName,
-            Subject = "SMS received",
-            Data = BinaryData.FromString(mapping.Content),
-            Message = new OmnichannelMessage
-            {
-                CustomerAddress = mapping.From,
-                ServiceAddress = mapping.To,
-                Content = mapping.Content,
-                Channel = mapping.Channel,
-                CreatedUtc = createdUtc,
-                IsInbound = true,
-                ProviderMessageId = providerMessageId,
-            },
+            CustomerAddress = mapping.From,
+            ServiceAddress = mapping.To,
+            Content = mapping.Content,
+            Channel = mapping.Channel,
+            CreatedUtc = createdUtc,
+            IsInbound = true,
+            ProviderMessageId = providerMessageId,
         };
 
         if (logger.IsEnabled(LogLevel.Information))
@@ -320,98 +332,89 @@ internal static class AzureEventGridEndpoint
                 mapping.Content.Length);
         }
 
-        // An automated reply waits a humanized settle pause, calls the AI model and waits a "typing" pause, which
-        // together can outlast the 30 seconds Event Grid waits for a response. Event Grid would then treat the
-        // delivery as failed and send it again, racing the original for the same conversation. So, as the Twilio
-        // webhook does, acknowledge now and process the text in a fresh shell scope off the request thread.
-        _ = ProcessInboundSmsAsync(shellHost, shellSettings, CreateEvent, mapping.Channel, providerMessageId, logger);
+        var inbox = context.RequestServices.GetService<IProviderWebhookInbox>();
+        var hasInboxHandler = context.RequestServices.GetServices<IProviderWebhookInboxHandler>()
+            .Any(handler => string.Equals(handler.TechnicalName, OmnichannelConstants.WebhookInboxHandlers.SmsReceived, StringComparison.Ordinal));
+
+        if (inbox is null || !hasInboxHandler || string.IsNullOrEmpty(providerMessageId))
+        {
+            // No SMS feature is on to take the text (each SMS feature brings the inbox and its handler), so nothing
+            // composes an automated reply. Store it and hand it to the event handlers inline, as any other event is.
+            await session.SaveAsync(message, collection: OmnichannelConstants.CollectionName);
+
+            await handlers.InvokeAsync((handler, evt) => handler.HandleAsync(evt), new OmnichannelEvent
+            {
+                Id = providerMessageId,
+                EventType = mapping.EventName,
+                Subject = "SMS received",
+                Data = BinaryData.FromString(mapping.Content),
+                Message = message,
+            }, logger);
+
+            return true;
+        }
+
+        ProviderWebhookInboxAcceptanceResult acceptance;
+
+        try
+        {
+            acceptance = await inbox.AcceptAsync(
+                new ProviderWebhookInboxDelivery
+                {
+                    ProviderName = ProviderName,
+                    DeliveryId = providerMessageId,
+                    HandlerName = OmnichannelConstants.WebhookInboxHandlers.SmsReceived,
+                    Payload = JsonSerializer.Serialize(message),
+                },
+                context.RequestAborted);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // Nothing was stored, so nothing picks this up later: this is the one case where Event Grid must redeliver.
+            logger.LogError(exception, "The inbound Event Grid SMS {ProviderMessageId} could not be stored in the provider webhook inbox.", providerMessageId.SanitizeLogValue());
+
+            return false;
+        }
+
+        if (acceptance.Status == ProviderWebhookInboxAcceptanceStatus.Duplicate)
+        {
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("Ignoring a duplicate Event Grid SMS delivery for ProviderMessageId {ProviderMessageId}.", providerMessageId.SanitizeLogValue());
+            }
+
+            return true;
+        }
+
+        if (acceptance.Status != ProviderWebhookInboxAcceptanceStatus.Accepted)
+        {
+            // Busy: the delivery was not stored.
+            return false;
+        }
+
+        var messageId = acceptance.MessageId;
+
+        AfterResponseWork.Schedule(
+            context,
+            shellHost,
+            shellSettings,
+            scope => DispatchAsync(scope, messageId),
+            logger);
+
+        return true;
     }
 
-    private static async Task ProcessInboundSmsAsync(
-        IShellHost shellHost,
-        ShellSettings shellSettings,
-        Func<OmnichannelEvent> createEvent,
-        string channel,
-        string providerMessageId,
-        ILogger logger)
+    private static async Task DispatchAsync(ShellScope scope, string messageId)
     {
-        // Event Grid delivers at least once, so the same text can arrive again. Claim its id once, before it is
-        // stored or any handler runs, so a redelivery is neither recorded twice nor answered again. The claim is
-        // made on the first attempt only; a retry below is this same delivery and must not see itself as a
-        // duplicate. The gate ships with Omnichannel management; without it, the handlers' own idempotency applies.
-        var claimed = false;
+        var inbox = scope.ServiceProvider.GetRequiredService<IProviderWebhookInbox>();
 
-        for (var attempt = 1; ; attempt++)
+        try
         {
-            try
-            {
-                var isDuplicate = false;
-
-                // Each attempt runs in its own shell scope, so a retry starts from a clean session rather than one
-                // whose commit already failed.
-                var backgroundScope = await shellHost.GetScopeAsync(shellSettings);
-
-                await backgroundScope.UsingAsync(async scope =>
-                {
-                    var scopedSession = scope.ServiceProvider.GetRequiredService<YesSqlSession>();
-                    var scopedHandlers = scope.ServiceProvider.GetServices<IOmnichannelEventHandler>();
-                    var scopedLogger = scope.ServiceProvider.GetRequiredService<ILogger<Startup>>();
-
-                    using var logScope = scopedLogger.BeginScope(new Dictionary<string, object>
-                    {
-                        ["ProviderMessageId"] = providerMessageId.SanitizeLogValue(),
-                        ["Channel"] = channel,
-                    });
-
-                    if (!claimed)
-                    {
-                        var conversationGate = scope.ServiceProvider.GetService<IAutomatedConversationGate>();
-
-                        if (conversationGate is not null && !conversationGate.TryClaimInboundMessage(providerMessageId))
-                        {
-                            isDuplicate = true;
-
-                            return;
-                        }
-
-                        claimed = true;
-                    }
-
-                    var omnichannelEvent = createEvent();
-
-                    await scopedSession.SaveAsync(omnichannelEvent.Message, collection: OmnichannelConstants.CollectionName);
-
-                    await scopedHandlers.InvokeAsync((handler, evt) => handler.HandleAsync(evt), omnichannelEvent, scopedLogger);
-                });
-
-                if (isDuplicate && logger.IsEnabled(LogLevel.Information))
-                {
-                    logger.LogInformation("Ignoring a duplicate Event Grid SMS delivery for ProviderMessageId {ProviderMessageId}.", providerMessageId.SanitizeLogValue());
-                }
-
-                return;
-            }
-            catch (ConcurrencyException) when (attempt < _maximumInboundSmsAttempts)
-            {
-                // Another writer changed a document this attempt also wrote, and the session was not committed.
-                // Event Grid has already been answered, so this is the only place the text can be retried.
-                logger.LogWarning(
-                    "Retrying inbound Event Grid SMS {ProviderMessageId} after a concurrency conflict (attempt {Attempt} of {MaxAttempts}).",
-                    providerMessageId.SanitizeLogValue(),
-                    attempt,
-                    _maximumInboundSmsAttempts);
-
-                await Task.Delay(_inboundSmsRetryDelays[attempt - 1]);
-            }
-            catch (Exception ex)
-            {
-                // Any other failure, or a concurrency conflict on the last attempt. Event Grid has already been
-                // answered, so nothing upstream is left to retry this work, and an exception escaping here would be
-                // unobserved. Record it so the lost text is visible in the logs.
-                logger.LogError(ex, "Failed to process the inbound Event Grid SMS {ProviderMessageId} in the background.", providerMessageId.SanitizeLogValue());
-
-                return;
-            }
+            await inbox.DispatchAsync(messageId);
+        }
+        catch (ConcurrencyException)
+        {
+            // Another node claimed the same delivery. The inbox retries it from storage.
         }
     }
 
@@ -431,14 +434,6 @@ internal static class AzureEventGridEndpoint
         !string.IsNullOrWhiteSpace(options.AADIssuer) &&
         !string.IsNullOrWhiteSpace(options.AADAudience) &&
         !string.IsNullOrWhiteSpace(options.AADMetadataAddress);
-
-    private static bool FixedTimeEquals(string a, string b)
-    {
-        var aBytes = Encoding.UTF8.GetBytes(a);
-        var bBytes = Encoding.UTF8.GetBytes(b);
-
-        return CryptographicOperations.FixedTimeEquals(aBytes, bBytes);
-    }
 
     private static bool TryGetBearerToken(string authorizationHeader, out string token)
     {

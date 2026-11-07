@@ -32,15 +32,12 @@ public interface IStoreCreditStore : ICatalog<StoreCreditAccount>
 /// </summary>
 public sealed class StoreCreditStore : DocumentCatalog<StoreCreditAccount, StoreCreditAccountIndex>, IStoreCreditStore
 {
-    private readonly IClock _clock;
-
     protected override bool CheckConcurrency => true;
 
     public StoreCreditStore(ISession session, IClock clock)
-        : base(session)
+        : base(session, clock)
     {
         CollectionName = CustomersConstants.CollectionName;
-        _clock = clock;
     }
 
     public Task<StoreCreditAccount> FindAsync(string customerId, string currency, CancellationToken cancellationToken = default)
@@ -57,20 +54,6 @@ public sealed class StoreCreditStore : DocumentCatalog<StoreCreditAccount, Store
         => string.IsNullOrEmpty(customerId)
             ? []
             : [.. await Session.Query<StoreCreditAccount, StoreCreditAccountIndex>(index => index.CustomerId == customerId, collection: CollectionName).ListAsync(cancellationToken)];
-
-    protected override ValueTask SavingAsync(StoreCreditAccount record)
-    {
-        var now = _clock.UtcNow;
-
-        if (record.CreatedUtc == default)
-        {
-            record.CreatedUtc = now;
-        }
-
-        record.UpdatedUtc = now;
-
-        return ValueTask.CompletedTask;
-    }
 }
 
 /// <summary>

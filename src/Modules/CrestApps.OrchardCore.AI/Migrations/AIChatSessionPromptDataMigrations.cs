@@ -1,7 +1,9 @@
+using System.Globalization;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
+using CrestApps.OrchardCore.Core.Migrations;
 using Dapper;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -71,6 +73,8 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
                 {
                     logger.LogInformation("Found {Count} AIChatSession documents to migrate prompts from.", documents.Count);
                 }
+
+                var skipped = new MigrationSkipReport(nameof(AIChatSessionPromptDataMigrations), logger);
 
                 // Process in batches to avoid holding too many changes in memory.
 
@@ -155,7 +159,7 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
                         }
                         catch (Exception ex)
                         {
-                            logger.LogError(ex, "Failed to migrate prompts for document ID {DocumentId}.", document.Id);
+                            skipped.Skip(document.Id.ToString(CultureInfo.InvariantCulture), "the session's prompts could not be migrated", ex);
                         }
                     }
 
@@ -169,6 +173,8 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
                         documents.Count);
                     }
                 }
+
+                await skipped.LogSummaryAsync(scope.ServiceProvider);
 
                 if (logger.IsEnabled(LogLevel.Information))
                 {

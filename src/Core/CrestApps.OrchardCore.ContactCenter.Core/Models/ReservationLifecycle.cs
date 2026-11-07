@@ -1,5 +1,5 @@
-using System.Collections.Frozen;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.StateMachines;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 
@@ -14,27 +14,28 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 /// </summary>
 public static class ReservationLifecycle
 {
-    private static readonly FrozenDictionary<ReservationStatus, FrozenSet<ReservationStatus>> _transitions =
-        new Dictionary<ReservationStatus, FrozenSet<ReservationStatus>>
+    private static readonly TransitionTable<ReservationStatus> _transitions = new(
+        new Dictionary<ReservationStatus, ReservationStatus[]>
         {
-            [ReservationStatus.Pending] = FrozenSet.ToFrozenSet(
+            [ReservationStatus.Pending] =
             [
                 ReservationStatus.Accepted,
                 ReservationStatus.Rejected,
                 ReservationStatus.Expired,
                 ReservationStatus.Canceled,
-            ]),
+            ],
 
             // An accepted reservation can still be cancelled: the assignment it produced may be released before
             // the agent starts work. Every other outcome is final.
-            [ReservationStatus.Accepted] = FrozenSet.ToFrozenSet(
+            [ReservationStatus.Accepted] =
             [
                 ReservationStatus.Canceled,
-            ]),
-            [ReservationStatus.Rejected] = FrozenSet<ReservationStatus>.Empty,
-            [ReservationStatus.Expired] = FrozenSet<ReservationStatus>.Empty,
-            [ReservationStatus.Canceled] = FrozenSet<ReservationStatus>.Empty,
-        }.ToFrozenDictionary();
+            ],
+            [ReservationStatus.Rejected] = [],
+            [ReservationStatus.Expired] = [],
+            [ReservationStatus.Canceled] = [],
+        },
+        allowStaying: true);
 
     /// <summary>
     /// Determines whether a reservation in one status may move to another.
@@ -43,14 +44,7 @@ public static class ReservationLifecycle
     /// <param name="to">The status the reservation would move to.</param>
     /// <returns><see langword="true"/> when the transition is admitted; otherwise <see langword="false"/>.</returns>
     public static bool CanTransition(ReservationStatus from, ReservationStatus to)
-    {
-        if (from == to)
-        {
-            return true;
-        }
-
-        return _transitions.TryGetValue(from, out var allowed) && allowed.Contains(to);
-    }
+        => _transitions.CanMove(from, to);
 
     /// <summary>
     /// Determines whether a reservation status is resolved, meaning the lock is no longer held.

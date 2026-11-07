@@ -14,8 +14,6 @@ namespace CrestApps.OrchardCore.Subscriptions.Core.Services;
 /// </summary>
 public sealed class InstallmentPlanStore : DocumentCatalog<InstallmentPlan, InstallmentPlanIndex>, IInstallmentPlanStore
 {
-    private readonly IClock _clock;
-
     /// <inheritdoc/>
     protected override bool CheckConcurrency => true;
 
@@ -25,10 +23,9 @@ public sealed class InstallmentPlanStore : DocumentCatalog<InstallmentPlan, Inst
     /// <param name="session">The YesSql session.</param>
     /// <param name="clock">The clock used to stamp the plan.</param>
     public InstallmentPlanStore(ISession session, IClock clock)
-        : base(session)
+        : base(session, clock)
     {
         CollectionName = SubscriptionConstants.InstallmentPlanCollectionName;
-        _clock = clock;
     }
 
     /// <inheritdoc/>
@@ -116,20 +113,5 @@ public sealed class InstallmentPlanStore : DocumentCatalog<InstallmentPlan, Inst
             .ListAsync(cancellationToken);
 
         return records.ToArray();
-    }
-
-    /// <inheritdoc/>
-    protected override ValueTask SavingAsync(InstallmentPlan record)
-    {
-        var now = _clock.UtcNow;
-
-        if (record.CreatedUtc == default)
-        {
-            record.CreatedUtc = now;
-        }
-
-        record.UpdatedUtc = now;
-
-        return ValueTask.CompletedTask;
     }
 }

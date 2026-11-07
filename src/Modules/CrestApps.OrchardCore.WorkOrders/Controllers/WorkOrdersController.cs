@@ -1,5 +1,3 @@
-using CrestApps.OrchardCore.Addresses.Models;
-using CrestApps.OrchardCore.Assets.Models;
 using CrestApps.OrchardCore.WorkOrders.Core;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
@@ -14,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -37,8 +36,6 @@ public sealed class WorkOrdersController : Controller
     /// </summary>
     public const string AllFilter = "all";
 
-    private const int BlankLines = 2;
-
     private readonly IAuthorizationService _authorizationService;
     private readonly WorkOrderService _service;
     private readonly WorkOrderSettingManager<WorkOrderType> _types;
@@ -49,6 +46,8 @@ public sealed class WorkOrdersController : Controller
     private readonly IClock _clock;
     private readonly ILocalClock _localClock;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<WorkOrder> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
 
@@ -65,6 +64,8 @@ public sealed class WorkOrdersController : Controller
     /// <param name="clock">The clock.</param>
     /// <param name="localClock">The local clock.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="displayManager">The display manager that builds the work order editor from its drivers.</param>
+    /// <param name="updateModelAccessor">The accessor of the model updater.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     public WorkOrdersController(
         IAuthorizationService authorizationService,
@@ -77,6 +78,8 @@ public sealed class WorkOrdersController : Controller
         IClock clock,
         ILocalClock localClock,
         INotifier notifier,
+        IDisplayManager<WorkOrder> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<WorkOrdersController> htmlLocalizer)
     {
         _authorizationService = authorizationService;
@@ -89,6 +92,8 @@ public sealed class WorkOrdersController : Controller
         _clock = clock;
         _localClock = localClock;
         _notifier = notifier;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
     }
 
@@ -178,11 +183,12 @@ public sealed class WorkOrdersController : Controller
     }
 
     /// <summary>
-    /// Shows the editor for a new work order of a type.
+    /// Shows the editor for a new work order of a type, built by the display drivers of <see cref="WorkOrder"/>.
     /// </summary>
     /// <param name="typeId">The type.</param>
     /// <param name="contactId">The CRM contact it is for, when started from the contact's page.</param>
     /// <param name="contactName">The contact's name.</param>
+    /// <param name="accountId">The account it is for, when started from the account's page.</param>
     /// <returns>The page.</returns>
     [Admin("work-orders/new/{typeId}", "WorkOrdersNew")]
     public async Task<IActionResult> New(string typeId, string contactId = null, string contactName = null, string accountId = null)
@@ -206,23 +212,18 @@ public sealed class WorkOrdersController : Controller
         workOrder.AccountId = string.IsNullOrWhiteSpace(accountId) ? await customers.AccountOfAsync(workOrder.ContactId, workOrder.CustomerId, HttpContext.RequestAborted) : accountId.Trim();
         workOrder.ServiceAddress ??= await customers.AccountAddressAsync(workOrder.AccountId, HttpContext.RequestAborted);
 
-        var model = await ToEditModelAsync(workOrder);
-
-        await PopulateAsync(model);
-
-        return View("Edit", model);
+        return View("Edit", await EditorAsync(workOrder, await _displayManager.BuildEditorAsync(workOrder, _updateModelAccessor.ModelUpdater, isNew: true), isNew: true));
     }
 
     /// <summary>
     /// Creates a work order.
     /// </summary>
     /// <param name="typeId">The type.</param>
-    /// <param name="form">The form.</param>
     /// <returns>Its page, or the editor with its errors.</returns>
     [HttpPost]
     [ActionName(nameof(New))]
     [Admin("work-orders/new/{typeId}", "WorkOrdersNew")]
-    public async Task<IActionResult> NewPost(string typeId, WorkOrderEditViewModel form)
+    public async Task<IActionResult> NewPost(string typeId)
     {
         if (!await _authorizationService.AuthorizeAsync(User, WorkOrdersPermissions.ManageWorkOrders))
         {
@@ -236,13 +237,18 @@ public sealed class WorkOrdersController : Controller
             return NotFound();
         }
 
-        await ApplyAsync(form, workOrder);
+        var editor = await _displayManager.UpdateEditorAsync(workOrder, _updateModelAccessor.ModelUpdater, isNew: true);
+
+        if (!ModelState.IsValid)
+        {
+            return await RedisplayAsync(workOrder, editor, null, isNew: true);
+        }
 
         var result = await _service.CreateAsync(workOrder, User.Identity?.Name, HttpContext.RequestAborted);
 
         if (!result.Succeeded)
         {
-            return await RedisplayAsync(form, result, typeId);
+            return await RedisplayAsync(workOrder, editor, result, isNew: true);
         }
 
         await _notifier.SuccessAsync(H["Work order {0} was created.", workOrder.Number]);
@@ -251,7 +257,7 @@ public sealed class WorkOrdersController : Controller
     }
 
     /// <summary>
-    /// Shows the editor.
+    /// Shows the editor, built by the display drivers of <see cref="WorkOrder"/>.
     /// </summary>
     /// <param name="id">The work order.</param>
     /// <returns>The page.</returns>
@@ -270,42 +276,43 @@ public sealed class WorkOrdersController : Controller
             return NotFound();
         }
 
-        var model = await ToEditModelAsync(workOrder);
-
-        await PopulateAsync(model);
-
-        return View(model);
+        return View(await EditorAsync(workOrder, await _displayManager.BuildEditorAsync(workOrder, _updateModelAccessor.ModelUpdater, isNew: false), isNew: false));
     }
 
     /// <summary>
     /// Saves the editor.
     /// </summary>
-    /// <param name="form">The form.</param>
+    /// <param name="id">The work order.</param>
     /// <returns>Its page, or the editor with its errors.</returns>
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("work-orders/edit/{id}", "WorkOrdersEdit")]
-    public async Task<IActionResult> EditPost(WorkOrderEditViewModel form)
+    public async Task<IActionResult> EditPost(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, WorkOrdersPermissions.ManageWorkOrders))
         {
             return Forbid();
         }
 
-        var workOrder = await _service.FindAsync(form.Id, HttpContext.RequestAborted);
+        var workOrder = await _service.FindAsync(id, HttpContext.RequestAborted);
 
         if (workOrder is null)
         {
             return NotFound();
         }
 
-        await ApplyAsync(form, workOrder);
+        var editor = await _displayManager.UpdateEditorAsync(workOrder, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        if (!ModelState.IsValid)
+        {
+            return await RedisplayAsync(workOrder, editor, null, isNew: false);
+        }
 
         var result = await _service.UpdateAsync(workOrder, User.Identity?.Name, HttpContext.RequestAborted);
 
         if (!result.Succeeded)
         {
-            return await RedisplayAsync(form, result, workOrder.TypeId);
+            return await RedisplayAsync(workOrder, editor, result, isNew: false);
         }
 
         await _notifier.SuccessAsync(H["Work order {0} was saved.", workOrder.Number]);
@@ -319,7 +326,7 @@ public sealed class WorkOrdersController : Controller
     /// <param name="id">The work order.</param>
     /// <returns>The page.</returns>
     [Admin("work-orders/view/{id}", "WorkOrdersView")]
-    public async Task<IActionResult> Details(string id, [FromServices] IDisplayManager<WorkOrderPanels> panels, [FromServices] global::OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor)
+    public async Task<IActionResult> Details(string id, [FromServices] IDisplayManager<WorkOrderPanels> panels, [FromServices] IUpdateModelAccessor updateModelAccessor)
     {
         if (!await _authorizationService.AuthorizeAsync(User, WorkOrdersPermissions.ViewWorkOrders))
         {
@@ -542,163 +549,33 @@ public sealed class WorkOrdersController : Controller
         }
     }
 
-    private async Task<IActionResult> RedisplayAsync(WorkOrderEditViewModel form, WorkOrderResult result, string typeId)
+    private async Task<IActionResult> RedisplayAsync(WorkOrder workOrder, object editor, WorkOrderResult result, bool isNew)
     {
-        foreach (var error in result.Errors)
+        foreach (var error in result?.Errors ?? [])
         {
             ModelState.AddModelError(string.Empty, error);
         }
 
-        form.TypeId = typeId;
-        form.TypeName = (await _types.FindByIdAsync(typeId))?.Name;
-        form.Number = result.WorkOrder?.Number;
-        await PopulateAsync(form);
+        // What a section's driver wrote while the editor was updated is not kept.
+        await _session.CancelAsync();
 
-        return View("Edit", form);
+        var model = await EditorAsync(workOrder, editor, isNew);
+
+        model.Number = result?.WorkOrder?.Number ?? model.Number;
+
+        return View("Edit", model);
     }
 
-    private async Task<WorkOrderEditViewModel> ToEditModelAsync(WorkOrder workOrder)
-    {
-        var address = workOrder.ServiceAddress;
-
-        return new WorkOrderEditViewModel
+    private async Task<WorkOrderEditorViewModel> EditorAsync(WorkOrder workOrder, object editor, bool isNew)
+        => new()
         {
-            Id = string.IsNullOrEmpty(workOrder.Number) ? null : workOrder.ItemId,
+            WorkOrderId = isNew ? null : workOrder.ItemId,
             TypeId = workOrder.TypeId,
             TypeName = (await _types.FindByIdAsync(workOrder.TypeId))?.Name,
             Number = workOrder.Number,
-            Summary = workOrder.Summary,
-            Description = workOrder.Description,
-            Priority = workOrder.Priority,
-            EstimatedMinutes = workOrder.EstimatedMinutes,
-            ContactId = workOrder.ContactId,
-            CustomerId = workOrder.CustomerId,
-            AccountId = workOrder.AccountId,
-            ContactName = workOrder.Contact?.Name,
-            ContactPhone = workOrder.Contact?.Phone,
-            ContactEmail = workOrder.Contact?.Email,
-            AddressLine1 = address?.AddressLine1,
-            AddressLine2 = address?.AddressLine2,
-            City = address?.City,
-            Region = address?.Region,
-            PostalCode = address?.PostalCode,
-            Country = address?.Country,
-            Latitude = address?.Latitude,
-            Longitude = address?.Longitude,
-            AccessNotes = workOrder.AccessNotes,
-            Earliest = workOrder.EarliestUtc is { } earliest ? (await _localClock.ConvertToLocalAsync(earliest)).DateTime : null,
-            Latest = workOrder.LatestUtc is { } latest ? (await _localClock.ConvertToLocalAsync(latest)).DateTime : null,
-            AssetIds = [.. workOrder.AssetIds],
-            Lines = [.. workOrder.Lines.Select(WorkOrderSettingsController.ToEditModel)],
+            Editor = editor,
         };
-    }
-
-    private async Task ApplyAsync(WorkOrderEditViewModel form, WorkOrder workOrder)
-    {
-        workOrder.Summary = form.Summary?.Trim();
-        workOrder.Description = string.IsNullOrWhiteSpace(form.Description) ? null : form.Description.Trim();
-        workOrder.Priority = form.Priority;
-        workOrder.EstimatedMinutes = Math.Max(0, form.EstimatedMinutes);
-        workOrder.ContactId = Clean(form.ContactId);
-        workOrder.CustomerId = Clean(form.CustomerId);
-        workOrder.AccountId = Clean(form.AccountId);
-
-        var customers = HttpContext.RequestServices.GetRequiredService<Integrations.WorkOrderCustomers>();
-
-        // A contact picked with no name typed gives the work order its name, and its account when none is chosen.
-        if (string.IsNullOrWhiteSpace(form.ContactName) && !string.IsNullOrEmpty(workOrder.ContactId))
-        {
-            form.ContactName = await customers.NameAsync(AssetOwnerKind.Contact, workOrder.ContactId, HttpContext.RequestAborted);
-        }
-
-        workOrder.AccountId ??= await customers.AccountOfAsync(workOrder.ContactId, workOrder.CustomerId, HttpContext.RequestAborted);
-
-        workOrder.Contact = new WorkOrderContact { Name = Clean(form.ContactName), Phone = Clean(form.ContactPhone), Email = Clean(form.ContactEmail) };
-        workOrder.AccessNotes = Clean(form.AccessNotes);
-        workOrder.EarliestUtc = form.Earliest is { } earliest ? await _localClock.ConvertToUtcAsync(earliest) : null;
-        workOrder.LatestUtc = form.Latest is { } latest ? await _localClock.ConvertToUtcAsync(latest) : null;
-        workOrder.AssetIds = [.. (form.AssetIds ?? []).Where(assetId => !string.IsNullOrEmpty(assetId)).Distinct(StringComparer.Ordinal)];
-
-        var previous = workOrder.Lines.Where(line => !string.IsNullOrEmpty(line.Id)).ToDictionary(line => line.Id, StringComparer.Ordinal);
-
-        workOrder.Lines = [.. (form.Lines ?? []).Where(line => !string.IsNullOrWhiteSpace(line.Description)).Select(line => WorkOrderSettingsController.ToLine(line, string.IsNullOrEmpty(line.Id) ? null : previous.GetValueOrDefault(line.Id)))];
-
-        // Lines that already used parts stay, even when their row was cleared: what was used is a record.
-        foreach (var used in previous.Values.Where(line => line.QuantityUsed > 0 && !workOrder.Lines.Any(item => item.Id == line.Id)))
-        {
-            workOrder.Lines.Add(used);
-        }
-
-        var address = new Address
-        {
-            AddressLine1 = Clean(form.AddressLine1),
-            AddressLine2 = Clean(form.AddressLine2),
-            City = Clean(form.City),
-            Region = Clean(form.Region),
-            PostalCode = Clean(form.PostalCode),
-            Country = Clean(form.Country),
-        };
-        var current = workOrder.ServiceAddress;
-        var pinned = GeoPointOf(form.Latitude, form.Longitude);
-
-        if (address.AddressLine1 is null && address.City is null && address.PostalCode is null)
-        {
-            workOrder.ServiceAddress = null;
-        }
-        else if (pinned is { } pin && (pin.Latitude != current?.Latitude || pin.Longitude != current?.Longitude))
-        {
-            // Placed by hand on the map: the pin is where the job is, whatever geocoding would say.
-            workOrder.ServiceAddress = new Address
-            {
-                AddressLine1 = address.AddressLine1,
-                AddressLine2 = address.AddressLine2,
-                City = address.City,
-                Region = address.Region,
-                PostalCode = address.PostalCode,
-                Country = address.Country,
-                Latitude = pin.Latitude,
-                Longitude = pin.Longitude,
-                GeocodedUtc = _clock.UtcNow,
-                GeocodeSource = "Pin",
-            };
-
-            // The territory is found again from the pin.
-            workOrder.TerritoryId = null;
-        }
-        else if (current is null
-            || current.AddressLine1 != address.AddressLine1
-            || current.AddressLine2 != address.AddressLine2
-            || current.City != address.City
-            || current.Region != address.Region
-            || current.PostalCode != address.PostalCode
-            || current.Country != address.Country)
-        {
-            // A new address has no point until it is geocoded.
-            workOrder.ServiceAddress = address;
-        }
-
-        // With no address typed, the job is at the account's location.
-        workOrder.ServiceAddress ??= await customers.AccountAddressAsync(workOrder.AccountId, HttpContext.RequestAborted);
-    }
-
-    private async Task PopulateAsync(WorkOrderEditViewModel model)
-    {
-        model.AssetOptions = [.. (await _lookups.AssetsAsync(HttpContext.RequestAborted)).Select(option => new SelectListItem(option.Text, option.Value, model.AssetIds.Contains(option.Value)))];
-        model.StockItemOptions = await _lookups.StockItemsAsync(HttpContext.RequestAborted);
-        model.CustomerPickers = await CustomerNamesAsync(model.CustomerId, model.AccountId, model.ContactId, pickers: true);
-        model.Map = HttpContext.RequestServices.GetService(typeof(CrestApps.OrchardCore.Geo.Services.IGeoSettingsService)) is CrestApps.OrchardCore.Geo.Services.IGeoSettingsService geo ? await geo.GetAsync() : null;
-
-        while (model.Lines.Count(line => string.IsNullOrWhiteSpace(line.Description)) < BlankLines)
-        {
-            model.Lines.Add(new LineEditModel());
-        }
-    }
 
     private Task<Dictionary<string, string>> CustomerNamesAsync(string customerId, string accountId, string contactId, bool pickers)
         => HttpContext.RequestServices.GetRequiredService<Integrations.WorkOrderCustomers>().NamesAsync(customerId, accountId, contactId, pickers, HttpContext.RequestAborted);
-
-    private static (double Latitude, double Longitude)? GeoPointOf(double? latitude, double? longitude)
-        => latitude is >= -90 and <= 90 && longitude is >= -180 and <= 180 ? (Math.Round(latitude.Value, 6), Math.Round(longitude.Value, 6)) : null;
-
-    private static string Clean(string value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

@@ -1,13 +1,14 @@
+using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Inventory.Core;
 using CrestApps.OrchardCore.Inventory.Core.Indexes;
 using CrestApps.OrchardCore.Inventory.Core.Models;
 using CrestApps.OrchardCore.Inventory.Core.Services;
 using CrestApps.OrchardCore.Inventory.Migrations;
 using CrestApps.OrchardCore.Inventory.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
@@ -93,6 +94,33 @@ public sealed class StockAlertServiceTests : IAsyncLifetime
         Assert.All(_sent, message => Assert.Contains("cap", message.Subject));
     }
 
+    [Fact]
+    public async Task TheStoresTemplate_OfTheBackInStockEmail_Wins()
+    {
+        var item = await AddItemAsync("scarf", onHand: 0);
+
+        await SubscribeAsync("scarf", "sam@example.test");
+
+        var templates = new OrderEmailTemplateSettings();
+        templates.Templates[StockAlertService.EmailKind] = new CommerceEmailTemplate
+        {
+            IsEnabled = true,
+            Subject = "Back: {{ StockItem.Title }}",
+            Body = "<p>{{ StockItem.Title }} is here again.</p>",
+        };
+
+        await using (var session = _store.CreateSession())
+        {
+            Assert.Equal(1, await CreateService(session, templates).NotifyAsync(item, TestContext.Current.CancellationToken));
+            await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        var message = Assert.Single(_sent);
+
+        Assert.Equal("Back: scarf", message.Subject);
+        Assert.Equal("<p>scarf is here again.</p>", message.HtmlBody);
+    }
+
     private async Task<StockAlertResult> SubscribeAsync(string contentItemId, string email)
     {
         await using var session = _store.CreateSession();
@@ -113,7 +141,7 @@ public sealed class StockAlertServiceTests : IAsyncLifetime
         return item;
     }
 
-    private StockAlertService CreateService(ISession session)
+    private StockAlertService CreateService(ISession session, OrderEmailTemplateSettings templates = null)
     {
         var clock = new Mock<IClock>();
         clock.Setup(value => value.UtcNow).Returns(_now);
@@ -138,7 +166,7 @@ public sealed class StockAlertServiceTests : IAsyncLifetime
             Mock.Of<IContentManager>(),
             clock.Object,
             services,
-            NullLogger<StockAlertService>.Instance,
+            templates is null ? CommerceEmailSenders.Create(services) : CommerceEmailSenders.CreateWithTemplates(email.Object, templates),
             new PassThroughStringLocalizer<StockAlertService>());
     }
 }

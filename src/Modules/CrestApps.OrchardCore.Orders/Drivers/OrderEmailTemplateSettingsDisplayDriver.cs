@@ -1,6 +1,5 @@
+using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Orders.Core;
-using CrestApps.OrchardCore.Orders.Core.Models;
-using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
@@ -16,7 +15,8 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Orders.Drivers;
 
 /// <summary>
-/// Settings › Commerce › Emails: the store's own templates of its emails about orders, and a layout around them.
+/// Settings › Commerce › Emails: the store's own templates of its emails, of every kind a feature registers, and a
+/// layout around them.
 /// </summary>
 public sealed class OrderEmailTemplateSettingsDisplayDriver : SiteDisplayDriver<OrderEmailTemplateSettings>
 {
@@ -101,7 +101,7 @@ public sealed class OrderEmailTemplateSettingsDisplayDriver : SiteDisplayDriver<
 
         foreach (var template in (model.Templates ?? []).Where(template => options.HasKind(template.Kind)))
         {
-            templates[template.Kind] = new OrderEmailTemplate
+            templates[template.Kind] = new CommerceEmailTemplate
             {
                 IsEnabled = template.IsEnabled,
                 Subject = string.IsNullOrWhiteSpace(template.Subject) ? null : template.Subject.Trim(),

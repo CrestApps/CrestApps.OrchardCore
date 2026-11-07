@@ -1,9 +1,10 @@
-using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.ContactCenter.Core.IntervalStatistics;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Indexes;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
+using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.Modules;
 using YesSql;
@@ -29,6 +30,8 @@ public sealed class ForecastService
     private readonly IWorkerTimeZoneService _timeZones;
     private readonly IClock _clock;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ForecastService"/> class.
     /// </summary>
@@ -39,6 +42,7 @@ public sealed class ForecastService
     /// <param name="coverageService">The coverage service.</param>
     /// <param name="timeZones">The time zones.</param>
     /// <param name="clock">The clock.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ForecastService(
         ISession session,
         PlanningGroupManager groupManager,
@@ -46,7 +50,8 @@ public sealed class ForecastService
         IIntervalStatisticsReader statistics,
         ICoverageService coverageService,
         IWorkerTimeZoneService timeZones,
-        IClock clock)
+        IClock clock,
+        IStringLocalizer<ForecastService> stringLocalizer)
     {
         _session = session;
         _groupManager = groupManager;
@@ -55,6 +60,7 @@ public sealed class ForecastService
         _coverageService = coverageService;
         _timeZones = timeZones;
         _clock = clock;
+        S = stringLocalizer;
     }
 
     /// <summary>
@@ -107,14 +113,14 @@ public sealed class ForecastService
 
         if (group is null)
         {
-            result.Fail("The planning group doesn't exist.");
+            result.Fail(S["The planning group doesn't exist."]);
 
             return result;
         }
 
         if (toDate < fromDate || toDate.DayNumber - fromDate.DayNumber > 92)
         {
-            result.Fail("A forecast covers 1 to 93 days.");
+            result.Fail(S["A forecast covers 1 to 93 days."]);
 
             return result;
         }
@@ -123,7 +129,7 @@ public sealed class ForecastService
 
         if (history.Count == 0)
         {
-            result.Fail("The planning group's queues have no interval statistics in the weeks before the first day.");
+            result.Fail(S["The planning group's queues have no interval statistics in the weeks before the first day."]);
 
             return result;
         }

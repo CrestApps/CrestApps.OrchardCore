@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Xml;
+using CrestApps.OrchardCore.Tabular;
 
 namespace CrestApps.OrchardCore.Products.Feeds;
 
@@ -59,7 +60,9 @@ public static class ProductFeedWriter
             "identifier_exists", "condition", "google_product_category", "product_type", "color", "size",
         };
 
-        var csv = new StringBuilder().AppendLine(string.Join(',', columns));
+        var csv = new StringBuilder();
+
+        CsvWriter.AppendRow(csv, columns);
 
         foreach (var item in feed.Items)
         {
@@ -67,7 +70,7 @@ public static class ProductFeedWriter
                 .GroupBy(attribute => attribute.Name)
                 .ToDictionary(group => group.Key, group => string.Join(',', group.Select(attribute => attribute.Value)));
 
-            csv.AppendLine(string.Join(',', columns.Select(column => Quote(values.GetValueOrDefault(column)))));
+            csv.AppendJoin(',', columns.Select(column => Quote(values.GetValueOrDefault(column)))).Append(CsvWriter.RecordSeparator);
         }
 
         return csv.ToString();
@@ -161,5 +164,5 @@ public static class ProductFeedWriter
     }
 
     private static string Quote(string value)
-        => string.IsNullOrEmpty(value) ? string.Empty : "\"" + value.Replace("\"", "\"\"", StringComparison.Ordinal).Replace('\n', ' ').Replace('\r', ' ') + "\"";
+        => CsvWriter.Escape(value?.Replace('\n', ' ').Replace('\r', ' '), guardFormula: false);
 }

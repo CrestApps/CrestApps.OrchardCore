@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.Carts;
 /// sets of the carts and their lines. The wishlists feature registers the data sets of its own records, so they are
 /// listed only while it is on.
 /// </summary>
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class DataSourcesStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -28,7 +28,7 @@ public sealed class DataSourcesStartup : StartupBase
 /// Registers the data sets of the wishlists feature.
 /// </summary>
 [Feature(CartConstants.Features.Wishlists)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class WishlistsDataSourcesStartup : StartupBase
 {
     /// <inheritdoc/>

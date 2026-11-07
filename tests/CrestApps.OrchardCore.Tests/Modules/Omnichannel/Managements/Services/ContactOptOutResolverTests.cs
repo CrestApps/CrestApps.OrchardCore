@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Tests.Utilities;
 using OrchardCore.ContentManagement;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements.Services;
 
@@ -42,6 +43,63 @@ public sealed class ContactOptOutResolverTests
             // Assert
             Assert.True(byPhone);
             Assert.False(bySms);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, path);
+        }
+    }
+
+    // Bug: a STOP from a number that no contact held was dropped. It is now recorded against the number, honored on
+    // that channel only, honored for a record that later holds the number, and lifted by an opt-in.
+    [Fact]
+    public async Task AddressOptOut_IsRecordedOnce_HonoredForTheChannel_AndForARecordThatLaterHoldsTheNumber()
+    {
+        var (connectionString, path) = ContactPhoneTestStore.CreateDatabase("opt-out-address");
+        var store = await ContactPhoneTestStore.CreateAsync(connectionString);
+
+        try
+        {
+            // Arrange
+            await using (var session = store.CreateSession())
+            {
+                var resolver = new ContactOptOutResolver(session, ContactPhoneTestStore.CreateLookup(session));
+
+                // Act
+                await resolver.RecordAddressOptOutAsync(new ContactAddressOptOut { Channel = OmnichannelConstants.Channels.Sms, Address = " +17025550104 " }, TestContext.Current.CancellationToken);
+                await resolver.RecordAddressOptOutAsync(new ContactAddressOptOut { Channel = OmnichannelConstants.Channels.Sms, Address = "+17025550104" }, TestContext.Current.CancellationToken);
+                await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            var laterContact = ContactPhoneTestStore.CreateRecord(ContactPhoneTestStore.ContactContentType, ("Cell", "+17025550104"));
+            await ContactPhoneTestStore.SaveAsync(store, laterContact);
+
+            await using (var session = store.CreateSession())
+            {
+                var resolver = new ContactOptOutResolver(session, ContactPhoneTestStore.CreateLookup(session));
+
+                // Assert
+                var recorded = await session
+                    .Query<ContactAddressOptOut>(collection: OmnichannelConstants.CollectionName)
+                    .ListAsync(TestContext.Current.CancellationToken);
+
+                Assert.Single(recorded);
+                Assert.True(await resolver.HasAddressOptedOutAsync(OmnichannelConstants.Channels.Sms, "+17025550104", TestContext.Current.CancellationToken));
+                Assert.False(await resolver.HasAddressOptedOutAsync(OmnichannelConstants.Channels.Phone, "+17025550104", TestContext.Current.CancellationToken));
+                Assert.False(await resolver.HasAddressOptedOutAsync(OmnichannelConstants.Channels.Sms, "+17025550105", TestContext.Current.CancellationToken));
+                Assert.True(await resolver.HasOptedOutAsync(laterContact, OmnichannelConstants.Channels.Sms, TestContext.Current.CancellationToken));
+                Assert.False(await resolver.HasOptedOutAsync(laterContact, OmnichannelConstants.Channels.Phone, TestContext.Current.CancellationToken));
+
+                Assert.True(await resolver.ClearAddressOptOutAsync(OmnichannelConstants.Channels.Sms, "+17025550104", TestContext.Current.CancellationToken));
+                await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            await using (var session = store.CreateSession())
+            {
+                var resolver = new ContactOptOutResolver(session, ContactPhoneTestStore.CreateLookup(session));
+
+                Assert.False(await resolver.HasAddressOptedOutAsync(OmnichannelConstants.Channels.Sms, "+17025550104", TestContext.Current.CancellationToken));
+            }
         }
         finally
         {

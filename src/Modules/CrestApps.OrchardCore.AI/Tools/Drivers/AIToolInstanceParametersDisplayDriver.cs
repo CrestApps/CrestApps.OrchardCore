@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Tooling;
 using CrestApps.Core.AI.Tooling.Instances;
 using CrestApps.Core.AI.Tooling.Parameters;
 using CrestApps.OrchardCore.AI.ViewModels;
+using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -71,12 +72,10 @@ internal sealed class AIToolInstanceParametersDisplayDriver : DisplayDriver<AITo
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var protector = _dataProtectionProvider.CreateProtector(HttpApiRequestToolConstants.DataProtectionPurpose);
-
         var parameters = AIToolInstanceParameterViewModel.ToParameters(
             model.Parameters,
             AIToolParameterBinder.GetParameters(instance),
-            protector.Protect);
+            value => _dataProtectionProvider.ProtectSetting(HttpApiRequestToolConstants.DataProtectionPurpose, value));
 
         foreach (var (index, error) in AIToolParameterValidator.Validate(parameters, capabilities))
         {

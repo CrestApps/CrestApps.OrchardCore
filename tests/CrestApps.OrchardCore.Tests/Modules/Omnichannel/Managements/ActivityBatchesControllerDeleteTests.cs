@@ -182,7 +182,8 @@ public sealed class ActivityBatchesControllerDeleteTests
             notifier.Object,
             Microsoft.Extensions.Options.Options.Create(new ActivityBatchSourceOptions()),
             new TestHtmlLocalizer(),
-            new TestStringLocalizer())
+            new TestStringLocalizer(),
+            new CrestApps.OrchardCore.Tests.Telephony.Doubles.StubClock())
         {
             ControllerContext = new ControllerContext
             {

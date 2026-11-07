@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using OrchardCore.Modules;
@@ -48,7 +49,7 @@ public sealed class OrderConfirmationSender
         {
             Kind = OrderEmailKinds.Confirmation,
             To = order.CustomerEmail,
-            Order = order,
+            Models = OrderEmailModels.For(order),
             Culture = order.Culture,
             Reference = order.OrderNumber,
         }, async _ =>

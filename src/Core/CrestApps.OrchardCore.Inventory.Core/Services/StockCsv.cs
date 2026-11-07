@@ -1,11 +1,12 @@
 using System.Globalization;
-using System.Text;
 using CrestApps.OrchardCore.Inventory.Core.Models;
+using CrestApps.OrchardCore.Tabular;
 
 namespace CrestApps.OrchardCore.Inventory.Core.Services;
 
 /// <summary>
-/// Reads and writes stock counts as CSV: one line per product or variant, found by its ids or its SKU.
+/// Reads and writes stock counts as CSV, with <see cref="CsvReader"/> and <see cref="CsvWriter"/>: one line per product or
+/// variant, found by its ids or its SKU.
 /// </summary>
 public static class StockCsv
 {
@@ -24,7 +25,7 @@ public static class StockCsv
     /// Writes the header line.
     /// </summary>
     public static void WriteHeader(TextWriter writer)
-        => WriteLine(writer, _header);
+        => CsvWriter.WriteRow(writer, _header);
 
     /// <summary>
     /// Writes one stock item. Only <see cref="OnHand"/> is read back on import; the other counts are for reading.
@@ -33,7 +34,7 @@ public static class StockCsv
     {
         ArgumentNullException.ThrowIfNull(item);
 
-        WriteLine(writer,
+        CsvWriter.WriteRow(writer,
         [
             item.Sku,
             item.Title,
@@ -55,15 +56,17 @@ public static class StockCsv
     {
         ArgumentNullException.ThrowIfNull(reader);
 
-        var header = ReadRecord(reader);
+        using var records = CsvReader.ReadRecords(reader).GetEnumerator();
 
-        if (header is null)
+        if (!records.MoveNext())
         {
             return null;
         }
 
+        var header = records.Current;
+
         int Column(string name)
-            => header.FindIndex(value => string.Equals(value?.Trim(), name, StringComparison.OrdinalIgnoreCase));
+            => Array.FindIndex(header, value => string.Equals(value?.Trim(), name, StringComparison.OrdinalIgnoreCase));
 
         var onHand = Column(OnHand);
         var sku = Column(Sku);
@@ -78,8 +81,10 @@ public static class StockCsv
         var rows = new List<StockCountRow>();
         var line = 1;
 
-        while (ReadRecord(reader) is { } values)
+        while (records.MoveNext())
         {
+            var values = records.Current;
+
             line++;
 
             if (values.All(string.IsNullOrWhiteSpace))
@@ -95,7 +100,7 @@ public static class StockCsv
             }
 
             string Value(int index)
-                => index >= 0 && index < values.Count && !string.IsNullOrWhiteSpace(values[index]) ? values[index].Trim() : null;
+                => index >= 0 && index < values.Length && !string.IsNullOrWhiteSpace(values[index]) ? values[index].Trim() : null;
 
             var count = Value(onHand);
 
@@ -110,111 +115,6 @@ public static class StockCsv
         }
 
         return rows;
-    }
-
-    private static void WriteLine(TextWriter writer, string[] values)
-    {
-        for (var i = 0; i < values.Length; i++)
-        {
-            if (i > 0)
-            {
-                writer.Write(',');
-            }
-
-            writer.Write(Escape(values[i]));
-        }
-
-        writer.Write("\r\n");
-    }
-
-    private static string Escape(string value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return string.Empty;
-        }
-
-        return value.AsSpan().IndexOfAny("\",\r\n") >= 0
-            ? $"\"{value.Replace("\"", "\"\"")}\""
-            : value;
-    }
-
-    // One record, which a quoted value may spread over several lines; null at the end of the file.
-    private static List<string> ReadRecord(TextReader reader)
-    {
-        var first = reader.Peek();
-
-        if (first < 0)
-        {
-            return null;
-        }
-
-        var values = new List<string>();
-        var value = new StringBuilder();
-        var quoted = false;
-
-        while (true)
-        {
-            var next = reader.Read();
-
-            if (next < 0)
-            {
-                values.Add(value.ToString());
-
-                return values;
-            }
-
-            var ch = (char)next;
-
-            if (quoted)
-            {
-                if (ch == '"')
-                {
-                    if (reader.Peek() == '"')
-                    {
-                        reader.Read();
-                        value.Append('"');
-                    }
-                    else
-                    {
-                        quoted = false;
-                    }
-                }
-                else
-                {
-                    value.Append(ch);
-                }
-
-                continue;
-            }
-
-            switch (ch)
-            {
-                case '"':
-                    quoted = true;
-                    break;
-                case ',':
-                    values.Add(value.ToString());
-                    value.Clear();
-                    break;
-                case '\r':
-                    if (reader.Peek() == '\n')
-                    {
-                        reader.Read();
-                    }
-
-                    values.Add(value.ToString());
-
-                    return values;
-                case '\n':
-                    values.Add(value.ToString());
-
-                    return values;
-                default:
-                    value.Append(ch);
-                    break;
-            }
-        }
     }
 }
 

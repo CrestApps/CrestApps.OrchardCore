@@ -73,7 +73,7 @@ public sealed class OmnichannelContactImportOptionsDisplayDriver : DisplayDriver
         return Initialize<OmnichannelContactImportOptionsViewModel>("OmnichannelContactImportOptions_Edit", async viewModel =>
         {
             viewModel.IgnoreDuplicateByPhoneNumber = options.IgnoreDuplicateByPhoneNumber;
-            viewModel.SelectedCountryCode = NormalizeCountryCode(options.SelectedCountryCode);
+            viewModel.SelectedCountryCode = PhoneCountryCodes.NormalizeRegionCode(options.SelectedCountryCode);
             viewModel.AvailableCountries = GetCountryOptions(viewModel.SelectedCountryCode);
             viewModel.CrmEnabled = _crmEnabled;
             viewModel.IsLeadType = isLeadType;
@@ -115,7 +115,7 @@ public sealed class OmnichannelContactImportOptionsDisplayDriver : DisplayDriver
 
             var options = model.GetOrCreate<OmnichannelContactImportOptionsPart>();
             options.IgnoreDuplicateByPhoneNumber = viewModel.IgnoreDuplicateByPhoneNumber;
-            options.SelectedCountryCode = NormalizeCountryCode(viewModel.SelectedCountryCode);
+            options.SelectedCountryCode = PhoneCountryCodes.NormalizeRegionCode(viewModel.SelectedCountryCode);
             options.DuplicateScope = viewModel.DuplicateScope;
 
             if (await IsLeadTypeAsync(model))
@@ -175,11 +175,6 @@ public sealed class OmnichannelContactImportOptionsDisplayDriver : DisplayDriver
 
         return countryOptions;
     }
-
-    private static string NormalizeCountryCode(string countryCode)
-        => string.IsNullOrWhiteSpace(countryCode)
-            ? null
-            : countryCode.Trim().ToUpperInvariant();
 
     private SelectListItem[] GetSupportedCountryOptions()
         =>

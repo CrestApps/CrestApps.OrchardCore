@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.WorkOrders;
 using CrestApps.OrchardCore.WorkOrders.Core;
@@ -33,7 +34,7 @@ public sealed class WorkOrderTests
     {
         // Open 9 to 5 on Friday and Monday; 2 hours from Friday 4 pm end at Monday 10 am.
         var friday = new DateTime(2026, 11, 6, 0, 0, 0, DateTimeKind.Utc);
-        var open = new[] { (friday.AddHours(9), friday.AddHours(17)), (friday.AddDays(3).AddHours(9), friday.AddDays(3).AddHours(17)) };
+        var open = new[] { new TimeWindow(friday.AddHours(9), friday.AddHours(17)), new TimeWindow(friday.AddDays(3).AddHours(9), friday.AddDays(3).AddHours(17)) };
         var remaining = TimeSpan.FromHours(2);
 
         Assert.Equal(friday.AddDays(3).AddHours(10), SlaClock.Add(open, friday.AddHours(16), ref remaining));

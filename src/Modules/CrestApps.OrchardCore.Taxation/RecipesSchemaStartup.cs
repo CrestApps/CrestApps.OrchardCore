@@ -1,4 +1,7 @@
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
+using CrestApps.OrchardCore.Taxation.Deployments;
+using CrestApps.OrchardCore.Taxation.Recipes;
 using CrestApps.OrchardCore.Taxation.Schemas;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
@@ -8,7 +11,7 @@ namespace CrestApps.OrchardCore.Taxation;
 /// <summary>
 /// Registers recipe schema contributors for the taxation feature.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class RecipesSchemaStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -19,6 +22,10 @@ public sealed class RecipesSchemaStartup : StartupBase
         services.AddScoped<IRecipeStep, TaxJurisdictionRecipeStep>();
         services.AddScoped<IRecipeStep, TaxRuleRecipeStep>();
         services.AddScoped<IRecipeStep, TaxTableRecipeStep>();
+        services.AddScoped<IRecipeStep, MerchantTaxRegistrationRecipeStepSchema>();
+        services.AddScoped<IRecipeStep, ExemptionCertificateRecipeStepSchema>();
+        services.AddDeploymentStepSchema<MerchantTaxRegistrationDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<ExemptionCertificateDeploymentStepSchema>();
 
         services.AddScoped<IContentSchemaDefinition, TaxationPartSchemaDefinition>();
     }

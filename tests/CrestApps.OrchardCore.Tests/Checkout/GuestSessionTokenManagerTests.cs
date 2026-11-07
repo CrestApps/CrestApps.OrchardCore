@@ -163,7 +163,7 @@ public sealed class GuestSessionTokenManagerTests
     {
         var accessor = new HttpContextAccessor { HttpContext = httpContext };
 
-        return new GuestSessionTokenManager(accessor, protectionProvider);
+        return new GuestSessionTokenManager(accessor, protectionProvider, new CrestApps.OrchardCore.Tests.Telephony.Doubles.StubClock(DateTime.UtcNow));
     }
 
     // Turns the cookie a response wrote into the cookie the next request sends, which is what a browser does

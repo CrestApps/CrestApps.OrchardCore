@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.DataSources;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Migrations;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -93,6 +94,7 @@ internal sealed class AIDataSourceIndexMigrations : DataMigration
         }
 
         var importedCount = 0;
+        var skipped = new MigrationSkipReport(nameof(AIDataSourceIndexMigrations), logger);
 
 
         foreach (var document in documents)
@@ -126,10 +128,9 @@ internal sealed class AIDataSourceIndexMigrations : DataMigration
 
                 if (!validationResult.Succeeded)
                 {
-                    logger.LogWarning(
-                        "Skipping legacy AI data source {ItemId} because validation failed: {Errors}",
+                    skipped.Skip(
                         itemId,
-                        string.Join("; ", validationResult.Errors.Select(error => error.ErrorMessage)));
+                        "validation failed: " + string.Join("; ", validationResult.Errors.Select(error => error.ErrorMessage)));
 
                     continue;
                 }
@@ -147,6 +148,8 @@ internal sealed class AIDataSourceIndexMigrations : DataMigration
                 importedCount++;
             }
         }
+
+        await skipped.LogSummaryAsync(serviceProvider);
 
         if (importedCount > 0)
         {

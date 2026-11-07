@@ -146,7 +146,7 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
 
         _ = GetColumns(context);
         var usesContactMethodsBag = UsesContactMethodsBag(context.ContentItem.ContentType);
-        var countryCode = NormalizeCountryCode(context.Entry?.GetOrCreate<OmnichannelContactImportOptionsPart>()?.SelectedCountryCode);
+        var countryCode = PhoneCountryCodes.NormalizeRegionCode(context.Entry?.GetOrCreate<OmnichannelContactImportOptionsPart>()?.SelectedCountryCode);
         string email = null;
         string cellPhone = null;
         string homePhone = null;
@@ -292,7 +292,7 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
             }
             else
             {
-                var normalizedTimeZoneId = NormalizeTimeZoneId(rawTimeZoneId);
+                var normalizedTimeZoneId = TimeZoneIds.Normalize(rawTimeZoneId);
 
                 if (!string.IsNullOrEmpty(normalizedTimeZoneId))
                 {
@@ -483,16 +483,6 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
     private string InferTimeZoneId(string primaryPhoneNumber, string fallbackPhoneNumber)
         => GetFirstKnownTimeZoneId(primaryPhoneNumber) ?? GetFirstKnownTimeZoneId(fallbackPhoneNumber);
 
-    private static string NormalizeTimeZoneId(string timeZoneId)
-    {
-        if (string.IsNullOrWhiteSpace(timeZoneId))
-        {
-            return null;
-        }
-
-        return NodaTime.DateTimeZoneProviders.Tzdb.GetZoneOrNull(timeZoneId.Trim())?.Id;
-    }
-
     private string GetFirstKnownTimeZoneId(string phoneNumber)
     {
         if (string.IsNullOrWhiteSpace(phoneNumber))
@@ -502,7 +492,7 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
 
         foreach (var timeZoneId in _phoneNumberService.GetTimeZones(phoneNumber))
         {
-            var normalizedTimeZoneId = NormalizeTimeZoneId(timeZoneId);
+            var normalizedTimeZoneId = TimeZoneIds.Normalize(timeZoneId);
 
             if (!string.IsNullOrEmpty(normalizedTimeZoneId))
             {
@@ -512,11 +502,6 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
 
         return null;
     }
-
-    private static string NormalizeCountryCode(string countryCode)
-        => string.IsNullOrWhiteSpace(countryCode)
-            ? null
-            : countryCode.Trim().ToUpperInvariant();
 
     private static string GetFormattingRegionCode(string phoneNumber, string countryCode)
         => PhoneNumber.IsE164(phoneNumber?.Trim())

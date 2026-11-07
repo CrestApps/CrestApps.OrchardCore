@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Users.Core;
 using CrestApps.OrchardCore.Users.Core.Handlers;
@@ -49,6 +50,9 @@ public sealed class Startup : StartupBase
     {
         services.AddUserCacheService();
         services.TryAddBasicDisplayNameProvider();
+        services.AddUserSearchService();
+        services.AddPartySource<UserPartySource>();
+        services.AddPermissionProvider<UserSearchPermissionProvider>();
         services.AddDisplayDriver<UserMenu, DisplayNameUserMenuDisplayDriver>();
         // services.AddShapeTableProvider<NavbarShapeTableProvider>();
     }
@@ -62,7 +66,7 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Liquid feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Liquid")]
+[RequireFeatures(OrchardCoreFeatureIds.Liquid)]
 public sealed class LiquidStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -74,7 +78,7 @@ public sealed class LiquidStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Caching feature.
 /// </summary>
-[RequireFeatures("OrchardCore.DynamicCache")]
+[RequireFeatures(OrchardCoreFeatureIds.DynamicCache)]
 public sealed class CachingStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -185,7 +189,7 @@ public sealed class AvatarStartup : StartupBase
 /// Registers recipe schema contributors for the DisplayName feature.
 /// </summary>
 [Feature(UsersConstants.Feature.DisplayName)]
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class DisplayNameRecipesSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

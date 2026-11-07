@@ -10,7 +10,7 @@ namespace CrestApps.OrchardCore.Bookings;
 /// Starts workflows as bookings are made, confirmed, moved, canceled, completed, missed and expire, and as they're paid,
 /// a balance charge fails, and money paid for them is refunded.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class WorkflowsStartup : StartupBase
 {
     /// <inheritdoc />

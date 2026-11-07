@@ -27,7 +27,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 /// <see cref="IActivityBatchLoader"/>. It is not sealed so specialized sources can inherit and
 /// customize individual stages of the load.
 /// </summary>
-public class DefaultContactActivityBatchLoader : IActivityBatchLoader
+public sealed class DefaultContactActivityBatchLoader : IActivityBatchLoader
 {
     private const int _batchSize = 100;
 
@@ -105,11 +105,11 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
     }
 
     /// <inheritdoc />
-    public virtual string Source
+    public string Source
         => null;
 
     /// <inheritdoc />
-    public virtual async Task LoadAsync(ActivityBatchLoadContext context, CancellationToken cancellationToken = default)
+    public async Task LoadAsync(ActivityBatchLoadContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
 
@@ -921,7 +921,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
     /// <param name="context">The load context.</param>
     /// <param name="reason">Why the load stopped, in words the operator can act on.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    protected async Task StopAsync(ActivityBatchLoadContext context, string reason, CancellationToken cancellationToken)
+    private async Task StopAsync(ActivityBatchLoadContext context, string reason, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
 

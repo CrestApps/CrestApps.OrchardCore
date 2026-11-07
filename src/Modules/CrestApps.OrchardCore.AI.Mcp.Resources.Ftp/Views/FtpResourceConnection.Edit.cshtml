@@ -1,6 +1,6 @@
-@using CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.ViewModels
+@using CrestApps.OrchardCore.AI.FileTransfer.Core.ViewModels
 
-@model FtpConnectionViewModel
+@model FtpConnectionFieldsViewModel
 
 <div class="ocat-wrapper">
     <label asp-for="Host" class="ocat-label ocat-label-required">@T["Host"]</label>
@@ -30,7 +30,7 @@
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="Password" class="ocat-label @(!Model.HasPassword ? "ocat-label-required" : "")">@T["Password"]</label>
+    <label asp-for="Password" class="ocat-label">@T["Password"]</label>
     <div class="ocat-end">
         @if (Model.HasPassword)
         {

@@ -10,7 +10,7 @@ namespace CrestApps.OrchardCore.WorkOrders;
 /// <summary>
 /// Imports the WorkOrders recipe step.
 /// </summary>
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class RecipesStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -23,7 +23,7 @@ public sealed class RecipesStartup : StartupBase
 /// <summary>
 /// Exports the WorkOrders deployment step.
 /// </summary>
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class DeploymentStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -36,7 +36,7 @@ public sealed class DeploymentStartup : StartupBase
 /// <summary>
 /// Describes the WorkOrders recipe and deployment steps to CrestApps Recipes.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class RecipesSchemaStartup : StartupBase
 {
     /// <inheritdoc/>

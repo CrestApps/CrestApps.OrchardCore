@@ -100,7 +100,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                     return;
                 }
 
-                var now = DateTime.UtcNow.Ticks;
+                var now = UtcNowTicks;
 
                 if (!listener.TryTakeUnheardReply(now, ProviderHeardCallerTicks(now), UnheardReplyWait))
                 {
@@ -202,7 +202,7 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// <param name="turnOpen">Whether the turn is still open, as it is when the provider has only heard it start.</param>
     private void ProviderHeardCaller(bool turnOpen)
     {
-        var now = DateTime.UtcNow.Ticks;
+        var now = UtcNowTicks;
         Interlocked.Exchange(ref _providerHeardCallerTicks, now);
 
         if (!turnOpen)
@@ -221,7 +221,7 @@ public sealed partial class RealtimeVoiceConversationRunner
 
         if (!inFlight)
         {
-            Interlocked.Exchange(ref _lastResponseEndedTicks, DateTime.UtcNow.Ticks);
+            Interlocked.Exchange(ref _lastResponseEndedTicks, UtcNowTicks);
         }
     }
 
@@ -259,7 +259,7 @@ public sealed partial class RealtimeVoiceConversationRunner
             return;
         }
 
-        var now = DateTime.UtcNow.Ticks;
+        var now = UtcNowTicks;
         var lastVoice = _replyListener?.LastVoiceTicks ?? 0;
 
         // The caller's voice is only tracked once the assistant has finished, so a turn that began by talking over it
@@ -305,7 +305,7 @@ public sealed partial class RealtimeVoiceConversationRunner
             return;
         }
 
-        var lag = TimeSpan.FromTicks(DateTime.UtcNow.Ticks - heardOnLine);
+        var lag = TimeSpan.FromTicks(UtcNowTicks - heardOnLine);
 
         if (lag < ProviderLagWorthReporting || !_logger.IsEnabled(LogLevel.Information))
         {

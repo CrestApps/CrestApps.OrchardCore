@@ -262,7 +262,8 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
         // conversation it is reviving began when the contact was willing to hear from us; somebody who has since
         // said stop is exactly the person a cadence would otherwise keep messaging, on a schedule, for days. Asked
         // of everybody reachable at the number, because a stop said on another record that holds it is theirs too.
-        if (await optOutResolver.HasOptedOutAsync(contact, activity.Channel, cancellationToken))
+        if (await optOutResolver.HasOptedOutAsync(contact, activity.Channel, cancellationToken) ||
+            await optOutResolver.HasAddressOptedOutAsync(activity.Channel, activity.PreferredDestination, cancellationToken))
         {
             if (logger.IsEnabled(LogLevel.Debug))
             {

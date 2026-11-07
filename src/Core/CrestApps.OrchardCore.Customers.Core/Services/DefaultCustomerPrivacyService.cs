@@ -86,7 +86,7 @@ public sealed class DefaultCustomerPrivacyService : ICustomerPrivacyService
         var now = _clock.UtcNow;
 
         // The handlers see the account the customer belonged to before it is unlinked.
-        var context = new CustomerPrivacyContext(customer, customer.UserId);
+        var context = new CustomerPrivacyContext(customer, customer.UserId, action);
 
         foreach (var handler in _handlers)
         {

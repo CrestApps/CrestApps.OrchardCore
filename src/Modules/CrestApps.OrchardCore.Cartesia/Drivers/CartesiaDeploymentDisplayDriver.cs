@@ -2,6 +2,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Cartesia;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.Cartesia.ViewModels;
+using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -79,9 +80,7 @@ internal sealed class CartesiaDeploymentDisplayDriver : DisplayDriver<AIDeployme
 
         if (hasNewKey)
         {
-            var protector = _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
-
-            deployment.Properties[ApiKeyProperty] = protector.Protect(model.ApiKey);
+            deployment.Properties[ApiKeyProperty] = _dataProtectionProvider.ProtectSetting(AIConstants.ConnectionProtectorName, model.ApiKey.Trim());
         }
 
         return Edit(deployment, context);

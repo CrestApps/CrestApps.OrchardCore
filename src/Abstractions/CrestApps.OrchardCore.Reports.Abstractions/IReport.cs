@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Reports.Models;
 using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 
@@ -36,4 +37,17 @@ public interface IReport : IReportRunner
     /// Gets the permission required to view and export the report.
     /// </summary>
     static abstract Permission Permission { get; }
+
+    /// <summary>
+    /// Gets the permission required, beside <see cref="Permission"/>, to export the report, or
+    /// <see langword="null"/> when <see cref="Permission"/> is enough. The report page hides its export buttons from a
+    /// person without it, the export refuses them, and a report subscription cannot attach the export for them.
+    /// </summary>
+    static virtual Permission ExportPermission => null;
+
+    /// <summary>
+    /// Gets the date range the report starts on before a person picks one, or <see langword="null"/> for today. A
+    /// report that declares one also accepts open-ended ranges; see <see cref="ReportDefaultDateRange"/>.
+    /// </summary>
+    static virtual ReportDefaultDateRange DefaultDateRange => null;
 }

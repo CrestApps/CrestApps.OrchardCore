@@ -3,7 +3,7 @@ namespace CrestApps.OrchardCore.Stripe.Core.Models;
 /// <summary>
 /// Represents customer details returned from Stripe.
 /// </summary>
-public class CustomerResponse
+public sealed class CustomerResponse
 {
     /// <summary>
     /// Gets or sets the Stripe customer identifier.

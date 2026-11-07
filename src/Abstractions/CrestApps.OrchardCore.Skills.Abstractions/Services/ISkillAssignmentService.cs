@@ -17,7 +17,9 @@ public interface ISkillAssignmentService
 
     /// <summary>
     /// Lists the skills that count for a person on a day: inside their effective dates, the skill enabled and, when the
-    /// skill requires a certification, the certification valid that day.
+    /// skill requires a certification, the certification valid that day. Skills held under another subject that names the
+    /// same person (see <see cref="ISkillSubjectLinkProvider"/>), such as the user linked to a worker profile, count too;
+    /// when both hold a skill, the higher proficiency counts.
     /// </summary>
     /// <param name="subject">The person.</param>
     /// <param name="date">The day.</param>
@@ -64,7 +66,7 @@ public interface ISkillAssignmentService
     /// <param name="kind">The kind of people to look at.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The assignments that count that day.</returns>
-    Task<IReadOnlyList<SkillAssignment>> FindHoldersAsync(string skillId, int minimumProficiency, DateOnly date, SkillSubjectKind kind, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<SkillAssignment>> FindHoldersAsync(string skillId, int minimumProficiency, DateOnly date, string kind, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets whether a person holds a skill at a proficiency or above on a day, honoring the certification the skill requires.

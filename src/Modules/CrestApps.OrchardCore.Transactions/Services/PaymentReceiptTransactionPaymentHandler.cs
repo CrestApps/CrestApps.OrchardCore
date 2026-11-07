@@ -1,4 +1,5 @@
 using System.Text.Encodings.Web;
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Payments;
@@ -107,7 +108,7 @@ public sealed class PaymentReceiptTransactionPaymentHandler : ITransactionPaymen
             html += $"<p><a href=\"{HtmlEncoder.Default.Encode(receiptUrl)}\">{HtmlEncoder.Default.Encode(linkText)}</a></p>";
         }
 
-        var delivered = await NotifyOwnerAsync(transaction, subject, text, html, cancellationToken);
+        var delivered = await NotifyOwnerAsync(TransactionEmailKinds.PaymentReceipt, transaction, subject, text, html, cancellationToken);
 
         if (!delivered)
         {
@@ -212,7 +213,7 @@ public sealed class PaymentReceiptTransactionPaymentHandler : ITransactionPaymen
         var subject = S["Your refund of {0}", amount].Value;
         var text = S["We refunded {0} for {1} to the card or account you paid with. It can take a few business days to appear on your statement.", amount, title].Value;
 
-        var delivered = await NotifyOwnerAsync(transaction, subject, text, html: null, cancellationToken);
+        var delivered = await NotifyOwnerAsync(TransactionEmailKinds.Refund, transaction, subject, text, html: null, cancellationToken);
 
         if (!delivered)
         {
@@ -231,12 +232,14 @@ public sealed class PaymentReceiptTransactionPaymentHandler : ITransactionPaymen
         await _transactionManager.UpdateAsync(transaction, data: null, cancellationToken);
     }
 
-    private Task<bool> NotifyOwnerAsync(Transaction transaction, string subject, string text, string html, CancellationToken cancellationToken)
+    private Task<bool> NotifyOwnerAsync(string kind, Transaction transaction, string subject, string text, string html, CancellationToken cancellationToken)
         => _ownerNotifier.NotifyAsync(
             transaction.GetOwner(),
             transaction.GetGuestContact(),
             new CustomerOwnerMessage
             {
+                Kind = kind,
+                Models = new Dictionary<string, object>(StringComparer.Ordinal) { [TransactionEmailKinds.TransactionModelName] = transaction },
                 Subject = subject,
                 Summary = text,
                 TextBody = text,

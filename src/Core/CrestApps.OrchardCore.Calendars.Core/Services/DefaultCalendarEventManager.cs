@@ -1,7 +1,8 @@
 using CrestApps.Core;
-using CrestApps.OrchardCore.Calendars.Core.Recurrence;
+using CrestApps.OrchardCore.Calendars.Recurrence;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -559,20 +560,21 @@ public sealed class DefaultCalendarEventManager : ICalendarEventManager
         }
         else
         {
-            var lockers = new List<ILocker>();
+            ILocker lockers = null;
 
             try
             {
-                foreach (var target in targets.OrderBy(target => target.ItemId, StringComparer.Ordinal))
+                // A caller that books from its own availability takes these locks with its own, before it reads it.
+                if (!options.CalendarLocksHeld)
                 {
-                    var (locker, locked) = await _distributedLock.TryAcquireLockAsync("CALENDAR_" + target.ItemId, _lockTimeout, _lockExpiration);
+                    lockers = await _distributedLock.LockAllAsync(targets.Select(target => CalendarLockKeys.Calendar(target.ItemId)), _lockTimeout, _lockExpiration);
 
-                    if (!locked)
+                    if (lockers is null)
                     {
-                        return CalendarResult<CalendarEvent>.Failed(calendarEvent, [new CalendarError(string.Empty, S["The calendar '{0}' is busy. Try again in a moment.", target.Name], CalendarError.ConflictCode)]);
-                    }
+                        var busy = targets.Count == 1 ? targets[0].Name : string.Join(", ", targets.Select(target => target.Name));
 
-                    lockers.Add(locker);
+                        return CalendarResult<CalendarEvent>.Failed(calendarEvent, [new CalendarError(string.Empty, S["The calendar '{0}' is busy. Try again in a moment.", busy], CalendarError.ConflictCode)]);
+                    }
                 }
 
                 var conflicts = await _conflictChecker.CheckAsync(calendarEvent, targets);
@@ -593,9 +595,9 @@ public sealed class DefaultCalendarEventManager : ICalendarEventManager
             }
             finally
             {
-                foreach (var locker in lockers)
+                if (lockers is not null)
                 {
-                    await locker.DisposeAsync();
+                    await lockers.DisposeAsync();
                 }
             }
         }

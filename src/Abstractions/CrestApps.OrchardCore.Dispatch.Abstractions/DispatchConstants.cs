@@ -21,6 +21,11 @@ public static class DispatchConstants
     public const string VisitNumberPrefix = "V-";
 
     /// <summary>
+    /// The number sequence series that visit numbers come from.
+    /// </summary>
+    public const string VisitNumberSeries = "Dispatch.Visit";
+
+    /// <summary>
     /// The calendar event type of a visit on a worker's team calendar.
     /// </summary>
     public const string JobEventType = "Job";

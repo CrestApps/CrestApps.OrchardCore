@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
+using CrestApps.OrchardCore.Resources;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -18,8 +19,8 @@ using OrchardCore.Modules.Manifest;
     Description = "Provides a provider-agnostic framework for verifying phone numbers, storing results on contact content items, and background revalidation.",
     Dependencies =
     [
-        "OrchardCore.Contents",
-        "CrestApps.OrchardCore.Resources",
+        OrchardCoreFeatureIds.Contents,
+        ResourcesConstants.Feature.Area,
         PhoneNumberVerificationsConstants.Features.PhoneNumbers,
     ]
 )]

@@ -11,7 +11,9 @@ namespace CrestApps.OrchardCore.Customers.Handlers;
 
 /// <summary>
 /// Tells checkout tax who is buying: a business or a person, their tax id, whether they are exempt, and the exemption
-/// certificates on file for them. Only a signed-in buyer is known; a guest is taxed as a person.
+/// certificates on file for them. Only a signed-in buyer is known; a guest is taxed as a person. When another handler
+/// already said who is buying, such as a business account the buyer buys for, its type and tax numbers stay, and the
+/// customer record adds what is missing: the customer, the exemption and the certificates.
 /// </summary>
 internal sealed class CustomerCheckoutTaxProfileHandler : ICheckoutTaxProfileHandler
 {
@@ -28,7 +30,8 @@ internal sealed class CustomerCheckoutTaxProfileHandler : ICheckoutTaxProfileHan
     {
         ArgumentNullException.ThrowIfNull(profile);
 
-        if (profile.Customer is not null || session is not CheckoutSession { OwnerId: { Length: > 0 } ownerId })
+        if (session is not CheckoutSession { OwnerId: { Length: > 0 } ownerId } ||
+            (profile.Customer is not null && !string.IsNullOrEmpty(profile.Customer.CustomerId)))
         {
             return;
         }
@@ -37,6 +40,17 @@ internal sealed class CustomerCheckoutTaxProfileHandler : ICheckoutTaxProfileHan
 
         if (customer is null)
         {
+            return;
+        }
+
+        if (profile.Customer is { } known)
+        {
+            known.CustomerId = customer.ItemId;
+            known.TaxRegistrationNumber ??= customer.TaxId;
+            known.VatNumber ??= customer.TaxId;
+            known.IsTaxExempt |= customer.IsTaxExempt;
+            known.ExemptionCertificateIds = [.. (known.ExemptionCertificateIds ?? []).Union(await GetCertificateIdsAsync(customer.ItemId, cancellationToken))];
+
             return;
         }
 

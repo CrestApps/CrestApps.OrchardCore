@@ -5,7 +5,7 @@ using CrestApps.Core.AI.Memory;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Resilience;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Memory.Models;
+using CrestApps.OrchardCore.AI.Core.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

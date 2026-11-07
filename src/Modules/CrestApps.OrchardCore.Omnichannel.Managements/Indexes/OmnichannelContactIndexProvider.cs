@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.PhoneNumbers;
 using OrchardCore.ContentManagement;
 using YesSql.Indexes;
+using static CrestApps.OrchardCore.StringTruncation;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
 
@@ -40,7 +41,7 @@ internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentIte
         var index = new OmnichannelContactIndex
         {
             ContentItemId = contact.ContentItemId,
-            ContentType = Truncate(contact.ContentType, 255),
+            ContentType = TruncateOrNull(contact.ContentType, 255),
             IsConverted = contact.TryGet<LeadPart>(out var leadPart) && leadPart.IsConverted,
             Published = contact.Published,
             Latest = contact.Latest,
@@ -49,7 +50,7 @@ internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentIte
 
         var contactMethods = _contactMethods.Get(contact);
 
-        index.PrimaryEmailAddress = Truncate(contactMethods.GetPrimaryEmailAddress(), 255);
+        index.PrimaryEmailAddress = TruncateOrNull(contactMethods.GetPrimaryEmailAddress(), 255);
 
         if (contactMethods.GetFirstPhoneNumber(ContactPhoneTypes.Cell) is { } cellPhoneNumber)
         {
@@ -95,12 +96,12 @@ internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentIte
 
         if (phoneNumberService.TryParse(phoneNumber, field.CountryCode, out var canonicalNumber))
         {
-            return Truncate(canonicalNumber.Value, 50);
+            return TruncateOrNull(canonicalNumber.Value, 50);
         }
 
         if (PhoneNumberSearchTerm.TryParse(phoneNumber, out var searchTerm) && searchTerm.IsE164)
         {
-            return Truncate(searchTerm.Value, 50);
+            return TruncateOrNull(searchTerm.Value, 50);
         }
 
         return null;
@@ -112,14 +113,14 @@ internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentIte
 
         if (!string.IsNullOrEmpty(nationalNumber))
         {
-            return Truncate(nationalNumber, 50);
+            return TruncateOrNull(nationalNumber, 50);
         }
 
         var digits = PhoneNumberSearchTerm.NormalizeDigits(e164Number ?? field.PhoneNumber);
 
         if (string.IsNullOrEmpty(digits) || string.IsNullOrEmpty(e164Number))
         {
-            return Truncate(digits, 50);
+            return TruncateOrNull(digits, 50);
         }
 
         var regionCode = string.IsNullOrWhiteSpace(field.CountryCode)
@@ -128,7 +129,7 @@ internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentIte
 
         if (string.IsNullOrWhiteSpace(regionCode))
         {
-            return Truncate(digits, 50);
+            return TruncateOrNull(digits, 50);
         }
 
         var countryCode = _phoneNumberService.GetCountryCode(regionCode);
@@ -143,14 +144,7 @@ internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentIte
             digits = digits.Substring(countryCodeText.Length);
         }
 
-        return Truncate(digits, 50);
-    }
-
-    private static string Truncate(string value, int maxLength)
-    {
-        return string.IsNullOrEmpty(value)
-            ? null
-            : value.Substring(0, Math.Min(maxLength, value.Length));
+        return TruncateOrNull(digits, 50);
     }
 
     private static string TruncateTrimmed(string value, int maxLength)
@@ -162,6 +156,6 @@ internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentIte
 
         var trimmed = value.Trim();
 
-        return Truncate(trimmed, maxLength);
+        return TruncateOrNull(trimmed, maxLength);
     }
 }

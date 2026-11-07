@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Permissions;
@@ -73,8 +74,8 @@ public sealed class TwilioPhoneNumberVerificationSettingsDisplayDriver : SiteDis
             viewModel.AccountSid = settings.AccountSid;
             viewModel.CountryCode = settings.CountryCode;
             viewModel.Fields = settings.Fields;
-            viewModel.HasApiKeySecret = !string.IsNullOrWhiteSpace(settings.ProtectedApiKeySecret);
-            viewModel.HasAuthToken = !string.IsNullOrWhiteSpace(settings.ProtectedAuthToken);
+            viewModel.HasApiKeySecret = ProtectedSettingExtensions.HasSecret(settings.ProtectedApiKeySecret);
+            viewModel.HasAuthToken = ProtectedSettingExtensions.HasSecret(settings.ProtectedAuthToken);
         }).Location("Content:7#Twilio")
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(
@@ -102,17 +103,8 @@ public sealed class TwilioPhoneNumberVerificationSettingsDisplayDriver : SiteDis
         settings.CountryCode = viewModel.CountryCode?.Trim();
         settings.Fields = viewModel.Fields?.Trim();
 
-        var protector = _dataProtectionProvider.CreateProtector(ProtectorPurpose);
-
-        if (!string.IsNullOrWhiteSpace(viewModel.ApiKeySecret))
-        {
-            settings.ProtectedApiKeySecret = protector.Protect(viewModel.ApiKeySecret);
-        }
-
-        if (!string.IsNullOrWhiteSpace(viewModel.AuthToken))
-        {
-            settings.ProtectedAuthToken = protector.Protect(viewModel.AuthToken);
-        }
+        settings.ProtectedApiKeySecret = _dataProtectionProvider.ApplySecret(ProtectorPurpose, settings.ProtectedApiKeySecret, viewModel.ApiKeySecret);
+        settings.ProtectedAuthToken = _dataProtectionProvider.ApplySecret(ProtectorPurpose, settings.ProtectedAuthToken, viewModel.AuthToken);
 
         if (viewModel.IsEnabled)
         {

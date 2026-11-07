@@ -3,6 +3,10 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.OrchardCore.Webhooks;
+using CrestApps.OrchardCore.Webhooks.Core.Models;
+using CrestApps.OrchardCore.Webhooks.Core.Services;
+using CrestApps.OrchardCore.Webhooks.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -34,7 +38,7 @@ public sealed class ProviderWebhookInboxTests
             .Returns(Task.CompletedTask);
         var handler = new Mock<IProviderWebhookInboxHandler>();
         handler.SetupGet(service => service.TechnicalName).Returns("handler");
-        handler.SetupGet(service => service.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.GuardedByDurableStore);
+        handler.SetupGet(service => service.ReplaySafety).Returns(WebhookHandlerReplaySafety.GuardedByDurableStore);
         var inbox = CreateInbox(store, session, [handler.Object]);
 
         // Act
@@ -147,7 +151,7 @@ public sealed class ProviderWebhookInboxTests
             .Returns(Task.CompletedTask);
         var handler = new Mock<IProviderWebhookInboxHandler>();
         handler.SetupGet(service => service.TechnicalName).Returns("handler");
-        handler.SetupGet(service => service.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.GuardedByDurableStore);
+        handler.SetupGet(service => service.ReplaySafety).Returns(WebhookHandlerReplaySafety.GuardedByDurableStore);
         handler
             .Setup(service => service.HandleAsync(originalPayload, It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
@@ -189,7 +193,7 @@ public sealed class ProviderWebhookInboxTests
         var session = new Mock<ISession>();
         var handler = new Mock<IProviderWebhookInboxHandler>();
         handler.SetupGet(service => service.TechnicalName).Returns("handler");
-        handler.SetupGet(service => service.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.GuardedByDurableStore);
+        handler.SetupGet(service => service.ReplaySafety).Returns(WebhookHandlerReplaySafety.GuardedByDurableStore);
         var inbox = CreateInbox(store, session, [handler.Object]);
 
         // Act
@@ -223,7 +227,7 @@ public sealed class ProviderWebhookInboxTests
             .Returns(Task.CompletedTask);
         var handler = new Mock<IProviderWebhookInboxHandler>();
         handler.SetupGet(service => service.TechnicalName).Returns("handler");
-        handler.SetupGet(service => service.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.GuardedByDurableStore);
+        handler.SetupGet(service => service.ReplaySafety).Returns(WebhookHandlerReplaySafety.GuardedByDurableStore);
         handler
             .Setup(service => service.HandleAsync(message.Payload, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("sensitive provider response"));
@@ -296,9 +300,9 @@ public sealed class ProviderWebhookInboxTests
             store,
             session,
             [],
-            retentionOptions: new ContactCenterRetentionOptions
+            inboxOptions: new ProviderWebhookInboxOptions
             {
-                WebhookInboxMessageRetentionDays = 30,
+                RetentionDays = 30,
             });
 
         // Act
@@ -335,9 +339,9 @@ public sealed class ProviderWebhookInboxTests
             store,
             session,
             [],
-            retentionOptions: new ContactCenterRetentionOptions
+            inboxOptions: new ProviderWebhookInboxOptions
             {
-                WebhookInboxMessageRetentionDays = 0,
+                RetentionDays = 0,
             });
 
         // Act
@@ -380,7 +384,7 @@ public sealed class ProviderWebhookInboxTests
             .Returns(Task.CompletedTask);
         var handler = new Mock<IProviderWebhookInboxHandler>();
         handler.SetupGet(service => service.TechnicalName).Returns("handler");
-        handler.SetupGet(service => service.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.GuardedByDurableStore);
+        handler.SetupGet(service => service.ReplaySafety).Returns(WebhookHandlerReplaySafety.GuardedByDurableStore);
         handler
             .SetupSequence(service => service.HandleAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("poison"))
@@ -416,7 +420,7 @@ public sealed class ProviderWebhookInboxTests
             .ThrowsAsync(new ConcurrencyException(new Document()));
         var handler = new Mock<IProviderWebhookInboxHandler>();
         handler.SetupGet(service => service.TechnicalName).Returns("handler");
-        handler.SetupGet(service => service.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.GuardedByDurableStore);
+        handler.SetupGet(service => service.ReplaySafety).Returns(WebhookHandlerReplaySafety.GuardedByDurableStore);
         handler
             .Setup(service => service.HandleAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
@@ -465,7 +469,7 @@ public sealed class ProviderWebhookInboxTests
             .ThrowsAsync(new ConcurrencyException(new Document()));
         var handler = new Mock<IProviderWebhookInboxHandler>();
         handler.SetupGet(service => service.TechnicalName).Returns("handler");
-        handler.SetupGet(service => service.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.GuardedByDurableStore);
+        handler.SetupGet(service => service.ReplaySafety).Returns(WebhookHandlerReplaySafety.GuardedByDurableStore);
         handler
             .Setup(service => service.HandleAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
@@ -503,7 +507,7 @@ public sealed class ProviderWebhookInboxTests
             .Returns(Task.CompletedTask);
         var handler = new Mock<IProviderWebhookInboxHandler>();
         handler.SetupGet(service => service.TechnicalName).Returns("handler");
-        handler.SetupGet(service => service.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.GuardedByDurableStore);
+        handler.SetupGet(service => service.ReplaySafety).Returns(WebhookHandlerReplaySafety.GuardedByDurableStore);
         handler
             .Setup(service => service.HandleAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException());
@@ -577,7 +581,7 @@ public sealed class ProviderWebhookInboxTests
     {
         var handler = new Mock<IProviderWebhookInboxHandler>();
         handler.SetupGet(service => service.TechnicalName).Returns(technicalName);
-        handler.SetupGet(service => service.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.GuardedByDurableStore);
+        handler.SetupGet(service => service.ReplaySafety).Returns(WebhookHandlerReplaySafety.GuardedByDurableStore);
 
         return handler;
     }
@@ -587,7 +591,7 @@ public sealed class ProviderWebhookInboxTests
         Mock<ISession> session,
         IEnumerable<IProviderWebhookInboxHandler> handlers,
         bool locked = true,
-        ContactCenterRetentionOptions retentionOptions = null)
+        ProviderWebhookInboxOptions inboxOptions = null)
     {
         var distributedLock = new Mock<IDistributedLock>();
         distributedLock
@@ -599,7 +603,7 @@ public sealed class ProviderWebhookInboxTests
         var clock = new Mock<IClock>();
         clock.SetupGet(service => service.UtcNow).Returns(_now);
         ProviderWebhookInbox inbox = null;
-        var scopeExecutor = new Mock<IContactCenterScopeExecutor>();
+        var scopeExecutor = new Mock<IProviderWebhookInboxScopeExecutor>();
         scopeExecutor
             .Setup(service => service.ExecuteAsync(It.IsAny<Func<IProviderWebhookInbox, Task>>()))
             .Returns((Func<IProviderWebhookInbox, Task> operation) => operation(inbox));
@@ -612,7 +616,7 @@ public sealed class ProviderWebhookInboxTests
             new ProviderIdentityResolver([]),
             scopeExecutor.Object,
             clock.Object,
-            Options.Create(retentionOptions ?? new ContactCenterRetentionOptions()),
+            Options.Create(inboxOptions ?? new ProviderWebhookInboxOptions()),
             NullLogger<ProviderWebhookInbox>.Instance);
 
         return inbox;

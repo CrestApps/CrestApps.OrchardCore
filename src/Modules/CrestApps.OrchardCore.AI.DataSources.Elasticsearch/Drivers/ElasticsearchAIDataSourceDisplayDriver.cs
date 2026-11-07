@@ -1,7 +1,11 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Core.Extensions;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Models;
+using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Services;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.ViewModels;
+using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -15,6 +19,7 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly ElasticsearchDataSourceOptions _options;
+    private readonly AIDataSourceConnectionPicker _connectionPicker;
 
     internal readonly IStringLocalizer S;
 
@@ -23,30 +28,41 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
     /// </summary>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
     /// <param name="options">The global Elasticsearch data source options.</param>
+    /// <param name="connectionPicker">The data connection picker.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ElasticsearchAIDataSourceDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
         IOptions<ElasticsearchDataSourceOptions> options,
+        AIDataSourceConnectionPicker connectionPicker,
         IStringLocalizer<ElasticsearchAIDataSourceDisplayDriver> stringLocalizer)
     {
         _dataProtectionProvider = dataProtectionProvider;
         _options = options.Value;
+        _connectionPicker = connectionPicker;
         S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(AIDataSource dataSource, BuildEditorContext context)
     {
         if (!string.Equals(
-            GetSourceType(dataSource),
+            AIDataSourceExtensions.GetSourceType(dataSource),
             AIDataSourceSourceTypes.Elasticsearch,
             StringComparison.OrdinalIgnoreCase))
         {
             return null;
         }
 
-        return Initialize<EditElasticsearchAIDataSourceViewModel>("ElasticsearchAIDataSource_Edit", model =>
+        return Initialize<EditElasticsearchAIDataSourceViewModel>("ElasticsearchAIDataSource_Edit", async model =>
         {
             var metadata = dataSource.GetOrCreate<ElasticsearchSourceMetadata>();
+            model.DataConnectionId = AIDataSourceConnectionPicker.GetConnectionId(dataSource);
+            model.CanPickDataConnection = await _connectionPicker.CanPickAsync();
+
+            if (model.CanPickDataConnection)
+            {
+                model.DataConnections = await _connectionPicker.GetOptionsAsync(ElasticsearchDataConnectionSettings.ConnectorNames, model.DataConnectionId);
+            }
+
             model.EnvironmentType = metadata.GetEnvironmentType();
             model.Url = metadata.Url;
             model.CloudId = metadata.CloudId;
@@ -55,18 +71,18 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
             model.Username = metadata.Username;
             model.ApiKeyId = metadata.ApiKeyId;
             model.CertificateFingerprint = metadata.CertificateFingerprint;
-            model.HasPassword = !string.IsNullOrWhiteSpace(metadata.Password);
-            model.HasApiKey = !string.IsNullOrWhiteSpace(metadata.ApiKey);
-            model.HasBase64ApiKey = !string.IsNullOrWhiteSpace(metadata.Base64ApiKey);
+            model.HasPassword = ProtectedSettingExtensions.HasSecret(metadata.Password);
+            model.HasApiKey = ProtectedSettingExtensions.HasSecret(metadata.ApiKey);
+            model.HasBase64ApiKey = ProtectedSettingExtensions.HasSecret(metadata.Base64ApiKey);
             model.HasDefaultConnection = _options.HasConnection;
-            model.UseDefaultConnection = _options.HasConnection && !HasStoredConnection(metadata);
+            model.UseDefaultConnection = _options.HasConnection && !HasStoredConnection(metadata) && model.DataConnectionId is null;
         }).Location("Content:11");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIDataSource dataSource, UpdateEditorContext context)
     {
         if (!string.Equals(
-            GetSourceType(dataSource),
+            AIDataSourceExtensions.GetSourceType(dataSource),
             AIDataSourceSourceTypes.Elasticsearch,
             StringComparison.OrdinalIgnoreCase))
         {
@@ -76,6 +92,25 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
         var model = new EditElasticsearchAIDataSourceViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+        // A data source that uses a data connection reads the URL and the credentials from the connection. Its own URL
+        // and credentials stay stored, unused, so switching back to its own settings loses nothing; they are not
+        // exported while the connection is used.
+        var connectionId = await _connectionPicker.UpdateAsync(dataSource, model.DataConnectionId, ElasticsearchDataConnectionSettings.ConnectorNames, context, Prefix, nameof(model.DataConnectionId));
+
+        if (connectionId is not null)
+        {
+            if (string.IsNullOrWhiteSpace(model.IndexName))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexName), S["Elasticsearch index name is required."]);
+            }
+
+            var storedMetadata = dataSource.GetOrCreate<ElasticsearchSourceMetadata>();
+            storedMetadata.IndexName = model.IndexName?.Trim();
+            dataSource.Put(storedMetadata);
+
+            return Edit(dataSource, context);
+        }
 
         // When a connection is configured globally, the operator can opt into it and only the index
         // name is stored on the data source.
@@ -161,8 +196,6 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.AuthenticationType), S["Elastic Cloud connections require an authentication type and matching credentials."]);
         }
 
-        var protector = _dataProtectionProvider.CreateProtector(AIDataSourceProtectionConstants.SourceSecretPurpose);
-
         dataSource.Put(new ElasticsearchSourceMetadata
         {
             EnvironmentType = environmentType,
@@ -178,20 +211,14 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
                 ? model.Username?.Trim()
                 : null,
             Password = string.Equals(authenticationType, ElasticsearchSourceMetadata.BasicAuthenticationType, StringComparison.OrdinalIgnoreCase)
-                ? string.IsNullOrWhiteSpace(model.Password)
-                    ? existingMetadata.Password
-                    : protector.Protect(model.Password)
+                ? _dataProtectionProvider.ApplySecret(AIDataSourceProtectionConstants.SourceSecretPurpose, existingMetadata.Password, model.Password)
                 : null,
             ApiKey = string.Equals(authenticationType, ElasticsearchSourceMetadata.ApiKeyAuthenticationType, StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(authenticationType, ElasticsearchSourceMetadata.KeyIdAndKeyAuthenticationType, StringComparison.OrdinalIgnoreCase)
-                ? string.IsNullOrWhiteSpace(model.ApiKey)
-                    ? existingMetadata.ApiKey
-                    : protector.Protect(model.ApiKey)
+                ? _dataProtectionProvider.ApplySecret(AIDataSourceProtectionConstants.SourceSecretPurpose, existingMetadata.ApiKey, model.ApiKey)
                 : null,
             Base64ApiKey = string.Equals(authenticationType, ElasticsearchSourceMetadata.Base64ApiKeyAuthenticationType, StringComparison.OrdinalIgnoreCase)
-                ? string.IsNullOrWhiteSpace(model.Base64ApiKey)
-                    ? existingMetadata.Base64ApiKey
-                    : protector.Protect(model.Base64ApiKey)
+                ? _dataProtectionProvider.ApplySecret(AIDataSourceProtectionConstants.SourceSecretPurpose, existingMetadata.Base64ApiKey, model.Base64ApiKey)
                 : null,
             ApiKeyId = string.Equals(authenticationType, ElasticsearchSourceMetadata.KeyIdAndKeyAuthenticationType, StringComparison.OrdinalIgnoreCase)
                 ? model.ApiKeyId?.Trim()
@@ -235,14 +262,5 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
         }
 
         return ElasticsearchSourceMetadata.NoneAuthenticationType;
-    }
-
-    private static string GetSourceType(AIDataSource dataSource)
-    {
-        ArgumentNullException.ThrowIfNull(dataSource);
-
-        return string.IsNullOrWhiteSpace(dataSource.Source)
-            ? AIDataSourceSourceTypes.SearchIndexProfile
-            : dataSource.Source;
     }
 }

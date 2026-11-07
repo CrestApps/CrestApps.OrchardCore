@@ -1,7 +1,8 @@
-using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
 using CrestApps.OrchardCore.Calendars.ViewModels;
+using CrestApps.OrchardCore.Core.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
@@ -23,7 +24,7 @@ internal sealed class CalendarDisplayDriver : DisplayDriver<Calendar>
     private readonly ICalendarAccessService _accessService;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IStringLocalizerFactory _localizerFactory;
-    private readonly IClock _clock;
+    private readonly ITimeZoneSelectListProvider _timeZoneSelectListProvider;
 
     internal readonly IStringLocalizer S;
 
@@ -32,14 +33,14 @@ internal sealed class CalendarDisplayDriver : DisplayDriver<Calendar>
         ICalendarAccessService accessService,
         IHttpContextAccessor httpContextAccessor,
         IStringLocalizerFactory localizerFactory,
-        IClock clock,
+        ITimeZoneSelectListProvider timeZoneSelectListProvider,
         IStringLocalizer<CalendarDisplayDriver> stringLocalizer)
     {
         _typeManager = typeManager;
         _accessService = accessService;
         _httpContextAccessor = httpContextAccessor;
         _localizerFactory = localizerFactory;
-        _clock = clock;
+        _timeZoneSelectListProvider = timeZoneSelectListProvider;
         S = stringLocalizer;
     }
 
@@ -87,7 +88,7 @@ internal sealed class CalendarDisplayDriver : DisplayDriver<Calendar>
     {
         var type = _typeManager.FindType(calendar.Type);
 
-        return Initialize<CalendarGeneralViewModel>("CalendarGeneral_Edit", model =>
+        return Initialize<CalendarGeneralViewModel>("CalendarGeneral_Edit", async model =>
         {
             model.Name = calendar.Name;
             model.Description = calendar.Description;
@@ -98,7 +99,7 @@ internal sealed class CalendarDisplayDriver : DisplayDriver<Calendar>
             model.TypeName = type is null ? calendar.Type : _localizerFactory.Localize(type.DisplayName).Value;
             model.TypeDescription = type?.Description is null ? null : _localizerFactory.Localize(type.Description).Value;
             model.TypeIcon = type?.Icon ?? "fa-solid fa-calendar";
-            model.TimeZoneOptions = CalendarSelectLists.TimeZones(_clock, calendar.TimeZoneId);
+            model.TimeZoneOptions = await _timeZoneSelectListProvider.GetTimeZoneOptionsAsync(calendar.TimeZoneId);
             model.VisibilityOptions = CalendarSelectLists.Visibilities(S);
         }).Location("Content:1%General;1");
     }

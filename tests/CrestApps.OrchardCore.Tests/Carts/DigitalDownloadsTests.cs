@@ -41,6 +41,7 @@ public sealed class DigitalDownloadsTests : IAsyncLifetime
     private readonly LocalLock _lock = new(NullLogger<LocalLock>.Instance);
     private DateTime _clockNow = _now;
     private IStore _store;
+    private IContentManager _contentManager;
 
     public async ValueTask InitializeAsync()
     {
@@ -138,10 +139,10 @@ public sealed class DigitalDownloadsTests : IAsyncLifetime
         var file = await FileStore().SaveAsync("guide.pdf", new MemoryStream([1, 2, 3]), TestContext.Current.CancellationToken);
         var order = PaidOrder();
 
-        await InSessionAsync(service => service.GrantAsync(order, TestContext.Current.CancellationToken), Product(file, limit: 2));
+        Assert.Equal(1, await GrantAsync(order, Product(file, limit: 2)));
 
         // Granting again adds nothing.
-        Assert.Equal(0, await InSessionAsync(service => service.GrantAsync(order, TestContext.Current.CancellationToken), Product(file, limit: 2)));
+        Assert.Equal(0, await GrantAsync(order, Product(file, limit: 2)));
 
         var url = await InSessionAsync(async service => await service.CreateUrlAsync(Assert.Single(await service.ListAsync(order.ItemId, TestContext.Current.CancellationToken))));
         var token = Uri.UnescapeDataString(url[(url.LastIndexOf('/') + 1)..]);
@@ -166,7 +167,7 @@ public sealed class DigitalDownloadsTests : IAsyncLifetime
         var file = await FileStore().SaveAsync("guide.pdf", new MemoryStream([1]), TestContext.Current.CancellationToken);
         var order = PaidOrder();
 
-        await InSessionAsync(service => service.GrantAsync(order, TestContext.Current.CancellationToken), Product(file, limit: 0, days: 10));
+        await GrantAsync(order, Product(file, limit: 0, days: 10));
 
         var entitlement = Assert.Single(await InSessionAsync(service => service.ListAsync(order.ItemId, TestContext.Current.CancellationToken)));
         Assert.Null(entitlement.DownloadLimit);
@@ -175,11 +176,11 @@ public sealed class DigitalDownloadsTests : IAsyncLifetime
 
         // A partial refund leaves the files; a full one takes them back.
         order.Refunds.Add(new OrderRefund { RefundId = "r1", Amount = 5m });
-        await InSessionAsync(async service => { await new DownloadOrderEventHandler(service, new PassThroughLocalizer<DownloadOrderEventHandler>()).RefundedAsync(new OrderRefundedContext(order, order.Refunds[0]), TestContext.Current.CancellationToken); return 0; });
+        await InSessionAsync(async service => { await new DownloadOrderEventHandler(service, _contentManager, new PassThroughLocalizer<DownloadOrderEventHandler>()).RefundedAsync(new OrderRefundedContext(order, order.Refunds[0]), TestContext.Current.CancellationToken); return 0; });
         Assert.Null(Assert.Single(await InSessionAsync(service => service.ListAsync(order.ItemId, TestContext.Current.CancellationToken))).RevokedUtc);
 
         order.Refunds.Add(new OrderRefund { RefundId = "r2", Amount = 15m });
-        await InSessionAsync(async service => { await new DownloadOrderEventHandler(service, new PassThroughLocalizer<DownloadOrderEventHandler>()).RefundedAsync(new OrderRefundedContext(order, order.Refunds[1]), TestContext.Current.CancellationToken); return 0; });
+        await InSessionAsync(async service => { await new DownloadOrderEventHandler(service, _contentManager, new PassThroughLocalizer<DownloadOrderEventHandler>()).RefundedAsync(new OrderRefundedContext(order, order.Refunds[1]), TestContext.Current.CancellationToken); return 0; });
 
         var revoked = Assert.Single(await InSessionAsync(service => service.ListAsync(order.ItemId, TestContext.Current.CancellationToken)));
         Assert.Equal(DownloadProblem.Revoked, DownloadService.GetProblem(revoked, _now));
@@ -195,7 +196,7 @@ public sealed class DigitalDownloadsTests : IAsyncLifetime
         var file = await FileStore().SaveAsync("guide.pdf", new MemoryStream([1]), TestContext.Current.CancellationToken);
         var order = PaidOrder();
 
-        await InSessionAsync(service => service.GrantAsync(order, TestContext.Current.CancellationToken), Product(file, limit: 3, days: 30));
+        await GrantAsync(order, Product(file, limit: 3, days: 30));
 
         var section = await InSessionAsync(service => new DownloadEmailSectionProvider(service, new PassThroughLocalizer<DownloadEmailSectionProvider>(), new TestClock(DateTime.UtcNow)).GetSectionAsync(order, TestContext.Current.CancellationToken));
 
@@ -278,12 +279,24 @@ public sealed class DigitalDownloadsTests : IAsyncLifetime
             return problem == DownloadProblem.None && await service.RecordDownloadAsync(entitlement, TestContext.Current.CancellationToken);
         });
 
+    // Grants the order through its order event handler, as payment does, and returns how many files it gave.
+    private async Task<int> GrantAsync(Order order, ContentItem product)
+        => await InSessionAsync(async service =>
+        {
+            var before = (await service.ListAsync(order.ItemId, TestContext.Current.CancellationToken)).Count;
+
+            await new DownloadOrderEventHandler(service, _contentManager, new PassThroughLocalizer<DownloadOrderEventHandler>()).PaidAsync(new OrderPaidContext(order), TestContext.Current.CancellationToken);
+
+            return (await service.ListAsync(order.ItemId, TestContext.Current.CancellationToken)).Count - before;
+        }, product);
+
     private async Task<T> InSessionAsync<T>(Func<DownloadService, Task<T>> work, ContentItem product = null)
     {
         await using var session = _store.CreateSession();
 
         var contentManager = new Mock<IContentManager>();
         contentManager.Setup(value => value.GetVersionAsync(It.IsAny<string>())).ReturnsAsync(product);
+        _contentManager = contentManager.Object;
 
         var site = new Mock<ISite>();
         site.Setup(value => value.GetOrCreate<DownloadSettings>()).Returns(new DownloadSettings());
@@ -295,7 +308,7 @@ public sealed class DigitalDownloadsTests : IAsyncLifetime
         var clock = new Mock<IClock>();
         clock.Setup(value => value.UtcNow).Returns(() => _clockNow);
 
-        var service = new DownloadService(session, contentManager.Object, siteService.Object, _protection, SignedLinkDoubles.Urls(siteService.Object, TemplateLinkGenerator.ForToken(DownloadsConstants.RouteNames.Download, "/downloads/")), _lock, clock.Object);
+        var service = new DownloadService(session, siteService.Object, _protection, SignedLinkDoubles.Urls(siteService.Object, TemplateLinkGenerator.ForToken(DownloadsConstants.RouteNames.Download, "/downloads/")), _lock, clock.Object);
         var result = await work(service);
 
         await session.SaveChangesAsync(TestContext.Current.CancellationToken);

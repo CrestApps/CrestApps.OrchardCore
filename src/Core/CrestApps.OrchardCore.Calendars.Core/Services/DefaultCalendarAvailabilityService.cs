@@ -140,7 +140,7 @@ public sealed class DefaultCalendarAvailabilityService : ICalendarAvailabilitySe
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<CalendarTimeWindow>> FindFreeWindowsAsync(CalendarBusyQuery query, TimeSpan duration, IEnumerable<CalendarTimeWindow> within = null, int maxResults = 20, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<TimeWindow>> FindFreeWindowsAsync(CalendarBusyQuery query, TimeSpan duration, IEnumerable<TimeWindow> within = null, int maxResults = 20, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(query);
 
@@ -150,12 +150,12 @@ public sealed class DefaultCalendarAvailabilityService : ICalendarAvailabilitySe
         }
 
         var busy = Merge(await GetBusyAsync(query, cancellationToken));
-        var windows = (within ?? [new CalendarTimeWindow(query.FromUtc, query.ToUtc)])
-            .Select(window => new CalendarTimeWindow(Max(window.StartUtc, query.FromUtc), Min(window.EndUtc, query.ToUtc)))
+        var windows = (within ?? [new TimeWindow(query.FromUtc, query.ToUtc)])
+            .Select(window => new TimeWindow(Max(window.StartUtc, query.FromUtc), Min(window.EndUtc, query.ToUtc)))
             .Where(window => window.EndUtc > window.StartUtc)
             .OrderBy(window => window.StartUtc);
 
-        var result = new List<CalendarTimeWindow>();
+        var result = new List<TimeWindow>();
 
         foreach (var window in windows)
         {
@@ -181,27 +181,11 @@ public sealed class DefaultCalendarAvailabilityService : ICalendarAvailabilitySe
     /// </summary>
     /// <param name="intervals">The intervals.</param>
     /// <returns>The merged windows, ordered by start.</returns>
-    public static IReadOnlyList<CalendarTimeWindow> Merge(IEnumerable<CalendarBusyInterval> intervals)
+    public static IReadOnlyList<TimeWindow> Merge(IEnumerable<CalendarBusyInterval> intervals)
     {
         ArgumentNullException.ThrowIfNull(intervals);
 
-        var result = new List<CalendarTimeWindow>();
-
-        foreach (var interval in intervals.Where(interval => interval.EndUtc > interval.StartUtc).OrderBy(interval => interval.StartUtc))
-        {
-            if (result.Count > 0 && interval.StartUtc <= result[result.Count - 1].EndUtc)
-            {
-                var last = result[result.Count - 1];
-
-                result[result.Count - 1] = last with { EndUtc = Max(last.EndUtc, interval.EndUtc) };
-            }
-            else
-            {
-                result.Add(new CalendarTimeWindow(interval.StartUtc, interval.EndUtc));
-            }
-        }
-
-        return result;
+        return TimeWindow.Merge(intervals.Select(interval => new TimeWindow(interval.StartUtc, interval.EndUtc)));
     }
 
     /// <summary>
@@ -210,37 +194,11 @@ public sealed class DefaultCalendarAvailabilityService : ICalendarAvailabilitySe
     /// <param name="window">The window.</param>
     /// <param name="busy">The merged busy windows, ordered by start.</param>
     /// <returns>The free parts of the window.</returns>
-    public static IEnumerable<CalendarTimeWindow> Subtract(CalendarTimeWindow window, IReadOnlyList<CalendarTimeWindow> busy)
+    public static IEnumerable<TimeWindow> Subtract(TimeWindow window, IReadOnlyList<TimeWindow> busy)
     {
-        ArgumentNullException.ThrowIfNull(window);
         ArgumentNullException.ThrowIfNull(busy);
 
-        var cursor = window.StartUtc;
-
-        foreach (var block in busy)
-        {
-            if (block.EndUtc <= cursor)
-            {
-                continue;
-            }
-
-            if (block.StartUtc >= window.EndUtc)
-            {
-                break;
-            }
-
-            if (block.StartUtc > cursor)
-            {
-                yield return new CalendarTimeWindow(cursor, block.StartUtc);
-            }
-
-            cursor = Max(cursor, block.EndUtc);
-        }
-
-        if (cursor < window.EndUtc)
-        {
-            yield return new CalendarTimeWindow(cursor, window.EndUtc);
-        }
+        return TimeWindow.Subtract([window], busy);
     }
 
     private static void Add(List<CalendarBusyInterval> result, CalendarOccurrence occurrence, CalendarBusyQuery query, string calendarId, string userId)

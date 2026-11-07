@@ -18,9 +18,9 @@ Use webhooks to:
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Webhooks |
-| **Permission** | **Manage commerce webhooks** |
-| **Feature** | Commerce Webhooks |
+| **Menu** | Configuration > Webhooks |
+| **Permission** | **Manage webhooks** |
+| **Feature** | Commerce Webhooks (it turns on Webhooks) |
 
 <AskYourAdmin />
 
@@ -34,7 +34,7 @@ The system that receives the messages is called the **receiver**. Whoever builds
 
 <YouTube video="webhooks" title="Video of adding a webhook" start={81} end={132} />
 
-1. Open **Commerce > Webhooks** and click **Add webhook**.
+1. Open **Configuration > Webhooks** and click **Add webhook**.
 2. Fill in the fields (below).
 3. Click **Save**.
 

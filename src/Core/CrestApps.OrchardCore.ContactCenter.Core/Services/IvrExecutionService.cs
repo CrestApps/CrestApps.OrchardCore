@@ -31,7 +31,7 @@ public sealed class IvrExecutionService : IIvrExecutionService
     /// </summary>
     public const string StateMetadataKey = "ivrFlowState";
 
-    private static readonly JsonSerializerOptions _serializerOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions _serializerOptions = JsonSerializerOptions.Web;
 
     private readonly IInteractionManager _interactionManager;
     private readonly IIvrProvider _ivrProvider;

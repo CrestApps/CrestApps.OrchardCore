@@ -5,7 +5,7 @@ namespace CrestApps.OrchardCore.Stripe.Core.Models;
 /// <summary>
 /// Represents the data required to create a Stripe subscription.
 /// </summary>
-public class CreateSubscriptionRequest : StripeWriteRequest
+public sealed class CreateSubscriptionRequest : StripeWriteRequest
 {
     /// <summary>
     /// Gets or sets the Stripe customer identifier that owns the subscription.

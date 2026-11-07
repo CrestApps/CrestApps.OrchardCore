@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Commerce;
+using CrestApps.OrchardCore.Commerce.Core;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Shipping.Deployments;
@@ -20,6 +21,7 @@ using CrestApps.OrchardCore.Shipping.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Commerce.Webhooks;
+using CrestApps.OrchardCore.Webhooks;
 using CrestApps.OrchardCore.Shipping.Api;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -93,7 +95,7 @@ public sealed class Startup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class WorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -106,7 +108,7 @@ public sealed class WorkflowsStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class RecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -115,7 +117,7 @@ public sealed class RecipesStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class DeploymentStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -177,7 +179,7 @@ public sealed class WebhooksStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IShipmentEventHandler, ShipmentWebhookHandler>();
-        services.AddCommerceWebhookEvent(CommerceWebhookEvents.ShipmentShipped, "Shipment shipped", "Shipments");
-        services.AddCommerceWebhookEvent(CommerceWebhookEvents.ShipmentDelivered, "Shipment delivered", "Shipments");
+        services.AddWebhookEvent(CommerceWebhookEvents.ShipmentShipped, "Shipment shipped", "Shipments");
+        services.AddWebhookEvent(CommerceWebhookEvents.ShipmentDelivered, "Shipment delivered", "Shipments");
     }
 }

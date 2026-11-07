@@ -2,10 +2,10 @@ using System.ComponentModel.DataAnnotations;
 using CrestApps.Core;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Omnichannel.Managements.Deployments;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Users.Indexes;
 using YesSql;
@@ -41,7 +41,7 @@ internal sealed class SubjectActionHandler : CatalogEntryHandlerBase<SubjectActi
     /// <inheritdoc/>
     public override Task InitializingAsync(InitializingContext<SubjectAction> context, CancellationToken cancellationToken = default)
     {
-        OmnichannelDeploymentSerializer.Populate(context.Model, context.Data);
+        CatalogDeploymentSerializer.Populate(context.Model, context.Data);
 
         return Task.CompletedTask;
     }
@@ -49,7 +49,7 @@ internal sealed class SubjectActionHandler : CatalogEntryHandlerBase<SubjectActi
     /// <inheritdoc/>
     public override Task UpdatingAsync(UpdatingContext<SubjectAction> context, CancellationToken cancellationToken = default)
     {
-        OmnichannelDeploymentSerializer.Populate(context.Model, context.Data);
+        CatalogDeploymentSerializer.Populate(context.Model, context.Data);
 
         return Task.CompletedTask;
     }

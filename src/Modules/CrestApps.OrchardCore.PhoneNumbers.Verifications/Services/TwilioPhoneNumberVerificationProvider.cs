@@ -159,7 +159,7 @@ public sealed class TwilioPhoneNumberVerificationProvider : IPhoneNumberVerifica
             IsVoip = lineType == PhoneNumberLineType.Voip,
             LineType = lineType,
             CountryCode = parsed.CountryCode,
-            CountryPrefix = NormalizeCountryPrefix(parsed.CallingCountryCode),
+            CountryPrefix = PhoneCountryCodes.NormalizeCallingCode(parsed.CallingCountryCode),
             Carrier = parsed.LineTypeIntelligence?.CarrierName,
             LineStatus = lineStatus,
             RiskScore = parsed.SmsPumpingRisk?.SmsPumpingRiskScore,
@@ -280,20 +280,6 @@ public sealed class TwilioPhoneNumberVerificationProvider : IPhoneNumberVerifica
         }
 
         query.Append(name).Append('=').Append(Uri.EscapeDataString(value));
-    }
-
-    private static string NormalizeCountryPrefix(string countryPrefix)
-    {
-        if (string.IsNullOrWhiteSpace(countryPrefix))
-        {
-            return null;
-        }
-
-        var trimmed = countryPrefix.Trim();
-
-        return trimmed.StartsWith('+')
-            ? trimmed
-            : "+" + trimmed;
     }
 
     private static PhoneNumberLineType MapLineType(string type)

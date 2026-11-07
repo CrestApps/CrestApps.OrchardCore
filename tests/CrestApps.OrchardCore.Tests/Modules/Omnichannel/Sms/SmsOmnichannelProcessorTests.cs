@@ -636,7 +636,7 @@ public sealed class SmsOmnichannelProcessorTests
                 Sms,
                 Liquid,
                 contentManager.Object,
-                OptOutResolver,
+                CrestApps.OrchardCore.Tests.Doubles.ConsentDoubles.Over(OptOutResolver, contentManager.Object),
                 new StubClock(_now),
                 new PassThroughStringLocalizer<SmsOmnichannelProcessor>());
         }

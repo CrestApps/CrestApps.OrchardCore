@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Services;
@@ -110,7 +111,7 @@ public sealed class CheckoutRecoveryService
             {
                 Kind = OrderEmailKinds.Recovery,
                 To = email,
-                Order = order,
+                Models = OrderEmailModels.For(order),
                 Culture = order.Culture,
                 Reference = order.OrderNumber,
             }, _ =>

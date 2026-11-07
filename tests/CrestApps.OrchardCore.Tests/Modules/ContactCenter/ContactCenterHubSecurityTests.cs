@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Environment.Shell;
@@ -175,6 +176,20 @@ public sealed class ContactCenterHubSecurityTests
         Assert.Empty(harness.AuthorizationService.EvaluatedPermissions);
     }
 
+    // Bug: the errors the hub shows an agent were hard-coded English. They now go through the localizer.
+    [Fact]
+    public async Task SignIn_WhenTheConnectionCarriesNoUserIdentifier_ThrowsALocalizedError()
+    {
+        // Arrange
+        var harness = new HubHarness(userId: null);
+
+        // Act
+        var exception = await Assert.ThrowsAsync<HubException>(() => harness.Hub.SignIn(["sales"], []));
+
+        // Assert
+        Assert.Equal(HubStringLocalizer.Prefix + "The current connection is not associated with an authenticated Contact Center user.", exception.Message);
+    }
+
     [Fact]
     public async Task OnConnectedAsync_WhenTheConnectionHasNoHttpContext_DeniesEveryPermissionAndAborts()
     {
@@ -334,7 +349,8 @@ public sealed class ContactCenterHubSecurityTests
                 new TestContactCenterScopeExecutor(services),
                 workManager.Object,
                 ConnectionRegistry,
-                new ShellSettings { Name = TenantName })
+                new ShellSettings { Name = TenantName },
+                new HubStringLocalizer())
             {
                 Context = Context,
                 Groups = Groups,
@@ -610,5 +626,16 @@ public sealed class ContactCenterHubSecurityTests
         {
             IsDisposed = true;
         }
+    }
+
+    private sealed class HubStringLocalizer : IStringLocalizer<ContactCenterHub>
+    {
+        public const string Prefix = "[localized] ";
+
+        public LocalizedString this[string name] => new(name, Prefix + name);
+
+        public LocalizedString this[string name, params object[] arguments] => new(name, Prefix + string.Format(name, arguments));
+
+        public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
     }
 }

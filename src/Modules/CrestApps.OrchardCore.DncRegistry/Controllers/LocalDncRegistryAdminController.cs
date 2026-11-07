@@ -1,7 +1,9 @@
+using System.Globalization;
 using System.Text;
 using CrestApps.OrchardCore.DncRegistry.Models;
 using CrestApps.OrchardCore.DncRegistry.Services;
 using CrestApps.OrchardCore.DncRegistry.ViewModels;
+using CrestApps.OrchardCore.Tabular;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -302,7 +304,7 @@ public sealed class LocalDncRegistryAdminController : Controller
         }
 
         var csv = new StringBuilder();
-        csv.AppendLine("Row,Value,Reason");
+        CsvWriter.AppendRow(csv, "Row", "Value", "Reason");
 
         var hasFileData = false;
 
@@ -325,9 +327,7 @@ public sealed class LocalDncRegistryAdminController : Controller
                         continue;
                     }
 
-                    var escapedValue = EscapeCsvField(line.Trim());
-                    var escapedReason = EscapeCsvField(reason);
-                    csv.AppendLine($"{rowIndex},{escapedValue},{escapedReason}");
+                    CsvWriter.AppendRow(csv, rowIndex.ToString(CultureInfo.InvariantCulture), line.Trim(), reason);
                 }
 
                 hasFileData = true;
@@ -338,8 +338,7 @@ public sealed class LocalDncRegistryAdminController : Controller
         {
             foreach (var error in list.ErrorMessages.OrderBy(x => x.Key))
             {
-                var escapedReason = EscapeCsvField(error.Value);
-                csv.AppendLine($"{error.Key},,{escapedReason}");
+                CsvWriter.AppendRow(csv, error.Key.ToString(CultureInfo.InvariantCulture), null, error.Value);
             }
         }
 
@@ -369,20 +368,5 @@ public sealed class LocalDncRegistryAdminController : Controller
         }
 
         return RedirectToAction(nameof(Index));
-    }
-
-    private static string EscapeCsvField(string value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return string.Empty;
-        }
-
-        if (value.Contains(',') || value.Contains('"') || value.Contains('\n'))
-        {
-            return "\"" + value.Replace("\"", "\"\"") + "\"";
-        }
-
-        return value;
     }
 }

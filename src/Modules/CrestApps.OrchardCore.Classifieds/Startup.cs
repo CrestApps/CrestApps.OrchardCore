@@ -9,8 +9,10 @@ using CrestApps.OrchardCore.Classifieds.Models;
 using CrestApps.OrchardCore.Classifieds.Services;
 using CrestApps.OrchardCore.Classifieds.ViewModels;
 using CrestApps.OrchardCore.Commerce;
+using CrestApps.OrchardCore.Commerce.Core;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.PersonalData.Core;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -21,6 +23,7 @@ using OrchardCore.ContentTypes.Editors;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Mvc.Core.Utilities;
 using OrchardCore.Navigation;
@@ -34,8 +37,10 @@ public sealed class Startup : StartupBase
     {
         services.AddDataMigration<ClassifiedMigrations>()
             .AddIndexProvider<ClassifiedIndexProvider>();
-        services.AddCommerceEmailSender();
+        services.AddCommerceEmailSender()
+            .AddCommerceEmailKind(ClassifiedsConstants.ListingEmailKind, LocalizationSource.Create<Startup>("Classified listing notice"));
         services.AddScoped<ClassifiedService>();
+        services.AddPersonalDataContributor<ClassifiedPersonalDataContributor>();
         services.AddScoped<ICartLineHandler, ClassifiedUpgradeLineHandler>();
         services.AddScoped<IOrderEventHandler, ClassifiedUpgradeOrderHandler>();
         services.AddSingleton<IBackgroundTask, ClassifiedsBackgroundTask>();

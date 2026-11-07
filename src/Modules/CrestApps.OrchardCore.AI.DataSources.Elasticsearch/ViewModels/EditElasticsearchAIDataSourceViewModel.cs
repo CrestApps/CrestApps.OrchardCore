@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.AI.DataSources.Elasticsearch.ViewModels;
 
@@ -67,6 +68,24 @@ public class EditElasticsearchAIDataSourceViewModel
     /// instead of connection settings stored on this data source.
     /// </summary>
     public bool UseDefaultConnection { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the Elasticsearch data connection the data source uses, or empty when it uses
+    /// its own connection settings.
+    /// </summary>
+    public string DataConnectionId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the current user may pick a data connection.
+    /// </summary>
+    [BindNever]
+    public bool CanPickDataConnection { get; set; }
+
+    /// <summary>
+    /// Gets or sets the data connections the user may pick.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> DataConnections { get; set; } = [];
 
     /// <summary>
     /// Gets or sets a value indicating whether a connection is configured globally.

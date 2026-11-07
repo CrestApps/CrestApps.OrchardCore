@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging;
 /// data pipelines.
 /// </summary>
 [Feature(MessagingConstants.Feature.Workspace)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class DataSourcesStartup : StartupBase
 {
     /// <inheritdoc/>

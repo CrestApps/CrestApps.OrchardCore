@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.Core.AI.Tooling.Instances.Documentation;
 using CrestApps.OrchardCore.AI.ViewModels;
+using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -84,11 +85,7 @@ internal sealed class AlgoliaDocumentationToolInstanceDisplayDriver : DisplayDri
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.MaxResults), S["The maximum results must be greater than zero."]);
         }
 
-        var apiKey = string.IsNullOrWhiteSpace(model.ApiKey)
-            ? existing.ApiKey
-            : _dataProtectionProvider
-                .CreateProtector(DocumentationToolConstants.AlgoliaDataProtectionPurpose)
-                .Protect(model.ApiKey.Trim());
+        var apiKey = _dataProtectionProvider.ApplySecret(DocumentationToolConstants.AlgoliaDataProtectionPurpose, existing.ApiKey, model.ApiKey);
 
         instance.Put(new AlgoliaDocumentationToolSettings
         {
