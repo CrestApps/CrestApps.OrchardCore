@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
+using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Services;
@@ -39,18 +40,23 @@ public sealed class AICompletionUsageReportDataSet : IndexedReportDataSet<AIComp
     private const decimal MillisecondsPerMinute = 60_000m;
 
     private readonly IAIProfileManager _profileManager;
+    private readonly IAIDeploymentStore _deploymentStore;
+
+    private IReadOnlyDictionary<string, AIDeploymentPricing> _pricing;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AICompletionUsageReportDataSet"/> class.
     /// </summary>
     /// <param name="session">The YesSql session the usage records are read from.</param>
     /// <param name="profileManager">The AI profile manager, which names the profiles.</param>
+    /// <param name="deploymentStore">The AI deployment store, whose prices estimate the cost of each request.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="storeOptions">The YesSql store options, which name the AI collection.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AICompletionUsageReportDataSet(
         ISession session,
         IAIProfileManager profileManager,
+        IAIDeploymentStore deploymentStore,
         IAuthorizationService authorizationService,
         IOptions<YesSqlStoreOptions> storeOptions,
         IStringLocalizer<AICompletionUsageReportDataSet> stringLocalizer)
@@ -65,6 +71,7 @@ public sealed class AICompletionUsageReportDataSet : IndexedReportDataSet<AIComp
             ChatAnalyticsPermissionProvider.ViewChatAnalytics)
     {
         _profileManager = profileManager;
+        _deploymentStore = deploymentStore;
 
         var S = stringLocalizer;
         var request = S["Request"].Value;
@@ -115,6 +122,21 @@ public sealed class AICompletionUsageReportDataSet : IndexedReportDataSet<AIComp
             .Description = S["For text-to-speech models billed by the character."].Value;
         AddField(nameof(AICompletionUsageRecord.ImageCount), S["Images generated"], DataFieldType.Integer, record => record.Document.ImageCount, billing)
             .Description = S["For image models billed by the image."].Value;
+        AddField(nameof(AICompletionUsageRecord.CacheWriteInputTokenCount), S["Cache write tokens"], DataFieldType.Integer, record => record.Document.CacheWriteInputTokenCount, billing)
+            .Description = S["Input tokens written to the provider's prompt cache, which some providers bill at a premium."].Value;
+        AddField(nameof(AICompletionUsageRecord.CachedInputAudioTokenCount), S["Cached audio input tokens"], DataFieldType.Integer, record => record.Document.CachedInputAudioTokenCount, billing);
+        AddField(nameof(AICompletionUsageRecord.InputImageTokenCount), S["Image input tokens"], DataFieldType.Integer, record => record.Document.InputImageTokenCount, billing);
+        AddField(nameof(AICompletionUsageRecord.OutputImageTokenCount), S["Image output tokens"], DataFieldType.Integer, record => record.Document.OutputImageTokenCount, billing);
+        AddField(nameof(AICompletionUsageRecord.RejectedPredictionTokenCount), S["Rejected prediction tokens"], DataFieldType.Integer, record => record.Document.RejectedPredictionTokenCount, billing)
+            .Description = S["Predicted output tokens the model did not use. Providers still bill them as output tokens."].Value;
+        AddField(nameof(AICompletionUsageRecord.WebSearchCount), S["Web searches"], DataFieldType.Integer, record => record.Document.WebSearchCount, billing);
+        AddField(nameof(AICompletionUsageRecord.WebFetchCount), S["Web fetches"], DataFieldType.Integer, record => record.Document.WebFetchCount, billing);
+
+        var cost = S["Cost"].Value;
+
+        AddField("EstimatedCost", S["Estimated cost"], DataFieldType.Decimal, record => AIUsageCostEstimator.Estimate(record.Document, AIUsageCostEstimator.GetPricing(_pricing, record.Document)), cost)
+            .Description = S["What the request cost at the prices set on its AI deployment, in the cost currency. Empty when the deployment has no prices."].Value;
+        AddField("CostCurrency", S["Cost currency"], DataFieldType.Text, record => AIUsageCostEstimator.GetPricing(_pricing, record.Document)?.Currency, cost);
 
         CompleteDescription();
     }
@@ -172,6 +194,7 @@ public sealed class AICompletionUsageReportDataSet : IndexedReportDataSet<AIComp
     protected override async IAsyncEnumerable<AIChatReportRecord<AICompletionUsageRecord>> LoadAsync(DataSourceQuery query, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var profileNames = await AIChatReportProfileNames.LoadAsync(_profileManager, query, cancellationToken);
+        _pricing = await _deploymentStore.GetPricingByDeploymentAsync(cancellationToken);
 
         await foreach (var row in base.LoadAsync(query, cancellationToken))
         {

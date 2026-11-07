@@ -1,4 +1,5 @@
 ﻿using CrestApps.Core.AI;
+using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Models;
 using Json.Schema;
 using Microsoft.Extensions.Options;
@@ -55,6 +56,7 @@ public sealed class AIDeploymentRecipeStep : IRecipeStep
             .Description("Legacy deployment purpose identifier, projected onto model capabilities on import.");
 
         var modelCapabilitiesSchema = BuildModelCapabilitiesSchema();
+        var pricingSchema = BuildPricingSchema();
 
         var containedConnectionPropertiesSchema = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
@@ -63,7 +65,8 @@ public sealed class AIDeploymentRecipeStep : IRecipeStep
                 ("AuthenticationType", azureAuthenticationTypeSchema),
                 ("ApiKey", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Contained-connection API key. Required when AuthenticationType is ApiKey.")),
                 ("IdentityId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional client ID of a user-assigned managed identity. Used when AuthenticationType is ManagedIdentity.")),
-                ("AIDeploymentMetadata", modelCapabilitiesSchema))
+                ("AIDeploymentMetadata", modelCapabilitiesSchema),
+                ("AIDeploymentPricing", pricingSchema))
             .AdditionalProperties(true)
             .Description("Properties stored directly on the deployment, such as contained provider connection settings and the declared model capabilities (AIDeploymentMetadata).");
 
@@ -95,6 +98,9 @@ public sealed class AIDeploymentRecipeStep : IRecipeStep
                 ("ApiKey", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Contained-connection API key alias for recipe imports. Supported by AzureSpeech deployments.")),
                 ("IdentityId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Contained-connection managed identity client ID alias for recipe imports. Supported by AzureSpeech deployments.")),
                 ("Properties", containedConnectionPropertiesSchema.Description("Contained provider connection properties stored directly on the deployment.")),
+                ("Pricing", new JsonSchemaBuilder().AnyOf(
+                    pricingSchema,
+                    new JsonSchemaBuilder().Type(SchemaValueType.Null).Description("Removes the deployment's prices.")).Description("What the deployment costs with its provider, used to estimate the cost of its usage in the AI usage reports. Leave it out to keep the deployment's current prices.")),
                 ("Purpose", new JsonSchemaBuilder().AnyOf(
                     deploymentPurposeSchema.Description("Legacy. Declare the model's capabilities under Properties.AIDeploymentMetadata instead. A deployment that names neither is imported as a text chat deployment."),
                     new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(
@@ -114,6 +120,38 @@ public sealed class AIDeploymentRecipeStep : IRecipeStep
             .Required("name", "Deployments")
             .AdditionalProperties(true)
             .Build();
+    }
+
+    /// <summary>
+    /// Builds the schema for a deployment's pricing: a currency and the prices, each an amount for a quantity of one
+    /// billed unit.
+    /// </summary>
+    private static JsonSchemaBuilder BuildPricingSchema()
+    {
+        var meterNames = AIUsageMeters.All.Select(static meter => meter.Name).ToArray();
+
+        var priceSchema = new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("Meter", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.String)
+                    .Enum(meterNames)
+                    .Description("The billed unit. Cached, cache-write, audio, and image tokens are taken out of the input and output tokens when they have their own price.")),
+                ("Amount", new JsonSchemaBuilder().Type(SchemaValueType.Number).Minimum(0).Description("What Per units cost, in the pricing's currency.")),
+                ("Per", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Minimum(1).Description("How many of the meter's base units Amount pays for, such as 1000000 for a price per million tokens, or 60 for a price per minute of audio (AudioSeconds).")),
+                ("CountName", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("For the AdditionalCount meter: the name of the count the provider reports, as shown in the usage report.")),
+                ("AboveInputTokens", new JsonSchemaBuilder().Type(SchemaValueType.Integer | SchemaValueType.Null).Minimum(1).Description("Long-context price: applies instead of the meter's regular price to requests with more input tokens than this.")),
+                ("Increment", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Minimum(0).Description("Rounds each request's quantity up to a multiple of this many base units, such as 15 for audio billed in 15-second increments. 0 bills the exact quantity.")))
+            .Required("Meter", "Amount", "Per")
+            .AdditionalProperties(false);
+
+        return new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("Currency", new JsonSchemaBuilder().Type(SchemaValueType.String).Pattern("^[A-Za-z]{3}$").Description("The ISO currency code the prices are in, such as USD. Defaults to USD.")),
+                ("Prices", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(priceSchema).Description("The prices, one per billed unit. Several prices for the same meter add up.")))
+            .AdditionalProperties(false)
+            .Description("What the deployment costs with its provider.");
     }
 
     /// <summary>

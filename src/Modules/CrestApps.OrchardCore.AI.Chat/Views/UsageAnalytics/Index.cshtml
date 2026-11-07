@@ -38,6 +38,35 @@
         _ => null,
     };
 
+    string Cost(string currency, decimal? cost) => cost is null || string.IsNullOrEmpty(currency)
+        ? "-"
+        : currency + " " + cost.Value.ToString(cost.Value > 0 && cost.Value < 1 ? "N4" : "N2", CultureInfo.CurrentCulture);
+    string OtherUsage(AIUsageReportRow row)
+    {
+        var parts = new List<string>();
+
+        void Add(string label, long value)
+        {
+            if (value > 0)
+            {
+                parts.Add(label + ": " + value.ToString("N0", CultureInfo.CurrentCulture));
+            }
+        }
+
+        Add(T["Cached audio in"].Value, row.CachedInputAudioTokenCount);
+        Add(T["Image in"].Value, row.InputImageTokenCount);
+        Add(T["Image out"].Value, row.OutputImageTokenCount);
+        Add(T["Rejected prediction"].Value, row.RejectedPredictionTokenCount);
+        Add(T["Web searches"].Value, row.WebSearchCount);
+        Add(T["Web fetches"].Value, row.WebFetchCount);
+
+        foreach (var (name, value) in row.AdditionalCounts.OrderBy(entry => entry.Key, StringComparer.Ordinal))
+        {
+            Add(name, value);
+        }
+
+        return parts.Count > 0 ? string.Join(", ", parts) : "-";
+    }
     string Bytes(long value) => value > 0 ? (value / 1048576d).ToString("N1", CultureInfo.CurrentCulture) + " MB" : "-";
 
     string KindLabel(string operationType) => operationType switch
@@ -161,6 +190,15 @@
             }
             else
             {
+                if (Model.EstimatedCosts.Count > 0)
+                {
+                    <div class="alert alert-light border">
+                        <span class="text-muted">@T["Estimated cost:"]</span>
+                        <span class="fw-semibold">@string.Join(" + ", Model.EstimatedCosts.Select(entry => Cost(entry.Currency, entry.Cost)))</span>
+                        <span class="text-muted small ms-2">@T["From the prices set on each AI deployment. Requests to deployments without prices have no cost."]</span>
+                    </div>
+                }
+
                 <div class="card mb-4">
                     <div class="card-header d-flex justify-content-between">
                         <span>@(meteringBreakdownLabel is null ? T["Usage by model"] : T["Usage by model and {0}", meteringBreakdownLabel.Value.ToLower(CultureInfo.CurrentCulture)])</span>
@@ -180,6 +218,7 @@
                                     <th class="text-end">@T["Requests"]</th>
                                     <th class="text-end">@T["Input"]</th>
                                     <th class="text-end">@T["Cached input"]</th>
+                                    <th class="text-end">@T["Cache writes"]</th>
                                     <th class="text-end">@T["Output"]</th>
                                     <th class="text-end">@T["Reasoning"]</th>
                                     <th class="text-end">@T["Audio in"]</th>
@@ -188,7 +227,9 @@
                                     <th class="text-end">@T["Audio minutes"]</th>
                                     <th class="text-end">@T["Characters"]</th>
                                     <th class="text-end">@T["Images"]</th>
+                                    <th>@T["Other usage"]</th>
                                     <th class="text-end">@T["Avg latency"]</th>
+                                    <th class="text-end">@T["Est. cost"]</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -205,6 +246,7 @@
                                     <td class="text-end">@row.RequestCount.ToString("N0", CultureInfo.CurrentCulture)</td>
                                     <td class="text-end">@Count(row.InputTokenCount)</td>
                                     <td class="text-end">@Count(row.CachedInputTokenCount)</td>
+                                    <td class="text-end">@Count(row.CacheWriteInputTokenCount)</td>
                                     <td class="text-end">@Count(row.OutputTokenCount)</td>
                                     <td class="text-end">@Count(row.ReasoningTokenCount)</td>
                                     <td class="text-end">@Count(row.InputAudioTokenCount)</td>
@@ -213,14 +255,16 @@
                                     <td class="text-end">@(row.AudioDurationMs > 0 ? (row.AudioDurationMs / 60000d).ToString("N1", CultureInfo.CurrentCulture) : "-")</td>
                                     <td class="text-end">@Count(row.CharacterCount)</td>
                                     <td class="text-end">@Count(row.ImageCount)</td>
+                                    <td class="small text-muted">@OtherUsage(row)</td>
                                     <td class="text-end">@(row.AverageResponseLatencyMs > 0 ? $"{row.AverageResponseLatencyMs} ms" : "-")</td>
+                                    <td class="text-end text-nowrap">@Cost(row.Currency, row.EstimatedCost)</td>
                                 </tr>
                             }
                             </tbody>
                         </table>
                     </div>
                     <div class="card-footer text-muted small">
-                        @T["Cached input, reasoning and audio tokens are part of the input and output totals; providers bill them at their own rates. Audio minutes are measured up to where the last recognized speech ended."]
+                        @T["Cached input, cache writes, reasoning, audio and image tokens are part of the input and output totals; providers bill them at their own rates. Audio minutes are measured up to where the last recognized speech ended. Estimated costs use the prices set on each AI deployment."]
                     </div>
                 </div>
             }
@@ -259,6 +303,7 @@
                                     <th class="text-end">@T["Segments"]</th>
                                     <th class="text-end">@T["Tokens"]</th>
                                     <th class="text-end">@T["Avg latency"]</th>
+                                    <th class="text-end">@T["Est. cost"]</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -287,6 +332,7 @@
                                     <td class="text-end">@Count(row.SegmentCount)</td>
                                     <td class="text-end">@Count(row.TotalTokenCount)</td>
                                     <td class="text-end">@(row.AverageResponseLatencyMs > 0 ? $"{row.AverageResponseLatencyMs} ms" : "-")</td>
+                                    <td class="text-end text-nowrap">@Cost(row.Currency, row.EstimatedCost)</td>
                                 </tr>
                             }
                             </tbody>
@@ -336,6 +382,7 @@
                                     <th class="text-end">@T["Output"]</th>
                                     <th class="text-end">@T["Tokens"]</th>
                                     <th class="text-end">@T["Avg latency"]</th>
+                                    <th class="text-end">@T["Est. cost"]</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -362,6 +409,7 @@
                                     <td class="text-end">@row.TotalOutputTokens</td>
                                     <td class="text-end fw-semibold">@row.TotalTokens</td>
                                     <td class="text-end">@(row.AverageResponseLatencyMs > 0 ? $"{row.AverageResponseLatencyMs} ms" : "-")</td>
+                                    <td class="text-end text-nowrap">@Cost(row.Currency, row.EstimatedCost)</td>
                                 </tr>
                             }
                             </tbody>
