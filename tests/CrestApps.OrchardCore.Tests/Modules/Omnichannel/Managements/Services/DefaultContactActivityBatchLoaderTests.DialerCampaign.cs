@@ -250,6 +250,63 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
         }
     }
 
+    // A dialer load exists to place calls: a contact with no phone number would only become an offer that fails with
+    // "The activity has no destination to dial", so it is skipped and counted instead of being loaded and queued.
+    [Fact]
+    public async Task LoadAsync_DialerBatch_WhenAContactHasNoPhoneNumber_SkipsItAndQueuesOnlyDialableContacts()
+    {
+        // Arrange
+        var databasePath = DatabasePath("dialer-no-number");
+        var connectionString = $"Data Source={databasePath};Pooling=False";
+        var store = await CreateStoreAsync(connectionString);
+
+        try
+        {
+            await using (var seedSession = store.CreateSession())
+            {
+                await SaveContactAsync(seedSession, cellPhoneNumber: "+15555550841", cellNationalNumber: "5555550841");
+                await SaveContactAsync(seedSession, emailAddress: "nophone@example.com");
+
+                await seedSession.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            var batch = NewBatch(ActivitySources.Dialer, OmnichannelConstants.Channels.Phone);
+            batch.DialerProfileId = DialerProfileId;
+            batch.CampaignId = "campaign-1";
+
+            var dialer = new RecordingDialerContributor();
+
+            // Act
+            await using (var session = store.CreateSession())
+            {
+                var loader = CreateCampaignDialerLoader(
+                    session,
+                    store,
+                    connectionString,
+                    dialer,
+                    new RecordingLogger<DefaultContactActivityBatchLoader>(),
+                    subjectDefaultCampaignId: null);
+
+                await loader.LoadAsync(
+                    new ActivityBatchLoadContext(batch, LoaderId, LoaderUserName),
+                    TestContext.Current.CancellationToken);
+
+                await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            // Assert
+            var activity = Assert.Single(await ListLoadedActivitiesAsync(store));
+
+            Assert.Equal("+15555550841", activity.PreferredDestination);
+            Assert.Equal([activity.ItemId], dialer.EnqueuedActivityIds);
+            Assert.Equal(1L, batch.TotalSkippedForNoDestination);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
     private static DefaultContactActivityBatchLoader CreateCampaignDialerLoader(
         ISession session,
         IStore store,
