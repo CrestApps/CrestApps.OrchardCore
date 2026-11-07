@@ -139,6 +139,13 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
 
         queueItem = current;
 
+        // The queue item is Waiting, so nobody owns it, and under the activity lock no live offer for it can exist. A
+        // pending or accepted reservation still on the activity is an orphan -- left by a call or an offer whose
+        // release never finished -- and it holds the activity's unique claim. Left alone, the insert below violates
+        // that unique index on every cycle, and because this item is the head of its queue, one orphan stops the
+        // whole queue from dialing. Cancelling the orphan frees the claim.
+        await CancelOrphanedReservationsAsync(queueItem, cancellationToken);
+
         // The availability service is the canonical authority for whether an agent may take work, and answering
         // that question already costs a read of the agent profile and a count of that agent's active
         // interactions. Reading the agent and counting again here would double the round trips this critical
@@ -232,6 +239,60 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
             cancellationToken);
 
         return reservation;
+    }
+
+    /// <summary>
+    /// Cancels every pending or accepted reservation still on an activity whose queue item is waiting, so the
+    /// activity's unique reservation claim is free for the reservation about to be created.
+    /// </summary>
+    private async Task CancelOrphanedReservationsAsync(QueueItem queueItem, CancellationToken cancellationToken)
+    {
+        var orphans = await _reservationManager.GetActiveByActivityAsync(queueItem.ActivityItemId, cancellationToken);
+
+        if (orphans is null || orphans.Count == 0)
+        {
+            return;
+        }
+
+        var now = _clock.UtcNow;
+
+        foreach (var orphan in orphans)
+        {
+            _logger.LogWarning(
+                "Cancelling orphaned {ReservationStatus} reservation '{ReservationId}' for waiting activity '{ActivityItemId}' so the queue can reserve it again.",
+                orphan.Status,
+                orphan.ItemId.SanitizeLogValue(),
+                orphan.ActivityItemId.SanitizeLogValue());
+
+            orphan.TransitionTo(ReservationStatus.Canceled);
+            orphan.ModifiedUtc = now;
+            await _reservationManager.UpdateAsync(orphan, cancellationToken: cancellationToken);
+
+            if (string.IsNullOrEmpty(orphan.AgentId))
+            {
+                continue;
+            }
+
+            var orphanAgent = await _agentManager.FindByIdAsync(orphan.AgentId, cancellationToken);
+
+            if (orphanAgent is not null &&
+                string.Equals(orphanAgent.ActiveReservationId, orphan.ItemId, StringComparison.Ordinal))
+            {
+                await ReleaseAgentStateAsync(
+                    orphanAgent,
+                    orphan,
+                    ResolveReleaseReason(ReservationStatus.Canceled),
+                    await FindInteractionIdAsync(orphan.ActivityItemId, cancellationToken),
+                    now,
+                    cancellationToken);
+
+                await _agentManager.UpdateAsync(orphanAgent, cancellationToken: cancellationToken);
+            }
+        }
+
+        // Committed now, ahead of the insert that follows, so the unique claim is free when that row is written
+        // rather than relying on the order the session flushes its index updates and inserts in.
+        await _session.SaveChangesAsync(cancellationToken);
     }
 
     /// <inheritdoc/>
