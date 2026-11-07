@@ -118,5 +118,11 @@ public static partial class ContactCenterConstants
         /// The identifier of the Agent Entitlements feature.
         /// </summary>
         public const string AgentEntitlements = "CrestApps.OrchardCore.ContactCenter.AgentEntitlements";
+
+        /// <summary>
+        /// The identifier of the feature that adds the read-only Contact Center tools an AI profile can use to explain
+        /// dialer, queue, routing and agent problems.
+        /// </summary>
+        public const string AITools = "CrestApps.OrchardCore.ContactCenter.AITools";
     }
 }

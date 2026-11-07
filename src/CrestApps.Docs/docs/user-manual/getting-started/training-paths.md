@@ -69,6 +69,7 @@ Use these training paths to onboard new staff. Each path is an ordered checklist
 4. **Work and reports** (40 minutes)
    - [ ] Run, filter and export reports: [Reports](../reports.md), with its screencast. Use the *Which report answers which question* table.
    - [ ] Reassign or reschedule work in bulk: [Managing activities in bulk](../bulk-activities.md).
+   - [ ] Ask the AI assistant why an agent is not getting calls or a queue is quiet, if your site has it: [Ask the contact center assistant](../contact-center-ai-assistant.md).
 5. **Texting** (15 minutes, if your team answers texts)
    - [ ] Send broadcasts and manage templates: [Messaging workspace](../messaging.md) (*Templates* and *Broadcasts*).
 
