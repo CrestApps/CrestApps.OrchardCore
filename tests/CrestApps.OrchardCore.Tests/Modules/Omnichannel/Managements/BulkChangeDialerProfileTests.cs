@@ -98,6 +98,31 @@ public sealed class BulkChangeDialerProfileTests
         Assert.NotEmpty(harness.Notifier.Invocations);
     }
 
+    // A record with no number to dial would only hand an agent an offer that fails with "The activity has no destination
+    // to dial", so it is left as it is and not queued.
+    [Fact]
+    public async Task BulkChangeDialerProfileAsync_WhenTheRecordHasNoNumberToDial_LeavesItUnchangedAndSaysWhy()
+    {
+        // Arrange
+        var harness = new Harness();
+        var dialable = harness.AddActivity("activity-1", CampaignId);
+        var noNumber = harness.AddActivity("activity-2", CampaignId);
+        noNumber.PreferredDestination = null;
+
+        // Act
+        var processed = await harness.Controller.BulkChangeDialerProfileAsync([dialable, noNumber], PowerProfileId);
+
+        // Assert
+        Assert.Equal(1, processed);
+        Assert.Equal(PowerProfileId, dialable.DialerProfileId);
+        Assert.Null(noNumber.DialerProfileId);
+        Assert.Equal(ActivitySources.Manual, noNumber.Source);
+        harness.Dialer.Verify(
+            dialer => dialer.EnqueueAsync("activity-2", It.IsAny<string>(), It.IsAny<ActivityDialerProfileDescriptor>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        Assert.NotEmpty(harness.Notifier.Invocations);
+    }
+
     // A campaign's waiting records are worked under the profile of the one at the head of its queue, so records moved
     // to a second profile behind another profile's records would never be dialed.
     [Fact]
@@ -353,6 +378,7 @@ public sealed class BulkChangeDialerProfileTests
                 CampaignId = campaignId,
                 Source = ActivitySources.Manual,
                 Status = ActivityStatus.NotStated,
+                PreferredDestination = "+15555550100",
             };
 
             _activityManager

@@ -1801,6 +1801,7 @@ public sealed class ActivitiesController : Controller
         }
 
         var processedCount = 0;
+        var noDestinationCount = 0;
 
         foreach (var campaignActivities in activities
             .Where(activity => CampaignOf(activity) is not null)
@@ -1832,6 +1833,15 @@ public sealed class ActivitiesController : Controller
 
                 if (!IsBulkManageableActivity(activity))
                 {
+                    continue;
+                }
+
+                // Queueing a record with no number to dial only hands agents an offer that fails with "The activity has
+                // no destination to dial", so it is left as it is.
+                if (string.IsNullOrWhiteSpace(activity.PreferredDestination))
+                {
+                    noDestinationCount++;
+
                     continue;
                 }
 
@@ -1876,6 +1886,11 @@ public sealed class ActivitiesController : Controller
 
                 processedCount++;
             }
+        }
+
+        if (noDestinationCount > 0)
+        {
+            await _notifier.WarningAsync(H["{0} activities have no number to dial, so they were left unchanged and not queued for the dialer.", noDestinationCount]);
         }
 
         return processedCount;
