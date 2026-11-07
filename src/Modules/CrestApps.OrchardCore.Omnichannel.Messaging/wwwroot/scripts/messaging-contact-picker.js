@@ -145,6 +145,28 @@
 				}, 250);
 			});
 		}
+		function initSubjectLine(line) {
+			var endpointSelect = document.querySelector(line.getAttribute("data-endpoint-select"));
+			var endpointChannels = {};
+			var subjectChannels = [];
+			try {
+				endpointChannels = JSON.parse(line.getAttribute("data-endpoint-channels") || "{}");
+				subjectChannels = JSON.parse(line.getAttribute("data-subject-channels") || "[]");
+			} catch (e) {
+				endpointChannels = {};
+				subjectChannels = [];
+			}
+			function update() {
+				var channel = endpointSelect ? endpointChannels[endpointSelect.value] || "" : "";
+				var visible = subjectChannels.indexOf(channel) !== -1;
+				line.classList.toggle("d-none", !visible);
+				Array.prototype.forEach.call(line.querySelectorAll("input, textarea"), function(input) {
+					input.disabled = !visible;
+				});
+			}
+			if (endpointSelect) endpointSelect.addEventListener("change", update);
+			update();
+		}
 		function initNumberEntry(select, picker, isPhoneChannel, endpointSelect, newAddressText) {
 			var entrySelector = select.getAttribute("data-number-entry");
 			/** @type {HTMLElement | null} */
@@ -240,6 +262,7 @@
 		}
 		function initAll() {
 			Array.prototype.forEach.call(document.querySelectorAll("[data-messaging-contact-picker]"), init);
+			Array.prototype.forEach.call(document.querySelectorAll("[data-messaging-subject-line]"), initSubjectLine);
 		}
 		if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initAll);
 		else initAll();

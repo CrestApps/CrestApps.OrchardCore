@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
@@ -25,10 +26,10 @@ public class SmsBroadcastServiceTests
         var sentTo = new List<string>();
         var conversationService = new Mock<IMessagingConversationService>();
         conversationService
-            .Setup(s => s.SendDirectAsync(broadcast.Channel, broadcast.ServiceAddress, It.IsAny<string>(), broadcast.Body, It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string _, string _, string to, string _, string _, CancellationToken _) =>
+            .Setup(s => s.SendDirectAsync(It.Is<MessagingDirectSendRequest>(request => request.Channel == broadcast.Channel && request.ServiceAddress == broadcast.ServiceAddress && request.Body == broadcast.Body && request.Purpose == MessagingOutboundPurpose.Broadcast), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((MessagingDirectSendRequest request, CancellationToken _) =>
             {
-                sentTo.Add(to);
+                sentTo.Add(request.ContactAddress);
                 return new MessagingSendResult { Succeeded = true };
             });
 
@@ -62,10 +63,10 @@ public class SmsBroadcastServiceTests
         var sentTo = new List<string>();
         var conversationService = new Mock<IMessagingConversationService>();
         conversationService
-            .Setup(s => s.SendDirectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string _, string _, string to, string _, string _, CancellationToken _) =>
+            .Setup(s => s.SendDirectAsync(It.IsAny<MessagingDirectSendRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((MessagingDirectSendRequest request, CancellationToken _) =>
             {
-                sentTo.Add(to);
+                sentTo.Add(request.ContactAddress);
                 return new MessagingSendResult { Succeeded = true };
             });
 
@@ -94,10 +95,10 @@ public class SmsBroadcastServiceTests
 
         var conversationService = new Mock<IMessagingConversationService>();
         conversationService
-            .Setup(s => s.SendDirectAsync(It.IsAny<string>(), It.IsAny<string>(), "+15551110001", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.SendDirectAsync(It.Is<MessagingDirectSendRequest>(request => request.ContactAddress == "+15551110001"), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MessagingSendResult { Succeeded = true });
         conversationService
-            .Setup(s => s.SendDirectAsync(It.IsAny<string>(), It.IsAny<string>(), "+15551110002", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.SendDirectAsync(It.Is<MessagingDirectSendRequest>(request => request.ContactAddress == "+15551110002"), It.IsAny<CancellationToken>()))
             .ReturnsAsync(MessagingSendResult.Failed("blocked"));
 
         var service = CreateService(conversationService.Object);

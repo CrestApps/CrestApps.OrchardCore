@@ -192,6 +192,7 @@ public sealed class BroadcastsController : Controller
         broadcast.Name = model.Name.Trim();
         broadcast.Channel = channel.Name;
         broadcast.ServiceAddress = endpoint.Value;
+        broadcast.Subject = channel.Capabilities.SupportsSubject ? MessagingSubjects.Clean(model.Subject) : null;
         broadcast.Body = model.Body.Trim();
         broadcast.Recipients = recipients;
         broadcast.OwnerAgentId = agent?.ItemId;
@@ -222,5 +223,6 @@ public sealed class BroadcastsController : Controller
 
         model.Endpoints = options.Items;
         model.EndpointChannels = options.EndpointChannels;
+        model.SubjectChannels = MessagingSubjects.GetChannelNames(_channelResolver);
     }
 }

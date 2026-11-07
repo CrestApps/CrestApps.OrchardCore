@@ -133,6 +133,10 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
 
         if (endpoint.AddressType == OmnichannelAddressTypes.EmailAddress)
         {
+            // Inbound mail names the address in whatever case the sender typed, so it is stored in the one form it is
+            // matched in.
+            endpoint.Value = OmnichannelEmailAddress.Normalize(endpoint.Value) ?? endpoint.Value;
+
             return;
         }
 
@@ -234,6 +238,10 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
                 _phoneNumberService.TryParse(value, null, out var canonicalNumber))
             {
                 value = canonicalNumber.Value;
+            }
+            else if (context.Model.AddressType == OmnichannelAddressTypes.EmailAddress)
+            {
+                value = OmnichannelEmailAddress.Normalize(value) ?? value;
             }
 
             var addresses = await _store.GetAllAsync(cancellationToken);

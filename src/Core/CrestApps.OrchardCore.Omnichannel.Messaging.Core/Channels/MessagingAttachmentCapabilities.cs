@@ -36,6 +36,13 @@ public sealed class MessagingAttachmentCapabilities
     public bool ShrinkImagesToFit { get; init; }
 
     /// <summary>
+    /// Gets a value indicating whether the channel's provider downloads each file from a public link, as an MMS
+    /// provider does. A channel that embeds the files in the message itself (an email) sets it to
+    /// <see langword="false"/>, so a message with files can be sent from a site that has no public address.
+    /// </summary>
+    public bool DeliveredAsLinks { get; init; } = true;
+
+    /// <summary>
     /// Gets a value indicating whether the channel carries any files.
     /// </summary>
     public bool IsSupported => Formats.Count > 0 && MaxCount > 0;

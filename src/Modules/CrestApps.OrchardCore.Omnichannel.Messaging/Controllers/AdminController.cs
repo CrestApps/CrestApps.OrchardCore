@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using CrestApps.Core;
 using CrestApps.Core.Support;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
@@ -42,7 +41,7 @@ public sealed class AdminController : Controller
     private readonly MessagingWorkspaceBuilder _workspaceBuilder;
     private readonly MessagingContactSearch _contactSearch;
     private readonly MessagingAttachmentUploads _attachmentUploads;
-    private readonly IAgentAddressResolver _agentAddressResolver;
+    private readonly MessagingSenderLines _senderLines;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
     private readonly ILogger _logger;
@@ -62,7 +61,7 @@ public sealed class AdminController : Controller
         MessagingWorkspaceBuilder workspaceBuilder,
         MessagingContactSearch contactSearch,
         MessagingAttachmentUploads attachmentUploads,
-        IAgentAddressResolver agentAddressResolver,
+        MessagingSenderLines senderLines,
         IAuthorizationService authorizationService,
         INotifier notifier,
         ILogger<AdminController> logger,
@@ -80,7 +79,7 @@ public sealed class AdminController : Controller
         _workspaceBuilder = workspaceBuilder;
         _contactSearch = contactSearch;
         _attachmentUploads = attachmentUploads;
-        _agentAddressResolver = agentAddressResolver;
+        _senderLines = senderLines;
         _authorizationService = authorizationService;
         _notifier = notifier;
         _logger = logger;
@@ -234,7 +233,7 @@ public sealed class AdminController : Controller
         }
 
         // A new conversation starts from the number the agent texts from: theirs, or the default SMS number.
-        await PopulateEndpointsAsync(model, await GetAgentTextingAddressIdAsync(model.Channel));
+        await PopulateEndpointsAsync(model, await _senderLines.FindAddressIdAsync(User, model.Channel, HttpContext.RequestAborted));
         model.EndpointId = model.Endpoints.FirstOrDefault(item => item.Selected)?.Value;
 
         return await ComposeViewAsync(model);
@@ -339,9 +338,20 @@ public sealed class AdminController : Controller
 
         // A single recipient starts a 1:1 conversation; multiple recipients fan out as a broadcast (each gets their
         // own private 1:1 thread).
+        var subject = channel.Capabilities.SupportsSubject ? MessagingSubjects.Clean(model.Subject) : null;
+
         if (recipients.Count == 1)
         {
-            var result = await _conversationService.SendDirectAsync(channel.Name, endpoint.Value, recipients[0], model.Body.Trim(), agent?.ItemId);
+            var result = await _conversationService.SendDirectAsync(new MessagingDirectSendRequest
+            {
+                Channel = channel.Name,
+                ServiceAddress = endpoint.Value,
+                ContactAddress = recipients[0],
+                Subject = subject,
+                Body = model.Body.Trim(),
+                ActingAgentId = agent?.ItemId,
+                Purpose = MessagingOutboundPurpose.Reply,
+            });
 
             if (!result.Succeeded)
             {
@@ -359,6 +369,7 @@ public sealed class AdminController : Controller
         broadcast.Name = S["Group message to {0} recipients", recipients.Count].Value;
         broadcast.Channel = channel.Name;
         broadcast.ServiceAddress = endpoint.Value;
+        broadcast.Subject = subject;
         broadcast.Body = model.Body.Trim();
         broadcast.Recipients = recipients;
         broadcast.OwnerAgentId = agent?.ItemId;
@@ -778,23 +789,12 @@ public sealed class AdminController : Controller
         });
     }
 
-    private async Task<string> GetAgentTextingAddressIdAsync(string channel)
-    {
-        if (!string.IsNullOrEmpty(channel) && !string.Equals(channel, OmnichannelConstants.Channels.Sms, StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        var addresses = await _agentAddressResolver.ResolveAsync(User.FindFirstValue(ClaimTypes.NameIdentifier), HttpContext.RequestAborted);
-
-        return addresses.SmsAddress?.ItemId;
-    }
-
     private async Task PopulateEndpointsAsync(ComposeViewModel model, string selectedEndpointId = null)
     {
         var options = await _workspaceBuilder.BuildEndpointOptionsAsync(model.Channel, selectedEndpointId);
 
         model.Endpoints = options.Items;
         model.EndpointChannels = options.EndpointChannels;
+        model.SubjectChannels = MessagingSubjects.GetChannelNames(_channelResolver);
     }
 }
