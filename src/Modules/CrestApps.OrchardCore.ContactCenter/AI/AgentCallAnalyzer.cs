@@ -70,7 +70,7 @@ internal sealed record AgentCallFacts(
     DateTime NowUtc,
     TimeSpan Lookback,
     string QueueFilter,
-    IReadOnlySet<string> VisibleQueueIds = null);
+    IReadOnlySet<string> VisibleQueueIds);
 
 /// <summary>
 /// What the analyzer concluded.

@@ -179,7 +179,7 @@ public sealed class ExplainAgentNoCallsToolTests
         };
 
         // Act
-        var analysis = AgentCallAnalyzer.Analyze(new AgentCallFacts(diagnosis, [], [], [], [], ContactCenterToolHost.Now, TimeSpan.FromHours(12), "Alpha"));
+        var analysis = AgentCallAnalyzer.Analyze(new AgentCallFacts(diagnosis, [], [], [], [], ContactCenterToolHost.Now, TimeSpan.FromHours(12), "Alpha", null));
 
         // Assert
         Assert.Single(analysis.Findings, finding => finding.Code == "Queue.NothingWaiting");

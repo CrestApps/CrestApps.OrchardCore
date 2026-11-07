@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
@@ -202,7 +203,9 @@ internal sealed class ExplainActivityTool : ContactCenterAIToolBase
 
     private static string Last4(string number)
     {
-        var digits = new string([.. (number ?? string.Empty).Where(char.IsDigit)]);
+        // Only the tail is shown, so the digits are read through the shared comparison key rather than a second
+        // normalization of the number.
+        var digits = PhoneNumberComparisonKey.For(default, number);
 
         return digits.Length >= 4 ? digits[^4..] : null;
     }
