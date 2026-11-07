@@ -955,7 +955,7 @@ public sealed class ActivitiesController : Controller
 
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.CompleteActivity, activity))
         {
-            return Forbid();
+            return await ForbidOrOwnershipLostAsync(activity, returnUrl);
         }
 
         // Asking for a disposition on an activity that is already finished only sets the agent up to lose their
@@ -1015,7 +1015,7 @@ public sealed class ActivitiesController : Controller
 
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.CompleteActivity, activity))
         {
-            return Forbid();
+            return await ForbidOrOwnershipLostAsync(activity, returnUrl);
         }
 
         // An activity that is already finished cannot be completed again, but "already done" is not "never
@@ -1140,6 +1140,29 @@ public sealed class ActivitiesController : Controller
     /// </summary>
     private static bool IsAlreadyFinished(OmnichannelActivity activity)
         => activity.Status is ActivityStatus.Completed or ActivityStatus.Cancelled or ActivityStatus.Purged;
+
+    /// <summary>
+    /// Answers a refused completion. An agent who may complete their own activities and was refused this dialer record
+    /// lost it rather than never having it: the offer ran out while they worked on it and the record went back to the
+    /// queue. They are told so and sent back, instead of meeting a bare 403 that gave no reason and discarded their
+    /// disposition. Anyone else, and any activity that is not dialer work, is still forbidden.
+    /// </summary>
+    private async Task<IActionResult> ForbidOrOwnershipLostAsync(OmnichannelActivity activity, string returnUrl)
+    {
+        if (string.IsNullOrEmpty(activity.DialerProfileId) ||
+            !await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.CompleteOwnActivity))
+        {
+            return Forbid();
+        }
+
+        await _notifier.WarningAsync(H["This record is no longer reserved for you, so your disposition was not recorded. Its offer ran out and it went back to the queue for another agent."]);
+
+        var safeReturnUrl = GetSafeReturnUrl(returnUrl);
+
+        return string.IsNullOrEmpty(safeReturnUrl)
+            ? RedirectToAction(nameof(Activities))
+            : Redirect(safeReturnUrl);
+    }
 
     /// <summary>
     /// Sends the agent back where they came from, told why the activity would not take their disposition.

@@ -134,6 +134,11 @@ internal sealed class DialerProfileHandler : CatalogEntryHandlerBase<DialerProfi
             context.Result.Fail(new ValidationResult(S["The ring time must be between {0} and {1} seconds. An unanswered automated call rings for at least {0} seconds.", DialerAbandonment.MinimumRingTimeoutSeconds, DialerAbandonment.MaximumRingTimeoutSeconds], [nameof(DialerProfile.RingTimeoutSeconds)]));
         }
 
+        if (profile.PreviewOfferTimeoutSeconds is not 0 and (< DialerProfile.MinimumPreviewOfferTimeoutSeconds or > DialerProfile.MaximumPreviewOfferTimeoutSeconds))
+        {
+            context.Result.Fail(new ValidationResult(S["The preview offer time must be between {0} and {1} seconds.", DialerProfile.MinimumPreviewOfferTimeoutSeconds, DialerProfile.MaximumPreviewOfferTimeoutSeconds], [nameof(DialerProfile.PreviewOfferTimeoutSeconds)]));
+        }
+
         if (profile.EnforceAbandonmentCap && profile.Mode.IsAutomated() && !profile.SafeHarborEnabled)
         {
             context.Result.Fail(new ValidationResult(S["Enable the abandoned-call message when an automated dialing mode enforces an abandonment cap."], [nameof(DialerProfile.SafeHarborEnabled)]));
