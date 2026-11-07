@@ -145,6 +145,10 @@ public sealed class DialerStartup : StartupBase
                 "Manual dialing calling-window enforcement requires a calling calendar id.")
             .ValidateOnStart();
 
+        // The eligibility service reads a contact's current number through the accessor; registering it here
+        // keeps the dialer working on a tenant that has no CRM feature enabled.
+        services.AddContactMethods();
+
         services
             .AddScoped<IDialerAbandonmentPolicyService, DefaultDialerAbandonmentPolicyService>()
             // The live answers and abandoned calls the cap is measured against, counted from the event log.

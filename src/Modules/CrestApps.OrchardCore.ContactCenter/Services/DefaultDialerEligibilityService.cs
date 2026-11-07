@@ -57,7 +57,7 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
         INotInServiceNumberService notInServiceNumbers,
         IClock clock,
         ILogger<DefaultDialerEligibilityService> logger,
-        IContactMethodsAccessor contactMethods = null)
+        IContactMethodsAccessor contactMethods)
     {
         _contactMethods = contactMethods;
         _interactionManager = interactionManager;
@@ -303,7 +303,7 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
     /// </summary>
     private async Task<string> FindContactPhoneNumberAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
     {
-        if (_contactMethods is null || string.IsNullOrEmpty(activity.ContactContentItemId))
+        if (string.IsNullOrEmpty(activity.ContactContentItemId))
         {
             return null;
         }
