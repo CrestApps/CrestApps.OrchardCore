@@ -1,4 +1,6 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.PersonalData;
@@ -60,7 +62,8 @@ public sealed class CrmPersonalDataContributorTests : IAsyncLifetime
             new CrmPersonalDataContacts(session, new DefaultPhoneNumberService()),
             TestContactMethods.Accessor,
             contentManager.Object,
-            new PassThroughStringLocalizer<CrmContactPersonalDataContributor>());
+            new PassThroughStringLocalizer<CrmContactPersonalDataContributor>(),
+            []);
         var subject = new PersonalDataSubject(phoneNumber: "+1 (702) 555-0100");
 
         // Act
@@ -148,18 +151,73 @@ public sealed class CrmPersonalDataContributorTests : IAsyncLifetime
         Assert.False(CrmActivityPersonalDataContributor.IsPersonsActivity(new OmnichannelActivity { ContactContentItemId = "bob" }, persons));
     }
 
-    private static CrmContactPersonalDataContributor CreateContributor(ISession session, List<string> updated)
+    [Fact]
+    public async Task AContactNamedEd_WithReferences_KeepsItsIdsAfterAnErase()
+    {
+        // Arrange
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var contact = CrmPersonalDataTestContacts.Create("Ed", ["ed@example.com"], ["+17025550100"]);
+        var companyId = "4edq2v8rk3ed0mn1xyz9abcded";
+        var ownerId = "4ed0000000000000000000000e";
+        var statusId = "ed1x2v8rk3ed0mn1xyz9abcd00";
+
+        contact.Content[ContactPhoneTestStore.ContactContentType]["Company"] = new JsonObject { ["ContentItemIds"] = new JsonArray(companyId) };
+        contact.Content[ContactPhoneTestStore.ContactContentType]["AccountManager"] = new JsonObject { ["UserIds"] = new JsonArray(ownerId), ["UserNames"] = new JsonArray("edmund") };
+        contact.Content["LeadPart"] = new JsonObject { ["StatusId"] = statusId };
+        contact.Content[ContactPhoneTestStore.ContactContentType]["Notes"] = new JsonObject { ["Text"] = "Edited by the desk." };
+
+        await ContactPhoneTestStore.SaveAsync(_store, contact);
+
+        var memory = new AIContactMemory { ItemId = "m1", ContactId = contact.ContentItemId, Text = "Ed prefers mornings." };
+        var memoryStore = new Mock<IAIContactMemoryStore>();
+        memoryStore.Setup(store => store.FindByContactAsync(contact.ContentItemId, It.IsAny<CancellationToken>())).ReturnsAsync(memory);
+
+        ContentItem updated = null;
+        await using var session = _store.CreateSession();
+        var contributor = CreateContributor(session, [], [memoryStore.Object], item => updated = item);
+        var subject = new PersonalDataSubject(email: "ed@example.com");
+        subject.AddName("Ed");
+
+        // Act
+        await contributor.AnonymizeAsync(new PersonalDataAnonymizeContext(subject, null, new PersonalDataAnonymizeResult()), cancellationToken);
+
+        // Assert
+        Assert.NotNull(updated);
+        var content = (JsonObject)updated.Content;
+        Assert.Equal(contact.ContentItemId, updated.ContentItemId);
+        Assert.Equal(companyId, (string)content[ContactPhoneTestStore.ContactContentType]["Company"]["ContentItemIds"][0]);
+        Assert.Equal(ownerId, (string)content[ContactPhoneTestStore.ContactContentType]["AccountManager"]["UserIds"][0]);
+        Assert.Equal("edmund", (string)content[ContactPhoneTestStore.ContactContentType]["AccountManager"]["UserNames"][0]);
+        Assert.Equal(statusId, (string)content["LeadPart"]["StatusId"]);
+        Assert.Equal("Edited by the desk.", (string)content[ContactPhoneTestStore.ContactContentType]["Notes"]["Text"]);
+
+        // The known personal-data fields are cleared.
+        Assert.Equal("Anonymized contact", updated.DisplayText);
+        Assert.Null((string)content[ContactPhoneTestStore.ContactContentType]["FirstName"]["Text"]);
+        Assert.Empty(TestContactMethods.Get(updated).EmailAddresses);
+        Assert.Empty(TestContactMethods.Get(updated).PhoneNumbers);
+        Assert.DoesNotContain("ed@example.com", content.ToJsonString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("5550100", content.ToJsonString(), StringComparison.Ordinal);
+        memoryStore.Verify(store => store.DeleteAsync(memory, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    private static CrmContactPersonalDataContributor CreateContributor(ISession session, List<string> updated, IAIContactMemoryStore[] memoryStores = null, Action<ContentItem> onUpdate = null)
     {
         var contentManager = new Mock<IContentManager>();
         contentManager
             .Setup(manager => manager.UpdateAsync(It.IsAny<ContentItem>()))
-            .Callback<ContentItem>(item => updated.Add(item.ContentItemId))
+            .Callback<ContentItem>(item =>
+            {
+                updated.Add(item.ContentItemId);
+                onUpdate?.Invoke(item);
+            })
             .Returns(Task.CompletedTask);
 
         return new CrmContactPersonalDataContributor(
             new CrmPersonalDataContacts(session, new DefaultPhoneNumberService()),
             TestContactMethods.Accessor,
             contentManager.Object,
-            new PassThroughStringLocalizer<CrmContactPersonalDataContributor>());
+            new PassThroughStringLocalizer<CrmContactPersonalDataContributor>(),
+            memoryStores ?? []);
     }
 }

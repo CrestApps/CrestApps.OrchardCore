@@ -127,7 +127,7 @@ public sealed class RetentionExpiryPersonalDataTests : IAsyncLifetime
     {
         // The contributors that are not commerce opt out by leaving the default.
         IPersonalDataContributor commerce = new CommercePersonalDataContributor(Mock.Of<ICommercePersonalDataService>());
-        IPersonalDataContributor crm = new CrmContactPersonalDataContributor(null, TestContactMethods.Accessor, Mock.Of<IContentManager>(), new PassThroughStringLocalizer<CrmContactPersonalDataContributor>());
+        IPersonalDataContributor crm = new CrmContactPersonalDataContributor(null, TestContactMethods.Accessor, Mock.Of<IContentManager>(), new PassThroughStringLocalizer<CrmContactPersonalDataContributor>(), []);
 
         Assert.True(commerce.TakesPartInRetentionExpiry);
         Assert.False(crm.TakesPartInRetentionExpiry);
@@ -159,7 +159,8 @@ public sealed class RetentionExpiryPersonalDataTests : IAsyncLifetime
             new CrmPersonalDataContacts(session, new DefaultPhoneNumberService()),
             TestContactMethods.Accessor,
             contentManager,
-            new PassThroughStringLocalizer<CrmContactPersonalDataContributor>());
+            new PassThroughStringLocalizer<CrmContactPersonalDataContributor>(),
+            []);
 
         var personalData = new DefaultPersonalDataService([new CommercePersonalDataContributor(commerce), crm], Clock());
 

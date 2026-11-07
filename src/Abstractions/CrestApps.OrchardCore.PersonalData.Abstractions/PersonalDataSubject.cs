@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 
 namespace CrestApps.OrchardCore.PersonalData;
 
@@ -8,9 +9,12 @@ namespace CrestApps.OrchardCore.PersonalData;
 /// </summary>
 public sealed class PersonalDataSubject
 {
-    private const int MinimumNameLength = 2;
+    private const int MinimumNameLength = 3;
     private const int MinimumPhoneDigits = 7;
+    private const int IdLength = 26;
     private const string PhoneSeparators = "+-(). ";
+
+    private static readonly TimeSpan _matchTimeout = TimeSpan.FromSeconds(1);
 
     private readonly List<string> _userIds = [];
     private readonly List<string> _emails = [];
@@ -137,7 +141,7 @@ public sealed class PersonalDataSubject
     }
 
     /// <summary>
-    /// Adds a name the person is known by. Names shorter than two characters are ignored, because scrubbing them would
+    /// Adds a name the person is known by. Names shorter than three characters are ignored, because scrubbing them would
     /// damage unrelated text.
     /// </summary>
     /// <param name="name">The name.</param>
@@ -191,7 +195,7 @@ public sealed class PersonalDataSubject
     }
 
     /// <summary>
-    /// Returns whether free text mentions one of the person's emails, phone numbers or names.
+    /// Returns whether free text mentions one of the person's emails, phone numbers or names, each as a whole word.
     /// </summary>
     /// <param name="text">The text.</param>
     /// <returns><see langword="true"/> when the text mentions the person.</returns>
@@ -202,11 +206,12 @@ public sealed class PersonalDataSubject
             return false;
         }
 
-        return Terms().Any(term => text.Contains(term, StringComparison.OrdinalIgnoreCase));
+        return Terms().Any(term => WholeWord(term).IsMatch(text));
     }
 
     /// <summary>
-    /// Replaces the person's emails, phone numbers and names in free text.
+    /// Replaces the person's emails, phone numbers and names in free text. Each is replaced only as a whole word, so the
+    /// name <c>Lee</c> leaves <c>Leeann</c> and an id that happens to contain it alone.
     /// </summary>
     /// <param name="text">The text.</param>
     /// <param name="replacement">What they are replaced with, or <see langword="null"/> to remove them.</param>
@@ -221,7 +226,7 @@ public sealed class PersonalDataSubject
         // Longer terms go first, so a full name is replaced before a shorter name it contains.
         foreach (var term in Terms().OrderByDescending(term => term.Length))
         {
-            text = text.Replace(term, replacement ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+            text = WholeWord(term).Replace(text, _ => replacement ?? string.Empty);
         }
 
         return text;
@@ -247,10 +252,16 @@ public sealed class PersonalDataSubject
     }
 
     /// <summary>
-    /// Replaces the person's details in every string of a JSON document, such as the content of a content item: text
-    /// that mentions an email, a phone number or a name is scrubbed, and a value that is one of the person's phone
-    /// numbers is cleared.
+    /// Replaces the person's details in the strings of a JSON document, such as the settings of a record: text that
+    /// mentions an email, a phone number or a name is scrubbed, and a value that is one of the person's phone numbers is
+    /// cleared.
     /// </summary>
+    /// <remarks>
+    /// References are never changed: a value under a property whose name ends with <c>Id</c> or <c>Ids</c> (such as
+    /// <c>ContentItemId</c>, <c>UserIds</c> or <c>StatusId</c>), and a value that looks like an id (a 26-character
+    /// lowercase id or a GUID), stay as they are. Prefer clearing the record's known personal-data fields over scrubbing
+    /// a whole document.
+    /// </remarks>
     /// <param name="node">The JSON document.</param>
     /// <param name="replacement">What the details are replaced with, or <see langword="null"/> to remove them.</param>
     /// <returns><see langword="true"/> when anything changed.</returns>
@@ -263,6 +274,11 @@ public sealed class PersonalDataSubject
             // The keys are copied first, because replacing a value while enumerating the object is not allowed.
             foreach (var key in jsonObject.Select(property => property.Key).ToArray())
             {
+                if (IsReferenceName(key))
+                {
+                    continue;
+                }
+
                 changed |= ScrubChild(jsonObject[key], replacement, value => jsonObject[key] = value);
             }
         }
@@ -283,6 +299,11 @@ public sealed class PersonalDataSubject
     {
         if (child is JsonValue value && value.TryGetValue<string>(out var text))
         {
+            if (LooksLikeId(text))
+            {
+                return false;
+            }
+
             if (MatchesPhoneNumber(text))
             {
                 replace(null);
@@ -305,6 +326,22 @@ public sealed class PersonalDataSubject
 
     private IEnumerable<string> Terms()
         => _emails.Concat(_phoneNumbers).Concat(_names);
+
+    // A term matches only where it is not part of a longer word: no letter, digit or underscore right before or after.
+    private static Regex WholeWord(string term)
+        => new(
+            $@"(?<![\p{{L}}\p{{N}}_]){Regex.Escape(term)}(?![\p{{L}}\p{{N}}_])",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
+            _matchTimeout);
+
+    // ContentItemId, UserIds, StatusId: a property that holds references.
+    private static bool IsReferenceName(string name)
+        => name.EndsWith("Id", StringComparison.Ordinal) || name.EndsWith("Ids", StringComparison.Ordinal);
+
+    // A 26-character lowercase id, as Orchard Core generates them, or a GUID.
+    private static bool LooksLikeId(string text)
+        => (text.Length == IdLength && text.All(character => char.IsAsciiDigit(character) || char.IsAsciiLetterLower(character))) ||
+            Guid.TryParse(text, out _);
 
     private bool Changed()
     {
