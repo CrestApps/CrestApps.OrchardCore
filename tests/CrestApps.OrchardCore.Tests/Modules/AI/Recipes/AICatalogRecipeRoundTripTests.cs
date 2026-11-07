@@ -235,7 +235,7 @@ public sealed class AICatalogRecipeRoundTripTests
 
         // Assert
         Assert.Equal(AIDeploymentStep.StepKey, exported["name"]!.GetValue<string>());
-        var entry = Assert.Single(exported["deployments"]!.AsArray())!;
+        var entry = Assert.Single(exported["Deployments"]!.AsArray())!;
         Assert.Equal("OpenAI", entry["ClientName"]!.GetValue<string>());
         Assert.Equal("OpenAI", entry["ProviderName"]!.GetValue<string>());
         Assert.Equal("gpt-4o-2024", entry["ModelName"]!.GetValue<string>());
