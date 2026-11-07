@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Redis;
@@ -16,7 +17,7 @@ public sealed class RedisBackplaneOptionsTests
         var services = new ServiceCollection();
 
         // Act
-        new global::OrchardCore.SignalR.Redis.Startup().ConfigureServices(services);
+        new global::OrchardCore.SignalR.Redis.Startup(NullLogger<global::OrchardCore.SignalR.Redis.Startup>.Instance).ConfigureServices(services);
 
         // Assert
         Assert.DoesNotContain(
@@ -58,7 +59,7 @@ public sealed class RedisBackplaneOptionsTests
             options.InstancePrefix = "test-environment:";
         });
 
-        new global::OrchardCore.SignalR.Redis.Startup().ConfigureServices(services);
+        new global::OrchardCore.SignalR.Redis.Startup(NullLogger<global::OrchardCore.SignalR.Redis.Startup>.Instance).ConfigureServices(services);
 
         return services
             .BuildServiceProvider()
