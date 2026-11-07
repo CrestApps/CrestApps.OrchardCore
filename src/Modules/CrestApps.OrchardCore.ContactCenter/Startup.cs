@@ -19,6 +19,7 @@ using CrestApps.OrchardCore.ContactCenter.Workflows.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.OrchardCore.Webhooks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -169,6 +170,7 @@ public sealed class Startup : StartupBase
             .AddScoped<ContactCenterFeatureLifecycleCoordinator>()
             .AddScoped<IFeatureEventHandler, ContactCenterFeatureLifecycleHandler>()
             .AddSingleton<IContactCenterFeatureWorkManager, ContactCenterFeatureWorkManager>()
+            .AddScoped<IProviderWebhookInboxDispatchGate, VoiceProviderWebhookInboxDispatchGate>()
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
                 new ContactCenterFeatureWorkLifecycleParticipant(
                     ContactCenterConstants.Feature.Area,

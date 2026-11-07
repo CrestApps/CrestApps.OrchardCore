@@ -130,7 +130,12 @@ still recognized. When Contact Center is enabled, its retention policy also purg
 deliveries, and its `WebhookInboxMessageRetentionDays` setting sets how long completed ones are kept.
 
 The feature ID is still `CrestApps.OrchardCore.ContactCenter.ProviderInbox`, the ID it was released with inside
-Contact Center, so tenants that already had it enabled keep it. The inbox no longer depends on Contact Center: an
+Contact Center, so tenants that already had it enabled keep it. The **Provider Webhook Inbox Dispatch** task keeps its
+type name too (`CrestApps.OrchardCore.ContactCenter.BackgroundTasks.ProviderWebhookInboxBackgroundTask`), because
+Orchard Core keys a task's saved schedule by it, so a schedule an admin saved keeps applying. A feature can hold the
+task back with an `IProviderWebhookInboxDispatchGate`: a pass runs only when every gate admits it. Contact Center
+registers one that refuses while its Voice feature is quiescing (being disabled, or its shell replaced), as the task
+did when it was part of Contact Center. The inbox no longer depends on Contact Center: an
 SMS-only or payments-only tenant uses it on its own.
 
 ### Using the inbox from a module
