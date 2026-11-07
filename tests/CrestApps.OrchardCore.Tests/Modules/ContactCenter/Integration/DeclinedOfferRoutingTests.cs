@@ -295,7 +295,8 @@ public sealed class DeclinedOfferRoutingTests
                 (IActivityRoutingService)routingService,
                 businessHours.Object,
                 new SignedInAgents(Harness, availability),
-                Mock.Of<IQueuedDialerWorkGate>());
+                Mock.Of<IQueuedDialerWorkGate>(),
+                Mock.Of<IDialerProfileReader>());
 
             var preDial = new Mock<IAgentPreDialCoordinator>();
             preDial

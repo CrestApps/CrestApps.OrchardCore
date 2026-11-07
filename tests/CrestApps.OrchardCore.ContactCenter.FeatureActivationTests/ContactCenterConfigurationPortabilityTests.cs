@@ -589,6 +589,9 @@ public sealed partial class ContactCenterConfigurationPortabilityTests
         // The generic seeder fills every string with a marker value, but the caller id is validated as a real
         // phone number parsed against the profile's region, so both properties need values the validator accepts.
         (ContactCenterDeploymentSteps.DialerProfile, nameof(DialerProfile.CallerId), JsonValue.Create("+16502530000")),
+        // The preview offer time is validated against a range, so the generic marker number (7) is rejected; use a value
+        // inside it that still differs from the default so the round trip proves the setting is carried.
+        (ContactCenterDeploymentSteps.DialerProfile, nameof(DialerProfile.PreviewOfferTimeoutSeconds), JsonValue.Create(DialerProfile.DefaultPreviewOfferTimeoutSeconds + 60)),
         (ContactCenterDeploymentSteps.DialerProfile, nameof(DialerProfile.DefaultRegionCode), JsonValue.Create("US")),
         // An entry point answers a channel features register (calls here), and its numbers are addresses from the
         // Omnichannel catalogs, which this group does not import, so it is seeded answering calls on no number yet.
