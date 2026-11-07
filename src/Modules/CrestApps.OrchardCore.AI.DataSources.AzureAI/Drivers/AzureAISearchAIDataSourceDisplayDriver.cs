@@ -79,8 +79,9 @@ internal sealed class AzureAISearchAIDataSourceDisplayDriver : DisplayDriver<AID
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        // A data source that uses a data connection stores only the index name: the endpoint and the key are the
-        // connection's.
+        // A data source that uses a data connection reads the endpoint and the key from the connection. Its own endpoint
+        // and key stay stored, unused, so switching back to its own settings loses nothing; they are not exported while
+        // the connection is used.
         var connectionId = await _connectionPicker.UpdateAsync(dataSource, model.DataConnectionId, AzureAISearchDataConnectionClient.ConnectorNames, context, Prefix, nameof(model.DataConnectionId));
 
         if (connectionId is not null)
@@ -90,10 +91,9 @@ internal sealed class AzureAISearchAIDataSourceDisplayDriver : DisplayDriver<AID
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexName), S["Azure AI Search index name is required."]);
             }
 
-            dataSource.Put(new AzureAISearchSourceMetadata
-            {
-                IndexName = model.IndexName?.Trim(),
-            });
+            var storedMetadata = dataSource.GetOrCreate<AzureAISearchSourceMetadata>();
+            storedMetadata.IndexName = model.IndexName?.Trim();
+            dataSource.Put(storedMetadata);
 
             return Edit(dataSource, context);
         }

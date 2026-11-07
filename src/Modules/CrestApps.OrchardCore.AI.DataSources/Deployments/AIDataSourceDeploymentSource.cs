@@ -2,6 +2,7 @@
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.Core.Deployments;
 
 namespace CrestApps.OrchardCore.AI.DataSources.Deployments;
@@ -11,6 +12,9 @@ namespace CrestApps.OrchardCore.AI.DataSources.Deployments;
 /// </summary>
 internal sealed class AIDataSourceDeploymentSource : CatalogDeploymentSourceBase<AIDataSourceDeploymentStep, AIDataSource>
 {
+    // The names the data source settings keep their protected credentials under.
+    private static readonly string[] _storedSecretNames = ["ApiKey", "Password", "Base64ApiKey"];
+
     private readonly IAIDataSourceStore _store;
 
     /// <summary>
@@ -44,6 +48,31 @@ internal sealed class AIDataSourceDeploymentSource : CatalogDeploymentSourceBase
             { "CreatedUtc", entry.CreatedUtc },
             { "OwnerId", entry.OwnerId },
             { "Author", entry.Author },
-            { "Properties", entry.Properties is not null ? JsonSerializer.SerializeToNode(entry.Properties) : null },
+            { "Properties", ExportProperties(entry) },
         };
+
+    // A data source that uses a data connection keeps its own credentials stored so switching back loses nothing, but
+    // they are not in use, and they never leave the site with it.
+    private static JsonNode ExportProperties(AIDataSource entry)
+    {
+        if (entry.Properties is null)
+        {
+            return null;
+        }
+
+        var properties = JsonSerializer.SerializeToNode(entry.Properties);
+
+        if (AIDataSourceConnectionPicker.GetConnectionId(entry) is not null && properties is JsonObject settings)
+        {
+            foreach (var metadata in settings.Select(property => property.Value).OfType<JsonObject>())
+            {
+                foreach (var name in _storedSecretNames)
+                {
+                    metadata.Remove(name);
+                }
+            }
+        }
+
+        return properties;
+    }
 }

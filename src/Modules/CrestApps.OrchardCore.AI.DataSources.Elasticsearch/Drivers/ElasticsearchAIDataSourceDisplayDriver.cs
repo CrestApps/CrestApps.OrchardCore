@@ -93,8 +93,9 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        // A data source that uses a data connection stores only the index name: the URL and the credentials are the
-        // connection's.
+        // A data source that uses a data connection reads the URL and the credentials from the connection. Its own URL
+        // and credentials stay stored, unused, so switching back to its own settings loses nothing; they are not
+        // exported while the connection is used.
         var connectionId = await _connectionPicker.UpdateAsync(dataSource, model.DataConnectionId, ElasticsearchDataConnectionSettings.ConnectorNames, context, Prefix, nameof(model.DataConnectionId));
 
         if (connectionId is not null)
@@ -104,10 +105,9 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexName), S["Elasticsearch index name is required."]);
             }
 
-            dataSource.Put(new ElasticsearchSourceMetadata
-            {
-                IndexName = model.IndexName?.Trim(),
-            });
+            var storedMetadata = dataSource.GetOrCreate<ElasticsearchSourceMetadata>();
+            storedMetadata.IndexName = model.IndexName?.Trim();
+            dataSource.Put(storedMetadata);
 
             return Edit(dataSource, context);
         }
