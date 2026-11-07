@@ -112,15 +112,7 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
         // this recovery would always read them as orphans and either requeue them onto an agent campaign queue or
         // mark a live AI call Failed — racing the call's own conclusion. InteractionType is the authoritative
         // AI-vs-agent axis (every agent-dialed mode, including Power/Progressive/Preview, is Manual) and is indexed.
-        var candidates = await _session
-            .Query<OmnichannelActivity, OmnichannelActivityIndex>(
-                index => index.Status.IsIn(_intermediateStatuses) &&
-                    index.InteractionType != ActivityInteractionType.Automated &&
-                    (index.ReservedUtc == null || index.ReservedUtc < cutoff),
-                collection: OmnichannelConstants.CollectionName)
-            .OrderBy(index => index.Id)
-            .Take(maxToRecover)
-            .ListAsync(cancellationToken);
+        var candidates = await ReadCandidatesAsync(cutoff, maxToRecover, cancellationToken);
 
         return await RecoverCandidatesAsync(candidates, now, cancellationToken);
     }
@@ -157,44 +149,55 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
         return recovered;
     }
 
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<OrphanedActivity>> FindAsync(TimeSpan gracePeriod, int maxToFind, CancellationToken cancellationToken = default)
+    {
+        if (maxToFind <= 0)
+        {
+            return [];
+        }
+
+        var now = _clock.UtcNow;
+        var cutoff = now - gracePeriod;
+        var candidates = await ReadCandidatesAsync(cutoff, maxToFind, cancellationToken);
+        var orphans = new List<OrphanedActivity>();
+
+        foreach (var activity in candidates)
+        {
+            var interaction = await FindOrphanInteractionAsync(activity, now, cancellationToken);
+
+            if (!interaction.IsOrphan)
+            {
+                continue;
+            }
+
+            orphans.Add(new OrphanedActivity(
+                activity.ItemId,
+                activity.CampaignId,
+                activity.Status.ToString(),
+                activity.ReservedUtc,
+                !WasConnected(activity, interaction.Interaction)));
+        }
+
+        return orphans;
+    }
+
+    private async Task<IList<OmnichannelActivity>> ReadCandidatesAsync(DateTime cutoff, int max, CancellationToken cancellationToken)
+        => [.. await _session
+            .Query<OmnichannelActivity, OmnichannelActivityIndex>(
+                index => index.Status.IsIn(_intermediateStatuses) &&
+                    index.InteractionType != ActivityInteractionType.Automated &&
+                    (index.ReservedUtc == null || index.ReservedUtc < cutoff),
+                collection: OmnichannelConstants.CollectionName)
+            .OrderBy(index => index.Id)
+            .Take(max)
+            .ListAsync(cancellationToken)];
+
     private async Task<bool> RecoverOneAsync(OmnichannelActivity activity, DateTime now, CancellationToken cancellationToken)
     {
-        // AI-automatic work is owned end to end by the omnichannel AI voice processor, not by the Contact Center
-        // agent machinery. It carries no CC reservation or interaction, so the checks below would always read it as
-        // an orphan and either requeue it onto an agent campaign queue or mark a live AI call Failed — racing the
-        // call's own conclusion. The candidate query already excludes these; this guard makes the exclusion hold
-        // even when a caller supplies candidates directly. InteractionType is the authoritative AI-vs-agent axis
-        // (every agent-dialed mode, including Power/Progressive/Preview, is Manual).
-        if (activity.InteractionType == ActivityInteractionType.Automated)
-        {
-            return false;
-        }
+        var (isOrphan, interaction) = await FindOrphanInteractionAsync(activity, now, cancellationToken);
 
-        // A live reservation means this is still a ringing offer the reservation-expiry sweep owns, not an orphan.
-        if (!string.IsNullOrEmpty(activity.ReservationId))
-        {
-            var reservation = await _reservationManager.FindByIdAsync(activity.ReservationId, cancellationToken);
-
-            if (reservation is not null && !reservation.IsResolved && reservation.ExpiresUtc > now)
-            {
-                return false;
-            }
-        }
-
-        // An unsettled interaction means a call is still live (or is a long-running connected call). Never touch
-        // it - this is the guard that keeps a slow but genuine call safe regardless of how old its reservation is.
-        var interaction = await _interactionManager.FindByActivityIdAsync(activity.ItemId, cancellationToken);
-
-        if (interaction is not null && !interaction.IsSettled)
-        {
-            return false;
-        }
-
-        // The call is over but its agent is still wrapping it up, and the disposition they give is what finishes the
-        // record. Live, an agent taking longer than the grace period over a call an AI handed them had it failed under
-        // them. A wrap-up nobody finishes is closed by the agent availability recovery once it runs past the longest
-        // allowed, and the record is recovered on the pass after that.
-        if (interaction is { WrapUpStartedUtc: not null, WrapUpCompletedUtc: null })
+        if (!isOrphan)
         {
             return false;
         }
@@ -223,11 +226,7 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
         //
         // A call a machine answered (an answering machine or fax, screened out before any agent was connected) was
         // answered by nobody: it goes back in the queue to be tried again like a call that rang out.
-        var wasConnected =
-            activity.Status == ActivityStatus.InProgress ||
-            interaction?.AnsweredUtc is not null && !WasAnsweredByMachine(interaction);
-
-        if (wasConnected)
+        if (WasConnected(activity, interaction))
         {
             await TerminateAsync(activity, now, cancellationToken);
         }
@@ -237,6 +236,55 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Decides whether an activity is an orphan: stranded with nothing live behind it. The same checks recovery makes, so a
+    /// read-only listing and the sweep never disagree about which activities are stuck.
+    /// </summary>
+    private async Task<(bool IsOrphan, Interaction Interaction)> FindOrphanInteractionAsync(OmnichannelActivity activity, DateTime now, CancellationToken cancellationToken)
+    {
+        // AI-automatic work is owned end to end by the omnichannel AI voice processor, not by the Contact Center
+        // agent machinery. It carries no CC reservation or interaction, so the checks below would always read it as
+        // an orphan and either requeue it onto an agent campaign queue or mark a live AI call Failed — racing the
+        // call's own conclusion. The candidate query already excludes these; this guard makes the exclusion hold
+        // even when a caller supplies candidates directly. InteractionType is the authoritative AI-vs-agent axis
+        // (every agent-dialed mode, including Power/Progressive/Preview, is Manual).
+        if (activity.InteractionType == ActivityInteractionType.Automated)
+        {
+            return (false, null);
+        }
+
+        // A live reservation means this is still a ringing offer the reservation-expiry sweep owns, not an orphan.
+        if (!string.IsNullOrEmpty(activity.ReservationId))
+        {
+            var reservation = await _reservationManager.FindByIdAsync(activity.ReservationId, cancellationToken);
+
+            if (reservation is not null && !reservation.IsResolved && reservation.ExpiresUtc > now)
+            {
+                return (false, null);
+            }
+        }
+
+        // An unsettled interaction means a call is still live (or is a long-running connected call). Never touch
+        // it - this is the guard that keeps a slow but genuine call safe regardless of how old its reservation is.
+        var interaction = await _interactionManager.FindByActivityIdAsync(activity.ItemId, cancellationToken);
+
+        if (interaction is not null && !interaction.IsSettled)
+        {
+            return (false, null);
+        }
+
+        // The call is over but its agent is still wrapping it up, and the disposition they give is what finishes the
+        // record. Live, an agent taking longer than the grace period over a call an AI handed them had it failed under
+        // them. A wrap-up nobody finishes is closed by the agent availability recovery once it runs past the longest
+        // allowed, and the record is recovered on the pass after that.
+        if (interaction is { WrapUpStartedUtc: not null, WrapUpCompletedUtc: null })
+        {
+            return (false, null);
+        }
+
+        return (true, interaction);
     }
 
     private async Task<bool> TryFinalizeDialerAttemptAsync(Interaction interaction, CancellationToken cancellationToken)
@@ -342,6 +390,10 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
         return events.Any(value => value?.EventType == ContactCenterConstants.Events.CallAbandoned) &&
             InteractionOutcomeClassifier.FromEvents(events).IsAbandoned(interaction);
     }
+
+    private static bool WasConnected(OmnichannelActivity activity, Interaction interaction)
+        => activity.Status == ActivityStatus.InProgress ||
+            interaction?.AnsweredUtc is not null && !WasAnsweredByMachine(interaction);
 
     private static bool WasAnsweredByMachine(Interaction interaction)
         => interaction.TechnicalMetadata.TryGetValue(ContactCenterConstants.TelephonyMetadata.AnswerClassification, out var classification) &&
