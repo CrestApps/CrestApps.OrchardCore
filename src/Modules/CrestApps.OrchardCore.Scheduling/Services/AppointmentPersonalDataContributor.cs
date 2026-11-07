@@ -80,6 +80,17 @@ public sealed class AppointmentPersonalDataContributor : IPersonalDataContributo
         }
     }
 
-    private Task<IReadOnlyList<Appointment>> ListAsync(PersonalDataSubject subject, CancellationToken cancellationToken)
-        => _appointments.ListForPersonAsync(subject.UserIds, subject.Emails, subject.PhoneNumbers, cancellationToken);
+    private async Task<IReadOnlyList<Appointment>> ListAsync(PersonalDataSubject subject, CancellationToken cancellationToken)
+    {
+        var appointments = await _appointments.ListForPersonAsync(subject.UserIds, subject.Emails, subject.PhoneNumbers, cancellationToken);
+
+        return [.. appointments.Where(appointment => IsPersons(appointment, subject))];
+    }
+
+    // A phone number is often shared (a household, a front desk), so an appointment found by it is only the person's
+    // when nothing on it says it is someone else's: it was booked by the person's account or email, or by phone alone.
+    internal static bool IsPersons(Appointment appointment, PersonalDataSubject subject)
+        => subject.IsUser(appointment.UserId) ||
+            subject.IsEmail(appointment.CustomerEmail) ||
+            (string.IsNullOrWhiteSpace(appointment.UserId) && string.IsNullOrWhiteSpace(appointment.CustomerEmail));
 }
