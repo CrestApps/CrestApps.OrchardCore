@@ -3762,7 +3762,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
                     Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.ActivityAssignmentService> logger,
                     CrestApps.OrchardCore.ContactCenter.Core.Services.IQueuedDialerWorkGate dialerWorkGate,
                     CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerDecisionLog decisionLog,
-                    CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerProfileReader dialerProfileReader = null) { }
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerProfileReader dialerProfileReader) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation> AssignNextAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> AssignQueueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation> AssignSpecificAsync(string activityItemId, string queueId, string agentId, int? ringTimeoutSeconds = default, System.Threading.CancellationToken cancellationToken = default) { }

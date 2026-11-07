@@ -372,7 +372,8 @@ internal sealed class IvrIntegrationFixture : IAsyncDisposable
             (IActivityRoutingService)new ActivityRoutingService([new LongestIdleRoutingStrategy()]),
             businessHours.Object,
             (IAgentAvailabilityService)availability,
-            Mock.Of<IQueuedDialerWorkGate>());
+            Mock.Of<IQueuedDialerWorkGate>(),
+            (IDialerProfileReader)new NullDialerProfileReader());
         var offerService = ActivatorUtilities.CreateInstance<VoiceQueueOfferService>(
             services,
             (IActivityAssignmentService)assignmentService,
