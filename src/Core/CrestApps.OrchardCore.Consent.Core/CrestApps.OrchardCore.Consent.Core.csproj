@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Consent.Core</RootNamespace>
+    <Title>CrestApps OrchardCore Consent Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      The consent service: asks each consent source whether a person opted out of a channel at an address, and
+      records opt-outs and opt-ins with every source that keeps them.
+    </Description>
+    <PackageTags>$(PackageTags) Consent OptOut DoNotContact</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Consent.Abstractions/CrestApps.OrchardCore.Consent.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

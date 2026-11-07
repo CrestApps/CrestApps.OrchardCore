@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.Marketplace;
 /// Exposes the vendors, their earnings and their payouts as a data source of Orchard Core, for reports and data
 /// pipelines.
 /// </summary>
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class DataSourcesStartup : StartupBase
 {
     /// <inheritdoc/>

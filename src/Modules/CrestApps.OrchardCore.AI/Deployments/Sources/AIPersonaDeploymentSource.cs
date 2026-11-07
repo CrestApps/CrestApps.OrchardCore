@@ -3,14 +3,14 @@ using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
-using OrchardCore.Deployment;
+using CrestApps.OrchardCore.Core.Deployments;
 
 namespace CrestApps.OrchardCore.AI.Deployments.Sources;
 
 /// <summary>
 /// Writes the saved AI personas to a deployment plan. Persona files are not exported: they ship with the code.
 /// </summary>
-internal sealed class AIPersonaDeploymentSource : DeploymentSourceBase<AIPersonaDeploymentStep>
+internal sealed class AIPersonaDeploymentSource : CatalogDeploymentSourceBase<AIPersonaDeploymentStep, AIPersona>
 {
     private readonly INamedCatalog<AIPersona> _personasCatalog;
 
@@ -19,48 +19,33 @@ internal sealed class AIPersonaDeploymentSource : DeploymentSourceBase<AIPersona
     /// </summary>
     /// <param name="personasCatalog">The catalog of saved personas.</param>
     public AIPersonaDeploymentSource(INamedCatalog<AIPersona> personasCatalog)
+        : base("personas")
     {
         _personasCatalog = personasCatalog;
     }
 
-    protected override async Task ProcessAsync(AIPersonaDeploymentStep step, DeploymentPlanResult result)
-    {
-        var personaIds = step.IncludeAll
-            ? []
-            : step.PersonaIds ?? [];
+    protected override async Task<IEnumerable<AIPersona>> GetEntriesAsync()
+        => await _personasCatalog.GetAllAsync();
 
-        var personas = new JsonArray();
+    protected override bool IsSelected(AIPersonaDeploymentStep step, AIPersona entry)
+        => IsSelectedByKey(step.IncludeAll, step.PersonaIds, entry.ItemId);
 
-        foreach (var persona in await _personasCatalog.GetAllAsync())
+    protected override JsonObject Export(AIPersona entry)
+        => new()
         {
-            if (personaIds.Length > 0 && !personaIds.Contains(persona.ItemId))
-            {
-                continue;
-            }
-
-            personas.Add(new JsonObject
-            {
-                [nameof(AIPersona.ItemId)] = persona.ItemId,
-                [nameof(AIPersona.Name)] = persona.Name,
-                [nameof(AIPersona.DisplayText)] = persona.DisplayText,
-                [nameof(AIPersona.Description)] = persona.Description,
-                [nameof(AIPersona.Instructions)] = persona.Instructions,
-                [nameof(AIPersona.AssistantName)] = persona.AssistantName,
-                [nameof(AIPersona.Language)] = persona.Language,
-                [nameof(AIPersona.VoiceName)] = persona.VoiceName,
-                [nameof(AIPersona.VoiceDeploymentName)] = persona.VoiceDeploymentName,
-                [nameof(AIPersona.AvatarUrl)] = persona.AvatarUrl,
-                [nameof(AIPersona.CreatedUtc)] = persona.CreatedUtc,
-                [nameof(AIPersona.OwnerId)] = persona.OwnerId,
-                [nameof(AIPersona.Author)] = persona.Author,
-                [nameof(AIPersona.Properties)] = JsonSerializer.SerializeToNode(persona.Properties),
-            });
-        }
-
-        result.Steps.Add(new JsonObject
-        {
-            ["name"] = step.Name,
-            ["personas"] = personas,
-        });
-    }
+            [nameof(AIPersona.ItemId)] = entry.ItemId,
+            [nameof(AIPersona.Name)] = entry.Name,
+            [nameof(AIPersona.DisplayText)] = entry.DisplayText,
+            [nameof(AIPersona.Description)] = entry.Description,
+            [nameof(AIPersona.Instructions)] = entry.Instructions,
+            [nameof(AIPersona.AssistantName)] = entry.AssistantName,
+            [nameof(AIPersona.Language)] = entry.Language,
+            [nameof(AIPersona.VoiceName)] = entry.VoiceName,
+            [nameof(AIPersona.VoiceDeploymentName)] = entry.VoiceDeploymentName,
+            [nameof(AIPersona.AvatarUrl)] = entry.AvatarUrl,
+            [nameof(AIPersona.CreatedUtc)] = entry.CreatedUtc,
+            [nameof(AIPersona.OwnerId)] = entry.OwnerId,
+            [nameof(AIPersona.Author)] = entry.Author,
+            [nameof(AIPersona.Properties)] = JsonSerializer.SerializeToNode(entry.Properties),
+        };
 }

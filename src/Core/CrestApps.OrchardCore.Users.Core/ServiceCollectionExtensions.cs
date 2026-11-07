@@ -34,6 +34,32 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Adds the shared <see cref="IUserSearchService"/> behind the user pickers, and the basic display name provider
+    /// when no other one is registered. Call it from every feature that searches users; it adds each service once.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    public static IServiceCollection AddUserSearchService(this IServiceCollection services)
+    {
+        services.TryAddBasicDisplayNameProvider();
+        services.TryAddScoped<IUserSearchService, DefaultUserSearchService>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds <see cref="IRoleGrantService"/>, which puts users in roles on behalf of sources such as memberships and
+    /// subscriptions and takes a role away only when no source still grants it. Safe to call from every module that
+    /// grants roles; register an <see cref="IRoleGrantSource"/> for the grants a module made before.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    public static IServiceCollection AddRoleGrants(this IServiceCollection services)
+    {
+        services.TryAddScoped<IRoleGrantService, DefaultRoleGrantService>();
+
+        return services;
+    }
+
+    /// <summary>
     /// Adds the user cache service.
     /// </summary>
     /// <param name="services">The services.</param>

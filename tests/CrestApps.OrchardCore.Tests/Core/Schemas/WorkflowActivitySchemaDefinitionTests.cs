@@ -158,8 +158,9 @@ public sealed class WorkflowActivitySchemaDefinitionTests
         Assert.Empty(duplicates);
     }
 
+    // The AI module registers the schemas of its own workflow activities, in a startup that requires the Recipes feature.
     [Fact]
-    public void EverySchemaDefinition_IsRegisteredByTheRecipesModule()
+    public void EverySchemaDefinition_IsRegisteredByTheRecipesModuleOrItsOwner()
     {
         var registered = GetRegisteredDefinitionTypes();
         var declared = GetDefinitionTypes()
@@ -645,8 +646,8 @@ public sealed class WorkflowActivitySchemaDefinitionTests
     private static string[] GetRegisteredDefinitionTypes()
     {
         var services = new ServiceCollection();
-        var startupTypes = Assembly.Load("CrestApps.OrchardCore.Recipes")
-            .GetTypes()
+        var startupTypes = new[] { "CrestApps.OrchardCore.Recipes", "CrestApps.OrchardCore.AI" }
+            .SelectMany(name => Assembly.Load(name).GetTypes())
             .Where(type => !type.IsAbstract && typeof(IStartup).IsAssignableFrom(type))
             .Where(type => type.GetConstructor(BindingFlags.Public | BindingFlags.Instance, []) is not null);
 

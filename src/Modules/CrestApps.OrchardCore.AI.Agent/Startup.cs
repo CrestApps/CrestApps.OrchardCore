@@ -14,6 +14,7 @@ using CrestApps.OrchardCore.AI.Agent.Tenants;
 using CrestApps.OrchardCore.AI.Agent.Users;
 using CrestApps.OrchardCore.AI.Agent.Workflows;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.Recipes.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
@@ -80,7 +81,7 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Recipes feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class RecipesStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -138,7 +139,7 @@ public sealed class RecipesStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Tenants feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Tenants")]
+[RequireFeatures(OrchardCoreFeatureIds.Tenants)]
 public sealed class TenantsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -213,7 +214,7 @@ public sealed class TenantsStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Contents feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Contents")]
+[RequireFeatures(OrchardCoreFeatureIds.Contents)]
 public sealed class ContentsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -292,7 +293,7 @@ public sealed class ContentsStartup : StartupBase
 /// <summary>
 /// Registers recipe-backed content payload assistance when the Recipes feature is enabled.
 /// </summary>
-[RequireFeatures("OrchardCore.Contents", "CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(OrchardCoreFeatureIds.Contents, CrestAppsRecipesConstants.Feature.Area)]
 public sealed class ContentRecipesStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -320,7 +321,7 @@ public sealed class ContentRecipesStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the ContentDefinitions feature.
 /// </summary>
-[RequireFeatures("OrchardCore.ContentTypes")]
+[RequireFeatures(OrchardCoreFeatureIds.ContentTypes)]
 public sealed class ContentDefinitionsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -373,7 +374,7 @@ public sealed class ContentDefinitionsStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the ContentDefinitionRecipesTools feature.
 /// </summary>
-[RequireFeatures("OrchardCore.ContentTypes", "OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.ContentTypes, OrchardCoreFeatureIds.RecipesCore)]
 public sealed class ContentDefinitionRecipesToolsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -412,7 +413,7 @@ public sealed class ContentDefinitionRecipesToolsStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Features feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Features")]
+[RequireFeatures(OrchardCoreFeatureIds.Features)]
 public sealed class FeaturesStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -463,7 +464,7 @@ public sealed class FeaturesStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Notifications feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Notifications")]
+[RequireFeatures(OrchardCoreFeatureIds.Notifications)]
 public sealed class NotificationsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -490,7 +491,7 @@ public sealed class NotificationsStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Email feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Email")]
+[RequireFeatures(OrchardCoreFeatureIds.Email)]
 public sealed class EmailStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -517,7 +518,7 @@ public sealed class EmailStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Sms feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Sms")]
+[RequireFeatures(OrchardCoreFeatureIds.Sms)]
 public sealed class SmsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -544,7 +545,7 @@ public sealed class SmsStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Users feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Users")]
+[RequireFeatures(OrchardCoreFeatureIds.Users)]
 public sealed class UsersStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -577,7 +578,7 @@ public sealed class UsersStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Roles feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Roles")]
+[RequireFeatures(OrchardCoreFeatureIds.Roles)]
 public sealed class RolesStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -604,7 +605,7 @@ public sealed class RolesStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Workflows feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class WorkflowsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -637,7 +638,7 @@ public sealed class WorkflowsStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the WorkflowsRecipes feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows", "OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows, OrchardCoreFeatureIds.RecipesCore)]
 public sealed class WorkflowsRecipesStartup : StartupBase
 {
     internal readonly IStringLocalizer S;

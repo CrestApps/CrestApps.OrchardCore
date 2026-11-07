@@ -238,7 +238,7 @@ public sealed partial class ReportDesignDocumentBuilder
             .Select((measure, position) => ReportColumnColorizer.Create(ShownColumn(measure, calculated[position]), rows
                 .SelectMany(row => row.Values)
                 .Where(cell => cell.Measure == position && !cell.IsTotal)
-                .Select(cell => cell.Value)))
+                .Select(cell => cell.Value), result.Today))
             .ToArray();
 
         var reportRows = rows.Select(row =>

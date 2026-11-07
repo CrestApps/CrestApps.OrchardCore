@@ -1,8 +1,6 @@
 using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Customers.Services;
-using CrestApps.OrchardCore.Orders.Core.Models;
-using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -42,7 +40,7 @@ public sealed class CustomerRetentionBackgroundTask : IBackgroundTask
                 serviceProvider.GetRequiredService<ICustomerPrivacyService>(),
                 cancellationToken);
 
-            var orders = await AnonymizeGuestOrdersAsync(settings, now, serviceProvider.GetService<OrderAnonymizer>(), cancellationToken);
+            var orders = await AnonymizeGuestRecordsAsync(settings, now, serviceProvider.GetServices<IGuestRetentionHandler>(), cancellationToken);
 
             if ((guests > 0 || orders > 0) && logger.IsEnabled(LogLevel.Information))
             {
@@ -92,19 +90,25 @@ public sealed class CustomerRetentionBackgroundTask : IBackgroundTask
         return count;
     }
 
-    internal static Task<int> AnonymizeGuestOrdersAsync(CustomerPrivacySettings settings, DateTime now, OrderAnonymizer anonymizer, CancellationToken cancellationToken)
+    /// <summary>
+    /// Anonymizes the guest records other modules keep (such as guest orders) once the retention window for guests'
+    /// orders runs out, through each module's <see cref="IGuestRetentionHandler"/>.
+    /// </summary>
+    internal static async Task<int> AnonymizeGuestRecordsAsync(CustomerPrivacySettings settings, DateTime now, IEnumerable<IGuestRetentionHandler> handlers, CancellationToken cancellationToken)
     {
-        if (anonymizer is null || settings.GuestOrderMonths <= 0)
+        if (settings.GuestOrderMonths <= 0)
         {
-            return Task.FromResult(0);
+            return 0;
         }
 
-        // Orders still owed keep their contact until they are settled or canceled.
-        return anonymizer.AnonymizeAsync(new OrderQuery
+        var createdBefore = now.AddMonths(-settings.GuestOrderMonths);
+        var count = 0;
+
+        foreach (var handler in handlers ?? [])
         {
-            GuestsOnly = true,
-            CreatedBefore = now.AddMonths(-settings.GuestOrderMonths),
-            Statuses = [OrderStatus.Paid, OrderStatus.Canceled],
-        }, BatchSize, cancellationToken);
+            count += await handler.AnonymizeGuestRecordsAsync(createdBefore, BatchSize, cancellationToken);
+        }
+
+        return count;
     }
 }

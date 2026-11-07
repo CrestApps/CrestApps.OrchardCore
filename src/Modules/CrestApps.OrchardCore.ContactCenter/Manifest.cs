@@ -3,7 +3,7 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Skills;
 using CrestApps.OrchardCore.Telephony;
-using CrestApps.OrchardCore.Users.Core;
+using CrestApps.OrchardCore.Users;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -109,18 +109,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         ContactCenterConstants.Feature.Dialer,
-    ]
-)]
-
-[assembly: Feature(
-    Id = ContactCenterConstants.Feature.ProviderInbox,
-    Name = "Contact Center Provider Webhook Inbox",
-    Description = "Durably commits an authenticated provider webhook delivery before any handler runs, deduplicates redeliveries on the provider's own delivery id, and retries processing from storage so a callback is never lost to a restart. Shared by every channel that ingests provider callbacks.",
-    Category = "Contact Center",
-    EnabledByDependencyOnly = true,
-    Dependencies =
-    [
-        ContactCenterConstants.Feature.Area,
     ]
 )]
 
@@ -238,6 +226,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         ContactCenterConstants.Feature.Queues,
-        "OrchardCore.SignalR",
+        OrchardCoreFeatureIds.SignalR,
     ]
 )]

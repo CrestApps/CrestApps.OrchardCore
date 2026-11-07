@@ -23,6 +23,11 @@ public class MarketplaceSettingsViewModel
     public bool AutomaticPayouts { get; set; }
 
     public string DefaultCountry { get; set; }
+
+    public string PayoutProvider { get; set; }
+
+    [BindNever]
+    public IList<string> PayoutProviders { get; set; } = [];
 }
 
 public class VendorsIndexViewModel

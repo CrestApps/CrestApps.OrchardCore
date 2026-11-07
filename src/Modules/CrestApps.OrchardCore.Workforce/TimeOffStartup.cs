@@ -1,10 +1,12 @@
 using CrestApps.OrchardCore.Workforce.BackgroundTasks;
+using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Workforce.Core;
 using CrestApps.OrchardCore.Workforce.Core.Indexes;
 using CrestApps.OrchardCore.Workforce.Drivers;
 using CrestApps.OrchardCore.Workforce.Migrations;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Navigation;
+using CrestApps.OrchardCore.Workforce.PersonalData;
 using CrestApps.OrchardCore.Workforce.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
@@ -28,6 +30,7 @@ public sealed class TimeOffStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddWorkforceTimeOffCore();
+        services.AddPersonalDataContributor<TimeOffRequestPersonalDataContributor>();
         services.AddDataMigration<TimeOffMigrations>()
             .AddIndexProvider<TimeOffTypeIndexProvider>()
             .AddIndexProvider<TimeOffPolicyIndexProvider>()

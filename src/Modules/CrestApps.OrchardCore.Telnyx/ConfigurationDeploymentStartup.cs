@@ -19,7 +19,7 @@ namespace CrestApps.OrchardCore.Telnyx;
 /// replaces the stored settings whole, which would erase the destination's credentials.
 /// </remarks>
 [Feature(TelnyxConstants.Feature.Area)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class ConfigurationDeploymentStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -34,7 +34,7 @@ public sealed class ConfigurationDeploymentStartup : StartupBase
 /// Registers the recipe step that imports the Telnyx voice provider settings.
 /// </summary>
 [Feature(TelnyxConstants.Feature.Area)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class ConfigurationRecipesStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -48,7 +48,7 @@ public sealed class ConfigurationRecipesStartup : StartupBase
 /// Registers the deployment step that exports the Telnyx SMS provider settings.
 /// </summary>
 [Feature(TelnyxConstants.Feature.Sms)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class SmsConfigurationDeploymentStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -63,7 +63,7 @@ public sealed class SmsConfigurationDeploymentStartup : StartupBase
 /// Registers the recipe step that imports the Telnyx SMS provider settings.
 /// </summary>
 [Feature(TelnyxConstants.Feature.Sms)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class SmsConfigurationRecipesStartup : StartupBase
 {
     /// <inheritdoc/>

@@ -1,5 +1,7 @@
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Tooling;
+using CrestApps.OrchardCore.AI.Core.ViewModels;
+using CrestApps.OrchardCore.AI.Core.Workflows;
 using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using Microsoft.Extensions.Localization;

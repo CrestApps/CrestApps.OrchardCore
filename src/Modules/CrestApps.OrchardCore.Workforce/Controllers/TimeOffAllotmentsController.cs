@@ -14,6 +14,7 @@ using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using QueryContext = CrestApps.Core.Models.QueryContext;
 
 namespace CrestApps.OrchardCore.Workforce.Controllers;
 
@@ -75,16 +76,16 @@ public sealed class TimeOffAllotmentsController : Controller
             return Forbid();
         }
 
-        var items = (await _allotmentManager.GetAllAsync(HttpContext.RequestAborted))
-            .OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase)
-            .ToList();
         var pager = new Pager(pagerParameters, pagerOptions.Value);
+
+        // Paged and counted in SQL, ordered by the name in the index.
+        var items = await _allotmentManager.PageAsync(pager.Page, pager.PageSize, new QueryContext { Sorted = true }, HttpContext.RequestAborted);
 
         return View(new WorkforceListViewModel
         {
             List = new AdminListContext<TimeOffAllotment>
             {
-                Source = items.Skip(pager.GetStartIndex()).Take(pager.PageSize).ToList(),
+                Source = [.. items.Entries],
                 Pager = await shapeFactory.PagerAsync(pager, items.Count),
             },
         });

@@ -1,5 +1,5 @@
 using CrestApps.OrchardCore.Orders.Core.Models;
-using CrestApps.OrchardCore.Orders.Services;
+using CrestApps.OrchardCore.Commerce.Core.Emails;
 
 namespace CrestApps.OrchardCore.Tests.Orders;
 
@@ -19,7 +19,7 @@ public sealed class OrderEmailTemplateTests
             Lines = [new OrderLine { Title = "Backpack", Quantity = 2 }],
         };
 
-        var plain = Assert.IsType<Dictionary<string, object>>(LiquidOrderEmailTemplates.ToPlain(LiquidOrderEmailTemplates.ToJson(order)));
+        var plain = Assert.IsType<Dictionary<string, object>>(LiquidCommerceEmailTemplates.ToPlain(LiquidCommerceEmailTemplates.ToJson(order)));
 
         Assert.Equal("261020-TEST", plain["ordernumber"]);
         Assert.Equal("Paid", plain["Status"]);
@@ -33,5 +33,5 @@ public sealed class OrderEmailTemplateTests
 
     [Fact]
     public void AnEmailsText_FollowsItsHtml()
-        => Assert.Equal("We got it!\n1 × Backpack", LiquidOrderEmailTemplates.ToText("<p>We got it!</p><div>1 &#xD7; Backpack</div>"));
+        => Assert.Equal("We got it!\n1 × Backpack", LiquidCommerceEmailTemplates.ToText("<p>We got it!</p><div>1 &#xD7; Backpack</div>"));
 }

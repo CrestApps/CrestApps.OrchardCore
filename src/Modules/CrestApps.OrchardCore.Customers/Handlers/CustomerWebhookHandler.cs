@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Commerce.Webhooks;
+using CrestApps.OrchardCore.Webhooks;
 using CrestApps.OrchardCore.Customers.Api;
 using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.Core.Services;
@@ -11,9 +12,9 @@ namespace CrestApps.OrchardCore.Customers.Handlers;
 /// </summary>
 internal sealed class CustomerWebhookHandler : ICustomerHandler
 {
-    private readonly ICommerceWebhookPublisher _publisher;
+    private readonly IWebhookPublisher _publisher;
 
-    public CustomerWebhookHandler(ICommerceWebhookPublisher publisher)
+    public CustomerWebhookHandler(IWebhookPublisher publisher)
     {
         _publisher = publisher;
     }

@@ -3,15 +3,13 @@ using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Accounts.B2B.Models;
 using CrestApps.OrchardCore.Accounts.Models;
 using CrestApps.OrchardCore.Checkout.Models;
+using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
-using OrchardCore.Email;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 
@@ -23,12 +21,21 @@ namespace CrestApps.OrchardCore.Accounts.B2B.Services;
 /// </summary>
 public sealed class B2BApprovalService
 {
+    /// <summary>
+    /// The kind of the email that asks an account's admins to approve an order.
+    /// </summary>
+    public const string ApprovalRequestedEmailKind = "b2b-approval-requested";
+
+    /// <summary>
+    /// The kind of the email that tells the buyer an admin approved or rejected their order.
+    /// </summary>
+    public const string ApprovalDecidedEmailKind = "b2b-approval-decided";
+
     private readonly IOrderStore _orders;
     private readonly IOrderService _orderService;
     private readonly ISiteService _siteService;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly ICommerceEmailSender _emailSender;
     private readonly IClock _clock;
-    private readonly ILogger _logger;
     private readonly IShopperCurrency _shopperCurrency;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly LinkGenerator _linkGenerator;
@@ -39,9 +46,8 @@ public sealed class B2BApprovalService
         IOrderStore orders,
         IOrderService orderService,
         ISiteService siteService,
-        IServiceProvider serviceProvider,
+        ICommerceEmailSender emailSender,
         IClock clock,
-        ILogger<B2BApprovalService> logger,
         IStringLocalizer<B2BApprovalService> stringLocalizer,
         IShopperCurrency shopperCurrency,
         IHttpContextAccessor httpContextAccessor,
@@ -50,9 +56,8 @@ public sealed class B2BApprovalService
         _orders = orders;
         _orderService = orderService;
         _siteService = siteService;
-        _serviceProvider = serviceProvider;
+        _emailSender = emailSender;
         _clock = clock;
-        _logger = logger;
         _shopperCurrency = shopperCurrency;
         _httpContextAccessor = httpContextAccessor;
         _linkGenerator = linkGenerator;
@@ -142,6 +147,8 @@ public sealed class B2BApprovalService
         await _orderService.AddNoteAsync(order, S["{0} asked {1} to approve the order: {2}.", buyerName, account.Name, reason], OrderNoteKind.Event, buyerName, cancellationToken);
         await _orders.UpdateAsync(order, cancellationToken);
         await EmailAsync(
+            ApprovalRequestedEmailKind,
+            order,
             account.Buyers.Where(buyer => buyer.Role == AccountMemberRole.Admin).Select(buyer => buyer.Email),
             S["Order {0} needs your approval", order.OrderNumber],
             S["{0} placed order {1} for {2}, which needs your approval: {3}. Approve or reject it on your account page.", buyerName, order.OrderNumber, ProductPriceFormatter.Format(total, currency), reason],
@@ -177,6 +184,8 @@ public sealed class B2BApprovalService
         }
 
         await EmailAsync(
+            ApprovalDecidedEmailKind,
+            order,
             [order.CustomerEmail],
             approve ? S["Order {0} was approved", order.OrderNumber] : S["Order {0} was rejected", order.OrderNumber],
             approve
@@ -200,31 +209,41 @@ public sealed class B2BApprovalService
             : amount;
     }
 
-    private async Task EmailAsync(IEnumerable<string> recipients, string subject, string text, string routeName, CancellationToken cancellationToken)
+    private async Task EmailAsync(string kind, Order order, IEnumerable<string> recipients, string subject, string text, string routeName, CancellationToken cancellationToken)
     {
         var to = string.Join(",", recipients.Where(email => !string.IsNullOrWhiteSpace(email)).Distinct(StringComparer.OrdinalIgnoreCase));
 
-        if (to.Length == 0 || _serviceProvider.GetService<IEmailService>() is not { } emailService)
+        if (to.Length == 0 || !_emailSender.CanSend)
         {
             return;
         }
 
         var httpContext = _httpContextAccessor.HttpContext;
         var url = httpContext is null ? null : _linkGenerator.GetUriByRouteValues(httpContext, routeName, values: null);
-        var body = new StringBuilder(text);
-        var encoder = HtmlEncoder.Default;
 
-        if (!string.IsNullOrEmpty(url))
+        await _emailSender.SendAsync(new CommerceEmail
         {
-            body.AppendLine().AppendLine().Append(url);
-        }
-
-        var html = "<p>" + encoder.Encode(text) + "</p>" + (string.IsNullOrEmpty(url) ? string.Empty : "<p><a href=\"" + encoder.Encode(url) + "\">" + encoder.Encode(url) + "</a></p>");
-        var result = await emailService.SendAsync(new MailMessage { To = to, Subject = subject, TextBody = body.ToString(), HtmlBody = html }, cancellationToken: cancellationToken);
-
-        if (!result.Succeeded && _logger.IsEnabled(LogLevel.Warning))
+            Kind = kind,
+            To = to,
+            Models = OrderEmailModels.For(order),
+            Reference = order.OrderNumber,
+        }, _ =>
         {
-            _logger.LogWarning("An approval email about '{Subject}' couldn't be sent.", subject);
-        }
+            var body = new StringBuilder(text);
+            var encoder = HtmlEncoder.Default;
+
+            if (!string.IsNullOrEmpty(url))
+            {
+                body.AppendLine().AppendLine().Append(url);
+            }
+
+            return Task.FromResult(new CommerceEmailContent
+            {
+                Subject = subject,
+                Text = body.ToString(),
+                Html = "<p>" + encoder.Encode(text) + "</p>" + (string.IsNullOrEmpty(url) ? string.Empty : "<p><a href=\"" + encoder.Encode(url) + "\">" + encoder.Encode(url) + "</a></p>"),
+                Values = new Dictionary<string, string> { ["Url"] = url ?? string.Empty },
+            });
+        }, cancellationToken);
     }
 }

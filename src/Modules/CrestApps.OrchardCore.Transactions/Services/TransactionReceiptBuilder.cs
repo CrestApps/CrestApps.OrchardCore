@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Receipts;

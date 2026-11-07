@@ -140,6 +140,11 @@ public sealed class Campaign : CatalogItem
 
     public int Failed { get; set; }
 
+    /// <summary>
+    /// Gets or sets the outreach run that sends the campaign, once it has started sending.
+    /// </summary>
+    public string OutreachRunId { get; set; }
+
     public string CreatedBy { get; set; }
 
     public DateTime CreatedUtc { get; set; }

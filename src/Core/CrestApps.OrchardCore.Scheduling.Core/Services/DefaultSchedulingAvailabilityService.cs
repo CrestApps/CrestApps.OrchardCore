@@ -1,5 +1,5 @@
 using System.Globalization;
-using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Core.Services;
 using CrestApps.OrchardCore.Calendars.Services;
 using CrestApps.OrchardCore.Scheduling.Models;
@@ -255,9 +255,9 @@ public sealed class DefaultSchedulingAvailabilityService : ISchedulingAvailabili
             .ToArray();
     }
 
-    private async Task<List<CalendarTimeWindow>> GetWindowsAsync(SchedulingResource resource, DateTime fromUtc, DateTime toUtc)
+    private async Task<List<TimeWindow>> GetWindowsAsync(SchedulingResource resource, DateTime fromUtc, DateTime toUtc)
     {
-        var windows = new List<CalendarTimeWindow>();
+        var windows = new List<TimeWindow>();
 
         var shiftCalendarIds = ShiftCalendarIds(resource);
 
@@ -273,7 +273,7 @@ public sealed class DefaultSchedulingAvailabilityService : ISchedulingAvailabili
 
             foreach (var shift in shifts.Where(shift => string.IsNullOrEmpty(resource.UserId) || shift.Event.Attendees.Any(attendee => attendee.UserId == resource.UserId)))
             {
-                windows.Add(new CalendarTimeWindow(shift.StartUtc, shift.EndUtc));
+                windows.Add(new TimeWindow(shift.StartUtc, shift.EndUtc));
             }
 
             return windows;
@@ -291,7 +291,7 @@ public sealed class DefaultSchedulingAvailabilityService : ISchedulingAvailabili
             {
                 if (!dayOverride.Closed && TryParse(dayOverride.Start, out var start) && TryParse(dayOverride.End, out var end) && end > start)
                 {
-                    windows.Add(new CalendarTimeWindow(CalendarTime.ToUtc(day + start, zone), CalendarTime.ToUtc(day + end, zone)));
+                    windows.Add(new TimeWindow(CalendarTime.ToUtc(day + start, zone), CalendarTime.ToUtc(day + end, zone)));
                 }
 
                 continue;
@@ -301,7 +301,7 @@ public sealed class DefaultSchedulingAvailabilityService : ISchedulingAvailabili
             {
                 if (TryParse(hours.Start, out var start) && TryParse(hours.End, out var end) && end > start)
                 {
-                    windows.Add(new CalendarTimeWindow(CalendarTime.ToUtc(day + start, zone), CalendarTime.ToUtc(day + end, zone)));
+                    windows.Add(new TimeWindow(CalendarTime.ToUtc(day + start, zone), CalendarTime.ToUtc(day + end, zone)));
                 }
             }
         }
@@ -309,14 +309,14 @@ public sealed class DefaultSchedulingAvailabilityService : ISchedulingAvailabili
         return windows;
     }
 
-    private static bool Overlaps(IReadOnlyList<CalendarTimeWindow> busy, DateTime startUtc, DateTime endUtc)
+    private static bool Overlaps(IReadOnlyList<TimeWindow> busy, DateTime startUtc, DateTime endUtc)
     {
         return busy.Any(block => block.StartUtc < endUtc && block.EndUtc > startUtc);
     }
 
     // A booked appointment keeps the free time its own type asks for before and after it. Busy time holds only the appointment
     // itself, so without this a later booking could start the moment it ends.
-    private async Task<Dictionary<string, CalendarTimeWindow>> GetKeptTimeAsync(AppointmentType appointmentType, IReadOnlyList<Appointment> appointments, CancellationToken cancellationToken)
+    private async Task<Dictionary<string, TimeWindow>> GetKeptTimeAsync(AppointmentType appointmentType, IReadOnlyList<Appointment> appointments, CancellationToken cancellationToken)
     {
         var typeIds = appointments.Select(appointment => appointment.AppointmentTypeId)
             .Where(id => !string.IsNullOrEmpty(id) && id != appointmentType.ItemId)
@@ -332,7 +332,7 @@ public sealed class DefaultSchedulingAvailabilityService : ISchedulingAvailabili
             types[appointmentType.ItemId] = appointmentType;
         }
 
-        var keptTime = new Dictionary<string, CalendarTimeWindow>(StringComparer.Ordinal);
+        var keptTime = new Dictionary<string, TimeWindow>(StringComparer.Ordinal);
 
         foreach (var appointment in appointments)
         {
@@ -341,7 +341,7 @@ public sealed class DefaultSchedulingAvailabilityService : ISchedulingAvailabili
                 continue;
             }
 
-            keptTime[appointment.ItemId] = new CalendarTimeWindow(
+            keptTime[appointment.ItemId] = new TimeWindow(
                 appointment.StartUtc.AddMinutes(-Math.Max(0, type.BufferBeforeMinutes)),
                 appointment.EndUtc.AddMinutes(Math.Max(0, type.BufferAfterMinutes)));
         }
@@ -360,7 +360,7 @@ public sealed class DefaultSchedulingAvailabilityService : ISchedulingAvailabili
             !(appointmentType.Capacity > 1 && appointment.AppointmentTypeId == appointmentType.ItemId));
     }
 
-    private static bool TakesKeptTime(List<Appointment> appointments, Dictionary<string, CalendarTimeWindow> keptTime, AppointmentType appointmentType, DateTime startUtc, DateTime endUtc)
+    private static bool TakesKeptTime(List<Appointment> appointments, Dictionary<string, TimeWindow> keptTime, AppointmentType appointmentType, DateTime startUtc, DateTime endUtc)
     {
         return appointments.Any(appointment =>
             keptTime.TryGetValue(appointment.ItemId, out var window) &&

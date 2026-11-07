@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Calendars;
 /// <summary>
 /// Registers the Calendars deployment step.
 /// </summary>
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class DeploymentStartup : StartupBase
 {
     /// <inheritdoc />

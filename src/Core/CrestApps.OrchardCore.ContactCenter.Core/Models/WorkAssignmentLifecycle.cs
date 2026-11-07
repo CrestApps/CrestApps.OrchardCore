@@ -1,5 +1,5 @@
-using System.Collections.Frozen;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.StateMachines;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 
@@ -15,57 +15,58 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 /// </summary>
 public static class WorkAssignmentLifecycle
 {
-    private static readonly FrozenDictionary<ActivityAssignmentStatus, FrozenSet<ActivityAssignmentStatus>> _transitions =
-        new Dictionary<ActivityAssignmentStatus, FrozenSet<ActivityAssignmentStatus>>
+    private static readonly TransitionTable<ActivityAssignmentStatus> _transitions = new(
+        new Dictionary<ActivityAssignmentStatus, ActivityAssignmentStatus[]>
         {
-            [ActivityAssignmentStatus.Unassigned] = FrozenSet.ToFrozenSet(
+            [ActivityAssignmentStatus.Unassigned] =
             [
                 ActivityAssignmentStatus.Available,
                 ActivityAssignmentStatus.Reserved,
                 ActivityAssignmentStatus.Assigned,
                 ActivityAssignmentStatus.Released,
-            ]),
-            [ActivityAssignmentStatus.Available] = FrozenSet.ToFrozenSet(
+            ],
+            [ActivityAssignmentStatus.Available] =
             [
                 ActivityAssignmentStatus.Unassigned,
                 ActivityAssignmentStatus.Reserved,
                 ActivityAssignmentStatus.Assigned,
                 ActivityAssignmentStatus.Released,
-            ]),
+            ],
 
             // A reservation that expires or is rejected puts the work back where routing can see it, so
             // Reserved reaches Available and Unassigned as well as Assigned.
-            [ActivityAssignmentStatus.Reserved] = FrozenSet.ToFrozenSet(
+            [ActivityAssignmentStatus.Reserved] =
             [
                 ActivityAssignmentStatus.Unassigned,
                 ActivityAssignmentStatus.Available,
                 ActivityAssignmentStatus.Assigned,
                 ActivityAssignmentStatus.Released,
-            ]),
-            [ActivityAssignmentStatus.Assigned] = FrozenSet.ToFrozenSet(
+            ],
+            [ActivityAssignmentStatus.Assigned] =
             [
                 ActivityAssignmentStatus.Unassigned,
                 ActivityAssignmentStatus.Available,
                 ActivityAssignmentStatus.InProgress,
                 ActivityAssignmentStatus.Released,
-            ]),
-            [ActivityAssignmentStatus.InProgress] = FrozenSet.ToFrozenSet(
+            ],
+            [ActivityAssignmentStatus.InProgress] =
             [
                 ActivityAssignmentStatus.Unassigned,
                 ActivityAssignmentStatus.Available,
                 ActivityAssignmentStatus.Released,
-            ]),
+            ],
 
             // Released is not terminal. The same work is dialed again on a later cycle, and the healing service
             // returns abandoned work to the pool, so released work must be able to become available again.
-            [ActivityAssignmentStatus.Released] = FrozenSet.ToFrozenSet(
+            [ActivityAssignmentStatus.Released] =
             [
                 ActivityAssignmentStatus.Unassigned,
                 ActivityAssignmentStatus.Available,
                 ActivityAssignmentStatus.Reserved,
                 ActivityAssignmentStatus.Assigned,
-            ]),
-        }.ToFrozenDictionary();
+            ],
+        },
+        allowStaying: true);
 
     /// <summary>
     /// Determines whether work in one assignment status may move to another.
@@ -74,12 +75,5 @@ public static class WorkAssignmentLifecycle
     /// <param name="to">The status the work would move to.</param>
     /// <returns><see langword="true"/> when the transition is admitted; otherwise <see langword="false"/>.</returns>
     public static bool CanTransition(ActivityAssignmentStatus from, ActivityAssignmentStatus to)
-    {
-        if (from == to)
-        {
-            return true;
-        }
-
-        return _transitions.TryGetValue(from, out var allowed) && allowed.Contains(to);
-    }
+        => _transitions.CanMove(from, to);
 }

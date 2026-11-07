@@ -14,6 +14,7 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
+using QueryContext = CrestApps.Core.Models.QueryContext;
 
 namespace CrestApps.OrchardCore.Workforce.Controllers;
 
@@ -66,14 +67,16 @@ public sealed class ActivityCodesController : Controller
             return Forbid();
         }
 
-        var codes = (await _activityCodeManager.GetAllAsync(HttpContext.RequestAborted)).OrderBy(code => code.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
         var pager = new Pager(pagerParameters, pagerOptions.Value);
+
+        // Paged and counted in SQL, ordered by the name in the index.
+        var codes = await _activityCodeManager.PageAsync(pager.Page, pager.PageSize, new QueryContext { Sorted = true }, HttpContext.RequestAborted);
 
         return View(new WorkforceListViewModel
         {
             List = new AdminListContext<ActivityCode>
             {
-                Source = codes.Skip(pager.GetStartIndex()).Take(pager.PageSize).ToList(),
+                Source = [.. codes.Entries],
                 Pager = await shapeFactory.PagerAsync(pager, codes.Count),
             },
         });

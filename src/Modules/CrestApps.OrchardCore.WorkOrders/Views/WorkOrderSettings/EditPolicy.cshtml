@@ -28,6 +28,18 @@
                     </select>
                 </div>
             </div>
+            @if (Model.HoursCalendarOptions.Count > 0)
+            {
+                <div class="ocat-wrapper">
+                    <label asp-for="HoursCalendarId" class="ocat-label">@T["Hours calendar"]</label>
+                    <div class="ocat-end">
+                        <select asp-for="HoursCalendarId" asp-items="Model.HoursCalendarOptions" class="form-select">
+                            <option value="">@T["None"]</option>
+                        </select>
+                        <span class="hint">@T["Optional. When the clock doesn't run on the opening hours below, it counts only this calendar's open hours and skips its holidays. With neither, it counts around the clock."]</span>
+                    </div>
+                </div>
+            }
         </div>
     </div>
     <div class="card text-bg-theme mb-3">

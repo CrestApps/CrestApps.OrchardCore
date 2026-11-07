@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.Subscriptions.Models;
 
@@ -15,7 +16,7 @@ namespace CrestApps.OrchardCore.Subscriptions.Models;
 /// The values in the inherited <c>Properties</c> belong to the module that created the plan; they are copied onto
 /// every transaction of the plan.
 /// </remarks>
-public sealed class InstallmentPlan : CatalogItem
+public sealed class InstallmentPlan : CatalogItem, ITimestampedModel
 {
     /// <summary>
     /// Gets or sets the YesSql document identifier.

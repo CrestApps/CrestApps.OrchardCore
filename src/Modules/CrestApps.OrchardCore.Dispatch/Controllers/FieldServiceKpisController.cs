@@ -1,5 +1,5 @@
 using System.Globalization;
-using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Dispatch.Reports;
 using CrestApps.OrchardCore.Dispatch.ViewModels;
 using Microsoft.AspNetCore.Authorization;

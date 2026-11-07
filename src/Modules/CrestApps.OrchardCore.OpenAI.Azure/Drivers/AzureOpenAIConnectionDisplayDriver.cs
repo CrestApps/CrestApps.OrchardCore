@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.OpenAI.Azure;
 using CrestApps.Core.Azure.Models;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.OpenAI.Azure.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
@@ -51,7 +52,7 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
                 ];
 
             model.AuthenticationType = metadata.AuthenticationType;
-            model.HasApiKey = !string.IsNullOrEmpty(metadata.ApiKey);
+            model.HasApiKey = ProtectedSettingExtensions.HasSecret(metadata.ApiKey);
             model.IdentityId = metadata.IdentityId;
         }).Location("Content:5");
     }
@@ -90,12 +91,7 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ApiKey), S["API key is required field."]);
         }
 
-        if (hasNewKey)
-        {
-            var protector = _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
-
-            metadata.ApiKey = protector.Protect(model.ApiKey);
-        }
+        metadata.ApiKey = _dataProtectionProvider.ApplySecret(AIConstants.ConnectionProtectorName, metadata.ApiKey, model.ApiKey);
 
         connection.Put(metadata);
 

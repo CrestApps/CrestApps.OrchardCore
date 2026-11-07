@@ -77,7 +77,7 @@ public sealed class AutoReplyRouter : IMessagingInboundRouter
         // A contact who has opted out gets nothing automated, the acknowledgement included. The agent-facing
         // send path already refuses them; an automated reply that slipped past it would be the platform
         // messaging someone who asked it not to.
-        if (await IsOptedOutAsync(context.Channel, conversation))
+        if (await context.Channel.IsConversationOptedOutAsync(conversation, _contentManager, cancellationToken))
         {
             return false;
         }
@@ -94,17 +94,5 @@ public sealed class AutoReplyRouter : IMessagingInboundRouter
         conversation.LastAutoReplyUtc = now;
 
         return false;
-    }
-
-    private async Task<bool> IsOptedOutAsync(IMessagingChannel channel, MessagingConversation conversation)
-    {
-        if (string.IsNullOrEmpty(conversation.ContactContentItemId))
-        {
-            return false;
-        }
-
-        var contact = await _contentManager.GetAsync(conversation.ContactContentItemId, VersionOptions.Latest);
-
-        return channel.IsOptedOut(contact);
     }
 }

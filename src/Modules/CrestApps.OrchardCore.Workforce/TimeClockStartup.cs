@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Workforce.BackgroundTasks;
+using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Workforce.Core;
 using CrestApps.OrchardCore.Workforce.Core.Indexes;
 using CrestApps.OrchardCore.Workforce.Core.Services;
@@ -6,6 +7,7 @@ using CrestApps.OrchardCore.Workforce.Drivers;
 using CrestApps.OrchardCore.Workforce.Migrations;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Navigation;
+using CrestApps.OrchardCore.Workforce.PersonalData;
 using CrestApps.OrchardCore.Workforce.Portal;
 using CrestApps.OrchardCore.Workforce.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,6 +33,7 @@ public sealed class TimeClockStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddWorkforceTimeClockCore();
+        services.AddPersonalDataContributor<TimePunchPersonalDataContributor>();
         services.AddWorkforceTimeClockTimeTracker();
         services.AddOptions<TimeClockTimeTrackerOptions>()
             .Configure<IOptions<AdminOptions>>((options, admin) => options.ManageUrl = "~/" + admin.Value.AdminUrlPrefix + "/workforce/timesheets");

@@ -1,4 +1,5 @@
 using System.Text.Encodings.Web;
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Payments;
@@ -345,6 +346,8 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
             transaction.GetGuestContact(),
             new CustomerOwnerMessage
             {
+                Kind = TransactionEmailKinds.PaymentReminder,
+                Models = new Dictionary<string, object>(StringComparer.Ordinal) { [TransactionEmailKinds.TransactionModelName] = transaction },
                 Subject = reminder.Subject,
                 Summary = reminder.Summary,
                 TextBody = reminder.Body,

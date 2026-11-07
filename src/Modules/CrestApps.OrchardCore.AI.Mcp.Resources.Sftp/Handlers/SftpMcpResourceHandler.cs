@@ -1,5 +1,6 @@
 ﻿using CrestApps.Core.AI.Mcp;
-using CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.Models;
+using CrestApps.Core.AI.Sftp;
+using CrestApps.Core.AI.Sftp.Models;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.Handlers;
 

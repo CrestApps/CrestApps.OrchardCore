@@ -35,7 +35,20 @@ Markets live in the `Markets` YesSql collection, indexed by `MarketIndex` (`Name
 | `PricesIncludeTax` | Makes the checkout's taxes inclusive (see [Tax](#tax)). |
 | `IsEnabled` | Off markets are never resolved or offered. |
 
-`ShopperMarketService.GetMarketsAsync()` returns the markets that are on, have a currency and a rate above zero, by name. Markets have no recipe or deployment step.
+`ShopperMarketService.GetMarketsAsync()` returns the markets that are on, have a currency and a rate above zero, by name.
+
+## Recipes and deployment
+
+The `Markets` recipe step (`MarketsStep`) creates or updates markets. A market is matched by its `ItemId`, then by its name, so running a recipe twice changes nothing. It is checked as on the admin screen: a name, two-letter countries that no other market has, a three-letter currency and an exchange rate above zero; a market that fails is a recipe error. The **Markets** deployment step (`MarketsDeploymentStep`, *Commerce*) writes every market in the shape the step reads.
+
+```json
+{
+  "name": "Markets",
+  "Markets": [
+    { "ItemId": "4mk00000000000000000000001", "Name": "Europe", "Countries": [ "DE", "AT" ], "Currency": "EUR", "ExchangeRate": 0.92, "Rounding": "EndIn99", "PricesIncludeTax": true, "IsEnabled": true }
+  ]
+}
+```
 
 `MarketPricing.Convert(amount, fromRate, toRate)` is `amount / fromRate * toRate`. `MarketPricing.Round(amount, currency, rounding)` rounds **up**: `WholeUnits` to the next whole unit, `EndIn99` and `EndIn95` to the next price ending in .99 or .95 (to the next whole unit for a currency with no minor units, such as JPY), `None` to the currency's scale (`CurrencyScale`).
 

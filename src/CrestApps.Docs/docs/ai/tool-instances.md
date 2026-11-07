@@ -255,16 +255,13 @@ Register it with `services.TryAddEnumerable(ServiceDescriptor.Transient<IAIToolI
 
 ## Exposing the selector on your own model
 
-`AIToolInstancesDisplayDriverBase<TModel>` renders the instance picker for any `ExtensibleEntity`, filtering the list down to the instances the current user may access. Derive from it to add the selector to your own model:
+`AIToolInstancesDisplayDriverBase<TModel>` (namespace `CrestApps.OrchardCore.AI.Core.Drivers` in the `CrestApps.OrchardCore.AI.Core` package) renders the instance picker for any `ExtensibleEntity`, filtering the list down to the instances the current user may access through `IAIToolInstanceAccessor` (`CrestApps.OrchardCore.AI.Core.Services`). Derive from it to add the selector to your own model; reference `CrestApps.OrchardCore.AI.Core`, never the AI module project:
 
 ```csharp
 internal sealed class MyModelToolInstancesDisplayDriver : AIToolInstancesDisplayDriverBase<MyModel>
 {
-    public MyModelToolInstancesDisplayDriver(
-        ISourceCatalog<AIToolInstance> instancesCatalog,
-        IAIToolAccessEvaluator toolAccessEvaluator,
-        IHttpContextAccessor httpContextAccessor)
-        : base(instancesCatalog, toolAccessEvaluator, httpContextAccessor)
+    public MyModelToolInstancesDisplayDriver(IAIToolInstanceAccessor instanceAccessor)
+        : base(instanceAccessor)
     {
     }
 

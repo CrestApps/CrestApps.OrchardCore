@@ -1,20 +1,17 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Core.Handlers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Handlers;
 
-internal sealed class McpConnectionHandler : CatalogEntryHandlerBase<McpConnection>
+internal sealed class McpConnectionHandler : CatalogEntryAuditHandlerBase<McpConnection>
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IClock _clock;
-
     internal readonly IStringLocalizer S;
 
     /// <summary>
@@ -27,10 +24,20 @@ internal sealed class McpConnectionHandler : CatalogEntryHandlerBase<McpConnecti
         IHttpContextAccessor httpContextAccessor,
         IClock clock,
         IStringLocalizer<McpConnectionHandler> stringLocalizer)
+        : base(httpContextAccessor, clock)
     {
-        _httpContextAccessor = httpContextAccessor;
-        _clock = clock;
         S = stringLocalizer;
+    }
+
+    protected override void SetCreated(McpConnection entry, DateTime createdUtc, string ownerId, string author, bool hasUser)
+    {
+        entry.CreatedUtc = createdUtc;
+
+        if (hasUser)
+        {
+            entry.OwnerId = ownerId;
+            entry.Author = author;
+        }
     }
 
     public override Task InitializingAsync(InitializingContext<McpConnection> context, CancellationToken cancellationToken = default)
@@ -38,7 +45,7 @@ internal sealed class McpConnectionHandler : CatalogEntryHandlerBase<McpConnecti
 
     public override Task UpdatingAsync(UpdatingContext<McpConnection> context, CancellationToken cancellationToken = default)
     {
-        context.Model.ModifiedUtc = _clock.UtcNow;
+        StampModified(context.Model);
 
         return PopulateAsync(context.Model, context.Data, false);
     }
@@ -57,15 +64,7 @@ internal sealed class McpConnectionHandler : CatalogEntryHandlerBase<McpConnecti
     {
         if (isNew)
         {
-            connection.CreatedUtc = _clock.UtcNow;
-
-            var user = _httpContextAccessor.HttpContext?.User;
-
-            if (user is not null)
-            {
-                connection.Author = user.Identity.Name;
-                connection.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            }
+            StampCreated(connection);
         }
 
         var displayText = data[nameof(McpConnection.DisplayText)]?.ToString();

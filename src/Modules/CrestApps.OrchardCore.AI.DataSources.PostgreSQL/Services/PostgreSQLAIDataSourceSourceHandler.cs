@@ -6,6 +6,7 @@ using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Infrastructure.Indexing.Models;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.DataSources.PostgreSQL.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
@@ -266,7 +267,7 @@ internal sealed class PostgreSQLAIDataSourceSourceHandler : IAIDataSourceSourceH
 
         if (string.IsNullOrWhiteSpace(title) && !string.IsNullOrWhiteSpace(content))
         {
-            title = ExtractTitleFromContent(content);
+            title = AIDataSourceExtensions.GetTitleFromContent(content);
         }
 
         return new SourceDocument
@@ -275,24 +276,6 @@ internal sealed class PostgreSQLAIDataSourceSourceHandler : IAIDataSourceSourceH
             Content = content,
             Fields = row.ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase),
         };
-    }
-
-    private static string ExtractTitleFromContent(string content)
-    {
-        var firstLine = content.AsSpan();
-        var newlineIndex = firstLine.IndexOfAny('\r', '\n');
-
-        if (newlineIndex > 0)
-        {
-            firstLine = firstLine[..newlineIndex];
-        }
-
-        if (firstLine.Length > 200)
-        {
-            firstLine = firstLine[..200];
-        }
-
-        return firstLine.ToString().Trim();
     }
 
     private static string QuoteCompositeIdentifier(string identifier)

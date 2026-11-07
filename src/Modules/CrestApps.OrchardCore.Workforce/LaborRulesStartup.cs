@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Workforce.Core;
 using CrestApps.OrchardCore.Workforce.Core.Indexes;
 using CrestApps.OrchardCore.Workforce.Drivers;
@@ -45,7 +46,7 @@ public sealed class LaborRulesStartup : StartupBase
 /// Imports labor rule sets with the WorkforceLaborRules recipe step.
 /// </summary>
 [Feature(WorkforceConstants.Features.LaborRules)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class LaborRulesRecipesStartup : StartupBase
 {
     /// <inheritdoc />
@@ -59,7 +60,7 @@ public sealed class LaborRulesRecipesStartup : StartupBase
 /// Describes the WorkforceLaborRules recipe step to CrestApps Recipes.
 /// </summary>
 [Feature(WorkforceConstants.Features.LaborRules)]
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class LaborRulesRecipesSchemaStartup : StartupBase
 {
     /// <inheritdoc />

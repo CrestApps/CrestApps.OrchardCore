@@ -19,6 +19,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         AIConstants.Feature.ChatCore,
-        "OrchardCore.Indexing",
+        OrchardCoreFeatureIds.Indexing,
     ]
 )]

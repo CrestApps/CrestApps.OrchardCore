@@ -36,6 +36,33 @@ public sealed class BookingIndex : CatalogItemIndex
     public DateTime? HoldExpiresUtc { get; set; }
 
     public DateTime CreatedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the user the booking was made by, so a privacy request finds it.
+    /// </summary>
+    public string UserId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the booker's email, trimmed and lowercase, so a privacy request finds a guest's bookings.
+    /// </summary>
+    public string CustomerEmail { get; set; }
+
+    /// <summary>
+    /// Returns an email as it is indexed: trimmed, lowercase and at most 255 characters.
+    /// </summary>
+    /// <param name="email">The email.</param>
+    /// <returns>The indexed email, or <see langword="null"/>.</returns>
+    public static string NormalizeEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return null;
+        }
+
+        var normalized = email.Trim().ToLowerInvariant();
+
+        return normalized.Length > 255 ? normalized[..255] : normalized;
+    }
 }
 
 public sealed class BookingBalanceIndex : CatalogItemIndex
@@ -90,6 +117,8 @@ public sealed class BookingIndexProvider : IndexProvider<Booking>
                 Status = booking.Status,
                 HoldExpiresUtc = booking.HoldExpiresUtc,
                 CreatedUtc = booking.CreatedUtc,
+                UserId = booking.UserId?.Length > 26 ? booking.UserId[..26] : booking.UserId,
+                CustomerEmail = BookingIndex.NormalizeEmail(booking.CustomerEmail),
             });
 }
 

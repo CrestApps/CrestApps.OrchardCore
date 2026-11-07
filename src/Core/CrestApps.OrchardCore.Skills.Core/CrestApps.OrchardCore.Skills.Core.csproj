@@ -18,7 +18,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
   </ItemGroup>
 

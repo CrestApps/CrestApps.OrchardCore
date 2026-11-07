@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.Orders;
 /// sets of the orders, their lines, refunds, disputes, discounts and taxes. The returns and gift cards features register
 /// the data sets of their own records, so a data set is listed only while its feature is on.
 /// </summary>
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class DataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -31,7 +31,7 @@ public sealed class DataSourcesStartup : StartupBase
 /// Registers the data set of the returns feature.
 /// </summary>
 [Feature(OrderConstants.Features.Returns)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class ReturnsDataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -44,7 +44,7 @@ public sealed class ReturnsDataSourcesStartup : StartupBase
 /// Registers the data set of the gift cards feature.
 /// </summary>
 [Feature(OrderConstants.Features.GiftCards)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class GiftCardsDataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

@@ -10,7 +10,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements;
 /// Registers the recipe steps that import Omnichannel configuration.
 /// </summary>
 [Feature(OmnichannelConstants.Features.Activities)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class ConfigurationRecipesStartup : StartupBase
 {
     /// <inheritdoc/>

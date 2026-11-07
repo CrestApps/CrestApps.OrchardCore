@@ -51,7 +51,7 @@ internal sealed class ContactListPartShapeTableProvider : IShapeTableProvider
                 if (displaying.Shape is ListPartNavigationAdminViewModel model &&
                     model.Container is not null &&
                     model.ContainerContentTypeDefinition is not null &&
-                    model.ContainerContentTypeDefinition.Parts.Any(x => x.Name == OmnichannelConstants.ContentParts.OmnichannelContact))
+                    model.ContainerContentTypeDefinition.HasPart(OmnichannelConstants.ContentParts.OmnichannelContact))
                 {
                     displaying.Shape.Metadata.Alternates.Add(NavigationContactAlternate);
                 }

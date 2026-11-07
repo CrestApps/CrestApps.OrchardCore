@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore Personal Data Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      The personal-data service that identifies a person across every module, then exports or anonymizes their records
+      through each registered personal-data contributor, and the registration helper modules add their contributor with.
+    </Description>
+    <PackageTags>$(PackageTags) PersonalData Privacy GDPR Core</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.PersonalData.Abstractions\CrestApps.OrchardCore.PersonalData.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

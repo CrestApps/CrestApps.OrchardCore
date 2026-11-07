@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.Calendars;
 /// <summary>
 /// Describes the Calendars recipe and deployment steps to CrestApps Recipes, so they can be checked and written with help.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class RecipesSchemaStartup : StartupBase
 {
     /// <inheritdoc />
@@ -23,7 +23,7 @@ public sealed class RecipesSchemaStartup : StartupBase
 /// <summary>
 /// Describes the part of the Calendar dashboard widget to CrestApps Recipes when the admin dashboard is on.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Recipes", "OrchardCore.AdminDashboard")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area, OrchardCoreFeatureIds.AdminDashboard)]
 public sealed class DashboardRecipesSchemaStartup : StartupBase
 {
     /// <inheritdoc />

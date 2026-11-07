@@ -113,7 +113,7 @@ public sealed class AssetsTests
     [Fact]
     public async Task TheOwnerDirectory_NamesOwners_ByKind_AndListsOnlyKindsWithASource()
     {
-        await using var harness = await CreateAsync(services => services.AddScoped<global::CrestApps.OrchardCore.Assets.Services.IAssetOwnerSource>(_ => new FakeOwnerSource(AssetOwnerKind.Contact, ("c1", "Dana Reyes"), ("c2", "Lee Park"))));
+        await using var harness = await CreateAsync(services => services.AddScoped<global::CrestApps.OrchardCore.Parties.Services.IPartySource>(_ => new FakeOwnerSource(AssetOwnerKind.Contact, ("c1", "Dana Reyes"), ("c2", "Lee Park"))));
         var type = await AddTypeAsync(harness);
 
         var result = await harness.RunAsync(async services =>
@@ -174,20 +174,20 @@ public sealed class AssetsTests
             [AssetsConstants.CollectionName]);
 }
 
-internal sealed class FakeOwnerSource : global::CrestApps.OrchardCore.Assets.Services.IAssetOwnerSource
+internal sealed class FakeOwnerSource : global::CrestApps.OrchardCore.Parties.Services.IPartySource
 {
     private readonly (string Id, string Name)[] _owners;
 
     public FakeOwnerSource(AssetOwnerKind kind, params (string Id, string Name)[] owners)
     {
-        Kind = kind;
+        Kind = kind.ToPartyKind();
         _owners = owners;
     }
 
-    public AssetOwnerKind Kind { get; }
+    public string Kind { get; }
 
-    public Task<IReadOnlyList<global::CrestApps.OrchardCore.Assets.Services.AssetOwnerOption>> SearchAsync(string query, int count, CancellationToken cancellationToken = default)
-        => Task.FromResult<IReadOnlyList<global::CrestApps.OrchardCore.Assets.Services.AssetOwnerOption>>([.. _owners.Where(owner => string.IsNullOrEmpty(query) || owner.Name.Contains(query, StringComparison.OrdinalIgnoreCase)).Take(count).Select(owner => new global::CrestApps.OrchardCore.Assets.Services.AssetOwnerOption(owner.Id, owner.Name))]);
+    public Task<IReadOnlyList<global::CrestApps.OrchardCore.Parties.Models.PartyOption>> SearchAsync(string query, int count, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<global::CrestApps.OrchardCore.Parties.Models.PartyOption>>([.. _owners.Where(owner => string.IsNullOrEmpty(query) || owner.Name.Contains(query, StringComparison.OrdinalIgnoreCase)).Take(count).Select(owner => new global::CrestApps.OrchardCore.Parties.Models.PartyOption(owner.Id, owner.Name))]);
 
     public Task<IReadOnlyDictionary<string, string>> GetNamesAsync(IReadOnlyCollection<string> ids, CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyDictionary<string, string>>(_owners.Where(owner => ids.Contains(owner.Id)).ToDictionary(owner => owner.Id, owner => owner.Name));

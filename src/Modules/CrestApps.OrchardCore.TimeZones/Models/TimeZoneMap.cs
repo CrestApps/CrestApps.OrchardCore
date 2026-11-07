@@ -1,13 +1,14 @@
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.TimeZones.Models;
 
 /// <summary>
 /// Represents a named time zone map entry.
 /// </summary>
-public sealed class TimeZoneMap : CatalogItem, INameAwareModel, IModifiedUtcAwareModel, ICloneable<TimeZoneMap>
+public sealed class TimeZoneMap : CatalogItem, INameAwareModel, IAuditedModel, ICloneable<TimeZoneMap>
 {
     /// <summary>
     /// Gets or sets the unique friendly name shown to editors.

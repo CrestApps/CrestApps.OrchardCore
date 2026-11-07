@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Permissions;
@@ -68,7 +69,7 @@ public sealed class VeriphonePhoneNumberVerificationSettingsDisplayDriver : Site
         return Initialize<VeriphonePhoneNumberVerificationSettingsViewModel>("VeriphonePhoneNumberVerificationSettings_Edit", viewModel =>
         {
             viewModel.IsEnabled = settings.IsEnabled;
-            viewModel.HasApiKey = !string.IsNullOrWhiteSpace(settings.ProtectedApiKey);
+            viewModel.HasApiKey = ProtectedSettingExtensions.HasSecret(settings.ProtectedApiKey);
         }).Location("Content:6#Veriphone")
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(
@@ -90,11 +91,7 @@ public sealed class VeriphonePhoneNumberVerificationSettingsDisplayDriver : Site
 
         await context.Updater.TryUpdateModelAsync(viewModel, Prefix);
 
-        if (!string.IsNullOrWhiteSpace(viewModel.ApiKey))
-        {
-            var protector = _dataProtectionProvider.CreateProtector(ProtectorPurpose);
-            settings.ProtectedApiKey = protector.Protect(viewModel.ApiKey);
-        }
+        settings.ProtectedApiKey = _dataProtectionProvider.ApplySecret(ProtectorPurpose, settings.ProtectedApiKey, viewModel.ApiKey);
 
         if (viewModel.IsEnabled)
         {

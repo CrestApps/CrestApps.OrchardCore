@@ -12,7 +12,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         ChatInteractionsConstants.Feature.ChatDocuments,
-        "OrchardCore.Indexing",
-        "OrchardCore.AzureAI",
+        OrchardCoreFeatureIds.Indexing,
+        OrchardCoreFeatureIds.AzureAI,
     ]
 )]

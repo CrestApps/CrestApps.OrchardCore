@@ -2,6 +2,7 @@ using System.Globalization;
 using CrestApps.OrchardCore.Fundraising.Models;
 using CrestApps.OrchardCore.Fundraising.Services;
 using CrestApps.OrchardCore.Fundraising.ViewModels;
+using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -143,7 +144,7 @@ internal sealed class FundraisingCampaignPartDisplayDriver : ContentPartDisplayD
         model.Currency = shown;
         model.Minimum = string.IsNullOrEmpty(currency)
             ? part.MinimumAmount
-            : Math.Round(await _shopperCurrency.ConvertOrKeepAsync(part.MinimumAmount, currency, shown, isPrice: false), 2, MidpointRounding.AwayFromZero);
+            : Money.Round(await _shopperCurrency.ConvertOrKeepAsync(part.MinimumAmount, currency, shown, isPrice: false), shown);
         model.TaxDeductible = part.TaxDeductible;
         model.Ended = part.EndsUtc < _clock.UtcNow;
     }

@@ -125,6 +125,13 @@ public sealed class VendorEarning : CatalogItem
 
     public string PayoutId { get; set; }
 
+    /// <summary>
+    /// Gets or sets how many payouts of this earning the payout provider refused. It is part of the next payout's
+    /// idempotency key, so a retry after a refusal is a new request, while a retry after a failed save reuses the key
+    /// of the transfer that went through.
+    /// </summary>
+    public int RefusedPayouts { get; set; }
+
     public DateTime CreatedUtc { get; set; }
 }
 
@@ -166,6 +173,16 @@ public sealed class VendorPayout : CatalogItem
 
     public List<string> EarningIds { get; set; } = [];
 
+    /// <summary>
+    /// Gets or sets the name of the payout provider that sent it.
+    /// </summary>
+    public string Provider { get; set; }
+
+    /// <summary>
+    /// Gets or sets the idempotency key it was sent with, derived from the vendor, the order and the earnings.
+    /// </summary>
+    public string IdempotencyKey { get; set; }
+
     public VendorPayoutStatus Status { get; set; }
 
     public string TransferId { get; set; }
@@ -205,6 +222,12 @@ public sealed class MarketplaceSettings
     /// Gets or sets whether released earnings are paid out by themselves, rather than when the store chooses.
     /// </summary>
     public bool AutomaticPayouts { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the payout provider vendors are paid through, or <see langword="null"/> to use the
+    /// only one enabled. When several are enabled and none is named, nothing is paid out.
+    /// </summary>
+    public string PayoutProvider { get; set; }
 
     /// <summary>
     /// Gets or sets the country a vendor's Stripe account is made in when the vendor names none.

@@ -65,4 +65,32 @@ public static class DataConnectorConstants
         /// </summary>
         public const string SqlServer = "CrestApps.OrchardCore.DataConnectors.SqlServer";
     }
+
+    /// <summary>
+    /// The technical names of the connectors, as stored in <see cref="Models.DataConnection.Connector"/>. Other modules
+    /// use them to offer only the connections they can read, such as Elasticsearch connections to an Elasticsearch AI
+    /// data source.
+    /// </summary>
+    public static class Connectors
+    {
+        /// <summary>
+        /// The HTTP API connector.
+        /// </summary>
+        public const string HttpApi = "HttpApi";
+
+        /// <summary>
+        /// The Elasticsearch connector.
+        /// </summary>
+        public const string Elasticsearch = "Elasticsearch";
+
+        /// <summary>
+        /// The media files connector.
+        /// </summary>
+        public const string MediaFiles = "MediaFiles";
+
+        /// <summary>
+        /// The SQL Server connector.
+        /// </summary>
+        public const string SqlServer = "SqlServer";
+    }
 }

@@ -917,6 +917,7 @@ public sealed partial class ReportQueryEngine
             }
             catch (UnauthorizedAccessException)
             {
+                // A file the process may not delete is left to the system's temporary directory clean-up too.
             }
         }
     }

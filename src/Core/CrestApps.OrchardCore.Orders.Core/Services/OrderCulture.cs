@@ -1,5 +1,4 @@
-using System.Globalization;
-using OrchardCore.Localization;
+using CrestApps.OrchardCore.Commerce.Emails;
 
 namespace CrestApps.OrchardCore.Orders.Core.Services;
 
@@ -12,28 +11,12 @@ public static class OrderCulture
     /// Returns the culture the current request is in, to keep on an order, or <see langword="null"/>.
     /// </summary>
     public static string Current()
-        => string.IsNullOrEmpty(CultureInfo.CurrentUICulture.Name) ? null : CultureInfo.CurrentUICulture.Name;
+        => CommerceEmailCulture.Current();
 
     /// <summary>
     /// Writes in a culture until the result is disposed. Returns <see langword="null"/>, keeping the current culture,
     /// when there's none or it isn't one.
     /// </summary>
     public static IDisposable Use(string culture)
-    {
-        if (string.IsNullOrWhiteSpace(culture))
-        {
-            return null;
-        }
-
-        try
-        {
-            var info = CultureInfo.GetCultureInfo(culture);
-
-            return CultureScope.Create(info, info);
-        }
-        catch (CultureNotFoundException)
-        {
-            return null;
-        }
-    }
+        => CommerceEmailCulture.Use(culture);
 }

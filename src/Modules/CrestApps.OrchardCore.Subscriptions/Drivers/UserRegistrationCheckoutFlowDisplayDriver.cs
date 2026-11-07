@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core;
 using CrestApps.OrchardCore.Checkout.Core.Services;
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
@@ -130,9 +131,7 @@ public sealed class UserRegistrationCheckoutFlowDisplayDriver : CheckoutFlowDisp
 
             if (context.Updater.ModelState.IsValid && !string.IsNullOrEmpty(form.Password))
             {
-                var protectedPassword = _dataProtectionProvider
-                    .CreateProtector(SubscriptionConstants.ProtectorPurposes.UserRegistrationStep)
-                    .Protect(form.Password);
+                var protectedPassword = _dataProtectionProvider.ProtectSetting(SubscriptionConstants.ProtectorPurposes.UserRegistrationStep, form.Password);
 
                 await _paymentSessionCache.SetAsync(flow.Session.SessionId, UserRegistrationCheckoutHandler.PasswordPurpose, protectedPassword);
             }

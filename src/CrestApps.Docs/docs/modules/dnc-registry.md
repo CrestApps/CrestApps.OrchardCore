@@ -176,6 +176,25 @@ var registered = await registry.GetRegisteredNumbersAsync(phoneNumbers, context)
 
 When no `CountryCode` is specified (or the context is `null`), the local registry checks against all uploaded lists regardless of country.
 
+### Recipes and deployment
+
+The **Local DNC lists** deployment step (Do Not Call category) exports every list whose import completed, with its phone numbers. Phone numbers are personal data: add the step to a plan only to move them to a site you trust. Lists that are still importing, paused, failed or being deleted are left out.
+
+The `LocalDncLists` recipe step queues each list for import as if its numbers were uploaded in a file, so the background import checks, normalizes and stores them the same way. A list whose name and country already exist is skipped, so running a recipe twice adds nothing.
+
+```json
+{
+  "steps": [
+    {
+      "name": "LocalDncLists",
+      "Lists": [
+        { "Name": "Opted out", "CountryCode": "US", "PhoneNumbers": [ "+12025550101", "+12025550102" ] }
+      ]
+    }
+  ]
+}
+```
+
 ## Report Builder data source
 
 The local lists and the numbers imported into them are also a data source of Orchard Core, so the [Report Builder](report-builder/index.md) and Orchard Core's data pipelines can read them, for example to follow the imports of each list or to find the contacts whose phone number is on a list.
@@ -303,6 +322,8 @@ To integrate another national do-not-call registry:
 3. Provide a stable `Key`, plus localized `DisplayName` and `Description`.
 4. Register the implementation in `Startup` with `services.AddScoped<INationalDoNotCallRegistry, TRegistry>();`.
 5. If the provider needs configuration, add its own site settings model, display driver, and admin menu entry under **Settings** -> **DNC Registries**.
+
+`CrestApps.OrchardCore.DncRegistry.Abstractions` also holds `DncRegistrySettings` (the global enforcement settings) and `DncRegistryConstants` (feature IDs, settings group IDs), so a module that reads which registries are enforced, such as the contact import of Omnichannel Management, does not use the DNC Registry module's own types.
 
 ```csharp
 services.AddScoped<INationalDoNotCallRegistry, MyRegistry>();

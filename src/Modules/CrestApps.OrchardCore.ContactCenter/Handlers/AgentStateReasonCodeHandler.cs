@@ -3,8 +3,8 @@ using System.Text.Json.Nodes;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using CrestApps.OrchardCore.ContactCenter.Deployments;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Core.Deployments;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
 
@@ -58,7 +58,7 @@ internal sealed class AgentStateReasonCodeHandler : CatalogEntryHandlerBase<Agen
 
     private static Task PopulateAsync(AgentStateReasonCode model, JsonNode data)
     {
-        ContactCenterDeploymentSerializer.Populate(model, data);
+        CatalogDeploymentSerializer.Populate(model, data);
 
         var name = data[nameof(AgentStateReasonCode.Name)]?.GetValue<string>()?.Trim();
 

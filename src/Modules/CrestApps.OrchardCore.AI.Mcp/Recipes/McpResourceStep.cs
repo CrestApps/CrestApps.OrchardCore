@@ -1,15 +1,19 @@
 ﻿using System.Text.Json.Nodes;
-using CrestApps.Core;
 using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Recipes;
 using Microsoft.Extensions.Localization;
 using ModelContextProtocol.Protocol;
 using OrchardCore.Recipes.Models;
-using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Recipes;
 
-internal sealed class McpResourceStep : NamedRecipeStepHandler
+/// <summary>
+/// Imports MCP resources, matched by their item id. An update applies the display text and resource fields the recipe
+/// carries.
+/// </summary>
+internal sealed class McpResourceStep : CatalogRecipeStepBase<McpResource>
 {
     public const string StepKey = "McpResource";
 
@@ -25,66 +29,46 @@ internal sealed class McpResourceStep : NamedRecipeStepHandler
     public McpResourceStep(
         ISourceCatalogManager<McpResource> manager,
         IStringLocalizer<McpResourceStep> stringLocalizer)
-    : base(StepKey)
+        : base(StepKey, "Resources")
     {
         _manager = manager;
         S = stringLocalizer;
     }
 
-    protected override async Task HandleAsync(RecipeExecutionContext context)
+    protected override bool ValidateUpdatedEntries => false;
+
+    protected override ValueTask<McpResource> FindByIdAsync(string id)
+        => _manager.FindByIdAsync(id);
+
+    protected override ValueTask UpdateAsync(McpResource entry, JsonObject token)
     {
-        var model = context.Step.ToObject<McpResourceDeploymentStepModel>();
-        var tokens = model.Resources.Cast<JsonObject>() ?? [];
+        PopulateEntry(entry, token);
 
-        foreach (var token in tokens)
-        {
-            var id = token[nameof(McpResource.ItemId)]?.GetValue<string>();
-
-            var hasId = !string.IsNullOrEmpty(id);
-
-            McpResource entry = hasId ? await _manager.FindByIdAsync(id) : null;
-
-            if (entry is not null)
-            {
-                // Update existing resource
-                PopulateEntry(entry, token);
-                await _manager.UpdateAsync(entry);
-            }
-            else
-            {
-                // Create new resource
-                var source = token[nameof(McpResource.Source)]?.GetValue<string>();
-
-                if (string.IsNullOrEmpty(source))
-                {
-                    context.Errors.Add(S["Resource source type is required."]);
-                    continue;
-                }
-
-                entry = await _manager.NewAsync(source, token);
-                PopulateEntry(entry, token);
-
-                if (hasId && UniqueId.IsValid(id))
-                {
-                    entry.ItemId = id;
-                }
-
-                var validationResult = await _manager.ValidateAsync(entry);
-
-                if (!validationResult.Succeeded)
-                {
-                    foreach (var error in validationResult.Errors)
-                    {
-                        context.Errors.Add(error.ErrorMessage);
-                    }
-
-                    continue;
-                }
-
-                await _manager.CreateAsync(entry);
-            }
-        }
+        return _manager.UpdateAsync(entry);
     }
+
+    protected override async ValueTask<McpResource> NewAsync(JsonObject token, RecipeExecutionContext context)
+    {
+        var source = token[nameof(McpResource.Source)]?.GetValue<string>();
+
+        if (string.IsNullOrEmpty(source))
+        {
+            context.Errors.Add(S["Resource source type is required."]);
+
+            return null;
+        }
+
+        var entry = await _manager.NewAsync(source, token);
+        PopulateEntry(entry, token);
+
+        return entry;
+    }
+
+    protected override ValueTask<ValidationResultDetails> ValidateAsync(McpResource entry)
+        => _manager.ValidateAsync(entry);
+
+    protected override ValueTask CreateAsync(McpResource entry)
+        => _manager.CreateAsync(entry);
 
     private static void PopulateEntry(McpResource entry, JsonObject token)
     {
@@ -136,13 +120,5 @@ internal sealed class McpResourceStep : NamedRecipeStepHandler
         {
             entry.Resource.Title = entry.DisplayText;
         }
-    }
-
-    private sealed class McpResourceDeploymentStepModel
-    {
-        /// <summary>
-        /// Gets or sets the resources.
-        /// </summary>
-        public JsonArray Resources { get; set; }
     }
 }

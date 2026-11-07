@@ -12,7 +12,7 @@ namespace CrestApps.OrchardCore.Reports.Designer.Workflows;
 /// runs, exports or publishes a report, and can run, export, or share a report.
 /// </summary>
 [Feature(ReportsConstants.BuilderFeature)]
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class ReportsWorkflowsStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -35,7 +35,7 @@ public sealed class ReportsWorkflowsStartup : StartupBase
 /// Adds the Email Report task to workflows, when the Workflows and Email features are on.
 /// </summary>
 [Feature(ReportsConstants.BuilderFeature)]
-[RequireFeatures("OrchardCore.Workflows", "OrchardCore.Email")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows, OrchardCoreFeatureIds.Email)]
 public sealed class ReportsEmailWorkflowsStartup : StartupBase
 {
     /// <inheritdoc/>

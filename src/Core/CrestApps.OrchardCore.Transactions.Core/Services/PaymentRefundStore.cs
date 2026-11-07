@@ -16,8 +16,6 @@ namespace CrestApps.OrchardCore.Transactions.Core.Services;
 /// </summary>
 public sealed class PaymentRefundStore : DocumentCatalog<PaymentRefund, PaymentRefundIndex>, IPaymentRefundStore
 {
-    private readonly IClock _clock;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="PaymentRefundStore"/> class.
     /// </summary>
@@ -26,9 +24,8 @@ public sealed class PaymentRefundStore : DocumentCatalog<PaymentRefund, PaymentR
     public PaymentRefundStore(
         ISession session,
         IClock clock)
-        : base(session)
+        : base(session, clock)
     {
-        _clock = clock;
     }
 
     /// <inheritdoc/>
@@ -99,20 +96,5 @@ public sealed class PaymentRefundStore : DocumentCatalog<PaymentRefund, PaymentR
             Count = count,
             Entries = entries.ToArray(),
         };
-    }
-
-    /// <inheritdoc/>
-    protected override ValueTask SavingAsync(PaymentRefund record)
-    {
-        var now = _clock.UtcNow;
-
-        if (record.CreatedUtc == default)
-        {
-            record.CreatedUtc = now;
-        }
-
-        record.UpdatedUtc = now;
-
-        return ValueTask.CompletedTask;
     }
 }

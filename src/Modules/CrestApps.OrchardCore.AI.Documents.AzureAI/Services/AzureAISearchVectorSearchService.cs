@@ -1,9 +1,10 @@
 ﻿using Azure;
 using Azure.Search.Documents;
 using Azure.Search.Documents.Models;
+using CrestApps.Core.Infrastructure;
 using CrestApps.Core.Infrastructure.Indexing;
 using CrestApps.Core.Infrastructure.Indexing.Models;
-using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Search;
 using Microsoft.Extensions.Logging;
 using OrchardCore.AzureAI.Services;
 
@@ -30,6 +31,15 @@ public sealed class AzureAISearchVectorSearchService : IVectorSearchService
         _clientFactory = clientFactory;
         _logger = logger;
     }
+
+    /// <summary>
+    /// Builds the filter that limits the search to one reference, with both values escaped.
+    /// </summary>
+    /// <param name="referenceId">The reference identifier.</param>
+    /// <param name="referenceType">The reference type.</param>
+    internal static string BuildFilter(string referenceId, string referenceType)
+        => $"{ODataFilter.Equal(DocumentIndexConstants.ColumnNames.ReferenceId, referenceId)} and {ODataFilter.Equal(DocumentIndexConstants.ColumnNames.ReferenceType, referenceType)}";
+
     /// <inheritdoc />
     public async Task<IEnumerable<DocumentChunkSearchResult>> SearchAsync(
         IIndexProfileInfo indexProfile,
@@ -58,21 +68,21 @@ public sealed class AzureAISearchVectorSearchService : IVectorSearchService
                 KNearestNeighborsCount = topN,
                 Fields =
                 {
-                    AIConstants.ColumnNames.Embedding,
+                    DocumentIndexConstants.ColumnNames.Embedding,
                 }
             };
 
             var searchOptions = new SearchOptions
             {
-                Filter = $"{AIConstants.ColumnNames.ReferenceId} eq '{referenceId}' and {AIConstants.ColumnNames.ReferenceType} eq '{referenceType}'",
+                Filter = BuildFilter(referenceId, referenceType),
                 Size = topN,
                 Select =
                 {
-                    AIConstants.ColumnNames.ChunkId,
-                    AIConstants.ColumnNames.DocumentId,
-                    AIConstants.ColumnNames.Content,
-                    AIConstants.ColumnNames.FileName,
-                    AIConstants.ColumnNames.ChunkIndex,
+                    DocumentIndexConstants.ColumnNames.ChunkId,
+                    DocumentIndexConstants.ColumnNames.DocumentId,
+                    DocumentIndexConstants.ColumnNames.Content,
+                    DocumentIndexConstants.ColumnNames.FileName,
+                    DocumentIndexConstants.ColumnNames.ChunkIndex,
                 },
                 VectorSearch = new VectorSearchOptions
                 {
@@ -91,13 +101,13 @@ public sealed class AzureAISearchVectorSearchService : IVectorSearchService
             {
                 var document = result.Document;
 
-                var chunkText = document.TryGetValue(AIConstants.ColumnNames.Content, out var textObj)
+                var chunkText = document.TryGetValue(DocumentIndexConstants.ColumnNames.Content, out var textObj)
                 ? textObj?.ToString()
                 : null;
 
                 var chunkIndex = 0;
 
-                if (document.TryGetValue(AIConstants.ColumnNames.ChunkIndex, out var indexObj))
+                if (document.TryGetValue(DocumentIndexConstants.ColumnNames.ChunkIndex, out var indexObj))
                 {
                     if (indexObj is int intValue)
                     {
@@ -111,11 +121,11 @@ public sealed class AzureAISearchVectorSearchService : IVectorSearchService
 
                 if (!string.IsNullOrEmpty(chunkText))
                 {
-                    var documentKey = document.TryGetValue(AIConstants.ColumnNames.DocumentId, out var docIdObj)
+                    var documentKey = document.TryGetValue(DocumentIndexConstants.ColumnNames.DocumentId, out var docIdObj)
                     ? docIdObj?.ToString()
                     : null;
 
-                    var fileName = document.TryGetValue(AIConstants.ColumnNames.FileName, out var fileNameObj)
+                    var fileName = document.TryGetValue(DocumentIndexConstants.ColumnNames.FileName, out var fileNameObj)
                     ? fileNameObj?.ToString()
                     : null;
 

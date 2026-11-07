@@ -30,10 +30,13 @@ public sealed class ProjectReferenceRulesTests
     ];
 
     // Neutral contracts that share a forbidden prefix: the API's shared shapes (money, paging, problems, idempotency)
-    // depend only on abstractions, so the foundation and reusable modules may map their endpoints with them.
+    // depend only on abstractions, so the foundation and reusable modules may map their endpoints with them; the
+    // commerce building blocks (e-mail templates, store profile and places) depend only on abstractions too.
     private static readonly string[] _neutralReferences =
     [
         "CrestApps.OrchardCore.Commerce.Api.Core",
+        "CrestApps.OrchardCore.Commerce.Abstractions",
+        "CrestApps.OrchardCore.Commerce.Core",
     ];
 
     // Reusable, purchase-agnostic modules that other commerce modules build on. Like the foundation
@@ -188,8 +191,12 @@ public sealed class ProjectReferenceRulesTests
 
             foreach (var reference in ReadProjectReferenceNames(project))
             {
-                var offending = _presentationReferences.FirstOrDefault(forbidden =>
-                    reference.StartsWith(forbidden, StringComparison.Ordinal));
+                // The shared contracts and implementations of a presentation area (its .Abstractions and .Core, such
+                // as the commerce e-mail templates) are reusable building blocks, not presentation.
+                var offending = IsSharedLibrary(reference)
+                    ? null
+                    : _presentationReferences.FirstOrDefault(forbidden =>
+                        reference.StartsWith(forbidden, StringComparison.Ordinal));
 
                 Assert.True(
                     offending is null,
@@ -199,12 +206,16 @@ public sealed class ProjectReferenceRulesTests
         }
     }
 
+    private static bool IsSharedLibrary(string projectName)
+        => projectName.EndsWith(".Abstractions", StringComparison.Ordinal) ||
+            projectName.EndsWith(".Core", StringComparison.Ordinal);
+
     private static bool IsReusableModule(string projectName)
         => _reusableModuleMarkers.Any(marker =>
             projectName.Equals(marker, StringComparison.Ordinal) ||
             projectName.StartsWith(marker + ".", StringComparison.Ordinal));
 
-    private static IEnumerable<string> ReadProjectReferenceNames(string projectPath)
+    internal static IEnumerable<string> ReadProjectReferenceNames(string projectPath)
     {
         var document = XDocument.Load(projectPath);
 
@@ -221,7 +232,7 @@ public sealed class ProjectReferenceRulesTests
         }
     }
 
-    private static string FindRepositoryRoot()
+    internal static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
 

@@ -12,7 +12,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         MemoryConstants.Feature.Memory,
-        "OrchardCore.Indexing",
-        "OrchardCore.AzureAI",
+        OrchardCoreFeatureIds.Indexing,
+        OrchardCoreFeatureIds.AzureAI,
     ]
 )]

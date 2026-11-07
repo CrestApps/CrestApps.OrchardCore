@@ -1,3 +1,6 @@
+using CrestApps.OrchardCore.BusinessHours;
+using CrestApps.OrchardCore.BusinessHours.Models;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.WorkOrders.Services;
 
@@ -50,7 +53,7 @@ public sealed class SlaClock
         while (from - startUtc < _horizon)
         {
             var to = from.AddDays(7);
-            IReadOnlyList<(DateTime StartUtc, DateTime EndUtc)> open = null;
+            IReadOnlyList<TimeWindow> open = null;
 
             foreach (var provider in _providers)
             {
@@ -86,7 +89,7 @@ public sealed class SlaClock
     /// <param name="fromUtc">Where counting starts.</param>
     /// <param name="remaining">The time left; what the stretches don't cover is left in it.</param>
     /// <returns>When the time ran out, or <see langword="null"/> when the stretches weren't enough.</returns>
-    public static DateTime? Add(IEnumerable<(DateTime StartUtc, DateTime EndUtc)> open, DateTime fromUtc, ref TimeSpan remaining)
+    public static DateTime? Add(IEnumerable<TimeWindow> open, DateTime fromUtc, ref TimeSpan remaining)
     {
         ArgumentNullException.ThrowIfNull(open);
 
@@ -116,39 +119,39 @@ public sealed class SlaClock
     /// Gives the open stretches of weekly hours, in a time zone, between two times. Pure.
     /// </summary>
     /// <param name="weekly">The hours.</param>
-    /// <param name="timeZoneId">The time zone, or <see langword="null"/> for UTC.</param>
+    /// <param name="timeZoneId">The time zone, an IANA or Windows id, or <see langword="null"/> for UTC.</param>
     /// <param name="fromUtc">The start.</param>
     /// <param name="toUtc">The end.</param>
     /// <returns>The stretches, in order.</returns>
-    public static IEnumerable<(DateTime StartUtc, DateTime EndUtc)> OpenWeekly(WeeklyHours weekly, string timeZoneId, DateTime fromUtc, DateTime toUtc)
+    /// <remarks>
+    /// An opening or closing time that a daylight-saving change skips moves forward by the gap, and one that happens twice
+    /// is the earlier of the two, as <see cref="CalendarTime"/> converts every wall-clock time.
+    /// </remarks>
+    public static IEnumerable<TimeWindow> OpenWeekly(WeeklyHours weekly, string timeZoneId, DateTime fromUtc, DateTime toUtc)
     {
         ArgumentNullException.ThrowIfNull(weekly);
 
-        var zone = TimeZoneInfo.Utc;
+        return HoursScheduleEvaluator.GetOpenWindows(ToHoursSchedule(weekly, timeZoneId), fromUtc, toUtc);
+    }
 
-        if (!string.IsNullOrEmpty(timeZoneId) && TimeZoneInfo.TryFindSystemTimeZoneById(timeZoneId, out var found))
+    /// <summary>
+    /// Reads weekly hours as the shared business hours schedule: the same window on each day open. Pure.
+    /// </summary>
+    /// <param name="weekly">The hours.</param>
+    /// <param name="timeZoneId">The time zone.</param>
+    /// <returns>The schedule.</returns>
+    public static HoursSchedule ToHoursSchedule(WeeklyHours weekly, string timeZoneId)
+    {
+        ArgumentNullException.ThrowIfNull(weekly);
+
+        var open = (weekly.Opens.Hour * 60) + weekly.Opens.Minute;
+        var close = (weekly.Closes.Hour * 60) + weekly.Closes.Minute;
+
+        return new HoursSchedule
         {
-            zone = found;
-        }
-
-        var day = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(fromUtc, zone)).AddDays(-1);
-        var lastDay = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(toUtc, zone));
-
-        for (; day <= lastDay; day = day.AddDays(1))
-        {
-            if (!weekly.Days.Contains(day.DayOfWeek))
-            {
-                continue;
-            }
-
-            var start = TimeZoneInfo.ConvertTimeToUtc(day.ToDateTime(weekly.Opens), zone);
-            var end = TimeZoneInfo.ConvertTimeToUtc(day.ToDateTime(weekly.Closes), zone);
-
-            if (end > fromUtc && start < toUtc)
-            {
-                yield return (start, end);
-            }
-        }
+            TimeZoneId = timeZoneId,
+            Windows = [.. (weekly.Days ?? []).Distinct().Select(day => new HoursWindow { Day = day, OpenMinute = open, CloseMinute = close })],
+        };
     }
 
     /// <summary>

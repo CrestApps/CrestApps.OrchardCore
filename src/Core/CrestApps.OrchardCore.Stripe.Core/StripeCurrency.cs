@@ -1,87 +1,80 @@
 using System.Globalization;
+using CrestApps.OrchardCore.Currencies;
+using CrestApps.OrchardCore.Payments;
 
 namespace CrestApps.OrchardCore.Stripe.Core;
 
 /// <summary>
 /// Converts monetary amounts between major units (e.g. dollars) and the integer minor units that
-/// Stripe settles in, honoring each currency's number of decimal places.
+/// Stripe settles in.
 ///
-/// Stripe does not use a universal hundredths conversion. Zero-decimal currencies (such as JPY) are
-/// exchanged as whole units, so multiplying by 100 would overcharge the customer 100x. Three-decimal
-/// currencies (such as KWD) are exchanged in thousandths, but Stripe additionally requires the smallest
-/// unit to be a multiple of 10. This helper centralizes those rules so no gateway call site performs a
-/// hardcoded conversion.
+/// A currency's precision comes from <see cref="CurrencyScale"/> (ISO 4217), the one precision table that
+/// tax, payments and display share. This class only adds what Stripe's API does differently from ISO 4217,
+/// as explicit overrides: the exponent Stripe's <c>amount</c> field uses for a few currencies, and the rule
+/// that three-decimal amounts are a multiple of 10. No gateway call site performs its own conversion.
 /// </summary>
 public static class StripeCurrency
 {
-    // Stripe zero-decimal currencies. Amounts are exchanged as whole units (no multiplication).
-    // https://docs.stripe.com/currencies#zero-decimal
-    //
-    // Note: UGX and ISK are listed by Stripe as zero-decimal but are "special cases" that must be sent
-    // as a two-decimal value evenly divisible by 100 (e.g. 5 UGX => amount 500). They are therefore
-    // intentionally NOT in this set and fall through to the two-decimal default. HUF and TWD accept
-    // two-decimal charge amounts (they are only zero-decimal for payouts), so they are also excluded.
-    private static readonly HashSet<string> _zeroDecimalCurrencies = new(StringComparer.OrdinalIgnoreCase)
+    // The exponent of Stripe's amount field where it differs from ISO 4217.
+    // https://docs.stripe.com/currencies#special-cases and #zero-decimal
+    private static readonly Dictionary<string, int> _amountExponentOverrides = new(StringComparer.OrdinalIgnoreCase)
     {
-        "BIF", "CLP", "DJF", "GNF", "JPY", "KMF", "KRW", "MGA", "PYG",
-        "RWF", "VND", "VUV", "XAF", "XOF", "XPF",
+        // ISO 4217 gives ISK and UGX no decimals. Stripe still sends them as two-decimal amounts, which must
+        // be evenly divisible by 100 (5 UGX is amount 500), for backwards compatibility.
+        ["ISK"] = 2,
+        ["UGX"] = 2,
+
+        // ISO 4217 gives MGA two decimals (the iraimbilanja), but Stripe charges it as a zero-decimal currency.
+        ["MGA"] = 0,
     };
 
-    // Stripe three-decimal currencies. Amounts are exchanged in thousandths but the smallest currency
-    // unit must be a multiple of 10 (Stripe rounds to the nearest ten).
-    // https://docs.stripe.com/currencies#three-decimal
-    private static readonly HashSet<string> _threeDecimalCurrencies = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "BHD", "JOD", "KWD", "OMR", "TND",
-    };
+    // IQD and LYD follow ISO 4217 (three decimals) like every other currency: Stripe does not list them as
+    // three-decimal currencies, and if it settles them at all its three-decimal rule below applies.
 
     /// <summary>
-    /// Returns the number of decimal places Stripe uses for the given ISO-4217 currency code.
-    /// Unknown currencies default to two decimals, matching the majority of supported currencies.
+    /// Returns the number of decimal places of Stripe's <c>amount</c> field for the given ISO-4217 currency code:
+    /// the currency's precision from <see cref="CurrencyScale"/>, except where Stripe's API differs.
     /// </summary>
+    /// <param name="currency">The ISO-4217 currency code.</param>
     public static int GetDecimalPlaces(string currency)
     {
         ArgumentException.ThrowIfNullOrEmpty(currency);
 
-        if (_zeroDecimalCurrencies.Contains(currency))
-        {
-            return 0;
-        }
-
-        if (_threeDecimalCurrencies.Contains(currency))
-        {
-            return 3;
-        }
-
-        return 2;
+        return _amountExponentOverrides.TryGetValue(currency, out var exponent)
+            ? exponent
+            : CurrencyScale.GetDecimalPlaces(currency);
     }
 
     /// <summary>
     /// Converts an amount expressed in major units to the integer minor units Stripe expects for the currency.
-    /// Rounding is performed away from zero at the currency's precision. For three-decimal currencies the
-    /// result is additionally rounded to the nearest multiple of 10 as required by Stripe.
+    /// The amount is first rounded away from zero to the finest precision both the currency and Stripe allow: whole
+    /// units for ISK, UGX and MGA, and hundredths for three-decimal currencies, whose Stripe amount must be a multiple
+    /// of 10.
     /// </summary>
+    /// <param name="amount">The amount expressed in major units.</param>
+    /// <param name="currency">The ISO-4217 currency code.</param>
     public static long ToMinorUnits(decimal amount, string currency)
     {
-        var decimals = GetDecimalPlaces(currency);
+        var exponent = GetDecimalPlaces(currency);
+        var precision = Math.Min(exponent, CurrencyScale.GetDecimalPlaces(currency));
 
-        if (decimals == 3)
+        if (exponent == 3)
         {
-            // Stripe requires three-decimal amounts to be a multiple of 10 in the smallest unit.
-            // Round directly at that granularity (0.01 major units) to avoid a double-rounding error.
-            var tens = (long)Math.Round(amount * 100m, MidpointRounding.AwayFromZero);
-
-            return tens * 10;
+            // Stripe requires three-decimal amounts to be a multiple of 10 in the smallest unit. Rounding straight to
+            // hundredths avoids a double-rounding error.
+            precision = 2;
         }
 
-        var scaled = amount * Pow10(decimals);
+        var rounded = Math.Round(amount, precision, MidpointRounding.AwayFromZero);
 
-        return (long)Math.Round(scaled, MidpointRounding.AwayFromZero);
+        return (long)(rounded * Pow10(exponent));
     }
 
     /// <summary>
     /// Converts integer minor units received from Stripe back to a major-unit amount for the currency.
     /// </summary>
+    /// <param name="minorUnits">The amount in Stripe's minor units.</param>
+    /// <param name="currency">The ISO-4217 currency code.</param>
     public static decimal FromMinorUnits(long minorUnits, string currency)
     {
         var decimals = GetDecimalPlaces(currency);
@@ -100,8 +93,10 @@ public static class StripeCurrency
         };
 
     /// <summary>
-    /// Formats a major-unit amount using the invariant culture with the currency's decimal precision.
+    /// Formats a major-unit amount using the invariant culture with the precision of Stripe's amount field.
     /// </summary>
+    /// <param name="amount">The amount expressed in major units.</param>
+    /// <param name="currency">The ISO-4217 currency code.</param>
     public static string Format(decimal amount, string currency)
         => amount.ToString("F" + GetDecimalPlaces(currency).ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);
 }

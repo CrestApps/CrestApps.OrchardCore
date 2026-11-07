@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Calendars;
 /// <summary>
 /// Exposes the calendars and their events as a data source of Orchard Core, for reports and data pipelines.
 /// </summary>
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class DataSourcesStartup : StartupBase
 {
     /// <inheritdoc/>

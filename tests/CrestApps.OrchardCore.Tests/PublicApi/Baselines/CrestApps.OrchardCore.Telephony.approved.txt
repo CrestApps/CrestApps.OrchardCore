@@ -14,7 +14,9 @@
     "the phone is closed.", Id="CrestApps.OrchardCore.Telephony.SoftPhone.Extension", Name="Telephony Soft Phone Extension")]
 [assembly: OrchardCore.Modules.Manifest.Feature(Category="Telephony", Dependencies=new string[] {
         "OrchardCore.Users",
-        "OrchardCore.SignalR"}, Description="Provides the provider-agnostic telephony services, SignalR hub, and site settings" +
+        "OrchardCore.SignalR",
+        "CrestApps.OrchardCore.Users",
+        "CrestApps.OrchardCore.Resources"}, Description="Provides the provider-agnostic telephony services, SignalR hub, and site settings" +
     ".", Id="CrestApps.OrchardCore.Telephony", Name="Telephony")]
 [assembly: OrchardCore.Modules.Manifest.Module(Author="The CrestApps Team", Category="Telephony", Description="Provides a provider-agnostic soft phone and SignalR hub for integrating telephony" +
     " providers.", Name="Telephony", Version="3.0.0", Website="https://crestapps.com")]
@@ -311,18 +313,6 @@ namespace CrestApps.OrchardCore.Telephony.Models
     {
         public SoftPhonePart() { }
     }
-    public sealed class SoftPhoneWidgetSettings
-    {
-        public const string DefaultAccentColor = "#2f6fed";
-        public const int DefaultRecentCallsCount = 30;
-        public SoftPhoneWidgetSettings() { }
-        public string AccentColor { get; set; }
-        public string DefaultCountryCode { get; set; }
-        public bool DisplayOnAdmin { get; set; }
-        public bool EnableDiagnostics { get; set; }
-        public bool Enabled { get; set; }
-        public int RecentCallsCount { get; set; }
-    }
     public sealed class TelephonyCoordinationOptions
     {
         public TelephonyCoordinationOptions() { }
@@ -457,13 +447,12 @@ namespace CrestApps.OrchardCore.Telephony.Services
         System.Threading.Tasks.Task PersistCurrentUserAsync(System.Func<OrchardCore.Users.IUser, bool> mutate);
         System.Threading.Tasks.Task<OrchardCore.Users.IUser> ReloadCurrentUserAsync();
     }
-    public sealed class LocalEncryptedRecordingMediaStore : CrestApps.OrchardCore.Telephony.IRecordingMediaStore, CrestApps.OrchardCore.Telephony.ISupportsTenantMediaPurge
+    public sealed class SoftPhoneClientNotifier : CrestApps.OrchardCore.Telephony.ISoftPhoneClientNotifier
     {
-        public LocalEncryptedRecordingMediaStore(OrchardCore.FileStorage.IFileStore fileStore, Microsoft.AspNetCore.DataProtection.IDataProtectionProvider dataProtectionProvider) { }
-        public System.Threading.Tasks.Task<bool> DeleteAsync(string storageReference, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.IO.Stream> OpenReadAsync(string storageReference, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<string> StoreAsync(CrestApps.OrchardCore.Telephony.Models.RecordingMediaWriteRequest request, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<bool> TryPurgeAllAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public SoftPhoneClientNotifier(Microsoft.AspNetCore.SignalR.IHubContext<CrestApps.OrchardCore.Telephony.Hubs.TelephonyHub, CrestApps.OrchardCore.Telephony.ITelephonyClient> hubContext, OrchardCore.Environment.Shell.ShellSettings shellSettings) { }
+        public System.Threading.Tasks.Task CallStateChangedAsync(string userId, CrestApps.OrchardCore.Telephony.Models.TelephonyCall call) { }
+        public System.Threading.Tasks.Task DialRequestedAsync(string userId, CrestApps.OrchardCore.Telephony.Models.TelephonyDialRequest request) { }
+        public System.Threading.Tasks.Task IncomingCallAnsweredAsync(string userId, CrestApps.OrchardCore.Telephony.Models.IncomingCallAnsweredNotification notification) { }
     }
     public sealed class SoftPhoneWidgetPresenter : CrestApps.OrchardCore.Telephony.Services.ISoftPhoneWidgetPresenter
     {
@@ -547,8 +536,6 @@ namespace CrestApps.OrchardCore.Telephony.ViewModels
         public string Name { get; set; }
         public string Number { get; set; }
         public string UserId { get; set; }
-        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
-        public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Users { get; set; }
     }
     public class TelephonySettingsViewModel
     {

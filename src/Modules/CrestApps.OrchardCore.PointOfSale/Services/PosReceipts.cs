@@ -16,6 +16,11 @@ namespace CrestApps.OrchardCore.PointOfSale.Services;
 /// </summary>
 internal static class PosReceipts
 {
+    /// <summary>
+    /// The kind of the register receipt email, which the store can write its own template of.
+    /// </summary>
+    public const string EmailKind = "pos-receipt";
+
     public static ApiPosReceipt ToApi(Order order, decimal change)
     {
         var currency = order.Currency;

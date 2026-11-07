@@ -20,7 +20,7 @@
             @if (Model.SinceUtc.HasValue)
             {
                 <div class="small text-muted">
-                    @(Model.State == TimeClockState.Out ? T["Last clocked out"] : T["Since"]) <time datetime="@Model.SinceUtc.Value.ToString("o")">@CrestApps.OrchardCore.Calendars.Core.CalendarTime.ToLocal(Model.SinceUtc.Value, Model.TimeZoneId ?? "UTC").ToString("t")</time>
+                    @(Model.State == TimeClockState.Out ? T["Last clocked out"] : T["Since"]) <time datetime="@Model.SinceUtc.Value.ToString("o")">@CrestApps.OrchardCore.Calendars.CalendarTime.ToLocal(Model.SinceUtc.Value, Model.TimeZoneId ?? "UTC").ToString("t")</time>
                 </div>
             }
             @if (Model.NeedsLocation)

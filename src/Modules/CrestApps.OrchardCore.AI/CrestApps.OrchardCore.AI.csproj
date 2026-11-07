@@ -38,6 +38,8 @@
     <PackageReference Include="CrestApps.Core.AI.Chat" />
     <PackageReference Include="CrestApps.Core.Support" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Reports.Abstractions/CrestApps.OrchardCore.Reports.Abstractions.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.Webhooks.Core/CrestApps.OrchardCore.Webhooks.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -48,6 +50,7 @@
     -->
     <ProjectReference Include="../CrestApps.OrchardCore.Resources/CrestApps.OrchardCore.Resources.csproj" PrivateAssets="none" />
     <ProjectReference Include="../CrestApps.OrchardCore.AI.Prompting/CrestApps.OrchardCore.AI.Prompting.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../CrestApps.OrchardCore.Webhooks/CrestApps.OrchardCore.Webhooks.csproj" />
   </ItemGroup>
 
 </Project>

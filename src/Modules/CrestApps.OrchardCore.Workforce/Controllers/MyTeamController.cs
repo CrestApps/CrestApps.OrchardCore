@@ -1,5 +1,5 @@
 using CrestApps.Core;
-using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
 using CrestApps.OrchardCore.Teams.Services;
@@ -290,9 +290,9 @@ public sealed class MyTeamController : Controller
             return Forbid();
         }
 
-        var open = await attendance.PageAsync(new AttendanceQuery { TeamIds = scope.All ? null : scope.TeamIds.ToArray(), Status = AttendanceExceptionStatus.Open }, 0, 1000, HttpContext.RequestAborted);
+        var exception = await attendance.FindByIdAsync(id, HttpContext.RequestAborted);
 
-        if (open.Items.All(exception => exception.ItemId != id))
+        if (exception is null || exception.Status != AttendanceExceptionStatus.Open || !scope.Covers(exception.TeamId))
         {
             return NotFound();
         }

@@ -39,8 +39,27 @@ public sealed class ReportOwnerPrincipalResolver
             return null;
         }
 
-        var user = await _userManager.FindByIdAsync(userId);
+        return await CreateAsync(await _userManager.FindByIdAsync(userId));
+    }
 
+    /// <summary>
+    /// Builds the principal of a user from their user name, for a record that keeps who saved it by name, such as a
+    /// report subscription.
+    /// </summary>
+    /// <param name="userName">The user name.</param>
+    /// <returns>The principal, or <see langword="null"/> when the user does not exist or is disabled.</returns>
+    public async Task<ClaimsPrincipal> ResolveByUserNameAsync(string userName)
+    {
+        if (string.IsNullOrEmpty(userName))
+        {
+            return null;
+        }
+
+        return await CreateAsync(await _userManager.FindByNameAsync(userName));
+    }
+
+    private async Task<ClaimsPrincipal> CreateAsync(IUser user)
+    {
         if (user is null || (user is User { IsEnabled: false }))
         {
             return null;

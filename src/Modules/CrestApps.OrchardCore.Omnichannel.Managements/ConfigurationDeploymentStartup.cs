@@ -13,7 +13,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements;
 /// Registers the deployment steps that export Omnichannel configuration.
 /// </summary>
 [Feature(OmnichannelConstants.Features.Activities)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class ConfigurationDeploymentStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -34,7 +34,7 @@ public sealed class ConfigurationDeploymentStartup : StartupBase
 /// steps to a plan need the administration feature.
 /// </summary>
 [Feature(OmnichannelConstants.Features.Managements)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class ConfigurationDeploymentAdminStartup : StartupBase
 {
     /// <inheritdoc/>

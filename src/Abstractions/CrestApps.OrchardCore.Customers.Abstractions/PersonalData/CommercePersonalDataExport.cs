@@ -68,6 +68,12 @@ public sealed class CommercePersonalDataExport
     public IList<CommerceStockAlertRecord> StockAlerts { get; init; } = [];
 
     /// <summary>
+    /// Gets the person's records that the other modules keep, such as donations, memberships and reviews, each with
+    /// its kind.
+    /// </summary>
+    public IList<CommercePersonalDataRecord> Records { get; init; } = [];
+
+    /// <summary>
     /// Gets what could not be exported, such as a payment provider that could not be reached.
     /// </summary>
     public IList<string> Warnings { get; init; } = [];

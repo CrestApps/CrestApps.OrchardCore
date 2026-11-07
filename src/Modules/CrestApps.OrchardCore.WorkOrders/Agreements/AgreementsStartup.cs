@@ -40,7 +40,7 @@ public sealed class AgreementsStartup : StartupBase
 /// Registers the expiring workflow event.
 /// </summary>
 [Feature(WorkOrdersConstants.Features.Agreements)]
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class AgreementsWorkflowsStartup : StartupBase
 {
     /// <inheritdoc/>

@@ -13,6 +13,7 @@ using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.Models;
 using Microsoft.Extensions.DependencyInjection;
+using CrestApps.OrchardCore.Calendars;
 
 namespace CrestApps.OrchardCore.Tests.Dispatch;
 
@@ -33,11 +34,11 @@ public sealed class DispatchTests
     [Fact]
     public void Subtract_TakesBreaksAndTimeOffOutOfAShift()
     {
-        var shift = new TimeSpanUtc(DispatchKit.Monday(8), DispatchKit.Monday(16));
+        var shift = new TimeWindow(DispatchKit.Monday(8), DispatchKit.Monday(16));
 
-        var open = DispatchResources.Subtract([shift], [new TimeSpanUtc(DispatchKit.Monday(12), DispatchKit.Monday(12, 30)), new TimeSpanUtc(DispatchKit.Monday(15), DispatchKit.Monday(17))]);
+        var open = TimeWindow.Subtract([shift], [new TimeWindow(DispatchKit.Monday(12), DispatchKit.Monday(12, 30)), new TimeWindow(DispatchKit.Monday(15), DispatchKit.Monday(17))]);
 
-        Assert.Equal([new TimeSpanUtc(DispatchKit.Monday(8), DispatchKit.Monday(12)), new TimeSpanUtc(DispatchKit.Monday(12, 30), DispatchKit.Monday(15))], open);
+        Assert.Equal([new TimeWindow(DispatchKit.Monday(8), DispatchKit.Monday(12)), new TimeWindow(DispatchKit.Monday(12, 30), DispatchKit.Monday(15))], open);
     }
 
     [Fact]

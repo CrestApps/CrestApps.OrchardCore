@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.Bookings;
 /// Exposes the bookings, the dates of booking products and the balances left to pay as a data source of Orchard Core,
 /// for reports and data pipelines.
 /// </summary>
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class DataSourcesStartup : StartupBase
 {
     /// <inheritdoc/>

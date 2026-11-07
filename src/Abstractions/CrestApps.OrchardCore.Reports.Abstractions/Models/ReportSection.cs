@@ -17,6 +17,12 @@ public sealed class ReportSection
     public string Description { get; set; }
 
     /// <summary>
+    /// Gets or sets the optional text the browser shows in place of the section's content when it has none, such as
+    /// how to start collecting the data it shows.
+    /// </summary>
+    public string EmptyMessage { get; set; }
+
+    /// <summary>
     /// Gets or sets the kind of content the section renders.
     /// </summary>
     public ReportSectionKind Kind { get; set; }

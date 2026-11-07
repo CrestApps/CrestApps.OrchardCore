@@ -10,7 +10,7 @@ namespace CrestApps.OrchardCore.Scheduling;
 /// <summary>
 /// Registers Appointment Starting Soon, raised by the Calendar Reminders feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows", CalendarsConstants.Features.Reminders)]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows, CalendarsConstants.Features.Reminders)]
 public sealed class WorkflowRemindersStartup : StartupBase
 {
     /// <inheritdoc />

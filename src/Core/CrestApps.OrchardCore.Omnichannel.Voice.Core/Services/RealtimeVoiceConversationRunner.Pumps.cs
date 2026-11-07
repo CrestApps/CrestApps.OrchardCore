@@ -60,7 +60,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                 }
 
                 released.Clear();
-                var now = DateTime.UtcNow.Ticks;
+                var now = UtcNowTicks;
                 var assistantPlaysUntil = Interlocked.Read(ref _assistantSpeechEndsTicks);
                 guard.Process(audio, now, assistantPlaysUntil, released);
                 _replyListener?.Hear(audio.Span, now, assistantPlaysUntil);
@@ -384,7 +384,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                                 Interlocked.Exchange(ref _assistantVoiceEndsTicks, startsTicks + AssistantBargeIn.DurationTicks(spokenBytes));
                             }
                             assistantLineStartedUtc ??= new DateTime(startsTicks, DateTimeKind.Utc);
-                            bargeIn.Queued(conversationEvent.ResponseId, conversationEvent.ItemId, startsTicks, speech.Length, DateTime.UtcNow.Ticks);
+                            bargeIn.Queued(conversationEvent.ResponseId, conversationEvent.ItemId, startsTicks, speech.Length, UtcNowTicks);
                             _meter?.AssistantAudioScheduled(startsTicks, AssistantBargeIn.DurationTicks(speech.Length));
                         }
 
@@ -438,7 +438,7 @@ public sealed partial class RealtimeVoiceConversationRunner
 
                     case RealtimeConversationEventType.UserSpeechStarted:
                         await StopTransferToneAsync();
-                        _meter?.CallerSpeechStarted(DateTime.UtcNow.Ticks);
+                        _meter?.CallerSpeechStarted(UtcNowTicks);
                         LogProviderRunningBehind(activityId);
                         ProviderHeardCaller(turnOpen: true);
 
@@ -455,7 +455,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                             conversation,
                             bargeIn,
                             closing: closingRequested || goodbyeSaid || context.HandoffRequested.IsCancellationRequested || OnAMachine() ||
-                                OpeningMayNotBeTalkedOver(DateTime.UtcNow.Ticks),
+                                OpeningMayNotBeTalkedOver(UtcNowTicks),
                             activityId,
                             cancellationToken);
 
@@ -473,7 +473,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                         // has stopped talking and the provider has transcribed them, which is seconds later --
                         // long enough that a call closing down would already have been cut. This is the moment
                         // the caller decides the conversation is not over, so it is the moment that has to count.
-                        Interlocked.Exchange(ref _lastCallerSpeechTicks, DateTime.UtcNow.Ticks);
+                        Interlocked.Exchange(ref _lastCallerSpeechTicks, UtcNowTicks);
 
                         break;
 
@@ -502,9 +502,9 @@ public sealed partial class RealtimeVoiceConversationRunner
                         // their speech the session reports.
                         if (conversationEvent.Type == RealtimeConversationEventType.UserTurnCommitted)
                         {
-                            turnCommittedTicks = DateTime.UtcNow.Ticks;
+                            turnCommittedTicks = UtcNowTicks;
                             awaitingFirstAudio = true;
-                            _meter?.CallerSpeechStopped(DateTime.UtcNow.Ticks);
+                            _meter?.CallerSpeechStopped(UtcNowTicks);
                             ProviderHeardCaller(turnOpen: false);
                             HeardTheMachine();
                             await LeaveOpeningTurnDetectionAsync(conversation, cancellationToken);
@@ -530,7 +530,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                         // persisting the turn takes a moment.
                         if (!string.IsNullOrWhiteSpace(conversationEvent.Text))
                         {
-                            Interlocked.Exchange(ref _lastCallerSpeechTicks, DateTime.UtcNow.Ticks);
+                            Interlocked.Exchange(ref _lastCallerSpeechTicks, UtcNowTicks);
                             HeardTheMachine();
 
                             // A recording's greeting is not the customer answering.
@@ -690,7 +690,7 @@ public sealed partial class RealtimeVoiceConversationRunner
 
             while (await timer.WaitForNextTickAsync(cancellationToken))
             {
-                var sinceAssistant = DateTime.UtcNow.Ticks - Interlocked.Read(ref _lastAssistantAudioTicks);
+                var sinceAssistant = UtcNowTicks - Interlocked.Read(ref _lastAssistantAudioTicks);
 
                 // A short hold-off rather than an exact handover: assistant audio arrives in bursts, and treating
                 // the gap between two deltas as silence would make the room stutter through every sentence.

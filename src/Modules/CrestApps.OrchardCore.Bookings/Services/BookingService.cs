@@ -86,7 +86,7 @@ public sealed class BookingService
                 continue;
             }
 
-            var item = await _contentManager.GetAsync(line.ContentItemId, VersionOptions.Published);
+            var item = await _contentManager.GetPurchasedAsync(line);
 
             if (item?.TryGet<BookingPart>(out var part) != true)
             {
@@ -385,7 +385,7 @@ public sealed class BookingService
             refundable = orderTotal > 0m ? Money.Round(paid * Math.Min(1m, booking.Total / orderTotal), booking.Currency) : paid;
         }
 
-        return new BookingCancellationQuote(daysBefore, feePercent, refundable, BookingSchedule.GetRefund(booking.Total, refundable, feePercent));
+        return new BookingCancellationQuote(daysBefore, feePercent, refundable, BookingSchedule.GetRefund(booking.Total, refundable, feePercent, booking.Currency));
     }
 
     /// <summary>

@@ -1,14 +1,12 @@
-using System.Globalization;
 using System.Net;
-using System.Net.Http.Headers;
 using System.Security.Cryptography;
-using System.Text;
 using CrestApps.Core;
+using CrestApps.OrchardCore.Webhooks;
+using CrestApps.OrchardCore.Webhooks.Models;
 using Fluid;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Modules;
 using OrchardCore.Workflows.Abstractions.Models;
 using OrchardCore.Workflows.Activities;
 using OrchardCore.Workflows.Models;
@@ -17,17 +15,12 @@ using OrchardCore.Workflows.Services;
 namespace CrestApps.OrchardCore.AI.Workflows.Models;
 
 /// <summary>
-/// Posts JSON to another system, signed so the receiver can check it came from this site and was not replayed: the
-/// same headers and signature as the commerce webhooks. Failed deliveries are retried a few times before the task
-/// gives up.
+/// Posts JSON to another system, signed so the receiver can check it came from this site and was not replayed: it sends
+/// through the Webhooks building block's <see cref="IWebhookSender"/>, so it has the same headers, signature and egress
+/// guard as every other webhook. Failed deliveries are retried a few times before the task gives up.
 /// </summary>
 public sealed class SendSignedWebhookTask : TaskActivity<SendSignedWebhookTask>
 {
-    /// <summary>
-    /// The name of the HTTP client the webhooks are sent with.
-    /// </summary>
-    public const string HttpClientName = "CrestApps.SignedWebhook";
-
     /// <summary>
     /// The purpose the signing secret is protected with.
     /// </summary>
@@ -36,9 +29,8 @@ public sealed class SendSignedWebhookTask : TaskActivity<SendSignedWebhookTask>
     private static readonly TimeSpan[] _retryDelays = [TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(9), TimeSpan.FromSeconds(27)];
 
     private readonly IWorkflowExpressionEvaluator _expressionEvaluator;
-    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IWebhookSender _webhookSender;
     private readonly IDataProtectionProvider _dataProtectionProvider;
-    private readonly IClock _clock;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -47,23 +39,20 @@ public sealed class SendSignedWebhookTask : TaskActivity<SendSignedWebhookTask>
     /// Initializes a new instance of the <see cref="SendSignedWebhookTask"/> class.
     /// </summary>
     /// <param name="expressionEvaluator">The workflow expression evaluator.</param>
-    /// <param name="httpClientFactory">The HTTP client factory.</param>
+    /// <param name="webhookSender">Makes each signed attempt.</param>
     /// <param name="dataProtectionProvider">The data protection provider the secret is kept with.</param>
-    /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public SendSignedWebhookTask(
         IWorkflowExpressionEvaluator expressionEvaluator,
-        IHttpClientFactory httpClientFactory,
+        IWebhookSender webhookSender,
         IDataProtectionProvider dataProtectionProvider,
-        IClock clock,
         ILogger<SendSignedWebhookTask> logger,
         IStringLocalizer<SendSignedWebhookTask> stringLocalizer)
     {
         _expressionEvaluator = expressionEvaluator;
-        _httpClientFactory = httpClientFactory;
+        _webhookSender = webhookSender;
         _dataProtectionProvider = dataProtectionProvider;
-        _clock = clock;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -160,51 +149,36 @@ public sealed class SendSignedWebhookTask : TaskActivity<SendSignedWebhookTask>
 
         body = string.IsNullOrWhiteSpace(body) ? "{}" : body;
         var attempts = Math.Clamp(MaxAttempts, 1, 5);
-        var client = _httpClientFactory.CreateClient(HttpClientName);
+        var request = new WebhookSendRequest
+        {
+            Url = uri.AbsoluteUri,
+            Secret = secret,
+            EventId = deliveryId,
+            EventName = eventName,
+            Body = body,
+        };
 
         for (var attempt = 1; attempt <= attempts; attempt++)
         {
             result["Attempts"] = attempt;
 
-            try
+            var sent = await _webhookSender.SendAsync(request);
+            result["StatusCode"] = sent.StatusCode;
+
+            if (sent.Succeeded)
             {
-                var timestamp = new DateTimeOffset(_clock.UtcNow).ToUnixTimeSeconds();
-                using var request = new HttpRequestMessage(HttpMethod.Post, uri)
-                {
-                    Content = new StringContent(body, Encoding.UTF8, "application/json"),
-                };
+                result["Error"] = null;
 
-                request.Headers.Add("X-Webhook-Id", deliveryId);
-
-                if (!string.IsNullOrEmpty(eventName))
-                {
-                    request.Headers.Add("X-Webhook-Event", eventName);
-                }
-
-                request.Headers.Add("X-Webhook-Timestamp", timestamp.ToString(CultureInfo.InvariantCulture));
-                request.Headers.Add("X-Webhook-Signature", Sign(secret, timestamp, body));
-                request.Headers.UserAgent.Add(new ProductInfoHeaderValue("CrestApps-Webhooks", "1.0"));
-
-                using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-                result["StatusCode"] = (int)response.StatusCode;
-
-                if (response.IsSuccessStatusCode)
-                {
-                    result["Error"] = null;
-
-                    return Outcome("Delivered");
-                }
-
-                result["Error"] = $"{(int)response.StatusCode} {response.ReasonPhrase}";
-
-                if (!IsWorthRetrying(response.StatusCode))
-                {
-                    break;
-                }
+                return Outcome("Delivered");
             }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+
+            result["Error"] = sent.Error;
+
+            // The egress guard refused a host on the site's own network, or the receiver refused it for good: sending it
+            // again is refused again.
+            if (sent.EgressRefused || (sent.StatusCode is { } statusCode && !IsWorthRetrying((HttpStatusCode)statusCode)))
             {
-                result["Error"] = ex.Message;
+                break;
             }
 
             if (attempt < attempts)
@@ -217,18 +191,6 @@ public sealed class SendSignedWebhookTask : TaskActivity<SendSignedWebhookTask>
 
         return Outcome("Failed");
     }
-
-    /// <summary>
-    /// Returns the signature of a body at a time: <c>v1=</c> and the lowercase hex HMAC-SHA256 of
-    /// <c>{timestamp}.{body}</c>, the same as the commerce webhooks.
-    /// </summary>
-    /// <param name="secret">The signing secret.</param>
-    /// <param name="timestamp">When it was signed, in seconds since 1970.</param>
-    /// <param name="body">The body.</param>
-    public static string Sign(string secret, long timestamp, string body)
-        => "v1=" + Convert.ToHexStringLower(HMACSHA256.HashData(
-            Encoding.UTF8.GetBytes(secret),
-            Encoding.UTF8.GetBytes(timestamp.ToString(CultureInfo.InvariantCulture) + "." + body)));
 
     /// <summary>
     /// Whether a failed response may succeed if sent again: a timeout, too many requests, or a server error.

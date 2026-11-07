@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Sftp;
 using CrestApps.Core.AI.Sftp.Models;
 using CrestApps.OrchardCore.AI.FileSources.Sftp.ViewModels;
+using CrestApps.OrchardCore.AI.FileTransfer.Core.Drivers;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -20,12 +21,8 @@ namespace CrestApps.OrchardCore.AI.FileSources.Sftp.Drivers;
 /// The editor is told only that one is stored, and a blank submission keeps whatever is there; otherwise
 /// opening the form and pressing Save would erase the key.
 /// </remarks>
-internal sealed class SftpFileSourceDisplayDriver : DisplayDriver<FileSource>
+internal sealed class SftpFileSourceDisplayDriver : SftpConnectionDisplayDriverBase<FileSource>
 {
-    private readonly IDataProtectionProvider _dataProtectionProvider;
-
-    internal readonly IStringLocalizer S;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="SftpFileSourceDisplayDriver"/> class.
     /// </summary>
@@ -34,9 +31,8 @@ internal sealed class SftpFileSourceDisplayDriver : DisplayDriver<FileSource>
     public SftpFileSourceDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<SftpFileSourceDisplayDriver> stringLocalizer)
+        : base(dataProtectionProvider, stringLocalizer)
     {
-        _dataProtectionProvider = dataProtectionProvider;
-        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(FileSource fileSource, BuildEditorContext context)
@@ -53,21 +49,7 @@ internal sealed class SftpFileSourceDisplayDriver : DisplayDriver<FileSource>
             model.RemoteRecursive = folder.Recursive;
             model.RemoteMaxItems = folder.MaxItems;
 
-            var connection = fileSource.GetOrCreate<SftpConnectionMetadata>();
-            model.Host = connection.Host;
-            model.Port = connection.Port;
-            model.Username = connection.Username;
-            model.ProxyType = connection.ProxyType;
-            model.ProxyHost = connection.ProxyHost;
-            model.ProxyPort = connection.ProxyPort;
-            model.ProxyUsername = connection.ProxyUsername;
-            model.ConnectionTimeout = connection.ConnectionTimeout;
-            model.KeepAliveInterval = connection.KeepAliveInterval;
-
-            model.HasPassword = !string.IsNullOrEmpty(connection.Password);
-            model.HasPrivateKey = !string.IsNullOrEmpty(connection.PrivateKey);
-            model.HasPassphrase = !string.IsNullOrEmpty(connection.Passphrase);
-            model.HasProxyPassword = !string.IsNullOrEmpty(connection.ProxyPassword);
+            PopulateConnectionFields(fileSource.GetOrCreate<SftpConnectionMetadata>(), model);
         }).Location("Content:5");
     }
 
@@ -82,28 +64,12 @@ internal sealed class SftpFileSourceDisplayDriver : DisplayDriver<FileSource>
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrWhiteSpace(model.Host))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Host), S["A host is required."]);
-        }
-
-        if (model.Port is < 1 or > 65535)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Port), S["The port must be between 1 and 65535."]);
-        }
-
-        if (model.ProxyPort is < 1 or > 65535)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProxyPort), S["The proxy port must be between 1 and 65535."]);
-        }
-
         if (model.RemoteMaxItems is < 1)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.RemoteMaxItems), S["The number of files must be a positive number."]);
         }
 
-        var existing = fileSource.GetOrCreate<SftpConnectionMetadata>();
-        var protector = _dataProtectionProvider.CreateProtector(SftpResourceConstants.DataProtectionPurpose);
+        var connection = ApplyConnectionFields(context, model, fileSource.GetOrCreate<SftpConnectionMetadata>());
 
         fileSource.Put(new RemoteFileSourceMetadata
         {
@@ -112,38 +78,10 @@ internal sealed class SftpFileSourceDisplayDriver : DisplayDriver<FileSource>
             MaxItems = model.RemoteMaxItems,
         });
 
-        fileSource.Put(new SftpConnectionMetadata
-        {
-            Host = model.Host?.Trim(),
-            Port = model.Port,
-            Username = Trimmed(model.Username),
-            Password = Keep(protector, model.Password, existing.Password),
-            PrivateKey = Keep(protector, model.PrivateKey, existing.PrivateKey),
-            Passphrase = Keep(protector, model.Passphrase, existing.Passphrase),
-            ProxyType = Trimmed(model.ProxyType),
-            ProxyHost = Trimmed(model.ProxyHost),
-            ProxyPort = model.ProxyPort,
-            ProxyUsername = Trimmed(model.ProxyUsername),
-            ProxyPassword = Keep(protector, model.ProxyPassword, existing.ProxyPassword),
-            ConnectionTimeout = model.ConnectionTimeout,
-            KeepAliveInterval = model.KeepAliveInterval,
-        });
+        fileSource.Put(connection);
 
         return Edit(fileSource, context);
     }
-
-    /// <summary>
-    /// Encrypts a newly typed secret, or keeps the stored one when the field came back empty.
-    /// </summary>
-    /// <param name="protector">The data protector.</param>
-    /// <param name="submitted">What the form submitted.</param>
-    /// <param name="stored">What is already stored.</param>
-    /// <returns>The value to store.</returns>
-    private static string Keep(IDataProtector protector, string submitted, string stored)
-        => string.IsNullOrWhiteSpace(submitted) ? stored : protector.Protect(submitted);
-
-    private static string Trimmed(string value)
-        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static bool IsSftp(FileSource fileSource)
         => string.Equals(fileSource.Source, SftpIngestionConnector.ConnectorName, StringComparison.OrdinalIgnoreCase);

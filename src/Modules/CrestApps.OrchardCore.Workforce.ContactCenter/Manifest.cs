@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.TimeTracker;
 using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.ContactCenter;
 using OrchardCore.Modules.Manifest;
@@ -81,6 +82,6 @@ using OrchardCore.Modules.Manifest;
     [
         WorkforceContactCenterConstants.Features.ContactCenter,
         ContactCenterConstants.Feature.IntervalStatistics,
-        "CrestApps.OrchardCore.TimeTracker",
+        TimeTrackerConstants.Features.TimeTracker,
     ]
 )]

@@ -56,16 +56,13 @@ public enum GiftCardStatusFilter
 /// </summary>
 public sealed class GiftCardStore : DocumentCatalog<GiftCard, GiftCardIndex>, IGiftCardStore
 {
-    private readonly IClock _clock;
-
     // Two checkouts spending one card must not both write a stale balance.
     protected override bool CheckConcurrency => true;
 
     public GiftCardStore(ISession session, IClock clock)
-        : base(session)
+        : base(session, clock)
     {
         CollectionName = OrderConstants.CollectionName;
-        _clock = clock;
     }
 
     /// <inheritdoc/>
@@ -94,7 +91,7 @@ public sealed class GiftCardStore : DocumentCatalog<GiftCard, GiftCardIndex>, IG
         query ??= new GiftCardQuery();
 
         var cards = Session.Query<GiftCard, GiftCardIndex>(collection: CollectionName);
-        var now = _clock.UtcNow;
+        var now = Clock.UtcNow;
 
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
@@ -118,20 +115,5 @@ public sealed class GiftCardStore : DocumentCatalog<GiftCard, GiftCardIndex>, IG
         var page = await cards.OrderByDescending(index => index.CreatedUtc).Skip(skip).Take(take).ListAsync(cancellationToken);
 
         return (count, [.. page]);
-    }
-
-    /// <inheritdoc/>
-    protected override ValueTask SavingAsync(GiftCard record)
-    {
-        var now = _clock.UtcNow;
-
-        if (record.CreatedUtc == default)
-        {
-            record.CreatedUtc = now;
-        }
-
-        record.UpdatedUtc = now;
-
-        return ValueTask.CompletedTask;
     }
 }

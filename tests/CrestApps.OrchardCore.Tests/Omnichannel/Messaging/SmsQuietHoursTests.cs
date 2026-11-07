@@ -121,6 +121,6 @@ public sealed class SmsQuietHoursTests
         var clock = new Mock<IClock>();
         clock.SetupGet(value => value.UtcNow).Returns(_now);
 
-        return new MessagingQuietHoursGuard(gate.Object, queuePolicyReader.Object, timeZoneResolver.Object, clock.Object);
+        return new MessagingQuietHoursGuard(gate.Object, queuePolicyReader.Object, timeZoneResolver.Object, clock.Object, new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<MessagingQuietHoursGuard>());
     }
 }

@@ -20,4 +20,12 @@ public static class MarketsConstants
     public const string QueryName = "market";
 
     public const string HeaderName = "X-Market";
+
+    public static class Recipes
+    {
+        /// <summary>
+        /// The recipe step that adds or updates markets.
+        /// </summary>
+        public const string Markets = "Markets";
+    }
 }

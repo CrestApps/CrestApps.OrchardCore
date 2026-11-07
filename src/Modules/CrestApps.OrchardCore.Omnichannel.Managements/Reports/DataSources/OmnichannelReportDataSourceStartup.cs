@@ -10,7 +10,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports.DataSources;
 /// Exposes the Omnichannel records as a data source of Orchard Core, for reports and data pipelines.
 /// </summary>
 [Feature(OmnichannelConstants.Features.Activities)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class OmnichannelReportDataSourceStartup : StartupBase
 {
     /// <inheritdoc/>

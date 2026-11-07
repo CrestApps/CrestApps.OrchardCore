@@ -51,7 +51,21 @@ Parameters:
 
 The picker is backed by the shared user-search endpoint (`Admin/api/crestapps/users/search`, which returns the top 50 enabled matches) and renders through the shared **`ItemSelector`** component, so the **CrestApps Resources** feature must be enabled wherever the picker is used.
 
+The endpoint answers only users who hold the **Search users in user pickers** permission (`SearchUsers`, `UserSearchPermissions.SearchUsers` in `CrestApps.OrchardCore.Users.Abstractions`). `AccessAdminPanel` implies it, so every role that can open the admin panel keeps its pickers, while a signed-in storefront customer gets `403 Forbidden`. An access that a handler grants only for one request, such as the worker access to the **My Work** pages, does not include it.
+
+Modules that look up users for their own pickers use the same search through `IUserSearchService` (`CrestApps.OrchardCore.Users.Abstractions`): `SearchAsync(UserSearchQuery)` finds enabled users by user name (and e-mail when `MatchEmail` is set), optionally in some roles, ordered by user name; `GetAsync(userIds)` resolves the users behind stored ids. Register it with `services.AddUserSearchService()` from `CrestApps.OrchardCore.Users.Core`; the service does not authorize, so the endpoint that exposes it checks `SearchUsers` or its own permission first. Calendars, Assets and the report designer use it.
+
 For example, the [Messaging Workspace](../omnichannel/messaging-workspace) uses `UserPicker` to choose the agent an SMS number routes inbound messages to.
+
+## Role grants
+
+`IRoleGrantService` (`CrestApps.OrchardCore.Users.Abstractions`) puts users in roles on behalf of the things that grant them, such as a membership or a subscription. Register it with `services.AddRoleGrants()` from `CrestApps.OrchardCore.Users.Core`; it is safe to call from every module that grants roles.
+
+- `GrantAsync(userId, roleName, source, sourceId)` records the grant and puts the user in the role when they are not in it.
+- `RevokeAsync(userId, roleName, source, sourceId)` removes the grant, and takes the user out of the role only when no other source still grants it and a grant put them in it. A role the user was in before any grant is kept. It then updates the user's security stamp.
+- `ListAsync(userId)` lists the grants.
+
+Grants are kept on the user's account (`UserRoleGrants`), so no table is added. A module that granted roles before grants were recorded registers an `IRoleGrantSource`, which reports those grants the first time the service touches a user. Memberships and Subscriptions use it.
 
 ## User Display Name
 

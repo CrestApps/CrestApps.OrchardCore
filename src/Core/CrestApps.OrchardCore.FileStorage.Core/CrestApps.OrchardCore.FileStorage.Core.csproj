@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Title>CrestApps OrchardCore File Storage Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Tenant file stores kept under the tenant's application data or in Azure Blob Storage, chosen from the shell
+      configuration, and an encrypted keyed file store on top of any Orchard Core file store.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS FileStorage Azure Blob</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.FileStorage.AzureBlob" />
+    <PackageReference Include="OrchardCore.FileStorage.FileSystem" />
+  </ItemGroup>
+
+</Project>

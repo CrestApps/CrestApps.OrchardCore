@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Reports.Designer.Models;
 using YesSql.Indexes;
+using static CrestApps.OrchardCore.StringTruncation;
 
 namespace CrestApps.OrchardCore.Reports.Designer.Indexes;
 
@@ -103,10 +104,5 @@ public sealed class ReportDesignVersionIndexProvider : IndexProvider<ReportDesig
                 CreatedByName = Truncate(version.CreatedByName, MaxDisplayTextLength),
                 RestoredFrom = version.RestoredFrom,
             });
-    }
-
-    private static string Truncate(string value, int length)
-    {
-        return value is null || value.Length <= length ? value : value[..length];
     }
 }

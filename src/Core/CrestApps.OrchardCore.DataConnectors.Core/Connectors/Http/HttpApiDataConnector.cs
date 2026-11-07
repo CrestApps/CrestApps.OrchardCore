@@ -37,7 +37,7 @@ internal sealed partial class HttpApiDataConnector : IDataConnector
         _fileFormatManager = fileFormatManager;
     }
 
-    public static string Name => "HttpApi";
+    public static string Name => DataConnectorConstants.Connectors.HttpApi;
 
     public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<HttpApiDataConnector>("HTTP API");
 

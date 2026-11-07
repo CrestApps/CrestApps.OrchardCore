@@ -3,10 +3,10 @@ using System.Security.Claims;
 using System.Text.Json.Nodes;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Controllers;
-using CrestApps.OrchardCore.Omnichannel.Managements.Deployments;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -114,7 +114,7 @@ public sealed class ChannelEndpointsControllerCloneTests
             .ReturnsAsync((JsonNode data, CancellationToken _) =>
             {
                 var entry = new OmnichannelChannelEndpoint { ItemId = NewId };
-                OmnichannelDeploymentSerializer.Populate(entry, data);
+                CatalogDeploymentSerializer.Populate(entry, data);
 
                 return entry;
             });

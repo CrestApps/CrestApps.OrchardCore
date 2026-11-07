@@ -1,6 +1,6 @@
 using CrestApps.Core.AI.Models;
-using CrestApps.OrchardCore.AI.Tools.Drivers;
-using CrestApps.OrchardCore.AI.Tools.Services;
+using CrestApps.OrchardCore.AI.Core.Drivers;
+using CrestApps.OrchardCore.AI.Core.Services;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 

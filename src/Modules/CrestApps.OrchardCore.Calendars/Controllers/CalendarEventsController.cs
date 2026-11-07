@@ -1,5 +1,5 @@
 using System.Globalization;
-using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Endpoints;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;

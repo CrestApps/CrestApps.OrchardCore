@@ -57,6 +57,10 @@ public static class AIConstants
 
         public const string ChatAdminWidget = "CrestApps.OrchardCore.AI.Chat.AdminWidget";
 
+        public const string ChatCopilot = "CrestApps.OrchardCore.AI.Chat.Copilot";
+
+        public const string ChatClaude = "CrestApps.OrchardCore.AI.Chat.Claude";
+
         public const string ChatSessionDocuments = "CrestApps.OrchardCore.AI.Documents.ChatSessions";
 
         public const string ChatAnalytics = "CrestApps.OrchardCore.AI.Chat.Analytics";
@@ -104,28 +108,6 @@ public static class AIConstants
         /// Reference type for uploaded documents in chat interactions or profiles.
         /// </summary>
         public const string Document = "Document";
-    }
-
-    /// <summary>
-    /// Represents the column names.
-    /// </summary>
-    public static class ColumnNames
-    {
-        public const string ChunkId = "chunkId";
-
-        public const string Content = "content";
-
-        public const string DocumentId = "documentId";
-
-        public const string FileName = "fileName";
-
-        public const string ReferenceId = "referenceId";
-
-        public const string ReferenceType = "referenceType";
-
-        public const string Embedding = "embedding";
-
-        public const string ChunkIndex = "chunkIndex";
     }
 
     /// <summary>

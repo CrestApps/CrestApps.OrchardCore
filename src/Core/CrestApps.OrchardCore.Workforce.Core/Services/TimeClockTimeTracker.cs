@@ -177,14 +177,16 @@ internal sealed class TimeClockDaySync
         return entries;
     }
 
-    private static string Source(TimePunchSource source) => source switch
+    private static string Source(string source) => source switch
     {
         TimePunchSource.Web => TimeTrackerConstants.Sources.Self,
         TimePunchSource.Mobile => TimeTrackerConstants.Sources.Mobile,
         TimePunchSource.Kiosk => TimeTrackerConstants.Sources.Kiosk,
-        TimePunchSource.ContactCenter => TimeTrackerConstants.Sources.ContactCenter,
         TimePunchSource.Manager => TimeTrackerConstants.Sources.Manager,
-        _ => TimeTrackerConstants.Sources.Api,
+        TimePunchSource.Api or null or "" => TimeTrackerConstants.Sources.Api,
+
+        // A source another module adds (such as the contact center's sign-in) is kept as it is named.
+        _ => source,
     };
 }
 

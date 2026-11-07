@@ -94,12 +94,16 @@ public sealed class Startup : StartupBase
                 "'CrestApps_Telephony:Coordination:TokenRefreshLockExpiration' must exceed 'TokenRefreshLockTimeout', otherwise the refresh lease expires while a peer is still waiting for it and two refreshes run at once.")
             .ValidateOnStart();
 
-        services.TryAddSingleton<IProviderIdentityResolver, ProviderIdentityResolver>();
+        services.AddProviderIdentityResolver();
         services.AddRedaction(builder => builder.SetRedactor<ErasingRedactor>(LogDataClassifications.AddressSet));
         services.AddScoped<IVoiceIngressGate, VoiceIngressGate>();
         services.AddScoped<INormalizedVoiceEventIngestor, NormalizedVoiceEventIngestor>();
         services.AddScoped<INormalizedVoiceEventHandler, TelephonyCallHistoryVoiceEventHandler>();
         services.AddScoped<ITelephonyRemotePartyNotifier, TelephonyRemotePartyNotifier>();
+
+        // How other modules, such as Contact Center, push to a user's soft phones without using the hub itself.
+        services.AddSingleton<ISoftPhoneClientNotifier, SoftPhoneClientNotifier>();
+
         services.AddScoped<ITelephonyProviderResolver, DefaultTelephonyProviderResolver>();
         services.AddScoped<IVoiceAgentMediaProviderResolver, VoiceAgentMediaProviderResolver>();
         services.AddScoped<IOutboundCallScreeningService, DefaultOutboundCallScreeningService>();
@@ -258,7 +262,7 @@ public sealed class SoftPhoneExtensionStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Contents")]
+[RequireFeatures(OrchardCoreFeatureIds.Contents)]
 public sealed class ContentsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

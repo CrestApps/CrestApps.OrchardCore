@@ -2,6 +2,7 @@
 using CrestApps.Core.AI.OpenAI.Azure;
 using CrestApps.Core.Azure.Models;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.OpenAI.Azure.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
@@ -97,9 +98,7 @@ internal sealed class AzureSpeechDeploymentDisplayDriver : DisplayDriver<AIDeplo
 
         if (hasNewKey)
         {
-            var protector = _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
-
-            deployment.Properties["ApiKey"] = protector.Protect(model.ApiKey);
+            deployment.Properties["ApiKey"] = _dataProtectionProvider.ProtectSetting(AIConstants.ConnectionProtectorName, model.ApiKey.Trim());
         }
 
         return Edit(deployment, context);

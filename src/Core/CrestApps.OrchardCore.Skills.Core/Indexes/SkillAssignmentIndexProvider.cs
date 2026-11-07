@@ -23,7 +23,8 @@ public sealed class SkillAssignmentIndexProvider : IndexProvider<SkillAssignment
             .Map(assignment => new SkillAssignmentIndex
             {
                 ItemId = assignment.ItemId,
-                SubjectKind = assignment.SubjectKind,
+                SubjectKind = SkillSubjectKind.ToLegacyValue(assignment.SubjectKind),
+                SubjectKindName = assignment.SubjectKind,
                 SubjectId = assignment.SubjectId,
                 SkillId = assignment.SkillId,
                 Proficiency = assignment.Proficiency,

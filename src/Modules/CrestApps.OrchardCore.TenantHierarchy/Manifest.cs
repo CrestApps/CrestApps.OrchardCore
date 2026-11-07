@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.Resources;
 using CrestApps.OrchardCore.TenantHierarchy;
+using CrestApps.OrchardCore.Users;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -19,8 +21,8 @@ using OrchardCore.Modules.Manifest;
     DefaultTenantOnly = true,
     Dependencies =
     [
-        "OrchardCore.Tenants",
-        "CrestApps.OrchardCore.Resources",
+        OrchardCoreFeatureIds.Tenants,
+        ResourcesConstants.Feature.Area,
     ]
 )]
 
@@ -31,15 +33,15 @@ using OrchardCore.Modules.Manifest;
     Description = "Lets a parent tenant create, manage and enter its own child tenants. The platform turns it on when it makes a tenant a parent.",
     Dependencies =
     [
-        "OrchardCore.Users",
-        "OrchardCore.Roles",
-        "CrestApps.OrchardCore.Resources",
+        OrchardCoreFeatureIds.Users,
+        OrchardCoreFeatureIds.Roles,
+        ResourcesConstants.Feature.Area,
 
         // The user picker of the access rules.
-        "CrestApps.OrchardCore.Users",
+        UsersConstants.Feature.Area,
 
         // The activity of the child tenants is recorded in the audit trail.
-        "OrchardCore.AuditTrail",
+        OrchardCoreFeatureIds.AuditTrail,
     ]
 )]
 
@@ -50,7 +52,7 @@ using OrchardCore.Modules.Manifest;
     Description = "Lets the users of the parent tenant enter this tenant. It is always on in a child tenant.",
     Dependencies =
     [
-        "OrchardCore.Users",
-        "OrchardCore.Roles",
+        OrchardCoreFeatureIds.Users,
+        OrchardCoreFeatureIds.Roles,
     ]
 )]

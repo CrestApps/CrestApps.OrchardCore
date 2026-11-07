@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.ContentTransfer.Models;
+using CrestApps.OrchardCore.DncRegistry;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -144,7 +145,7 @@ public sealed class Startup : StartupBase
     }
 }
 
-[RequireFeatures("CrestApps.OrchardCore.AI")]
+[RequireFeatures(AIConstants.Feature.Area)]
 public sealed class AISubjectFlowStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -215,7 +216,7 @@ public sealed class ContentTransferStartup : StartupBase
     }
 }
 
-[RequireFeatures("CrestApps.OrchardCore.DncRegistry", ContentTransferConstants.Feature.ModuleId)]
+[RequireFeatures(DncRegistryConstants.Features.Area, ContentTransferConstants.Feature.ModuleId)]
 public sealed class NationalDoNotCallRegistryContentTransferStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

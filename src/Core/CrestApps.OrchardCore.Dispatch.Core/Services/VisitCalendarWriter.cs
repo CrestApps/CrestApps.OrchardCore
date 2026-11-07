@@ -235,8 +235,8 @@ public sealed class VisitCalendarWriter
         calendarEvent.Title = title;
         calendarEvent.AllDay = false;
         calendarEvent.TimeZoneId = availability.TimeZoneId;
-        calendarEvent.Start = Calendars.Core.CalendarTime.ToLocal(visit.StartUtc.Value, availability.TimeZoneId);
-        calendarEvent.End = Calendars.Core.CalendarTime.ToLocal(visit.EndUtc.Value, availability.TimeZoneId);
+        calendarEvent.Start = Calendars.CalendarTime.ToLocal(visit.StartUtc.Value, availability.TimeZoneId);
+        calendarEvent.End = Calendars.CalendarTime.ToLocal(visit.EndUtc.Value, availability.TimeZoneId);
         calendarEvent.Transparency = CalendarTransparency.Busy;
         calendarEvent.Attendees = string.IsNullOrEmpty(worker.UserId) && string.IsNullOrEmpty(worker.Email)
             ? []

@@ -46,7 +46,7 @@ public sealed class Startup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class WorkflowsStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -61,7 +61,7 @@ public sealed class WorkflowsStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Contents")]
+[RequireFeatures(OrchardCoreFeatureIds.Contents)]
 public sealed class ContentsStartup : StartupBase
 {
     /// <inheritdoc/>

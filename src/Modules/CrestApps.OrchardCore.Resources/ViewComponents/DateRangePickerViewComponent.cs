@@ -27,6 +27,8 @@ public sealed class DateRangePickerViewComponent : ViewComponent
     /// <param name="placeholder">The placeholder shown on the toggle when no range is selected.</param>
     /// <param name="wrapperCssClass">The CSS classes applied to the picker root element.</param>
     /// <param name="toggleCssClass">The CSS classes applied to the toggle button. Defaults to <c>form-select</c>.</param>
+    /// <param name="allowAllTime">Whether to offer <em>All Time</em> (the <c>all</c> key), which clears both bounds, for a
+    /// form that accepts a range with neither.</param>
     /// <returns>The rendered picker view.</returns>
     public IViewComponentResult Invoke(
         string fromName,
@@ -41,7 +43,8 @@ public sealed class DateRangePickerViewComponent : ViewComponent
         string labelCssClass = null,
         string placeholder = null,
         string wrapperCssClass = null,
-        string toggleCssClass = null)
+        string toggleCssClass = null,
+        bool allowAllTime = false)
     {
         ArgumentException.ThrowIfNullOrEmpty(fromName);
         ArgumentException.ThrowIfNullOrEmpty(toName);
@@ -70,6 +73,7 @@ public sealed class DateRangePickerViewComponent : ViewComponent
             TimePattern = culture.DateTimeFormat.ShortTimePattern,
             WeekStart = (int)culture.DateTimeFormat.FirstDayOfWeek,
             HasInitialValue = from.HasValue || to.HasValue,
+            AllowAllTime = allowAllTime,
         };
 
         return View(model);

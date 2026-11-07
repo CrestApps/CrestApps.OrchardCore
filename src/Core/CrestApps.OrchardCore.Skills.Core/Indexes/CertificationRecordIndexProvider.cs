@@ -23,7 +23,8 @@ public sealed class CertificationRecordIndexProvider : IndexProvider<Certificati
             .Map(record => new CertificationRecordIndex
             {
                 ItemId = record.ItemId,
-                SubjectKind = record.SubjectKind,
+                SubjectKind = SkillSubjectKind.ToLegacyValue(record.SubjectKind),
+                SubjectKindName = record.SubjectKind,
                 SubjectId = record.SubjectId,
                 SubjectName = record.SubjectName,
                 CertificationId = record.CertificationId,

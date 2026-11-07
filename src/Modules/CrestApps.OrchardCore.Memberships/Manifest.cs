@@ -20,6 +20,6 @@ using OrchardCore.Modules.Manifest;
     [
         CommerceConstants.Features.Area,
         OrderConstants.Features.Orders,
-        "OrchardCore.Roles",
+        OrchardCoreFeatureIds.Roles,
     ]
 )]

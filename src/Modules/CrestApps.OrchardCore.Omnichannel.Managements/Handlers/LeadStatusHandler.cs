@@ -1,21 +1,17 @@
 using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
 using System.Text.Json.Nodes;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Omnichannel.Managements.Deployments;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 
-internal sealed class LeadStatusHandler : CatalogEntryHandlerBase<LeadStatus>
+internal sealed class LeadStatusHandler : AuditedCatalogEntryHandlerBase<LeadStatus>
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IClock _clock;
-
     internal readonly IStringLocalizer S;
 
     /// <summary>
@@ -28,20 +24,9 @@ internal sealed class LeadStatusHandler : CatalogEntryHandlerBase<LeadStatus>
         IHttpContextAccessor httpContextAccessor,
         IClock clock,
         IStringLocalizer<LeadStatusHandler> stringLocalizer)
+        : base(httpContextAccessor, clock)
     {
-        _httpContextAccessor = httpContextAccessor;
-        _clock = clock;
         S = stringLocalizer;
-    }
-
-    public override Task InitializingAsync(InitializingContext<LeadStatus> context, CancellationToken cancellationToken = default)
-        => PopulateAsync(context.Model, context.Data);
-
-    public override Task UpdatingAsync(UpdatingContext<LeadStatus> context, CancellationToken cancellationToken = default)
-    {
-        context.Model.ModifiedUtc = _clock.UtcNow;
-
-        return PopulateAsync(context.Model, context.Data);
     }
 
     public override Task ValidatingAsync(ValidatingContext<LeadStatus> context, CancellationToken cancellationToken = default)
@@ -60,24 +45,15 @@ internal sealed class LeadStatusHandler : CatalogEntryHandlerBase<LeadStatus>
         return Task.CompletedTask;
     }
 
-    public override Task InitializedAsync(InitializedContext<LeadStatus> context, CancellationToken cancellationToken = default)
+    /// <inheritdoc/>
+    protected override void Populate(LeadStatus model, JsonNode data)
     {
-        context.Model.CreatedUtc = _clock.UtcNow;
+        base.Populate(model, data);
 
-        var user = _httpContextAccessor.HttpContext?.User;
-
-        if (user != null)
+        if (data is null)
         {
-            context.Model.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            context.Model.Author = user.Identity.Name;
+            return;
         }
-
-        return Task.CompletedTask;
-    }
-
-    private static Task PopulateAsync(LeadStatus model, JsonNode data)
-    {
-        OmnichannelDeploymentSerializer.Populate(model, data);
 
         var name = data[nameof(LeadStatus.Name)]?.GetValue<string>()?.Trim();
 
@@ -103,7 +79,5 @@ internal sealed class LeadStatusHandler : CatalogEntryHandlerBase<LeadStatus>
                 model.Properties[key] = value;
             }
         }
-
-        return Task.CompletedTask;
     }
 }

@@ -48,7 +48,8 @@ public sealed class SmsKeywordPolicyTests
     }
 
     [Theory]
-    [InlineData("stop by the shop later")]
+    [InlineData("stopping by the shop later")]
+    [InlineData("please stop")]
     [InlineData("can you help me with my order")]
     [InlineData("start of the month works")]
     [InlineData("")]
@@ -56,9 +57,19 @@ public sealed class SmsKeywordPolicyTests
     public void Classify_DoesNotFireOnOrdinaryProse(string body)
     {
         // Assert
-        // A keyword is the whole message. Matching it as a prefix of a sentence opted people out of a service
-        // they were in the middle of asking about.
+        // HELP and START must be the whole message, and an opt-out keyword only counts as the first word.
         Assert.Equal(SmsKeyword.None, SmsKeywordPolicy.Classify(body));
+    }
+
+    [Theory]
+    [InlineData("STOP please")]
+    [InlineData("stop.")]
+    [InlineData("stop by the shop later")]
+    public void Classify_OptsOut_WhenTheFirstWordIsAStopKeyword(string body)
+    {
+        // Assert
+        // An opt-out errs on the side of the person texting, as the automated SMS path always did.
+        Assert.Equal(SmsKeyword.Stop, SmsKeywordPolicy.Classify(body));
     }
 
     [Theory]

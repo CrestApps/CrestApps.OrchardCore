@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -10,6 +9,7 @@ using CrestApps.Core.AI.Connections;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Core.Handlers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -20,7 +20,7 @@ namespace CrestApps.OrchardCore.AI.Core.Handlers;
 /// <summary>
 /// Handles catalog lifecycle events for <see cref="AIDeployment"/> entries, including initialization, validation, and population from JSON data.
 /// </summary>
-public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
+public sealed class AIDeploymentHandler : CatalogEntryAuditHandlerBase<AIDeployment>
 {
     // Recipes are written by hand, so the pricing section is read without regard to case and accepts numbers as text.
     private static readonly JsonSerializerOptions _pricingSerializerOptions = new()
@@ -29,10 +29,8 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
         NumberHandling = JsonNumberHandling.AllowReadingFromString,
     };
 
-    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAIProviderConnectionStore _connectionStore;
     private readonly AIOptions _aiOptions;
-    private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
 
@@ -50,12 +48,22 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
         IOptions<AIOptions> aiOptions,
         IClock clock,
         IStringLocalizer<AIDeploymentHandler> stringLocalizer)
+        : base(httpContextAccessor, clock)
     {
-        _httpContextAccessor = httpContextAccessor;
         _connectionStore = connectionsCatalog;
         _aiOptions = aiOptions.Value;
-        _clock = clock;
         S = stringLocalizer;
+    }
+
+    protected override void SetCreated(AIDeployment entry, DateTime createdUtc, string ownerId, string author, bool hasUser)
+    {
+        entry.CreatedUtc = createdUtc;
+
+        if (hasUser)
+        {
+            entry.OwnerId = ownerId;
+            entry.Author = author;
+        }
     }
 
     public override Task InitializingAsync(InitializingContext<AIDeployment> context, CancellationToken cancellationToken = default)
@@ -63,7 +71,7 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
 
     public override Task UpdatingAsync(UpdatingContext<AIDeployment> context, CancellationToken cancellationToken = default)
     {
-        context.Model.ModifiedUtc = _clock.UtcNow;
+        StampModified(context.Model);
 
         return PopulateAsync(context.Model, context.Data);
     }
@@ -124,15 +132,7 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
 
     public override Task InitializedAsync(InitializedContext<AIDeployment> context, CancellationToken cancellationToken = default)
     {
-        context.Model.CreatedUtc = _clock.UtcNow;
-
-        var user = _httpContextAccessor.HttpContext?.User;
-
-        if (user != null)
-        {
-            context.Model.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            context.Model.Author = user.Identity.Name;
-        }
+        StampCreated(context.Model);
 
         return Task.CompletedTask;
     }

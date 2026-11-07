@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Inventory.Core.Models;
 using CrestApps.OrchardCore.Inventory.Core.Services;
 using CrestApps.OrchardCore.Inventory.Endpoints;
 using CrestApps.OrchardCore.Inventory.ViewModels;
+using CrestApps.OrchardCore.Numbering;
 using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -33,6 +34,8 @@ namespace CrestApps.OrchardCore.Inventory.Controllers;
 public sealed class PurchaseOrdersAdminController : Controller
 {
     private const int MaxLines = 500;
+
+    private const string PurchaseOrderNumberSeries = "Inventory.PurchaseOrder";
     private const int MaxQuantity = 1_000_000;
     private const int LowStockScanPageSize = 500;
     private const int LowStockScanMaxItems = 5_000;
@@ -42,6 +45,7 @@ public sealed class PurchaseOrdersAdminController : Controller
     private readonly IInventoryLocationService _locations;
     private readonly PurchaseOrderReceiver _receiver;
     private readonly IProductCurrencyProvider _currencyProvider;
+    private readonly INumberSequence _numberSequence;
     private readonly IClock _clock;
     private readonly IAuthorizationService _authorizationService;
     private readonly IShapeFactory _shapeFactory;
@@ -58,6 +62,7 @@ public sealed class PurchaseOrdersAdminController : Controller
         IInventoryLocationService locations,
         PurchaseOrderReceiver receiver,
         IProductCurrencyProvider currencyProvider,
+        INumberSequence numberSequence,
         IClock clock,
         IAuthorizationService authorizationService,
         IShapeFactory shapeFactory,
@@ -72,6 +77,7 @@ public sealed class PurchaseOrdersAdminController : Controller
         _locations = locations;
         _receiver = receiver;
         _currencyProvider = currencyProvider;
+        _numberSequence = numberSequence;
         _clock = clock;
         _authorizationService = authorizationService;
         _shapeFactory = shapeFactory;
@@ -586,23 +592,13 @@ public sealed class PurchaseOrdersAdminController : Controller
         model.SearchEndpoint = Url.RouteUrl(StockItemSearchEndpoints.RouteName);
     }
 
-    // A number staff can read out: the date and four characters, such as PO-261019-K3QZ.
+    // A number staff can read out: the date and five characters made from the purchase order's place in a locked
+    // sequence, such as PO-261019-K3QZ7. Two purchase orders never get the same number.
     private async Task<string> NewNumberAsync(DateTime now)
     {
-        const string Alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        var sequence = await _numberSequence.NextAsync(PurchaseOrderNumberSeries, cancellationToken: HttpContext.RequestAborted);
 
-        for (var attempt = 0; ; attempt++)
-        {
-            var suffix = string.Concat(Enumerable.Range(0, 4).Select(_ => Alphabet[Random.Shared.Next(Alphabet.Length)]));
-            var number = $"PO-{now.ToString("yyMMdd", CultureInfo.InvariantCulture)}-{suffix}";
-
-            var (count, _) = await _orders.PageAsync(new PurchaseOrderQuery { Search = number, All = true }, 0, 1, HttpContext.RequestAborted);
-
-            if (count == 0 || attempt >= 5)
-            {
-                return number;
-            }
-        }
+        return $"PO-{now.ToString("yyMMdd", CultureInfo.InvariantCulture)}-{ReadableCodes.FromNumber(sequence, 5)}";
     }
 
     private static RouteValueDictionary FilterRouteValues(PurchaseOrderIndexOptions options, PagerParameters pagerParameters)

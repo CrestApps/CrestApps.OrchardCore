@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.StateMachines;
 using OrchardCore;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -17,7 +18,7 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
     private static readonly TimeSpan _registrationLockTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan _registrationLockExpiration = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan _initialRecoveryDelay = TimeSpan.FromMinutes(5);
-    private static readonly Dictionary<ProviderCommandStatus, ProviderCommandStatus[]> _allowedTransitions =
+    private static readonly TransitionTable<ProviderCommandStatus> _allowedTransitions = new(
         new Dictionary<ProviderCommandStatus, ProviderCommandStatus[]>
         {
             [ProviderCommandStatus.Pending] = [ProviderCommandStatus.Claimed, ProviderCommandStatus.Compensating, ProviderCommandStatus.Failed],
@@ -29,7 +30,7 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
             [ProviderCommandStatus.Confirmed] = [],
             [ProviderCommandStatus.Compensated] = [],
             [ProviderCommandStatus.Failed] = [],
-        };
+        });
 
     private readonly IProviderCommandManager _manager;
     private readonly ISession _session;
@@ -533,7 +534,7 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
 
     private static void EnsureTransitionAllowed(ProviderCommand command, ProviderCommandStatus target)
     {
-        if (!_allowedTransitions.TryGetValue(command.Status, out var allowed) || !allowed.Contains(target))
+        if (!_allowedTransitions.CanMove(command.Status, target))
         {
             throw new ProviderCommandTransitionException(command.CommandId, command.Status, target);
         }

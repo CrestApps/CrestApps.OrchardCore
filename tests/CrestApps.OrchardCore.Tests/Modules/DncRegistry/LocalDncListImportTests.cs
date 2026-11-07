@@ -71,7 +71,8 @@ public sealed class LocalDncListImportTests
                     CreateClock(),
                     new DefaultPhoneNumberService(),
                     Options.Create(new BackgroundWorkPacingOptions { DatabaseShare = 1 }),
-                    NullLogger<DefaultLocalDncListManager>.Instance);
+                    NullLogger<DefaultLocalDncListManager>.Instance,
+                    new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<DefaultLocalDncListManager>());
 
                 // Act
                 await manager.ProcessImportAsync(ListId, TestContext.Current.CancellationToken);

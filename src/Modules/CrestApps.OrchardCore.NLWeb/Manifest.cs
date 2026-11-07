@@ -18,5 +18,8 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         StructuredDataConstants.Feature.Area,
+
+        // The settings page lists the site's index profiles, which the Indexing feature stores.
+        OrchardCoreFeatureIds.Indexing,
     ]
 )]

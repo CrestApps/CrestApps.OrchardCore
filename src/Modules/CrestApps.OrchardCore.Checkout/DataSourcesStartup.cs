@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.Checkout;
 /// Exposes the checkout as a data source of Orchard Core, for reports and data pipelines: the data source, and the data
 /// sets of the checkouts buyers started, the coupons, the uses of their codes, and the payment methods customers kept.
 /// </summary>
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class DataSourcesStartup : StartupBase
 {
     /// <inheritdoc/>

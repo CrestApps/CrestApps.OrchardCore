@@ -97,7 +97,8 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
                     catalog,
                     [new FailingLoader(session)],
                     CreateDialerLoader(session, store, connectionString, catalog),
-                    NullLogger<DefaultActivityBatchLoadCoordinator>.Instance);
+                    NullLogger<DefaultActivityBatchLoadCoordinator>.Instance,
+                    new StubClock());
 
                 await coordinator.LoadAsync(batch.ItemId, LoaderId, LoaderUserName, TestContext.Current.CancellationToken);
                 await session.SaveChangesAsync(TestContext.Current.CancellationToken);

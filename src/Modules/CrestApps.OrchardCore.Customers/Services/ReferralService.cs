@@ -1,8 +1,8 @@
-using System.Security.Cryptography;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Customers.Indexes;
 using CrestApps.OrchardCore.Customers.Models;
+using CrestApps.OrchardCore.Numbering;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using OrchardCore;
 using OrchardCore.Modules;
@@ -25,15 +25,12 @@ public interface IReferralStore : ICatalog<ReferralProfile>
 /// </summary>
 public sealed class ReferralStore : DocumentCatalog<ReferralProfile, ReferralProfileIndex>, IReferralStore
 {
-    private readonly IClock _clock;
-
     protected override bool CheckConcurrency => true;
 
     public ReferralStore(ISession session, IClock clock)
-        : base(session)
+        : base(session, clock)
     {
         CollectionName = CustomersConstants.CollectionName;
-        _clock = clock;
     }
 
     public Task<ReferralProfile> FindByCustomerAsync(string customerId, CancellationToken cancellationToken = default)
@@ -49,20 +46,6 @@ public sealed class ReferralStore : DocumentCatalog<ReferralProfile, ReferralPro
             ? Task.FromResult<ReferralProfile>(null)
             : Session.Query<ReferralProfile, ReferralProfileIndex>(index => index.Code == code, collection: CollectionName).FirstOrDefaultAsync(cancellationToken);
     }
-
-    protected override ValueTask SavingAsync(ReferralProfile record)
-    {
-        var now = _clock.UtcNow;
-
-        if (record.CreatedUtc == default)
-        {
-            record.CreatedUtc = now;
-        }
-
-        record.UpdatedUtc = now;
-
-        return ValueTask.CompletedTask;
-    }
 }
 
 /// <summary>
@@ -74,9 +57,6 @@ public sealed class ReferralService
     /// The cookie a referral link keeps its code in until the friend checks out.
     /// </summary>
     public const string CookieName = "orchard-referral";
-
-    // No 0, O, 1 or I, which people misread when they share a link by hand.
-    private static readonly char[] _alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".ToCharArray();
 
     private readonly IReferralStore _store;
     private readonly ISession _session;
@@ -103,7 +83,7 @@ public sealed class ReferralService
 
         do
         {
-            code = new string(RandomNumberGenerator.GetItems<char>(_alphabet, 8));
+            code = ReadableCodes.Generate(8);
         }
         while (await _store.FindByCodeAsync(code, cancellationToken) is not null);
 

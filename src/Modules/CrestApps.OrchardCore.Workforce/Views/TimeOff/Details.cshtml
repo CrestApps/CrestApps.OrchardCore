@@ -37,10 +37,10 @@
             <p class="mb-0 mt-2 small"><span class="text-muted">@T["Reason:"]</span> @request.Reason</p>
         }
         <p class="mb-0 mt-1 small text-muted">
-            @T["Submitted {0} by {1}.", CrestApps.OrchardCore.Calendars.Core.CalendarTime.ToLocal(request.SubmittedUtc, request.TimeZoneId).ToString("g"), Model.SubmittedByName ?? T["someone"].Value]
+            @T["Submitted {0} by {1}.", CrestApps.OrchardCore.Calendars.CalendarTime.ToLocal(request.SubmittedUtc, request.TimeZoneId).ToString("g"), Model.SubmittedByName ?? T["someone"].Value]
             @if (request.DecidedUtc.HasValue && !request.IsOpen)
             {
-                @T[" Decided {0} by {1}.", CrestApps.OrchardCore.Calendars.Core.CalendarTime.ToLocal(request.DecidedUtc.Value, request.TimeZoneId).ToString("g"), Model.DecidedByName ?? T["someone"].Value]
+                @T[" Decided {0} by {1}.", CrestApps.OrchardCore.Calendars.CalendarTime.ToLocal(request.DecidedUtc.Value, request.TimeZoneId).ToString("g"), Model.DecidedByName ?? T["someone"].Value]
             }
             @if (!string.IsNullOrEmpty(request.DecisionNote))
             {

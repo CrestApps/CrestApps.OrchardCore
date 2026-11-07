@@ -3,13 +3,17 @@ using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
+using CrestApps.OrchardCore.Core.Deployments;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Deployment;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Deployments.Sources;
 
-internal sealed class AIProviderConnectionDeploymentSource : DeploymentSourceBase<AIProviderConnectionDeploymentStep>
+/// <summary>
+/// Writes the selected AI provider connections to a deployment plan. The connection handlers strip the secrets while
+/// each connection is exported.
+/// </summary>
+internal sealed class AIProviderConnectionDeploymentSource : CatalogDeploymentSourceBase<AIProviderConnectionDeploymentStep, AIProviderConnection>
 {
     private readonly INamedCatalog<AIProviderConnection> _connectionsCatalog;
     private readonly IEnumerable<IAIProviderConnectionHandler> _handlers;
@@ -25,52 +29,37 @@ internal sealed class AIProviderConnectionDeploymentSource : DeploymentSourceBas
         INamedCatalog<AIProviderConnection> connectionsCatalog,
         IEnumerable<IAIProviderConnectionHandler> handlers,
         ILogger<AIProviderConnectionDeploymentSource> logger)
+        : base("connections")
     {
         _connectionsCatalog = connectionsCatalog;
         _handlers = handlers;
         _logger = logger;
     }
 
-    protected override async Task ProcessAsync(AIProviderConnectionDeploymentStep step, DeploymentPlanResult result)
+    protected override async Task<IEnumerable<AIProviderConnection>> GetEntriesAsync()
+        => await _connectionsCatalog.GetAllAsync();
+
+    protected override bool IsSelected(AIProviderConnectionDeploymentStep step, AIProviderConnection entry)
+        => IsSelectedByKey(step.IncludeAll, step.ConnectionIds, entry.ItemId);
+
+    protected override JsonObject Export(AIProviderConnection entry)
     {
-        var connections = await _connectionsCatalog.GetAllAsync();
-
-        var connectionObjects = new JsonArray();
-
-        var connectionIds = step.IncludeAll
-        ? []
-        : step.ConnectionIds ?? [];
-
-        foreach (var connection in connections)
+        var connectionObject = new JsonObject()
         {
-            if (connectionIds.Length > 0 && !connectionIds.Contains(connection.ItemId))
-            {
-                continue;
-            }
+            { "ItemId", entry.ItemId },
+            { "Source", entry.Source },
+            { "Name", entry.Name },
+            { "DisplayText", entry.DisplayText },
+            { "CreatedUtc", entry.CreatedUtc },
+            { "OwnerId", entry.OwnerId },
+            { "Author", entry.Author },
+            { "Properties", JsonSerializer.SerializeToNode(entry.Properties) },
+        };
 
-            var connectionObject = new JsonObject()
-            {
-                { "ItemId", connection.ItemId },
-                { "Source", connection.Source },
-                { "Name", connection.Name },
-                { "DisplayText", connection.DisplayText },
-                { "CreatedUtc", connection.CreatedUtc },
-                { "OwnerId", connection.OwnerId },
-                { "Author", connection.Author },
-                { "Properties", JsonSerializer.SerializeToNode(connection.Properties) },
-            };
+        var exportingContext = new ExportingAIProviderConnectionContext(entry, connectionObject);
 
-            var exportingContext = new ExportingAIProviderConnectionContext(connection, connectionObject);
+        _handlers.Invoke((handler, context) => handler.Exporting(context), exportingContext, _logger);
 
-            _handlers.Invoke((handler, context) => handler.Exporting(context), exportingContext, _logger);
-
-            connectionObjects.Add(connectionObject);
-        }
-
-        result.Steps.Add(new JsonObject
-        {
-            ["name"] = step.Name,
-            ["connections"] = connectionObjects,
-        });
+        return connectionObject;
     }
 }

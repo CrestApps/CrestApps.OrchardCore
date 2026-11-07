@@ -78,7 +78,7 @@ public sealed class ShippingCheckoutTests
 
         var handler = new ShippingCheckoutHandler(
             orders.Object,
-            new ServiceCollection().BuildServiceProvider(),
+            [],
             Options.Create(new DocumentJsonSerializerOptions()),
             new PassThroughStringLocalizer<ShippingCheckoutHandler>());
 

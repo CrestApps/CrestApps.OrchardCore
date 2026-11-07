@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Addresses;
 using CrestApps.OrchardCore.Customers.Core.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Locking.Distributed;
@@ -133,7 +134,7 @@ public sealed class DefaultCustomerMergeService : ICustomerMergeService
 
         foreach (var address in guest.Addresses ?? [])
         {
-            if (into.Addresses.Count >= MaxAddresses || into.Addresses.Any(existing => IsSameAddress(existing.Address, address.Address)))
+            if (into.Addresses.Count >= MaxAddresses || into.Addresses.Any(existing => AddressComparison.IsSameAddress(existing.Address, address.Address)))
             {
                 continue;
             }
@@ -146,16 +147,4 @@ public sealed class DefaultCustomerMergeService : ICustomerMergeService
             }
         }
     }
-
-    private static bool IsSameAddress(Addresses.Models.Address left, Addresses.Models.Address right)
-        => left is not null && right is not null &&
-            Same(left.AddressLine1, right.AddressLine1) &&
-            Same(left.AddressLine2, right.AddressLine2) &&
-            Same(left.City, right.City) &&
-            Same(left.Region, right.Region) &&
-            Same(left.PostalCode, right.PostalCode) &&
-            Same(left.Country, right.Country);
-
-    private static bool Same(string left, string right)
-        => string.Equals(left?.Trim() ?? string.Empty, right?.Trim() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
 }

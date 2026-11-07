@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Geo;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -17,7 +18,7 @@ public sealed class AzureMapsSettingsDisplayDriver : SiteDisplayDriver<AzureMaps
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
-    private readonly IDataProtector _protector;
+    private readonly IDataProtectionProvider _dataProtectionProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AzureMapsSettingsDisplayDriver"/> class.
@@ -29,7 +30,7 @@ public sealed class AzureMapsSettingsDisplayDriver : SiteDisplayDriver<AzureMaps
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
-        _protector = dataProtectionProvider.CreateProtector(AzureMapsSettings.ProtectionPurpose);
+        _dataProtectionProvider = dataProtectionProvider;
     }
 
     /// <inheritdoc/>
@@ -37,7 +38,7 @@ public sealed class AzureMapsSettingsDisplayDriver : SiteDisplayDriver<AzureMaps
 
     /// <inheritdoc/>
     public override IDisplayResult Edit(ISite site, AzureMapsSettings settings, BuildEditorContext context)
-        => Initialize<AzureMapsSettingsViewModel>("AzureMapsSettings_Edit", model => model.HasKey = !string.IsNullOrEmpty(settings.Key))
+        => Initialize<AzureMapsSettingsViewModel>("AzureMapsSettings_Edit", model => model.HasKey = ProtectedSettingExtensions.HasSecret(settings.Key))
             .Location("Content:5")
             .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, GeoPermissions.ManageGeoSettings))
             .OnGroup(SettingsGroupId);
@@ -54,14 +55,8 @@ public sealed class AzureMapsSettingsDisplayDriver : SiteDisplayDriver<AzureMaps
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (model.RemoveKey)
-        {
-            settings.Key = null;
-        }
-        else if (!string.IsNullOrWhiteSpace(model.Key))
-        {
-            settings.Key = _protector.Protect(model.Key.Trim());
-        }
+        settings.Key = _dataProtectionProvider.ApplySecret(AzureMapsSettings.ProtectionPurpose, settings.Key, model.Key, model.RemoveKey);
+
 
         return Edit(site, settings, context);
     }

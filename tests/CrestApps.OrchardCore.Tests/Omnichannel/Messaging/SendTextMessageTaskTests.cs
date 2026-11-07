@@ -95,7 +95,7 @@ public sealed class SendTextMessageTaskTests
 
         return new SendTextMessageTask(
             conversations,
-            profiles.Object,
+            new AgentProfileReader(profiles.Object),
             new UserManager<IUser>(users.Object, null, null, null, null, null, null, null, NullLogger<UserManager<IUser>>.Instance),
             evaluator.Object,
             NullLogger<SendTextMessageTask>.Instance,

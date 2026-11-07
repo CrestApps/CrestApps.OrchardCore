@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Services;
-using CrestApps.OrchardCore.Products.Core.Transfer;
+using CrestApps.OrchardCore.Tabular;
 using Xunit;
 
 namespace CrestApps.OrchardCore.Tests.Orders;
@@ -31,7 +31,7 @@ public sealed class OrderCsvTests
             ],
         };
 
-        var (headers, rows) = CsvTable.Parse(OrderCsv.Write([order], utc => utc.AddHours(-7)));
+        var (headers, rows) = CsvReader.Parse(OrderCsv.Write([order], utc => utc.AddHours(-7)));
 
         Assert.Equal(OrderCsv.Columns, headers);
         Assert.Equal(2, rows.Count);

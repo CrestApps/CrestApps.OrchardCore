@@ -1,11 +1,16 @@
 using CrestApps.OrchardCore.BackgroundWork;
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.DncRegistry.BackgroundTasks;
+using CrestApps.OrchardCore.DncRegistry.Deployments;
 using CrestApps.OrchardCore.DncRegistry.Drivers;
 using CrestApps.OrchardCore.DncRegistry.Indexes;
 using CrestApps.OrchardCore.DncRegistry.Migrations;
 using CrestApps.OrchardCore.DncRegistry.Models;
+using CrestApps.OrchardCore.DncRegistry.Recipes;
 using CrestApps.OrchardCore.DncRegistry.Reports.DataSources;
 using CrestApps.OrchardCore.DncRegistry.Services;
+using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -13,12 +18,14 @@ using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.FileStorage.FileSystem;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
 using YesSql.Indexes;
 
@@ -105,6 +112,7 @@ public sealed class LocalDncRegistryStartup : StartupBase
         });
 
         services.AddScoped<INationalDoNotCallRegistry, LocalDncRegistry>();
+        services.AddConsentSource<DoNotCallListConsentSource>();
         services.AddScoped<ILocalDncListManager, DefaultLocalDncListManager>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, LocalDncImportBackgroundTask>());
         services.AddNavigationProvider<LocalDncRegistryAdminMenu>();
@@ -114,6 +122,12 @@ public sealed class LocalDncRegistryStartup : StartupBase
         services.AddScoped<IDisplayDriver<LocalDncList>, LocalDncListDisplayDriver>();
         services.AddScoped<IDisplayDriver<LocalDncListOptions>, LocalDncListOptionsDisplayDriver>();
         services.AddScoped<IDisplayDriver<ImportLocalDncList>, ImportLocalDncListDisplayDriver>();
+
+        // Local lists travel between sites with their numbers, which are queued through the same import as an upload.
+        services.AddRecipeExecutionStep<LocalDncListsStep>();
+        services.AddScoped<IRecipeStep, LocalDncListsRecipeStepSchema>();
+        services.AddDeployment<LocalDncListsDeploymentSource, LocalDncListsDeploymentStep, SummaryDeploymentStepDisplayDriver<LocalDncListsDeploymentStep>>();
+        services.AddDeploymentStepSchema<LocalDncListsDeploymentStepSchema>();
     }
 }
 
@@ -122,7 +136,7 @@ public sealed class LocalDncRegistryStartup : StartupBase
 /// pipelines. Only the local registry stores records, so the data source is listed only while it is on.
 /// </summary>
 [Feature(DncRegistryConstants.Features.Local)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class LocalDncDataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

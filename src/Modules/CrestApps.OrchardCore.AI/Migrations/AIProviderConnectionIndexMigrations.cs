@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AI;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Migrations;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -101,6 +102,7 @@ public sealed class AIProviderConnectionIndexMigrations : DataMigration
         }
 
         var importedCount = 0;
+        var skipped = new MigrationSkipReport(nameof(AIProviderConnectionIndexMigrations), logger);
 
         foreach (var batch in BatchDocuments(documents))
         {
@@ -149,9 +151,7 @@ public sealed class AIProviderConnectionIndexMigrations : DataMigration
                     {
                         if (string.IsNullOrWhiteSpace(sourceName))
                         {
-                            logger.LogWarning(
-                                "Skipping legacy AI provider connection {ItemId} because no source/client name was found.",
-                                itemId);
+                            skipped.Skip(itemId, "no source/client name was found");
                             continue;
                         }
 
@@ -162,10 +162,9 @@ public sealed class AIProviderConnectionIndexMigrations : DataMigration
                     var validationResult = await connectionManager.ValidateAsync(providerConnection);
                     if (!validationResult.Succeeded)
                     {
-                        logger.LogWarning(
-                            "Skipping legacy AI provider connection {ItemId} because validation failed: {Errors}",
+                        skipped.Skip(
                             itemId,
-                            string.Join("; ", validationResult.Errors.Select(error => error.ErrorMessage)));
+                            "validation failed: " + string.Join("; ", validationResult.Errors.Select(error => error.ErrorMessage)));
                         continue;
                     }
 
@@ -174,6 +173,8 @@ public sealed class AIProviderConnectionIndexMigrations : DataMigration
                 }
             }
         }
+
+        await skipped.LogSummaryAsync(serviceProvider);
 
         if (importedCount > 0 && logger.IsEnabled(LogLevel.Information))
         {

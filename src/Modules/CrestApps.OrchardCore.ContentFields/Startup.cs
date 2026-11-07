@@ -32,7 +32,7 @@ public sealed class Startup : StartupBase
     }
 }
 
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class RecipesSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -61,7 +61,7 @@ public sealed class AddressFieldStartup : StartupBase
 }
 
 [Feature("CrestApps.OrchardCore.ContentFields.Address")]
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class AddressFieldRecipesSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

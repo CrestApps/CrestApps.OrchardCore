@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="CrestApps.Core.AI" />
     <PackageReference Include="Moq" />
   </ItemGroup>
 

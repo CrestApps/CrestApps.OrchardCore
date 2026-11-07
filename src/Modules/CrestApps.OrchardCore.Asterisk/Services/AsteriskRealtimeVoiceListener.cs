@@ -82,6 +82,7 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceList
         }
         catch (OperationCanceledException)
         {
+            // The listener was cancelled just above; that is how it stops.
         }
         finally
         {

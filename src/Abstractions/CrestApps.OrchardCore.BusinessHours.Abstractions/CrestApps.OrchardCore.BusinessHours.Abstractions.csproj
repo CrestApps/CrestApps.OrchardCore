@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.BusinessHours</RootNamespace>
+    <Title>CrestApps OrchardCore Business Hours Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Public contracts for business hours: the weekly hours schedule with its date exceptions (holidays and special
+      hours), the open-hours service every module asks "are we open?", the schedule sources that keep schedules,
+      and the pure evaluator that turns a schedule into open windows in its time zone.
+    </Description>
+    <PackageTags>$(PackageTags) BusinessHours Hours Holidays Schedule Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Calendars.Abstractions\CrestApps.OrchardCore.Calendars.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

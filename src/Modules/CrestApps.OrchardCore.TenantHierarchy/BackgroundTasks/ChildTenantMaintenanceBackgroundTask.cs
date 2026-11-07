@@ -31,10 +31,7 @@ public sealed class ChildTenantMaintenanceBackgroundTask : IBackgroundTask
 
         try
         {
-            var clock = serviceProvider.GetRequiredService<IClock>();
-            var codes = serviceProvider.GetRequiredService<DelegatedAccessCodeStore>();
-            await codes.DeleteExpiredAsync(clock.UtcNow.AddMinutes(-5));
-
+            // Expired delegated sign-in codes are removed by the platform retention task (DelegatedAccessCodeRetentionPolicy).
             var removed = await serviceProvider.GetRequiredService<ChildTenantManager>().RemoveDueAsync();
 
             if (removed > 0 && logger.IsEnabled(LogLevel.Information))

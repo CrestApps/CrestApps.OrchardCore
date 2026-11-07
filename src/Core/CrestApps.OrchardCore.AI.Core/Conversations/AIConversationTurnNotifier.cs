@@ -1,5 +1,6 @@
 using CrestApps.Core.AI.Models;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Core.Conversations;
 
@@ -10,16 +11,19 @@ namespace CrestApps.OrchardCore.AI.Core.Conversations;
 public sealed class AIConversationTurnNotifier : IAIConversationTurnNotifier
 {
     private readonly IEnumerable<IAIConversationTurnHandler> _handlers;
+    private readonly IClock _clock;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AIConversationTurnNotifier"/> class.
     /// </summary>
     /// <param name="handlers">The turn handlers.</param>
+    /// <param name="clock">The clock a turn is stamped with.</param>
     /// <param name="logger">The logger.</param>
-    public AIConversationTurnNotifier(IEnumerable<IAIConversationTurnHandler> handlers, ILogger<AIConversationTurnNotifier> logger)
+    public AIConversationTurnNotifier(IEnumerable<IAIConversationTurnHandler> handlers, IClock clock, ILogger<AIConversationTurnNotifier> logger)
     {
         _handlers = handlers;
+        _clock = clock;
         _logger = logger;
     }
 
@@ -38,7 +42,7 @@ public sealed class AIConversationTurnNotifier : IAIConversationTurnNotifier
             conversation = new AIConversationContext { Session = session };
         }
 
-        var turn = new AIConversationTurn(role, text.Trim(), DateTime.UtcNow);
+        var turn = new AIConversationTurn(role, text.Trim(), _clock.UtcNow);
 
         foreach (var handler in _handlers)
         {

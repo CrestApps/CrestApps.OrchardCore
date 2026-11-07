@@ -30,6 +30,8 @@ An agent and a worker are the same person when they share a user account. `Agent
 
 - **Sign-in** (source `SignIn`, or Offline to any other state): the agent's worker is clocked in with source `ContactCenter`, at the time of the change, unless they are already clocked in another way.
 - **Sign-out** (source `SignOut`, or any state to Offline): the worker is clocked out, but only when the clock-in that opened their stretch came from the contact center.
+
+The `ContactCenter` punch source (`WorkforceContactCenterConstants.PunchSource`) belongs to this module, not to Workforce: punch sources are open strings, and the feature describes its source through an `ITimePunchSourceProvider`, so a time clock policy offers **The contact center** under **Workers can punch from** only while this feature is enabled, and timesheets name it. Punches and policies saved while sources were numbers are still read.
 - Each punch carries `contact-center:<event id>` as its idempotency key, so an event delivered twice punches once. A punch the time clock refuses (no policy, the contact center not allowed by the policy) is logged and skipped.
 
 ## Agent states in Time Tracker

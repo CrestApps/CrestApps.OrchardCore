@@ -23,8 +23,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Controllers;
 [Admin]
 public sealed class BroadcastsController : Controller
 {
-    private static readonly char[] _recipientSeparators = ['\n', '\r', ',', ';'];
-
     private readonly IMessagingBroadcastManager _manager;
     private readonly IOmnichannelChannelEndpointManager _endpointManager;
     private readonly IMessagingChannelResolver _channelResolver;
@@ -109,7 +107,7 @@ public sealed class BroadcastsController : Controller
         // An address can be used on several channels; the composer sends on the first messaging channel it has.
         var channel = endpoint is null ? null : _channelResolver.GetAll().FirstOrDefault(candidate => endpoint.HasCapability(candidate.Name));
 
-        var addresses = ParseRecipients(model.RecipientsText)
+        var addresses = MessagingRecipients.Parse(model.RecipientsText)
             .Concat(model.ContactAddresses ?? [])
             .Where(address => !string.IsNullOrWhiteSpace(address))
             .ToList();
@@ -201,19 +199,6 @@ public sealed class BroadcastsController : Controller
         await _notifier.SuccessAsync(H["The broadcast was queued and will be sent to {0} recipient(s).", recipients.Count]);
 
         return RedirectToAction(nameof(Index));
-    }
-
-    private static List<string> ParseRecipients(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return [];
-        }
-
-        return text
-            .Split(_recipientSeparators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
     }
 
     private async Task PopulateEndpointsAsync(BroadcastCreateViewModel model)

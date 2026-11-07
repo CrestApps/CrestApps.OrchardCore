@@ -47,7 +47,7 @@ public sealed class Startup : StartupBase
 /// Answers questions with the keyword search of Orchard Core's search providers, which register their search service
 /// only when Orchard Core's Search feature is enabled.
 /// </summary>
-[RequireFeatures("OrchardCore.Search")]
+[RequireFeatures(OrchardCoreFeatureIds.Search)]
 public sealed class SearchStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -109,7 +109,7 @@ public sealed class DataSourcesStartup : StartupBase
 /// Holds each visitor to a number of questions a minute when Orchard Core's Rate Limits feature is enabled: every
 /// question runs a search, and, with AI, calls a model the site pays for.
 /// </summary>
-[RequireFeatures("OrchardCore.RateLimits")]
+[RequireFeatures(OrchardCoreFeatureIds.RateLimits)]
 public sealed class RateLimitsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

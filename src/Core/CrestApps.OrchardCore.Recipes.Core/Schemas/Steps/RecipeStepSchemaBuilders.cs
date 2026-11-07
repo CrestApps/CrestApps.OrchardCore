@@ -3,7 +3,10 @@ using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 
-internal static class RecipeStepSchemaBuilders
+/// <summary>
+/// Builds the common parts of a recipe step schema. Modules use it to describe their own recipe steps.
+/// </summary>
+public static class RecipeStepSchemaBuilders
 {
     /// <summary>
     /// Builds a JSON schema for a named recipe step with the specified properties and constraints.

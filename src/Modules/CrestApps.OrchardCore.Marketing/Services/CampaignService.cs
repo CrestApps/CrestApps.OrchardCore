@@ -1,13 +1,16 @@
 using System.Text.Encodings.Web;
-using System.Text.RegularExpressions;
+using CrestApps.OrchardCore.Consent;
 using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Marketing.Models;
+using CrestApps.OrchardCore.Marketing.Outreach;
+using CrestApps.OrchardCore.Outreach;
+using CrestApps.OrchardCore.Outreach.Core;
+using CrestApps.OrchardCore.Outreach.Models;
 using Fluid;
 using Fluid.Values;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
 using OrchardCore.Email;
 using OrchardCore.Liquid;
 using OrchardCore.Modules;
@@ -16,13 +19,13 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Marketing.Services;
 
 /// <summary>
-/// Sends campaigns: each one to its segment's customers who accept marketing and have an email, in batches, picking up
-/// where the last batch stopped, with the customer's own unsubscribe link.
+/// Sends campaigns through the outreach engine: each one to its segment's customers who accept marketing and have an
+/// email, in batches, picking up where the last batch stopped, with the customer's own unsubscribe link. Marketing
+/// depends on Orchard's e-mail feature, so the e-mail service is always there; a site whose e-mail isn't set up can't
+/// send a campaign, and is told so.
 /// </summary>
-public sealed partial class CampaignService
+public sealed class CampaignService
 {
-    public const int BatchSize = 50;
-
     private const string UnsubscribePurpose = "CrestApps.Marketing.Unsubscribe";
 
     // An unsubscribe link keeps working for this long.
@@ -35,9 +38,10 @@ public sealed partial class CampaignService
     private readonly ILiquidTemplateManager _liquid;
     private readonly ISiteService _siteService;
     private readonly IEmailService _emailService;
+    private readonly IEmailProviderResolver _emailProviderResolver;
+    private readonly IOutreachEngine _outreachEngine;
     private readonly SignedTokenService _signedTokenService;
     private readonly IClock _clock;
-    private readonly ILogger _logger;
 
     public CampaignService(
         ICampaignStore campaigns,
@@ -48,9 +52,10 @@ public sealed partial class CampaignService
         ISiteService siteService,
         SignedTokenService signedTokenService,
         IClock clock,
-        ILogger<CampaignService> logger,
         IStringLocalizer<CampaignService> stringLocalizer,
-        IEmailService emailService = null)
+        IEmailService emailService,
+        IEmailProviderResolver emailProviderResolver,
+        IOutreachEngine outreachEngine)
     {
         _campaigns = campaigns;
         _segments = segments;
@@ -59,16 +64,20 @@ public sealed partial class CampaignService
         _liquid = liquid;
         _siteService = siteService;
         _emailService = emailService;
+        _emailProviderResolver = emailProviderResolver;
+        _outreachEngine = outreachEngine;
         _signedTokenService = signedTokenService;
         _clock = clock;
-        _logger = logger;
         S = stringLocalizer;
     }
 
     internal readonly IStringLocalizer S;
 
-    public bool CanSend
-        => _emailService is not null;
+    /// <summary>
+    /// Gets whether the site's e-mail is set up, so a campaign can be sent.
+    /// </summary>
+    public async Task<bool> CanSendAsync()
+        => await _emailProviderResolver.GetAsync() is not null;
 
     /// <summary>
     /// Returns the token of a customer's unsubscribe link.
@@ -114,7 +123,7 @@ public sealed partial class CampaignService
     /// </summary>
     public async Task<bool> SendTestAsync(Campaign campaign, string to, Func<string, string> unsubscribeUrl, CancellationToken cancellationToken = default)
     {
-        if (_emailService is null || string.IsNullOrWhiteSpace(to))
+        if (string.IsNullOrWhiteSpace(to))
         {
             return false;
         }
@@ -122,14 +131,15 @@ public sealed partial class CampaignService
         var sample = await FindSampleAsync(campaign, cancellationToken);
         var (subject, html) = await RenderAsync(campaign, sample.Customer, sample.Purchases, unsubscribeUrl(sample.Customer is null ? "test" : CreateUnsubscribeToken(sample.Customer.ItemId)));
 
-        return (await _emailService.SendAsync(new MailMessage { To = to.Trim(), Subject = "[Test] " + subject, HtmlBody = html, TextBody = ToText(html) }, cancellationToken: cancellationToken)).Succeeded;
+        return (await _emailService.SendAsync(new MailMessage { To = to.Trim(), Subject = "[Test] " + subject, HtmlBody = html, TextBody = OutreachText.FromHtml(html) }, cancellationToken: cancellationToken)).Succeeded;
     }
 
     /// <summary>
-    /// Sends the next batch of a sending campaign, or starts a scheduled one whose time has come. Returns whether the
-    /// campaign has more to send.
+    /// Starts a scheduled campaign whose time has come, and hands a sending campaign to the outreach engine, which sends
+    /// it to its segment in batches. A campaign that was half sent before it carries its counts and position over.
+    /// Returns whether a run was started.
     /// </summary>
-    public async Task<bool> SendBatchAsync(Campaign campaign, Func<string, string> unsubscribeUrl, CancellationToken cancellationToken = default)
+    public async Task<bool> StartSendingAsync(Campaign campaign, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(campaign);
 
@@ -141,56 +151,57 @@ public sealed partial class CampaignService
             campaign.StartedUtc = now;
         }
 
-        if (campaign.Status != CampaignStatus.Sending || _emailService is null)
+        if (campaign.Status != CampaignStatus.Sending || !string.IsNullOrEmpty(campaign.OutreachRunId))
         {
             return false;
         }
 
-        var segment = await _segments.FindByIdAsync(campaign.SegmentId, cancellationToken);
-        var batch = segment is null ? [] : await _purchases.ListAsync(segment.Rules, now, campaign.Cursor, BatchSize, cancellationToken);
-
-        foreach (var purchases in batch)
+        var run = await _outreachEngine.StartAsync(new OutreachRun
         {
-            campaign.Cursor = purchases.Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            Name = campaign.Name,
+            OwnerType = MarketingOutreachConstants.CampaignOwnerType,
+            OwnerId = campaign.ItemId,
+            AudienceSource = MarketingOutreachConstants.SegmentAudienceSource,
+            Sender = OutreachConstants.EmailSender,
 
-            var customer = await _customers.FindByIdAsync(purchases.ItemId, cancellationToken);
+            // Before each e-mail the engine asks the consent service whether the customer still accepts marketing, so
+            // an unsubscribe recorded after the audience page was read still stops the e-mail.
+            ConsentChannel = ConsentChannels.Email,
+            ConsentContactKind = ConsentContactKinds.Customer,
+            Renderer = MarketingOutreachConstants.CampaignRenderer,
+            PageSize = MarketingOutreachConstants.PageSize,
+            Template = new OutreachTemplate { Subject = campaign.Subject, Body = campaign.Body, IsHtml = true },
+            Cursor = campaign.Cursor,
+            Sent = campaign.Sent,
+            Skipped = campaign.Skipped,
+            Failed = campaign.Failed,
+        }, cancellationToken);
 
-            // Only customers who said yes to marketing get it, and only once.
-            if (customer is not { AcceptsMarketing: true, Status: CustomerStatus.Active } || string.IsNullOrWhiteSpace(customer.Email))
-            {
-                campaign.Skipped++;
-
-                continue;
-            }
-
-            var (subject, html) = await RenderAsync(campaign, customer, purchases, unsubscribeUrl(CreateUnsubscribeToken(customer.ItemId)));
-            var result = await _emailService.SendAsync(new MailMessage { To = customer.Email, Subject = subject, HtmlBody = html, TextBody = ToText(html) }, cancellationToken: cancellationToken);
-
-            if (result.Succeeded)
-            {
-                campaign.Sent++;
-            }
-            else
-            {
-                campaign.Failed++;
-
-                if (_logger.IsEnabled(LogLevel.Warning))
-                {
-                    _logger.LogWarning("Campaign '{CampaignId}' couldn't be emailed to customer '{CustomerId}'.", campaign.ItemId, customer.ItemId);
-                }
-            }
-        }
-
-        if (batch.Count < BatchSize)
-        {
-            campaign.Status = CampaignStatus.Sent;
-            campaign.CompletedUtc = now;
-        }
-
+        campaign.OutreachRunId = run.ItemId;
         campaign.ModifiedUtc = now;
         await _campaigns.UpdateAsync(campaign, cancellationToken);
 
-        return campaign.Status == CampaignStatus.Sending;
+        return true;
+    }
+
+    /// <summary>
+    /// Cancels a scheduled or sending campaign, and stops its outreach run so nothing more goes out.
+    /// </summary>
+    public async Task<bool> CancelAsync(Campaign campaign, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(campaign);
+
+        if (campaign.Status is not (CampaignStatus.Scheduled or CampaignStatus.Sending))
+        {
+            return false;
+        }
+
+        campaign.Status = CampaignStatus.Canceled;
+        campaign.ModifiedUtc = _clock.UtcNow;
+        await _campaigns.UpdateAsync(campaign, cancellationToken);
+        await _outreachEngine.CancelAsync(campaign.OutreachRunId, cancellationToken);
+
+        return true;
     }
 
     /// <summary>
@@ -241,15 +252,6 @@ public sealed partial class CampaignService
 
         return (null, null);
     }
-
-    internal static string ToText(string html)
-        => System.Net.WebUtility.HtmlDecode(Tags().Replace(LineBreaks().Replace(html ?? string.Empty, "\n"), string.Empty)).Trim();
-
-    [GeneratedRegex("<[^>]+>")]
-    private static partial Regex Tags();
-
-    [GeneratedRegex("<br\\s*/?>|</p>|</div>|</h[1-6]>|</li>", RegexOptions.IgnoreCase)]
-    private static partial Regex LineBreaks();
 }
 
 /// <summary>

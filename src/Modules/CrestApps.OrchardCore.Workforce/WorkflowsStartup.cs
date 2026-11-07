@@ -10,7 +10,7 @@ namespace CrestApps.OrchardCore.Workforce;
 /// <summary>
 /// Starts workflows from Workforce events: time off, schedules, punches, attendance and timesheets.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class WorkflowsStartup : StartupBase
 {
     /// <inheritdoc />

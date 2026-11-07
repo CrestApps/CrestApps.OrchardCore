@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.Taxation;
 /// content item can inherit its tax classification from the taxonomy terms (product categories) it belongs
 /// to, so tax codes are managed per category rather than repeated on every item.
 /// </summary>
-[RequireFeatures("OrchardCore.Taxonomies")]
+[RequireFeatures(OrchardCoreFeatureIds.Taxonomies)]
 public sealed class TaxonomiesStartup : StartupBase
 {
     /// <inheritdoc/>

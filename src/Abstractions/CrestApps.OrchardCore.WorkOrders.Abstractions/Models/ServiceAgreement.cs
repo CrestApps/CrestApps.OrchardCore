@@ -103,8 +103,12 @@ public sealed class ServiceAgreement : CatalogItem
     public ServiceAgreementStatus Status { get; set; }
 
     /// <summary>
-    /// Gets or sets the customer.
+    /// Gets or sets the customer: an Orchard Core <b>user id</b> (party kind <c>User</c>), not a Customers module record id.
     /// </summary>
+    /// <remarks>
+    /// The stored name is kept so existing records stay readable; read it as a party with
+    /// <c>new PartyRef(PartyKinds.User, CustomerId)</c>.
+    /// </remarks>
     public string CustomerId { get; set; }
 
     /// <summary>

@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Bookings.Models;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
@@ -66,7 +67,7 @@ public sealed class BookingDepositService
         {
             if (line.Details?.GetValueOrDefault(BookingsConstants.Details.Date) is not { } date ||
                 BookingSchedule.GetLocalStart(date) is not { } start ||
-                (await _contentManager.GetAsync(line.ContentItemId, VersionOptions.Published))?.TryGet<BookingPart>(out var part) != true ||
+                (await _contentManager.GetPurchasedAsync(line))?.TryGet<BookingPart>(out var part) != true ||
                 part.DepositPercent is <= 0m or >= 100m)
             {
                 continue;
@@ -95,7 +96,7 @@ public sealed class BookingDepositService
             return null;
         }
 
-        var dueUtc = TimeZoneInfo.ConvertTimeToUtc(due.Value.ToDateTime(new TimeOnly(9, 0)), await _capacity.GetTimeZoneAsync());
+        var dueUtc = CalendarTime.ToUtc(due.Value.ToDateTime(new TimeOnly(9, 0)), await _capacity.GetTimeZoneAsync());
 
         return new BookingDepositOffer(balance, percent, dueUtc, due.Value);
     }

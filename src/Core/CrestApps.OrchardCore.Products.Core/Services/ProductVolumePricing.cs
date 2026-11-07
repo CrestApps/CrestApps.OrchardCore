@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Products.Core.Models;
 
 namespace CrestApps.OrchardCore.Products.Core.Services;
@@ -35,10 +36,13 @@ public static class ProductVolumePricing
     }
 
     /// <summary>
-    /// Returns the unit price after the best discount, rounded to cents.
+    /// Returns the unit price after the best discount, rounded to the currency's precision (whole yen, cents, fils).
     /// </summary>
-    public static decimal Apply(decimal unitPrice, decimal percentOff)
-        => percentOff <= 0m ? unitPrice : Math.Round(unitPrice * (100m - percentOff) / 100m, 2, MidpointRounding.AwayFromZero);
+    /// <param name="unitPrice">The unit price.</param>
+    /// <param name="percentOff">The percentage off.</param>
+    /// <param name="currency">The ISO-4217 currency of the price; two decimals when it is not given.</param>
+    public static decimal Apply(decimal unitPrice, decimal percentOff, string currency = null)
+        => percentOff <= 0m ? unitPrice : CurrencyScale.Round(unitPrice * (100m - percentOff) / 100m, currency);
 
     /// <summary>
     /// Returns whether the quantity follows the product's rules, and the rule it breaks when it doesn't.

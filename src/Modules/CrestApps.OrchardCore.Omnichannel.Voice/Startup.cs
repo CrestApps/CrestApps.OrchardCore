@@ -124,7 +124,7 @@ public sealed class RealtimeVoiceStartup : StartupBase
 /// Relays commands for live AI calls between the tenant's nodes over Redis, so a supervisor whose request lands on
 /// one node reaches a live session another node holds. Without Redis, commands reach only the node's own calls.
 /// </summary>
-[RequireFeatures("OrchardCore.Redis")]
+[RequireFeatures(OrchardCoreFeatureIds.Redis)]
 public sealed class RedisVoiceCallRelayStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

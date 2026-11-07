@@ -6,19 +6,12 @@
     <Description>
       $(OCCMSDescription)
 
-      Outgoing webhooks for the commerce modules: subscriptions to order, shipment, customer and stock events, each
-      payload signed with the subscription's secret, retried with backoff, and logged.
+      Outgoing webhooks for the commerce modules: order, shipment, customer and stock events, published through the
+      Webhooks building block, which signs each payload with the subscription's secret, retries with backoff and logs
+      every delivery.
     </Description>
     <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Commerce Webhooks</PackageTags>
   </PropertyGroup>
-
-  <PropertyGroup>
-    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
-  </ItemGroup>
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
@@ -26,17 +19,13 @@
 
   <ItemGroup>
     <PackageReference Include="OrchardCore.Module.Targets" />
-    <PackageReference Include="OrchardCore.Admin.Abstractions" />
-    <PackageReference Include="OrchardCore.Data.Abstractions" />
-    <PackageReference Include="OrchardCore.DisplayManagement" />
-    <PackageReference Include="OrchardCore.Navigation.Core" />
-    <PackageReference Include="OrchardCore.ResourceManagement" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
-    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
-    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Webhooks.Abstractions\CrestApps.OrchardCore.Webhooks.Abstractions.csproj" />
+    <!-- Carries the Webhooks feature this feature depends on. -->
+    <ProjectReference Include="..\CrestApps.OrchardCore.Webhooks\CrestApps.OrchardCore.Webhooks.csproj" />
   </ItemGroup>
 
 </Project>

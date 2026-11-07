@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.SignalR.Core;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
@@ -279,8 +280,7 @@ public sealed class SharedVoicemailControllerTests
             queues.Object,
             Mock.Of<IInteractionManager>(),
             notifier.Object,
-            hub.Object,
-            new ShellSettings { Name = TenantName },
+            new SoftPhoneClientNotifier(hub.Object, new ShellSettings { Name = TenantName }),
             NullLogger<SharedVoicemailController>.Instance,
             new NullHtmlLocalizer())
         {

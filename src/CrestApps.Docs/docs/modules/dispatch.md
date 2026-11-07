@@ -36,7 +36,7 @@ It works with other features when they are on:
 
 Visits live in the `Dispatch` YesSql collection.
 
-- **`ServiceVisit`**: `Number` (`V-000001` and on), `WorkOrderId`, copies of the work order's number, summary, type, priority, territory and resolution target for lists, `Status` (`Unscheduled`, `Scheduled`, `Dispatched`, `EnRoute`, `OnSite`, `Paused`, `Completed`, `Incomplete`, `Canceled`), `DurationMinutes`, `StartUtc` and `EndUtc`, the arrival window (`ArrivalStartUtc`, `ArrivalEndUtc`), `LeadWorkerId` and `WorkerIds`, `Pinned`, the trip from the stop before (`TravelMinutes`, `TravelKm`), `IncompleteReason` and `ReturnVisitId`, `CalendarEvents` (the job event kept for each worker) and `History`.
+- **`ServiceVisit`**: `Number` (`V-000001` and on, from the `Dispatch.Visit` series of the shared locked `INumberSequence`, which a site with earlier visits starts after its highest number), `WorkOrderId`, copies of the work order's number, summary, type, priority, territory and resolution target for lists, `Status` (`Unscheduled`, `Scheduled`, `Dispatched`, `EnRoute`, `OnSite`, `Paused`, `Completed`, `Incomplete`, `Canceled`), `DurationMinutes`, `StartUtc` and `EndUtc`, the arrival window (`ArrivalStartUtc`, `ArrivalEndUtc`), `LeadWorkerId` and `WorkerIds`, `Pinned`, the trip from the stop before (`TravelMinutes`, `TravelKm`), `IncompleteReason` and `ReturnVisitId`, `CalendarEvents` (the job event kept for each worker) and `History`.
 - **`DispatchSettings`** (site settings): whether a new work order gets a visit, the arrival window, the look-ahead, the buffer between visits, whether the territory is strict, the board's time zone, the `Objective` weights (travel, urgency, proficiency, preferred technician, workload balance), the minutes late that put a visit at risk, the optimizer's time limit, and the customer notices (on or off, the tracking link, the reminder hour and the five texts).
 
 `ServiceVisitIndex` keeps the number, work order, status, whether it is open, priority, territory, lead, times and resolution target; `VisitWorkerIndex` has a row per worker of a scheduled visit with its times and whether it keeps them busy.
@@ -262,6 +262,7 @@ When Assets is on:
 - `IFieldFileStore`: keep the technician app's photos and signatures somewhere other than the media library.
 - `IFieldStockSource`: stock locations for parts used from somewhere other than Inventory.
 - `WorkOrderPanels` (Work Orders): a display driver for it adds a panel to the work order's page; Dispatch adds the visits.
+- `DisplayDriver<ServiceVisit>`: adds a panel to a visit's page (`dispatch/visits/{id}`), which builds `IDisplayManager<ServiceVisit>` with the `Detail` display type and shows the Content zone after the scheduling cards. Return a shape from `Display`, placed in `Content`, and register the driver with `services.AddDisplayDriver<ServiceVisit, TDriver>()`. The visit's own cards and its actions (assign, unschedule, pin, status) stay as they are; a visit has no editor form.
 
 ## Getting started and the sample
 

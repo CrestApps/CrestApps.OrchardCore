@@ -3,7 +3,7 @@ namespace CrestApps.OrchardCore.Stripe.Core.Models;
 /// <summary>
 /// Represents the result returned after confirming a Stripe PaymentIntent.
 /// </summary>
-public class ConfirmPaymentIntentResponse
+public sealed class ConfirmPaymentIntentResponse
 {
     /// <summary>
     /// Gets or sets the Stripe PaymentIntent identifier.

@@ -1,8 +1,10 @@
+using CrestApps.OrchardCore.Assets;
 using CrestApps.OrchardCore.Dispatch.Core.Indexes;
 using CrestApps.OrchardCore.Dispatch.Migrations;
 using CrestApps.OrchardCore.Dispatch.Mobile;
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
+using CrestApps.OrchardCore.Inventory.Core;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.AspNetCore.Builder;
@@ -52,7 +54,7 @@ public sealed class MobileStartup : StartupBase
 /// Lists Inventory's stock locations in the technician app, for parts used.
 /// </summary>
 [Feature(DispatchConstants.Features.Mobile)]
-[RequireFeatures("CrestApps.OrchardCore.Inventory")]
+[RequireFeatures(InventoryConstants.Features.Inventory)]
 public sealed class MobileInventoryStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -66,7 +68,7 @@ public sealed class MobileInventoryStartup : StartupBase
 /// Shows the assets of the technician's work orders, with their history, in the technician app.
 /// </summary>
 [Feature(DispatchConstants.Features.Mobile)]
-[RequireFeatures("CrestApps.OrchardCore.Assets")]
+[RequireFeatures(AssetsConstants.Features.Assets)]
 public sealed class MobileAssetsStartup : StartupBase
 {
     /// <inheritdoc/>

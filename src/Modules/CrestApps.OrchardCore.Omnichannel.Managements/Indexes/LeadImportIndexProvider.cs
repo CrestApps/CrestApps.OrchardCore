@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using OrchardCore.ContentManagement;
 using YesSql.Indexes;
+using static CrestApps.OrchardCore.StringTruncation;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
 
@@ -29,18 +30,13 @@ internal sealed class LeadImportIndexProvider : IndexProvider<ContentItem>
             .Select(import => new LeadImportIndex
             {
                 ContentItemId = contentItem.ContentItemId,
-                ContentType = Truncate(contentItem.ContentType, 255),
+                ContentType = TruncateOrNull(contentItem.ContentType, 255),
                 Published = contentItem.Published,
                 Latest = contentItem.Latest,
-                EntryId = Truncate(import.EntryId, 26),
-                FileName = Truncate(import.FileName, 255),
+                EntryId = TruncateOrNull(import.EntryId, 26),
+                FileName = TruncateOrNull(import.FileName, 255),
                 ImportedUtc = import.ImportedUtc,
             })
             .ToArray();
     }
-
-    private static string Truncate(string value, int maxLength)
-        => string.IsNullOrEmpty(value)
-            ? null
-            : value[..Math.Min(maxLength, value.Length)];
 }

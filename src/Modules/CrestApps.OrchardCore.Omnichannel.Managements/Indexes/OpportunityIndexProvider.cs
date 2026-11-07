@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using OrchardCore.ContentManagement;
 using OrchardCore.Lists.Models;
 using YesSql.Indexes;
+using static CrestApps.OrchardCore.StringTruncation;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
 
@@ -27,29 +28,24 @@ internal sealed class OpportunityIndexProvider : IndexProvider<ContentItem>
         return new OpportunityIndex
         {
             ContentItemId = contentItem.ContentItemId,
-            ContentType = Truncate(contentItem.ContentType, 255),
+            ContentType = TruncateOrNull(contentItem.ContentType, 255),
             Published = contentItem.Published,
             Latest = contentItem.Latest,
-            StageId = Truncate(part.StageId, 50),
+            StageId = TruncateOrNull(part.StageId, 50),
             IsClosed = part.IsClosed,
             IsWon = part.IsWon,
             Probability = part.Probability,
             Amount = part.Amount?.Value,
             CloseDate = part.CloseDate?.Value,
-            OwnerId = Truncate(part.Owner.GetFirstUserId(), 50),
+            OwnerId = TruncateOrNull(part.Owner.GetFirstUserId(), 50),
             AccountContentItemId = contentItem.TryGet<ContainedPart>(out var contained)
-                ? Truncate(contained.ListContentItemId, 26)
+                ? TruncateOrNull(contained.ListContentItemId, 26)
                 : null,
-            CampaignId = Truncate(part.CampaignId, 50),
-            PrimaryContactItemId = Truncate(part.PrimaryContact.GetFirstContentItemId(), 26),
-            SourceId = Truncate(part.Source.GetFirstContentItemId(), 26),
-            ConvertedFromLeadItemId = Truncate(part.ConvertedFromLeadItemId, 26),
+            CampaignId = TruncateOrNull(part.CampaignId, 50),
+            PrimaryContactItemId = TruncateOrNull(part.PrimaryContact.GetFirstContentItemId(), 26),
+            SourceId = TruncateOrNull(part.Source.GetFirstContentItemId(), 26),
+            ConvertedFromLeadItemId = TruncateOrNull(part.ConvertedFromLeadItemId, 26),
             CreatedUtc = contentItem.CreatedUtc,
         };
     }
-
-    private static string Truncate(string value, int maxLength)
-        => string.IsNullOrEmpty(value)
-            ? null
-            : value[..Math.Min(maxLength, value.Length)];
 }

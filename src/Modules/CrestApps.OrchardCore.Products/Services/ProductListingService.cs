@@ -815,7 +815,7 @@ public sealed class ProductListingService
         if (_listingItems is null)
         {
             var listingTypes = (await _contentDefinitionManager.ListTypeDefinitionsAsync())
-                .Where(type => type.Parts.Any(part => part.PartDefinition.Name == nameof(ProductListingPart)))
+                .Where(type => type.HasPart(nameof(ProductListingPart)))
                 .Select(type => type.Name)
                 .ToArray();
 

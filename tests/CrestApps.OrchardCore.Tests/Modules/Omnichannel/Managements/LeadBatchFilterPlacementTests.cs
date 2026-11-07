@@ -103,7 +103,7 @@ public sealed class LeadBatchFilterPlacementTests
         return new LeadBatchFilterDisplayDriver(
             statuses.Object,
             new LeadSourceProvider(session),
-            new LeadImportProvider(session, Mock.Of<ILocalClock>(), new PassThroughStringLocalizer<LeadImportProvider>()),
+            new LeadImportProvider(session, Mock.Of<ILocalClock>(), new CrestApps.OrchardCore.Tests.Telephony.Doubles.StubClock(), new PassThroughStringLocalizer<LeadImportProvider>()),
             new LeadRatingProvider(contentDefinitionManager.Object),
             contentTypeProvider,
             new PassThroughStringLocalizer<LeadBatchFilterDisplayDriver>());

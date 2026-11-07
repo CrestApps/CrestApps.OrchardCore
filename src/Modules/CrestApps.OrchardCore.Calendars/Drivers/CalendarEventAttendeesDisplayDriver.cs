@@ -16,7 +16,7 @@ namespace CrestApps.OrchardCore.Calendars.Drivers;
 /// </summary>
 internal sealed class CalendarEventAttendeesDisplayDriver : DisplayDriver<CalendarEvent>
 {
-    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions _jsonOptions = JsonSerializerOptions.Web;
 
     private readonly ICalendarService _calendarService;
     private readonly ICalendarTypeManager _typeManager;

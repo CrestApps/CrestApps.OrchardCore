@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.ContactCenter.Core.IntervalStatistics;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Tests.Calendars;

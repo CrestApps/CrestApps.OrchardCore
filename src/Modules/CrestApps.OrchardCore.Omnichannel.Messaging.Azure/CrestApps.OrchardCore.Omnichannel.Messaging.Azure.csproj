@@ -21,8 +21,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="OrchardCore.FileStorage.AzureBlob" />
-    <PackageReference Include="OrchardCore.Media.Azure" />
     <PackageReference Include="OrchardCore.Module.Targets" />
   </ItemGroup>
 
@@ -31,7 +29,12 @@
       Depend directly on the Messaging module so installing this package resolves the Messaging workspace feature
       dependency and gives access to the encrypted attachment store it reuses over an Azure Blob backend.
     -->
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.FileStorage.Core/CrestApps.OrchardCore.FileStorage.Core.csproj" />
     <ProjectReference Include="../CrestApps.OrchardCore.Omnichannel.Messaging/CrestApps.OrchardCore.Omnichannel.Messaging.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.Omnichannel.Messaging.Core/CrestApps.OrchardCore.Omnichannel.Messaging.Core.csproj" />
   </ItemGroup>
 
 </Project>

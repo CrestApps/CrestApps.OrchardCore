@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 
@@ -32,7 +33,7 @@ internal sealed class WorkerTimeZones : IWorkerTimeZoneService
 
     public async Task<string> GetAsync(WorkerProfile worker, string teamId, CancellationToken cancellationToken = default)
     {
-        if (!string.IsNullOrEmpty(worker.TimeZoneId))
+        if (CalendarTimeZones.IsValid(worker.TimeZoneId))
         {
             return worker.TimeZoneId;
         }

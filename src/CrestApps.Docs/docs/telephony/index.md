@@ -484,6 +484,22 @@ Telephony owns the modal and the media controls; it does not decide who receives
 orchestration module (such as the [Contact Center](../contact-center/index.md)) resolves the target
 user, reserves the agent, and calls the dispatcher.
 
+### Pushing other events to a user's soft phones
+
+A module that drives calls never uses `TelephonyHub` itself. It pushes to every soft phone a user has open
+on the tenant through `ISoftPhoneClientNotifier` (in `CrestApps.OrchardCore.Telephony.Abstractions`), which
+the Telephony feature implements over the hub, in the user's tenant-scoped group:
+
+```csharp
+await _softPhones.CallStateChangedAsync(agentUserId, call);
+await _softPhones.IncomingCallAnsweredAsync(agentUserId, new IncomingCallAnsweredNotification { CallId = callId, OfferId = offerId });
+await _softPhones.DialRequestedAsync(userId, new TelephonyDialRequest { Number = number });
+```
+
+The Contact Center uses it for call-state changes, transfers, answered offers and shared voicemail
+call-backs. `SoftPhoneWidgetSettings` (the soft phone's site settings, such as its default country) is in
+the same project, so other modules read it without using the Telephony module's classes.
+
 ### Enriching the modal from another module
 
 Other modules contribute records and shortcuts to the modal by implementing

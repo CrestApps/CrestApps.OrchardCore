@@ -98,7 +98,7 @@ public sealed class ChatStartup : StartupBase
 /// <summary>
 /// Adds the WebMCP part, which exposes selected tools on a content item's page, when content management is enabled.
 /// </summary>
-[RequireFeatures("OrchardCore.Contents")]
+[RequireFeatures(OrchardCoreFeatureIds.Contents)]
 public sealed class ContentsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

@@ -69,4 +69,20 @@ internal sealed class TimePunchStore : DocumentCatalog<TimePunch, TimePunchIndex
 
         return rows.Select(row => row.WorkerId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
     }
+
+    /// <summary>
+    /// Returns a worker's punches, corrections and removals included, newest first, for a privacy request.
+    /// </summary>
+    public async Task<IReadOnlyList<TimePunch>> ListForWorkerAsync(string workerId, int take, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(workerId))
+        {
+            return [];
+        }
+
+        return [.. await Session.Query<TimePunch, TimePunchIndex>(index => index.WorkerId == workerId, collection: CollectionName)
+            .OrderByDescending(index => index.Utc)
+            .Take(take)
+            .ListAsync(cancellationToken)];
+    }
 }

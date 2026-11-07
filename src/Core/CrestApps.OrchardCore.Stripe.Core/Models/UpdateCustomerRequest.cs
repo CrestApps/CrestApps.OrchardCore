@@ -3,7 +3,7 @@ namespace CrestApps.OrchardCore.Stripe.Core.Models;
 /// <summary>
 /// Represents the customer values to update in Stripe.
 /// </summary>
-public class UpdateCustomerRequest
+public sealed class UpdateCustomerRequest
 {
     /// <summary>
     /// Gets or sets the updated customer name.

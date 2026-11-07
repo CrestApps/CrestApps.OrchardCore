@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.TimeTracker;
+using CrestApps.OrchardCore.Users;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -16,7 +17,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Workforce",
     Dependencies =
     [
-        "OrchardCore.Users",
-        "CrestApps.OrchardCore.Users",
+        OrchardCoreFeatureIds.Users,
+        UsersConstants.Feature.Area,
     ]
 )]

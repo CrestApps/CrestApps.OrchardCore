@@ -1,0 +1,8 @@
+@model CrestApps.OrchardCore.AI.ViewModels.AIQACohortReportFilterViewModel
+
+<div class="col p-1">
+    <label class="form-label" asp-for="QACohortId">@T["QA cohort"]</label>
+    <select asp-for="QACohortId" asp-items="Model.Cohorts" class="form-select">
+        <option value="">@T["Every scored conversation"]</option>
+    </select>
+</div>

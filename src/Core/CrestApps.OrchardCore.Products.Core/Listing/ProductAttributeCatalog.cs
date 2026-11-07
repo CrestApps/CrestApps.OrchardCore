@@ -34,7 +34,7 @@ public sealed class ProductAttributeCatalog
     /// </summary>
     /// <param name="definition">The content type definition.</param>
     public static bool IsProductType(ContentTypeDefinition definition)
-        => definition?.Parts.Any(part => part.PartDefinition.Name == nameof(ProductPart)) == true;
+        => definition.HasPart(nameof(ProductPart));
 
     /// <summary>
     /// Gets the product part settings of a content type.

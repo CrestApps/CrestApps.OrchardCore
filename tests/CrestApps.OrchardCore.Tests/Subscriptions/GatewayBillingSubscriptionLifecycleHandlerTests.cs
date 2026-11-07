@@ -2,6 +2,8 @@ using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.Services;
+using CrestApps.OrchardCore.Transactions.Models;
+using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -18,6 +20,45 @@ namespace CrestApps.OrchardCore.Tests.Subscriptions;
 /// </remarks>
 public sealed class GatewayBillingSubscriptionLifecycleHandlerTests
 {
+    /// <summary>
+    /// The gateway refuses to cancel: the customer may still be billed, so an operator must see it, not only the log.
+    /// </summary>
+    [Fact]
+    public async Task ChangedAsync_WhenTheGatewayRefusesToCancel_RecordsAPaymentIssue()
+    {
+        var provider = new RecordingRecurringProvider { CancelError = "No such subscription." };
+        var issues = new RecordingIssueRecorder();
+        var handler = new GatewayBillingSubscriptionLifecycleHandler([provider], issues, NullLogger<GatewayBillingSubscriptionLifecycleHandler>.Instance);
+
+        await handler.ChangedAsync(new SubscriptionLifecycleContext(
+            CreateSubscription(SubscriptionStatus.Canceled, cancelAtPeriodEnd: true),
+            SubscriptionStatus.Active,
+            source: "customer"));
+
+        var issue = Assert.Single(issues.Issues);
+
+        Assert.Equal(PaymentIssueKinds.GatewaySubscriptionChangeFailed, issue.Kind);
+        Assert.Equal(("Subscription", "subscription-1", "Stripe", "sub_1"), (issue.ReferenceType, issue.ReferenceId, issue.ProviderKey, issue.ProviderReference));
+        Assert.Equal("No such subscription.", issue.Error);
+    }
+
+    /// <summary>
+    /// A cancellation the gateway accepts needs no operator.
+    /// </summary>
+    [Fact]
+    public async Task ChangedAsync_WhenTheGatewayCancels_RecordsNoIssue()
+    {
+        var issues = new RecordingIssueRecorder();
+        var handler = new GatewayBillingSubscriptionLifecycleHandler([new RecordingRecurringProvider()], issues, NullLogger<GatewayBillingSubscriptionLifecycleHandler>.Instance);
+
+        await handler.ChangedAsync(new SubscriptionLifecycleContext(
+            CreateSubscription(SubscriptionStatus.Canceled, cancelAtPeriodEnd: true),
+            SubscriptionStatus.Active,
+            source: "customer"));
+
+        Assert.Empty(issues.Issues);
+    }
+
     /// <summary>
     /// The customer cancels; the gateway is told to stop billing.
     /// </summary>
@@ -175,7 +216,7 @@ public sealed class GatewayBillingSubscriptionLifecycleHandlerTests
     }
 
     private static GatewayBillingSubscriptionLifecycleHandler CreateHandler(RecordingRecurringProvider provider)
-        => new([provider], NullLogger<GatewayBillingSubscriptionLifecycleHandler>.Instance);
+        => new([provider], new RecordingIssueRecorder(), NullLogger<GatewayBillingSubscriptionLifecycleHandler>.Instance);
 
     private static Subscription CreateSubscription(SubscriptionStatus status, bool cancelAtPeriodEnd)
         => new()
@@ -195,6 +236,8 @@ public sealed class GatewayBillingSubscriptionLifecycleHandlerTests
 
         public List<PauseRecurringPaymentContext> Collection { get; } = [];
 
+        public string CancelError { get; set; }
+
         public string Key => "Stripe";
 
         public Task<PaymentBeginResult> BeginRecurringAsync(BeginRecurringPaymentContext context, CancellationToken cancellationToken = default)
@@ -204,7 +247,7 @@ public sealed class GatewayBillingSubscriptionLifecycleHandlerTests
         {
             Canceled.Add(context);
 
-            return Task.FromResult(RecurringCancelResult.Success(null));
+            return Task.FromResult(CancelError is null ? RecurringCancelResult.Success(null) : RecurringCancelResult.Failure(CancelError));
         }
 
         public Task<RecurringPauseResult> PauseRecurringAsync(PauseRecurringPaymentContext context, CancellationToken cancellationToken = default)
@@ -216,5 +259,17 @@ public sealed class GatewayBillingSubscriptionLifecycleHandlerTests
 
         public Task<RecurringUpdateResult> UpdateRecurringAsync(UpdateRecurringPaymentContext context, CancellationToken cancellationToken = default)
             => Task.FromResult(RecurringUpdateResult.Failure("not used"));
+    }
+
+    private sealed class RecordingIssueRecorder : IPaymentIssueRecorder
+    {
+        public List<PaymentIssue> Issues { get; } = [];
+
+        public Task<bool> RecordAsync(PaymentIssue issue, CancellationToken cancellationToken = default)
+        {
+            Issues.Add(issue);
+
+            return Task.FromResult(true);
+        }
     }
 }

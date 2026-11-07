@@ -43,6 +43,12 @@ public sealed class ReportQueryResult
     public bool IsAggregated { get; }
 
     /// <summary>
+    /// Gets the time the query ran, in the site's time zone, which relative date rules such as today or the last
+    /// 7 days are measured from.
+    /// </summary>
+    public DateTime Today { get; init; }
+
+    /// <summary>
     /// Gets the warnings raised while running, such as a data set that had more rows than the limit.
     /// </summary>
     public IList<string> Warnings { get; } = [];

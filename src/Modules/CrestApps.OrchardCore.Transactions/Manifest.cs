@@ -2,7 +2,7 @@ using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Receipts.Core;
 using CrestApps.OrchardCore.Transactions;
-using CrestApps.OrchardCore.Users.Core;
+using CrestApps.OrchardCore.Users;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -34,7 +34,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         TransactionsConstants.Features.Area,
-        "OrchardCore.Notifications",
+        OrchardCoreFeatureIds.Notifications,
     ]
 )]
 
@@ -47,6 +47,6 @@ using OrchardCore.Modules.Manifest;
     [
         TransactionsConstants.Features.Area,
         ReceiptsConstants.Feature.Area,
-        "OrchardCore.Notifications",
+        OrchardCoreFeatureIds.Notifications,
     ]
 )]

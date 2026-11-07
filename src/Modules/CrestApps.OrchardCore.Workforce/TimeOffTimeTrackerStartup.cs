@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.TimeTracker;
 using CrestApps.OrchardCore.Workforce.BackgroundTasks;
 using CrestApps.OrchardCore.Workforce.Core;
 using CrestApps.OrchardCore.Workforce.Core.Services;
@@ -15,7 +16,7 @@ namespace CrestApps.OrchardCore.Workforce;
 /// Keeps approved time off in Time Tracker when it is on: each type gets a stage, and each day off is kept in it.
 /// </summary>
 [Feature(WorkforceConstants.Features.TimeOff)]
-[RequireFeatures("CrestApps.OrchardCore.TimeTracker")]
+[RequireFeatures(TimeTrackerConstants.Features.TimeTracker)]
 public sealed class TimeOffTimeTrackerStartup : StartupBase
 {
     /// <inheritdoc />

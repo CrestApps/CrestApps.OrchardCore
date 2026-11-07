@@ -1,6 +1,6 @@
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
-using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.TimeTracker;
 using CrestApps.OrchardCore.TimeTracker.Models;
 using CrestApps.OrchardCore.TimeTracker.Services;

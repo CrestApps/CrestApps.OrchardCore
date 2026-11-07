@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Markets.Models;
 using CrestApps.OrchardCore.Payments;
 

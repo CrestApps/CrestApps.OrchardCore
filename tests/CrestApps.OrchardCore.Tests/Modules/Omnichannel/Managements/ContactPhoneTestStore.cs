@@ -59,6 +59,7 @@ internal static class ContactPhoneTestStore
 
         await OmnichannelContactsMigrations.CreateContactIndexTableAsync(schemaBuilder);
         await OmnichannelContactsMigrations.CreatePhoneNumberIndexTableAsync(schemaBuilder);
+        await ContactAddressOptOutIndexMigrations.CreateIndexTableAsync(schemaBuilder);
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
@@ -78,6 +79,7 @@ internal static class ContactPhoneTestStore
         {
             new ContentItemIndexProvider(),
             new OmnichannelContactIndexProvider(new DefaultPhoneNumberService(), TestContactMethods.Accessor),
+            new ContactAddressOptOutIndexProvider(),
         };
 
         if (withPhoneNumberIndex)
@@ -88,6 +90,7 @@ internal static class ContactPhoneTestStore
         store.RegisterIndexes(providers);
 
         await store.InitializeAsync(TestContext.Current.CancellationToken);
+        await store.InitializeCollectionAsync(OmnichannelConstants.CollectionName, TestContext.Current.CancellationToken);
 
         return store;
     }

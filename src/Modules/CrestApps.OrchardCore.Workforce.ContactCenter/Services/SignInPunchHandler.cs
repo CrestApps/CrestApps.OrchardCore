@@ -102,7 +102,7 @@ public sealed class SignInPunchHandler : IContactCenterEventHandler
         {
             WorkerId = worker.ItemId,
             Kind = kind,
-            Source = TimePunchSource.ContactCenter,
+            Source = WorkforceContactCenterConstants.PunchSource,
             Utc = at,
             IdempotencyKey = "contact-center:" + interactionEvent.ItemId,
         }, data.UserId, cancellationToken);
@@ -121,13 +121,13 @@ public sealed class SignInPunchHandler : IContactCenterEventHandler
     {
         if (status.SinceUtc is not { } since)
         {
-            return status.LastPunch?.Source == TimePunchSource.ContactCenter;
+            return status.LastPunch?.Source == WorkforceContactCenterConstants.PunchSource;
         }
 
         // The punch that opened the current stretch is the last clock-in at or before it.
         var punches = await _timeClockService.ListAsync(worker.ItemId, since.AddDays(-1), since.AddTicks(1), cancellationToken);
         var opening = punches.LastOrDefault(punch => punch.Kind == TimePunchKind.In);
 
-        return opening?.Source == TimePunchSource.ContactCenter;
+        return opening?.Source == WorkforceContactCenterConstants.PunchSource;
     }
 }

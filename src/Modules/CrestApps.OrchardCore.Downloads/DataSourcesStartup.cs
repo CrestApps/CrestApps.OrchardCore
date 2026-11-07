@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Downloads;
 /// <summary>
 /// Exposes the download entitlements as a data source of Orchard Core, for reports and data pipelines.
 /// </summary>
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class DataSourcesStartup : StartupBase
 {
     /// <inheritdoc/>

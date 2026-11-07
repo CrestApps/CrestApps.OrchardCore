@@ -15,8 +15,6 @@ namespace CrestApps.OrchardCore.Transactions.Core.Services;
 /// </summary>
 public sealed class PaymentAttemptStore : DocumentCatalog<PaymentAttempt, PaymentAttemptIndex>, IPaymentAttemptStore
 {
-    private readonly IClock _clock;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="PaymentAttemptStore"/> class.
     /// </summary>
@@ -25,9 +23,8 @@ public sealed class PaymentAttemptStore : DocumentCatalog<PaymentAttempt, Paymen
     public PaymentAttemptStore(
         ISession session,
         IClock clock)
-        : base(session)
+        : base(session, clock)
     {
-        _clock = clock;
     }
 
     /// <inheritdoc/>
@@ -105,20 +102,5 @@ public sealed class PaymentAttemptStore : DocumentCatalog<PaymentAttempt, Paymen
             Count = count,
             Entries = entries.ToArray(),
         };
-    }
-
-    /// <inheritdoc/>
-    protected override ValueTask SavingAsync(PaymentAttempt record)
-    {
-        var now = _clock.UtcNow;
-
-        if (record.CreatedUtc == default)
-        {
-            record.CreatedUtc = now;
-        }
-
-        record.UpdatedUtc = now;
-
-        return ValueTask.CompletedTask;
     }
 }

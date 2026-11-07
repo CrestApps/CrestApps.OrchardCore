@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Geo.Core.Services;
 using CrestApps.OrchardCore.Geo.Models;
 using CrestApps.OrchardCore.Geo.Services;
@@ -24,7 +25,7 @@ public sealed class TerritoriesController : Controller
     private readonly ServiceTerritoryManager _manager;
     private readonly ITerritoryResolver _resolver;
     private readonly IGeoSettingsService _settingsService;
-    private readonly IClock _clock;
+    private readonly ITimeZoneSelectListProvider _timeZoneSelectListProvider;
     private readonly INotifier _notifier;
     private readonly IEnumerable<ITerritoryMemberSource> _memberSources;
 
@@ -37,7 +38,7 @@ public sealed class TerritoriesController : Controller
     /// <param name="manager">The territory manager.</param>
     /// <param name="resolver">The territory resolver.</param>
     /// <param name="settingsService">The settings service.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeZoneSelectListProvider">The time zone list provider.</param>
     /// <param name="notifier">The notifier.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     public TerritoriesController(
@@ -45,7 +46,7 @@ public sealed class TerritoriesController : Controller
         ServiceTerritoryManager manager,
         ITerritoryResolver resolver,
         IGeoSettingsService settingsService,
-        IClock clock,
+        ITimeZoneSelectListProvider timeZoneSelectListProvider,
         INotifier notifier,
         IHtmlLocalizer<TerritoriesController> htmlLocalizer,
         IEnumerable<ITerritoryMemberSource> memberSources)
@@ -54,7 +55,7 @@ public sealed class TerritoriesController : Controller
         _manager = manager;
         _resolver = resolver;
         _settingsService = settingsService;
-        _clock = clock;
+        _timeZoneSelectListProvider = timeZoneSelectListProvider;
         _notifier = notifier;
         _memberSources = memberSources;
         H = htmlLocalizer;
@@ -254,7 +255,7 @@ public sealed class TerritoriesController : Controller
         model.Map = await _settingsService.GetAsync();
         model.ParentOptions = [.. all.Select(item => new SelectListItem(item.Name, item.ItemId, item.ItemId == model.ParentId))];
         model.OtherShapes = [.. all.Where(item => !string.IsNullOrEmpty(item.Shape)).Select(item => new TerritoryShape { Label = item.Name, GeoJson = item.Shape })];
-        model.TimeZoneOptions = [.. _clock.GetTimeZones().Select(zone => new SelectListItem(zone.TimeZoneId, zone.TimeZoneId, zone.TimeZoneId == model.TimeZoneId))];
+        model.TimeZoneOptions = await _timeZoneSelectListProvider.GetTimeZoneOptionsAsync(model.TimeZoneId, HttpContext.RequestAborted);
         model.MemberGroups = [];
 
         foreach (var source in _memberSources)

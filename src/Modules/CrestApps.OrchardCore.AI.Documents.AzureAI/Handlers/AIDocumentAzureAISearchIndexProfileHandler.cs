@@ -1,8 +1,8 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.Infrastructure;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Handlers;
-using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.Logging;
 using OrchardCore.AzureAI;
 using OrchardCore.AzureAI.Models;
@@ -118,18 +118,18 @@ public sealed class AIDocumentAzureAISearchIndexProfileHandler : AIDocumentIndex
 
         metadata.IndexMappings.Clear();
 
-        metadata.IndexMappings.Add(CreateOrUpdateIndexMap(existingManagedMappings, AIConstants.ColumnNames.ChunkId, DocumentIndex.Types.Text, map =>
+        metadata.IndexMappings.Add(CreateOrUpdateIndexMap(existingManagedMappings, DocumentIndexConstants.ColumnNames.ChunkId, DocumentIndex.Types.Text, map =>
         {
             map.IsKey = true;
             map.IsFilterable = true;
         }));
-        metadata.IndexMappings.Add(CreateOrUpdateIndexMap(existingManagedMappings, AIConstants.ColumnNames.DocumentId, DocumentIndex.Types.Text, map => map.IsFilterable = true));
-        metadata.IndexMappings.Add(CreateOrUpdateIndexMap(existingManagedMappings, AIConstants.ColumnNames.Content, DocumentIndex.Types.Text, map => map.IsSearchable = true));
-        metadata.IndexMappings.Add(CreateOrUpdateIndexMap(existingManagedMappings, AIConstants.ColumnNames.FileName, DocumentIndex.Types.Text, map => map.IsFilterable = true));
-        metadata.IndexMappings.Add(CreateOrUpdateIndexMap(existingManagedMappings, AIConstants.ColumnNames.ReferenceId, DocumentIndex.Types.Text, map => map.IsFilterable = true));
-        metadata.IndexMappings.Add(CreateOrUpdateIndexMap(existingManagedMappings, AIConstants.ColumnNames.ReferenceType, DocumentIndex.Types.Text, map => map.IsFilterable = true));
-        metadata.IndexMappings.Add(CreateOrUpdateIndexMap(existingManagedMappings, AIConstants.ColumnNames.ChunkIndex, DocumentIndex.Types.Integer));
-        metadata.IndexMappings.Add(CreateOrUpdateIndexMap(existingManagedMappings, AIConstants.ColumnNames.Embedding, DocumentIndex.Types.Vector, map =>
+        metadata.IndexMappings.Add(CreateOrUpdateIndexMap(existingManagedMappings, DocumentIndexConstants.ColumnNames.DocumentId, DocumentIndex.Types.Text, map => map.IsFilterable = true));
+        metadata.IndexMappings.Add(CreateOrUpdateIndexMap(existingManagedMappings, DocumentIndexConstants.ColumnNames.Content, DocumentIndex.Types.Text, map => map.IsSearchable = true));
+        metadata.IndexMappings.Add(CreateOrUpdateIndexMap(existingManagedMappings, DocumentIndexConstants.ColumnNames.FileName, DocumentIndex.Types.Text, map => map.IsFilterable = true));
+        metadata.IndexMappings.Add(CreateOrUpdateIndexMap(existingManagedMappings, DocumentIndexConstants.ColumnNames.ReferenceId, DocumentIndex.Types.Text, map => map.IsFilterable = true));
+        metadata.IndexMappings.Add(CreateOrUpdateIndexMap(existingManagedMappings, DocumentIndexConstants.ColumnNames.ReferenceType, DocumentIndex.Types.Text, map => map.IsFilterable = true));
+        metadata.IndexMappings.Add(CreateOrUpdateIndexMap(existingManagedMappings, DocumentIndexConstants.ColumnNames.ChunkIndex, DocumentIndex.Types.Integer));
+        metadata.IndexMappings.Add(CreateOrUpdateIndexMap(existingManagedMappings, DocumentIndexConstants.ColumnNames.Embedding, DocumentIndex.Types.Vector, map =>
         {
             map.IsSearchable = true;
             map.VectorInfo = new AzureAISearchIndexMapVectorInfo
@@ -176,13 +176,13 @@ public sealed class AIDocumentAzureAISearchIndexProfileHandler : AIDocumentIndex
 
     private static bool IsManagedField(string fieldKey)
     {
-        return string.Equals(fieldKey, AIConstants.ColumnNames.ChunkId, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(fieldKey, AIConstants.ColumnNames.DocumentId, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(fieldKey, AIConstants.ColumnNames.Content, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(fieldKey, AIConstants.ColumnNames.FileName, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(fieldKey, AIConstants.ColumnNames.ReferenceId, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(fieldKey, AIConstants.ColumnNames.ReferenceType, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(fieldKey, AIConstants.ColumnNames.ChunkIndex, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(fieldKey, AIConstants.ColumnNames.Embedding, StringComparison.OrdinalIgnoreCase);
+        return string.Equals(fieldKey, DocumentIndexConstants.ColumnNames.ChunkId, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(fieldKey, DocumentIndexConstants.ColumnNames.DocumentId, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(fieldKey, DocumentIndexConstants.ColumnNames.Content, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(fieldKey, DocumentIndexConstants.ColumnNames.FileName, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(fieldKey, DocumentIndexConstants.ColumnNames.ReferenceId, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(fieldKey, DocumentIndexConstants.ColumnNames.ReferenceType, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(fieldKey, DocumentIndexConstants.ColumnNames.ChunkIndex, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(fieldKey, DocumentIndexConstants.ColumnNames.Embedding, StringComparison.OrdinalIgnoreCase);
     }
 }

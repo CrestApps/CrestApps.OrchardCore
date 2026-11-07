@@ -44,7 +44,7 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Registers recipe execution support for the Time Zones feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class RecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -56,7 +56,7 @@ public sealed class RecipesStartup : StartupBase
 /// <summary>
 /// Registers deployment support for the Time Zones feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class DeploymentStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

@@ -1,10 +1,15 @@
+using CrestApps.OrchardCore.Addresses.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Customers.BackgroundTasks;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Customers.Core.Indexes;
+using CrestApps.OrchardCore.Customers.Deployments;
+using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Customers.Drivers;
@@ -14,9 +19,12 @@ using CrestApps.OrchardCore.Customers.Navigation;
 using CrestApps.OrchardCore.Customers.Recipes;
 using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Orders.Core;
+using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Commerce.Webhooks;
+using CrestApps.OrchardCore.Webhooks;
 using CrestApps.OrchardCore.Customers.Api;
+using CrestApps.OrchardCore.PersonalData.Core;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,6 +32,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -44,7 +53,13 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<CustomerIndexProvider>();
 
         services.AddScoped<ICustomerStore, CustomerStore>();
+
+        // A customer's consent to marketing, which every campaign asks and a campaign's unsubscribe link withdraws.
+        services.AddConsentSource<CustomerMarketingConsentSource>();
         services.AddScoped<ICustomerService, DefaultCustomerService>();
+
+        // Customers are parties: pickers and lists in any module find and name them by their customer record id.
+        services.AddPartySource<CustomerPartySource>();
 
         // A guest's history joins their account once the account's email is verified.
         services.AddScoped<ICustomerMergeService, DefaultCustomerMergeService>();
@@ -53,17 +68,24 @@ public sealed class Startup : StartupBase
         services.AddScoped<IUserEventHandler, CustomerMergeUserEventHandler>();
 
         services.AddScoped<CustomerAddressBook>();
+
+        // Checkout steps such as Shipping list and save the buyer's addresses through the Addresses contract.
+        services.AddScoped<IShippingAddressBook, CustomerShippingAddressBook>();
         services.AddScoped<CustomerAccountPages>();
 
-        // Sample stores add their customers through a recipe. Customers are personal data, so there is no export step.
+        // Sample stores add their customers through a recipe. Customers are personal data: the deployment step exports
+        // them only when an administrator adds it to a plan, and leaves out the customers who have a user account.
         services.AddRecipeExecutionStep<CustomersStep>();
+        services.AddDeployment<CustomersDeploymentSource, CustomersDeploymentStep, SummaryDeploymentStepDisplayDriver<CustomersDeploymentStep>>();
+        services.AddDeploymentStepSchema<CustomersDeploymentStepSchema>();
 
         // Access and erasure requests, and the retention windows for guests' personal data.
         services.AddScoped<ICustomerPrivacyService, DefaultCustomerPrivacyService>();
 
-        // Erasing or exporting a customer covers what the other commerce modules keep about them: checkouts,
-        // transactions, subscriptions, installment plans, coupon redemptions and payment-provider customers.
-        services.AddScoped<ICustomerPrivacyHandler, CommercePersonalDataCustomerPrivacyHandler>();
+        // Erasing or exporting a customer covers what every other module keeps about them, through each module's
+        // personal-data contributor: commerce records, the CRM, Workforce, Scheduling, Bookings and the rest.
+        services.AddPersonalData();
+        services.AddScoped<ICustomerPrivacyHandler, PersonalDataCustomerPrivacyHandler>();
         services.AddSingleton<IBackgroundTask, CustomerRetentionBackgroundTask>();
         services.AddSiteDisplayDriver<CustomerPrivacySettingsDisplayDriver>();
         services.AddNavigationProvider<CustomerSettingsAdminMenu>();
@@ -95,9 +117,6 @@ public sealed class OrdersStartup : StartupBase
 
         // Who is buying, a business or a person, and whether they are exempt, reaches checkout tax.
         services.AddScoped<ICheckoutTaxProfileHandler, CustomerCheckoutTaxProfileHandler>();
-        services.AddScoped<ICustomerMergeHandler, OrderCustomerMergeHandler>();
-        services.AddScoped<OrderAnonymizer>();
-        services.AddScoped<ICustomerPrivacyHandler, OrderCustomerPrivacyHandler>();
         services.AddScoped<CustomerContactStepService>();
         services.AddDisplayDriver<CheckoutFlow, CustomerContactCheckoutFlowDisplayDriver>();
         services.AddSiteDisplayDriver<CustomerCheckoutSettingsDisplayDriver>();
@@ -139,6 +158,10 @@ public sealed class StoreCreditStartup : StartupBase
         services.AddDisplayDriver<CheckoutFlow, StoreCreditCheckoutFlowDisplayDriver>();
         services.AddDisplayDriver<Customer, CustomerStoreCreditDisplayDriver>();
         services.AddNavigationProvider<StoreCreditAccountMenu>();
+        services.AddRecipeExecutionStep<StoreCreditAccountsStep>();
+        services.AddScoped<IRecipeStep, StoreCreditAccountsRecipeStepSchema>();
+        services.AddDeployment<StoreCreditAccountsDeploymentSource, StoreCreditAccountsDeploymentStep, SummaryDeploymentStepDisplayDriver<StoreCreditAccountsDeploymentStep>>();
+        services.AddDeploymentStepSchema<StoreCreditAccountsDeploymentStepSchema>();
     }
 }
 
@@ -164,6 +187,10 @@ public sealed class LoyaltyStartup : StartupBase
         services.AddSiteSettingsPermission(CustomersConstants.LoyaltySettingsGroupId, CustomerPermissions.ManageCustomers);
         services.AddNavigationProvider<LoyaltyAccountMenu>();
         services.AddNavigationProvider<LoyaltySettingsAdminMenu>();
+        services.AddRecipeExecutionStep<LoyaltyAccountsStep>();
+        services.AddScoped<IRecipeStep, LoyaltyAccountsRecipeStepSchema>();
+        services.AddDeployment<LoyaltyAccountsDeploymentSource, LoyaltyAccountsDeploymentStep, SummaryDeploymentStepDisplayDriver<LoyaltyAccountsDeploymentStep>>();
+        services.AddDeploymentStepSchema<LoyaltyAccountsDeploymentStepSchema>();
     }
 }
 
@@ -186,6 +213,10 @@ public sealed class ReferralsStartup : StartupBase
         services.AddSiteSettingsPermission(CustomersConstants.ReferralSettingsGroupId, CustomerPermissions.ManageCustomers);
         services.AddNavigationProvider<ReferralAccountMenu>();
         services.AddNavigationProvider<ReferralSettingsAdminMenu>();
+        services.AddRecipeExecutionStep<ReferralProfilesStep>();
+        services.AddScoped<IRecipeStep, ReferralProfilesRecipeStepSchema>();
+        services.AddDeployment<ReferralProfilesDeploymentSource, ReferralProfilesDeploymentStep, SummaryDeploymentStepDisplayDriver<ReferralProfilesDeploymentStep>>();
+        services.AddDeploymentStepSchema<ReferralProfilesDeploymentStepSchema>();
     }
 }
 
@@ -232,6 +263,6 @@ public sealed class WebhooksStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ICustomerHandler, CustomerWebhookHandler>();
-        services.AddCommerceWebhookEvent(CommerceWebhookEvents.CustomerCreated, "Customer created", "Customers");
+        services.AddWebhookEvent(CommerceWebhookEvents.CustomerCreated, "Customer created", "Customers");
     }
 }

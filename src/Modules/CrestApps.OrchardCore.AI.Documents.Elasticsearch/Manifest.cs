@@ -12,6 +12,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         ChatInteractionsConstants.Feature.ChatDocuments,
-        "OrchardCore.Elasticsearch",
+        OrchardCoreFeatureIds.Elasticsearch,
     ]
 )]

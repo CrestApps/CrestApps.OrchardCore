@@ -84,6 +84,22 @@ internal sealed class TimeOffRequestStore : DocumentCatalog<TimeOffRequest, Time
         return requests.ToArray();
     }
 
+    /// <summary>
+    /// Returns a worker's requests in every state, newest first, for a privacy request.
+    /// </summary>
+    public async Task<IReadOnlyList<TimeOffRequest>> ListForWorkerAsync(string workerId, int take, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(workerId))
+        {
+            return [];
+        }
+
+        return [.. await Session.Query<TimeOffRequest, TimeOffRequestIndex>(index => index.WorkerId == workerId, collection: CollectionName)
+            .OrderByDescending(index => index.SubmittedUtc)
+            .Take(take)
+            .ListAsync(cancellationToken)];
+    }
+
     public async Task<(int Count, IReadOnlyList<TimeOffRequest> Items)> PageAsync(TimeOffRequestQuery query, int skip, int take, CancellationToken cancellationToken = default)
     {
         var search = Session.Query<TimeOffRequest, TimeOffRequestIndex>(collection: CollectionName);

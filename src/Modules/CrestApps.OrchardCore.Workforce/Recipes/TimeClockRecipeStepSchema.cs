@@ -21,7 +21,9 @@ internal sealed class TimeClockRecipeStepSchema : IRecipeStep
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("WorkforceTimeClock").Description("Recipe step discriminator. Must be 'WorkforceTimeClock'.")),
                 ("PayPeriods", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true)).Description("Pay periods: name, frequency (Weekly, Biweekly, SemiMonthly or Monthly), anchorDate and weekStart.")),
                 ("PayCodes", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true)).Description("Pay codes: code, name, kind, multiplier, and for a shift differential premiumPerHour, windowStart, windowEnd and weekdays.")),
-                ("Policies", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true)).Description("Time clock policies: name, payPeriodsName, the policy fields, and teamNames for the teams that use it.")))
+                ("Policies", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true)).Description("Time clock policies: name, payPeriodsName, the policy fields, and teamNames for the teams that use it.")),
+                ("Kiosks", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true)).Description("Time clock kiosks, matched by id or name: name, teamName and enabled. A kiosk's token is never imported; issue a new address on the kiosk's page.")),
+                ("PayrollCsv", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true).Description("The payroll CSV file: columns, each with a header and a field.")))
             .Required("name")
             .AdditionalProperties(true)
             .Build();

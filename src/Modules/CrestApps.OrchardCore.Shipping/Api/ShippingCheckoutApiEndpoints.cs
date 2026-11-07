@@ -138,7 +138,7 @@ internal static class ShippingCheckoutApiEndpoints
 
     private static async Task<Address> GetAddressAsync(ShippingCheckoutStepService shipping, CheckoutSession session, string addressId, ApiAddress address)
     {
-        if (!string.IsNullOrEmpty(addressId) && await shipping.GetCustomerAsync(session) is { } customer && customer.FindAddress(addressId) is { } saved)
+        if (!string.IsNullOrEmpty(addressId) && await shipping.GetAddressBookAsync(session) is { } addressBook && addressBook.FindAddress(addressId) is { } saved)
         {
             return saved.ToAddress();
         }

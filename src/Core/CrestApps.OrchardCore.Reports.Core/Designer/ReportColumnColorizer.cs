@@ -35,8 +35,9 @@ internal sealed class ReportColumnColorizer
     /// </summary>
     /// <param name="column">The column.</param>
     /// <param name="values">The values of the cells the table shows in the column, which the color scale spans.</param>
+    /// <param name="today">The time the report ran in the site's time zone, which relative date rules are measured from.</param>
     /// <returns>The colorizer, or <see langword="null"/>.</returns>
-    public static ReportColumnColorizer Create(ReportResultColumn column, IEnumerable<object> values)
+    public static ReportColumnColorizer Create(ReportResultColumn column, IEnumerable<object> values, DateTime today)
     {
         ArgumentNullException.ThrowIfNull(column);
 
@@ -56,7 +57,7 @@ internal sealed class ReportColumnColorizer
                 continue;
             }
 
-            var matches = DataFilterPredicates.Build(rule.Operator, column.DataType, rule.Values ?? [], DateTime.Today);
+            var matches = DataFilterPredicates.Build(rule.Operator, column.DataType, rule.Values ?? [], today);
 
             if (matches is not null)
             {

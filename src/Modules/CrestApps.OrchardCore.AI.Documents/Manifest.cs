@@ -19,7 +19,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         ChatInteractionsConstants.Feature.ChatInteractions,
-        "OrchardCore.Indexing",
+        OrchardCoreFeatureIds.Indexing,
     ]
 )]
 

@@ -37,7 +37,8 @@ public sealed class MessagingBroadcast : CatalogItem, INameAwareModel, IModified
     public IList<string> Recipients { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the recipient numbers already processed, so a resumed sweep never re-sends them.
+    /// Gets or sets the recipients processed before broadcasts were sent through the outreach engine. They are still
+    /// read, so a broadcast that was half sent then is never sent to them again; the engine keeps its own progress.
     /// </summary>
     public IList<string> ProcessedRecipients { get; set; } = [];
 
@@ -61,6 +62,16 @@ public sealed class MessagingBroadcast : CatalogItem, INameAwareModel, IModified
     /// Gets or sets the number of recipients that failed to send.
     /// </summary>
     public int FailedCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of recipients that were not sent to because they opted out of the channel.
+    /// </summary>
+    public int SkippedCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the outreach run that sends the broadcast, once it has started.
+    /// </summary>
+    public string OutreachRunId { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time the broadcast was created.

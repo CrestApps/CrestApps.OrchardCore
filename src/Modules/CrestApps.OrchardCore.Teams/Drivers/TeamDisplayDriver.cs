@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Teams.ViewModels;
@@ -16,17 +17,17 @@ namespace CrestApps.OrchardCore.Teams.Drivers;
 internal sealed class TeamDisplayDriver : DisplayDriver<Team>
 {
     private readonly ITeamManager _teamManager;
-    private readonly IClock _clock;
+    private readonly ITimeZoneSelectListProvider _timeZoneSelectListProvider;
 
     internal readonly IStringLocalizer S;
 
     public TeamDisplayDriver(
         ITeamManager teamManager,
-        IClock clock,
+        ITimeZoneSelectListProvider timeZoneSelectListProvider,
         IStringLocalizer<TeamDisplayDriver> stringLocalizer)
     {
         _teamManager = teamManager;
-        _clock = clock;
+        _timeZoneSelectListProvider = timeZoneSelectListProvider;
         S = stringLocalizer;
     }
 
@@ -52,9 +53,7 @@ internal sealed class TeamDisplayDriver : DisplayDriver<Team>
                 .Select(item => new SelectListItem(new string(' ', item.Depth * 4) + item.Team.Name, item.Team.ItemId, item.Team.ItemId == model.ParentId))
                 .ToList();
             model.KindOptions = KindOptions(model.Kind);
-            model.TimeZoneOptions = _clock.GetTimeZones()
-                .Select(zone => new SelectListItem(zone.TimeZoneId, zone.TimeZoneId, zone.TimeZoneId == model.TimeZoneId))
-                .ToList();
+            model.TimeZoneOptions = await _timeZoneSelectListProvider.GetTimeZoneOptionsAsync(model.TimeZoneId);
         }).Location("Content:1");
     }
 

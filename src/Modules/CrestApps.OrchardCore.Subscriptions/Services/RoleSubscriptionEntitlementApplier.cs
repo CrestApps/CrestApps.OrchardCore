@@ -1,9 +1,5 @@
 using CrestApps.OrchardCore.Subscriptions.Core;
-using CrestApps.OrchardCore.Subscriptions.Services;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Logging;
-using OrchardCore.Users;
-using OrchardCore.Users.Services;
+using CrestApps.OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.Subscriptions.Services;
 
@@ -17,28 +13,25 @@ namespace CrestApps.OrchardCore.Subscriptions.Services;
 ///
 /// Removing the role when access ends matters as much as granting it. A subscriber who stops paying and
 /// keeps the role keeps everything they were paying for, which is the failure that costs the site owner
-/// money quietly and indefinitely.
+/// money quietly and indefinitely. The grant goes through <see cref="IRoleGrantService"/>, keyed by the
+/// subscription, so the role is removed only when nothing else, such as an active membership, still grants it.
 /// </remarks>
 public sealed class RoleSubscriptionEntitlementApplier : ISubscriptionEntitlementApplier
 {
-    private readonly UserManager<IUser> _userManager;
-    private readonly IUserService _userService;
-    private readonly ILogger _logger;
+    /// <summary>
+    /// The source name that subscriptions' role grants are recorded under.
+    /// </summary>
+    public const string SourceName = "Subscription";
+
+    private readonly IRoleGrantService _roleGrantService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RoleSubscriptionEntitlementApplier"/> class.
     /// </summary>
-    /// <param name="userManager">The user manager used to add and remove the role.</param>
-    /// <param name="userService">The user service used to resolve the subscription's owner.</param>
-    /// <param name="logger">The logger.</param>
-    public RoleSubscriptionEntitlementApplier(
-        UserManager<IUser> userManager,
-        IUserService userService,
-        ILogger<RoleSubscriptionEntitlementApplier> logger)
+    /// <param name="roleGrantService">The service that records the grant and adds or removes the role.</param>
+    public RoleSubscriptionEntitlementApplier(IRoleGrantService roleGrantService)
     {
-        _userManager = userManager;
-        _userService = userService;
-        _logger = logger;
+        _roleGrantService = roleGrantService;
     }
 
     /// <inheritdoc/>
@@ -47,71 +40,28 @@ public sealed class RoleSubscriptionEntitlementApplier : ISubscriptionEntitlemen
     /// <inheritdoc/>
     public async Task ApplyAsync(SubscriptionEntitlementContext context)
     {
-        var (user, roleName) = await ResolveAsync(context);
-
-        if (user is null || string.IsNullOrEmpty(roleName))
+        if (TryResolve(context, out var ownerId, out var roleName))
         {
-            return;
-        }
-
-        if (await _userManager.IsInRoleAsync(user, roleName))
-        {
-            return;
-        }
-
-        var result = await _userManager.AddToRoleAsync(user, roleName);
-
-        if (!result.Succeeded)
-        {
-            _logger.LogError(
-                "Could not add the '{RoleName}' role for subscription '{SubscriptionId}': {Errors}",
-                roleName,
-                context.Subscription.ItemId,
-                string.Join("; ", result.Errors.Select(error => error.Description)));
+            // A guest subscriber has no account to put in a role. The subscription is still valid; it simply
+            // cannot grant a role until the buyer has an account.
+            await _roleGrantService.GrantAsync(ownerId, roleName, SourceName, context.Subscription.ItemId);
         }
     }
 
     /// <inheritdoc/>
     public async Task RevokeAsync(SubscriptionEntitlementContext context)
     {
-        var (user, roleName) = await ResolveAsync(context);
-
-        if (user is null || string.IsNullOrEmpty(roleName))
+        if (TryResolve(context, out var ownerId, out var roleName))
         {
-            return;
-        }
-
-        if (!await _userManager.IsInRoleAsync(user, roleName))
-        {
-            return;
-        }
-
-        var result = await _userManager.RemoveFromRoleAsync(user, roleName);
-
-        if (!result.Succeeded)
-        {
-            _logger.LogError(
-                "Could not remove the '{RoleName}' role for subscription '{SubscriptionId}': {Errors}",
-                roleName,
-                context.Subscription.ItemId,
-                string.Join("; ", result.Errors.Select(error => error.Description)));
+            await _roleGrantService.RevokeAsync(ownerId, roleName, SourceName, context.Subscription.ItemId);
         }
     }
 
-    private async Task<(IUser User, string RoleName)> ResolveAsync(SubscriptionEntitlementContext context)
+    private static bool TryResolve(SubscriptionEntitlementContext context, out string ownerId, out string roleName)
     {
-        var roleName = context?.Entitlement?.Value;
-        var ownerId = context?.Subscription?.OwnerId;
+        roleName = context?.Entitlement?.Value;
+        ownerId = context?.Subscription?.OwnerId;
 
-        if (string.IsNullOrEmpty(roleName) || string.IsNullOrEmpty(ownerId))
-        {
-            return (null, null);
-        }
-
-        // A guest subscriber has no account to put in a role. The subscription is still valid; it simply
-        // cannot grant a role until the buyer has an account.
-        var user = await _userService.GetUserByUniqueIdAsync(ownerId);
-
-        return (user, roleName);
+        return !string.IsNullOrEmpty(roleName) && !string.IsNullOrEmpty(ownerId);
     }
 }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Reports.Services;
 using CrestApps.OrchardCore.Reports.ViewModels;
@@ -108,14 +109,15 @@ public sealed class ReportsController : Controller
         return View(new ReportDisplayViewModel
         {
             Report = descriptor,
-            ExportFormats = _exportManager.GetFormats(),
+            ExportFormats = await CanExportAsync(descriptor) ? _exportManager.GetFormats() : [],
             FilterShape = filterShape,
             Document = document,
         });
     }
 
     /// <summary>
-    /// Exports a report in the requested format (CSV by default).
+    /// Exports a report in the requested format (CSV by default). It needs the report's permission, and its export
+    /// permission when it has one.
     /// </summary>
     /// <param name="id">The report technical name.</param>
     /// <param name="format">The export format technical name.</param>
@@ -130,7 +132,7 @@ public sealed class ReportsController : Controller
             return NotFound();
         }
 
-        if (!await _authorizationService.AuthorizeAsync(User, report.Permission))
+        if (!await _authorizationService.AuthorizeAsync(User, report.Permission) || !await CanExportAsync(report))
         {
             return Forbid();
         }
@@ -149,10 +151,24 @@ public sealed class ReportsController : Controller
         await _displayValueResolver.ResolveAsync(document);
         var content = _exportManager.GetFormat(exportFormat.Name).Serialize(document);
         var range = filter.GetDateRange();
-        var fileName = $"{report.Name}-{range.FromUtc:yyyyMMdd}-to-{range.ToUtc:yyyyMMdd}{exportFormat.Extension}";
+        var fileName = GetFileName(report.Name, range) + exportFormat.Extension;
 
         return File(content, exportFormat.ContentType, fileName);
     }
+
+    // An open-ended range names only the bound it has.
+    internal static string GetFileName(string reportName, ReportDateRange range)
+        => (range.FromUtc, range.ToUtc) switch
+        {
+            ({ } from, { } to) => string.Create(CultureInfo.InvariantCulture, $"{reportName}-{from:yyyyMMdd}-to-{to:yyyyMMdd}"),
+            ({ } from, null) => string.Create(CultureInfo.InvariantCulture, $"{reportName}-from-{from:yyyyMMdd}"),
+            (null, { } to) => string.Create(CultureInfo.InvariantCulture, $"{reportName}-to-{to:yyyyMMdd}"),
+            _ => reportName + "-all-time",
+        };
+
+    // A report may need a permission of its own to export, beside the one that views it.
+    private async Task<bool> CanExportAsync(ReportDescriptor report)
+        => report.ExportPermission is null || await _authorizationService.AuthorizeAsync(User, report.ExportPermission);
 
     private async Task<ReportFilter> BuildFilterAsync(string reportName)
     {

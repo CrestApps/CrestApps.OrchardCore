@@ -19,7 +19,9 @@
   <ItemGroup>
     <PackageReference Include="OrchardCore.Admin.Abstractions" />
     <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.Deployment.Abstractions" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.Recipes.Abstractions" />
     <PackageReference Include="OrchardCore.FileStorage.FileSystem" />
     <PackageReference Include="OrchardCore.Navigation.Core" />
     <PackageReference Include="OrchardCore.Settings" />
@@ -29,10 +31,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.Consent.Core/CrestApps.OrchardCore.Consent.Core.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.DncRegistry.Abstractions/CrestApps.OrchardCore.DncRegistry.Abstractions.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Reports.Abstractions/CrestApps.OrchardCore.Reports.Abstractions.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.Recipes.Core/CrestApps.OrchardCore.Recipes.Core.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.Reports.Core/CrestApps.OrchardCore.Reports.Core.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.YesSql.Core/CrestApps.OrchardCore.YesSql.Core.csproj" />
   </ItemGroup>

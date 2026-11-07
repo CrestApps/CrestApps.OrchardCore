@@ -14,7 +14,8 @@ public enum AssetOwnerKind
     Internal,
 
     /// <summary>
-    /// A customer: their installed base.
+    /// A customer who signs in: their installed base. The owner id is a user id (party kind <c>User</c>), not a
+    /// Customers module record id; the stored name is kept so existing assets stay readable.
     /// </summary>
     Customer,
 
@@ -190,7 +191,8 @@ public sealed class Asset : CatalogItem
     public AssetOwnerKind OwnerKind { get; set; }
 
     /// <summary>
-    /// Gets or sets the customer, CRM account or CRM contact that owns it.
+    /// Gets or sets the customer (a user id), account (a content item id) or CRM contact (a content item id) that owns it;
+    /// <see cref="AssetOwners.ToParty(Asset)"/> reads it as a party.
     /// </summary>
     public string OwnerId { get; set; }
 

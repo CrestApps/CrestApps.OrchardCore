@@ -1,16 +1,17 @@
 using System.Linq;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
+using CrestApps.OrchardCore.Transactions.Core.Services;
+using CrestApps.OrchardCore.Transactions.Models;
+using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
-using CrestApps.OrchardCore.Transactions.Core.Services;
-using CrestApps.OrchardCore.Transactions.Models;
-using CrestApps.OrchardCore.Transactions.Services;
 
 namespace CrestApps.OrchardCore.Checkout.Core.Services;
 

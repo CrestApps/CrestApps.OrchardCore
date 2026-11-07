@@ -211,6 +211,40 @@ public sealed class DataConnectorHttpTests
     }
 
     [Fact]
+    public async Task SendAsync_WithARetryAfterDate_WaitsUntilThatDateOnTheSiteClock()
+    {
+        // Arrange
+        var clock = new FixedClock();
+        var calls = 0;
+        var waits = new List<TimeSpan>();
+        var client = CreateClient(_ =>
+        {
+            if (++calls > 1)
+            {
+                return StubHttpHandler.Json("[]");
+            }
+
+            var throttled = new HttpResponseMessage(HttpStatusCode.TooManyRequests);
+            throttled.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(new DateTimeOffset(clock.UtcNow.AddSeconds(12)));
+
+            return throttled;
+        }, out _, clock);
+        client.Delay = (delay, _) =>
+        {
+            waits.Add(delay);
+
+            return Task.CompletedTask;
+        };
+
+        // Act
+        using var response = await client.SendAsync(Settings(), new FakeSecrets(), "key", HttpMethod.Get, new Uri("https://api.example.com/items"), null, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal([TimeSpan.FromSeconds(12)], waits);
+    }
+
+    [Fact]
     public async Task SendAsync_FollowsARedirectOnTheSameServer()
     {
         // Arrange
@@ -326,13 +360,13 @@ public sealed class DataConnectorHttpTests
         return (authenticator, handler);
     }
 
-    internal static DataConnectorHttpClient CreateClient(Func<HttpRequestMessage, HttpResponseMessage> respond, out StubHttpHandler handler)
+    internal static DataConnectorHttpClient CreateClient(Func<HttpRequestMessage, HttpResponseMessage> respond, out StubHttpHandler handler, FixedClock clock = null)
     {
         handler = new StubHttpHandler((request, _) => respond(request));
         var factory = new StubHttpClientFactory(handler);
         var authenticator = new HttpRequestAuthenticator(factory, new MemoryCache(new MemoryCacheOptions()), new ShellSettings { Name = "Default" });
 
-        return new DataConnectorHttpClient(factory, authenticator, Options.Create(new DataConnectorNetworkOptions()))
+        return new DataConnectorHttpClient(factory, authenticator, Options.Create(new DataConnectorNetworkOptions()), clock ?? new FixedClock())
         {
             Delay = (_, _) => Task.CompletedTask,
         };

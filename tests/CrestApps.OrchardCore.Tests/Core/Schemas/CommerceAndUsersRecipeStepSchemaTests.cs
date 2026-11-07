@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.Recipes.Core.Services;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Deployments;
 using CrestApps.OrchardCore.Stripe.Models;
+using CrestApps.OrchardCore.Users;
 using CrestApps.OrchardCore.Users.Core;
 using Json.Schema;
 using Microsoft.Extensions.AI;

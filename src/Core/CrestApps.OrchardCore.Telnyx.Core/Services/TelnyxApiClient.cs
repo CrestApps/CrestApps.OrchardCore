@@ -21,7 +21,7 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 /// </summary>
 public sealed partial class TelnyxApiClient
 {
-    private static readonly JsonSerializerOptions _serializerOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions _serializerOptions = JsonSerializerOptions.Web;
 
     private readonly HttpClient _httpClient;
     private readonly IOptionsMonitor<TelnyxOptions> _options;

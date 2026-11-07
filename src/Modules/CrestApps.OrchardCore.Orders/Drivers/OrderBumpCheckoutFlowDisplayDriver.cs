@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Orders.Core.Handlers;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Orders.ViewModels;
+using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
 using OrchardCore.ContentManagement;
@@ -136,7 +137,7 @@ public sealed class OrderBumpCheckoutFlowDisplayDriver : CheckoutFlowDisplayDriv
         }
 
         var price = settings.OrderBumpPercentOff is > 0 and < 100 and var percent
-            ? Math.Round(product.UnitPrice * (100m - percent) / 100m, 2, MidpointRounding.AwayFromZero)
+            ? Money.Round(product.UnitPrice * (100m - percent) / 100m, product.Currency)
             : product.UnitPrice;
 
         return (settings, new Offered(product.Title, price, product.UnitPrice, new CheckoutOrderBump

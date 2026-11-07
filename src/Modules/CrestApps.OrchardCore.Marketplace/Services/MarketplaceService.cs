@@ -1,7 +1,9 @@
 using CrestApps.OrchardCore.Marketplace.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Products.Core.Models;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
@@ -14,6 +16,11 @@ namespace CrestApps.OrchardCore.Marketplace.Services;
 /// </summary>
 public interface IVendorPayoutProvider
 {
+    /// <summary>
+    /// Gets the provider's unique name, which <see cref="MarketplaceSettings.PayoutProvider"/> chooses it by.
+    /// </summary>
+    string Name { get; }
+
     /// <summary>
     /// Sends <paramref name="amount"/> to the vendor for an order, from that order's payment when it can. Returns the
     /// provider's reference for the transfer, or the reason it failed.
@@ -37,6 +44,8 @@ public sealed class MarketplaceService
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
+    internal readonly IStringLocalizer S;
+
     public MarketplaceService(
         IVendorStore vendors,
         IVendorEarningStore earnings,
@@ -46,7 +55,8 @@ public sealed class MarketplaceService
         ISiteService siteService,
         IEnumerable<IVendorPayoutProvider> payoutProviders,
         IClock clock,
-        ILogger<MarketplaceService> logger)
+        ILogger<MarketplaceService> logger,
+        IStringLocalizer<MarketplaceService> stringLocalizer)
     {
         _vendors = vendors;
         _earnings = earnings;
@@ -57,6 +67,7 @@ public sealed class MarketplaceService
         _payoutProviders = payoutProviders;
         _clock = clock;
         _logger = logger;
+        S = stringLocalizer;
     }
 
     public bool CanPayOut
@@ -81,7 +92,7 @@ public sealed class MarketplaceService
 
         foreach (var line in order.Lines ?? [])
         {
-            var item = await _contentManager.GetAsync(line.ContentItemId, VersionOptions.Latest);
+            var item = await _contentManager.GetPurchasedAsync(line);
 
             if (item?.TryGet<VendorPart>(out var part) != true || string.IsNullOrEmpty(part.VendorId) ||
                 await _vendors.FindByIdAsync(part.VendorId, cancellationToken) is not { } vendor)
@@ -89,9 +100,9 @@ public sealed class MarketplaceService
                 continue;
             }
 
-            var gross = MarketplaceLedger.GetLineGross(line.LineTotal, order.Subtotal, order.DiscountTotal);
+            var gross = MarketplaceLedger.GetLineGross(line.LineTotal, order.Subtotal, order.DiscountTotal, order.Currency);
             var percent = vendor.CommissionPercent ?? settings.CommissionPercent;
-            var (commission, net) = MarketplaceLedger.Split(gross, percent);
+            var (commission, net) = MarketplaceLedger.Split(gross, percent, order.Currency);
 
             await _earnings.CreateAsync(new VendorEarning
             {
@@ -143,14 +154,14 @@ public sealed class MarketplaceService
 
         foreach (var sale in sales)
         {
-            var gross = MarketplaceLedger.GetRefundShare(sale.Gross, refund.Amount, paid);
+            var gross = MarketplaceLedger.GetRefundShare(sale.Gross, refund.Amount, paid, sale.Currency);
 
             if (gross <= 0m)
             {
                 continue;
             }
 
-            var (commission, net) = MarketplaceLedger.Split(-gross, sale.CommissionPercent);
+            var (commission, net) = MarketplaceLedger.Split(-gross, sale.CommissionPercent, sale.Currency);
 
             await _earnings.CreateAsync(new VendorEarning
             {
@@ -236,10 +247,13 @@ public sealed class MarketplaceService
         ArgumentNullException.ThrowIfNull(vendor);
 
         var failures = new List<string>();
+        var settings = await _siteService.GetSettingsAsync<MarketplaceSettings>();
 
-        if (_payoutProviders.FirstOrDefault() is not { } provider)
+        if (SelectPayoutProvider(_payoutProviders, settings.PayoutProvider) is not { } provider)
         {
-            return (0m, ["No payout provider is enabled, such as Marketplace payouts with Stripe Connect."]);
+            return (0m, [_payoutProviders.Any()
+                ? S["Choose the payout provider in the marketplace settings: more than one is enabled, or the one chosen is not."].Value
+                : S["No payout provider is enabled, such as Marketplace payouts with Stripe Connect."].Value]);
         }
 
         if (vendor.Status != VendorStatus.Active || !vendor.PayoutsEnabled)
@@ -252,7 +266,7 @@ public sealed class MarketplaceService
 
         foreach (var group in (await _earnings.ListAvailableAsync(vendor.ItemId, cancellationToken)).GroupBy(earning => (earning.OrderId, earning.Currency)))
         {
-            var amount = Math.Round(group.Sum(earning => earning.Net), 2, MidpointRounding.AwayFromZero);
+            var amount = Money.Round(group.Sum(earning => earning.Net), group.Key.Currency);
 
             // A refund bigger than what's left of the order waits for later sales to make up for it.
             if (amount <= 0m)
@@ -270,10 +284,15 @@ public sealed class MarketplaceService
                 Amount = amount,
                 Currency = group.Key.Currency,
                 EarningIds = [.. group.Select(earning => earning.ItemId)],
+                Provider = provider.Name,
                 CreatedUtc = now,
             };
 
-            var (transferId, failure) = await provider.PayAsync(vendor, order, amount, group.Key.Currency, payout.ItemId, cancellationToken);
+            // Stable for the same vendor, order and earnings, so a retry after a transfer went through but its save
+            // failed is answered with the same transfer instead of paying the vendor twice.
+            payout.IdempotencyKey = MarketplaceLedger.GetPayoutKey(vendor.ItemId, group.Key.OrderId, payout.EarningIds, group.Max(earning => earning.RefusedPayouts));
+
+            var (transferId, failure) = await provider.PayAsync(vendor, order, amount, group.Key.Currency, payout.IdempotencyKey, cancellationToken);
 
             payout.TransferId = transferId;
             payout.Failure = failure;
@@ -283,6 +302,14 @@ public sealed class MarketplaceService
 
             if (failure is not null)
             {
+                // The provider keeps its answer for a key, so the next try of these earnings needs a new key.
+                foreach (var earning in group)
+                {
+                    earning.RefusedPayouts++;
+
+                    await _earnings.UpdateAsync(earning, cancellationToken);
+                }
+
                 failures.Add(failure);
                 _logger.LogWarning("Order '{OrderNumber}' couldn't be paid out to vendor '{VendorId}': {Failure}", payout.OrderNumber, vendor.ItemId, failure);
 
@@ -332,6 +359,26 @@ public sealed class MarketplaceService
                 group.Where(earning => earning.Status == VendorEarningStatus.Held).Sum(earning => earning.Net),
                 group.Where(earning => earning.Status == VendorEarningStatus.Available).Sum(earning => earning.Net),
                 group.Where(earning => earning.Status == VendorEarningStatus.PaidOut).Sum(earning => earning.Net)))];
+
+    /// <summary>
+    /// Returns the payout provider named <paramref name="name"/>, or the only one enabled when no name is given;
+    /// <see langword="null"/> when none matches or several are enabled and none is named.
+    /// </summary>
+    /// <param name="providers">The enabled payout providers.</param>
+    /// <param name="name">The name chosen in the settings, if any.</param>
+    public static IVendorPayoutProvider SelectPayoutProvider(IEnumerable<IVendorPayoutProvider> providers, string name)
+    {
+        ArgumentNullException.ThrowIfNull(providers);
+
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            return providers.FirstOrDefault(provider => string.Equals(provider.Name, name, StringComparison.OrdinalIgnoreCase));
+        }
+
+        var enabled = providers.Take(2).ToList();
+
+        return enabled.Count == 1 ? enabled[0] : null;
+    }
 
     private async Task ReleaseAsync(VendorEarning earning, DateTime now, CancellationToken cancellationToken)
     {

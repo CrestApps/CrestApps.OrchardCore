@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text;
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.Webhooks;
 
 namespace CrestApps.OrchardCore.Tests.Architecture;
 
@@ -9,7 +10,7 @@ namespace CrestApps.OrchardCore.Tests.Architecture;
 /// safe to run twice, and has to say how it is safe — otherwise the second delivery enqueues a caller again,
 /// bills a call twice, or sends a customer a second copy of a message.
 /// <para>
-/// Declaring <see cref="ContactCenterHandlerReplaySafety"/> is not the same as being replay-safe, so this also
+/// Declaring <see cref="WebhookHandlerReplaySafety"/> is not the same as being replay-safe, so this also
 /// requires each handler to have a test that names it and exercises a duplicate delivery. A declaration nobody
 /// tested is a claim, and this rule exists because claims about idempotency are the ones that turn out to be
 /// wrong under load.
@@ -40,11 +41,11 @@ public sealed class ProviderWriteIdempotencyArchitectureTests
                 continue;
             }
 
-            var safety = (ContactCenterHandlerReplaySafety)handler
+            var safety = (WebhookHandlerReplaySafety)handler
                 .GetProperty(nameof(IProviderWebhookInboxHandler.ReplaySafety))
                 .GetValue(instance);
 
-            if (safety == ContactCenterHandlerReplaySafety.Unspecified)
+            if (safety == WebhookHandlerReplaySafety.Unspecified)
             {
                 violations.Add(
                     $"{handler.Name} does not say how it survives a redelivered webhook. Declare NaturallyIdempotent, " +

@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.SignalR.Core;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -90,8 +91,7 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             callSessionManager.Object,
             agentManager.Object,
             store.Object,
-            hubContext.Object,
-            _shellSettings,
+            new SoftPhoneClientNotifier(hubContext.Object, _shellSettings),
             Mock.Of<IOmnichannelActivityStore>(),
             NullLogger<ContactCenterSoftPhoneEventHandler>.Instance);
 
@@ -190,8 +190,7 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             callSessionManager.Object,
             agentManager.Object,
             store.Object,
-            hubContext.Object,
-            _shellSettings,
+            new SoftPhoneClientNotifier(hubContext.Object, _shellSettings),
             Mock.Of<IOmnichannelActivityStore>(),
             NullLogger<ContactCenterSoftPhoneEventHandler>.Instance);
 
@@ -278,8 +277,7 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             callSessionManager.Object,
             agentManager.Object,
             store.Object,
-            hubContext.Object,
-            _shellSettings,
+            new SoftPhoneClientNotifier(hubContext.Object, _shellSettings),
             Mock.Of<IOmnichannelActivityStore>(),
             NullLogger<ContactCenterSoftPhoneEventHandler>.Instance);
 
@@ -349,8 +347,7 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             new Mock<ICallSessionManager>().Object,
             agentManager.Object,
             store.Object,
-            hubContext.Object,
-            _shellSettings,
+            new SoftPhoneClientNotifier(hubContext.Object, _shellSettings),
             Mock.Of<IOmnichannelActivityStore>(),
             NullLogger<ContactCenterSoftPhoneEventHandler>.Instance);
 
@@ -427,8 +424,7 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             callSessionManager.Object,
             agentManager.Object,
             store.Object,
-            hubContext.Object,
-            _shellSettings,
+            new SoftPhoneClientNotifier(hubContext.Object, _shellSettings),
             Mock.Of<IOmnichannelActivityStore>(),
             NullLogger<ContactCenterSoftPhoneEventHandler>.Instance);
 
@@ -513,8 +509,7 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             callSessionManager.Object,
             agentManager.Object,
             store.Object,
-            hubContext.Object,
-            _shellSettings,
+            new SoftPhoneClientNotifier(hubContext.Object, _shellSettings),
             Mock.Of<IOmnichannelActivityStore>(),
             NullLogger<ContactCenterSoftPhoneEventHandler>.Instance);
 
@@ -607,8 +602,7 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             callSessionManager.Object,
             agentManager.Object,
             store.Object,
-            hubContext.Object,
-            _shellSettings,
+            new SoftPhoneClientNotifier(hubContext.Object, _shellSettings),
             Mock.Of<IOmnichannelActivityStore>(),
             NullLogger<ContactCenterSoftPhoneEventHandler>.Instance);
 
@@ -698,8 +692,7 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             callSessionManager.Object,
             agentManager.Object,
             new Mock<ITelephonyInteractionStore>().Object,
-            hubContext.Object,
-            _shellSettings,
+            new SoftPhoneClientNotifier(hubContext.Object, _shellSettings),
             Mock.Of<IOmnichannelActivityStore>(),
             NullLogger<ContactCenterSoftPhoneEventHandler>.Instance);
 

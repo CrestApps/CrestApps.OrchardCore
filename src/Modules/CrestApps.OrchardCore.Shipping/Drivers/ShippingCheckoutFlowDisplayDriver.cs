@@ -5,8 +5,6 @@ using CrestApps.OrchardCore.Addresses.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core;
 using CrestApps.OrchardCore.Checkout.Core.Services;
-using CrestApps.OrchardCore.Customers.Core.Models;
-using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Shipping.Handlers;
@@ -102,8 +100,8 @@ public sealed class ShippingCheckoutFlowDisplayDriver : CheckoutFlowDisplayDrive
         => Initialize<ShippingCheckoutStepViewModel>("ShippingCheckoutStep_Edit", async model =>
         {
             var session = flow.Session;
-            var customer = await GetCustomerAsync(session);
-            var options = EditorOptions(session, customer);
+            var addressBook = await _step.GetAddressBookAsync(session);
+            var options = EditorOptions(session, addressBook);
             var step = ShippingCheckoutHandler.GetStep(session, _documentJsonSerializerOptions);
             Address known = null;
 
@@ -136,24 +134,24 @@ public sealed class ShippingCheckoutFlowDisplayDriver : CheckoutFlowDisplayDrive
                 model.PickupLocationId = step?.PickupLocationId;
 
                 // A business buyer with no default address of their own starts with their account's first location.
-                var defaultAddress = customer?.GetDefaultShippingAddress();
+                var defaultAddress = addressBook?.GetDefaultShippingAddress();
                 var sourcedDefault = defaultAddress is null && await _step.GetSourcedAddressesAsync(session) is { Count: > 0 } sourced ? sourced[0] : null;
 
                 model.AddressId = defaultAddress?.AddressId ?? sourcedDefault?.AddressId;
-                model.SaveAddress = customer is not null;
+                model.SaveAddress = addressBook is not null;
                 model.Address = await _addressEditor.BuildAsync(defaultAddress is null && sourcedDefault is null ? GetBillingAddress(session) : null, options);
                 known = defaultAddress?.ToAddress() ?? sourcedDefault?.Address ?? GetBillingAddress(session);
             }
 
             model.IsSignedIn = !string.IsNullOrEmpty(session.OwnerId);
-            model.SavedAddresses = await SummarizeAsync(customer, session);
+            model.SavedAddresses = await SummarizeAsync(addressBook, session);
 
             if (model.SavedAddresses.Count > 0)
             {
                 model.AddressId ??= string.Empty;
             }
 
-            model.CanSaveAddress = customer is not null && (customer.Addresses?.Count ?? 0) < 20;
+            model.CanSaveAddress = addressBook?.CanAdd == true;
             model.AddressEditor = await _shapeFactory.CreateAddressEditorAsync(model.Address, Prefix + "." + AddressPrefix);
 
             // Rates for the address the buyer is most likely shipping to, so they can choose straight away.
@@ -172,20 +170,20 @@ public sealed class ShippingCheckoutFlowDisplayDriver : CheckoutFlowDisplayDrive
             }
         }).Location("Content");
 
-    private async Task<IReadOnlyList<ShippingAddressSummary>> SummarizeAsync(Customer customer, ICheckoutFlowSession session)
+    private async Task<IReadOnlyList<ShippingAddressSummary>> SummarizeAsync(ShippingAddressBook addressBook, ICheckoutFlowSession session)
     {
         var summaries = new List<ShippingAddressSummary>();
         var formatOptions = new AddressFormatOptions { IncludeCountry = true };
 
         // The default shipping address first.
-        foreach (var entry in (customer?.Addresses ?? []).OrderByDescending(entry => entry.AddressId == customer.DefaultShippingAddressId))
+        foreach (var entry in (addressBook?.Addresses ?? []).OrderByDescending(entry => entry.AddressId == addressBook.DefaultShippingAddressId))
         {
             summaries.Add(new ShippingAddressSummary
             {
                 AddressId = entry.AddressId,
                 Label = entry.Label,
                 Lines = await _addressFormatter.GetLinesAsync(entry.ToAddress(), formatOptions),
-                IsDefault = entry.AddressId == customer.DefaultShippingAddressId,
+                IsDefault = entry.AddressId == addressBook.DefaultShippingAddressId,
             });
         }
 
@@ -205,8 +203,8 @@ public sealed class ShippingCheckoutFlowDisplayDriver : CheckoutFlowDisplayDrive
     }
 
     // The shipping form asks for who receives the parcel and a phone the carrier can call.
-    private static AddressEditorOptions EditorOptions(ICheckoutFlowSession session, Customer customer)
-        => ShippingCheckoutStepService.EditorOptions(session, customer);
+    private static AddressEditorOptions EditorOptions(ICheckoutFlowSession session, ShippingAddressBook addressBook)
+        => ShippingCheckoutStepService.EditorOptions(session, addressBook);
 
     private static Address GetBillingAddress(ICheckoutFlowSession session)
         => session.TryGet<CheckoutContactInfo>(out var contact) ? contact.BillingAddress : null;
@@ -218,6 +216,4 @@ public sealed class ShippingCheckoutFlowDisplayDriver : CheckoutFlowDisplayDrive
     private Task<Order> GetOrderAsync(ICheckoutFlowSession session)
         => _step.GetOrderAsync(session);
 
-    private Task<Customer> GetCustomerAsync(ICheckoutFlowSession session)
-        => _step.GetCustomerAsync(session);
 }

@@ -145,7 +145,7 @@ public sealed class ProductRecommendationService
     public async Task<IReadOnlyList<(string Id, string Text, string Type)>> SearchAsync(string query, int take = 30)
     {
         var types = (await _contentDefinitionManager.ListTypeDefinitionsAsync())
-            .Where(type => type.Parts.Any(part => part.PartDefinition.Name == nameof(ProductPart)))
+            .Where(type => type.HasPart(nameof(ProductPart)))
             .Select(type => type.Name)
             .ToArray();
 

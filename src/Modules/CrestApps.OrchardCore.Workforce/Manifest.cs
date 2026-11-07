@@ -2,6 +2,7 @@ using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Skills;
 using CrestApps.OrchardCore.Teams;
+using CrestApps.OrchardCore.TimeTracker;
 using CrestApps.OrchardCore.Workforce;
 using OrchardCore.Modules.Manifest;
 
@@ -66,7 +67,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         WorkforceConstants.Features.Workforce,
-        "CrestApps.OrchardCore.TimeTracker",
+        TimeTrackerConstants.Features.TimeTracker,
     ]
 )]
 

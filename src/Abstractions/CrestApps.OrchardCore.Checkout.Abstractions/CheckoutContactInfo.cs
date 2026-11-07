@@ -29,4 +29,11 @@ public sealed class CheckoutContactInfo
     /// Gets or sets the address the buyer is billed at, when the checkout asked for one.
     /// </summary>
     public Address BillingAddress { get; set; }
+
+    /// <summary>
+    /// Returns the buyer's contact as the shared <see cref="ContactInfo"/>. The phone is there when it's in E.164 form,
+    /// as the checkout keeps a phone that parses.
+    /// </summary>
+    public ContactInfo ToContactInfo()
+        => ContactInfo.From(DisplayName, Email, Phone, BillingAddress);
 }

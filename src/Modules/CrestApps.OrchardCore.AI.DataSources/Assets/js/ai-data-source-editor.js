@@ -227,6 +227,26 @@
         updateVisibility();
     }
 
+    function initializeDataConnections(form) {
+        // A data source that picks a data connection reads its endpoint and credentials from the connection, so its
+        // own connection settings are hidden while one is picked.
+        form.querySelectorAll('[data-ai-data-source-data-connection]').forEach(function (select) {
+            var section = select.closest('[data-ai-data-source-section]');
+            var settings = section ? section.querySelector('[data-ai-data-source-embedded-connection]') : null;
+
+            if (!(select instanceof HTMLSelectElement) || !(settings instanceof HTMLElement)) {
+                return;
+            }
+
+            function updateVisibility() {
+                settings.hidden = select.value !== '';
+            }
+
+            select.addEventListener('change', updateVisibility);
+            updateVisibility();
+        });
+    }
+
     function initialize(root) {
         var form = root.closest('form') || document;
         var sourceTypeInput = root.querySelector('[data-ai-data-source-source-type]');
@@ -242,6 +262,7 @@
         initializeElasticsearch(form);
         initializePostgreSQL(form);
         initializeAzureAiSearch(form);
+        initializeDataConnections(form);
     }
 
     document.addEventListener('DOMContentLoaded', function () {

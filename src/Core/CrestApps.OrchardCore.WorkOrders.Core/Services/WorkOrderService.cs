@@ -1,4 +1,5 @@
 using System.Globalization;
+using CrestApps.OrchardCore.Numbering;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.WorkOrders.Services;
@@ -37,6 +38,7 @@ public sealed class WorkOrderResult
 public sealed class WorkOrderService
 {
     private readonly ISession _session;
+    private readonly INumberSequence _numberSequence;
     private readonly WorkOrderStore _store;
     private readonly WorkOrderSettingManager<WorkOrderType> _types;
     private readonly WorkOrderSettingManager<ChecklistTemplate> _checklists;
@@ -55,6 +57,7 @@ public sealed class WorkOrderService
     /// Initializes a new instance of the <see cref="WorkOrderService"/> class.
     /// </summary>
     /// <param name="session">The session.</param>
+    /// <param name="numberSequence">The locked sequence that work order numbers come from.</param>
     /// <param name="store">The work order store.</param>
     /// <param name="types">The work order types.</param>
     /// <param name="checklists">The checklist templates.</param>
@@ -69,6 +72,7 @@ public sealed class WorkOrderService
     /// <param name="stringLocalizer">The string localizer.</param>
     public WorkOrderService(
         ISession session,
+        INumberSequence numberSequence,
         WorkOrderStore store,
         WorkOrderSettingManager<WorkOrderType> types,
         WorkOrderSettingManager<ChecklistTemplate> checklists,
@@ -83,6 +87,7 @@ public sealed class WorkOrderService
         IStringLocalizer<WorkOrderService> stringLocalizer)
     {
         _session = session;
+        _numberSequence = numberSequence;
         _store = store;
         _types = types;
         _checklists = checklists;
@@ -758,16 +763,18 @@ public sealed class WorkOrderService
         return errors;
     }
 
-    private async Task<string> NextNumberAsync(CancellationToken cancellationToken)
-    {
-        var numbers = await _session.QueryIndex<WorkOrderIndex>(index => index.Number.StartsWith(WorkOrdersConstants.NumberPrefix), collection: WorkOrdersConstants.CollectionName).ListAsync(cancellationToken);
-        var highest = numbers
-            .Select(index => int.TryParse(index.Number.AsSpan(WorkOrdersConstants.NumberPrefix.Length), NumberStyles.None, CultureInfo.InvariantCulture, out var value) ? value : 0)
-            .DefaultIfEmpty(0)
-            .Max();
+    // A locked, gap-free sequence. A site that numbered its work orders before the sequence carries on after its highest
+    // number.
+    private Task<string> NextNumberAsync(CancellationToken cancellationToken)
+        => _numberSequence.NextAsync(WorkOrdersConstants.NumberSeries, WorkOrdersConstants.NumberPrefix, 6, new NumberSequenceOptions
+        {
+            SeedAsync = async token =>
+            {
+                var numbers = await _session.QueryIndex<WorkOrderIndex>(index => index.Number.StartsWith(WorkOrdersConstants.NumberPrefix), collection: WorkOrdersConstants.CollectionName).ListAsync(token);
 
-        return string.Create(CultureInfo.InvariantCulture, $"{WorkOrdersConstants.NumberPrefix}{highest + 1:000000}");
-    }
+                return NumberSequenceExtensions.HighestNumber(numbers.Select(index => index.Number), WorkOrdersConstants.NumberPrefix);
+            },
+        }, cancellationToken);
 
     private async Task NotifyAsync(WorkOrder workOrder, string eventName, IReadOnlyDictionary<string, object> detail, CancellationToken cancellationToken)
     {

@@ -42,7 +42,7 @@ public sealed class AIQualityAdminMenu : AdminNavigationProvider
                 .Add(S["QA"], S["QA"].PrefixPosition(), qa => qa
                     .AddClass("ai-qa")
                     .Id("aiQA")
-                    .Action("Index", "AIQADashboard", AIConstants.Feature.Area)
+                    .Action("Index", "AIQACohorts", AIConstants.Feature.Area)
                     .Permission(AIPermissions.ManageAIQuality)
                     .LocalNav()
                 )

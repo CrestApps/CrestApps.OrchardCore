@@ -106,7 +106,7 @@ public sealed class Startup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Title")]
+[RequireFeatures(OrchardCoreFeatureIds.Title)]
 public sealed class TitleStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -115,7 +115,7 @@ public sealed class TitleStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Html")]
+[RequireFeatures(OrchardCoreFeatureIds.Html)]
 public sealed class HtmlBodyStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -124,7 +124,7 @@ public sealed class HtmlBodyStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Markdown")]
+[RequireFeatures(OrchardCoreFeatureIds.Markdown)]
 public sealed class MarkdownStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -134,7 +134,7 @@ public sealed class MarkdownStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Alias")]
+[RequireFeatures(OrchardCoreFeatureIds.Alias)]
 public sealed class AliasStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -143,7 +143,7 @@ public sealed class AliasStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.ArchiveLater")]
+[RequireFeatures(OrchardCoreFeatureIds.ArchiveLater)]
 public sealed class ArchiveLaterStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -152,7 +152,7 @@ public sealed class ArchiveLaterStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Autoroute")]
+[RequireFeatures(OrchardCoreFeatureIds.Autoroute)]
 public sealed class AutorouteStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -161,7 +161,7 @@ public sealed class AutorouteStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.ContentFields")]
+[RequireFeatures(OrchardCoreFeatureIds.ContentFields)]
 public sealed class ContentFieldsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -181,7 +181,7 @@ public sealed class ContentFieldsStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Liquid")]
+[RequireFeatures(OrchardCoreFeatureIds.Liquid)]
 public sealed class LiquidStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -190,7 +190,7 @@ public sealed class LiquidStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Media")]
+[RequireFeatures(OrchardCoreFeatureIds.Media)]
 public sealed class MediaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -199,7 +199,7 @@ public sealed class MediaStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.PublishLater")]
+[RequireFeatures(OrchardCoreFeatureIds.PublishLater)]
 public sealed class PublishLaterStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -208,7 +208,7 @@ public sealed class PublishLaterStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Taxonomies")]
+[RequireFeatures(OrchardCoreFeatureIds.Taxonomies)]
 public sealed class TaxonomiesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -217,7 +217,7 @@ public sealed class TaxonomiesStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.ContentLocalization")]
+[RequireFeatures(OrchardCoreFeatureIds.ContentLocalization)]
 public sealed class ContentLocalizationStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -226,7 +226,7 @@ public sealed class ContentLocalizationStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Notifications")]
+[RequireFeatures(OrchardCoreFeatureIds.Notifications)]
 public sealed class NotificationsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

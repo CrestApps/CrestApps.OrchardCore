@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Products;
 /// <summary>
 /// Registers recipe schema contributors for the products feature.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class RecipesSchemaStartup : StartupBase
 {
     /// <inheritdoc/>

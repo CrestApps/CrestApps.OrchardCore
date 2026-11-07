@@ -122,6 +122,18 @@ In the **Memory** section of **Settings → Artificial Intelligence**, configure
 - **Index profile** — the master memory index used for storing memories
 - **Default top N** — the default number of matching memories returned by searches (1–20)
 
+These are the `AIMemorySettings` site settings. Orchard Core's `Settings` recipe step sets them, and the **AI memory settings** deployment step exports them:
+
+```json
+{
+  "name": "Settings",
+  "AIMemorySettings": {
+    "IndexProfileName": "Memories",
+    "TopN": 5
+  }
+}
+```
+
 Preemptive memory retrieval itself is controlled separately in the **General** section of **Settings → Artificial Intelligence** through **Enable preemptive memory retrieval**. This lets you keep user memory tools enabled while turning off the upfront memory injection step for the tenant.
 
 :::warning

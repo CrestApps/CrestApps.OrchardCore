@@ -1,4 +1,3 @@
-using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
@@ -16,13 +15,10 @@ namespace CrestApps.OrchardCore.Core.Deployments;
 /// </remarks>
 /// <typeparam name="TStep">The deployment step type.</typeparam>
 /// <typeparam name="TEntry">The catalog entry type.</typeparam>
-public abstract class NamedCatalogDeploymentSource<TStep, TEntry> : DeploymentSourceBase<TStep>
+public abstract class NamedCatalogDeploymentSource<TStep, TEntry> : CatalogDeploymentSource<TStep, TEntry>
     where TStep : DeploymentStep
     where TEntry : CatalogItem, INameAwareModel, new()
 {
-    private readonly string _entriesName;
-    private readonly INamedCatalogManager<TEntry> _manager;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="NamedCatalogDeploymentSource{TStep, TEntry}"/> class.
     /// </summary>
@@ -31,35 +27,7 @@ public abstract class NamedCatalogDeploymentSource<TStep, TEntry> : DeploymentSo
     protected NamedCatalogDeploymentSource(
         string entriesName,
         INamedCatalogManager<TEntry> manager)
+        : base(entriesName, manager)
     {
-        ArgumentException.ThrowIfNullOrEmpty(entriesName);
-
-        _entriesName = entriesName;
-        _manager = manager;
-    }
-
-    /// <summary>
-    /// Orders the entries the way they are written to the plan.
-    /// </summary>
-    /// <param name="entries">The stored entries.</param>
-    /// <returns>The entries in the order they are exported.</returns>
-    protected virtual IEnumerable<TEntry> Order(IEnumerable<TEntry> entries)
-        => entries;
-
-    /// <inheritdoc/>
-    protected override async Task ProcessAsync(TStep step, DeploymentPlanResult result)
-    {
-        var data = new JsonArray();
-
-        foreach (var entry in Order(await _manager.GetAllAsync()))
-        {
-            data.Add(CatalogDeploymentSerializer.Export(entry));
-        }
-
-        result.Steps.Add(new JsonObject
-        {
-            ["name"] = step.Name,
-            [_entriesName] = data,
-        });
     }
 }

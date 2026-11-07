@@ -6,8 +6,8 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Controllers;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Deployments;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Core.Deployments;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -206,7 +206,7 @@ public sealed class ContactCenterCatalogCloneTests
                 .ReturnsAsync((JsonNode data, CancellationToken _) =>
                 {
                     var entry = new T { ItemId = NewId };
-                    ContactCenterDeploymentSerializer.Populate(entry, data);
+                    CatalogDeploymentSerializer.Populate(entry, data);
 
                     return entry;
                 });

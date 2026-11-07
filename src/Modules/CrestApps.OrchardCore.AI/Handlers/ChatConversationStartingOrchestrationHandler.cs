@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
 using CrestApps.OrchardCore.AI.Core.Conversations;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Handlers;
 
@@ -17,14 +18,17 @@ namespace CrestApps.OrchardCore.AI.Handlers;
 internal sealed class ChatConversationStartingOrchestrationHandler : IOrchestrationContextBuilderHandler
 {
     private readonly IAIConversationStartingService _startingService;
+    private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ChatConversationStartingOrchestrationHandler"/> class.
     /// </summary>
     /// <param name="startingService">Runs the starting handlers.</param>
-    public ChatConversationStartingOrchestrationHandler(IAIConversationStartingService startingService)
+    /// <param name="clock">The clock the conversation's start is stamped with.</param>
+    public ChatConversationStartingOrchestrationHandler(IAIConversationStartingService startingService, IClock clock)
     {
         _startingService = startingService;
+        _clock = clock;
     }
 
     /// <inheritdoc/>
@@ -37,7 +41,7 @@ internal sealed class ChatConversationStartingOrchestrationHandler : IOrchestrat
             return;
         }
 
-        session.Put(new AIConversationStartedMetadata { StartedUtc = DateTime.UtcNow });
+        session.Put(new AIConversationStartedMetadata { StartedUtc = _clock.UtcNow });
 
         await _startingService.StartingAsync(new AIConversationContext
         {

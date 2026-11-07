@@ -57,6 +57,8 @@ public sealed class TimeClockPolicyEditViewModel
 
     public IList<string> AllowedSources { get; set; } = [];
 
+    public IList<TimePunchSourceDescriptor> AdditionalSources { get; set; } = [];
+
     public bool RequireGeofence { get; set; }
 
     public int GeofenceRadiusMeters { get; set; }

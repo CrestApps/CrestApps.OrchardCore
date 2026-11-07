@@ -12,7 +12,7 @@ internal sealed class WorkforceSettingsDeploymentStepSchema : DeploymentStepSche
 
     protected override string DisplayText => "Workforce settings";
 
-    protected override string Description => "Exports shift templates, time-off settings and time clock settings, for the features that are on.";
+    protected override string Description => "Exports shift templates, rotations, coverage requirements, time-off settings, time clock settings (with kiosks, never their tokens, and the payroll CSV columns) and labor rule sets, for the features that are on.";
 
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(DeploymentStepSchemaContext context)
     {

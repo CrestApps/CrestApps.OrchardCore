@@ -1,11 +1,7 @@
-using System.Text.Json.Nodes;
-using CrestApps.Core;
+using CrestApps.OrchardCore.Core.Recipes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Deployments;
-using Microsoft.Extensions.Localization;
-using OrchardCore.Recipes.Models;
-using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Recipes;
 
@@ -13,88 +9,39 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Recipes;
 /// Imports Omnichannel channel endpoints carried by a recipe step, creating entries that do not exist and updating
 /// those that do.
 /// </summary>
-internal sealed class OmnichannelChannelEndpointStep : NamedRecipeStepHandler
+internal sealed class OmnichannelChannelEndpointStep : CatalogRecipeStep<OmnichannelChannelEndpoint>
 {
     private readonly IOmnichannelChannelEndpointManager _manager;
-
-    internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelChannelEndpointStep"/> class.
     /// </summary>
     /// <param name="manager">The manager that owns the channel endpoints.</param>
-    /// <param name="stringLocalizer">The string localizer for error messages.</param>
-    public OmnichannelChannelEndpointStep(
-        IOmnichannelChannelEndpointManager manager,
-        IStringLocalizer<OmnichannelChannelEndpointStep> stringLocalizer)
-        : base(OmnichannelDeploymentSteps.ChannelEndpoint)
+    public OmnichannelChannelEndpointStep(IOmnichannelChannelEndpointManager manager)
+        : base(OmnichannelDeploymentSteps.ChannelEndpoint, "ChannelEndpoints", manager)
     {
         _manager = manager;
-        S = stringLocalizer;
     }
 
-    protected override async Task HandleAsync(RecipeExecutionContext context)
+    /// <summary>
+    /// A recipe exported before addresses had capabilities lists a number once per channel. The second record joins
+    /// the address the first created instead of being refused as a duplicate.
+    /// </summary>
+    /// <param name="entry">The new, unsaved entry.</param>
+    /// <returns><see langword="true"/> when the entry joined a stored address.</returns>
+    protected override async ValueTask<bool> TryMergeNewEntryAsync(OmnichannelChannelEndpoint entry)
     {
-        var model = context.Step.ToObject<OmnichannelChannelEndpointStepModel>();
-        var tokens = model.ChannelEndpoints?.OfType<JsonObject>() ?? [];
+        var existing = await FindSameAddressAsync(entry);
 
-        foreach (var token in tokens)
+        if (existing is null)
         {
-            OmnichannelChannelEndpoint entry = null;
-            var isNew = false;
-
-            var id = token[nameof(OmnichannelChannelEndpoint.ItemId)]?.GetValue<string>();
-            var hasId = !string.IsNullOrEmpty(id);
-
-            if (hasId)
-            {
-                entry = await _manager.FindByIdAsync(id);
-            }
-
-            if (entry is not null)
-            {
-                await _manager.UpdateAsync(entry, token);
-            }
-            else
-            {
-                isNew = true;
-                entry = await _manager.NewAsync(token);
-
-                if (hasId && UniqueId.IsValid(id))
-                {
-                    entry.ItemId = id;
-                }
-
-                // A recipe exported before addresses had capabilities lists a number once per channel. The second
-                // record joins the address the first created instead of being refused as a duplicate.
-                var existing = await FindSameAddressAsync(entry);
-
-                if (existing is not null)
-                {
-                    OmnichannelAddressConsolidator.Absorb(existing, entry);
-                    await _manager.UpdateAsync(existing);
-
-                    continue;
-                }
-            }
-
-            var validationResult = await _manager.ValidateAsync(entry);
-
-            if (!validationResult.Succeeded)
-            {
-                foreach (var error in validationResult.Errors)
-                {
-                    context.Errors.Add(error.ErrorMessage);
-                }
-
-                continue;
-            }
-
-            if (isNew)
-            {
-                await _manager.CreateAsync(entry);
-            }
+            return false;
         }
+
+        OmnichannelAddressConsolidator.Absorb(existing, entry);
+        await _manager.UpdateAsync(existing);
+
+        return true;
     }
 
     private async Task<OmnichannelChannelEndpoint> FindSameAddressAsync(OmnichannelChannelEndpoint entry)
@@ -109,10 +56,5 @@ internal sealed class OmnichannelChannelEndpointStep : NamedRecipeStepHandler
         return (await _manager.GetAllAsync()).FirstOrDefault(address =>
             string.Equals(address.GetAddressType(), addressType, StringComparison.OrdinalIgnoreCase) &&
             string.Equals(address.Value, entry.Value, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private sealed class OmnichannelChannelEndpointStepModel
-    {
-        public JsonArray ChannelEndpoints { get; set; }
     }
 }

@@ -8,12 +8,12 @@ using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Workflows;
 using CrestApps.OrchardCore.AI.Documents.Drivers;
 using CrestApps.OrchardCore.AI.Documents.Handlers;
 using CrestApps.OrchardCore.AI.Documents.Migrations;
 using CrestApps.OrchardCore.AI.Documents.Services;
 using CrestApps.OrchardCore.AI.Services;
-using CrestApps.OrchardCore.AI.Workflows.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -153,7 +153,7 @@ public sealed class ChatSessionDocumentsStartup : StartupBase
 /// Registers the document knowledgebase display driver for the AI Completion using Direct Config
 /// workflow activity so uploaded documents contribute retrieval context during completion.
 /// </summary>
-[RequireFeatures(ChatInteractionsConstants.Feature.ChatInteractions, "OrchardCore.Workflows")]
+[RequireFeatures(ChatInteractionsConstants.Feature.ChatInteractions, OrchardCoreFeatureIds.Workflows)]
 public sealed class ChatInteractionsWorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

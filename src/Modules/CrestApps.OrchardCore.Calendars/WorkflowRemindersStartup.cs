@@ -10,7 +10,7 @@ namespace CrestApps.OrchardCore.Calendars;
 /// Registers the workflow events raised by calendar reminders.
 /// </summary>
 [Feature(CalendarsConstants.Features.Reminders)]
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class WorkflowRemindersStartup : StartupBase
 {
     /// <inheritdoc />

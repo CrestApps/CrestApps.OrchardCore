@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Geo.Core;
 using CrestApps.OrchardCore.Geo.Models;
 using CrestApps.OrchardCore.Geo.Services;
 using Microsoft.AspNetCore.DataProtection;
+using OrchardCore.Modules;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Geo.GoogleMaps;
@@ -31,6 +32,7 @@ public sealed partial class GoogleMapsProvider : IGeocodingProvider, ITravelTime
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ISiteService _siteService;
     private readonly IDataProtector _protector;
+    private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GoogleMapsProvider"/> class.
@@ -38,8 +40,10 @@ public sealed partial class GoogleMapsProvider : IGeocodingProvider, ITravelTime
     /// <param name="httpClientFactory">The HTTP client factory.</param>
     /// <param name="siteService">The site service.</param>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
-    public GoogleMapsProvider(IHttpClientFactory httpClientFactory, ISiteService siteService, IDataProtectionProvider dataProtectionProvider)
+    /// <param name="clock">The clock that tells a departure in the future from one that is now.</param>
+    public GoogleMapsProvider(IHttpClientFactory httpClientFactory, ISiteService siteService, IDataProtectionProvider dataProtectionProvider, IClock clock)
     {
+        _clock = clock;
         _httpClientFactory = httpClientFactory;
         _siteService = siteService;
         _protector = dataProtectionProvider.CreateProtector(GoogleMapsSettings.ProtectionPurpose);
@@ -88,7 +92,7 @@ public sealed partial class GoogleMapsProvider : IGeocodingProvider, ITravelTime
         ArgumentNullException.ThrowIfNull(destinations);
 
         var rows = origins.Select(_ => new TravelLeg[destinations.Count]).ToArray();
-        var departure = departureUtc > DateTime.UtcNow ? new DateTimeOffset(departureUtc, TimeSpan.Zero).ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture) : "now";
+        var departure = departureUtc > _clock.UtcNow ? new DateTimeOffset(departureUtc, TimeSpan.Zero).ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture) : "now";
         var destinationChunk = Math.Min(MaxPerSide, destinations.Count);
         var originChunk = Math.Max(1, Math.Min(MaxPerSide, MaxElements / Math.Max(1, destinationChunk)));
 

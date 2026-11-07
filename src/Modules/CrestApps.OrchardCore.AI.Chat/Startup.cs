@@ -14,6 +14,7 @@ using CrestApps.OrchardCore.AI.Chat.Handlers;
 using CrestApps.OrchardCore.AI.Chat.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Migrations;
 using CrestApps.OrchardCore.AI.Chat.Models;
+using CrestApps.OrchardCore.AI.Chat.Recipes.Schemas;
 using CrestApps.OrchardCore.AI.Chat.Reports;
 using CrestApps.OrchardCore.AI.Chat.Schemas;
 using CrestApps.OrchardCore.AI.Chat.Services;
@@ -23,8 +24,8 @@ using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.Recipes.Core;
-using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
 using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
@@ -120,7 +121,7 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Widgets feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Widgets")]
+[RequireFeatures(OrchardCoreFeatureIds.Widgets)]
 public sealed class WidgetsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -162,20 +163,17 @@ public sealed class ChatAnalyticsUIStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddNavigationProvider<ChatAnalyticsAdminMenu>()
             .AddDataMigration<AIChatSessionExtractedDataMigrations>()
             .AddScoped<IAIConversationPrivacyHandler, AIChatSessionExtractedDataPrivacyHandler>()
             .AddDisplayDriver<AIProfile, AIProfileAnalyticsDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateAnalyticsDisplayDriver>()
-            .AddDisplayDriver<AIChatAnalyticsFilter, AIChatAnalyticsDateRangeFilterDisplayDriver>()
-            .AddDisplayDriver<AIChatAnalyticsFilter, AIChatAnalyticsProfileFilterDisplayDriver>()
-            .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsOverviewDisplayDriver>()
-            .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsTimeOfDayDisplayDriver>()
-            .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsDayOfWeekDisplayDriver>()
-            .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsUserSegmentDisplayDriver>()
-            .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsPerformanceDisplayDriver>()
-            .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsConversionDisplayDriver>()
-            .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsFeedbackDisplayDriver>();
+            .AddScoped<IAIChatSessionEventReader, YesSqlAIChatSessionEventReader>();
+
+        // The feature depends on Reports, which lists, renders and exports these reports.
+        services
+            .AddReport<AIChatSessionAnalyticsReport>()
+            .AddReport<AIChatExtractedDataReport>()
+            .AddReport<AIChatConversionGoalsReport>();
     }
 }
 
@@ -188,15 +186,30 @@ public sealed class UsageAnalyticsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddNavigationProvider<AIUsageAnalyticsAdminMenu>();
         services.AddCoreAIUsageTracking();
+
+        // The feature depends on Reports, which lists, renders and exports the usage report.
+        services
+            .AddReport<AIUsageAnalyticsReport>()
+            .AddDisplayDriver<ReportFilter, AIUsageGroupingReportFilterDisplayDriver>();
     }
+}
+
+/// <summary>
+/// Adds the AI profile filter to the AI chat reports that list it. Both analytics features use it and either may be
+/// enabled alone, so it is registered once, whenever Reports is on.
+/// </summary>
+[RequireFeatures(ReportsConstants.Feature)]
+public sealed class ReportFiltersStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddDisplayDriver<ReportFilter, AIChatProfileReportFilterDisplayDriver>();
 }
 
 /// <summary>
 /// Exposes AI chat sessions as a data source of Orchard Core, for reports and data pipelines.
 /// </summary>
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class DataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -213,7 +226,7 @@ public sealed class DataSourcesStartup : StartupBase
 /// usage records, so their data sets are listed only while it is on.
 /// </summary>
 [Feature(AIConstants.Feature.ChatAnalytics)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class ChatAnalyticsDataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -229,7 +242,7 @@ public sealed class ChatAnalyticsDataSourcesStartup : StartupBase
 /// <summary>
 /// Registers recipe schema contributors for the AI Chat widget feature.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Recipes", "OrchardCore.Widgets")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area, OrchardCoreFeatureIds.Widgets)]
 public sealed class RecipesSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -241,7 +254,7 @@ public sealed class RecipesSchemaStartup : StartupBase
 /// <summary>
 /// Registers recipe schema contributors for AI chat site settings.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class SiteSettingsRecipesSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

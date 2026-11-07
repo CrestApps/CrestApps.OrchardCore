@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Commerce.Webhooks;
+using CrestApps.OrchardCore.Webhooks;
 using CrestApps.OrchardCore.Inventory.Api;
 using CrestApps.OrchardCore.Inventory.Core.Services;
 
@@ -10,9 +11,9 @@ namespace CrestApps.OrchardCore.Inventory.Handlers;
 /// </summary>
 internal sealed class StockWebhookHandler : IStockLevelHandler
 {
-    private readonly ICommerceWebhookPublisher _publisher;
+    private readonly IWebhookPublisher _publisher;
 
-    public StockWebhookHandler(ICommerceWebhookPublisher publisher)
+    public StockWebhookHandler(IWebhookPublisher publisher)
     {
         _publisher = publisher;
     }

@@ -1,24 +1,21 @@
 ﻿using CrestApps.Core;
+using CrestApps.Core.AI.Ftp;
+using CrestApps.Core.AI.Ftp.Models;
 using CrestApps.Core.AI.Mcp.Models;
-using CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.ViewModels;
+using CrestApps.OrchardCore.AI.FileTransfer.Core.Drivers;
+using CrestApps.OrchardCore.AI.FileTransfer.Core.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Mvc.ModelBinding;
-using OrchardFtpConnectionMetadata = CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.Models.FtpConnectionMetadata;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.Drivers;
 
 /// <summary>
-/// Display driver for the ftp resource shape.
+/// Display driver for the FTP connection of an FTP MCP resource.
 /// </summary>
-public sealed class FtpResourceDisplayDriver : DisplayDriver<McpResource>
+public sealed class FtpResourceDisplayDriver : FtpConnectionDisplayDriverBase<McpResource>
 {
-    private readonly IDataProtectionProvider _dataProtectionProvider;
-
-    internal readonly IStringLocalizer S;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="FtpResourceDisplayDriver"/> class.
     /// </summary>
@@ -27,9 +24,8 @@ public sealed class FtpResourceDisplayDriver : DisplayDriver<McpResource>
     public FtpResourceDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<FtpResourceDisplayDriver> stringLocalizer)
+        : base(dataProtectionProvider, stringLocalizer)
     {
-        _dataProtectionProvider = dataProtectionProvider;
-        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(McpResource resource, BuildEditorContext context)
@@ -39,20 +35,9 @@ public sealed class FtpResourceDisplayDriver : DisplayDriver<McpResource>
             return null;
         }
 
-        return Initialize<FtpConnectionViewModel>("FtpResourceConnection_Edit", model =>
+        return Initialize<FtpConnectionFieldsViewModel>("FtpResourceConnection_Edit", model =>
         {
-            var metadata = resource.GetOrCreate<OrchardFtpConnectionMetadata>();
-
-            model.Host = metadata?.Host;
-            model.Port = metadata?.Port;
-            model.Username = metadata?.Username;
-            model.HasPassword = !string.IsNullOrEmpty(metadata?.Password);
-            model.EncryptionMode = metadata?.EncryptionMode;
-            model.DataConnectionType = metadata?.DataConnectionType;
-            model.ValidateAnyCertificate = metadata?.ValidateAnyCertificate ?? false;
-            model.ConnectTimeout = metadata?.ConnectTimeout;
-            model.ReadTimeout = metadata?.ReadTimeout;
-            model.RetryAttempts = metadata?.RetryAttempts;
+            PopulateConnectionFields(resource.GetOrCreate<FtpConnectionMetadata>(), model);
         }).Location("Content:5");
     }
 
@@ -63,49 +48,11 @@ public sealed class FtpResourceDisplayDriver : DisplayDriver<McpResource>
             return null;
         }
 
-        var model = new FtpConnectionViewModel();
+        var model = new FtpConnectionFieldsViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrWhiteSpace(model.Host))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Host), S["The FTP host is required."]);
-        }
-
-        var metadata = resource.GetOrCreate<OrchardFtpConnectionMetadata>();
-
-        var hasNewPassword = !string.IsNullOrWhiteSpace(model.Password);
-
-        if (!hasNewPassword && string.IsNullOrWhiteSpace(metadata?.Password))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Password), S["The FTP password is required."]);
-        }
-
-        if (hasNewPassword)
-        {
-            var protector = _dataProtectionProvider.CreateProtector(FtpResourceConstants.DataProtectionPurpose);
-
-            metadata ??= new OrchardFtpConnectionMetadata();
-            metadata.Password = protector.Protect(model.Password);
-        }
-
-        resource.Alter<OrchardFtpConnectionMetadata>(m =>
-        {
-            m.Host = model.Host;
-            m.Port = model.Port;
-            m.Username = model.Username;
-            m.EncryptionMode = model.EncryptionMode;
-            m.DataConnectionType = model.DataConnectionType;
-            m.ValidateAnyCertificate = model.ValidateAnyCertificate;
-            m.ConnectTimeout = model.ConnectTimeout;
-            m.ReadTimeout = model.ReadTimeout;
-            m.RetryAttempts = model.RetryAttempts;
-
-            if (hasNewPassword)
-            {
-                m.Password = metadata.Password;
-            }
-        });
+        resource.Put(ApplyConnectionFields(context, model, resource.GetOrCreate<FtpConnectionMetadata>()));
 
         return Edit(resource, context);
     }

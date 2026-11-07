@@ -1,6 +1,10 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Core.Extensions;
+using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore.AI.DataSources.AzureAI.Services;
 using CrestApps.OrchardCore.AI.DataSources.AzureAI.ViewModels;
+using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -12,6 +16,7 @@ namespace CrestApps.OrchardCore.AI.DataSources.AzureAI.Drivers;
 internal sealed class AzureAISearchAIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly AIDataSourceConnectionPicker _connectionPicker;
 
     internal readonly IStringLocalizer S;
 
@@ -19,40 +24,51 @@ internal sealed class AzureAISearchAIDataSourceDisplayDriver : DisplayDriver<AID
     /// Initializes a new instance of the <see cref="AzureAISearchAIDataSourceDisplayDriver"/> class.
     /// </summary>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="connectionPicker">The data connection picker.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AzureAISearchAIDataSourceDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
+        AIDataSourceConnectionPicker connectionPicker,
         IStringLocalizer<AzureAISearchAIDataSourceDisplayDriver> stringLocalizer)
     {
         _dataProtectionProvider = dataProtectionProvider;
+        _connectionPicker = connectionPicker;
         S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(AIDataSource dataSource, BuildEditorContext context)
     {
         if (!string.Equals(
-            GetSourceType(dataSource),
+            AIDataSourceExtensions.GetSourceType(dataSource),
             AIDataSourceSourceTypes.AzureAISearch,
             StringComparison.OrdinalIgnoreCase))
         {
             return null;
         }
 
-        return Initialize<EditAzureAISearchAIDataSourceViewModel>("AzureAISearchAIDataSource_Edit", model =>
+        return Initialize<EditAzureAISearchAIDataSourceViewModel>("AzureAISearchAIDataSource_Edit", async model =>
         {
             var metadata = dataSource.GetOrCreate<AzureAISearchSourceMetadata>();
+            model.DataConnectionId = AIDataSourceConnectionPicker.GetConnectionId(dataSource);
+            model.CanPickDataConnection = await _connectionPicker.CanPickAsync();
+
+            if (model.CanPickDataConnection)
+            {
+                model.DataConnections = await _connectionPicker.GetOptionsAsync(AzureAISearchDataConnectionClient.ConnectorNames, model.DataConnectionId);
+            }
+
             model.Endpoint = metadata.Endpoint;
             model.AuthenticationType = metadata.GetAuthenticationType();
             model.IndexName = metadata.IndexName;
             model.IdentityClientId = metadata.IdentityClientId;
-            model.HasApiKey = !string.IsNullOrWhiteSpace(metadata.ApiKey);
+            model.HasApiKey = ProtectedSettingExtensions.HasSecret(metadata.ApiKey);
         }).Location("Content:11");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIDataSource dataSource, UpdateEditorContext context)
     {
         if (!string.Equals(
-            GetSourceType(dataSource),
+            AIDataSourceExtensions.GetSourceType(dataSource),
             AIDataSourceSourceTypes.AzureAISearch,
             StringComparison.OrdinalIgnoreCase))
         {
@@ -62,6 +78,25 @@ internal sealed class AzureAISearchAIDataSourceDisplayDriver : DisplayDriver<AID
         var model = new EditAzureAISearchAIDataSourceViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+        // A data source that uses a data connection reads the endpoint and the key from the connection. Its own endpoint
+        // and key stay stored, unused, so switching back to its own settings loses nothing; they are not exported while
+        // the connection is used.
+        var connectionId = await _connectionPicker.UpdateAsync(dataSource, model.DataConnectionId, AzureAISearchDataConnectionClient.ConnectorNames, context, Prefix, nameof(model.DataConnectionId));
+
+        if (connectionId is not null)
+        {
+            if (string.IsNullOrWhiteSpace(model.IndexName))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexName), S["Azure AI Search index name is required."]);
+            }
+
+            var storedMetadata = dataSource.GetOrCreate<AzureAISearchSourceMetadata>();
+            storedMetadata.IndexName = model.IndexName?.Trim();
+            dataSource.Put(storedMetadata);
+
+            return Edit(dataSource, context);
+        }
 
         var authenticationType = string.Equals(
             model.AuthenticationType,
@@ -93,8 +128,6 @@ internal sealed class AzureAISearchAIDataSourceDisplayDriver : DisplayDriver<AID
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ApiKey), S["Azure AI Search API key is required."]);
         }
 
-        var protector = _dataProtectionProvider.CreateProtector(AIDataSourceProtectionConstants.SourceSecretPurpose);
-
         dataSource.Put(new AzureAISearchSourceMetadata
         {
             Endpoint = model.Endpoint?.Trim(),
@@ -104,21 +137,10 @@ internal sealed class AzureAISearchAIDataSourceDisplayDriver : DisplayDriver<AID
                 ? null
                 : model.IdentityClientId?.Trim(),
             ApiKey = string.Equals(authenticationType, AzureAISearchSourceMetadata.ApiKeyAuthenticationType, StringComparison.OrdinalIgnoreCase)
-                ? string.IsNullOrWhiteSpace(model.ApiKey)
-                    ? existingMetadata.ApiKey
-                    : protector.Protect(model.ApiKey)
+                ? _dataProtectionProvider.ApplySecret(AIDataSourceProtectionConstants.SourceSecretPurpose, existingMetadata.ApiKey, model.ApiKey)
                 : null,
         });
 
         return Edit(dataSource, context);
-    }
-
-    private static string GetSourceType(AIDataSource dataSource)
-    {
-        ArgumentNullException.ThrowIfNull(dataSource);
-
-        return string.IsNullOrWhiteSpace(dataSource.Source)
-            ? AIDataSourceSourceTypes.SearchIndexProfile
-            : dataSource.Source;
     }
 }

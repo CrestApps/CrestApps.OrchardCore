@@ -131,29 +131,6 @@ public sealed class CalendarReminderService
         return raised;
     }
 
-    /// <summary>
-    /// Deletes reminder records older than a cutoff, which can never be needed again.
-    /// </summary>
-    /// <param name="olderThanUtc">The cutoff.</param>
-    /// <param name="limit">The most records to delete.</param>
-    /// <returns>How many were deleted.</returns>
-    public async Task<int> PurgeAsync(DateTime olderThanUtc, int limit = 500)
-    {
-        var logs = await _session.Query<CalendarReminderLog, CalendarReminderLogIndex>(index => index.RaisedUtc < olderThanUtc, collection: CalendarsConstants.CollectionName)
-            .Take(limit)
-            .ListAsync();
-
-        var count = 0;
-
-        foreach (var log in logs)
-        {
-            _session.Delete(log, CalendarsConstants.CollectionName);
-            count++;
-        }
-
-        return count;
-    }
-
     internal static string Key(string kind, CalendarOccurrence occurrence, TimeSpan offset)
     {
         return string.Create(CultureInfo.InvariantCulture, $"{kind}:{occurrence.Event.ItemId}:{occurrence.StartUtc:yyyyMMddTHHmmss}:{(int)offset.TotalMinutes}");

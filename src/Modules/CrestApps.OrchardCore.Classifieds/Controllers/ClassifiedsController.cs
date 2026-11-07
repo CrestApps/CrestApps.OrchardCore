@@ -163,7 +163,7 @@ public sealed class ClassifiedsController : Controller
         var listings = await _classifieds.ListOwnAsync(User.FindFirstValue(ClaimTypes.NameIdentifier), HttpContext.RequestAborted);
         var types = await _classifieds.ListTypesAsync();
         var upgradeTypes = (await contentDefinitionManager.ListTypeDefinitionsAsync())
-            .Where(type => type.Parts.Any(part => part.PartDefinition.Name == nameof(ClassifiedUpgradePart)))
+            .Where(type => type.HasPart(nameof(ClassifiedUpgradePart)))
             .Select(type => type.Name)
             .ToArray();
         var upgrades = upgradeTypes.Length == 0

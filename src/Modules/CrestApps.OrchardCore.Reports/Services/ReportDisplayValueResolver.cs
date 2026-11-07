@@ -7,7 +7,8 @@ using OrchardCore.DisplayManagement;
 namespace CrestApps.OrchardCore.Reports.Services;
 
 /// <summary>
-/// Resolves typed report values through the Orchard display pipeline before display or export.
+/// Resolves typed report values before display or export: a user display name through the Orchard display pipeline,
+/// and a link to its text, so an export never carries the address of a link.
 /// </summary>
 public sealed partial class ReportDisplayValueResolver
 {
@@ -55,7 +56,7 @@ public sealed partial class ReportDisplayValueResolver
 
     /// <summary>
     /// Resolves typed values that cannot render an Orchard shape directly in the report view.
-    /// Table cells remain typed so the view can render each user value as its own shape.
+    /// Table cells remain typed so the view can render each user value as its own shape, and each link as an anchor.
     /// </summary>
     /// <param name="document">The report document.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
@@ -110,6 +111,12 @@ public sealed partial class ReportDisplayValueResolver
         string value,
         Dictionary<string, string> userDisplayNames)
     {
+        // A link is shown as an anchor only in a table on screen; anywhere else, such as an export, it is its text.
+        if (ReportValue.TryGetLink(value, out var text, out _))
+        {
+            return text;
+        }
+
         if (!ReportValue.TryGetUserName(value, out var userName))
         {
             return value;

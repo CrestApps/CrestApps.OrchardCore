@@ -1,5 +1,6 @@
 using System.Globalization;
 using CrestApps.Core;
+using CrestApps.OrchardCore.Numbering;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Services;
@@ -16,7 +17,19 @@ namespace CrestApps.OrchardCore.Orders.Services;
 /// </summary>
 public sealed class OrderReturnService
 {
+    /// <summary>
+    /// The number sequence series that return numbers come from.
+    /// </summary>
+    public const string ReturnNumberSeries = "Orders.Return";
+
+    /// <summary>
+    /// The first characters of a return number, such as RMA-261019-K3QZ7.
+    /// </summary>
+    public const string ReturnNumberPrefix = "RMA-";
+
     private const int MaxCommentLength = 2000;
+
+    private const int ReturnCodeLength = 5;
 
     private readonly IOrderReturnStore _returns;
     private readonly IOrderStore _orders;
@@ -24,6 +37,7 @@ public sealed class OrderReturnService
     private readonly IEnumerable<IOrderEventHandler> _handlers;
     private readonly OrderOperationsService _operations;
     private readonly OrderReturnEmailSender _emails;
+    private readonly INumberSequence _numberSequence;
     private readonly ISiteService _siteService;
     private readonly IClock _clock;
 
@@ -36,6 +50,7 @@ public sealed class OrderReturnService
         IEnumerable<IOrderEventHandler> handlers,
         OrderOperationsService operations,
         OrderReturnEmailSender emails,
+        INumberSequence numberSequence,
         ISiteService siteService,
         IClock clock,
         IStringLocalizer<OrderReturnService> stringLocalizer)
@@ -46,6 +61,7 @@ public sealed class OrderReturnService
         _handlers = handlers;
         _operations = operations;
         _emails = emails;
+        _numberSequence = numberSequence;
         _siteService = siteService;
         _clock = clock;
         S = stringLocalizer;
@@ -112,7 +128,7 @@ public sealed class OrderReturnService
                 Title = OrderLineText.Describe(line),
                 Sku = line.Sku,
                 Quantity = quantity,
-                UnitPrice = OrderReturnPolicy.UnitPriceOf(line),
+                UnitPrice = OrderReturnPolicy.UnitPriceOf(line, order.Currency),
                 Reason = reason.Trim(),
             });
         }
@@ -331,23 +347,13 @@ public sealed class OrderReturnService
     private static string Trim(string value, int maxLength)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim() is { } trimmed && trimmed.Length > maxLength ? trimmed[..maxLength] : value.Trim();
 
-    // A number the buyer can read out: the date and four characters, such as R-261019-K3QZ.
+    // A number the buyer can read out: the date and five characters made from the return's place in a locked sequence,
+    // such as RMA-261019-K3QZ7. RMA, not R, so a return is never mistaken for a receipt (R-1001).
     private async Task<string> NewNumberAsync(DateTime now, CancellationToken cancellationToken)
     {
-        const string Alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        var sequence = await _numberSequence.NextAsync(ReturnNumberSeries, cancellationToken: cancellationToken);
 
-        for (var attempt = 0; ; attempt++)
-        {
-            var suffix = string.Concat(Enumerable.Range(0, 4).Select(_ => Alphabet[Random.Shared.Next(Alphabet.Length)]));
-            var number = $"R-{now.ToString("yyMMdd", CultureInfo.InvariantCulture)}-{suffix}";
-
-            var (count, _) = await _returns.PageAsync(new OrderReturnQuery { Search = number, All = true }, 0, 1, cancellationToken);
-
-            if (count == 0 || attempt >= 5)
-            {
-                return number;
-            }
-        }
+        return $"{ReturnNumberPrefix}{now.ToString("yyMMdd", CultureInfo.InvariantCulture)}-{ReadableCodes.FromNumber(sequence, ReturnCodeLength)}";
     }
 }
 

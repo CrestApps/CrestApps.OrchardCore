@@ -39,7 +39,7 @@ public sealed class AgentEntitlementsStartup : StartupBase
 /// Registers the deployment source and step editor that export agent entitlements.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.AgentEntitlements)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class AgentEntitlementsDeploymentStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -54,7 +54,7 @@ public sealed class AgentEntitlementsDeploymentStartup : StartupBase
 /// Registers the recipe step that imports agent entitlements.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.AgentEntitlements)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class AgentEntitlementsRecipesStartup : StartupBase
 {
     /// <inheritdoc/>

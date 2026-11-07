@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
@@ -18,7 +19,7 @@ public sealed class GooglePlacesSettingsDisplayDriver : SiteDisplayDriver<Google
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
-    private readonly IDataProtector _protector;
+    private readonly IDataProtectionProvider _dataProtectionProvider;
 
     public GooglePlacesSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
@@ -27,7 +28,7 @@ public sealed class GooglePlacesSettingsDisplayDriver : SiteDisplayDriver<Google
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
-        _protector = dataProtectionProvider.CreateProtector(GooglePlacesSettings.ProtectionPurpose);
+        _dataProtectionProvider = dataProtectionProvider;
     }
 
     protected override string SettingsGroupId
@@ -36,7 +37,7 @@ public sealed class GooglePlacesSettingsDisplayDriver : SiteDisplayDriver<Google
     public override IDisplayResult Edit(ISite site, GooglePlacesSettings settings, BuildEditorContext context)
         => Initialize<GooglePlacesSettingsViewModel>("GooglePlacesSettings_Edit", model =>
         {
-            model.HasApiKey = !string.IsNullOrEmpty(settings.ApiKey);
+            model.HasApiKey = ProtectedSettingExtensions.HasSecret(settings.ApiKey);
         }).Location("Content:1")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, AddressPermissions.ManageAddressSuggestions))
         .OnGroup(SettingsGroupId);
@@ -52,14 +53,8 @@ public sealed class GooglePlacesSettingsDisplayDriver : SiteDisplayDriver<Google
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (model.RemoveApiKey)
-        {
-            settings.ApiKey = null;
-        }
-        else if (!string.IsNullOrWhiteSpace(model.ApiKey))
-        {
-            settings.ApiKey = _protector.Protect(model.ApiKey.Trim());
-        }
+        settings.ApiKey = _dataProtectionProvider.ApplySecret(GooglePlacesSettings.ProtectionPurpose, settings.ApiKey, model.ApiKey, model.RemoveApiKey);
+
 
         return Edit(site, settings, context);
     }

@@ -1,17 +1,25 @@
+using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Core.Http;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Indexes;
 using CrestApps.OrchardCore.Stripe.Models;
+using CrestApps.OrchardCore.Stripe.Services;
+using CrestApps.OrchardCore.Transactions.Models;
+using CrestApps.OrchardCore.Webhooks;
+using CrestApps.OrchardCore.Webhooks.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OrchardCore.Environment.Shell;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using Stripe;
 using YesSql;
-using CrestApps.OrchardCore.Transactions.Models;
 
 namespace CrestApps.OrchardCore.Stripe.Endpoints;
 
@@ -64,7 +72,7 @@ public static class CreateWebhookEndpoint
         ILogger<T> logger,
         IEnumerable<IPaymentEvent> paymentEvents,
         IOptionsMonitor<StripeOptions> stripeOptions,
-        YesSql.ISession session,
+        global::YesSql.ISession session,
         IDistributedLock distributedLock,
         IClock clock,
         CancellationToken cancellationToken)
@@ -105,6 +113,13 @@ public static class CreateWebhookEndpoint
         if (stripeEvent == null || string.IsNullOrEmpty(stripeEvent.Id))
         {
             return TypedResults.BadRequest();
+        }
+
+        var httpContext = httpContextAccessor.HttpContext;
+
+        if (TryGetInbox(httpContext.RequestServices, out var inbox))
+        {
+            return await AcceptIntoInboxAsync(httpContext, inbox, stripeEvent, json, session, logger);
         }
 
         // Stripe delivers events at-least-once and re-delivers on any non-2xx response. Guard the
@@ -171,6 +186,93 @@ public static class CreateWebhookEndpoint
             }
 
             return TypedResults.Ok();
+        }
+    }
+
+    // The provider webhook inbox is used when the Provider Webhook Inbox feature is on and the Stripe handler is
+    // registered with it; a tenant without it keeps processing events inline, guarded by the lock and the marker.
+    internal static bool TryGetInbox(IServiceProvider services, out IProviderWebhookInbox inbox)
+    {
+        inbox = services.GetService<IProviderWebhookInbox>();
+
+        return inbox is not null && services.GetServices<IProviderWebhookInboxHandler>()
+            .Any(handler => string.Equals(handler.TechnicalName, StripeWebhookInboxHandler.HandlerTechnicalName, StringComparison.Ordinal));
+    }
+
+    // Stores the verified event and answers Stripe at once; the payment handlers run from storage right after the
+    // response, and again with backoff until they succeed. Stripe's own redelivery of the same event is a duplicate.
+    internal static async Task<IResult> AcceptIntoInboxAsync(
+        HttpContext httpContext,
+        IProviderWebhookInbox inbox,
+        Event stripeEvent,
+        string json,
+        global::YesSql.ISession session,
+        ILogger logger)
+    {
+        // An event processed inline before the inbox was used is acknowledged without storing it again.
+        var alreadyProcessed = await session
+            .Query<ProcessedStripeWebhookEvent, ProcessedStripeWebhookEventIndex>(x => x.EventId == stripeEvent.Id)
+            .FirstOrDefaultAsync(httpContext.RequestAborted);
+
+        if (alreadyProcessed != null)
+        {
+            return TypedResults.Ok();
+        }
+
+        ProviderWebhookInboxAcceptanceResult acceptance;
+
+        try
+        {
+            acceptance = await inbox.AcceptAsync(
+                new ProviderWebhookInboxDelivery
+                {
+                    ProviderName = StripeWebhookInboxHandler.ProviderName,
+                    DeliveryId = stripeEvent.Id,
+                    HandlerName = StripeWebhookInboxHandler.HandlerTechnicalName,
+                    Payload = json,
+                },
+                httpContext.RequestAborted);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // Nothing was stored, so nothing picks this up later: this is the one case where Stripe must redeliver.
+            logger.LogError(exception, "The Stripe event '{EventId}' could not be stored in the provider webhook inbox.", stripeEvent.Id.SanitizeLogValue());
+
+            return TypedResults.StatusCode(StatusCodes.Status503ServiceUnavailable);
+        }
+
+        if (acceptance.Status == ProviderWebhookInboxAcceptanceStatus.Duplicate)
+        {
+            return TypedResults.Ok();
+        }
+
+        if (acceptance.Status != ProviderWebhookInboxAcceptanceStatus.Accepted)
+        {
+            // Busy: another delivery of the same event holds the acceptance lock. Ask Stripe to retry.
+            return TypedResults.StatusCode(StatusCodes.Status409Conflict);
+        }
+
+        var messageId = acceptance.MessageId;
+
+        AfterResponseWork.Schedule(
+            httpContext,
+            httpContext.RequestServices.GetRequiredService<IShellHost>(),
+            httpContext.RequestServices.GetRequiredService<ShellSettings>(),
+            scope => DispatchFromInboxAsync(scope, messageId),
+            logger);
+
+        return TypedResults.Ok();
+    }
+
+    private static async Task DispatchFromInboxAsync(ShellScope scope, string messageId)
+    {
+        try
+        {
+            await scope.ServiceProvider.GetRequiredService<IProviderWebhookInbox>().DispatchAsync(messageId);
+        }
+        catch (ConcurrencyException)
+        {
+            // Another node claimed the same delivery. The inbox retries it from storage.
         }
     }
 

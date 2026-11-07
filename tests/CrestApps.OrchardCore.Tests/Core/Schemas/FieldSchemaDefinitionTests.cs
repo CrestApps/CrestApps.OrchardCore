@@ -177,7 +177,7 @@ public sealed class FieldSchemaDefinitionTests
     [Fact]
     public async Task AddressFieldSchemaDefinition_FieldSchemaDescribesTheAddress()
     {
-        var contentFieldsAssembly = typeof(CrestApps.OrchardCore.ContentFields.Fields.AddressField).Assembly;
+        var contentFieldsAssembly = typeof(CrestApps.OrchardCore.ContentFields.Drivers.PhoneFieldDisplayDriver).Assembly;
         var instance = Activator.CreateInstance(contentFieldsAssembly.GetType(
             "CrestApps.OrchardCore.ContentFields.Schemas.AddressFieldSchemaDefinition",
             throwOnError: true));
@@ -194,7 +194,7 @@ public sealed class FieldSchemaDefinitionTests
     [Fact]
     public async Task AddressFieldSchemaDefinition_SettingsSchemaListsTheEditorsOptions()
     {
-        var contentFieldsAssembly = typeof(CrestApps.OrchardCore.ContentFields.Fields.AddressField).Assembly;
+        var contentFieldsAssembly = typeof(CrestApps.OrchardCore.ContentFields.Drivers.PhoneFieldDisplayDriver).Assembly;
         var instance = (IContentSchemaDefinition)Activator.CreateInstance(contentFieldsAssembly.GetType(
             "CrestApps.OrchardCore.ContentFields.Schemas.AddressFieldSchemaDefinition",
             throwOnError: true));
@@ -212,7 +212,7 @@ public sealed class FieldSchemaDefinitionTests
     public async Task PhoneFieldSchemaDefinition_FieldSchemaContainsCountryCodeEnum()
     {
         // Arrange — resolve the internal PhoneFieldSchemaDefinition via reflection.
-        var contentFieldsAssembly = typeof(CrestApps.OrchardCore.ContentFields.Fields.PhoneField).Assembly;
+        var contentFieldsAssembly = typeof(CrestApps.OrchardCore.ContentFields.Drivers.PhoneFieldDisplayDriver).Assembly;
         var phoneFieldSchemaType = contentFieldsAssembly.GetType(
             "CrestApps.OrchardCore.ContentFields.Schemas.PhoneFieldSchemaDefinition",
             throwOnError: true);
@@ -237,7 +237,7 @@ public sealed class FieldSchemaDefinitionTests
     public async Task PhoneFieldSchemaDefinition_SettingsSchemaContainsCountryCodeEnum()
     {
         // Arrange
-        var contentFieldsAssembly = typeof(CrestApps.OrchardCore.ContentFields.Fields.PhoneField).Assembly;
+        var contentFieldsAssembly = typeof(CrestApps.OrchardCore.ContentFields.Drivers.PhoneFieldDisplayDriver).Assembly;
         var phoneFieldSchemaType = contentFieldsAssembly.GetType(
             "CrestApps.OrchardCore.ContentFields.Schemas.PhoneFieldSchemaDefinition",
             throwOnError: true);
@@ -260,7 +260,7 @@ public sealed class FieldSchemaDefinitionTests
     public async Task PhoneFieldSchemaDefinition_FieldSchemaContainsPhoneNumberProperties()
     {
         // Arrange
-        var contentFieldsAssembly = typeof(CrestApps.OrchardCore.ContentFields.Fields.PhoneField).Assembly;
+        var contentFieldsAssembly = typeof(CrestApps.OrchardCore.ContentFields.Drivers.PhoneFieldDisplayDriver).Assembly;
         var phoneFieldSchemaType = contentFieldsAssembly.GetType(
             "CrestApps.OrchardCore.ContentFields.Schemas.PhoneFieldSchemaDefinition",
             throwOnError: true);

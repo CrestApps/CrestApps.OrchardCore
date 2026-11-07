@@ -22,7 +22,7 @@ namespace CrestApps.OrchardCore.Orders.Services;
 /// through the transaction commands. Either way the refund comes back through <see cref="OrderRefundRecorder"/>, which
 /// records it on the order with who gave it.
 /// </remarks>
-public sealed class OrderOperationsService
+public sealed class OrderOperationsService : IOrderOperationsService
 {
     private const string StoreCreditRefundPrefix = "store-credit:";
 
@@ -508,36 +508,4 @@ public sealed class OrderOperationsService
 
     private static bool IsOutstanding(Transaction transaction)
         => transaction.OutstandingAmount > 0m && transaction.Status is TransactionStatus.Pending or TransactionStatus.Outstanding or TransactionStatus.PartiallyPaid;
-}
-
-/// <summary>
-/// What can still be refunded for an order, and what is still owed for it.
-/// </summary>
-public sealed class OrderMoney
-{
-    /// <summary>
-    /// Gets or sets whether the refund can be given to the buyer as store credit.
-    /// </summary>
-    public bool CanRefundAsStoreCredit { get; set; }
-
-    public string Currency { get; set; }
-
-    public decimal Refundable { get; set; }
-
-    public decimal Outstanding { get; set; }
-}
-
-/// <summary>
-/// The outcome of an operation on an order.
-/// </summary>
-public sealed class OrderOperationResult
-{
-    public bool Succeeded
-        => Errors.Count == 0;
-
-    public decimal Refunded { get; set; }
-
-    public List<string> Errors { get; } = [];
-
-    public List<string> Messages { get; } = [];
 }

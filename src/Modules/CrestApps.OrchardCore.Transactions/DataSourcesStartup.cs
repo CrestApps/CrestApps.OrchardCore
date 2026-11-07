@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.Transactions;
 /// the data set of the transactions. The payments and refunds data sets are registered only while Checkout, which keeps
 /// those ledgers, is enabled.
 /// </summary>
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class DataSourcesStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -26,7 +26,7 @@ public sealed class DataSourcesStartup : StartupBase
 /// <summary>
 /// Registers the data sets of the payments and refunds ledgers, which Checkout keeps.
 /// </summary>
-[RequireFeatures("OrchardCore.DataPipelines.Core", CheckoutConstants.Features.Area)]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore, CheckoutConstants.Features.Area)]
 public sealed class CheckoutDataSourcesStartup : StartupBase
 {
     /// <inheritdoc/>

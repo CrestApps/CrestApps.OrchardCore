@@ -3,7 +3,8 @@ using CrestApps.OrchardCore.Accounts.Services;
 using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Assets.Core.Services;
 using CrestApps.OrchardCore.Assets.Models;
-using CrestApps.OrchardCore.Assets.Services;
+using CrestApps.OrchardCore.Parties.Models;
+using CrestApps.OrchardCore.Parties.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -16,8 +17,8 @@ using ISession = YesSql.ISession;
 namespace CrestApps.OrchardCore.WorkOrders.Integrations;
 
 /// <summary>
-/// The customers, CRM accounts and CRM contacts a work order can be for, found through the asset owner sources that
-/// users and the CRM register when Assets is on.
+/// The customers, accounts and CRM contacts a work order can be for, found through the shared party sources (users,
+/// accounts and CRM contacts). The work order's customer is a user (party kind <c>User</c>).
 /// </summary>
 public sealed class WorkOrderCustomers
 {
@@ -28,12 +29,12 @@ public sealed class WorkOrderCustomers
     /// <summary>
     /// Initializes a new instance of the <see cref="WorkOrderCustomers"/> class.
     /// </summary>
-    /// <param name="sources">The owner sources.</param>
+    /// <param name="parties">The party directory.</param>
     /// <param name="session">The session, for a contact's account.</param>
     /// <param name="members">The account members, when the Account Members feature is on.</param>
-    public WorkOrderCustomers(IEnumerable<IAssetOwnerSource> sources, ISession session, IEnumerable<IAccountMemberService> members)
+    public WorkOrderCustomers(IPartyDirectory parties, ISession session, IEnumerable<IAccountMemberService> members)
     {
-        _owners = new AssetOwnerDirectory(sources);
+        _owners = new AssetOwnerDirectory(parties);
         _session = session;
         _members = members;
     }
@@ -187,7 +188,7 @@ public sealed class WorkOrderCustomers
     /// <param name="count">The most to return.</param>
     /// <param name="cancellationToken">A token to cancel the search.</param>
     /// <returns>The customers found.</returns>
-    public async Task<IReadOnlyList<AssetOwnerOption>> SearchAsync(AssetOwnerKind kind, string query, int count, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PartyOption>> SearchAsync(AssetOwnerKind kind, string query, int count, CancellationToken cancellationToken = default)
         => _owners.GetSource(kind) is { } source ? await source.SearchAsync(query, count, cancellationToken) : [];
 }
 

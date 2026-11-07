@@ -3,7 +3,7 @@ namespace CrestApps.OrchardCore.Stripe.Core.Models;
 /// <summary>
 /// Represents a request to create a Stripe customer.
 /// </summary>
-public class CreateCustomerRequest : StripeWriteRequest
+public sealed class CreateCustomerRequest : StripeWriteRequest
 {
     /// <summary>
     /// Gets or sets the Stripe payment method identifier to make the customer's default payment method.

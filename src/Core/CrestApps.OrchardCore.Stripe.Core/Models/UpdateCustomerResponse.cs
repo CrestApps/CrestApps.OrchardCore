@@ -3,7 +3,7 @@ namespace CrestApps.OrchardCore.Stripe.Core.Models;
 /// <summary>
 /// Represents the result returned after a Stripe customer update is attempted.
 /// </summary>
-public class UpdateCustomerResponse
+public sealed class UpdateCustomerResponse
 {
     /// <summary>
     /// Gets or sets a value indicating whether Stripe updated the customer successfully.

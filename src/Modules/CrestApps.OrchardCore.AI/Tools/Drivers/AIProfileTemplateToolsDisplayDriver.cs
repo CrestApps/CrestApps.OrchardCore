@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Tooling;
+using CrestApps.OrchardCore.AI.Core.ViewModels;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;

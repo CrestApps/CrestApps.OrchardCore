@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.WorkOrders.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Dispatch.ViewModels;
 
@@ -340,6 +341,12 @@ public class VisitDetailsViewModel
     /// Gets or sets the customer's tracking link, while it works.
     /// </summary>
     public string TrackingUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the panels other modules add to the visit's page, built by the display drivers of
+    /// <see cref="ServiceVisit"/>.
+    /// </summary>
+    public IShape Panels { get; set; }
 }
 
 /// <summary>
