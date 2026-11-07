@@ -590,6 +590,8 @@ public sealed partial class ContactCenterConfigurationPortabilityTests
         // phone number parsed against the profile's region, so both properties need values the validator accepts.
         (ContactCenterDeploymentSteps.DialerProfile, nameof(DialerProfile.CallerId), JsonValue.Create("+16502530000")),
         (ContactCenterDeploymentSteps.DialerProfile, nameof(DialerProfile.DefaultRegionCode), JsonValue.Create("US")),
+        // A preview offer must last long enough to review a record, which the seeder's small default number is not.
+        (ContactCenterDeploymentSteps.DialerProfile, nameof(DialerProfile.PreviewOfferTimeoutSeconds), JsonValue.Create(DialerProfile.MinimumPreviewOfferTimeoutSeconds + 15)),
         // An entry point answers a channel features register (calls here), and its numbers are addresses from the
         // Omnichannel catalogs, which this group does not import, so it is seeded answering calls on no number yet.
         (ContactCenterDeploymentSteps.EntryPoint, nameof(ContactCenterEntryPoint.Channel), JsonValue.Create("Phone")),
