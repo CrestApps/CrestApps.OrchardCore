@@ -245,7 +245,8 @@ internal sealed class TransferIntegrationFixture : IAsyncDisposable
             (IActivityRoutingService)routingService,
             businessHours.Object,
             new DirectOrQueueAvailability(Harness, availability),
-            Mock.Of<IQueuedDialerWorkGate>());
+            Mock.Of<IQueuedDialerWorkGate>(),
+            Mock.Of<IDialerProfileReader>());
         var offerService = ActivatorUtilities.CreateInstance<VoiceQueueOfferService>(
             services,
             (IActivityAssignmentService)assignmentService,
