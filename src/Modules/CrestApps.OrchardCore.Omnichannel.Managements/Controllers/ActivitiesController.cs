@@ -19,7 +19,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
+using CrestApps.Core.Support;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.ContentManagement;
@@ -965,6 +968,10 @@ public sealed class ActivitiesController : Controller
             return await AlreadyFinishedAsync(returnUrl);
         }
 
+        // Opening the screen is the agent starting on the record, so an offer that is still pending is given its full
+        // time again from here; the page keeps it alive while it stays open.
+        await KeepOfferAliveAsync(activity);
+
         var subject = activity.Subject;
 
         if (subject is null && !string.IsNullOrEmpty(activity.SubjectContentType))
@@ -1142,6 +1149,53 @@ public sealed class ActivitiesController : Controller
         => activity.Status is ActivityStatus.Completed or ActivityStatus.Cancelled or ActivityStatus.Purged;
 
     /// <summary>
+    /// Tells the feature that offered the activity that the agent is still working on it, so the offer stays with them.
+    /// Called by the Complete screen while it is open.
+    /// </summary>
+    /// <param name="id">The activity identifier.</param>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Admin("omnichannel/activities/keep-alive/{id}")]
+    public async Task<IActionResult> KeepAlive(string id)
+    {
+        var activity = await _omnichannelActivityManager.FindByIdAsync(id);
+
+        if (activity is null)
+        {
+            return NotFound();
+        }
+
+        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.CompleteActivity, activity))
+        {
+            // The offer already ran out or went to someone else: the page says so instead of retrying.
+            return Json(new { held = false });
+        }
+
+        var expiresUtc = await KeepOfferAliveAsync(activity);
+
+        return Json(new { held = true, expiresUtc });
+    }
+
+    private async Task<DateTime?> KeepOfferAliveAsync(OmnichannelActivity activity)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            return null;
+        }
+
+        DateTime? expiresUtc = null;
+
+        foreach (var keepAlive in HttpContext.RequestServices.GetServices<IActivityOfferKeepAlive>())
+        {
+            expiresUtc ??= await keepAlive.KeepAliveAsync(activity, userId, HttpContext.RequestAborted);
+        }
+
+        return expiresUtc;
+    }
+
+    /// <summary>
     /// Answers a refused completion. An agent who may complete their own activities and was refused this dialer record
     /// lost it rather than never having it: the offer ran out while they worked on it and the record went back to the
     /// queue. They are told so and sent back, instead of meeting a bare 403 that gave no reason and discarded their
@@ -1154,6 +1208,11 @@ public sealed class ActivitiesController : Controller
         {
             return Forbid();
         }
+
+        HttpContext.RequestServices.GetService<ILogger<ActivitiesController>>()?.LogWarning(
+            "User '{UserId}' could not complete dialer activity '{ActivityItemId}' because it is no longer reserved for them; its offer ran out or went to another agent.",
+            User.FindFirstValue(ClaimTypes.NameIdentifier)?.SanitizeLogValue(),
+            activity.ItemId.SanitizeLogValue());
 
         await _notifier.WarningAsync(H["This record is no longer reserved for you, so your disposition was not recorded. Its offer ran out and it went back to the queue for another agent."]);
 
