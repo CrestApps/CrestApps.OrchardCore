@@ -791,7 +791,9 @@ public sealed class DefaultContactActivityBatchLoader : IActivityBatchLoader
                     continue;
                 }
 
-                if (activity.InteractionType == ActivityInteractionType.Automated &&
+                // A dialer load exists to place calls, so a record with no number to dial is as useless to it as it is to
+                // an automated activity: agents were offered it and met "The activity has no destination to dial".
+                if ((activity.InteractionType == ActivityInteractionType.Automated || isDialerLoad) &&
                     string.IsNullOrWhiteSpace(activity.PreferredDestination))
                 {
                     batch.TotalSkippedForNoDestination++;

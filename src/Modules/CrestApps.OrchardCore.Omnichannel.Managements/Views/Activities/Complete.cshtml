@@ -29,7 +29,8 @@
     @await DisplayAsync(shape)
 }
 
-<form method="post" asp-action="Complete" asp-route-id="@activityId" asp-route-returnUrl="@Model.ReturnUrl" enctype="multipart/form-data" class="no-multisubmit">
+<form method="post" asp-action="Complete" asp-route-id="@activityId" asp-route-returnUrl="@Model.ReturnUrl" enctype="multipart/form-data" class="no-multisubmit"
+      data-keep-alive-url="@Url.Action("KeepAlive", "Activities", new { area = "CrestApps.OrchardCore.Omnichannel.Managements", id = activityId })">
     @Html.ValidationSummary()
     @await DisplayAsync(Model)
 
@@ -49,3 +50,38 @@
         }
     </div>
 </form>
+
+<script at="Foot">
+    // A preview record is offered to the agent for a limited time. While this screen is open the agent is still working
+    // on it, so the offer is kept with them instead of running out and going to someone else mid-disposition.
+    (() => {
+        const form = document.querySelector('form[data-keep-alive-url]');
+        const url = form?.dataset.keepAliveUrl;
+        const token = form?.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+        if (!url || !token) {
+            return;
+        }
+
+        const intervalMilliseconds = 60000;
+        let timer = null;
+
+        const ping = () => {
+            const body = new FormData();
+            body.append('__RequestVerificationToken', token);
+
+            fetch(url, { method: 'POST', body: body, credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(response => response.ok ? response.json() : null)
+                .then(data => {
+                    // Nothing held for this agent any more: stop asking. Completing still says why.
+                    if (data && data.held === false && timer) {
+                        window.clearInterval(timer);
+                        timer = null;
+                    }
+                })
+                .catch(() => { /* the next ping tries again */ });
+        };
+
+        timer = window.setInterval(ping, intervalMilliseconds);
+    })();
+</script>

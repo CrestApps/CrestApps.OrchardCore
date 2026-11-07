@@ -101,6 +101,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             RetryDelayMinutes = profile.RetryDelayMinutes,
             AnsweringMachineDetection = profile.AnsweringMachineDetection,
             RingTimeoutSeconds = profile.RingTimeoutSeconds > 0 ? profile.RingTimeoutSeconds : DialerAbandonment.DefaultRingTimeoutSeconds,
+            PreviewOfferTimeoutSeconds = profile.PreviewOfferTimeoutSeconds > 0 ? profile.PreviewOfferTimeoutSeconds : DialerProfile.DefaultPreviewOfferTimeoutSeconds,
             CallerId = profile.CallerId,
             AlwaysUseCallerId = profile.AlwaysUseCallerId,
             DefaultRegionCode = profile.DefaultRegionCode,
@@ -162,6 +163,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             model.RetryDelayMinutes = viewModel.RetryDelayMinutes;
             model.AnsweringMachineDetection = viewModel.AnsweringMachineDetection;
             model.RingTimeoutSeconds = viewModel.RingTimeoutSeconds;
+            model.PreviewOfferTimeoutSeconds = viewModel.PreviewOfferTimeoutSeconds;
             model.CallerId = viewModel.CallerId;
             model.AlwaysUseCallerId = viewModel.AlwaysUseCallerId;
             model.DefaultRegionCode = viewModel.DefaultRegionCode;
@@ -225,6 +227,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
         profile.RetryDelayMinutes = model.RetryDelayMinutes;
         profile.AnsweringMachineDetection = model.AnsweringMachineDetection;
         profile.RingTimeoutSeconds = model.RingTimeoutSeconds;
+        profile.PreviewOfferTimeoutSeconds = model.PreviewOfferTimeoutSeconds;
         profile.CallerId = model.CallerId?.Trim();
         profile.AlwaysUseCallerId = model.AlwaysUseCallerId;
         profile.DefaultRegionCode = model.DefaultRegionCode?.Trim().ToUpperInvariant();

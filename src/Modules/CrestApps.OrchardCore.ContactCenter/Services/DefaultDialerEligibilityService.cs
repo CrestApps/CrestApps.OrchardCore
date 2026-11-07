@@ -34,6 +34,7 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
     private readonly IConsentService _consentService;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly IContactMethodsAccessor _contactMethods;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultDialerEligibilityService"/> class.
@@ -60,8 +61,10 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
         INotInServiceNumberService notInServiceNumbers,
         IConsentService consentService,
         IClock clock,
-        ILogger<DefaultDialerEligibilityService> logger)
+        ILogger<DefaultDialerEligibilityService> logger,
+        IContactMethodsAccessor contactMethods = null)
     {
+        _contactMethods = contactMethods;
         _interactionManager = interactionManager;
         _workStateService = workStateService;
         _contentManager = contentManager;
@@ -84,6 +87,15 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
 
         var profile = context.Profile;
         var activity = context.Activity;
+
+        // The activity's number is copied from the contact when the activity is created, and nothing refreshes it. A
+        // record loaded before its contact had a number -- or whose number was added or corrected since -- kept an empty
+        // destination, and agents were told "The activity has no destination to dial" on a contact that plainly has one.
+        // The contact is asked for its number now, before the record is given up as undialable.
+        if (string.IsNullOrEmpty(activity.PreferredDestination))
+        {
+            activity.PreferredDestination = await FindContactPhoneNumberAsync(activity, cancellationToken);
+        }
 
         if (string.IsNullOrEmpty(activity.PreferredDestination))
         {
@@ -298,5 +310,34 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Reads the contact's preferred phone number as it is now, for an activity that was created without one.
+    /// </summary>
+    private async Task<string> FindContactPhoneNumberAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
+    {
+        if (_contactMethods is null || string.IsNullOrEmpty(activity.ContactContentItemId))
+        {
+            return null;
+        }
+
+        var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Published);
+
+        if (contact is null)
+        {
+            return null;
+        }
+
+        var phoneNumber = _contactMethods.Get(contact).GetPreferredPhoneNumber()?.PhoneNumber;
+
+        if (!string.IsNullOrEmpty(phoneNumber) && _logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Activity '{ActivityItemId}' had no number to dial; using its contact's current number instead.",
+                activity.ItemId.SanitizeLogValue());
+        }
+
+        return phoneNumber;
     }
 }

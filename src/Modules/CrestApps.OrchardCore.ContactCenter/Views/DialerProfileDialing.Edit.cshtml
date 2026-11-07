@@ -85,6 +85,15 @@
     </div>
 </div>
 
+<div class="ocat-wrapper" asp-validation-class-for="PreviewOfferTimeoutSeconds" data-dialer-modes="Preview">
+    <label asp-for="PreviewOfferTimeoutSeconds" class="ocat-label">@T["Offer time (seconds)"]</label>
+    <div class="ocat-end">
+        <input asp-for="PreviewOfferTimeoutSeconds" type="number" min="@DialerProfile.MinimumPreviewOfferTimeoutSeconds" max="@DialerProfile.MaximumPreviewOfferTimeoutSeconds" class="form-control" />
+        <span asp-validation-for="PreviewOfferTimeoutSeconds" class="text-danger"></span>
+        <span class="hint">@T["How long a preview record stays reserved for the agent it is offered to, from {0} to {1} seconds. Reviewing the record, updating the contact and choosing a disposition all happen inside this time. When it runs out the record goes back to the queue for another agent, and the first agent can no longer complete it.", DialerProfile.MinimumPreviewOfferTimeoutSeconds, DialerProfile.MaximumPreviewOfferTimeoutSeconds]</span>
+    </div>
+</div>
+
 <div class="ocat-wrapper" asp-validation-class-for="AnsweringMachineDetection" data-dialer-modes="Power Progressive Predictive">
     <label asp-for="AnsweringMachineDetection" class="ocat-label">@T["Screen out answering machines"]</label>
     <div class="ocat-end">

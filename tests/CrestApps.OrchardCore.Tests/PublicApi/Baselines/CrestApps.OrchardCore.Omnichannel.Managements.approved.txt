@@ -320,6 +320,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/activities/edit/{id}", null)]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> EditAsync(string id) { }
+        [Microsoft.AspNetCore.Mvc.HttpPost]
+        [Microsoft.AspNetCore.Mvc.ValidateAntiForgeryToken]
+        [OrchardCore.Admin.Admin("omnichannel/activities/keep-alive/{id}", null)]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> KeepAlive(string id) { }
         [OrchardCore.Admin.Admin("omnichannel/activities/{contentItemId}", null)]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> List(string contentItemId, OrchardCore.Navigation.PagerParameters pagerParameters, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="s")] OrchardCore.Navigation.PagerParameters scheduledPagerParameters, [Microsoft.AspNetCore.Mvc.FromServices] Microsoft.Extensions.Options.IOptions<OrchardCore.Navigation.PagerOptions> pagerOptions, [Microsoft.AspNetCore.Mvc.FromServices] OrchardCore.DisplayManagement.IShapeFactory shapeFactory) { }
         [Microsoft.AspNetCore.Mvc.HttpGet]

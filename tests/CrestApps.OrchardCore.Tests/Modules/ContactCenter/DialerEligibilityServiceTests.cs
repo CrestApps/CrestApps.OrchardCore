@@ -34,6 +34,53 @@ public sealed class DialerEligibilityServiceTests
         Assert.Equal(DialerSuppressionReason.NoDestination, result.Reason);
     }
 
+    // An activity copies its contact's number when it is created and nothing refreshed it, so a record loaded before its
+    // contact had a number told the agent "The activity has no destination to dial" on a contact that plainly has one.
+    [Fact]
+    public async Task EvaluateAsync_WhenTheActivityHasNoNumberButItsContactNowDoes_DialsTheContactsNumber()
+    {
+        // Arrange
+        var harness = new Harness();
+        var contact = new ContentItem { ContentItemId = "contact1", ContentType = "Lead" };
+        harness.ContentManager
+            .Setup(manager => manager.GetAsync("contact1", It.IsAny<VersionOptions>()))
+            .ReturnsAsync(contact);
+        harness.ContactMethods
+            .Setup(accessor => accessor.Get(contact))
+            .Returns(new ContactMethodSet(
+                [new ContactPhoneNumber { PhoneNumber = "+14255551212", Type = ContactPhoneTypes.Cell }],
+                []));
+        var activity = new OmnichannelActivity { ItemId = "act1", ContactContentItemId = "contact1", PreferredDestination = null };
+
+        // Act
+        var result = await harness.EvaluateAsync(Profile(), activity);
+
+        // Assert
+        Assert.NotEqual(DialerSuppressionReason.NoDestination, result.Reason);
+        Assert.Equal("+14255551212", activity.PreferredDestination);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WhenNeitherTheActivityNorItsContactHasANumber_SuppressesNoDestination()
+    {
+        // Arrange
+        var harness = new Harness();
+        var contact = new ContentItem { ContentItemId = "contact1", ContentType = "Lead" };
+        harness.ContentManager
+            .Setup(manager => manager.GetAsync("contact1", It.IsAny<VersionOptions>()))
+            .ReturnsAsync(contact);
+        harness.ContactMethods
+            .Setup(accessor => accessor.Get(contact))
+            .Returns(ContactMethodSet.Empty);
+        var activity = new OmnichannelActivity { ItemId = "act1", ContactContentItemId = "contact1", PreferredDestination = null };
+
+        // Act
+        var result = await harness.EvaluateAsync(Profile(), activity);
+
+        // Assert
+        Assert.Equal(DialerSuppressionReason.NoDestination, result.Reason);
+    }
+
     [Fact]
     public async Task EvaluateAsync_WhenMaxAttemptsReached_SuppressesMaxAttempts()
     {
@@ -482,6 +529,8 @@ public sealed class DialerEligibilityServiceTests
 
         public global::CrestApps.OrchardCore.Tests.Modules.Omnichannel.Sms.SharedNumberOptOutResolver OptOutResolver { get; } = new();
 
+        public Mock<IContactMethodsAccessor> ContactMethods { get; } = new();
+
         public Harness()
         {
             AbandonmentPolicyService
@@ -517,7 +566,8 @@ public sealed class DialerEligibilityServiceTests
                 NotInServiceNumbers.Object,
                 CrestApps.OrchardCore.Tests.Doubles.ConsentDoubles.Over(OptOutResolver, ContentManager.Object),
                 clock.Object,
-                NullLogger<DefaultDialerEligibilityService>.Instance);
+                NullLogger<DefaultDialerEligibilityService>.Instance,
+                ContactMethods.Object);
 
             return await service.EvaluateAsync(new DialerEligibilityContext
             {

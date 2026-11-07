@@ -84,6 +84,12 @@ public class DialerProfileViewModel
     public int RingTimeoutSeconds { get; set; } = DialerAbandonment.DefaultRingTimeoutSeconds;
 
     /// <summary>
+    /// Gets or sets how many seconds a preview record stays reserved for the agent it was offered to. Shown for
+    /// preview mode only.
+    /// </summary>
+    public int PreviewOfferTimeoutSeconds { get; set; } = DialerProfile.DefaultPreviewOfferTimeoutSeconds;
+
+    /// <summary>
     /// Gets or sets the caller identifier.
     /// </summary>
     public string CallerId { get; set; }
