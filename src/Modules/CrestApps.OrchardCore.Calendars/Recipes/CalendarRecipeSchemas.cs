@@ -95,5 +95,5 @@ internal static class CalendarRecipeSchemas
         ("source", String("The feature that manages it, or null.")),
         ("sourceId", String("The record of that feature it belongs to.")),
         ("properties", Properties("calendar")),
-        ("events", Array(Event(), "Its events (when the deployment step included them).")));
+        ("Events", Array(Event(), "Its events (when the deployment step included them). Unlike the other members, this one is read with a capital E.")));
 }

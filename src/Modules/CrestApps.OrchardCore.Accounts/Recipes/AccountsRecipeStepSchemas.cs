@@ -23,12 +23,12 @@ internal sealed class AccountsRecipeStepSchema : IRecipeStep
                 ("Accounts", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
                     .Items(ContentItem("An account: a content item with AccountPart, and the parts other modules add to it, such as AccountMembersPart, AccountLocationsPart and B2BAccountPart."))
-                    .Description("The accounts to create or update. An account with an existing ContentItemId is updated.")),
+                    .Description("The accounts to create or update. An account with an existing ContentItemId is updated. An item without AccountPart is refused.")),
                 ("Records", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
                     .Items(ContentItem("A record an account holds, such as a contact or an opportunity. Its ContainedPart names the account."))
                     .Description("The records the accounts hold, imported after the accounts.")))
-            .Required("name", "Accounts")
+            .Required("name")
             .AdditionalProperties(true)
             .Build();
 
@@ -43,8 +43,8 @@ internal sealed class AccountsRecipeStepSchema : IRecipeStep
                 ("ContentItemVersionId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The version id.")),
                 ("ContentType", new JsonSchemaBuilder().Type(SchemaValueType.String).MinLength(1).Description("The content type.")),
                 ("DisplayText", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The item's title.")),
-                ("Latest", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
-                ("Published", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)))
+                ("Latest", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether this is the latest version of the item.")),
+                ("Published", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether this version is published.")))
             .Required("ContentItemId", "ContentType")
             .AdditionalProperties(true)
             .Description(description);
