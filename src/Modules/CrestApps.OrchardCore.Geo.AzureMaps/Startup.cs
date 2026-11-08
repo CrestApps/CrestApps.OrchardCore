@@ -1,4 +1,6 @@
+using CrestApps.OrchardCore.Geo.AzureMaps.Recipes;
 using CrestApps.OrchardCore.Geo.Services;
+using CrestApps.OrchardCore.Recipes.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http.Resilience;
@@ -29,5 +31,18 @@ public sealed class Startup : StartupBase
         services.AddScoped<IRouteProvider>(sp => sp.GetRequiredService<AzureMapsProvider>());
         services.AddSiteDisplayDriver<AzureMapsSettingsDisplayDriver>();
         services.AddSiteSettingsPermission(GeoConstants.SettingsGroupId, GeoPermissions.ManageGeoSettings);
+    }
+}
+
+/// <summary>
+/// Describes the AzureMaps site settings to CrestApps Recipes.
+/// </summary>
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
+public sealed class RecipesSchemaStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<ISiteSettingsSchemaDefinition, AzureMapsSettingsSchema>();
     }
 }

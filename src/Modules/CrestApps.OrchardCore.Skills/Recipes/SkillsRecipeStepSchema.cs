@@ -44,6 +44,11 @@ internal sealed class SkillsRecipeStepSchema : IRecipeStep
         return new JsonSchemaBuilder().Type(SchemaValueType.String).Format(Formats.Date).Description(description);
     }
 
+    private static JsonSchemaBuilder SubjectKind(string description)
+    {
+        return new JsonSchemaBuilder().Type(SchemaValueType.String).Examples("User", "Worker").Description(description);
+    }
+
     private static JsonSchemaBuilder Certification()
     {
         return new JsonSchemaBuilder()
@@ -56,7 +61,7 @@ internal sealed class SkillsRecipeStepSchema : IRecipeStep
                 ("validityMonths", new JsonSchemaBuilder().Type(SchemaValueType.Integer, SchemaValueType.Null).Minimum(1).Description("How many months a certificate stays valid; null when it never expires.")),
                 ("requiresDocument", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether a copy of the certificate is needed before it counts.")),
                 ("reminderDays", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.Integer).Minimum(1)).Description("Days before expiry that a reminder is raised.")),
-                ("enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)))
+                ("enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the certification can be recorded and required by skills.")))
             .Required("name")
             .AdditionalProperties(true);
     }
@@ -72,7 +77,7 @@ internal sealed class SkillsRecipeStepSchema : IRecipeStep
                 ("description", Text("What the skill means.")),
                 ("requiredCertificationId", Text("The certification the skill requires, by id.")),
                 ("RequiredCertificationName", Text("The certification the skill requires, by name; wins over the id.")),
-                ("enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)))
+                ("enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the skill can be assigned and used for matching.")))
             .Required("name")
             .AdditionalProperties(true);
     }
@@ -82,7 +87,7 @@ internal sealed class SkillsRecipeStepSchema : IRecipeStep
         return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("subjectKind", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("User", "Worker").Description("Who holds the skill: a user (default) or a workforce worker.")),
+                ("subjectKind", SubjectKind("Who holds the skill: User (the default) or Worker for a workforce worker. Other modules may register more kinds.")),
                 ("subjectId", Text("The user id or the worker id.")),
                 ("skillId", Text("The skill, by id.")),
                 ("skillName", Text("The skill, by name, when the id isn't known.")),
@@ -99,7 +104,7 @@ internal sealed class SkillsRecipeStepSchema : IRecipeStep
             .Type(SchemaValueType.Object)
             .Properties(
                 ("itemId", Text("The record id; omit for a new record.")),
-                ("subjectKind", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("User", "Worker")),
+                ("subjectKind", SubjectKind("Who holds the certificate: User (the default) or Worker for a workforce worker.")),
                 ("subjectId", Text("The user id or the worker id.")),
                 ("subjectName", Text("The holder's name, shown in lists.")),
                 ("certificationId", Text("The certification, by id.")),
@@ -108,7 +113,9 @@ internal sealed class SkillsRecipeStepSchema : IRecipeStep
                 ("issuedOn", Date("The day it was issued.")),
                 ("expiresOn", Date("The last day it is valid.")),
                 ("documentPath", Text("The media library path of a copy of the certificate.")),
-                ("status", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Pending", "Valid", "Expired", "Revoked")),
+                ("status", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Pending", "Valid", "Expired", "Revoked").Description("Whether the certificate is waiting for a check, valid, expired or revoked.")),
+                ("verifiedBy", Text("Who checked the certificate.")),
+                ("verifiedUtc", new JsonSchemaBuilder().Type(SchemaValueType.String, SchemaValueType.Null).Format(Formats.DateTime).Description("When the certificate was checked.")),
                 ("notes", Text("A note about the record.")))
             .Required("subjectId")
             .AdditionalProperties(true);

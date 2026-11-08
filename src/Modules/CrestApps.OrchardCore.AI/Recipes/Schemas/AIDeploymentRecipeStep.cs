@@ -44,33 +44,38 @@ public sealed class AIDeploymentRecipeStep : IRecipeStep
 
     private JsonSchema CreateSchema()
     {
-        var azureAuthenticationTypeSchema = new JsonSchemaBuilder()
-            .Type(SchemaValueType.String)
-            .Enum("Default", "ManagedIdentity", "ApiKey")
-            .Description("Azure authentication type. Supported values are Default, ManagedIdentity, or ApiKey.");
+        static JsonSchemaBuilder AzureAuthenticationType()
+            => new JsonSchemaBuilder()
+                .Type(SchemaValueType.String)
+                .Enum("Default", "ManagedIdentity", "ApiKey")
+                .Description("Azure authentication type of an AzureSpeech deployment. Supported values are Default, ManagedIdentity, or ApiKey.");
 
         // The purpose was replaced by model capabilities. A recipe that still names one is read through the
         // framework's read-time projection, so it keeps importing; new recipes declare AIDeploymentMetadata
         // under Properties instead.
-        var deploymentPurposeSchema = new JsonSchemaBuilder()
-            .Type(SchemaValueType.String)
-            .Enum("Chat", "Utility", "Embedding", "Image", "SpeechToText", "TextToSpeech", "Vision")
-            .Description("Legacy deployment purpose identifier, projected onto model capabilities on import.");
+        static JsonSchemaBuilder DeploymentPurpose()
+            => new JsonSchemaBuilder()
+                .Type(SchemaValueType.String)
+                .Enum("Chat", "Utility", "Embedding", "Image", "SpeechToText", "TextToSpeech", "Vision")
+                .Description("Legacy deployment purpose identifier, projected onto model capabilities on import.");
 
         var modelCapabilitiesSchema = BuildModelCapabilitiesSchema();
         var pricingSchema = BuildPricingSchema();
 
+        const string ContainedApiKeyDescription = "Contained-connection API key (AzureSpeech, ElevenLabs and Cartesia deployments), stored protected with the 'AIProviderConnection' data protection purpose. The value is read as a protected value when the deployment is used, so a key in clear text does not work: keep the protected value an exported plan carries (it only decrypts on a site that shares the exporting site's data protection keys), or leave it out and enter the key on the deployment in the admin.";
+
         var containedConnectionPropertiesSchema = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("Endpoint", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Contained-connection endpoint. Used by AzureSpeech deployments.")),
-                ("AuthenticationType", azureAuthenticationTypeSchema),
-                ("ApiKey", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Contained-connection API key. Required when AuthenticationType is ApiKey.")),
+                ("Endpoint", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Contained-connection endpoint. Required by AzureSpeech deployments; an optional absolute address that replaces the provider's default for ElevenLabs and Cartesia deployments.")),
+                ("AuthenticationType", AzureAuthenticationType()),
+                ("ApiKey", new JsonSchemaBuilder().Type(SchemaValueType.String).Description(ContainedApiKeyDescription)),
                 ("IdentityId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional client ID of a user-assigned managed identity. Used when AuthenticationType is ManagedIdentity.")),
                 ("AIDeploymentMetadata", modelCapabilitiesSchema),
-                ("AIDeploymentPricing", pricingSchema))
+                ("CascadedRealtimeMetadata", BuildCascadedRealtimeSchema()),
+                ("AIDeploymentPricing", BuildPricingSchema().Description("What the deployment costs with its provider. Read only when the deployment carries no top-level Pricing; prefer Pricing.")))
             .AdditionalProperties(true)
-            .Description("Properties stored directly on the deployment, such as contained provider connection settings and the declared model capabilities (AIDeploymentMetadata).");
+            .Description("Properties stored directly on the deployment, such as contained provider connection settings and the declared model capabilities (AIDeploymentMetadata). Merged into the stored properties; a list replaces the stored list.");
 
         var clientNameSchema = new JsonSchemaBuilder()
             .Type(SchemaValueType.String)
@@ -91,22 +96,24 @@ public sealed class AIDeploymentRecipeStep : IRecipeStep
         var deploymentSchema = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Deployment name as specified by the vendor.")),
+                ("ItemId", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Optional unique identifier of the deployment. When it matches a stored deployment, that deployment is updated; otherwise the deployment is matched by Name and ClientName, and a new one is created under this identifier.")),
+                ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Deployment name as specified by the vendor. With ClientName, identifies the deployment when no ItemId matches.")),
                 ("ModelName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional vendor model name. Defaults to Name when omitted.")),
                 ("ClientName", clientNameSchema),
-                ("ConnectionName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Connection name used to configure the provider.")),
-                ("Endpoint", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Contained-connection endpoint alias for recipe imports. Supported by AzureSpeech deployments.")),
-                ("AuthenticationType", azureAuthenticationTypeSchema.Description("Contained-connection authentication type alias for recipe imports. Supported by AzureSpeech deployments.")),
-                ("ApiKey", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Contained-connection API key alias for recipe imports. Supported by AzureSpeech deployments.")),
-                ("IdentityId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Contained-connection managed identity client ID alias for recipe imports. Supported by AzureSpeech deployments.")),
+                ("ProviderName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Legacy alias of ClientName, read when ClientName is missing.")),
+                ("ConnectionName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Name of the provider connection the deployment uses. Required unless the provider keeps its connection in the deployment (AzureSpeech, ElevenLabs, Cartesia, CascadedRealtime).")),
+                ("Endpoint", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Alias copied to Properties.Endpoint: the contained-connection endpoint of AzureSpeech, ElevenLabs and Cartesia deployments.")),
+                ("AuthenticationType", AzureAuthenticationType().Description("Alias copied to Properties.AuthenticationType. Supported by AzureSpeech deployments.")),
+                ("ApiKey", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Alias copied as given to Properties.ApiKey. It must be the protected value (see Properties.ApiKey); a key in clear text does not work.")),
+                ("IdentityId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Alias copied to Properties.IdentityId: the managed identity client ID of an AzureSpeech deployment.")),
                 ("Properties", containedConnectionPropertiesSchema.Description("Contained provider connection properties stored directly on the deployment.")),
                 ("Pricing", new JsonSchemaBuilder().AnyOf(
                     pricingSchema,
                     new JsonSchemaBuilder().Type(SchemaValueType.Null).Description("Removes the deployment's prices.")).Description("What the deployment costs with its provider, used to estimate the cost of its usage in the AI usage reports. Leave it out to keep the deployment's current prices.")),
                 ("Purpose", new JsonSchemaBuilder().AnyOf(
-                    deploymentPurposeSchema.Description("Legacy. Declare the model's capabilities under Properties.AIDeploymentMetadata instead. A deployment that names neither is imported as a text chat deployment."),
+                    DeploymentPurpose().Description("Legacy. Declare the model's capabilities under Properties.AIDeploymentMetadata instead. A deployment that names neither is imported as a text chat deployment."),
                     new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(
-                        deploymentPurposeSchema).MinItems(1).UniqueItems(true).Description("Legacy deployment purposes, projected onto model capabilities on import."))))
+                        DeploymentPurpose()).MinItems(1).UniqueItems(true).Description("Legacy deployment purposes, projected onto model capabilities on import."))))
             .Required("Name")
             .AdditionalProperties(true);
 

@@ -1,5 +1,9 @@
+using System.Reflection;
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
+using CrestApps.OrchardCore.Workforce.Models;
 using Json.Schema;
+using static CrestApps.OrchardCore.Workforce.Recipes.WorkforceSchemaBuilder;
 
 namespace CrestApps.OrchardCore.Workforce.Recipes;
 
@@ -14,52 +18,39 @@ internal sealed class LaborRulesRecipeStepSchema : IRecipeStep
 
     public ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
     {
-        _cached ??= new JsonSchemaBuilder()
-            .Type(SchemaValueType.Object)
-            .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const(LaborRulesRecipeStep.LaborRulesStepName).Description("Recipe step discriminator. Must be 'WorkforceLaborRules'.")),
-                ("RuleSets", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(RuleSet()).Description("The labor rule sets to create, or update by id or name.")))
-            .Required("name")
-            .AdditionalProperties(true)
-            .Build();
+        _cached ??= Step(
+            LaborRulesRecipeStep.LaborRulesStepName,
+            "Creates or updates labor rule sets, matched by itemId then name. A rule set that is updated takes every member of the entry.",
+            ("RuleSets", Array(RuleSet(), "The labor rule sets to create or update.")));
 
         return ValueTask.FromResult(_cached);
     }
 
     private static JsonSchemaBuilder RuleSet()
-    {
-        return new JsonSchemaBuilder()
-            .Type(SchemaValueType.Object)
-            .Properties(
-                ("itemId", Text("The set id; omit to match by name.")),
-                ("name", Text("The set name.")),
-                ("description", Text("What the set is for.")),
-                ("jurisdiction", Text("The place or law it follows, as free text.")),
-                ("teamNames", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("The names of the teams it applies to, with their sub-teams.")),
-                ("employmentTypes", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("FullTime", "PartTime", "Seasonal", "Temporary", "Contractor", "Subcontractor")).Description("The employment types it applies to; empty for all.")),
-                ("enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the set is in use.")),
-                ("rules", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(Rule()).Description("The rules.")))
-            .Required("name")
-            .AdditionalProperties(true);
-    }
+        => Object(
+            "A labor rule set.",
+            ("itemId", Text("The set's id. When it matches a stored set, that set is updated; otherwise it is matched by name.")),
+            ("name", Text("The set name, unique.")),
+            ("description", Text("What the set is for.")),
+            ("jurisdiction", Text("The place or law it follows, as free text.")),
+            ("teamNames", Strings("The teams it applies to (with their sub-teams), by name; added to teamIds. A name that doesn't match a team refuses the set.")),
+            ("teamIds", Strings("The teams it applies to, by id.")),
+            ("workerIds", Strings("The workers it applies to, by id.")),
+            ("employmentTypes", EnumArray<EmploymentType>("The employment types it applies to; empty for all.")),
+            ("enabled", Flag("Whether the set is in use. Defaults to true.")),
+            ("rules", Array(Rule(), "The rules.")))
+        .Required("name");
 
     private static JsonSchemaBuilder Rule()
-    {
-        return new JsonSchemaBuilder()
-            .Type(SchemaValueType.Object)
-            .Properties(
-                ("id", Text("The rule's id within the set; one is made when omitted.")),
-                ("ruleKey", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum(
-                    "MaxHoursPerDay", "MaxHoursPerWeek", "MinHoursPerWeek", "MinRest", "MaxConsecutiveDays", "DaysOffPerWeek", "MaxShiftLength", "MinShiftLength",
-                    "Breaks", "MinorLimits", "SkillsRequired", "NoWorkDuringTimeOff", "ScheduleNotice", "Overtime", "PredictabilityPay").Description("The rule's key; other modules add their own.")),
-                ("enforcement", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Warn", "Block", "RequireOverride")),
-                ("parameters", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("The rule's parameters by name, written invariantly, such as { \"Hours\": \"10\" }.")))
-            .Required("ruleKey")
-            .AdditionalProperties(true);
-    }
-
-    private static JsonSchemaBuilder Text(string description)
-    {
-        return new JsonSchemaBuilder().Type(SchemaValueType.String).Description(description);
-    }
+        => Object(
+            "A rule of the set.",
+            ("id", Text("The rule's id within the set; one is made when omitted.")),
+            ("ruleKey", RecipeStepSchemaBuilders.SuggestedString(typeof(LaborRuleKeys)
+                .GetFields(BindingFlags.Public | BindingFlags.Static)
+                .Where(field => field.IsLiteral && field.FieldType == typeof(string))
+                .Select(field => (string)field.GetRawConstantValue()))
+                .Description("The rule's key. These are the built-in rules; other modules add their own.")),
+            ("enforcement", Enum<LaborRuleEnforcement>("What happens when a schedule breaks the rule. Defaults to Warn.")),
+            ("parameters", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("The rule's parameters by name, written invariantly as strings, such as { \"Hours\": \"10\" }.")))
+        .Required("ruleKey");
 }

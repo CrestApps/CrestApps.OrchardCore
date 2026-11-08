@@ -1,4 +1,4 @@
-using CrestApps.Core.AI;
+﻿using CrestApps.Core.AI;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using Json.Schema;
@@ -37,36 +37,43 @@ public sealed class AIProviderConnectionsRecipeStep : IRecipeStep
 
     private JsonSchema CreateSchema()
     {
-        var azureAuthenticationTypeSchema = new JsonSchemaBuilder()
-            .Type(SchemaValueType.String)
-            .Enum("Default", "ManagedIdentity", "ApiKey")
-            .Description("Azure authentication type. Supported values are Default, ManagedIdentity, or ApiKey.");
+        const string ApiKeyDescription = "Provider API key in clear text. It is encrypted when stored; a deployment plan exports it blank, so fill it in before importing.";
 
-        var openAIMetadataSchema = new JsonSchemaBuilder()
-            .Type(SchemaValueType.Object)
-            .Properties(
-                ("Endpoint", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Provider API endpoint.")),
-                ("ApiKey", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Provider API key.")))
-            .AdditionalProperties(true);
+        static JsonSchemaBuilder AzureAuthenticationType(string description)
+            => new JsonSchemaBuilder()
+                .Type(SchemaValueType.String)
+                .Enum("Default", "ManagedIdentity", "ApiKey")
+                .Description(description);
 
-        var azureMetadataSchema = new JsonSchemaBuilder()
-            .Type(SchemaValueType.Object)
-            .Properties(
-                ("Endpoint", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Provider API endpoint.")),
-                ("AuthenticationType", azureAuthenticationTypeSchema),
-                ("ApiKey", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Provider API key. Required when AuthenticationType is ApiKey.")),
-                ("IdentityId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional client ID of a user-assigned managed identity. Used when AuthenticationType is ManagedIdentity.")))
-            .AdditionalProperties(true);
+        static JsonSchemaBuilder OpenAIMetadata(string description)
+            => new JsonSchemaBuilder()
+                .Type(SchemaValueType.Object)
+                .Properties(
+                    ("Endpoint", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Provider API endpoint (an absolute address).")),
+                    ("ApiKey", new JsonSchemaBuilder().Type(SchemaValueType.String).Description(ApiKeyDescription)))
+                .AdditionalProperties(true)
+                .Description(description);
+
+        static JsonSchemaBuilder AzureMetadata(string description)
+            => new JsonSchemaBuilder()
+                .Type(SchemaValueType.Object)
+                .Properties(
+                    ("Endpoint", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Provider API endpoint (an absolute address).")),
+                    ("AuthenticationType", AzureAuthenticationType("Azure authentication type. Supported values are Default, ManagedIdentity, or ApiKey.")),
+                    ("ApiKey", new JsonSchemaBuilder().Type(SchemaValueType.String).Description(ApiKeyDescription + " Required when AuthenticationType is ApiKey.")),
+                    ("IdentityId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional client ID of a user-assigned managed identity. Used when AuthenticationType is ManagedIdentity.")))
+                .AdditionalProperties(true)
+                .Description(description);
 
         var propertiesSchema = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("OpenAIConnectionMetadata", openAIMetadataSchema.Description("Metadata for OpenAI-compatible connections.")),
-                ("AzureConnectionMetadata", azureMetadataSchema.Description("Metadata for Azure OpenAI connections.")),
-                ("AzureOpenAIConnectionMetadata", azureMetadataSchema.Description("Legacy metadata alias for Azure OpenAI connections.")),
-                ("AzureAIInferenceConnectionMetadata", azureMetadataSchema.Description("Metadata for Azure AI Inference connections.")))
+                ("OpenAIConnectionMetadata", OpenAIMetadata("Metadata for OpenAI-compatible connections (Source OpenAI).")),
+                ("AzureConnectionMetadata", AzureMetadata("Metadata for Azure OpenAI connections.")),
+                ("AzureOpenAIConnectionMetadata", AzureMetadata("Legacy metadata alias for Azure OpenAI connections, read when AzureConnectionMetadata is missing.")),
+                ("AzureAIInferenceConnectionMetadata", AzureMetadata("Metadata for Azure AI Inference connections.")))
             .AdditionalProperties(true)
-            .Description("Provider-specific connection metadata. Recipe exports keep provider settings under these metadata objects.");
+            .Description("Provider-specific connection metadata grouped by metadata object name. Merged into the stored properties.");
 
         var providerSources = _aiOptions.ConnectionSources.Keys
             .Where(static name => !string.IsNullOrWhiteSpace(name))
@@ -83,16 +90,16 @@ public sealed class AIProviderConnectionsRecipeStep : IRecipeStep
         var connectionSchema = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("ItemId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional unique identifier.")),
+                ("ItemId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional unique identifier. When it matches a stored connection, that connection is updated; otherwise the connection is matched by Name.")),
                 ("Source", providerSourceSchema),
                 ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Unique connection name.")),
                 ("DisplayText", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Display name.")),
                 ("ClientName", clientNameSchema),
-                ("Endpoint", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Common connection endpoint alias for recipe imports.")),
-                ("AuthenticationType", azureAuthenticationTypeSchema.Description("Common Azure connection authentication type alias for recipe imports.")),
-                ("ApiKey", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Common connection API key alias for recipe imports.")),
-                ("IdentityId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Common Azure connection managed identity client ID alias for recipe imports.")),
-                ("Properties", propertiesSchema.Description("Provider-specific connection metadata grouped by metadata object name.")))
+                ("Endpoint", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Alias of the provider metadata's Endpoint, read by the OpenAI, Azure OpenAI and Azure AI Inference providers.")),
+                ("AuthenticationType", AzureAuthenticationType("Alias of the Azure metadata's AuthenticationType.")),
+                ("ApiKey", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Alias of the provider metadata's ApiKey. " + ApiKeyDescription)),
+                ("IdentityId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Alias of the Azure metadata's IdentityId.")),
+                ("Properties", propertiesSchema))
             .Required("Name")
             .AdditionalProperties(true);
 

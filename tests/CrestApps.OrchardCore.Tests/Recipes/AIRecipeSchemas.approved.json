@@ -238,9 +238,16 @@
         "items": {
           "type": "object",
           "properties": {
+            "ItemId": {
+              "type": [
+                "null",
+                "string"
+              ],
+              "description": "Optional unique identifier of the deployment. When it matches a stored deployment, that deployment is updated; otherwise the deployment is matched by Name and ClientName, and a new one is created under this identifier."
+            },
             "Name": {
               "type": "string",
-              "description": "Deployment name as specified by the vendor."
+              "description": "Deployment name as specified by the vendor. With ClientName, identifies the deployment when no ItemId matches."
             },
             "ModelName": {
               "type": "string",
@@ -250,13 +257,17 @@
               "type": "string",
               "description": "Client name for the registered AI provider."
             },
+            "ProviderName": {
+              "type": "string",
+              "description": "Legacy alias of ClientName, read when ClientName is missing."
+            },
             "ConnectionName": {
               "type": "string",
-              "description": "Connection name used to configure the provider."
+              "description": "Name of the provider connection the deployment uses. Required unless the provider keeps its connection in the deployment (AzureSpeech, ElevenLabs, Cartesia, CascadedRealtime)."
             },
             "Endpoint": {
               "type": "string",
-              "description": "Contained-connection endpoint alias for recipe imports. Supported by AzureSpeech deployments."
+              "description": "Alias copied to Properties.Endpoint: the contained-connection endpoint of AzureSpeech, ElevenLabs and Cartesia deployments."
             },
             "AuthenticationType": {
               "type": "string",
@@ -265,22 +276,22 @@
                 "ManagedIdentity",
                 "ApiKey"
               ],
-              "description": "Contained-connection authentication type alias for recipe imports. Supported by AzureSpeech deployments."
+              "description": "Alias copied to Properties.AuthenticationType. Supported by AzureSpeech deployments."
             },
             "ApiKey": {
               "type": "string",
-              "description": "Contained-connection API key alias for recipe imports. Supported by AzureSpeech deployments."
+              "description": "Alias copied as given to Properties.ApiKey. It must be the protected value (see Properties.ApiKey); a key in clear text does not work."
             },
             "IdentityId": {
               "type": "string",
-              "description": "Contained-connection managed identity client ID alias for recipe imports. Supported by AzureSpeech deployments."
+              "description": "Alias copied to Properties.IdentityId: the managed identity client ID of an AzureSpeech deployment."
             },
             "Properties": {
               "type": "object",
               "properties": {
                 "Endpoint": {
                   "type": "string",
-                  "description": "Contained-connection endpoint. Used by AzureSpeech deployments."
+                  "description": "Contained-connection endpoint. Required by AzureSpeech deployments; an optional absolute address that replaces the provider\u0027s default for ElevenLabs and Cartesia deployments."
                 },
                 "AuthenticationType": {
                   "type": "string",
@@ -289,11 +300,11 @@
                     "ManagedIdentity",
                     "ApiKey"
                   ],
-                  "description": "Azure authentication type. Supported values are Default, ManagedIdentity, or ApiKey."
+                  "description": "Azure authentication type of an AzureSpeech deployment. Supported values are Default, ManagedIdentity, or ApiKey."
                 },
                 "ApiKey": {
                   "type": "string",
-                  "description": "Contained-connection API key. Required when AuthenticationType is ApiKey."
+                  "description": "Contained-connection API key (AzureSpeech, ElevenLabs and Cartesia deployments), stored protected with the \u0027AIProviderConnection\u0027 data protection purpose. The value is read as a protected value when the deployment is used, so a key in clear text does not work: keep the protected value an exported plan carries (it only decrypts on a site that shares the exporting site\u0027s data protection keys), or leave it out and enter the key on the deployment in the admin."
                 },
                 "IdentityId": {
                   "type": "string",
@@ -348,6 +359,30 @@
                   },
                   "additionalProperties": true,
                   "description": "Declared model capabilities for the deployment: the trained features it supports and the configurable model parameters it exposes."
+                },
+                "CascadedRealtimeMetadata": {
+                  "type": "object",
+                  "properties": {
+                    "SpeechToTextDeploymentName": {
+                      "type": "string",
+                      "description": "Technical name of the deployment that transcribes the user\u0027s speech. Must expose a realtime client."
+                    },
+                    "ChatDeploymentName": {
+                      "type": "string",
+                      "description": "Technical name of the chat deployment that generates the reply."
+                    },
+                    "TextToSpeechDeploymentName": {
+                      "type": "string",
+                      "description": "Technical name of the deployment that speaks the reply."
+                    }
+                  },
+                  "required": [
+                    "SpeechToTextDeploymentName",
+                    "ChatDeploymentName",
+                    "TextToSpeechDeploymentName"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Set on a deployment created under the CascadedRealtime client to chain a speech-to-text, a chat, and a text-to-speech deployment into one realtime deployment."
                 },
                 "AIDeploymentPricing": {
                   "type": "object",
@@ -426,7 +461,7 @@
                     }
                   },
                   "additionalProperties": false,
-                  "description": "What the deployment costs with its provider."
+                  "description": "What the deployment costs with its provider. Read only when the deployment carries no top-level Pricing; prefer Pricing."
                 }
               },
               "additionalProperties": true,
@@ -548,7 +583,7 @@
                       "TextToSpeech",
                       "Vision"
                     ],
-                    "description": "Legacy. Declare the model\u0027s capabilities under Properties.AIDeploymentMetadata instead. A deployment that names neither is imported as a text chat deployment."
+                    "description": "Legacy deployment purpose identifier, projected onto model capabilities on import."
                   },
                   "minItems": 1,
                   "uniqueItems": true,
@@ -729,6 +764,10 @@
               "type": "string",
               "description": "Optional technical name of the AI persona this profile links to. An empty value unlinks the persona, and leaving the key out keeps the current link."
             },
+            "ConnectionName": {
+              "type": "string",
+              "description": "Optional name of the provider connection the profile uses."
+            },
             "ChatDeploymentName": {
               "type": "string",
               "description": "Chat deployment technical name for the AI model."
@@ -736,6 +775,71 @@
             "UtilityDeploymentName": {
               "type": "string",
               "description": "Utility deployment technical name for the AI model."
+            },
+            "SystemMessage": {
+              "type": "string",
+              "description": "Shortcut for Properties.AIProfileMetadata.SystemMessage. Ignored when the profile\u0027s system message is locked."
+            },
+            "InitialPrompt": {
+              "type": "string",
+              "description": "Shortcut for Properties.AIProfileMetadata.InitialPrompt."
+            },
+            "Temperature": {
+              "type": "number",
+              "description": "Shortcut for Properties.AIProfileMetadata.Temperature."
+            },
+            "TopP": {
+              "type": "number",
+              "description": "Shortcut for Properties.AIProfileMetadata.TopP."
+            },
+            "FrequencyPenalty": {
+              "type": "number",
+              "description": "Shortcut for Properties.AIProfileMetadata.FrequencyPenalty."
+            },
+            "PresencePenalty": {
+              "type": "number",
+              "description": "Shortcut for Properties.AIProfileMetadata.PresencePenalty."
+            },
+            "MaxTokens": {
+              "type": "integer",
+              "description": "Shortcut for Properties.AIProfileMetadata.MaxTokens."
+            },
+            "PastMessagesCount": {
+              "type": "integer",
+              "description": "Shortcut for Properties.AIProfileMetadata.PastMessagesCount."
+            },
+            "UseCaching": {
+              "type": "boolean",
+              "description": "Shortcut for Properties.AIProfileMetadata.UseCaching."
+            },
+            "LockSystemMessage": {
+              "type": "boolean",
+              "description": "Shortcut for Settings.AIProfileSettings.LockSystemMessage."
+            },
+            "IsListable": {
+              "type": "boolean",
+              "description": "Shortcut for Settings.AIProfileSettings.IsListable."
+            },
+            "IsRemovable": {
+              "type": "boolean",
+              "description": "Shortcut for Settings.AIProfileSettings.IsRemovable."
+            },
+            "ChatMode": {
+              "type": "string",
+              "enum": [
+                "TextInput",
+                "AudioInput",
+                "Conversation"
+              ],
+              "description": "Shortcut for Settings.ChatModeProfileSettings.ChatMode."
+            },
+            "VoiceName": {
+              "type": "string",
+              "description": "Shortcut for Settings.ChatModeProfileSettings.VoiceName."
+            },
+            "EnableTextToSpeechPlayback": {
+              "type": "boolean",
+              "description": "Shortcut for Settings.ChatModeProfileSettings.EnableTextToSpeechPlayback."
             },
             "CreatedUtc": {
               "type": "string",
@@ -962,6 +1066,13 @@
                     "Filter": {
                       "type": "string",
                       "description": "Optional OData filter applied to retrieved data."
+                    },
+                    "ObjectTypes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Optional object types (for example content types) the retrieved documents are limited to. Empty searches every type."
                     }
                   },
                   "additionalProperties": true
@@ -1022,6 +1133,20 @@
                         "Hierarchical"
                       ],
                       "description": "Document retrieval strategy."
+                    },
+                    "MaxIndexableCharacters": {
+                      "type": [
+                        "null",
+                        "integer"
+                      ],
+                      "description": "Optional limit on the characters of a document that are indexed. Null uses the site default."
+                    },
+                    "DescribeFiguresInUploads": {
+                      "type": [
+                        "null",
+                        "boolean"
+                      ],
+                      "description": "Whether figures in uploaded documents are described by an AI model while indexing. Null uses the site default."
                     }
                   },
                   "additionalProperties": true
@@ -1031,8 +1156,25 @@
                   "description": "Known AI memory configuration for the profile.",
                   "properties": {
                     "EnableUserMemory": {
-                      "type": "boolean",
-                      "description": "Whether user memory is enabled for the profile."
+                      "type": [
+                        "null",
+                        "boolean"
+                      ],
+                      "description": "Whether user memory is enabled for the profile. Null uses the site default."
+                    },
+                    "EnableSessionMemory": {
+                      "type": [
+                        "null",
+                        "boolean"
+                      ],
+                      "description": "Whether the profile keeps a memory of the current session. Null uses the site default."
+                    },
+                    "EnablePastConversations": {
+                      "type": [
+                        "null",
+                        "boolean"
+                      ],
+                      "description": "Whether the profile may recall the user\u0027s past conversations. Null uses the site default."
                     }
                   },
                   "additionalProperties": true
@@ -1083,6 +1225,27 @@
                   },
                   "additionalProperties": true
                 },
+                "AIDeploymentParametersMetadata": {
+                  "type": "object",
+                  "description": "Values of the model parameters the profile\u0027s deployments expose (for example reasoningEffort), keyed by the parameter\u0027s technical name.",
+                  "properties": {
+                    "Values": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "description": "Parameter values sent with requests to the chat deployment."
+                    },
+                    "UtilityValues": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "description": "Parameter values sent with requests to the utility deployment."
+                    }
+                  },
+                  "additionalProperties": true
+                },
                 "AIProfileMcpMetadata": {
                   "type": "object",
                   "description": "Known MCP connection selections for this profile.",
@@ -1093,6 +1256,22 @@
                         "type": "string"
                       },
                       "description": "Selected connection identifiers."
+                    },
+                    "ToolNames": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": [
+                          "null",
+                          "array"
+                        ],
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "description": "Per connection identifier, the names of the tools the profile may use from it. A connection with no entry, or a null entry, exposes every tool; an empty array exposes none."
                     }
                   },
                   "additionalProperties": true
@@ -1125,6 +1304,10 @@
                     "LockSystemMessage": {
                       "type": "boolean",
                       "description": "Prevents recipe or editor updates from changing the system message."
+                    },
+                    "IsListable": {
+                      "type": "boolean",
+                      "description": "Whether the profile is listed in the admin UI. Defaults to true."
                     },
                     "IsRemovable": {
                       "type": "boolean",
@@ -1191,6 +1374,25 @@
                           "IsUpdatable": {
                             "type": "boolean",
                             "description": "Whether later session turns can update the extracted value."
+                          },
+                          "FieldType": {
+                            "type": "string",
+                            "enum": [
+                              "Text",
+                              "Number",
+                              "Boolean",
+                              "Date",
+                              "Enum",
+                              "List"
+                            ],
+                            "description": "The type of the extracted value. Enum and List values are limited to AllowedValues."
+                          },
+                          "AllowedValues": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "The values an Enum or List field may take."
                           }
                         },
                         "additionalProperties": true
@@ -1214,6 +1416,13 @@
                         "type": "string"
                       },
                       "description": "Tools available to post-session processing."
+                    },
+                    "ToolInstanceNames": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Tool instances available to post-session processing."
                     },
                     "PostSessionTasks": {
                       "type": "array",
@@ -1257,6 +1466,20 @@
                               "additionalProperties": true
                             },
                             "description": "Predefined options used when Type is PredefinedOptions."
+                          },
+                          "ToolNames": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Tools the task may call."
+                          },
+                          "ToolInstanceNames": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Tool instances the task may call."
                           }
                         },
                         "additionalProperties": true
@@ -1279,6 +1502,13 @@
                       ],
                       "description": "Preferred input mode for this profile."
                     },
+                    "ConversationDeploymentName": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "Optional technical name of the speech-to-speech (realtime) deployment used in conversation mode. Leave empty to use the site default."
+                    },
                     "VoiceName": {
                       "type": "string",
                       "description": "Optional speech synthesis voice for conversation mode."
@@ -1286,6 +1516,360 @@
                     "EnableTextToSpeechPlayback": {
                       "type": "boolean",
                       "description": "Whether assistant responses should be played back with text-to-speech."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "AIProfileGuardrailSettings": {
+                  "type": "object",
+                  "description": "Topic guardrails: what the assistant must not discuss, checked on the customer\u0027s messages, the replies, or both.",
+                  "properties": {
+                    "CheckCustomer": {
+                      "type": "boolean",
+                      "description": "Whether the customer\u0027s messages are checked against the topics."
+                    },
+                    "CheckReplies": {
+                      "type": "boolean",
+                      "description": "Whether the assistant\u0027s replies are checked against the topics before they are sent."
+                    },
+                    "Topics": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Identifiers of the guardrail topics: System Prompt templates in the \u0027Guardrail topic\u0027 category."
+                    },
+                    "OtherTopics": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "Other topics refused, described in a sentence or two, for this profile alone."
+                    },
+                    "PlaceholderReply": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "What the assistant says instead when a guardrail triggers. Empty uses a default."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "AIProfileDataPrivacySettings": {
+                  "type": "object",
+                  "description": "What the profile\u0027s conversations keep once they end.",
+                  "properties": {
+                    "StorageMode": {
+                      "type": "string",
+                      "enum": [
+                        "Everything",
+                        "RedactPersonalData",
+                        "MetadataOnly"
+                      ],
+                      "description": "Everything keeps the transcript; RedactPersonalData removes personal data from it; MetadataOnly keeps only the conversation\u0027s metadata."
+                    },
+                    "StorageModeSinceUtc": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "When the storage mode last changed (ISO 8601, UTC). Conversations active after it get the mode. Set by the admin when the mode changes."
+                    },
+                    "RetentionDays": {
+                      "type": [
+                        "null",
+                        "integer"
+                      ],
+                      "minimum": 1,
+                      "description": "Days without activity after which a conversation is deleted. Null keeps conversations."
+                    },
+                    "NamesToKeep": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Names that are not personal data and are kept when personal data is redacted, such as the assistant\u0027s, the business\u0027s and its staff\u0027s names."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "AIProfileSpeakingStyleSettings": {
+                  "type": "object",
+                  "description": "The speaking styles the assistant follows.",
+                  "properties": {
+                    "Styles": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Identifiers of System Prompt templates in the \u0027Speaking style\u0027 category, for example speaking-style-echo-verification, speaking-style-nato-spelling, speaking-style-speech-normalization, speaking-style-fuzzy-name-matching, speaking-style-ai-disclosure, speaking-style-scope-limits, speaking-style-filler-words or speaking-style-high-empathy."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "AIProfileSpeechSettings": {
+                  "type": "object",
+                  "description": "How the assistant speaks and listens in voice conversations.",
+                  "properties": {
+                    "SpeakingRate": {
+                      "type": [
+                        "null",
+                        "number"
+                      ],
+                      "description": "How fast the profile speaks, as a multiple of the voice\u0027s normal pace (1 is normal), clamped to 0.25-4. Null uses the deployment\u0027s own pace."
+                    },
+                    "SpeakingEmotion": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "Emotion the voice speaks with, as one word such as calm or excited, for providers with an emotion control (Cartesia). Others ignore it."
+                    },
+                    "PronunciationEntries": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "Text": {
+                            "type": "string",
+                            "description": "The word or phrase to pronounce differently."
+                          },
+                          "Alias": {
+                            "type": "string",
+                            "description": "How it is spoken."
+                          },
+                          "MatchCase": {
+                            "type": "boolean",
+                            "description": "Whether Text matches only with the same letter case."
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "description": "Pronunciation replacements applied before text is spoken."
+                    },
+                    "FallbackTextToSpeechDeploymentName": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "Technical name of the text-to-speech deployment used when the primary one fails."
+                    },
+                    "BoostedKeywords": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Words the speech recognizer is biased toward, such as product names."
+                    },
+                    "RecognitionLanguages": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Languages the recognizer should expect, as BCP-47 tags. The first is the primary language."
+                    },
+                    "InterruptionSensitivity": {
+                      "type": [
+                        "null",
+                        "number"
+                      ],
+                      "minimum": 0,
+                      "maximum": 1,
+                      "description": "How readily the caller\u0027s speech interrupts the assistant, from 0 (never interrupted) to 1 (any caller speech interrupts it). Null uses the default."
+                    },
+                    "EnableBackchanneling": {
+                      "type": "boolean",
+                      "description": "Whether the assistant says short acknowledgements while the caller speaks."
+                    },
+                    "BackchannelPhrases": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "The acknowledgements used for backchanneling. Empty uses a small built-in set."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "AIProfileLanguageSettings": {
+                  "type": "object",
+                  "description": "The languages the assistant may speak.",
+                  "properties": {
+                    "AllowedLanguages": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Languages the profile may converse in, as BCP-47 tags. Empty means no restriction."
+                    },
+                    "StartingLanguage": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "BCP-47 tag of the language a conversation starts in. A conversation language set by the host (for example from a conversation variable) overrides it."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "AIProfileFlowSettings": {
+                  "type": "object",
+                  "description": "The conversation flow: a workflow whose AI conversation stages guide the conversation.",
+                  "properties": {
+                    "WorkflowTypeId": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "Identifier of the workflow type that starts with an AI Conversation Flow Started event and holds the stages. Empty turns the flow off."
+                    },
+                    "Flexible": {
+                      "type": "boolean",
+                      "description": "Whether every stage\u0027s instructions are given at once, so a caller who jumps between tasks is followed, rather than only the current stage\u0027s."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "AIProfileContactMemorySettings": {
+                  "type": "object",
+                  "description": "The memory the assistant keeps about each CRM contact.",
+                  "properties": {
+                    "UseMemory": {
+                      "type": "boolean",
+                      "description": "Whether what is remembered about the contact is given to the assistant."
+                    },
+                    "SaveMemory": {
+                      "type": "boolean",
+                      "description": "Whether the memory is updated after each conversation."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "AIProfileContactFieldMappingSettings": {
+                  "type": "object",
+                  "description": "Copies extracted values onto the CRM contact when the conversation closes.",
+                  "properties": {
+                    "Mappings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "FieldName": {
+                            "type": "string",
+                            "description": "Name of the data extraction entry the value comes from."
+                          },
+                          "ContactField": {
+                            "type": "string",
+                            "description": "The contact field the value is written to."
+                          },
+                          "Mode": {
+                            "type": "string",
+                            "enum": [
+                              "Overwrite",
+                              "FillIfEmpty",
+                              "Append"
+                            ],
+                            "description": "Whether the value replaces the field, fills it only when empty, or is appended to it."
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "description": "The mappings, one per extracted value."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "PromptSecurityProfileSettings": {
+                  "type": "object",
+                  "description": "Per-profile overrides of the site\u0027s chat rate limits. A null member uses the site setting.",
+                  "properties": {
+                    "MaxMessagesPerWindow": {
+                      "type": [
+                        "null",
+                        "integer"
+                      ],
+                      "description": "Most messages a signed-in user may send per RateLimitWindow."
+                    },
+                    "RateLimitWindow": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "The message rate limit window, as a time span such as 00:01:00."
+                    },
+                    "AnonymousMessageRateLimitTiers": {
+                      "type": [
+                        "null",
+                        "array"
+                      ],
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "Limit": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "description": "How many are allowed in the window."
+                          },
+                          "Window": {
+                            "type": "string",
+                            "description": "The window, as a time span such as 00:01:00."
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "description": "Message limits for anonymous visitors; every tier applies."
+                    },
+                    "AnonymousSessionStartRateLimitTiers": {
+                      "type": [
+                        "null",
+                        "array"
+                      ],
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "Limit": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "description": "How many are allowed in the window."
+                          },
+                          "Window": {
+                            "type": "string",
+                            "description": "The window, as a time span such as 00:01:00."
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "description": "Session start limits for anonymous visitors; every tier applies."
+                    },
+                    "MaxAnonymousSessionsPerWindow": {
+                      "type": [
+                        "null",
+                        "integer"
+                      ],
+                      "description": "Most sessions an anonymous visitor may start per AnonymousSessionRateLimitWindow."
+                    },
+                    "AnonymousSessionRateLimitWindow": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "The anonymous session window, as a time span such as 01:00:00."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "WebMcpProfileSettings": {
+                  "type": "object",
+                  "description": "Whether the profile may use the tools the visitor\u0027s page offers through WebMCP.",
+                  "properties": {
+                    "AllowPageTools": {
+                      "type": "boolean",
+                      "description": "Whether the assistant may call the page\u0027s tools."
+                    },
+                    "AllowConsequentialPageTools": {
+                      "type": "boolean",
+                      "description": "Whether the assistant may also call page tools that change something (consequential tools)."
                     }
                   },
                   "additionalProperties": true
@@ -1324,7 +1908,7 @@
           "properties": {
             "ItemId": {
               "type": "string",
-              "description": "Optional unique identifier."
+              "description": "Optional unique identifier. When it matches a stored template, that template is updated; otherwise the template is matched by Name and Source."
             },
             "Source": {
               "type": "string",
@@ -1336,7 +1920,7 @@
             },
             "DisplayText": {
               "type": "string",
-              "description": "Human-readable display name."
+              "description": "Human-readable display name. Defaults to Name."
             },
             "Description": {
               "type": "string",
@@ -1350,89 +1934,21 @@
               "type": "boolean",
               "description": "Whether the template appears in the selection dropdown."
             },
-            "ProfileType": {
+            "CreatedUtc": {
               "type": "string",
-              "enum": [
-                "Chat",
-                "Utility",
-                "TemplatePrompt",
-                "Agent"
-              ],
-              "description": "The profile type."
+              "description": "Optional creation timestamp in ISO 8601 format."
             },
-            "OrchestratorName": {
+            "OwnerId": {
               "type": "string",
-              "description": "Orchestrator name."
+              "description": "Optional owner identifier."
             },
-            "SystemMessage": {
+            "Author": {
               "type": "string",
-              "description": "System prompt for the AI."
-            },
-            "WelcomeMessage": {
-              "type": "string",
-              "description": "Initial greeting."
-            },
-            "TitleType": {
-              "type": "string",
-              "enum": [
-                "InitialPrompt",
-                "Generated"
-              ],
-              "description": "Session title type."
-            },
-            "PromptTemplate": {
-              "type": "string",
-              "description": "Liquid prompt template."
-            },
-            "PromptSubject": {
-              "type": "string",
-              "description": "Subject for prompt."
-            },
-            "Temperature": {
-              "type": "number",
-              "description": "Controls randomness (0.0 to 2.0)."
-            },
-            "TopP": {
-              "type": "number",
-              "description": "Nucleus sampling threshold."
-            },
-            "FrequencyPenalty": {
-              "type": "number",
-              "description": "Reduces frequent token repetition."
-            },
-            "PresencePenalty": {
-              "type": "number",
-              "description": "Encourages topic diversity."
-            },
-            "MaxOutputTokens": {
-              "type": "integer",
-              "description": "Maximum tokens in response."
-            },
-            "PastMessagesCount": {
-              "type": "integer",
-              "description": "Number of history messages to include."
-            },
-            "ToolNames": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "AI tool names."
-            },
-            "AgentNames": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "Agent profile names to include."
-            },
-            "ProfileDescription": {
-              "type": "string",
-              "description": "Description of the profile\u0027s capabilities (used for Agent type)."
+              "description": "Optional author name."
             },
             "Properties": {
               "type": "object",
-              "description": "Extended template properties. This includes the shared AI profile metadata objects plus template-specific metadata and template-stored settings objects, while still allowing additional feature-specific objects.",
+              "description": "Extended template properties. A Profile template keeps its profile values (type, deployments, system message, model parameters, tools, agents) under ProfileTemplateMetadata and a SystemPrompt template its text under SystemPromptTemplateMetadata; the step reads nothing else from the template besides the members above. This includes the shared AI profile metadata objects plus template-specific metadata and template-stored settings objects, while still allowing additional feature-specific objects.",
               "properties": {
                 "AgentMetadata": {
                   "type": "object",
@@ -1643,6 +2159,13 @@
                     "Filter": {
                       "type": "string",
                       "description": "Optional OData filter applied to retrieved data."
+                    },
+                    "ObjectTypes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Optional object types (for example content types) the retrieved documents are limited to. Empty searches every type."
                     }
                   },
                   "additionalProperties": true
@@ -1703,6 +2226,20 @@
                         "Hierarchical"
                       ],
                       "description": "Document retrieval strategy."
+                    },
+                    "MaxIndexableCharacters": {
+                      "type": [
+                        "null",
+                        "integer"
+                      ],
+                      "description": "Optional limit on the characters of a document that are indexed. Null uses the site default."
+                    },
+                    "DescribeFiguresInUploads": {
+                      "type": [
+                        "null",
+                        "boolean"
+                      ],
+                      "description": "Whether figures in uploaded documents are described by an AI model while indexing. Null uses the site default."
                     }
                   },
                   "additionalProperties": true
@@ -1712,8 +2249,25 @@
                   "description": "Known AI memory configuration for the profile.",
                   "properties": {
                     "EnableUserMemory": {
-                      "type": "boolean",
-                      "description": "Whether user memory is enabled for the profile."
+                      "type": [
+                        "null",
+                        "boolean"
+                      ],
+                      "description": "Whether user memory is enabled for the profile. Null uses the site default."
+                    },
+                    "EnableSessionMemory": {
+                      "type": [
+                        "null",
+                        "boolean"
+                      ],
+                      "description": "Whether the profile keeps a memory of the current session. Null uses the site default."
+                    },
+                    "EnablePastConversations": {
+                      "type": [
+                        "null",
+                        "boolean"
+                      ],
+                      "description": "Whether the profile may recall the user\u0027s past conversations. Null uses the site default."
                     }
                   },
                   "additionalProperties": true
@@ -1764,6 +2318,27 @@
                   },
                   "additionalProperties": true
                 },
+                "AIDeploymentParametersMetadata": {
+                  "type": "object",
+                  "description": "Values of the model parameters the profile\u0027s deployments expose (for example reasoningEffort), keyed by the parameter\u0027s technical name.",
+                  "properties": {
+                    "Values": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "description": "Parameter values sent with requests to the chat deployment."
+                    },
+                    "UtilityValues": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "description": "Parameter values sent with requests to the utility deployment."
+                    }
+                  },
+                  "additionalProperties": true
+                },
                 "AIProfileMcpMetadata": {
                   "type": "object",
                   "description": "Known MCP connection selections for this profile.",
@@ -1774,6 +2349,22 @@
                         "type": "string"
                       },
                       "description": "Selected connection identifiers."
+                    },
+                    "ToolNames": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": [
+                          "null",
+                          "array"
+                        ],
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "description": "Per connection identifier, the names of the tools the profile may use from it. A connection with no entry, or a null entry, exposes every tool; an empty array exposes none."
                     }
                   },
                   "additionalProperties": true
@@ -1805,6 +2396,27 @@
                         "Agent"
                       ],
                       "description": "Profile type created from this template."
+                    },
+                    "ConnectionName": {
+                      "type": "string",
+                      "description": "Provider connection name applied to generated profiles."
+                    },
+                    "ChatMode": {
+                      "type": "string",
+                      "enum": [
+                        "TextInput",
+                        "AudioInput",
+                        "Conversation"
+                      ],
+                      "description": "Chat mode applied to generated profiles."
+                    },
+                    "VoiceName": {
+                      "type": "string",
+                      "description": "Speech synthesis voice applied to generated profiles."
+                    },
+                    "EnableTextToSpeechPlayback": {
+                      "type": "boolean",
+                      "description": "Whether generated profiles read their replies aloud."
                     },
                     "ChatDeploymentName": {
                       "type": "string",
@@ -1892,6 +2504,13 @@
                       },
                       "description": "On-demand agent profile names automatically selected for generated profiles."
                     },
+                    "A2AConnectionIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "A2A connection identifiers automatically selected for generated profiles."
+                    },
                     "Description": {
                       "type": "string",
                       "description": "Profile description copied into the generated profile."
@@ -1929,6 +2548,10 @@
                     "LockSystemMessage": {
                       "type": "boolean",
                       "description": "Prevents recipe or editor updates from changing the system message."
+                    },
+                    "IsListable": {
+                      "type": "boolean",
+                      "description": "Whether the profile is listed in the admin UI. Defaults to true."
                     },
                     "IsRemovable": {
                       "type": "boolean",
@@ -1995,6 +2618,25 @@
                           "IsUpdatable": {
                             "type": "boolean",
                             "description": "Whether later session turns can update the extracted value."
+                          },
+                          "FieldType": {
+                            "type": "string",
+                            "enum": [
+                              "Text",
+                              "Number",
+                              "Boolean",
+                              "Date",
+                              "Enum",
+                              "List"
+                            ],
+                            "description": "The type of the extracted value. Enum and List values are limited to AllowedValues."
+                          },
+                          "AllowedValues": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "The values an Enum or List field may take."
                           }
                         },
                         "additionalProperties": true
@@ -2018,6 +2660,13 @@
                         "type": "string"
                       },
                       "description": "Tools available to post-session processing."
+                    },
+                    "ToolInstanceNames": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Tool instances available to post-session processing."
                     },
                     "PostSessionTasks": {
                       "type": "array",
@@ -2061,6 +2710,20 @@
                               "additionalProperties": true
                             },
                             "description": "Predefined options used when Type is PredefinedOptions."
+                          },
+                          "ToolNames": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Tools the task may call."
+                          },
+                          "ToolInstanceNames": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Tool instances the task may call."
                           }
                         },
                         "additionalProperties": true
@@ -2083,6 +2746,13 @@
                       ],
                       "description": "Preferred input mode for this profile."
                     },
+                    "ConversationDeploymentName": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "Optional technical name of the speech-to-speech (realtime) deployment used in conversation mode. Leave empty to use the site default."
+                    },
                     "VoiceName": {
                       "type": "string",
                       "description": "Optional speech synthesis voice for conversation mode."
@@ -2093,6 +2763,360 @@
                     }
                   },
                   "additionalProperties": true
+                },
+                "AIProfileGuardrailSettings": {
+                  "type": "object",
+                  "description": "Topic guardrails: what the assistant must not discuss, checked on the customer\u0027s messages, the replies, or both.",
+                  "properties": {
+                    "CheckCustomer": {
+                      "type": "boolean",
+                      "description": "Whether the customer\u0027s messages are checked against the topics."
+                    },
+                    "CheckReplies": {
+                      "type": "boolean",
+                      "description": "Whether the assistant\u0027s replies are checked against the topics before they are sent."
+                    },
+                    "Topics": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Identifiers of the guardrail topics: System Prompt templates in the \u0027Guardrail topic\u0027 category."
+                    },
+                    "OtherTopics": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "Other topics refused, described in a sentence or two, for this profile alone."
+                    },
+                    "PlaceholderReply": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "What the assistant says instead when a guardrail triggers. Empty uses a default."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "AIProfileDataPrivacySettings": {
+                  "type": "object",
+                  "description": "What the profile\u0027s conversations keep once they end.",
+                  "properties": {
+                    "StorageMode": {
+                      "type": "string",
+                      "enum": [
+                        "Everything",
+                        "RedactPersonalData",
+                        "MetadataOnly"
+                      ],
+                      "description": "Everything keeps the transcript; RedactPersonalData removes personal data from it; MetadataOnly keeps only the conversation\u0027s metadata."
+                    },
+                    "StorageModeSinceUtc": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "When the storage mode last changed (ISO 8601, UTC). Conversations active after it get the mode. Set by the admin when the mode changes."
+                    },
+                    "RetentionDays": {
+                      "type": [
+                        "null",
+                        "integer"
+                      ],
+                      "minimum": 1,
+                      "description": "Days without activity after which a conversation is deleted. Null keeps conversations."
+                    },
+                    "NamesToKeep": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Names that are not personal data and are kept when personal data is redacted, such as the assistant\u0027s, the business\u0027s and its staff\u0027s names."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "AIProfileSpeakingStyleSettings": {
+                  "type": "object",
+                  "description": "The speaking styles the assistant follows.",
+                  "properties": {
+                    "Styles": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Identifiers of System Prompt templates in the \u0027Speaking style\u0027 category, for example speaking-style-echo-verification, speaking-style-nato-spelling, speaking-style-speech-normalization, speaking-style-fuzzy-name-matching, speaking-style-ai-disclosure, speaking-style-scope-limits, speaking-style-filler-words or speaking-style-high-empathy."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "AIProfileSpeechSettings": {
+                  "type": "object",
+                  "description": "How the assistant speaks and listens in voice conversations.",
+                  "properties": {
+                    "SpeakingRate": {
+                      "type": [
+                        "null",
+                        "number"
+                      ],
+                      "description": "How fast the profile speaks, as a multiple of the voice\u0027s normal pace (1 is normal), clamped to 0.25-4. Null uses the deployment\u0027s own pace."
+                    },
+                    "SpeakingEmotion": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "Emotion the voice speaks with, as one word such as calm or excited, for providers with an emotion control (Cartesia). Others ignore it."
+                    },
+                    "PronunciationEntries": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "Text": {
+                            "type": "string",
+                            "description": "The word or phrase to pronounce differently."
+                          },
+                          "Alias": {
+                            "type": "string",
+                            "description": "How it is spoken."
+                          },
+                          "MatchCase": {
+                            "type": "boolean",
+                            "description": "Whether Text matches only with the same letter case."
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "description": "Pronunciation replacements applied before text is spoken."
+                    },
+                    "FallbackTextToSpeechDeploymentName": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "Technical name of the text-to-speech deployment used when the primary one fails."
+                    },
+                    "BoostedKeywords": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Words the speech recognizer is biased toward, such as product names."
+                    },
+                    "RecognitionLanguages": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Languages the recognizer should expect, as BCP-47 tags. The first is the primary language."
+                    },
+                    "InterruptionSensitivity": {
+                      "type": [
+                        "null",
+                        "number"
+                      ],
+                      "minimum": 0,
+                      "maximum": 1,
+                      "description": "How readily the caller\u0027s speech interrupts the assistant, from 0 (never interrupted) to 1 (any caller speech interrupts it). Null uses the default."
+                    },
+                    "EnableBackchanneling": {
+                      "type": "boolean",
+                      "description": "Whether the assistant says short acknowledgements while the caller speaks."
+                    },
+                    "BackchannelPhrases": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "The acknowledgements used for backchanneling. Empty uses a small built-in set."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "AIProfileLanguageSettings": {
+                  "type": "object",
+                  "description": "The languages the assistant may speak.",
+                  "properties": {
+                    "AllowedLanguages": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Languages the profile may converse in, as BCP-47 tags. Empty means no restriction."
+                    },
+                    "StartingLanguage": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "BCP-47 tag of the language a conversation starts in. A conversation language set by the host (for example from a conversation variable) overrides it."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "AIProfileFlowSettings": {
+                  "type": "object",
+                  "description": "The conversation flow: a workflow whose AI conversation stages guide the conversation.",
+                  "properties": {
+                    "WorkflowTypeId": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "Identifier of the workflow type that starts with an AI Conversation Flow Started event and holds the stages. Empty turns the flow off."
+                    },
+                    "Flexible": {
+                      "type": "boolean",
+                      "description": "Whether every stage\u0027s instructions are given at once, so a caller who jumps between tasks is followed, rather than only the current stage\u0027s."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "AIProfileContactMemorySettings": {
+                  "type": "object",
+                  "description": "The memory the assistant keeps about each CRM contact.",
+                  "properties": {
+                    "UseMemory": {
+                      "type": "boolean",
+                      "description": "Whether what is remembered about the contact is given to the assistant."
+                    },
+                    "SaveMemory": {
+                      "type": "boolean",
+                      "description": "Whether the memory is updated after each conversation."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "AIProfileContactFieldMappingSettings": {
+                  "type": "object",
+                  "description": "Copies extracted values onto the CRM contact when the conversation closes.",
+                  "properties": {
+                    "Mappings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "FieldName": {
+                            "type": "string",
+                            "description": "Name of the data extraction entry the value comes from."
+                          },
+                          "ContactField": {
+                            "type": "string",
+                            "description": "The contact field the value is written to."
+                          },
+                          "Mode": {
+                            "type": "string",
+                            "enum": [
+                              "Overwrite",
+                              "FillIfEmpty",
+                              "Append"
+                            ],
+                            "description": "Whether the value replaces the field, fills it only when empty, or is appended to it."
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "description": "The mappings, one per extracted value."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "PromptSecurityProfileSettings": {
+                  "type": "object",
+                  "description": "Per-profile overrides of the site\u0027s chat rate limits. A null member uses the site setting.",
+                  "properties": {
+                    "MaxMessagesPerWindow": {
+                      "type": [
+                        "null",
+                        "integer"
+                      ],
+                      "description": "Most messages a signed-in user may send per RateLimitWindow."
+                    },
+                    "RateLimitWindow": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "The message rate limit window, as a time span such as 00:01:00."
+                    },
+                    "AnonymousMessageRateLimitTiers": {
+                      "type": [
+                        "null",
+                        "array"
+                      ],
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "Limit": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "description": "How many are allowed in the window."
+                          },
+                          "Window": {
+                            "type": "string",
+                            "description": "The window, as a time span such as 00:01:00."
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "description": "Message limits for anonymous visitors; every tier applies."
+                    },
+                    "AnonymousSessionStartRateLimitTiers": {
+                      "type": [
+                        "null",
+                        "array"
+                      ],
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "Limit": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "description": "How many are allowed in the window."
+                          },
+                          "Window": {
+                            "type": "string",
+                            "description": "The window, as a time span such as 00:01:00."
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "description": "Session start limits for anonymous visitors; every tier applies."
+                    },
+                    "MaxAnonymousSessionsPerWindow": {
+                      "type": [
+                        "null",
+                        "integer"
+                      ],
+                      "description": "Most sessions an anonymous visitor may start per AnonymousSessionRateLimitWindow."
+                    },
+                    "AnonymousSessionRateLimitWindow": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "The anonymous session window, as a time span such as 01:00:00."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "WebMcpProfileSettings": {
+                  "type": "object",
+                  "description": "Whether the profile may use the tools the visitor\u0027s page offers through WebMCP.",
+                  "properties": {
+                    "AllowPageTools": {
+                      "type": "boolean",
+                      "description": "Whether the assistant may call the page\u0027s tools."
+                    },
+                    "AllowConsequentialPageTools": {
+                      "type": "boolean",
+                      "description": "Whether the assistant may also call page tools that change something (consequential tools)."
+                    }
+                  },
+                  "additionalProperties": true
                 }
               },
               "additionalProperties": true
@@ -2100,8 +3124,7 @@
           },
           "required": [
             "Name",
-            "Source",
-            "DisplayText"
+            "Source"
           ],
           "additionalProperties": true
         },
@@ -2130,7 +3153,7 @@
           "properties": {
             "ItemId": {
               "type": "string",
-              "description": "Optional unique identifier."
+              "description": "Optional unique identifier. When it matches a stored connection, that connection is updated; otherwise the connection is matched by Name."
             },
             "Source": {
               "type": "string",
@@ -2150,7 +3173,7 @@
             },
             "Endpoint": {
               "type": "string",
-              "description": "Common connection endpoint alias for recipe imports."
+              "description": "Alias of the provider metadata\u0027s Endpoint, read by the OpenAI, Azure OpenAI and Azure AI Inference providers."
             },
             "AuthenticationType": {
               "type": "string",
@@ -2159,15 +3182,15 @@
                 "ManagedIdentity",
                 "ApiKey"
               ],
-              "description": "Common Azure connection authentication type alias for recipe imports."
+              "description": "Alias of the Azure metadata\u0027s AuthenticationType."
             },
             "ApiKey": {
               "type": "string",
-              "description": "Common connection API key alias for recipe imports."
+              "description": "Alias of the provider metadata\u0027s ApiKey. Provider API key in clear text. It is encrypted when stored; a deployment plan exports it blank, so fill it in before importing."
             },
             "IdentityId": {
               "type": "string",
-              "description": "Common Azure connection managed identity client ID alias for recipe imports."
+              "description": "Alias of the Azure metadata\u0027s IdentityId."
             },
             "Properties": {
               "type": "object",
@@ -2177,22 +3200,22 @@
                   "properties": {
                     "Endpoint": {
                       "type": "string",
-                      "description": "Provider API endpoint."
+                      "description": "Provider API endpoint (an absolute address)."
                     },
                     "ApiKey": {
                       "type": "string",
-                      "description": "Provider API key."
+                      "description": "Provider API key in clear text. It is encrypted when stored; a deployment plan exports it blank, so fill it in before importing."
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Metadata for OpenAI-compatible connections."
+                  "description": "Metadata for OpenAI-compatible connections (Source OpenAI)."
                 },
                 "AzureConnectionMetadata": {
                   "type": "object",
                   "properties": {
                     "Endpoint": {
                       "type": "string",
-                      "description": "Provider API endpoint."
+                      "description": "Provider API endpoint (an absolute address)."
                     },
                     "AuthenticationType": {
                       "type": "string",
@@ -2205,7 +3228,7 @@
                     },
                     "ApiKey": {
                       "type": "string",
-                      "description": "Provider API key. Required when AuthenticationType is ApiKey."
+                      "description": "Provider API key in clear text. It is encrypted when stored; a deployment plan exports it blank, so fill it in before importing. Required when AuthenticationType is ApiKey."
                     },
                     "IdentityId": {
                       "type": "string",
@@ -2213,14 +3236,14 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Metadata for Azure AI Inference connections."
+                  "description": "Metadata for Azure OpenAI connections."
                 },
                 "AzureOpenAIConnectionMetadata": {
                   "type": "object",
                   "properties": {
                     "Endpoint": {
                       "type": "string",
-                      "description": "Provider API endpoint."
+                      "description": "Provider API endpoint (an absolute address)."
                     },
                     "AuthenticationType": {
                       "type": "string",
@@ -2233,7 +3256,7 @@
                     },
                     "ApiKey": {
                       "type": "string",
-                      "description": "Provider API key. Required when AuthenticationType is ApiKey."
+                      "description": "Provider API key in clear text. It is encrypted when stored; a deployment plan exports it blank, so fill it in before importing. Required when AuthenticationType is ApiKey."
                     },
                     "IdentityId": {
                       "type": "string",
@@ -2241,14 +3264,14 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Metadata for Azure AI Inference connections."
+                  "description": "Legacy metadata alias for Azure OpenAI connections, read when AzureConnectionMetadata is missing."
                 },
                 "AzureAIInferenceConnectionMetadata": {
                   "type": "object",
                   "properties": {
                     "Endpoint": {
                       "type": "string",
-                      "description": "Provider API endpoint."
+                      "description": "Provider API endpoint (an absolute address)."
                     },
                     "AuthenticationType": {
                       "type": "string",
@@ -2261,7 +3284,7 @@
                     },
                     "ApiKey": {
                       "type": "string",
-                      "description": "Provider API key. Required when AuthenticationType is ApiKey."
+                      "description": "Provider API key in clear text. It is encrypted when stored; a deployment plan exports it blank, so fill it in before importing. Required when AuthenticationType is ApiKey."
                     },
                     "IdentityId": {
                       "type": "string",
@@ -2273,7 +3296,7 @@
                 }
               },
               "additionalProperties": true,
-              "description": "Provider-specific connection metadata grouped by metadata object name."
+              "description": "Provider-specific connection metadata grouped by metadata object name. Merged into the stored properties."
             }
           },
           "required": [
@@ -2342,6 +3365,10 @@
                       "type": "string",
                       "description": "Absolute HTTP or HTTPS URL the request targets."
                     },
+                    "PathTemplate": {
+                      "type": "string",
+                      "description": "Optional path appended to BaseUrl. It may hold {parameterName} tokens replaced by parameters bound to the path, each escaped as one path segment."
+                    },
                     "HttpMethod": {
                       "type": "string",
                       "description": "HTTP method: GET, POST, PUT, PATCH, or DELETE."
@@ -2356,11 +3383,11 @@
                     },
                     "ApiKey": {
                       "type": "string",
-                      "description": "API key credential. Stored encrypted at rest."
+                      "description": "API key credential. Encrypted when entered in the admin; a value imported in clear text is used as given. Exported plans leave it blank."
                     },
                     "BearerToken": {
                       "type": "string",
-                      "description": "Bearer token credential. Stored encrypted at rest."
+                      "description": "Bearer token credential. Encrypted when entered in the admin; a value imported in clear text is used as given. Exported plans leave it blank."
                     },
                     "Username": {
                       "type": "string",
@@ -2368,7 +3395,7 @@
                     },
                     "Password": {
                       "type": "string",
-                      "description": "Basic authentication password. Stored encrypted at rest."
+                      "description": "Basic authentication password. Encrypted when entered in the admin; a value imported in clear text is used as given. Exported plans leave it blank."
                     },
                     "TokenEndpoint": {
                       "type": "string",
@@ -2380,7 +3407,7 @@
                     },
                     "ClientSecret": {
                       "type": "string",
-                      "description": "OAuth 2.0 client secret. Stored encrypted at rest."
+                      "description": "OAuth 2.0 client secret. Encrypted when entered in the admin; a value imported in clear text is used as given. Exported plans leave it blank."
                     },
                     "Scope": {
                       "type": "string",
@@ -2464,7 +3491,7 @@
                     },
                     "ApiKey": {
                       "type": "string",
-                      "description": "Algolia search-only API key. Stored encrypted at rest."
+                      "description": "Algolia search-only API key. Encrypted when entered in the admin; a value imported in clear text is used as given. Exported plans leave it blank."
                     },
                     "IndexName": {
                       "type": "string",
@@ -2547,6 +3574,13 @@
                     "Filter": {
                       "type": "string",
                       "description": "OData filter expression translated to the index provider\u0027s own syntax before the search runs."
+                    },
+                    "ContentTypes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "The kinds of knowledge searched (knowledge object types). Empty searches every kind."
                     }
                   },
                   "additionalProperties": true,
@@ -2629,7 +3663,7 @@
                 }
               },
               "additionalProperties": true,
-              "description": "Source-specific tool instance settings, grouped by settings object name. Secrets are stored encrypted at rest."
+              "description": "Source-specific tool instance settings, grouped by settings object name. Secrets entered in the admin are stored encrypted; exported plans leave them blank."
             }
           },
           "required": [
@@ -2717,6 +3751,10 @@
             "OrchestratorName": {
               "type": "string",
               "description": "Overrides the orchestrator name."
+            },
+            "ConnectionName": {
+              "type": "string",
+              "description": "Overrides the provider connection name."
             },
             "ChatDeploymentName": {
               "type": "string",
@@ -2939,6 +3977,13 @@
                     "Filter": {
                       "type": "string",
                       "description": "Optional OData filter applied to retrieved data."
+                    },
+                    "ObjectTypes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Optional object types (for example content types) the retrieved documents are limited to. Empty searches every type."
                     }
                   },
                   "additionalProperties": true
@@ -2999,6 +4044,20 @@
                         "Hierarchical"
                       ],
                       "description": "Document retrieval strategy."
+                    },
+                    "MaxIndexableCharacters": {
+                      "type": [
+                        "null",
+                        "integer"
+                      ],
+                      "description": "Optional limit on the characters of a document that are indexed. Null uses the site default."
+                    },
+                    "DescribeFiguresInUploads": {
+                      "type": [
+                        "null",
+                        "boolean"
+                      ],
+                      "description": "Whether figures in uploaded documents are described by an AI model while indexing. Null uses the site default."
                     }
                   },
                   "additionalProperties": true
@@ -3008,8 +4067,25 @@
                   "description": "Known AI memory configuration for the profile.",
                   "properties": {
                     "EnableUserMemory": {
-                      "type": "boolean",
-                      "description": "Whether user memory is enabled for the profile."
+                      "type": [
+                        "null",
+                        "boolean"
+                      ],
+                      "description": "Whether user memory is enabled for the profile. Null uses the site default."
+                    },
+                    "EnableSessionMemory": {
+                      "type": [
+                        "null",
+                        "boolean"
+                      ],
+                      "description": "Whether the profile keeps a memory of the current session. Null uses the site default."
+                    },
+                    "EnablePastConversations": {
+                      "type": [
+                        "null",
+                        "boolean"
+                      ],
+                      "description": "Whether the profile may recall the user\u0027s past conversations. Null uses the site default."
                     }
                   },
                   "additionalProperties": true
@@ -3060,6 +4136,27 @@
                   },
                   "additionalProperties": true
                 },
+                "AIDeploymentParametersMetadata": {
+                  "type": "object",
+                  "description": "Values of the model parameters the profile\u0027s deployments expose (for example reasoningEffort), keyed by the parameter\u0027s technical name.",
+                  "properties": {
+                    "Values": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "description": "Parameter values sent with requests to the chat deployment."
+                    },
+                    "UtilityValues": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "description": "Parameter values sent with requests to the utility deployment."
+                    }
+                  },
+                  "additionalProperties": true
+                },
                 "AIProfileMcpMetadata": {
                   "type": "object",
                   "description": "Known MCP connection selections for this profile.",
@@ -3070,6 +4167,22 @@
                         "type": "string"
                       },
                       "description": "Selected connection identifiers."
+                    },
+                    "ToolNames": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": [
+                          "null",
+                          "array"
+                        ],
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "description": "Per connection identifier, the names of the tools the profile may use from it. A connection with no entry, or a null entry, exposes every tool; an empty array exposes none."
                     }
                   },
                   "additionalProperties": true
@@ -3102,6 +4215,10 @@
                     "LockSystemMessage": {
                       "type": "boolean",
                       "description": "Prevents recipe or editor updates from changing the system message."
+                    },
+                    "IsListable": {
+                      "type": "boolean",
+                      "description": "Whether the profile is listed in the admin UI. Defaults to true."
                     },
                     "IsRemovable": {
                       "type": "boolean",
@@ -3168,6 +4285,25 @@
                           "IsUpdatable": {
                             "type": "boolean",
                             "description": "Whether later session turns can update the extracted value."
+                          },
+                          "FieldType": {
+                            "type": "string",
+                            "enum": [
+                              "Text",
+                              "Number",
+                              "Boolean",
+                              "Date",
+                              "Enum",
+                              "List"
+                            ],
+                            "description": "The type of the extracted value. Enum and List values are limited to AllowedValues."
+                          },
+                          "AllowedValues": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "The values an Enum or List field may take."
                           }
                         },
                         "additionalProperties": true
@@ -3191,6 +4327,13 @@
                         "type": "string"
                       },
                       "description": "Tools available to post-session processing."
+                    },
+                    "ToolInstanceNames": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Tool instances available to post-session processing."
                     },
                     "PostSessionTasks": {
                       "type": "array",
@@ -3234,6 +4377,20 @@
                               "additionalProperties": true
                             },
                             "description": "Predefined options used when Type is PredefinedOptions."
+                          },
+                          "ToolNames": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Tools the task may call."
+                          },
+                          "ToolInstanceNames": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Tool instances the task may call."
                           }
                         },
                         "additionalProperties": true
@@ -3256,6 +4413,13 @@
                       ],
                       "description": "Preferred input mode for this profile."
                     },
+                    "ConversationDeploymentName": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "Optional technical name of the speech-to-speech (realtime) deployment used in conversation mode. Leave empty to use the site default."
+                    },
                     "VoiceName": {
                       "type": "string",
                       "description": "Optional speech synthesis voice for conversation mode."
@@ -3263,6 +4427,360 @@
                     "EnableTextToSpeechPlayback": {
                       "type": "boolean",
                       "description": "Whether assistant responses should be played back with text-to-speech."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "AIProfileGuardrailSettings": {
+                  "type": "object",
+                  "description": "Topic guardrails: what the assistant must not discuss, checked on the customer\u0027s messages, the replies, or both.",
+                  "properties": {
+                    "CheckCustomer": {
+                      "type": "boolean",
+                      "description": "Whether the customer\u0027s messages are checked against the topics."
+                    },
+                    "CheckReplies": {
+                      "type": "boolean",
+                      "description": "Whether the assistant\u0027s replies are checked against the topics before they are sent."
+                    },
+                    "Topics": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Identifiers of the guardrail topics: System Prompt templates in the \u0027Guardrail topic\u0027 category."
+                    },
+                    "OtherTopics": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "Other topics refused, described in a sentence or two, for this profile alone."
+                    },
+                    "PlaceholderReply": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "What the assistant says instead when a guardrail triggers. Empty uses a default."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "AIProfileDataPrivacySettings": {
+                  "type": "object",
+                  "description": "What the profile\u0027s conversations keep once they end.",
+                  "properties": {
+                    "StorageMode": {
+                      "type": "string",
+                      "enum": [
+                        "Everything",
+                        "RedactPersonalData",
+                        "MetadataOnly"
+                      ],
+                      "description": "Everything keeps the transcript; RedactPersonalData removes personal data from it; MetadataOnly keeps only the conversation\u0027s metadata."
+                    },
+                    "StorageModeSinceUtc": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "When the storage mode last changed (ISO 8601, UTC). Conversations active after it get the mode. Set by the admin when the mode changes."
+                    },
+                    "RetentionDays": {
+                      "type": [
+                        "null",
+                        "integer"
+                      ],
+                      "minimum": 1,
+                      "description": "Days without activity after which a conversation is deleted. Null keeps conversations."
+                    },
+                    "NamesToKeep": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Names that are not personal data and are kept when personal data is redacted, such as the assistant\u0027s, the business\u0027s and its staff\u0027s names."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "AIProfileSpeakingStyleSettings": {
+                  "type": "object",
+                  "description": "The speaking styles the assistant follows.",
+                  "properties": {
+                    "Styles": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Identifiers of System Prompt templates in the \u0027Speaking style\u0027 category, for example speaking-style-echo-verification, speaking-style-nato-spelling, speaking-style-speech-normalization, speaking-style-fuzzy-name-matching, speaking-style-ai-disclosure, speaking-style-scope-limits, speaking-style-filler-words or speaking-style-high-empathy."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "AIProfileSpeechSettings": {
+                  "type": "object",
+                  "description": "How the assistant speaks and listens in voice conversations.",
+                  "properties": {
+                    "SpeakingRate": {
+                      "type": [
+                        "null",
+                        "number"
+                      ],
+                      "description": "How fast the profile speaks, as a multiple of the voice\u0027s normal pace (1 is normal), clamped to 0.25-4. Null uses the deployment\u0027s own pace."
+                    },
+                    "SpeakingEmotion": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "Emotion the voice speaks with, as one word such as calm or excited, for providers with an emotion control (Cartesia). Others ignore it."
+                    },
+                    "PronunciationEntries": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "Text": {
+                            "type": "string",
+                            "description": "The word or phrase to pronounce differently."
+                          },
+                          "Alias": {
+                            "type": "string",
+                            "description": "How it is spoken."
+                          },
+                          "MatchCase": {
+                            "type": "boolean",
+                            "description": "Whether Text matches only with the same letter case."
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "description": "Pronunciation replacements applied before text is spoken."
+                    },
+                    "FallbackTextToSpeechDeploymentName": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "Technical name of the text-to-speech deployment used when the primary one fails."
+                    },
+                    "BoostedKeywords": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Words the speech recognizer is biased toward, such as product names."
+                    },
+                    "RecognitionLanguages": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Languages the recognizer should expect, as BCP-47 tags. The first is the primary language."
+                    },
+                    "InterruptionSensitivity": {
+                      "type": [
+                        "null",
+                        "number"
+                      ],
+                      "minimum": 0,
+                      "maximum": 1,
+                      "description": "How readily the caller\u0027s speech interrupts the assistant, from 0 (never interrupted) to 1 (any caller speech interrupts it). Null uses the default."
+                    },
+                    "EnableBackchanneling": {
+                      "type": "boolean",
+                      "description": "Whether the assistant says short acknowledgements while the caller speaks."
+                    },
+                    "BackchannelPhrases": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "The acknowledgements used for backchanneling. Empty uses a small built-in set."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "AIProfileLanguageSettings": {
+                  "type": "object",
+                  "description": "The languages the assistant may speak.",
+                  "properties": {
+                    "AllowedLanguages": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Languages the profile may converse in, as BCP-47 tags. Empty means no restriction."
+                    },
+                    "StartingLanguage": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "BCP-47 tag of the language a conversation starts in. A conversation language set by the host (for example from a conversation variable) overrides it."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "AIProfileFlowSettings": {
+                  "type": "object",
+                  "description": "The conversation flow: a workflow whose AI conversation stages guide the conversation.",
+                  "properties": {
+                    "WorkflowTypeId": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "Identifier of the workflow type that starts with an AI Conversation Flow Started event and holds the stages. Empty turns the flow off."
+                    },
+                    "Flexible": {
+                      "type": "boolean",
+                      "description": "Whether every stage\u0027s instructions are given at once, so a caller who jumps between tasks is followed, rather than only the current stage\u0027s."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "AIProfileContactMemorySettings": {
+                  "type": "object",
+                  "description": "The memory the assistant keeps about each CRM contact.",
+                  "properties": {
+                    "UseMemory": {
+                      "type": "boolean",
+                      "description": "Whether what is remembered about the contact is given to the assistant."
+                    },
+                    "SaveMemory": {
+                      "type": "boolean",
+                      "description": "Whether the memory is updated after each conversation."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "AIProfileContactFieldMappingSettings": {
+                  "type": "object",
+                  "description": "Copies extracted values onto the CRM contact when the conversation closes.",
+                  "properties": {
+                    "Mappings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "FieldName": {
+                            "type": "string",
+                            "description": "Name of the data extraction entry the value comes from."
+                          },
+                          "ContactField": {
+                            "type": "string",
+                            "description": "The contact field the value is written to."
+                          },
+                          "Mode": {
+                            "type": "string",
+                            "enum": [
+                              "Overwrite",
+                              "FillIfEmpty",
+                              "Append"
+                            ],
+                            "description": "Whether the value replaces the field, fills it only when empty, or is appended to it."
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "description": "The mappings, one per extracted value."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "PromptSecurityProfileSettings": {
+                  "type": "object",
+                  "description": "Per-profile overrides of the site\u0027s chat rate limits. A null member uses the site setting.",
+                  "properties": {
+                    "MaxMessagesPerWindow": {
+                      "type": [
+                        "null",
+                        "integer"
+                      ],
+                      "description": "Most messages a signed-in user may send per RateLimitWindow."
+                    },
+                    "RateLimitWindow": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "The message rate limit window, as a time span such as 00:01:00."
+                    },
+                    "AnonymousMessageRateLimitTiers": {
+                      "type": [
+                        "null",
+                        "array"
+                      ],
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "Limit": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "description": "How many are allowed in the window."
+                          },
+                          "Window": {
+                            "type": "string",
+                            "description": "The window, as a time span such as 00:01:00."
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "description": "Message limits for anonymous visitors; every tier applies."
+                    },
+                    "AnonymousSessionStartRateLimitTiers": {
+                      "type": [
+                        "null",
+                        "array"
+                      ],
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "Limit": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "description": "How many are allowed in the window."
+                          },
+                          "Window": {
+                            "type": "string",
+                            "description": "The window, as a time span such as 00:01:00."
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "description": "Session start limits for anonymous visitors; every tier applies."
+                    },
+                    "MaxAnonymousSessionsPerWindow": {
+                      "type": [
+                        "null",
+                        "integer"
+                      ],
+                      "description": "Most sessions an anonymous visitor may start per AnonymousSessionRateLimitWindow."
+                    },
+                    "AnonymousSessionRateLimitWindow": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "The anonymous session window, as a time span such as 01:00:00."
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "WebMcpProfileSettings": {
+                  "type": "object",
+                  "description": "Whether the profile may use the tools the visitor\u0027s page offers through WebMCP.",
+                  "properties": {
+                    "AllowPageTools": {
+                      "type": "boolean",
+                      "description": "Whether the assistant may call the page\u0027s tools."
+                    },
+                    "AllowConsequentialPageTools": {
+                      "type": "boolean",
+                      "description": "Whether the assistant may also call page tools that change something (consequential tools)."
                     }
                   },
                   "additionalProperties": true
@@ -3572,6 +5090,32 @@
               "additionalProperties": true,
               "description": "The MCP prompt definition to create or update."
             },
+            "Messages": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "Role": {
+                    "type": "string",
+                    "enum": [
+                      "user",
+                      "assistant"
+                    ],
+                    "description": "Who says the message: user or assistant."
+                  },
+                  "Content": {
+                    "type": "string",
+                    "description": "The message text. It may use the prompt\u0027s arguments. Messages without content are skipped."
+                  }
+                },
+                "required": [
+                  "Role",
+                  "Content"
+                ],
+                "additionalProperties": true
+              },
+              "description": "The messages that make up the prompt\u0027s body, returned to the client when it asks for the prompt. When present, they replace the stored messages."
+            },
             "Properties": {
               "type": "object",
               "description": "Additional prompt metadata. No built-in MCP prompt metadata objects are currently exported here, but extra keys are allowed for future extensions.",
@@ -3872,13 +5416,53 @@
         "type": "boolean",
         "description": "Whether user input delimiters are enabled."
       },
+      "EnableChatInteractionInputDelimiters": {
+        "type": "boolean",
+        "default": true,
+        "description": "Whether user messages in Chat Interactions are wrapped with boundary delimiters. Chat Interactions get no security preamble or injection blocking."
+      },
       "EnableAuditLogging": {
         "type": "boolean",
         "description": "Whether security audit logging is enabled."
       },
       "BlockingThreshold": {
         "type": "string",
-        "description": "The minimum prompt risk level that triggers blocking."
+        "enum": [
+          "None",
+          "Low",
+          "Medium",
+          "High",
+          "Critical"
+        ],
+        "default": "High",
+        "description": "The minimum prompt risk level that triggers blocking, after weighted scoring."
+      },
+      "LowRiskScoreThreshold": {
+        "type": "integer",
+        "default": 10,
+        "description": "The aggregate score from which a prompt is suspicious (low risk)."
+      },
+      "MediumRiskScoreThreshold": {
+        "type": "integer",
+        "default": 20,
+        "description": "The aggregate score from which a prompt is medium risk."
+      },
+      "HighRiskScoreThreshold": {
+        "type": "integer",
+        "default": 35,
+        "description": "The aggregate score from which a prompt is high risk."
+      },
+      "CriticalRiskScoreThreshold": {
+        "type": "integer",
+        "default": 50,
+        "description": "The aggregate score from which a prompt is critical risk."
+      },
+      "CustomBlockedPatterns": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Extra regular expressions detected in user prompts. A match scores as critical and is blocked by the default thresholds."
       },
       "MaxMessagesPerWindow": {
         "type": "integer",

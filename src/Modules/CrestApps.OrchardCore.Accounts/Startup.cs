@@ -136,6 +136,35 @@ public sealed class RecipesSchemaStartup : StartupBase
     {
         services.AddScoped<IRecipeStep, AccountsRecipeStepSchema>();
         services.AddDeploymentStepSchema<AccountsDeploymentStepSchema>();
+        services.AddScoped<IContentSchemaDefinition, AccountPartSchemaDefinition>();
+    }
+}
+
+/// <summary>
+/// Describes the account members part to CrestApps Recipes.
+/// </summary>
+[Feature(AccountsConstants.MembersFeature)]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
+public sealed class MembersRecipesSchemaStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentSchemaDefinition, AccountMembersPartSchemaDefinition>();
+    }
+}
+
+/// <summary>
+/// Describes the account locations part to CrestApps Recipes.
+/// </summary>
+[Feature(AccountsConstants.LocationsFeature)]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
+public sealed class LocationsRecipesSchemaStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentSchemaDefinition, AccountLocationsPartSchemaDefinition>();
     }
 }
 

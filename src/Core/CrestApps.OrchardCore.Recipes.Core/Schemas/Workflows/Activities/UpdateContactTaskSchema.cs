@@ -23,13 +23,13 @@ public sealed class UpdateContactTaskSchema : WorkflowActivitySchemaDefinitionBa
     protected override IEnumerable<string> Outcomes => ["Done", "Failed"];
 
     /// <inheritdoc />
-    protected override IEnumerable<string> RequiredProperties => ["ContactContentItemId", "ContentProperties"];
+    protected override IEnumerable<string> RequiredProperties => ["ContentProperties"];
 
     /// <inheritdoc />
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
-        yield return ("ContactContentItemId", WorkflowActivitySchemaBuilders.LiquidExpression("The content item identifier of the contact or lead to change."));
-        yield return ("ContentProperties", WorkflowActivitySchemaBuilders.LiquidExpression("The JSON merged into the record, such as { \"Customer\": { \"NoAnswerTextSent\": { \"Value\": true } } }."));
+        yield return ("ContactContentItemId", WorkflowActivitySchemaBuilders.String("The Liquid expression that resolves the content item identifier of the contact or lead to change. Defaults to '{{ Workflow.Input.ContentItem.ContentItemId }}'."));
+        yield return ("ContentProperties", WorkflowActivitySchemaBuilders.String("The Liquid template of the JSON merged into the record, such as { \"Customer\": { \"NoAnswerTextSent\": { \"Value\": true } } }."));
         yield return ("Publish", WorkflowActivitySchemaBuilders.Boolean("Whether a record whose latest version is a draft is published once changed. Defaults to true."));
     }
 }

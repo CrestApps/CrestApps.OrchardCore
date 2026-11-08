@@ -36,6 +36,7 @@ public sealed class CreateAIProfileFromTemplateRecipeStep : IRecipeStep
                 ("PromptTemplate", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Overrides the Liquid template for TemplatePrompt profiles.")),
                 ("PromptSubject", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Overrides the prompt subject.")),
                 ("OrchestratorName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Overrides the orchestrator name.")),
+                ("ConnectionName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Overrides the provider connection name.")),
                 ("ChatDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Overrides the chat deployment technical name.")),
                 ("UtilityDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Overrides the utility deployment technical name.")),
                 ("Properties", AIProfileRecipeSchemaBuilder.BuildPropertiesSchema("Overrides extended profile properties. Known metadata objects are listed here, and additional feature-specific objects are also allowed.")),

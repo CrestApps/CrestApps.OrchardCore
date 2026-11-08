@@ -3,7 +3,6 @@ using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Core.Recipes;
 using CrestApps.OrchardCore.Geo.Core.Services;
 using CrestApps.OrchardCore.Geo.Models;
-using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using Json.Schema;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,34 +37,6 @@ internal sealed class GeoRecipeStep : NamedRecipeStepHandler
     {
         await CatalogRecipeSections.ImportAsync(context, "Territories", _services.GetRequiredService<ServiceTerritoryManager>(), "service territory");
     }
-}
-
-/// <summary>
-/// Describes the Geo recipe step.
-/// </summary>
-internal sealed class GeoRecipeStepSchema : IRecipeStep
-{
-    private JsonSchema _cached;
-
-    public string Name => GeoRecipeStep.RecipeName;
-
-    public ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
-    {
-        _cached ??= new JsonSchemaBuilder()
-            .Type(SchemaValueType.Object)
-            .Description("Every service territory, with its shape or postal codes, parent and time zone. Records are matched by ItemId.")
-            .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const(GeoRecipeStep.RecipeName).Description("Recipe step discriminator. Must be 'Geo'.")),
-                ("Territories", Array("Service territories, with their ItemId, so children keep their parent.")))
-            .Required("name")
-            .AdditionalProperties(true)
-            .Build();
-
-        return ValueTask.FromResult(_cached);
-    }
-
-    private static JsonSchemaBuilder Array(string description)
-        => new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true)).Description(description);
 }
 
 /// <summary>

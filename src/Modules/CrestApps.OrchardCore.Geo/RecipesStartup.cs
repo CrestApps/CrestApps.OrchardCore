@@ -49,5 +49,6 @@ public sealed class RecipesSchemaStartup : StartupBase
     {
         services.AddScoped<IRecipeStep, GeoRecipeStepSchema>();
         services.AddDeploymentStepSchema<GeoDeploymentStepSchema>();
+        services.AddScoped<ISiteSettingsSchemaDefinition, GeoSettingsSchema>();
     }
 }

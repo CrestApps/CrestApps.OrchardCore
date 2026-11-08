@@ -12,6 +12,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Core\CrestApps.OrchardCore.Recipes.Core\CrestApps.OrchardCore.Recipes.Core.csproj" />
+    <!--
+      Every CrestApps module owns the schemas of its own recipe steps, workflow activities, site settings, parts and
+      fields. Referencing the bundle brings all module assemblies next to the exporter, so it describes them too.
+    -->
+    <ProjectReference Include="..\..\src\Targets\CrestApps.OrchardCore.Cms.Core.Targets\CrestApps.OrchardCore.Cms.Core.Targets.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,4 +1,4 @@
-using Json.Schema;
+﻿using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows.Activities;
 
@@ -25,9 +25,9 @@ public sealed class EvaluateConversationTaskSchema : WorkflowActivitySchemaDefin
     /// <inheritdoc />
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
-        yield return ("SessionId", WorkflowActivitySchemaBuilders.LiquidExpression("The AI session to evaluate. Defaults to {{ Workflow.Input.SessionId }}."));
-        yield return ("Criteria", WorkflowActivitySchemaBuilders.LiquidExpression("The conditions a successful conversation meets, one per line."));
+        yield return ("SessionId", WorkflowActivitySchemaBuilders.String("The AI session to evaluate. Defaults to {{ Workflow.Input.SessionId }}. " + WorkflowActivitySchemaBuilders.LiquidSupportText));
+        yield return ("Criteria", WorkflowActivitySchemaBuilders.String("The conditions a successful conversation meets, one per line. " + WorkflowActivitySchemaBuilders.LiquidSupportText));
         yield return ("PassingScore", WorkflowActivitySchemaBuilders.Integer("The lowest score out of 100 that passes. Defaults to 70."));
-        yield return ("Label", WorkflowActivitySchemaBuilders.LiquidExpression("Optionally, a label that groups evaluations in reports, such as a cohort or a variant."));
+        yield return ("Label", WorkflowActivitySchemaBuilders.String("Optionally, a label that groups evaluations in reports, such as a cohort or a variant. " + WorkflowActivitySchemaBuilders.LiquidSupportText));
     }
 }

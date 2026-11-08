@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Recipes.Core;
+﻿using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using Json.Schema;
 
@@ -55,6 +55,13 @@ public sealed class McpPromptRecipeStep : IRecipeStep
                 ("OwnerId", RecipeStepSchemaBuilders.String().Description("Optional owner user identifier.")),
                 ("Author", RecipeStepSchemaBuilders.String().Description("Optional author name recorded with the prompt.")),
                 ("Prompt", promptDefinitionSchema.Description("The MCP prompt definition to create or update.")),
+                ("Messages", RecipeStepSchemaBuilders.Array(new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Object)
+                    .Properties(
+                        ("Role", RecipeStepSchemaBuilders.String().Enum("user", "assistant").Description("Who says the message: user or assistant.")),
+                        ("Content", RecipeStepSchemaBuilders.String().Description("The message text. It may use the prompt's arguments. Messages without content are skipped.")))
+                    .Required("Role", "Content")
+                    .AdditionalProperties(true)).Description("The messages that make up the prompt's body, returned to the client when it asks for the prompt. When present, they replace the stored messages.")),
                 ("Properties", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Object)
                     .Description("Additional prompt metadata. No built-in MCP prompt metadata objects are currently exported here, but extra keys are allowed for future extensions.")

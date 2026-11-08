@@ -1,4 +1,4 @@
-using Json.Schema;
+﻿using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows.Activities;
 
@@ -28,6 +28,6 @@ public sealed class SetConversationVariablesTaskSchema : WorkflowActivitySchemaD
     /// <inheritdoc />
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
-        yield return ("Variables", WorkflowActivitySchemaBuilders.LiquidExpression("The variables, one name: value per line. Liquid is supported; a name with no value clears the variable."));
+        yield return ("Variables", WorkflowActivitySchemaBuilders.String("The variables, one name: value per line. Liquid is supported; a name with no value clears the variable. " + WorkflowActivitySchemaBuilders.LiquidSupportText));
     }
 }

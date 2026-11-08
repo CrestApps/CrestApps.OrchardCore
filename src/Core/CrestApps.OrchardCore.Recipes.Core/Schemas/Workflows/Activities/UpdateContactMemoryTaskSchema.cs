@@ -1,4 +1,4 @@
-using Json.Schema;
+﻿using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows.Activities;
 
@@ -25,7 +25,7 @@ public sealed class UpdateContactMemoryTaskSchema : WorkflowActivitySchemaDefini
     /// <inheritdoc />
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
-        yield return ("SessionId", WorkflowActivitySchemaBuilders.LiquidExpression("The AI session to remember. Defaults to {{ Workflow.Input.SessionId }}."));
-        yield return ("ContactId", WorkflowActivitySchemaBuilders.LiquidExpression("Optionally, the contact's content item ID. Defaults to the contact the conversation was with."));
+        yield return ("SessionId", WorkflowActivitySchemaBuilders.String("The AI session to remember. Defaults to {{ Workflow.Input.SessionId }}. " + WorkflowActivitySchemaBuilders.LiquidSupportText));
+        yield return ("ContactId", WorkflowActivitySchemaBuilders.String("Optionally, the contact's content item ID. Defaults to the contact the conversation was with. " + WorkflowActivitySchemaBuilders.LiquidSupportText));
     }
 }

@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Commerce.Webhooks.Migrations;
+using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Webhooks.BackgroundTasks;
 using CrestApps.OrchardCore.Webhooks.Core;
 using CrestApps.OrchardCore.Webhooks.Core.Indexes;
@@ -69,4 +70,18 @@ public sealed class DeploymentStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
         => services.AddDeployment<WebhookSubscriptionsDeploymentSource, WebhookSubscriptionsDeploymentStep>();
+}
+
+/// <summary>
+/// Describes the webhook subscriptions recipe and deployment steps to CrestApps Recipes.
+/// </summary>
+[Feature(WebhooksConstants.Feature.Webhooks)]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
+public sealed class RecipeSchemasStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, WebhookSubscriptionsRecipeStepSchema>();
+        services.AddDeploymentStepSchema<WebhookSubscriptionsDeploymentStepSchema>();
+    }
 }

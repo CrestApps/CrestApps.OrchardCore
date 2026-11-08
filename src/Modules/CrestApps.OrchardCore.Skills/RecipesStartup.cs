@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Skills.Deployments;
 using CrestApps.OrchardCore.Skills.Recipes;
+using CrestApps.OrchardCore.Skills.Recipes.Workflows;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Deployment;
 using OrchardCore.Modules;
@@ -45,5 +46,22 @@ public sealed class RecipesSchemaStartup : StartupBase
     {
         services.AddScoped<IRecipeStep, SkillsRecipeStepSchema>();
         services.AddDeploymentStepSchema<SkillsDeploymentStepSchema>();
+    }
+}
+
+/// <summary>
+/// Describes the skills workflow events and task to CrestApps Recipes.
+/// </summary>
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area, OrchardCoreFeatureIds.Workflows)]
+public sealed class WorkflowsRecipesSchemaStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddWorkflowActivitySchema<CertificationExpiringEventSchema>()
+            .AddWorkflowActivitySchema<CertificationExpiredEventSchema>()
+            .AddWorkflowActivitySchema<SkillsChangedEventSchema>()
+            .AddWorkflowActivitySchema<AssignSkillTaskSchema>();
     }
 }

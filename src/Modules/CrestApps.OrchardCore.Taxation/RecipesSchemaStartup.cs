@@ -28,5 +28,18 @@ public sealed class RecipesSchemaStartup : StartupBase
         services.AddDeploymentStepSchema<ExemptionCertificateDeploymentStepSchema>();
 
         services.AddScoped<IContentSchemaDefinition, TaxationPartSchemaDefinition>();
+        services.AddScoped<ISiteSettingsSchemaDefinition, TaxOriginSettingsSchema>();
     }
+}
+
+/// <summary>
+/// Registers the schema of the TaxJar settings.
+/// </summary>
+[Feature(TaxationConstants.Feature.TaxJar)]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
+public sealed class TaxJarRecipesSchemaStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddScoped<ISiteSettingsSchemaDefinition, TaxJarSettingsSchema>();
 }

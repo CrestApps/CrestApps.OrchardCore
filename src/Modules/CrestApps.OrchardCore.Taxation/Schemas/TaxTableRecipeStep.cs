@@ -48,7 +48,7 @@ public sealed class TaxTableRecipeStep : IRecipeStep
             .Properties(
                 ("ItemId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The stable identifier of the tax table. Preserved across environments.")),
                 ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The name of the tax table, referenced by table-based tax rules.")),
-                ("Version", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("The version of the tax table.")),
+                ("Version", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Ignored on import: each site stamps its own version, incremented on every change.")),
                 ("EffectiveFromUtc", dateSchema.Description("The UTC date the tax table becomes effective.")),
                 ("EffectiveToUtc", dateSchema.Description("The UTC date the tax table stops being effective.")),
                 ("Rows", new JsonSchemaBuilder()

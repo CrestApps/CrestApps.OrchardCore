@@ -1,7 +1,6 @@
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Core.Recipes;
-using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
@@ -45,38 +44,6 @@ internal sealed class WorkOrdersRecipeStep : NamedRecipeStepHandler
             await CatalogRecipeSections.ImportAsync(context, "Agreements", agreements, "service agreement");
         }
     }
-}
-
-/// <summary>
-/// Describes the WorkOrders recipe step.
-/// </summary>
-internal sealed class WorkOrdersRecipeStepSchema : IRecipeStep
-{
-    private JsonSchema _cached;
-
-    public string Name => WorkOrdersRecipeStep.RecipeName;
-
-    public ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
-    {
-        _cached ??= new JsonSchemaBuilder()
-            .Type(SchemaValueType.Object)
-            .Description("Work order types, checklists, service levels and sub-statuses, and service agreements when asked. Records are matched by ItemId.")
-            .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const(WorkOrdersRecipeStep.RecipeName).Description("Recipe step discriminator. Must be 'WorkOrders'.")),
-                ("Checklists", Array("Checklist templates with their sections and questions.")),
-                ("ServiceLevels", Array("Service level policies with their targets.")),
-                ("SubStatuses", Array("Sub-statuses.")),
-                ("Types", Array("Work order types, which name their checklists and service level by ItemId.")),
-                ("Agreements", Array("Service agreements; their customers, places and assets must be on the site too.")))
-            .Required("name")
-            .AdditionalProperties(true)
-            .Build();
-
-        return ValueTask.FromResult(_cached);
-    }
-
-    private static JsonSchemaBuilder Array(string description)
-        => new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true)).Description(description);
 }
 
 /// <summary>
