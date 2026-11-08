@@ -172,6 +172,20 @@ public sealed class AdherenceWorkflowsStartup : StartupBase
 }
 
 /// <summary>
+/// Describes the Agent Out Of Adherence workflow event to CrestApps Recipes.
+/// </summary>
+[Feature(WorkforceContactCenterConstants.Features.Adherence)]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area, OrchardCoreFeatureIds.Workflows)]
+public sealed class AdherenceWorkflowsRecipeSchemaStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddWorkflowActivitySchema<WorkforceOutOfAdherenceEventSchema>();
+    }
+}
+
+/// <summary>
 /// Registers the adherence data sets of the Workforce report data source.
 /// </summary>
 [Feature(WorkforceContactCenterConstants.Features.Adherence)]

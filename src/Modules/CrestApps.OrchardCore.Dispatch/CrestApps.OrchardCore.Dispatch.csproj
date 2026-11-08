@@ -49,6 +49,7 @@
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Assets.Core\CrestApps.OrchardCore.Assets.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Dispatch.Core\CrestApps.OrchardCore.Dispatch.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Inventory.Core\CrestApps.OrchardCore.Inventory.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Recipes.Core\CrestApps.OrchardCore.Recipes.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.SignalR.Core\CrestApps.OrchardCore.SignalR.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Workforce.Core\CrestApps.OrchardCore.Workforce.Core.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Workforce\CrestApps.OrchardCore.Workforce.csproj" />
