@@ -102,7 +102,7 @@ public sealed class AIProfileRecipeStepTests
         Assert.Contains("\"ChatModeProfileSettings\"", json);
         Assert.Contains("\"InitialResponseHandlerName\"", json);
         Assert.Contains("\"AgentAvailability\"", json);
-        Assert.Equal(["Name", "Source", "DisplayText"], requiredValues);
+        Assert.Equal(["Name", "Source"], requiredValues);
     }
 
     [Fact]

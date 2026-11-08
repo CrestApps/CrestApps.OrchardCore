@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Recipes.Core;
+﻿using CrestApps.OrchardCore.Recipes.Core;
 using Json.Schema;
 
 namespace CrestApps.OrchardCore.AI.Recipes.Schemas;
@@ -39,8 +39,24 @@ public sealed class AIProfileRecipeStep : IRecipeStep
                 ("PromptSubject", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Prompt subject.")),
                 ("OrchestratorName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Orchestrator name.")),
                 ("PersonaId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional technical name of the AI persona this profile links to. An empty value unlinks the persona, and leaving the key out keeps the current link.")),
+                ("ConnectionName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional name of the provider connection the profile uses.")),
                 ("ChatDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Chat deployment technical name for the AI model.")),
                 ("UtilityDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Utility deployment technical name for the AI model.")),
+                ("SystemMessage", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Shortcut for Properties.AIProfileMetadata.SystemMessage. Ignored when the profile's system message is locked.")),
+                ("InitialPrompt", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Shortcut for Properties.AIProfileMetadata.InitialPrompt.")),
+                ("Temperature", new JsonSchemaBuilder().Type(SchemaValueType.Number).Description("Shortcut for Properties.AIProfileMetadata.Temperature.")),
+                ("TopP", new JsonSchemaBuilder().Type(SchemaValueType.Number).Description("Shortcut for Properties.AIProfileMetadata.TopP.")),
+                ("FrequencyPenalty", new JsonSchemaBuilder().Type(SchemaValueType.Number).Description("Shortcut for Properties.AIProfileMetadata.FrequencyPenalty.")),
+                ("PresencePenalty", new JsonSchemaBuilder().Type(SchemaValueType.Number).Description("Shortcut for Properties.AIProfileMetadata.PresencePenalty.")),
+                ("MaxTokens", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Shortcut for Properties.AIProfileMetadata.MaxTokens.")),
+                ("PastMessagesCount", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Shortcut for Properties.AIProfileMetadata.PastMessagesCount.")),
+                ("UseCaching", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Shortcut for Properties.AIProfileMetadata.UseCaching.")),
+                ("LockSystemMessage", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Shortcut for Settings.AIProfileSettings.LockSystemMessage.")),
+                ("IsListable", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Shortcut for Settings.AIProfileSettings.IsListable.")),
+                ("IsRemovable", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Shortcut for Settings.AIProfileSettings.IsRemovable.")),
+                ("ChatMode", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("TextInput", "AudioInput", "Conversation").Description("Shortcut for Settings.ChatModeProfileSettings.ChatMode.")),
+                ("VoiceName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Shortcut for Settings.ChatModeProfileSettings.VoiceName.")),
+                ("EnableTextToSpeechPlayback", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Shortcut for Settings.ChatModeProfileSettings.EnableTextToSpeechPlayback.")),
                 ("CreatedUtc", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional creation timestamp in ISO 8601 format.")),
                 ("OwnerId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional owner identifier.")),
                 ("Author", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional author name.")),

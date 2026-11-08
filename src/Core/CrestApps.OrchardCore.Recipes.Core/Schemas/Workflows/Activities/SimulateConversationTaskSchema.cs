@@ -1,4 +1,4 @@
-using Json.Schema;
+﻿using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows.Activities;
 
@@ -29,12 +29,12 @@ public sealed class SimulateConversationTaskSchema : WorkflowActivitySchemaDefin
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("ProfileId", WorkflowActivitySchemaBuilders.String("The identifier of the AI profile under test."));
-        yield return ("Scenario", WorkflowActivitySchemaBuilders.LiquidExpression("Who the simulated customer is, what they want and how they behave."));
-        yield return ("Criteria", WorkflowActivitySchemaBuilders.LiquidExpression("The conditions the conversation must meet, one per line."));
-        yield return ("Variables", WorkflowActivitySchemaBuilders.LiquidExpression("The conversation variables the test starts with, one name: value per line."));
+        yield return ("Scenario", WorkflowActivitySchemaBuilders.String("Who the simulated customer is, what they want and how they behave. " + WorkflowActivitySchemaBuilders.LiquidSupportText));
+        yield return ("Criteria", WorkflowActivitySchemaBuilders.String("The conditions the conversation must meet, one per line. " + WorkflowActivitySchemaBuilders.LiquidSupportText));
+        yield return ("Variables", WorkflowActivitySchemaBuilders.String("The conversation variables the test starts with, one name: value per line. " + WorkflowActivitySchemaBuilders.LiquidSupportText));
         yield return ("MaxTurns", WorkflowActivitySchemaBuilders.Integer("The most customer turns, from 1 to 50. Defaults to 8."));
         yield return ("PassingScore", WorkflowActivitySchemaBuilders.Integer("The lowest score out of 100 that passes. Defaults to 70."));
-        yield return ("Label", WorkflowActivitySchemaBuilders.LiquidExpression("Optionally, a label that groups the results, such as the test suite."));
+        yield return ("Label", WorkflowActivitySchemaBuilders.String("Optionally, a label that groups the results, such as the test suite. " + WorkflowActivitySchemaBuilders.LiquidSupportText));
         yield return ("CustomerDeploymentName", WorkflowActivitySchemaBuilders.String("Optionally, the deployment that plays the customer. Defaults to the utility deployment."));
         yield return ("JudgeDeploymentName", WorkflowActivitySchemaBuilders.String("Optionally, the deployment that judges the conversation. Defaults to the utility deployment."));
     }

@@ -1,4 +1,4 @@
-using Json.Schema;
+﻿using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows.Activities;
 
@@ -25,6 +25,6 @@ public sealed class DeclineConversationTaskSchema : WorkflowActivitySchemaDefini
     /// <inheritdoc />
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
-        yield return ("Reason", WorkflowActivitySchemaBuilders.LiquidExpression("Optional. Why the conversation is declined, kept on the record."));
+        yield return ("Reason", WorkflowActivitySchemaBuilders.String("Optional. Why the conversation is declined, kept on the record. " + WorkflowActivitySchemaBuilders.LiquidSupportText));
     }
 }

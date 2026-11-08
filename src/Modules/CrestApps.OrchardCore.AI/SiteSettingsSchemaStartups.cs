@@ -1,4 +1,5 @@
-using CrestApps.OrchardCore.AI.Core;
+﻿using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Recipes.Schemas;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows.Activities;
@@ -42,7 +43,7 @@ public sealed class AIWorkflowRecipeSchemaStartup : StartupBase
 }
 
 /// <summary>
-/// Registers the JSON schemas of the general AI and default deployment site settings, so the Recipes module can describe them.
+/// Registers the JSON schemas of the general AI, default deployment, phone cost and contact memory site settings, so the Recipes module can describe them.
 /// </summary>
 [Feature(AIConstants.Feature.Area)]
 [RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
@@ -52,6 +53,8 @@ public sealed class AISiteSettingsSchemaStartup : StartupBase
     {
         services.AddScoped<ISiteSettingsSchemaDefinition, GeneralAISettingsSchema>();
         services.AddScoped<ISiteSettingsSchemaDefinition, DefaultAIDeploymentSettingsSchema>();
+        services.AddScoped<ISiteSettingsSchemaDefinition, AICostSettingsSchema>();
+        services.AddScoped<ISiteSettingsSchemaDefinition, AIContactMemorySettingsSchema>();
     }
 }
 
