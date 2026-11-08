@@ -31,7 +31,7 @@ public sealed class MediaRecipeStep : IRecipeStep
                     .Items(new JsonSchemaBuilder()
                         .Type(SchemaValueType.Object)
                         .Properties(
-                            ("TargetPath", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Media library path where the file will be stored.")),
+                            ("TargetPath", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Media library path where the file will be stored, for example 'images/logo.png'. It must be a relative file path without '..' segments, and its extension must be allowed by the media options; otherwise the file is rejected.")),
                             ("Path", new JsonSchemaBuilder()
                                 .Type(SchemaValueType.String)
                                 .Description("Alias for TargetPath. Path where the content will be written.")),

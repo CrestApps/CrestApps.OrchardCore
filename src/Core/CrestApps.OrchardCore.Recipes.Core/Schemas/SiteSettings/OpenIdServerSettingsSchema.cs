@@ -34,6 +34,7 @@ public sealed class OpenIdServerSettingsSchema : SiteSettingsSchemaBase
                 ("TokenEndpointPath", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The relative path of the token endpoint.")),
                 ("UserinfoEndpointPath", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The relative path of the userinfo endpoint.")),
                 ("IntrospectionEndpointPath", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The relative path of the introspection endpoint.")),
+                ("PushedAuthorizationEndpointPath", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The relative path of the pushed authorization (PAR) endpoint.")),
                 ("RevocationEndpointPath", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The relative path of the revocation endpoint.")),
                 ("AllowPasswordFlow", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to allow the resource owner password credentials grant.")),
                 ("AllowClientCredentialsFlow", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to allow the client credentials grant.")),
@@ -44,6 +45,7 @@ public sealed class OpenIdServerSettingsSchema : SiteSettingsSchemaBase
                 ("DisableRollingRefreshTokens", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to disable rolling refresh tokens.")),
                 ("UseReferenceAccessTokens", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to use reference access tokens instead of self-contained tokens.")),
                 ("RequireProofKeyForCodeExchange", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to require PKCE for authorization code flow.")),
-                ("RequirePushedAuthorizationRequests", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to require pushed authorization requests (PAR).")))
+                ("RequirePushedAuthorizationRequests", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to require pushed authorization requests (PAR).")),
+                ("RequireEndSessionConfirmation", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Default(true).Description("Whether the logout endpoint asks the user to confirm the sign-out. When false, the user is signed out without a confirmation page.")))
             .AdditionalProperties(false);
 }

@@ -12,7 +12,7 @@ public sealed class OpenIdServerSettingsRecipeStep : RecipeStepSchemaBase
     protected override JsonSchema CreateSchema()
         => RecipeStepSchemaBuilders.BuildNamedStep(Name,
             [
-                ("AccessTokenFormat", RecipeStepSchemaBuilders.String().Enum("DataProtection", "JsonWebToken").Description("Format used when issuing access tokens.")),
+                ("AccessTokenFormat", RecipeStepSchemaBuilders.String().Enum("DataProtection", "JsonWebToken").Default("DataProtection").Description("Format used when issuing access tokens.")),
                 ("Authority", RecipeStepSchemaBuilders.String().Description("Public authority or issuer URL exposed by the OpenID server.")),
                 ("DisableAccessTokenEncryption", RecipeStepSchemaBuilders.Boolean().Description("Whether encrypted access tokens should be disabled.")),
                 ("EncryptionCertificateStoreLocation", RecipeStepSchemaBuilders.String()
@@ -45,6 +45,7 @@ public sealed class OpenIdServerSettingsRecipeStep : RecipeStepSchemaBase
                 ("DisableRollingRefreshTokens", RecipeStepSchemaBuilders.Boolean().Description("Whether refresh token rolling should be disabled.")),
                 ("RequireProofKeyForCodeExchange", RecipeStepSchemaBuilders.Boolean().Description("Whether PKCE is required for authorization code flows.")),
                 ("RequirePushedAuthorizationRequests", RecipeStepSchemaBuilders.Boolean().Description("Whether clients must use pushed authorization requests.")),
+                ("RequireEndSessionConfirmation", RecipeStepSchemaBuilders.Boolean().Default(true).Description("Whether the logout endpoint asks the user to confirm the sign-out. Defaults to true when omitted.")),
                 ("UseReferenceAccessTokens", RecipeStepSchemaBuilders.Boolean().Description("Whether reference access tokens should be issued instead of self-contained tokens.")),
             ]);
 }

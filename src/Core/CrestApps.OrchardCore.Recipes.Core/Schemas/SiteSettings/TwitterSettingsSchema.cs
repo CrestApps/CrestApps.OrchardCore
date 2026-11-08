@@ -21,9 +21,11 @@ public sealed class TwitterSettingsSchema : SiteSettingsSchemaBase
             .Description("Configuration for Twitter (X) API integration.")
             .Properties(
                 ("ConsumerKey", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The API key (consumer key) from the Twitter developer application.")),
-                ("ConsumerSecret", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The API secret key (consumer secret) from the Twitter developer application.")),
+                ("ConsumerSecret", ProtectedCredential("Twitter API secret key (consumer secret)", "ConsumerSecretSecretName")),
+                ("ConsumerSecretSecretName", SecretName("Twitter API secret key (consumer secret)")),
                 ("AccessToken", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The access token for authenticating API requests.")),
-                ("AccessTokenSecret", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The access token secret for authenticating API requests.")))
-            .Required("ConsumerKey", "ConsumerSecret", "AccessToken", "AccessTokenSecret")
+                ("AccessTokenSecret", ProtectedCredential("Twitter access token secret", "AccessTokenSecretSecretName")),
+                ("AccessTokenSecretSecretName", SecretName("Twitter access token secret")))
+            .Required("ConsumerKey", "AccessToken")
             .AdditionalProperties(false);
 }

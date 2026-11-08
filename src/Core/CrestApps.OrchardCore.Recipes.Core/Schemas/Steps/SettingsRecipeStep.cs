@@ -54,11 +54,13 @@ public sealed class SettingsRecipeStep : IRecipeStep
         return new Dictionary<string, JsonSchemaBuilder>(StringComparer.Ordinal)
         {
             ["name"] = RecipeStepSchemaBuilders.String().Const("settings").Description("Recipe step discriminator. Must be 'settings'."),
-            ["BaseUrl"] = RecipeStepSchemaBuilders.Nullable(RecipeStepSchemaBuilders.String()).Description("Optional absolute base URL for the site."),
+            ["BaseUrl"] = AbsoluteUriOrEmpty().Description("Optional absolute base URL of the site, for example 'https://www.example.com'. A relative URL is rejected; an empty value or null clears it."),
             ["Calendar"] = RecipeStepSchemaBuilders.Nullable(RecipeStepSchemaBuilders.String()).Description("Optional calendar system identifier used by the site."),
             ["MaxPagedCount"] = RecipeStepSchemaBuilders.Integer().Description("Maximum number of items Orchard may return from paged queries."),
             ["MaxPageSize"] = RecipeStepSchemaBuilders.Integer().Description("Maximum page size allowed by Orchard paging APIs."),
             ["PageSize"] = RecipeStepSchemaBuilders.Integer().Description("Default page size used by Orchard lists and queries."),
+            ["AllowPageSizeSelection"] = RecipeStepSchemaBuilders.Boolean().Description("Whether admin lists show a selector that lets users pick the page size from PageSizeOptions."),
+            ["PageSizeOptions"] = RecipeStepSchemaBuilders.Array(RecipeStepSchemaBuilders.Integer().Minimum(1)).Description("The page sizes offered when AllowPageSizeSelection is true. Defaults to [10, 25, 50, 100]."),
             ["ResourceDebugMode"] = RecipeStepSchemaBuilders.String().Enum(["FromConfiguration", "Enabled", "Disabled"]).Description("Controls whether resource debugging stays with configuration, is forced on, or is forced off."),
             ["SiteName"] = RecipeStepSchemaBuilders.String().Description("Public site name."),
             ["PageTitleFormat"] = RecipeStepSchemaBuilders.String().Description("Page title format string, typically including placeholders like '{{ Site.SiteName }}'."),
@@ -66,12 +68,21 @@ public sealed class SettingsRecipeStep : IRecipeStep
             ["SuperUser"] = RecipeStepSchemaBuilders.String().Description("User name of the Orchard super user account."),
             ["TimeZoneId"] = RecipeStepSchemaBuilders.String().Description("Default site time zone ID."),
             ["UseCdn"] = RecipeStepSchemaBuilders.Boolean().Description("Whether Orchard should serve static assets from a CDN base URL."),
-            ["CdnBaseUrl"] = RecipeStepSchemaBuilders.Nullable(RecipeStepSchemaBuilders.String()).Description("CDN base URL used when UseCdn is enabled."),
+            ["CdnBaseUrl"] = AbsoluteUriOrEmpty().Description("Absolute CDN base URL used when UseCdn is enabled, for example 'https://cdn.example.com'. A relative URL is rejected; an empty value or null clears it."),
             ["AppendVersion"] = RecipeStepSchemaBuilders.Boolean().Description("Whether Orchard should append file version hashes to resource URLs."),
             ["HomeRoute"] = RecipeStepSchemaBuilders.Nullable(BuildHomeRoute()).Description("Optional route object that overrides the site's home page target."),
             ["CacheMode"] = RecipeStepSchemaBuilders.String().Enum(["FromConfiguration", "Enabled", "DebugEnabled", "Disabled"]).Description("Controls Orchard cache behavior for the tenant."),
         };
     }
+
+    private static JsonSchemaBuilder AbsoluteUriOrEmpty()
+        => new JsonSchemaBuilder()
+            .AnyOf(
+                RecipeStepSchemaBuilders.String()
+                    .Format(Formats.Uri)
+                    .Pattern("^[A-Za-z][A-Za-z0-9+.-]*:"),
+                RecipeStepSchemaBuilders.String().MaxLength(0),
+                RecipeStepSchemaBuilders.Null());
 
     private static JsonSchemaBuilder BuildHomeRoute()
         => RecipeStepSchemaBuilders.Object(

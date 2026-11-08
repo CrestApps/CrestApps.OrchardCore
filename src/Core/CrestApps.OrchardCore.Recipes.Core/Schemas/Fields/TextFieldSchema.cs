@@ -26,7 +26,15 @@ public sealed class TextFieldSchema : FieldSchemaDefinitionBase
                         ("Pattern", new JsonSchemaBuilder()
                             .Type(SchemaValueType.String)
                             .Description("This string must be valid Liquid syntax when provided.")),
-                        ("Placeholder", new JsonSchemaBuilder().Type(SchemaValueType.String)))
+                        ("Placeholder", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                        ("MinLength", new JsonSchemaBuilder()
+                            .Type(SchemaValueType.Integer)
+                            .Minimum(0)
+                            .Description("The minimum number of characters allowed. Omit it for no minimum.")),
+                        ("MaxLength", new JsonSchemaBuilder()
+                            .Type(SchemaValueType.Integer)
+                            .Minimum(1)
+                            .Description("The maximum number of characters allowed. Omit it for no maximum.")))
                     .AdditionalProperties(false)),
                 ("TextFieldHeaderDisplaySettings", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Object)

@@ -92,6 +92,7 @@ internal sealed class Program
         "GeoPointField",
         "HtmlField",
         "LinkField",
+        "LiquidField",
         "LocalizationSetContentPickerField",
         "MarkdownField",
         "MediaField",

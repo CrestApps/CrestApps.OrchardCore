@@ -40,6 +40,8 @@ public static class OrchardCoreFeatureIds
 
     public const string DataLocalization = "OrchardCore.DataLocalization";
 
+    public const string DataPipelines = "OrchardCore.DataPipelines";
+
     public const string DataPipelinesCore = "OrchardCore.DataPipelines.Core";
 
     public const string Deployment = "OrchardCore.Deployment";
@@ -110,6 +112,8 @@ public static class OrchardCoreFeatureIds
 
     public const string OpenIdManagement = "OrchardCore.OpenId.Management";
 
+    public const string OpenIdSecrets = "OrchardCore.OpenId.Secrets";
+
     public const string OpenIdServer = "OrchardCore.OpenId.Server";
 
     public const string OpenIdValidation = "OrchardCore.OpenId.Validation";
@@ -137,6 +141,8 @@ public static class OrchardCoreFeatureIds
     public const string Roles = "OrchardCore.Roles";
 
     public const string Search = "OrchardCore.Search";
+
+    public const string Secrets = "OrchardCore.Secrets";
 
     public const string Security = "OrchardCore.Security";
 

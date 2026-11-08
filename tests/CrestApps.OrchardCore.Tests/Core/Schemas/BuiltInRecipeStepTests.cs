@@ -269,6 +269,7 @@ public sealed class BuiltInRecipeStepTests
             new LoginSettingsSchema(),
             new MicrosoftAccountSettingsSchema(),
             new OpenIdClientSettingsSchema(),
+            new OpenIdSecretSettingsSchema(),
             new OpenIdServerSettingsSchema(),
             new OpenIdValidationSettingsSchema(),
             new ReCaptchaSettingsSchema(),
@@ -460,6 +461,10 @@ public sealed class BuiltInRecipeStepTests
     [InlineData(typeof(McpResourceRecipeStep), "McpResource")]
     [InlineData(typeof(A2AConnectionRecipeStep), "A2AConnection")]
     [InlineData(typeof(CommandRecipeStep), "command")]
+    [InlineData(typeof(ReloadTenantRecipeStep), "ReloadTenant")]
+    [InlineData(typeof(SecretsRecipeStep), "Secrets")]
+    [InlineData(typeof(DataPipelinesRecipeStep), "DataPipelines")]
+    [InlineData(typeof(CreateOrUpdateRateLimitPoliciesRecipeStep), "CreateOrUpdateRateLimitPolicies")]
     public void Name_ReturnsExpected(Type stepType, string expectedName)
     {
         var step = CreateStep(stepType);
@@ -527,6 +532,10 @@ public sealed class BuiltInRecipeStepTests
     [InlineData(typeof(McpResourceRecipeStep))]
     [InlineData(typeof(A2AConnectionRecipeStep))]
     [InlineData(typeof(CommandRecipeStep))]
+    [InlineData(typeof(ReloadTenantRecipeStep))]
+    [InlineData(typeof(SecretsRecipeStep))]
+    [InlineData(typeof(DataPipelinesRecipeStep))]
+    [InlineData(typeof(CreateOrUpdateRateLimitPoliciesRecipeStep))]
     public async Task GetSchemaAsync_ProducesValidSerializableSchema(Type stepType)
     {
         var step = CreateStep(stepType);
@@ -599,6 +608,10 @@ public sealed class BuiltInRecipeStepTests
     [InlineData(typeof(McpResourceRecipeStep))]
     [InlineData(typeof(A2AConnectionRecipeStep))]
     [InlineData(typeof(CommandRecipeStep))]
+    [InlineData(typeof(ReloadTenantRecipeStep))]
+    [InlineData(typeof(SecretsRecipeStep))]
+    [InlineData(typeof(DataPipelinesRecipeStep))]
+    [InlineData(typeof(CreateOrUpdateRateLimitPoliciesRecipeStep))]
     public async Task GetSchemaAsync_CachesResult(Type stepType)
     {
         var step = CreateStep(stepType);

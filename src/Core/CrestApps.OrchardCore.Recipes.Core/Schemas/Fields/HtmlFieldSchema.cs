@@ -19,8 +19,7 @@ public sealed class HtmlFieldSchema : FieldSchemaDefinitionBase
                     .Properties(
                         ("Hint", new JsonSchemaBuilder().Type(SchemaValueType.String)),
                         ("Required", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
-                        ("SanitizeHtml", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
-                        ("RenderLiquid", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)))
+                        ("SanitizeHtml", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)))
                     .AdditionalProperties(false)),
                 ("HtmlFieldMonacoEditorSettings", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Object)

@@ -20,8 +20,7 @@ public sealed class MarkdownBodyPartSchema : PartSchemaDefinitionBase
                         ("SanitizeHtml", new JsonSchemaBuilder()
                             .Type(SchemaValueType.Boolean)
                             .Default(true)
-                            .Description("Sanitize rendered HTML output.")),
-                        ("RenderLiquid", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)))
+                            .Description("Sanitize rendered HTML output.")))
                     .AdditionalProperties(false)),
                 ("MarkdownBodyPartWysiwygEditorSettings", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Object)

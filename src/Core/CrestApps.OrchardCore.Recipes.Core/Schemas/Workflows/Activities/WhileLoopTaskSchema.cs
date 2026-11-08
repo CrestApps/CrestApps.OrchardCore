@@ -25,8 +25,8 @@ public sealed class WhileLoopTaskSchema : WorkflowActivitySchemaDefinitionBase
     /// <inheritdoc />
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
-        yield return ("Condition", WorkflowActivitySchemaBuilders.ScriptExpression("An expression evaluating to true or false. Required when 'Syntax' is 'JavaScript'."));
-        yield return ("LiquidCondition", WorkflowActivitySchemaBuilders.LiquidExpression("An expression evaluating to true or false. Required when 'Syntax' is 'Liquid'."));
-        yield return ("Syntax", WorkflowActivitySchemaBuilders.EnumValue("The syntax used to evaluate the condition. Defaults to 'JavaScript'.", "JavaScript", "Liquid"));
+        yield return ("Condition", WorkflowActivitySchemaBuilders.SyntaxExpression("An expression evaluating to true or false. The loop iterates while it is true.", "JavaScript"));
+        yield return ("LiquidCondition", WorkflowActivitySchemaBuilders.LiquidExpression("Legacy: the Liquid condition, used when 'Condition' has no syntax and 'Syntax' is 'Liquid'."));
+        yield return ("Syntax", WorkflowActivitySchemaBuilders.EnumValue("Legacy: selects the JavaScript expression or its Liquid counterpart when the expression has no 'Syntax' of its own. Defaults to 'JavaScript'. Prefer setting 'Syntax' on the expression.", "JavaScript", "Liquid"));
     }
 }

@@ -106,7 +106,13 @@ public abstract class WorkflowActivitySchemaDefinitionBase : IWorkflowActivitySc
         var properties = new List<(string Name, JsonSchemaBuilder Schema)>
         {
             ("ActivityMetadata", WorkflowActivitySchemaBuilders.ActivityMetadata()),
+            ("OutputBindings", WorkflowActivitySchemaBuilders.OutputBindings()),
         };
+
+        if (!context.IsEvent)
+        {
+            properties.Add(("ActivityRetryPolicy", WorkflowActivitySchemaBuilders.ActivityRetryPolicy()));
+        }
 
         properties.AddRange(GetPropertyDefinitions(context) ?? []);
 
