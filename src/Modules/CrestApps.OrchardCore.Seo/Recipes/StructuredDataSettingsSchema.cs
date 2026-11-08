@@ -17,7 +17,7 @@ internal sealed class StructuredDataSettingsSchema : SiteSettingsSchemaBase
             .Description("The site's Schema.org structured data.")
             .Properties(
                 (nameof(StructuredDataSettings.RenderOnPages), new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Default(true).Description("Whether the structured data is rendered on the site's pages.")),
-                (nameof(StructuredDataSettings.PublisherType), new JsonSchemaBuilder().Type(SchemaValueType.String).Enum(StructuredDataPublisherTypes.Organization, StructuredDataPublisherTypes.Person).Description("Whether the site is published by an organization or a person.")),
+                (nameof(StructuredDataSettings.PublisherType), new JsonSchemaBuilder().Enum(StructuredDataPublisherTypes.Organization, StructuredDataPublisherTypes.Person, string.Empty, null).Default(StructuredDataPublisherTypes.Organization).Description("Whether the site is published by an organization or a person, or empty (or null) to describe no publisher.")),
                 (nameof(StructuredDataSettings.PublisherName), new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The publisher's name. The site name is used when it is empty.")),
                 (nameof(StructuredDataSettings.PublisherLogoUrl), new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The URL of the publisher's logo.")),
                 (nameof(StructuredDataSettings.SameAs), new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("The URLs of the publisher's profiles on other sites.")),
