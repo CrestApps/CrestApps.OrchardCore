@@ -41,6 +41,7 @@
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Commerce.Core\CrestApps.OrchardCore.Commerce.Core.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Addresses\CrestApps.OrchardCore.Addresses.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Commerce\CrestApps.OrchardCore.Commerce.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Recipes.Core\CrestApps.OrchardCore.Recipes.Core.csproj" />
   </ItemGroup>
 
 </Project>

@@ -25,5 +25,6 @@ internal sealed class StockLocationsRecipeStepSchema : RecordsRecipeStepSchemaBa
             ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The location's name, such as Main warehouse.")),
             ("Address", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The location's address, as one line of text.")),
             ("Position", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("The location's place in the list: orders take units from the first locations first.")),
+            ("OwnerKind", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Leave empty. A location owned by another record, such as an asset's, belongs to that record and is skipped.")),
         ];
 }

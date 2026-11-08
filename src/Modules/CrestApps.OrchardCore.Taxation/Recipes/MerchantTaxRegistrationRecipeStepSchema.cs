@@ -28,6 +28,8 @@ internal sealed class MerchantTaxRegistrationRecipeStepSchema : RecordsRecipeSte
             ("RegistrationNumber", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The number the tax authority gave the store.")),
             ("IsActive", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the store collects the tax under this registration.")),
             ("ThresholdAmount", new JsonSchemaBuilder().Type(SchemaValueType.Number | SchemaValueType.Null).Description("The sales above which the store must collect the tax, or none.")),
+            ("ThresholdAccumulatedAmount", new JsonSchemaBuilder().Type(SchemaValueType.Number).Description("The sales recorded into the jurisdiction so far, measured against ThresholdAmount. It is kept up to date as sales are recorded, so it is usually left out.")),
+            ("RegistrationDateUtc", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("When the tax authority granted the registration.")),
             ("EffectiveFromUtc", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("When the registration takes effect.")),
             ("EffectiveToUtc", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("When the registration ends.")),
         ];
