@@ -134,6 +134,23 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
 
         await _scopeExecutor.ExecuteAsync<ContactCenterHubScopeContext>(async services =>
         {
+            // The agent's profile is read once for the whole registration. Both the agent and the supervisor steps
+            // need it, and reading it again on the same unit of work only repeated the query: the session's identity
+            // map hands back the instance it already holds, so the second read could never see newer data.
+            AgentProfile profile = null;
+            var profileLoaded = false;
+
+            async Task<AgentProfile> GetProfileAsync()
+            {
+                if (!profileLoaded)
+                {
+                    profile = await services.AgentManager.FindByUserIdAsync(userId, HubConnectionWork.MustComplete);
+                    profileLoaded = true;
+                }
+
+                return profile;
+            }
+
             if (await AuthorizeAsync(services, ContactCenterPermissions.SignIntoQueues))
             {
                 authorized = true;
@@ -155,8 +172,10 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
                         await Groups.AddToGroupAsync(Context.ConnectionId, GetQueueGroup(queueId), HubConnectionWork.MustComplete);
                     }
 
-                    var snapshot = await services.SessionService.BuildSnapshotAsync(userId, HubConnectionWork.MustComplete);
-                    await UpdateQueueGroupsAsync(session.QueueIds, snapshot.QueueIds);
+                    // Reconcile the groups with the queues the profile entitles the agent to. Only the profile decides
+                    // them, so the full desktop snapshot this used to build (a second profile read plus a session
+                    // read) is not needed: the client asks for the snapshot itself as soon as it connects.
+                    await UpdateQueueGroupsAsync(session.QueueIds, GetEntitledQueueIds(await GetProfileAsync()));
                 }
                 catch (Exception ex)
                 {
@@ -180,9 +199,7 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
                 // One group for every supervisor used to carry every queue's events -- agents' names and states,
                 // offers, recordings, call quality -- so a supervisor limited to one queue heard about all of them.
                 // Each queue now has a supervisor group of its own, joined only for the queues this one oversees.
-                var supervisor = await services.AgentManager.FindByUserIdAsync(userId, HubConnectionWork.MustComplete);
-
-                foreach (var queueId in GetSupervisedQueueIds(supervisor))
+                foreach (var queueId in GetSupervisedQueueIds(await GetProfileAsync()))
                 {
                     await Groups.AddToGroupAsync(
                         Context.ConnectionId,
@@ -608,6 +625,15 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
         {
             throw new HubException(S["The current user is not authorized for '{0}'.", permission.Name].Value);
         }
+    }
+
+    // The queues an agent's connection belongs to: the ones they are signed in to that they are also entitled to, as the
+    // desktop snapshot reports them. An agent with no profile belongs to none.
+    internal static IList<string> GetEntitledQueueIds(AgentProfile profile)
+    {
+        return profile is null
+            ? []
+            : AgentEntitlementUtilities.FilterEntitled(profile.QueueIds, profile.AllowedQueueIds);
     }
 
     private async Task UpdateQueueGroupsAsync(IEnumerable<string> previousQueueIds, IEnumerable<string> currentQueueIds)

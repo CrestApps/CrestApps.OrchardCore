@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Redis;
 using StackExchange.Redis;
@@ -49,7 +50,7 @@ internal sealed class DistributedSignalRTestHost : IAsyncDisposable
             throw new InvalidOperationException("The transport harness does not resolve Orchard's Redis service."));
         builder.Services.AddSingleton<TestProviderListener>();
 
-        new global::OrchardCore.SignalR.Redis.Startup().ConfigureServices(builder.Services);
+        new global::OrchardCore.SignalR.Redis.Startup(NullLogger<global::OrchardCore.SignalR.Redis.Startup>.Instance).ConfigureServices(builder.Services);
 
         var app = builder.Build();
         app.Urls.Add("http://127.0.0.1:0");
