@@ -39,6 +39,7 @@ type alongside its schema; export-to-import round trips and schema validation of
 | 24 | Telnyx voice settings | site settings `TelnyxSettings` | **no → yes** (`TelnyxSettings`, secrets stripped) | **no → yes** (`TelnyxSettings`, merges, protects supplied secrets) | **no → yes** (step schema and `Settings`-step schema) |
 | 25 | Telnyx SMS settings | site settings `TelnyxSmsSettings` | **no → yes** (`TelnyxSmsSettings`, secrets stripped) | **no → yes** | **no → yes** |
 | 26 | Asterisk settings | site settings `AsteriskSettings` | **no → yes** (`AsteriskSettings`, secrets stripped) | **no → yes** (same live-binding guard as the settings screen) | **no → yes** |
+| 27 | CC Default agent numbers | site settings `ContactCenterDefaultAddressSettings` | **no** (no site settings deployment step yet) | built-in `Settings` step | **yes** (site settings schema) |
 
 ## Deliberately excluded
 

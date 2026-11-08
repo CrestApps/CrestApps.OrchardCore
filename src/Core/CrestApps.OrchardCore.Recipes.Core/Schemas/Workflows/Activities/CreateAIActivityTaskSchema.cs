@@ -31,10 +31,10 @@ public sealed class CreateAIActivityTaskSchema : WorkflowActivitySchemaDefinitio
         yield return ("Channel", WorkflowActivitySchemaBuilders.StringEnum("Phone for a call, SMS for a text.", "Phone", "SMS"));
         yield return ("AIProfileId", WorkflowActivitySchemaBuilders.String("The identifier of the AI profile that holds the conversation."));
         yield return ("ChannelEndpointId", WorkflowActivitySchemaBuilders.String("Optional. The identifier of the number the call or text comes from."));
-        yield return ("Destination", WorkflowActivitySchemaBuilders.LiquidExpression("The customer's phone number."));
-        yield return ("ContactContentItemId", WorkflowActivitySchemaBuilders.LiquidExpression("Optional. The contact's content item identifier."));
+        yield return ("Destination", WorkflowActivitySchemaBuilders.String("The Liquid expression that resolves the customer's phone number."));
+        yield return ("ContactContentItemId", WorkflowActivitySchemaBuilders.String("Optional. The Liquid expression that resolves the contact's content item identifier."));
         yield return ("SubjectContentType", WorkflowActivitySchemaBuilders.String("Optional. The subject content type the activity is about."));
         yield return ("CampaignId", WorkflowActivitySchemaBuilders.String("Optional. The campaign the activity belongs to."));
-        yield return ("Variables", WorkflowActivitySchemaBuilders.LiquidExpression("Optional. The variables the conversation starts with, one name: value per line."));
+        yield return ("Variables", WorkflowActivitySchemaBuilders.String("Optional. The Liquid template of the variables the conversation starts with, one name: value per line."));
     }
 }
