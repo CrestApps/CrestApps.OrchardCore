@@ -114,6 +114,16 @@ The provider settings steps take secrets in clear text and protect them on impor
 
 The Contact Center workflows bridge (available automatically when `OrchardCore.Workflows` is enabled alongside Contact Center) additionally contributes workflow-activity schemas for the `ContactCenterEvent` event and the `EnqueueActivityTask`, `ScheduleCallbackTask`, `SetAgentPresenceTask`, `StartCallRecordingTask`, and `StopCallRecordingTask` tasks, so the `WorkflowType` step can describe their properties and outcomes.
 
+## Orchard Core 4.0 step schemas
+
+The schemas describe the Orchard Core 4.0 recipe steps, settings, parts, fields and workflow activities as the Orchard Core step handlers read them:
+
+- **New steps**: `ReloadTenant`, `Secrets` (with the `OrchardCore.Secrets` feature), `DataPipelines` (with `OrchardCore.DataPipelines`) and `CreateOrUpdateRateLimitPolicies` (with `OrchardCore.RateLimits`), plus the schemas of the **Secrets**, **Data Pipelines** and **All Rate Limit Policies** deployment steps.
+- **Secrets in settings**: the site settings that hold a credential (SMTP, Azure Email, Azure SMS, Twilio, Azure AI Search, OpenID Connect client, Facebook, GitHub, Google, Microsoft Account and Twitter) describe the `...SecretName` property that references a secret of the Secrets module. A secret reference takes precedence over the protected value, which the generic `Settings` step stores exactly as given, so a clear value there does not work. With `OrchardCore.OpenId.Secrets`, the `OpenIdSecretSettings` site settings reference the signing and encryption keys of the OpenID Connect server.
+- **Settings**: `AllowPageSizeSelection` and `PageSizeOptions` at the root of the `Settings` step, where `BaseUrl` and `CdnBaseUrl` must be absolute URLs (or empty to clear them); `AdminSettings` adds `DisplayQuickNavigation`, `ShowBreadcrumb`, `MenuBehavior`, `ListLayout`, `ActionsLayout` and `AllowUserListLayoutSelection`; `LoginSettings` adds `UsePersistentAuthenticationCookie`; `HttpsSettings` uses `StrictTransportSecurityMode`; `OpenIdServerSettings` adds `RequireEndSessionConfirmation`.
+- **Parts and fields**: `RenderLiquid` is gone from the HTML and Markdown body parts and fields, `TextFieldSettings` adds `MinLength` and `MaxLength`, and the `LiquidPart` and `LiquidField` schemas describe the only places that execute Liquid.
+- **Workflows**: the `WorkflowType` step describes `Variables`, `IsActivity`, `IsSingletonPerCorrelation`, `BranchingMode`, `FaultOnScriptErrors` and `RecordActivityData`. Every expression accepts a `Syntax` (`Literal`, `Liquid` or `JavaScript`), which the control-flow and value activities honor; every activity accepts `OutputBindings`, and every task an `ActivityRetryPolicy`. The `ExecuteWorkflowTask`, `SetVariableTask`, `StartedByWorkflowEvent`, `UserLoggedOutEvent`, `RunDataPipelineTask`, `DataPipelineRunCompletedEvent` and `MetaConversionsApiEventTask` activities have schemas.
+
 ## Creating a Recipe Step
 
 To define a recipe step, implement the `IRecipeStep` interface and register your implementation as a service.
