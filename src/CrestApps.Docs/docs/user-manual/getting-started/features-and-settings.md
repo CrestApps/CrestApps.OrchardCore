@@ -82,6 +82,7 @@ Find the feature by the name shown in **Tools > Features**. The [feature referen
 | **Contact Center Call Recording** | Call recording and its rules. | [Contact Center settings](../contact-center-settings.md) |
 | **Contact Center Secure Data Capture** | A secure link for customers to type card or bank details. | [Contact Center settings](../contact-center-settings.md), [Agent workspace](../agent-workspace.md) |
 | **Contact Center Supervision & Live Dashboard** | The live dashboard and listen, whisper and barge. | [Live dashboard](../live-dashboard.md) |
+| **Contact Center AI Tools** | Questions about agents, queues and dialing answered by an AI assistant, for supervisors. | [Ask the contact center assistant](../contact-center-ai-assistant.md) |
 | **Contact Center Voice Media** | Two-way audio for AI phone calls, which a live (realtime) AI conversation needs. | [Automated AI SMS and voice](../automated-ai.md) |
 
 ### Phone and SMS providers

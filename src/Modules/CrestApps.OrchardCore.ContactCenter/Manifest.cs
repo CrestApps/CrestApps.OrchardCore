@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Skills;
@@ -227,5 +228,17 @@ using OrchardCore.Modules.Manifest;
     [
         ContactCenterConstants.Feature.Queues,
         OrchardCoreFeatureIds.SignalR,
+    ]
+)]
+
+[assembly: Feature(
+    Id = ContactCenterConstants.Feature.AITools,
+    Name = "Contact Center AI Tools",
+    Description = "Adds read-only tools to the AI profile tool picker that let a contact center manager ask an AI profile why an agent is not getting calls, what is in a queue or campaign, why a call was suppressed and which queues have work nothing is handling. Every tool answers from the same services the supervisor dashboard and reports read, and requires the supervisor permission.",
+    Category = "Contact Center",
+    Dependencies =
+    [
+        ContactCenterConstants.Feature.Queues,
+        AIConstants.Feature.Area,
     ]
 )]

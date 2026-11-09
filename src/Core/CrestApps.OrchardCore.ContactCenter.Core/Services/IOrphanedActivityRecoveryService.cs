@@ -25,4 +25,26 @@ public interface IOrphanedActivityRecoveryService
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The number of activities recovered.</returns>
     Task<int> RecoverAsync(TimeSpan gracePeriod, int maxToRecover, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Finds, without changing anything, the activities <see cref="RecoverAsync"/> would act on: those stranded in an
+    /// intermediate status for at least <paramref name="gracePeriod"/> that have no live reservation, no unsettled call and
+    /// no after-call work waiting for an agent. A manager reads this to see stuck work before the sweep reaches it.
+    /// </summary>
+    /// <param name="gracePeriod">How long an intermediate-status record must have been stale to be listed.</param>
+    /// <param name="maxToFind">The most activities to examine.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The orphaned activities, with what recovery would do with each.</returns>
+    Task<IReadOnlyList<OrphanedActivity>> FindAsync(TimeSpan gracePeriod, int maxToFind, CancellationToken cancellationToken = default);
 }
+
+/// <summary>
+/// An activity stranded in an intermediate status that recovery would act on.
+/// </summary>
+/// <param name="ActivityItemId">The activity's identifier.</param>
+/// <param name="CampaignId">The campaign it belongs to, or <see langword="null"/>.</param>
+/// <param name="Status">The status it is stranded in.</param>
+/// <param name="ReservedUtc">When it was last reserved, or <see langword="null"/>.</param>
+/// <param name="WouldRequeue"><see langword="true"/> when it was provably never answered and recovery would put it back in the
+/// queue; <see langword="false"/> when it may have reached the customer and recovery would fail it rather than dial it again.</param>
+public sealed record OrphanedActivity(string ActivityItemId, string CampaignId, string Status, DateTime? ReservedUtc, bool WouldRequeue);

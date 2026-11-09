@@ -36,6 +36,7 @@ Each Contact Center capability owns both its runtime services and the administra
 | `CrestApps.OrchardCore.ContactCenter.BusinessHours` | The **Business hours** calendar screens |
 | `CrestApps.OrchardCore.ContactCenter.Queues` | Queue, queue group, and skill screens |
 | `CrestApps.OrchardCore.ContactCenter.Dialer` | Outbound dialer profile screens |
+| `CrestApps.OrchardCore.ContactCenter.AITools` | No screen of its own: read-only tools in the AI tool picker and the **Contact center manager** profile template. See [AI Tools](ai-tools.md) |
 | `CrestApps.OrchardCore.ContactCenter.Voice`, enabled with Inbound Voice, the Outbound Dialer, Voice Media, Call Recording or Supervision | The **External transfer destinations** settings tab |
 | `CrestApps.OrchardCore.ContactCenter.Recording` | The **Recording governance** settings tab |
 | `CrestApps.OrchardCore.ContactCenter.InboundVoice` | Inbound entry-point screens |

@@ -48,6 +48,12 @@ The module ships as feature-gated capabilities so a tenant enables only what it 
 
 > **Workflow automation** is not a separate feature either. The Contact Center domain-event activity and the workflow tasks activate automatically whenever `OrchardCore.Workflows` is enabled alongside Contact Center. Each task is additionally gated on the capability that owns its underlying service, so an activity only appears in the editor when its capability is enabled: the Enqueue Activity task requires Work Distribution, Schedule Callback requires the Outbound Dialer, Set Agent Presence requires Agents, and the recording tasks require Call Recording.
 
+### AI assistance
+
+| Feature | Feature ID | Purpose |
+| --- | --- | --- |
+| Contact Center AI Tools | `CrestApps.OrchardCore.ContactCenter.AITools` | Eight read-only tools in the AI tool picker (category **Contact Center**) that let a manager ask an AI profile why an agent is not getting calls, what is in a queue or campaign, why a record was not dialed, who is signed in and what is stuck. Requires the supervisor permission, shows only the queues and campaigns the person oversees, and ships a **Contact center manager** profile template. Depends on Contact Center Work Distribution and the AI feature. |
+
 ## Installation
 
 Install the package into the web/startup project and enable the capabilities you need. Their administration screens are enabled with them. A minimal inbound-voice contact center, for example:

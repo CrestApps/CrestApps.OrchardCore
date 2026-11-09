@@ -13,7 +13,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// call and latest compliance suppression in batches and decides each through the evaluation the dispatch diagnostics use
 /// (<see cref="DialerDispatchDiagnosticsService"/>), so the live dashboard, the dialer queue inventory and the campaign summary all give the reason the dispatcher acts on.
 /// </summary>
-internal sealed class DialerRecordClassifier
+internal class DialerRecordClassifier
 {
     private const int BatchSize = 500;
 
@@ -53,7 +53,7 @@ internal sealed class DialerRecordClassifier
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The profile, or <see langword="null"/> when the identifier is empty, names the built-in queued-callback
     /// profile, or names a profile that no longer exists.</returns>
-    public async Task<DialerProfile> ReadProfileAsync(string profileId, CancellationToken cancellationToken)
+    public virtual async Task<DialerProfile> ReadProfileAsync(string profileId, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(profileId) || QueueCallbackDialerProfile.IsCallbackProfile(profileId))
         {
@@ -77,7 +77,7 @@ internal sealed class DialerRecordClassifier
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The verdict of each record, by activity identifier. A record whose activity can no longer be read has
     /// none.</returns>
-    public async Task<IReadOnlyDictionary<string, DialerRecordVerdict>> ClassifyAsync(
+    public virtual async Task<IReadOnlyDictionary<string, DialerRecordVerdict>> ClassifyAsync(
         IReadOnlyCollection<DialerRecordInput> records,
         DateTime now,
         CancellationToken cancellationToken)

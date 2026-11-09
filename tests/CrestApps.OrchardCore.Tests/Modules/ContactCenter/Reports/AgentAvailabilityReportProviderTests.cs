@@ -519,10 +519,7 @@ public sealed class AgentAvailabilityReportProviderTests
             },
         };
 
-        var provider = new AgentAvailabilityReportProvider(
-            Mock.Of<IContactCenterReportingService>(),
-            capabilityGuard.Object,
-            agentManager.Object,
+        var reader = new AgentAvailabilityReader(
             sessionManager.Object,
             interactionManager.Object,
             eventStore.Object,
@@ -531,13 +528,18 @@ public sealed class AgentAvailabilityReportProviderTests
             businessHours.Object,
             availabilityService,
             routingService,
-            supervisorAuthorization.Object,
             campaignManager.Object,
             withStaleWorkDetection ? new[] { staleWorkService.Object } : Array.Empty<IStaleAgentWorkService>(),
-            httpContextAccessor,
             availabilityOptions,
             clock.Object,
-            Mock.Of<ILocalClock>(),
+            Mock.Of<ILocalClock>());
+        var provider = new AgentAvailabilityReportProvider(
+            Mock.Of<IContactCenterReportingService>(),
+            capabilityGuard.Object,
+            agentManager.Object,
+            reader,
+            supervisorAuthorization.Object,
+            httpContextAccessor,
             new FormattingLocalizer<AgentAvailabilityReportProvider>());
 
         var filter = new ReportFilter();
