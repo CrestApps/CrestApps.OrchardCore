@@ -299,17 +299,9 @@ public sealed class WorkflowsStartup : StartupBase
 
         // AI conversations: workflows that run before a conversation starts, and the tasks they decide with.
         services.AddActivity<AIConversationStartingEvent, AIConversationStartingEventDisplayDriver>();
-        services.AddActivity<SetConversationVariablesTask, SetConversationVariablesTaskDisplayDriver>();
         services.AddActivity<UseAIProfileTask, UseAIProfileTaskDisplayDriver>();
         services.AddActivity<AIAlertTriggeredEvent, AIAlertTriggeredEventDisplayDriver>();
 
-        // Conversation flows: stage-by-stage guidance built from workflow activities.
-        services.AddActivity<AIConversationFlowStartedEvent, AIConversationFlowStartedEventDisplayDriver>();
-        services.AddActivity<AIConversationStageTask, AIConversationStageTaskDisplayDriver>();
-        services.AddScoped<AIConversationFlows>();
-        services.AddScoped<IAICompletionContextBuilderHandler, AIConversationFlowCompletionHandler>();
-        services.AddScoped<IToolRegistryProvider, AIConversationFlowToolProvider>();
-        services.AddDisplayDriver<AIProfile, AIProfileFlowDisplayDriver>();
         services.AddActivity<AIAlertResolvedEvent, AIAlertResolvedEventDisplayDriver>();
         services.AddScoped<AIProfileVersionCopies>();
         services.AddActivity<DeclineConversationTask, DeclineConversationTaskDisplayDriver>();
@@ -318,16 +310,12 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddActivity<AIConversationTurnEvent, AIConversationTurnEventDisplayDriver>();
         services.AddScoped<IAIConversationTurnHandler, WorkflowAIConversationTurnHandler>();
 
-        // Quality: A/B splits, QA evaluations, simulated tests, analysis reruns and metric alerts.
+        // Quality: A/B splits and metric alerts. The tasks that read chat sessions are in ChatWorkflowsStartup.
         services.AddActivity<SplitTrafficTask, SplitTrafficTaskDisplayDriver>();
-        services.AddActivity<EvaluateConversationTask, EvaluateConversationTaskDisplayDriver>();
         services.AddActivity<AIConversationEvaluatedEvent, AIConversationEvaluatedEventDisplayDriver>();
-        services.AddActivity<SimulateConversationTask, SimulateConversationTaskDisplayDriver>();
-        services.AddActivity<RerunConversationAnalysisTask, RerunConversationAnalysisTaskDisplayDriver>();
         services.AddActivity<CheckConversationMetricTask, CheckConversationMetricTaskDisplayDriver>();
 
-        // Memory and integrations: rewriting a contact's memory, and signed webhooks to other systems.
-        services.AddActivity<UpdateContactMemoryTask, UpdateContactMemoryTaskDisplayDriver>();
+        // Integrations: signed webhooks to other systems.
         services.AddActivity<SendSignedWebhookTask, SendSignedWebhookTaskDisplayDriver>();
         services.AddActivity<AIGuardrailTriggeredEvent, AIGuardrailTriggeredEventDisplayDriver>();
         services.AddScoped<IAIGuardrailHandler, WorkflowAIGuardrailHandler>();
@@ -508,6 +496,25 @@ public sealed class ChatWorkflowsStartup : StartupBase
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, DataExtractionChatSessionHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, ConversationTurnChatSessionHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, PostSessionProcessingChatSessionHandler>());
+
+        // These activities and services read or change chat sessions, so they need the chat session manager and
+        // prompt store that only the ChatCore feature registers. A tenant with Workflows and AI but no chat cannot
+        // build them, and the workflow editor, which creates every activity, fails on that tenant.
+        services.AddActivity<SetConversationVariablesTask, SetConversationVariablesTaskDisplayDriver>();
+
+        // Conversation flows: stage-by-stage guidance built from workflow activities.
+        services.AddActivity<AIConversationFlowStartedEvent, AIConversationFlowStartedEventDisplayDriver>();
+        services.AddActivity<AIConversationStageTask, AIConversationStageTaskDisplayDriver>();
+        services.AddScoped<AIConversationFlows>();
+        services.AddScoped<IAICompletionContextBuilderHandler, AIConversationFlowCompletionHandler>();
+        services.AddScoped<IToolRegistryProvider, AIConversationFlowToolProvider>();
+        services.AddDisplayDriver<AIProfile, AIProfileFlowDisplayDriver>();
+
+        // Quality and memory: QA evaluations, simulated tests, analysis reruns and contact memory.
+        services.AddActivity<EvaluateConversationTask, EvaluateConversationTaskDisplayDriver>();
+        services.AddActivity<SimulateConversationTask, SimulateConversationTaskDisplayDriver>();
+        services.AddActivity<RerunConversationAnalysisTask, RerunConversationAnalysisTaskDisplayDriver>();
+        services.AddActivity<UpdateContactMemoryTask, UpdateContactMemoryTaskDisplayDriver>();
     }
 }
 
