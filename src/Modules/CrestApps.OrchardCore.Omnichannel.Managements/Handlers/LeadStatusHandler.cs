@@ -42,6 +42,12 @@ internal sealed class LeadStatusHandler : AuditedCatalogEntryHandlerBase<LeadSta
             context.Result.Fail(new ValidationResult(S["Only an open status can be the one a new lead starts in."], [nameof(LeadStatus.IsDefault)]));
         }
 
+        // A contacted lead leaves the default status and is still worked, so only an open status other than the default fits.
+        if (context.Model.IsContacted && (context.Model.IsClosed || context.Model.IsConverted || context.Model.IsDefault))
+        {
+            context.Result.Fail(new ValidationResult(S["Only an open status that is not the default can be the one a contacted lead moves to."], [nameof(LeadStatus.IsContacted)]));
+        }
+
         return Task.CompletedTask;
     }
 

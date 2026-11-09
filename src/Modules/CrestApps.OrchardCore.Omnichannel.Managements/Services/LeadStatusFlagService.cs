@@ -4,7 +4,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 
 /// <summary>
-/// Keeps the flags only one lead status may carry, the default status and the converted status, on a single status.
+/// Keeps the flags only one lead status may carry, the default status, the contacted status and the converted status, on a single status.
 /// Saving a status with one of them clears it from every other status.
 /// </summary>
 public sealed class LeadStatusFlagService
@@ -21,14 +21,14 @@ public sealed class LeadStatusFlagService
     }
 
     /// <summary>
-    /// Clears the default and converted flags from every status other than the one just saved, where it carries them.
+    /// Clears the default, contacted and converted flags from every status other than the one just saved, where it carries them.
     /// </summary>
     /// <param name="saved">The status that was just saved.</param>
     public async Task EnforceAsync(LeadStatus saved)
     {
         ArgumentNullException.ThrowIfNull(saved);
 
-        if (!saved.IsDefault && !saved.IsConverted)
+        if (!saved.IsDefault && !saved.IsContacted && !saved.IsConverted)
         {
             return;
         }
@@ -45,6 +45,12 @@ public sealed class LeadStatusFlagService
             if (saved.IsDefault && other.IsDefault)
             {
                 other.IsDefault = false;
+                changed = true;
+            }
+
+            if (saved.IsContacted && other.IsContacted)
+            {
+                other.IsContacted = false;
                 changed = true;
             }
 

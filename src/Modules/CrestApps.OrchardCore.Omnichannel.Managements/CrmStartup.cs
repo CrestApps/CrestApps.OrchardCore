@@ -89,6 +89,7 @@ public sealed class CrmStartup : StartupBase
         services.AddDisplayDriver<OpportunityStage, OpportunityStageDisplayDriver>();
 
         services.AddScoped<CrmCatalogSeeder>();
+        services.AddScoped<LeadContactedStatusBackfill>();
         services.AddScoped<LeadStatusFlagService>();
         services.AddScoped<LeadRatingProvider>();
         services.AddSingleton<LeadImportListCache>();

@@ -91,6 +91,12 @@ public class OmnichannelActivityViewModel
     public ActivityUrgencyLevel UrgencyLevel { get; set; }
 
     /// <summary>
+    /// Gets or sets when the activity was created, in local time. It is shown for tracking and cannot be changed.
+    /// </summary>
+    [BindNever]
+    public DateTime? CreatedLocal { get; set; }
+
+    /// <summary>
     /// Gets or sets the completed local.
     /// </summary>
     [BindNever]

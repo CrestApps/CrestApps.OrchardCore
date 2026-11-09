@@ -858,6 +858,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public System.DateTime CreatedUtc { get; set; }
         public string Description { get; set; }
         public bool IsClosed { get; set; }
+        public bool IsContacted { get; set; }
         public bool IsConverted { get; set; }
         public bool IsDefault { get; set; }
         public System.DateTime? ModifiedUtc { get; set; }

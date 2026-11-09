@@ -59,17 +59,33 @@
     </div>
 </div>
 
+<div class="ocat-wrapper" data-lead-status-contacted>
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="IsContacted" class="form-check-input" type="checkbox" />
+            <label asp-for="IsContacted" class="form-check-label">@T["A lead moves to this status once it is contacted"]</label>
+            <span class="hint dashed">@T["When an activity for a lead that is still in the default status is completed, the lead moves to this status, so activity loads that pick the default status do not load it again. A disposition or subject action that sets its own lead status takes precedence. Only one status can be the contacted status, and it cannot be the default."]</span>
+            <span asp-validation-for="IsContacted" class="text-danger"></span>
+        </div>
+    </div>
+</div>
+
 <script at="Foot">
     (() => {
         const kind = document.querySelector('[data-lead-status-kind]');
         const defaultRow = document.querySelector('[data-lead-status-default]');
+        const contactedRow = document.querySelector('[data-lead-status-contacted]');
 
-        if (!kind || !defaultRow) {
+        if (!kind || !defaultRow || !contactedRow) {
             return;
         }
 
-        // Only an open status can be the one new leads start in.
-        const refresh = () => defaultRow.classList.toggle('d-none', kind.value !== '@LeadStatusKind.Open');
+        // Only an open status can be the one new leads start in, or the one a contacted lead moves to.
+        const refresh = () => {
+            const isOpen = kind.value === '@LeadStatusKind.Open';
+            defaultRow.classList.toggle('d-none', !isOpen);
+            contactedRow.classList.toggle('d-none', !isOpen);
+        };
 
         kind.addEventListener('change', refresh);
         refresh();

@@ -56,6 +56,7 @@ internal sealed class LeadStatusDisplayDriver : DisplayDriver<LeadStatus>
             model.Description = entry.Description;
             model.Order = entry.Order;
             model.IsDefault = entry.IsDefault;
+            model.IsContacted = entry.IsContacted;
             model.Kind = entry.IsConverted
                 ? LeadStatusKind.Converted
                 : entry.IsClosed ? LeadStatusKind.Closed : LeadStatusKind.Open;
@@ -80,6 +81,9 @@ internal sealed class LeadStatusDisplayDriver : DisplayDriver<LeadStatus>
 
         // The default box is hidden, not cleared, when another type is picked, so it only counts for an open status.
         entry.IsDefault = model.IsDefault && model.Kind == LeadStatusKind.Open;
+
+        // A lead that was contacted moves out of the default status, so the contacted status is open and not the default.
+        entry.IsContacted = model.IsContacted && model.Kind == LeadStatusKind.Open && !entry.IsDefault;
 
         return Edit(entry, context);
     }

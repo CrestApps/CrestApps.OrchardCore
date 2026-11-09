@@ -119,7 +119,7 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
             .GetRequiredService<CrmCatalogSeeder>()
             .SeedAsync());
 
-        return 7;
+        return 8;
     }
 
     /// <summary>
@@ -239,6 +239,27 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
         }
 
         return 7;
+    }
+
+    /// <summary>
+    /// Makes the seeded <c>Working - Contacted</c> status the one a lead moves to once an activity for it is completed,
+    /// so a lead that was called is no longer loaded by a load that picks the default status, then moves the leads that
+    /// were already called there. Both run as deferred tasks, after the request that ran the migration, so a large
+    /// tenant does not hold up its activation; each deferred task runs in its own scope, so the backfill reads the
+    /// status the first one saved.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public static int UpdateFrom7()
+    {
+        ShellScope.AddDeferredTask(scope => scope.ServiceProvider
+            .GetRequiredService<CrmCatalogSeeder>()
+            .SeedContactedStatusAsync());
+
+        ShellScope.AddDeferredTask(scope => scope.ServiceProvider
+            .GetRequiredService<LeadContactedStatusBackfill>()
+            .RunAsync());
+
+        return 8;
     }
 
     // Gives an existing lead or opportunity index table every column this version maps. Returns whether any was added.
