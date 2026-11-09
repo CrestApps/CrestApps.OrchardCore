@@ -103,7 +103,10 @@ internal sealed class CrmCatalogSeeder
 
         await _leadStatusManager.UpdateAsync(contacted);
 
-        _logger.LogInformation("Made the lead status '{StatusName}' the status a contacted lead moves to.", contacted.Name);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Made the lead status '{StatusName}' the status a contacted lead moves to.", contacted.Name);
+        }
     }
 
     private async Task CreateOpportunityStageAsync(string name, int order, int probability, bool isClosed = false, bool isWon = false)

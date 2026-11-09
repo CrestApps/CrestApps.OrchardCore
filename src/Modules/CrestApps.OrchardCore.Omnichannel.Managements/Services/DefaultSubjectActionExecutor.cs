@@ -139,7 +139,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             return;
         }
 
-        var statuses = await _leadStatuses.GetAllAsync();
+        var statuses = await _leadStatuses.GetAllAsync(cancellationToken);
         var current = statuses.FirstOrDefault(status => status.ItemId == leadPart.StatusId);
 
         if (current is { IsClosed: true })

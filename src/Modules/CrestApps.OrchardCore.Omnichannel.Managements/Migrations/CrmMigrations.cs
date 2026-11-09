@@ -249,7 +249,7 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
     /// status the first one saved.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public int UpdateFrom7()
+    public static int UpdateFrom7()
     {
         ShellScope.AddDeferredTask(scope => scope.ServiceProvider
             .GetRequiredService<CrmCatalogSeeder>()
