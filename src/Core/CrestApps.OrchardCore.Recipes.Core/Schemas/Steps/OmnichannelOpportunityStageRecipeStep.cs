@@ -26,7 +26,7 @@ public sealed class OmnichannelOpportunityStageRecipeStep : IRecipeStep
                         .Type(SchemaValueType.Object)
                         .Properties(
                             ("ItemId", CatalogRecipeStepSchemas.ItemId("opportunity stage")),
-                            ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Unique name of the opportunity stage.")),
+                            ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Unique name of the opportunity stage. An entry whose ItemId matches no stored stage is matched by this name, so a second run updates it.")),
                             ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Administrative description of the opportunity stage.")),
                             ("Order", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Position of the stage in the pipeline, lowest first.")),
                             ("Probability", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Default chance, from 0 to 100, that an opportunity in this stage is won.")),

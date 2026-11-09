@@ -21,8 +21,9 @@ public sealed class AzureSmsSettingsSchema : SiteSettingsSchemaBase
             .Description("Configuration for the Azure Communication Services SMS provider.")
             .Properties(
                 ("IsEnabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the Azure SMS provider is enabled.")),
-                ("ConnectionString", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The Azure Communication Services connection string.")),
+                ("ConnectionString", ProtectedCredential("Azure Communication Services connection string", "ConnectionStringSecretName")),
+                ("ConnectionStringSecretName", SecretName("Azure Communication Services connection string")),
                 ("PhoneNumber", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The phone number to send SMS messages from.")))
-            .Required("ConnectionString", "PhoneNumber")
+            .Required("PhoneNumber")
             .AdditionalProperties(false);
 }

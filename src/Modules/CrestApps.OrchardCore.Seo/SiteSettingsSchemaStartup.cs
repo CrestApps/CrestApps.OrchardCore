@@ -17,5 +17,6 @@ public sealed class SiteSettingsSchemaStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ISiteSettingsSchemaDefinition, StructuredDataSettingsSchema>();
+        services.AddScoped<IContentSchemaDefinition, SchemaOrgPartSchemaDefinition>();
     }
 }

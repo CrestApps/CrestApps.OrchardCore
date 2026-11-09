@@ -1,4 +1,4 @@
-using Json.Schema;
+﻿using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows.Activities;
 
@@ -26,7 +26,7 @@ public sealed class AIConversationStageTaskSchema : WorkflowActivitySchemaDefini
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("StageName", WorkflowActivitySchemaBuilders.String("The stage's name."));
-        yield return ("Instructions", WorkflowActivitySchemaBuilders.LiquidExpression("What the AI does in this stage."));
+        yield return ("Instructions", WorkflowActivitySchemaBuilders.String("What the AI does in this stage. " + WorkflowActivitySchemaBuilders.LiquidSupportText));
         yield return ("WaysOut", WorkflowActivitySchemaBuilders.String("The ways out, one 'outcome: when to take it' per line; each is an outcome of the activity."));
     }
 }

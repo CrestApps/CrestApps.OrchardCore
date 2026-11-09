@@ -1,4 +1,4 @@
-using Json.Schema;
+﻿using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
 
@@ -20,14 +20,15 @@ public sealed class DefaultAIDeploymentSettingsSchema : SiteSettingsSchemaBase
             .Type(SchemaValueType.Object)
             .Description("Default AI deployment assignments for each capability type.")
             .Properties(
-                ("DefaultChatDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The technical name of the default chat deployment.")),
-                ("DefaultUtilityDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The technical name of the default utility deployment.")),
-                ("DefaultEmbeddingDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The technical name of the default embedding deployment.")),
-                ("DefaultImageDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The technical name of the default image generation deployment.")),
-                ("DefaultVisionDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The technical name of the default vision deployment.")),
-                ("DefaultSpeechToTextDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The technical name of the default speech-to-text deployment.")),
-                ("DefaultTextToSpeechDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The technical name of the default text-to-speech deployment.")),
-                ("DefaultTextToSpeechVoiceId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The voice identifier to use for text-to-speech.")),
-                ("DefaultRealtimeDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The technical name of the default realtime deployment: the model that carries a spoken conversation, in the chat or on a phone call, when the profile names none.")))
+                ("DefaultChatDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The technical name of the default chat deployment.")),
+                ("DefaultUtilityDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The technical name of the default utility deployment.")),
+                ("DefaultEmbeddingDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The technical name of the default embedding deployment.")),
+                ("DefaultImageDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The technical name of the default image generation deployment.")),
+                ("DefaultVisionDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The technical name of the default vision deployment.")),
+                ("DefaultSpeechToTextDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The technical name of the default speech-to-text deployment.")),
+                ("DefaultTextToSpeechDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The technical name of the default text-to-speech deployment.")),
+                ("DefaultTextToSpeechVoiceId", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The voice identifier to use for text-to-speech.")),
+                ("DefaultRealtimeDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The technical name of the default realtime deployment: the model that carries a spoken conversation, in the chat or on a phone call, when the profile names none.")),
+                ("DefaultRealtimeVoiceId", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The voice used in realtime (speech-to-speech) sessions when the profile names none.")))
             .AdditionalProperties(false);
 }

@@ -1,4 +1,4 @@
-using CrestApps.Core.AI;
+﻿using CrestApps.Core.AI;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using Json.Schema;
@@ -63,7 +63,7 @@ public sealed class AIToolInstanceRecipeStep : IRecipeStep
                 ("DataSourceSearchToolSettings", BuildDataSourceSearchSettingsSchema().Description("Settings for the built-in AI data source vector search source.")),
                 ("AIToolInstanceParametersMetadata", BuildParametersMetadataSchema().Description("User-declared parameters for sources that opt into parameter support.")))
             .AdditionalProperties(true)
-            .Description("Source-specific tool instance settings, grouped by settings object name. Secrets are stored encrypted at rest.");
+            .Description("Source-specific tool instance settings, grouped by settings object name. Secrets entered in the admin are stored encrypted; exported plans leave them blank.");
 
         var instanceSchema = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
@@ -118,16 +118,17 @@ public sealed class AIToolInstanceRecipeStep : IRecipeStep
             .Type(SchemaValueType.Object)
             .Properties(
                 ("BaseUrl", RecipeStepSchemaBuilders.String().Description("Absolute HTTP or HTTPS URL the request targets.")),
+                ("PathTemplate", RecipeStepSchemaBuilders.String().Description("Optional path appended to BaseUrl. It may hold {parameterName} tokens replaced by parameters bound to the path, each escaped as one path segment.")),
                 ("HttpMethod", RecipeStepSchemaBuilders.String().Description("HTTP method: GET, POST, PUT, PATCH, or DELETE.")),
                 ("AuthenticationType", RecipeStepSchemaBuilders.String().Description("Authentication type: None, ApiKey, Basic, or OAuth2.")),
                 ("ApiKeyHeaderName", RecipeStepSchemaBuilders.String().Description("Header name used to send the API key when AuthenticationType is ApiKey.")),
-                ("ApiKey", RecipeStepSchemaBuilders.String().Description("API key credential. Stored encrypted at rest.")),
-                ("BearerToken", RecipeStepSchemaBuilders.String().Description("Bearer token credential. Stored encrypted at rest.")),
+                ("ApiKey", RecipeStepSchemaBuilders.String().Description("API key credential. Encrypted when entered in the admin; a value imported in clear text is used as given. Exported plans leave it blank.")),
+                ("BearerToken", RecipeStepSchemaBuilders.String().Description("Bearer token credential. Encrypted when entered in the admin; a value imported in clear text is used as given. Exported plans leave it blank.")),
                 ("Username", RecipeStepSchemaBuilders.String().Description("Basic authentication user name.")),
-                ("Password", RecipeStepSchemaBuilders.String().Description("Basic authentication password. Stored encrypted at rest.")),
+                ("Password", RecipeStepSchemaBuilders.String().Description("Basic authentication password. Encrypted when entered in the admin; a value imported in clear text is used as given. Exported plans leave it blank.")),
                 ("TokenEndpoint", RecipeStepSchemaBuilders.String().Description("OAuth 2.0 token endpoint.")),
                 ("ClientId", RecipeStepSchemaBuilders.String().Description("OAuth 2.0 client identifier.")),
-                ("ClientSecret", RecipeStepSchemaBuilders.String().Description("OAuth 2.0 client secret. Stored encrypted at rest.")),
+                ("ClientSecret", RecipeStepSchemaBuilders.String().Description("OAuth 2.0 client secret. Encrypted when entered in the admin; a value imported in clear text is used as given. Exported plans leave it blank.")),
                 ("Scope", RecipeStepSchemaBuilders.String().Description("OAuth 2.0 scope.")),
                 ("DefaultHeaders", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Object)
@@ -163,7 +164,7 @@ public sealed class AIToolInstanceRecipeStep : IRecipeStep
             .Type(SchemaValueType.Object)
             .Properties(
                 ("ApplicationId", RecipeStepSchemaBuilders.String().Description("Algolia application identifier.")),
-                ("ApiKey", RecipeStepSchemaBuilders.String().Description("Algolia search-only API key. Stored encrypted at rest.")),
+                ("ApiKey", RecipeStepSchemaBuilders.String().Description("Algolia search-only API key. Encrypted when entered in the admin; a value imported in clear text is used as given. Exported plans leave it blank.")),
                 ("IndexName", RecipeStepSchemaBuilders.String().Description("Algolia index name.")),
                 ("MaxResults", RecipeStepSchemaBuilders.Integer().Description("Maximum passages returned for a single search.")))
             .AdditionalProperties(true);
@@ -176,7 +177,8 @@ public sealed class AIToolInstanceRecipeStep : IRecipeStep
                 ("RetrievalMode", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Chunk", "Hierarchical").Description("Whether a search returns only the matching chunks or the full source documents they belong to.")),
                 ("TopNDocuments", RecipeStepSchemaBuilders.Integer().Description("Number of top-scoring documents returned for a single search. Empty uses the site default.")),
                 ("Strictness", RecipeStepSchemaBuilders.Integer().Description("Relevance threshold a result must clear to be returned. Empty uses the site default.")),
-                ("Filter", RecipeStepSchemaBuilders.String().Description("OData filter expression translated to the index provider's own syntax before the search runs.")))
+                ("Filter", RecipeStepSchemaBuilders.String().Description("OData filter expression translated to the index provider's own syntax before the search runs.")),
+                ("ContentTypes", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("The kinds of knowledge searched (knowledge object types). Empty searches every kind.")))
             .AdditionalProperties(true);
 
     private static JsonSchemaBuilder BuildWebsiteSearchSettingsSchema()

@@ -33,5 +33,7 @@ public sealed class NotifyContentOwnerTaskSchema : WorkflowActivitySchemaDefinit
         yield return ("TextBody", WorkflowActivitySchemaBuilders.LiquidExpression("The optional plain-text body of the notification. Does not support HTML."));
         yield return ("HtmlBody", WorkflowActivitySchemaBuilders.LiquidExpression("The HTML body of the notification. Only sent when the provider supports HTML."));
         yield return ("IsHtmlPreferred", WorkflowActivitySchemaBuilders.Boolean("When true, the notification provider uses the HTML body when it supports HTML. Defaults to false."));
+        yield return ("Url", WorkflowActivitySchemaBuilders.LiquidExpression("The optional URL the notification points to."));
+        yield return ("NotificationType", WorkflowActivitySchemaBuilders.String("The optional type of the notification, used to group or filter notifications."));
     }
 }

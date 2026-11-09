@@ -29,6 +29,7 @@ public sealed class SmsTaskSchema : WorkflowActivitySchemaDefinitionBase
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("PhoneNumber", WorkflowActivitySchemaBuilders.LiquidExpression("The destination phone number. Must include the country code, for example +1 for the United States."));
+        yield return ("FromNumber", WorkflowActivitySchemaBuilders.LiquidExpression("The phone number to send the message from. When empty, the default phone number of the SMS provider is used."));
         yield return ("Body", WorkflowActivitySchemaBuilders.LiquidExpression("The body of the SMS message."));
     }
 }

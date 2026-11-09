@@ -48,7 +48,7 @@ public sealed class CustomersRecipeStep : RecipeStepSchemaBase
 
         var customer = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
-            .Description("A customer. It needs a name, a company or an email.")
+            .Description("A guest customer, matched by ItemId, then by the email of a guest. It needs a name, a company or an email. Every member is replaced, so omitted ones are cleared. Customers linked to a user account, erased or merged are left as they are.")
             .Properties(
                 ("ItemId", NullableString("The stable identifier of the customer. Preserved across environments; generated when empty or invalid.")),
                 ("Kind", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Person", "Business").Default("Person").Description("Whether the customer is a person or a business.")),
@@ -57,6 +57,8 @@ public sealed class CustomersRecipeStep : RecipeStepSchemaBase
                 ("LastName", NullableString("The person's last name.")),
                 ("CompanyName", NullableString("The company name of a business customer.")),
                 ("TaxId", NullableString("The tax identifier of a business customer.")),
+                ("IsTaxExempt", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the customer is exempt from tax.")),
+                ("TaxExemptionReason", NullableString("Why the customer is exempt from tax, such as a resale certificate number, for the store's records.")),
                 ("Email", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Format(Formats.Email).Description("The customer's email. A guest with the same email is updated rather than duplicated.")),
                 ("Phone", NullableString("The customer's phone number.")),
                 ("AcceptsMarketing", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the customer accepts marketing.")),

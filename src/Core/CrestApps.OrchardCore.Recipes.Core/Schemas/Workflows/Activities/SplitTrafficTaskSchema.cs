@@ -1,4 +1,4 @@
-using Json.Schema;
+﻿using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows.Activities;
 
@@ -29,6 +29,6 @@ public sealed class SplitTrafficTaskSchema : WorkflowActivitySchemaDefinitionBas
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("Variants", WorkflowActivitySchemaBuilders.String("The outcomes and their weights, one name: weight per line. Each name is an outcome."));
-        yield return ("StickyKey", WorkflowActivitySchemaBuilders.LiquidExpression("Optionally, a key such as the customer's phone number that always takes the same outcome."));
+        yield return ("StickyKey", WorkflowActivitySchemaBuilders.String("Optionally, a key such as the customer's phone number that always takes the same outcome. " + WorkflowActivitySchemaBuilders.LiquidSupportText));
     }
 }

@@ -28,6 +28,7 @@ internal sealed class MembershipsRecipeStepSchema : RecordsRecipeStepSchemaBase
             ("OrderIds", new JsonSchemaBuilder().Type(SchemaValueType.Array).Description("The orders that bought or renewed the membership.")),
             ("StartsUtc", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("When the membership starts.")),
             ("EndsUtc", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("When the membership ends, or none for one that doesn't.")),
-            ("Status", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Integer).Description("The membership's status.")),
+            ("Status", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Integer).Description("The membership's status: Active, Expired or Revoked (or 0, 1, 2).")),
+            ("EndedReason", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Why the membership ended early, such as the order being refunded.")),
         ];
 }

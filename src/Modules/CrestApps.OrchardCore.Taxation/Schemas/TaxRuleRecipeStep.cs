@@ -43,7 +43,7 @@ public sealed class TaxRuleRecipeStep : IRecipeStep
             .Properties(
                 ("ItemId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The stable identifier of the rule. Preserved across environments.")),
                 ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The display name of the rule.")),
-                ("Version", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("The version of the rule.")),
+                ("Version", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Ignored on import: each site stamps its own version, incremented on every change.")),
                 ("Enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the rule is enabled.")),
                 ("Priority", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("The evaluation priority. Lower values are evaluated first.")),
                 ("TaxType", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The type of tax the rule produces (for example 'SalesTax').")),

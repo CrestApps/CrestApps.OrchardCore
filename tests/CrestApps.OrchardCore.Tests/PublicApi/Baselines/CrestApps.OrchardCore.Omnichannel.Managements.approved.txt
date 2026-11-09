@@ -144,6 +144,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements
     }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Crm")]
     [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.Recipes"})]
+    public sealed class CrmRecipeSchemasStartup : OrchardCore.Modules.StartupBase
+    {
+        public CrmRecipeSchemasStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Crm")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
             "OrchardCore.Recipes.Core"})]
     public sealed class CrmRecipesStartup : OrchardCore.Modules.StartupBase
     {
@@ -162,6 +170,15 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements
     public sealed class CrmStartup : OrchardCore.Modules.StartupBase
     {
         public CrmStartup(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.CrmStartup> stringLocalizer) { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Crm")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.Recipes",
+            "OrchardCore.Workflows"})]
+    public sealed class CrmWorkflowRecipeSchemasStartup : OrchardCore.Modules.StartupBase
+    {
+        public CrmWorkflowRecipeSchemasStartup() { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Crm")]

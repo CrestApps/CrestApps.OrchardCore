@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Calendars.Deployments;
 using CrestApps.OrchardCore.Calendars.Recipes;
+using CrestApps.OrchardCore.Calendars.Recipes.Workflows;
 using CrestApps.OrchardCore.Recipes.Core;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
@@ -30,5 +31,48 @@ public sealed class DashboardRecipesSchemaStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IContentSchemaDefinition, CalendarWidgetPartSchemaDefinition>();
+    }
+}
+
+/// <summary>
+/// Describes the calendar workflow events and tasks to CrestApps Recipes.
+/// </summary>
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area, OrchardCoreFeatureIds.Workflows)]
+public sealed class WorkflowsRecipesSchemaStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddWorkflowActivitySchema<CalendarEventCreatedEventSchema>()
+            .AddWorkflowActivitySchema<CalendarEventUpdatedEventSchema>()
+            .AddWorkflowActivitySchema<CalendarEventCancelledEventSchema>()
+            .AddWorkflowActivitySchema<CalendarEventDeletedEventSchema>()
+            .AddWorkflowActivitySchema<CalendarAttendeeInvitedEventSchema>()
+            .AddWorkflowActivitySchema<CalendarAttendeeRespondedEventSchema>()
+            .AddWorkflowActivitySchema<CreateCalendarEventTaskSchema>()
+            .AddWorkflowActivitySchema<UpdateCalendarEventTaskSchema>()
+            .AddWorkflowActivitySchema<CancelCalendarEventTaskSchema>()
+            .AddWorkflowActivitySchema<GetCalendarEventTaskSchema>()
+            .AddWorkflowActivitySchema<FindCalendarEventsTaskSchema>()
+            .AddWorkflowActivitySchema<AddCalendarAttendeeTaskSchema>()
+            .AddWorkflowActivitySchema<RemoveCalendarAttendeeTaskSchema>()
+            .AddWorkflowActivitySchema<FindFreeTimeTaskSchema>();
+    }
+}
+
+/// <summary>
+/// Describes the workflow events raised by calendar reminders to CrestApps Recipes.
+/// </summary>
+[Feature(CalendarsConstants.Features.Reminders)]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area, OrchardCoreFeatureIds.Workflows)]
+public sealed class WorkflowRemindersRecipesSchemaStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddWorkflowActivitySchema<CalendarEventStartingSoonEventSchema>()
+            .AddWorkflowActivitySchema<CalendarEventCompletedEventSchema>();
     }
 }

@@ -1,4 +1,4 @@
-using Json.Schema;
+﻿using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows.Activities;
 
@@ -28,9 +28,9 @@ public sealed class SendSignedWebhookTaskSchema : WorkflowActivitySchemaDefiniti
     /// <inheritdoc />
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
-        yield return ("Url", WorkflowActivitySchemaBuilders.LiquidExpression("The http or https address to post to."));
-        yield return ("EventName", WorkflowActivitySchemaBuilders.LiquidExpression("Optionally, the event name sent in the X-Webhook-Event header."));
-        yield return ("Body", WorkflowActivitySchemaBuilders.LiquidExpression("The JSON body. Defaults to {{ Workflow.Input | json }}."));
+        yield return ("Url", WorkflowActivitySchemaBuilders.String("The http or https address to post to. " + WorkflowActivitySchemaBuilders.LiquidSupportText));
+        yield return ("EventName", WorkflowActivitySchemaBuilders.String("Optionally, the event name sent in the X-Webhook-Event header. " + WorkflowActivitySchemaBuilders.LiquidSupportText));
+        yield return ("Body", WorkflowActivitySchemaBuilders.String("The JSON body. Defaults to {{ Workflow.Input | json }}. " + WorkflowActivitySchemaBuilders.LiquidSupportText));
         yield return ("ProtectedSecret", WorkflowActivitySchemaBuilders.String("The signing secret, encrypted for this tenant. It can't be moved to another tenant; enter the secret again in the task's editor there."));
         yield return ("MaxAttempts", WorkflowActivitySchemaBuilders.Integer("How many times a delivery is tried, from 1 to 5. Defaults to 3."));
     }

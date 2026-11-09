@@ -1,4 +1,6 @@
+using CrestApps.OrchardCore.Geo.Osrm.Recipes;
 using CrestApps.OrchardCore.Geo.Services;
+using CrestApps.OrchardCore.Recipes.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http.Resilience;
@@ -24,5 +26,18 @@ public sealed class Startup : StartupBase
         services.AddScoped<IRouteProvider>(sp => sp.GetRequiredService<OsrmProvider>());
         services.AddSiteDisplayDriver<OsrmSettingsDisplayDriver>();
         services.AddSiteSettingsPermission(GeoConstants.SettingsGroupId, GeoPermissions.ManageGeoSettings);
+    }
+}
+
+/// <summary>
+/// Describes the Osrm site settings to CrestApps Recipes.
+/// </summary>
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
+public sealed class RecipesSchemaStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<ISiteSettingsSchemaDefinition, OsrmSettingsSchema>();
     }
 }

@@ -36,6 +36,46 @@ public sealed class Startup : StartupBase
         services.AddScoped<IRecipeStep, CustomSettingsRecipeStep>();
         services.AddScoped<IRecipeStep, CommandRecipeStep>();
         services.AddScoped<IRecipeStep, RecipesRecipeStep>();
+        services.AddScoped<IRecipeStep, ReloadTenantRecipeStep>();
+    }
+}
+
+/// <summary>
+/// Registers the schemas of the Secrets recipe and deployment steps.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.Secrets)]
+public sealed class SecretsRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, SecretsRecipeStep>();
+        services.AddDeploymentStepSchema<SecretsDeploymentStepSchema>();
+    }
+}
+
+/// <summary>
+/// Registers the schemas of the DataPipelines recipe and deployment steps.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelines)]
+public sealed class DataPipelinesRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, DataPipelinesRecipeStep>();
+        services.AddDeploymentStepSchema<DataPipelinesDeploymentStepSchema>();
+    }
+}
+
+/// <summary>
+/// Registers the schemas of the rate-limit policies recipe and deployment steps.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.RateLimits)]
+public sealed class RateLimitsRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, CreateOrUpdateRateLimitPoliciesRecipeStep>();
+        services.AddDeploymentStepSchema<AllRateLimitPoliciesDeploymentStepSchema>();
     }
 }
 
@@ -155,6 +195,7 @@ public sealed class WorkflowRecipeStartup : StartupBase
         services
             .AddWorkflowActivitySchema<CommitTransactionTaskSchema>()
             .AddWorkflowActivitySchema<CorrelateTaskSchema>()
+            .AddWorkflowActivitySchema<ExecuteWorkflowTaskSchema>()
             .AddWorkflowActivitySchema<ForEachTaskSchema>()
             .AddWorkflowActivitySchema<ForkTaskSchema>()
             .AddWorkflowActivitySchema<ForLoopTaskSchema>()
@@ -166,6 +207,8 @@ public sealed class WorkflowRecipeStartup : StartupBase
             .AddWorkflowActivitySchema<ScriptTaskSchema>()
             .AddWorkflowActivitySchema<SetOutputTaskSchema>()
             .AddWorkflowActivitySchema<SetPropertyTaskSchema>()
+            .AddWorkflowActivitySchema<SetVariableTaskSchema>()
+            .AddWorkflowActivitySchema<StartedByWorkflowEventSchema>()
             .AddWorkflowActivitySchema<WhileLoopTaskSchema>()
             .AddWorkflowActivitySchema<WorkflowFaultEventSchema>();
     }
@@ -337,6 +380,7 @@ public sealed class UsersWorkflowRecipeStartup : StartupBase
             .AddWorkflowActivitySchema<UserDisabledEventSchema>()
             .AddWorkflowActivitySchema<UserEnabledEventSchema>()
             .AddWorkflowActivitySchema<UserLoggedInEventSchema>()
+            .AddWorkflowActivitySchema<UserLoggedOutEventSchema>()
             .AddWorkflowActivitySchema<UserUpdatedEventSchema>()
             .AddWorkflowActivitySchema<ValidateUserTaskSchema>();
     }
@@ -367,6 +411,32 @@ public sealed class TwitterWorkflowRecipeStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddWorkflowActivitySchema<UpdateTwitterStatusTaskSchema>();
+    }
+}
+
+/// <summary>
+/// Registers the schemas of the Data Pipelines workflow activities.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.Workflows, OrchardCoreFeatureIds.DataPipelines)]
+public sealed class DataPipelinesWorkflowRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddWorkflowActivitySchema<DataPipelineRunCompletedEventSchema>()
+            .AddWorkflowActivitySchema<RunDataPipelineTaskSchema>();
+    }
+}
+
+/// <summary>
+/// Registers the schema of the Meta Conversions API workflow task.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.Workflows, OrchardCoreFeatureIds.FacebookPixel)]
+public sealed class FacebookPixelWorkflowRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddWorkflowActivitySchema<MetaConversionsApiEventTaskSchema>();
     }
 }
 
@@ -921,6 +991,19 @@ public sealed class HtmlSchemaStartup : StartupBase
 }
 
 /// <summary>
+/// Registers the schemas of the Liquid part and the Liquid field.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.Liquid, OrchardCoreFeatureIds.Contents)]
+public sealed class LiquidSchemaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentSchemaDefinition, LiquidPartSchema>();
+        services.AddScoped<IContentSchemaDefinition, LiquidFieldSchema>();
+    }
+}
+
+/// <summary>
 /// Registers services and configuration for the MarkdownSchema feature.
 /// </summary>
 [RequireFeatures(OrchardCoreFeatureIds.Markdown)]
@@ -1185,6 +1268,18 @@ public sealed class OpenIdServerSiteSettingsSchemaStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ISiteSettingsSchemaDefinition, OpenIdServerSettingsSchema>();
+    }
+}
+
+/// <summary>
+/// Registers the schema of the OpenID Connect secret settings.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.OpenIdSecrets)]
+public sealed class OpenIdSecretSiteSettingsSchemaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<ISiteSettingsSchemaDefinition, OpenIdSecretSettingsSchema>();
     }
 }
 

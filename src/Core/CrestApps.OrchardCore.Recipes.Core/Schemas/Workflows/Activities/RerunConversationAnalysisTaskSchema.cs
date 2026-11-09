@@ -1,4 +1,4 @@
-using Json.Schema;
+﻿using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows.Activities;
 
@@ -25,6 +25,6 @@ public sealed class RerunConversationAnalysisTaskSchema : WorkflowActivitySchema
     /// <inheritdoc />
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
-        yield return ("SessionId", WorkflowActivitySchemaBuilders.LiquidExpression("The AI session to analyze again. Defaults to {{ Workflow.Input.SessionId }}."));
+        yield return ("SessionId", WorkflowActivitySchemaBuilders.String("The AI session to analyze again. Defaults to {{ Workflow.Input.SessionId }}. " + WorkflowActivitySchemaBuilders.LiquidSupportText));
     }
 }

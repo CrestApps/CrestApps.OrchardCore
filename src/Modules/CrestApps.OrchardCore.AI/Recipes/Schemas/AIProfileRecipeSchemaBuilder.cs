@@ -1,4 +1,4 @@
-using Json.Schema;
+﻿using Json.Schema;
 
 namespace CrestApps.OrchardCore.AI.Recipes.Schemas;
 
@@ -46,7 +46,8 @@ internal static class AIProfileRecipeSchemaBuilder
             ("MemoryMetadata", BuildMemoryMetadataSchema()),
             ("ClaudeSessionMetadata", BuildClaudeSessionMetadataSchema()),
             ("CopilotSessionMetadata", BuildCopilotSessionMetadataSchema()),
-            ("AIProfileMcpMetadata", BuildConnectionIdsMetadataSchema("Known MCP connection selections for this profile.")),
+            ("AIDeploymentParametersMetadata", BuildDeploymentParametersMetadataSchema()),
+            ("AIProfileMcpMetadata", BuildMcpMetadataSchema()),
             ("AIProfileA2AMetadata", BuildConnectionIdsMetadataSchema("Known A2A connection selections for this profile.")),
         ];
 
@@ -59,6 +60,16 @@ internal static class AIProfileRecipeSchemaBuilder
             ("AIProfileDataExtractionSettings", BuildAIProfileDataExtractionSettingsSchema()),
             ("AIProfilePostSessionSettings", BuildAIProfilePostSessionSettingsSchema()),
             ("ChatModeProfileSettings", BuildChatModeProfileSettingsSchema()),
+            ("AIProfileGuardrailSettings", BuildGuardrailSettingsSchema()),
+            ("AIProfileDataPrivacySettings", BuildDataPrivacySettingsSchema()),
+            ("AIProfileSpeakingStyleSettings", BuildSpeakingStyleSettingsSchema()),
+            ("AIProfileSpeechSettings", BuildSpeechSettingsSchema()),
+            ("AIProfileLanguageSettings", BuildLanguageSettingsSchema()),
+            ("AIProfileFlowSettings", BuildFlowSettingsSchema()),
+            ("AIProfileContactMemorySettings", BuildContactMemorySettingsSchema()),
+            ("AIProfileContactFieldMappingSettings", BuildContactFieldMappingSettingsSchema()),
+            ("PromptSecurityProfileSettings", BuildPromptSecurityProfileSettingsSchema()),
+            ("WebMcpProfileSettings", BuildWebMcpProfileSettingsSchema()),
         ];
 
     private static IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetTemplatePropertyEntries()
@@ -170,7 +181,8 @@ internal static class AIProfileRecipeSchemaBuilder
                 ("Strictness", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Retrieval strictness value.")),
                 ("TopNDocuments", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("How many documents to retrieve.")),
                 ("IsInScope", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether answers must stay within the retrieved documents.")),
-                ("Filter", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional OData filter applied to retrieved data.")))
+                ("Filter", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional OData filter applied to retrieved data.")),
+                ("ObjectTypes", BuildStringArraySchema("Optional object types (for example content types) the retrieved documents are limited to. Empty searches every type.")))
             .AdditionalProperties(true);
 
     private static JsonSchemaBuilder BuildAIProfileSessionDocumentsMetadataSchema()
@@ -202,7 +214,9 @@ internal static class AIProfileRecipeSchemaBuilder
                 ("RetrievalMode", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)
                     .Enum("Chunk", "Hierarchical")
-                    .Description("Document retrieval strategy.")))
+                    .Description("Document retrieval strategy.")),
+                ("MaxIndexableCharacters", new JsonSchemaBuilder().Type(SchemaValueType.Integer | SchemaValueType.Null).Description("Optional limit on the characters of a document that are indexed. Null uses the site default.")),
+                ("DescribeFiguresInUploads", new JsonSchemaBuilder().Type(SchemaValueType.Boolean | SchemaValueType.Null).Description("Whether figures in uploaded documents are described by an AI model while indexing. Null uses the site default.")))
             .AdditionalProperties(true);
 
     private static JsonSchemaBuilder BuildMemoryMetadataSchema()
@@ -210,7 +224,9 @@ internal static class AIProfileRecipeSchemaBuilder
             .Type(SchemaValueType.Object)
             .Description("Known AI memory configuration for the profile.")
             .Properties(
-                ("EnableUserMemory", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether user memory is enabled for the profile.")))
+                ("EnableUserMemory", new JsonSchemaBuilder().Type(SchemaValueType.Boolean | SchemaValueType.Null).Description("Whether user memory is enabled for the profile. Null uses the site default.")),
+                ("EnableSessionMemory", new JsonSchemaBuilder().Type(SchemaValueType.Boolean | SchemaValueType.Null).Description("Whether the profile keeps a memory of the current session. Null uses the site default.")),
+                ("EnablePastConversations", new JsonSchemaBuilder().Type(SchemaValueType.Boolean | SchemaValueType.Null).Description("Whether the profile may recall the user's past conversations. Null uses the site default.")))
             .AdditionalProperties(true);
 
     private static JsonSchemaBuilder BuildClaudeSessionMetadataSchema()
@@ -255,6 +271,10 @@ internal static class AIProfileRecipeSchemaBuilder
                     .Type(SchemaValueType.String)
                     .Enum("Chat", "Utility", "TemplatePrompt", "Agent")
                     .Description("Profile type created from this template.")),
+                ("ConnectionName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Provider connection name applied to generated profiles.")),
+                ("ChatMode", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("TextInput", "AudioInput", "Conversation").Description("Chat mode applied to generated profiles.")),
+                ("VoiceName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Speech synthesis voice applied to generated profiles.")),
+                ("EnableTextToSpeechPlayback", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether generated profiles read their replies aloud.")),
                 ("ChatDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Text deployment the generated profile talks to. It answers typed messages, including those typed during a voice conversation.")),
                 ("ConversationDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Deployment that carries a spoken conversation for the generated profile. Naming one puts the profile in Conversation chat mode unless the template carries a chat mode of its own. Leave it empty to inherit the site's default realtime deployment.")),
                 ("UtilityDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Utility deployment name used when the generated profile needs a utility or background model.")),
@@ -277,6 +297,7 @@ internal static class AIProfileRecipeSchemaBuilder
                 ("PastMessagesCount", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Number of prior chat messages that generated profiles should include in context.")),
                 ("ToolNames", BuildStringArraySchema("Tool names automatically selected for generated profiles.")),
                 ("AgentNames", BuildStringArraySchema("On-demand agent profile names automatically selected for generated profiles.")),
+                ("A2AConnectionIds", BuildStringArraySchema("A2A connection identifiers automatically selected for generated profiles.")),
                 ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Profile description copied into the generated profile.")),
                 ("AgentAvailability", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)
@@ -310,6 +331,7 @@ internal static class AIProfileRecipeSchemaBuilder
             .Description("Known core profile settings.")
             .Properties(
                 ("LockSystemMessage", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Prevents recipe or editor updates from changing the system message.")),
+                ("IsListable", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the profile is listed in the admin UI. Defaults to true.")),
                 ("IsRemovable", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Controls whether the profile can be deleted from the admin UI.")))
             .AdditionalProperties(true);
 
@@ -345,7 +367,9 @@ internal static class AIProfileRecipeSchemaBuilder
                             ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Unique extraction key.")),
                             ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("What value should be extracted.")),
                             ("AllowMultipleValues", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether multiple values can be captured.")),
-                            ("IsUpdatable", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether later session turns can update the extracted value.")))
+                            ("IsUpdatable", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether later session turns can update the extracted value.")),
+                            ("FieldType", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Text", "Number", "Boolean", "Date", "Enum", "List").Description("The type of the extracted value. Enum and List values are limited to AllowedValues.")),
+                            ("AllowedValues", BuildStringArraySchema("The values an Enum or List field may take.")))
                         .AdditionalProperties(true))
                     .Description("Structured extraction definitions.")))
             .AdditionalProperties(true);
@@ -357,6 +381,7 @@ internal static class AIProfileRecipeSchemaBuilder
             .Properties(
                 ("EnablePostSessionProcessing", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Enables deferred post-session tasks.")),
                 ("ToolNames", BuildStringArraySchema("Tools available to post-session processing.")),
+                ("ToolInstanceNames", BuildStringArraySchema("Tool instances available to post-session processing.")),
                 ("PostSessionTasks", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
                     .Items(new JsonSchemaBuilder()
@@ -377,7 +402,9 @@ internal static class AIProfileRecipeSchemaBuilder
                                         ("Value", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Predefined option value.")),
                                         ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Human-readable description for the option.")))
                                     .AdditionalProperties(true))
-                                .Description("Predefined options used when Type is PredefinedOptions.")))
+                                .Description("Predefined options used when Type is PredefinedOptions.")),
+                            ("ToolNames", BuildStringArraySchema("Tools the task may call.")),
+                            ("ToolInstanceNames", BuildStringArraySchema("Tool instances the task may call.")))
                         .AdditionalProperties(true))
                     .Description("Tasks executed after the chat session closes.")))
             .AdditionalProperties(true);
@@ -391,9 +418,172 @@ internal static class AIProfileRecipeSchemaBuilder
                     .Type(SchemaValueType.String)
                     .Enum("TextInput", "AudioInput", "Conversation")
                     .Description("Preferred input mode for this profile.")),
+                ("ConversationDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Optional technical name of the speech-to-speech (realtime) deployment used in conversation mode. Leave empty to use the site default.")),
                 ("VoiceName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional speech synthesis voice for conversation mode.")),
                 ("EnableTextToSpeechPlayback", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether assistant responses should be played back with text-to-speech.")))
             .AdditionalProperties(true);
+
+    private static JsonSchemaBuilder BuildDeploymentParametersMetadataSchema()
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Description("Values of the model parameters the profile's deployments expose (for example reasoningEffort), keyed by the parameter's technical name.")
+            .Properties(
+                ("Values", BuildStringDictionarySchema("Parameter values sent with requests to the chat deployment.")),
+                ("UtilityValues", BuildStringDictionarySchema("Parameter values sent with requests to the utility deployment.")))
+            .AdditionalProperties(true);
+
+    private static JsonSchemaBuilder BuildMcpMetadataSchema()
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Description("Known MCP connection selections for this profile.")
+            .Properties(
+                ("ConnectionIds", BuildStringArraySchema("Selected connection identifiers.")),
+                ("ToolNames", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Object | SchemaValueType.Null)
+                    .AdditionalProperties(new JsonSchemaBuilder().Type(SchemaValueType.Array | SchemaValueType.Null).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)))
+                    .Description("Per connection identifier, the names of the tools the profile may use from it. A connection with no entry, or a null entry, exposes every tool; an empty array exposes none.")))
+            .AdditionalProperties(true);
+
+    private static JsonSchemaBuilder BuildGuardrailSettingsSchema()
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Description("Topic guardrails: what the assistant must not discuss, checked on the customer's messages, the replies, or both.")
+            .Properties(
+                ("CheckCustomer", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the customer's messages are checked against the topics.")),
+                ("CheckReplies", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the assistant's replies are checked against the topics before they are sent.")),
+                ("Topics", BuildStringArraySchema("Identifiers of the guardrail topics: System Prompt templates in the 'Guardrail topic' category.")),
+                ("OtherTopics", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Other topics refused, described in a sentence or two, for this profile alone.")),
+                ("PlaceholderReply", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("What the assistant says instead when a guardrail triggers. Empty uses a default.")))
+            .AdditionalProperties(true);
+
+    private static JsonSchemaBuilder BuildDataPrivacySettingsSchema()
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Description("What the profile's conversations keep once they end.")
+            .Properties(
+                ("StorageMode", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Everything", "RedactPersonalData", "MetadataOnly").Description("Everything keeps the transcript; RedactPersonalData removes personal data from it; MetadataOnly keeps only the conversation's metadata.")),
+                ("StorageModeSinceUtc", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("When the storage mode last changed (ISO 8601, UTC). Conversations active after it get the mode. Set by the admin when the mode changes.")),
+                ("RetentionDays", new JsonSchemaBuilder().Type(SchemaValueType.Integer | SchemaValueType.Null).Minimum(1).Description("Days without activity after which a conversation is deleted. Null keeps conversations.")),
+                ("NamesToKeep", BuildStringArraySchema("Names that are not personal data and are kept when personal data is redacted, such as the assistant's, the business's and its staff's names.")))
+            .AdditionalProperties(true);
+
+    private static JsonSchemaBuilder BuildSpeakingStyleSettingsSchema()
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Description("The speaking styles the assistant follows.")
+            .Properties(
+                ("Styles", BuildStringArraySchema("Identifiers of System Prompt templates in the 'Speaking style' category, for example speaking-style-echo-verification, speaking-style-nato-spelling, speaking-style-speech-normalization, speaking-style-fuzzy-name-matching, speaking-style-ai-disclosure, speaking-style-scope-limits, speaking-style-filler-words or speaking-style-high-empathy.")))
+            .AdditionalProperties(true);
+
+    private static JsonSchemaBuilder BuildSpeechSettingsSchema()
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Description("How the assistant speaks and listens in voice conversations.")
+            .Properties(
+                ("SpeakingRate", new JsonSchemaBuilder().Type(SchemaValueType.Number | SchemaValueType.Null).Description("How fast the profile speaks, as a multiple of the voice's normal pace (1 is normal), clamped to 0.25-4. Null uses the deployment's own pace.")),
+                ("SpeakingEmotion", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Emotion the voice speaks with, as one word such as calm or excited, for providers with an emotion control (Cartesia). Others ignore it.")),
+                ("PronunciationEntries", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Array)
+                    .Items(new JsonSchemaBuilder()
+                        .Type(SchemaValueType.Object)
+                        .Properties(
+                            ("Text", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The word or phrase to pronounce differently.")),
+                            ("Alias", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("How it is spoken.")),
+                            ("MatchCase", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether Text matches only with the same letter case.")))
+                        .AdditionalProperties(true))
+                    .Description("Pronunciation replacements applied before text is spoken.")),
+                ("FallbackTextToSpeechDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Technical name of the text-to-speech deployment used when the primary one fails.")),
+                ("BoostedKeywords", BuildStringArraySchema("Words the speech recognizer is biased toward, such as product names.")),
+                ("RecognitionLanguages", BuildStringArraySchema("Languages the recognizer should expect, as BCP-47 tags. The first is the primary language.")),
+                ("InterruptionSensitivity", new JsonSchemaBuilder().Type(SchemaValueType.Number | SchemaValueType.Null).Minimum(0).Maximum(1).Description("How readily the caller's speech interrupts the assistant, from 0 (never interrupted) to 1 (any caller speech interrupts it). Null uses the default.")),
+                ("EnableBackchanneling", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the assistant says short acknowledgements while the caller speaks.")),
+                ("BackchannelPhrases", BuildStringArraySchema("The acknowledgements used for backchanneling. Empty uses a small built-in set.")))
+            .AdditionalProperties(true);
+
+    private static JsonSchemaBuilder BuildLanguageSettingsSchema()
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Description("The languages the assistant may speak.")
+            .Properties(
+                ("AllowedLanguages", BuildStringArraySchema("Languages the profile may converse in, as BCP-47 tags. Empty means no restriction.")),
+                ("StartingLanguage", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("BCP-47 tag of the language a conversation starts in. A conversation language set by the host (for example from a conversation variable) overrides it.")))
+            .AdditionalProperties(true);
+
+    private static JsonSchemaBuilder BuildFlowSettingsSchema()
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Description("The conversation flow: a workflow whose AI conversation stages guide the conversation.")
+            .Properties(
+                ("WorkflowTypeId", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Identifier of the workflow type that starts with an AI Conversation Flow Started event and holds the stages. Empty turns the flow off.")),
+                ("Flexible", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether every stage's instructions are given at once, so a caller who jumps between tasks is followed, rather than only the current stage's.")))
+            .AdditionalProperties(true);
+
+    private static JsonSchemaBuilder BuildContactMemorySettingsSchema()
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Description("The memory the assistant keeps about each CRM contact.")
+            .Properties(
+                ("UseMemory", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether what is remembered about the contact is given to the assistant.")),
+                ("SaveMemory", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the memory is updated after each conversation.")))
+            .AdditionalProperties(true);
+
+    private static JsonSchemaBuilder BuildContactFieldMappingSettingsSchema()
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Description("Copies extracted values onto the CRM contact when the conversation closes.")
+            .Properties(
+                ("Mappings", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Array)
+                    .Items(new JsonSchemaBuilder()
+                        .Type(SchemaValueType.Object)
+                        .Properties(
+                            ("FieldName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Name of the data extraction entry the value comes from.")),
+                            ("ContactField", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The contact field the value is written to.")),
+                            ("Mode", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Overwrite", "FillIfEmpty", "Append").Description("Whether the value replaces the field, fills it only when empty, or is appended to it.")))
+                        .AdditionalProperties(true))
+                    .Description("The mappings, one per extracted value.")))
+            .AdditionalProperties(true);
+
+    private static JsonSchemaBuilder BuildPromptSecurityProfileSettingsSchema()
+    {
+        static JsonSchemaBuilder Tiers(string description)
+            => new JsonSchemaBuilder()
+                .Type(SchemaValueType.Array | SchemaValueType.Null)
+                .Items(new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Object)
+                    .Properties(
+                        ("Limit", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Minimum(1).Description("How many are allowed in the window.")),
+                        ("Window", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The window, as a time span such as 00:01:00.")))
+                    .AdditionalProperties(true))
+                .Description(description);
+
+        return new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Description("Per-profile overrides of the site's chat rate limits. A null member uses the site setting.")
+            .Properties(
+                ("MaxMessagesPerWindow", new JsonSchemaBuilder().Type(SchemaValueType.Integer | SchemaValueType.Null).Description("Most messages a signed-in user may send per RateLimitWindow.")),
+                ("RateLimitWindow", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The message rate limit window, as a time span such as 00:01:00.")),
+                ("AnonymousMessageRateLimitTiers", Tiers("Message limits for anonymous visitors; every tier applies.")),
+                ("AnonymousSessionStartRateLimitTiers", Tiers("Session start limits for anonymous visitors; every tier applies.")),
+                ("MaxAnonymousSessionsPerWindow", new JsonSchemaBuilder().Type(SchemaValueType.Integer | SchemaValueType.Null).Description("Most sessions an anonymous visitor may start per AnonymousSessionRateLimitWindow.")),
+                ("AnonymousSessionRateLimitWindow", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The anonymous session window, as a time span such as 01:00:00.")))
+            .AdditionalProperties(true);
+    }
+
+    private static JsonSchemaBuilder BuildWebMcpProfileSettingsSchema()
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Description("Whether the profile may use the tools the visitor's page offers through WebMCP.")
+            .Properties(
+                ("AllowPageTools", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the assistant may call the page's tools.")),
+                ("AllowConsequentialPageTools", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the assistant may also call page tools that change something (consequential tools).")))
+            .AdditionalProperties(true);
+
+    private static JsonSchemaBuilder BuildStringDictionarySchema(string description)
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .AdditionalProperties(new JsonSchemaBuilder().Type(SchemaValueType.String))
+            .Description(description);
 
     private static JsonSchemaBuilder BuildStringArraySchema(string description)
         => new JsonSchemaBuilder()

@@ -23,13 +23,10 @@ public sealed class AICallActionTaskSchema : WorkflowActivitySchemaDefinitionBas
     protected override IEnumerable<string> Outcomes => ["Done", "Failed"];
 
     /// <inheritdoc />
-    protected override IEnumerable<string> RequiredProperties => ["Action"];
-
-    /// <inheritdoc />
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
-        yield return ("Action", WorkflowActivitySchemaBuilders.StringEnum("What to do.", "Message", "TakeOver", "TransferToNumber", "SwitchProfile", "End"));
-        yield return ("Value", WorkflowActivitySchemaBuilders.LiquidExpression("The note, the agent's user name, the phone number, or the AI profile identifier, depending on the action."));
-        yield return ("ActivityId", WorkflowActivitySchemaBuilders.LiquidExpression("The call's activity. Defaults to {{ Workflow.Input.ActivityId }}."));
+        yield return ("Action", WorkflowActivitySchemaBuilders.StringEnum("What to do. Defaults to Message.", "Message", "TakeOver", "TransferToNumber", "SwitchProfile", "End"));
+        yield return ("Value", WorkflowActivitySchemaBuilders.String("The Liquid expression that resolves the note, the agent's user name, the phone number, or the AI profile identifier, depending on the action."));
+        yield return ("ActivityId", WorkflowActivitySchemaBuilders.String("The Liquid expression that resolves the call's activity. Defaults to {{ Workflow.Input.ActivityId }}."));
     }
 }

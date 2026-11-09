@@ -28,15 +28,28 @@ public static class WorkflowActivitySchemaBuilders
     public const string ScriptSupportText = "Supports JavaScript syntax, for example \"input('Name')\".";
 
     /// <summary>
+    /// The names of the built-in workflow expression syntaxes.
+    /// </summary>
+    public static readonly string[] ExpressionSyntaxes = ["Literal", "Liquid", "JavaScript"];
+
+    /// <summary>
+    /// The names of the built-in types of workflow variables.
+    /// </summary>
+    public static readonly string[] VariableTypeNames = ["any", "array", "boolean", "contentItem", "datetime", "number", "object", "string"];
+
+    /// <summary>
     /// Creates a schema for a <c>WorkflowExpression&lt;T&gt;</c> property.
     /// </summary>
     /// <param name="description">The description shown for the property.</param>
     public static JsonSchemaBuilder Expression(string description)
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
-            .Properties(("Expression", new JsonSchemaBuilder()
-                .Type(SchemaValueType.String | SchemaValueType.Null)
-                .Description("The expression evaluated at runtime.")))
+            .Properties(
+                ("Expression", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.String | SchemaValueType.Null)
+                    .Description("The expression evaluated at runtime.")),
+                ("Syntax", ExpressionSyntax()
+                    .Description("The syntax of the expression: 'Literal', 'Liquid', 'JavaScript' or another registered syntax. Only the activities that let each expression choose its syntax read it; the other activities always use their own syntax.")))
             .AdditionalProperties(false)
             .Description(description);
 
@@ -179,6 +192,62 @@ public static class WorkflowActivitySchemaBuilders
             .Type(SchemaValueType.Array)
             .Items(new JsonSchemaBuilder().Type(SchemaValueType.String).Enum(values))
             .Description(description);
+
+    /// <summary>
+    /// Creates a schema for a <c>WorkflowExpression&lt;T&gt;</c> property of an activity that lets the expression
+    /// choose its syntax.
+    /// </summary>
+    /// <param name="description">The description of the property.</param>
+    /// <param name="defaultSyntax">The syntax used when neither the expression nor the activity selects one.</param>
+    public static JsonSchemaBuilder SyntaxExpression(string description, string defaultSyntax)
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("Expression", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.String | SchemaValueType.Null)
+                    .Description("The expression evaluated at runtime.")),
+                ("Syntax", ExpressionSyntax()
+                    .Description($"How the expression is evaluated: 'Literal' (the text is the value), 'Liquid', 'JavaScript', or another registered syntax. When omitted, the legacy 'Syntax' property of the activity decides, and {defaultSyntax} is used by default.")))
+            .AdditionalProperties(false)
+            .Description(description);
+
+    /// <summary>
+    /// Creates the schema of the name of a workflow expression syntax.
+    /// </summary>
+    public static JsonSchemaBuilder ExpressionSyntax()
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.String | SchemaValueType.Null)
+            .WithSuggestions(ExpressionSyntaxes);
+
+    /// <summary>
+    /// Creates the schema of the output bindings of an activity, which write its outputs to workflow variables.
+    /// </summary>
+    public static JsonSchemaBuilder OutputBindings()
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .AdditionalProperties(new JsonSchemaBuilder().Type(SchemaValueType.String))
+            .Description("Writes outputs of the activity to workflow variables: an object of output names, such as 'Result', to the names of declared variables.");
+
+    /// <summary>
+    /// Creates the schema of the retry policy of a task.
+    /// </summary>
+    public static JsonSchemaBuilder ActivityRetryPolicy()
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("MaxRetries", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Integer)
+                    .Minimum(0)
+                    .Maximum(10)
+                    .Description("How many times the task is retried when it faults, from 0 to 10.")),
+                ("DelaySeconds", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Integer)
+                    .Minimum(0)
+                    .Description("The delay before the first retry, in seconds. With 0, the task is retried at once, in the same run.")),
+                ("Backoff", EnumValue("How the delay grows from one retry to the next. Defaults to 'Fixed'.", "Fixed", "Exponential")),
+                ("OnFailure", EnumValue("What the failure does once the attempts are spent: fault the workflow, or follow the 'Failed' outcome. Defaults to 'FaultWorkflow'.", "FaultWorkflow", "FollowFailedOutcome")))
+            .AdditionalProperties(true)
+            .Description("How the task is retried when it faults, and what its failure does once the attempts are spent. When 'OnFailure' is 'FollowFailedOutcome', the task gets a 'Failed' outcome.");
 
     /// <summary>
     /// Creates a schema for the <c>ActivityMetadata</c> property that every workflow activity supports.

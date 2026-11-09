@@ -21,9 +21,10 @@ public sealed class GoogleAuthenticationSettingsSchema : SiteSettingsSchemaBase
             .Description("Configuration for Google OAuth authentication.")
             .Properties(
                 ("ClientID", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The Client ID from the Google Cloud Console.")),
-                ("ClientSecret", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The Client Secret from the Google Cloud Console.")),
+                ("ClientSecret", ProtectedCredential("Google client secret", "ClientSecretSecretName")),
+                ("ClientSecretSecretName", SecretName("Google client secret")),
                 ("CallbackPath", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The request path where the user-agent will be returned after authentication.")),
                 ("SaveTokens", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to save the access and refresh tokens.")))
-            .Required("ClientID", "ClientSecret")
+            .Required("ClientID")
             .AdditionalProperties(false);
 }

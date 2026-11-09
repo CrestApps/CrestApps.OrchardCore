@@ -20,7 +20,9 @@ public sealed class FacebookPixelSettingsSchema : SiteSettingsSchemaBase
             .Type(SchemaValueType.Object)
             .Description("Configuration for Meta Pixel tracking.")
             .Properties(
-                ("PixelId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The Meta Pixel identifier.")))
+                ("PixelId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The Meta Pixel identifier.")),
+                ("ConversionsApiAccessToken", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The access token of the Meta Conversions API, protected with the tenant's ASP.NET Core Data Protection keys. A clear value does not work.")),
+                ("ConversionsApiTestEventCode", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The test event code sent with the Meta Conversions API events, to check them in the Events Manager.")))
             .Required("PixelId")
             .AdditionalProperties(false);
 }

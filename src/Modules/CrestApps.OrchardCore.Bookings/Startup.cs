@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Bookings.Migrations;
 using CrestApps.OrchardCore.Bookings.Models;
 using CrestApps.OrchardCore.Bookings.Navigation;
 using CrestApps.OrchardCore.Bookings.Recipes;
+using CrestApps.OrchardCore.Bookings.Recipes.Workflows;
 using CrestApps.OrchardCore.Bookings.Services;
 using CrestApps.OrchardCore.Carts.Core.Models;
 using CrestApps.OrchardCore.Carts.Core.Services;
@@ -80,7 +81,6 @@ public sealed class Startup : StartupBase
 
         // The upcoming open dates are exported in the shape the BookingDates recipe step reads.
         services.AddDeployment<BookingDatesDeploymentSource, BookingDatesDeploymentStep, SummaryDeploymentStepDisplayDriver<BookingDatesDeploymentStep>>();
-        services.AddDeploymentStepSchema<BookingDatesDeploymentStepSchema>();
     }
 }
 
@@ -93,6 +93,41 @@ public sealed class RecipesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddRecipeExecutionStep<BookingDatesStep>();
+    }
+}
+
+/// <summary>
+/// Describes the BookingDates recipe and deployment steps and the booking part to CrestApps Recipes.
+/// </summary>
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
+public sealed class RecipesSchemaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
         services.AddScoped<IRecipeStep, BookingDatesRecipeStepSchema>();
+        services.AddDeploymentStepSchema<BookingDatesDeploymentStepSchema>();
+        services.AddScoped<IContentSchemaDefinition, BookingPartSchemaDefinition>();
+    }
+}
+
+/// <summary>
+/// Describes the booking workflow events to CrestApps Recipes.
+/// </summary>
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area, OrchardCoreFeatureIds.Workflows)]
+public sealed class WorkflowsRecipesSchemaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddWorkflowActivitySchema<BookingCreatedEventSchema>()
+            .AddWorkflowActivitySchema<BookingConfirmedEventSchema>()
+            .AddWorkflowActivitySchema<BookingRescheduledEventSchema>()
+            .AddWorkflowActivitySchema<BookingCanceledEventSchema>()
+            .AddWorkflowActivitySchema<BookingCompletedEventSchema>()
+            .AddWorkflowActivitySchema<BookingNoShowEventSchema>()
+            .AddWorkflowActivitySchema<BookingExpiredEventSchema>()
+            .AddWorkflowActivitySchema<BookingPaymentReceivedEventSchema>()
+            .AddWorkflowActivitySchema<BookingPaymentFailedEventSchema>()
+            .AddWorkflowActivitySchema<BookingRefundedEventSchema>();
     }
 }

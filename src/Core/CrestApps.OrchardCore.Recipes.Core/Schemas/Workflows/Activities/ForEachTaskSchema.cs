@@ -25,9 +25,9 @@ public sealed class ForEachTaskSchema : WorkflowActivitySchemaDefinitionBase
     /// <inheritdoc />
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
-        yield return ("Enumerable", WorkflowActivitySchemaBuilders.ScriptExpression("An expression evaluating to the enumerable object to iterate over. Required when 'Syntax' is 'JavaScript'."));
-        yield return ("LiquidEnumerable", WorkflowActivitySchemaBuilders.LiquidExpression("An expression evaluating to the enumerable object to iterate over. A JSON array, a comma-separated list or a single value are all accepted. Required when 'Syntax' is 'Liquid'."));
-        yield return ("Syntax", WorkflowActivitySchemaBuilders.EnumValue("The syntax used to evaluate the enumerable expression. Defaults to 'JavaScript'.", "JavaScript", "Liquid"));
+        yield return ("Enumerable", WorkflowActivitySchemaBuilders.SyntaxExpression("An expression evaluating to the enumerable object to iterate over. With Liquid, a JSON array, a comma-separated list or a single value are all accepted.", "JavaScript"));
+        yield return ("LiquidEnumerable", WorkflowActivitySchemaBuilders.LiquidExpression("Legacy: the Liquid enumerable expression, used when 'Enumerable' has no syntax and 'Syntax' is 'Liquid'."));
+        yield return ("Syntax", WorkflowActivitySchemaBuilders.EnumValue("Legacy: selects the JavaScript expression or its Liquid counterpart when the expression has no 'Syntax' of its own. Defaults to 'JavaScript'. Prefer setting 'Syntax' on the expression.", "JavaScript", "Liquid"));
         yield return ("LoopVariableName", WorkflowActivitySchemaBuilders.String("The name of the looping variable. The current value of each iteration is set to a workflow property with this name as well as to the last result. Defaults to \"x\"."));
         yield return ("Current", WorkflowActivitySchemaBuilders.Any("Runtime state. Holds the value of the current iteration and is normally omitted from recipes."));
         yield return ("Index", WorkflowActivitySchemaBuilders.Integer("Runtime state. Holds the number of iterations executed so far and is normally omitted from recipes."));
@@ -41,8 +41,18 @@ public sealed class ForEachTaskSchema : WorkflowActivitySchemaDefinitionBase
         schema.Properties = schema.Properties
             .AllOf(new JsonSchemaBuilder()
                 .If(new JsonSchemaBuilder()
-                    .Properties(("Syntax", new JsonSchemaBuilder().Const("Liquid")))
-                    .Required("Syntax"))
+                    .AllOf(
+                        new JsonSchemaBuilder()
+                            .Properties(("Syntax", new JsonSchemaBuilder().Const("Liquid")))
+                            .Required("Syntax"),
+                        new JsonSchemaBuilder()
+                            .Not(new JsonSchemaBuilder()
+                                .Properties(("Enumerable", new JsonSchemaBuilder()
+                                    .Properties(("Syntax", new JsonSchemaBuilder()
+                                        .Type(SchemaValueType.String)
+                                        .MinLength(1)))
+                                    .Required("Syntax")))
+                                .Required("Enumerable"))))
                 .Then(RequireExpression("LiquidEnumerable"))
                 .Else(RequireExpression("Enumerable")));
 

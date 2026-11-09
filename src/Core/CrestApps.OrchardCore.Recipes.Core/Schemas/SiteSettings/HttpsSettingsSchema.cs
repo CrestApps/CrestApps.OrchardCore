@@ -20,7 +20,7 @@ public sealed class HttpsSettingsSchema : SiteSettingsSchemaBase
             .Type(SchemaValueType.Object)
             .Description("Configuration for HTTPS and strict transport security.")
             .Properties(
-                ("EnableStrictTransportSecurity", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to enable HTTP Strict Transport Security (HSTS) headers.")),
+                ("StrictTransportSecurityMode", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Disabled", "Enabled", "FromConfiguration").Default("Disabled").Description("Whether HTTP Strict Transport Security (HSTS) headers are sent: never, always, or as the hosting configuration decides. Replaces the obsolete EnableStrictTransportSecurity property.")),
                 ("RequireHttps", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to require HTTPS for all requests.")),
                 ("RequireHttpsPermanent", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to use a permanent (301) redirect for HTTPS redirection.")),
                 ("SslPort", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("The port number for SSL connections.")))

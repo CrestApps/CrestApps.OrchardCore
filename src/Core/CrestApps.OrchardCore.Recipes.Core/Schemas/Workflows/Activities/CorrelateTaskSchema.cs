@@ -28,7 +28,7 @@ public sealed class CorrelateTaskSchema : WorkflowActivitySchemaDefinitionBase
     /// <inheritdoc />
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
-        yield return ("Value", WorkflowActivitySchemaBuilders.Expression("The value to assign to the workflow correlation identifier. Evaluated using the syntax selected in 'Syntax'."));
-        yield return ("Syntax", WorkflowActivitySchemaBuilders.EnumValue("The syntax used to evaluate 'Value'. Defaults to 'JavaScript'.", "JavaScript", "Liquid"));
+        yield return ("Value", WorkflowActivitySchemaBuilders.SyntaxExpression("The value to assign to the workflow correlation identifier.", "JavaScript"));
+        yield return ("Syntax", WorkflowActivitySchemaBuilders.EnumValue("Legacy: the syntax of 'Value' when the expression has no 'Syntax' of its own. Defaults to 'JavaScript'. Prefer setting 'Syntax' on the expression.", "JavaScript", "Liquid"));
     }
 }

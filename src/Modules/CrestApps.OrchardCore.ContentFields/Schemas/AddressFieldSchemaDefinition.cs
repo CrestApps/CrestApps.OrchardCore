@@ -14,11 +14,11 @@ internal sealed class AddressFieldSchemaDefinition : FieldSchemaDefinitionBase
                 ("AddressFieldSettings", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Object)
                     .Properties(
-                        ("Hint", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                        ("Required", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
-                        ("ShowName", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
-                        ("ShowCompany", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
-                        ("ShowPhone", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
+                        ("Hint", new JsonSchemaBuilder().Type(SchemaValueType.String, SchemaValueType.Null).Description("The hint shown under the field in the editor.")),
+                        ("Required", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether an address must be entered.")),
+                        ("ShowName", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Default(true).Description("Whether the editor asks for the recipient's name.")),
+                        ("ShowCompany", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Default(true).Description("Whether the editor asks for a company.")),
+                        ("ShowPhone", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the editor asks for a phone number.")),
                         ("Countries", new JsonSchemaBuilder()
                             .Type(SchemaValueType.Array, SchemaValueType.Null)
                             .Items(CountryCode())
@@ -48,7 +48,11 @@ internal sealed class AddressFieldSchemaDefinition : FieldSchemaDefinitionBase
                         ("PostalCode", Text()),
                         ("SortingCode", Text()),
                         ("Country", CountryCode()),
-                        ("Phone", Text()))
+                        ("Phone", Text()),
+                        ("Latitude", new JsonSchemaBuilder().Type(SchemaValueType.Number, SchemaValueType.Null).Minimum(-90).Maximum(90).Description("The latitude found by geocoding the address.")),
+                        ("Longitude", new JsonSchemaBuilder().Type(SchemaValueType.Number, SchemaValueType.Null).Minimum(-180).Maximum(180).Description("The longitude found by geocoding the address.")),
+                        ("GeocodedUtc", new JsonSchemaBuilder().Type(SchemaValueType.String, SchemaValueType.Null).Description("When the address was geocoded, in UTC.")),
+                        ("GeocodeSource", Text().Description("The geocoding provider that found the coordinates.")))
                     .AdditionalProperties(false)))
             .AdditionalProperties(true);
 
