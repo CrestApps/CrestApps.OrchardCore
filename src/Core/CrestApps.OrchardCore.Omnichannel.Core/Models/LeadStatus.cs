@@ -33,6 +33,13 @@ public sealed class LeadStatus : CatalogItem, INameAwareModel, IAuditedModel, IC
     public bool IsDefault { get; set; }
 
     /// <summary>
+    /// Gets or sets whether a lead moves to this status once an activity for it is completed while it is still in the
+    /// default status, so a lead that was called is no longer loaded as one nobody has contacted. A disposition or a
+    /// subject action that names its own status takes precedence. Only one open status can carry this flag.
+    /// </summary>
+    public bool IsContacted { get; set; }
+
+    /// <summary>
     /// Gets or sets whether a lead in this status is closed. Closed leads are loaded into activities only by an
     /// inventory load that picks this status.
     /// </summary>
@@ -75,6 +82,7 @@ public sealed class LeadStatus : CatalogItem, INameAwareModel, IAuditedModel, IC
             Description = Description,
             Order = Order,
             IsDefault = IsDefault,
+            IsContacted = IsContacted,
             IsClosed = IsClosed,
             IsConverted = IsConverted,
             CreatedUtc = CreatedUtc,

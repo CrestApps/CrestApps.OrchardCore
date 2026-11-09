@@ -212,6 +212,9 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             model.DispositionId = activity.DispositionId;
             model.RequireDisposition = flowSettings?.RequireDisposition ?? false;
             model.ScheduledLocal = (await _localClock.ConvertToLocalAsync(activity.ScheduledUtc)).DateTime;
+            model.CreatedLocal = activity.CreatedUtc == DateTime.MinValue
+                ? null
+                : (await _localClock.ConvertToLocalAsync(activity.CreatedUtc)).DateTime;
             model.AssignedToName = await _displayNameProvider.GetAsync(await _userManager.FindByIdAsync(activity.AssignedToId));
             model.UrgencyLevel = activity.UrgencyLevel;
             model.ShowWorkflowPreview = isCompletingActivity;

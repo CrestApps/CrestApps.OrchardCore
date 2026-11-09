@@ -631,6 +631,131 @@ public sealed class DefaultSubjectActionExecutorTests
         contentManager.Verify(x => x.UpdateAsync(contact), Times.Once);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_LeadInDefaultStatusAndNothingNamesAStatus_MovesToTheContactedStatus()
+    {
+        // Arrange
+        // A lead called once used to stay "Open - Not Contacted", so a load that picked that status loaded it again.
+        var contentManager = new Mock<IContentManager>();
+        var executor = CreateExecutor(
+            CreateAction(OmnichannelConstants.ActionTypes.Finish, SubjectActionOwnerAssignmentType.SameOwner),
+            new Mock<ISession>(),
+            contentManager: contentManager,
+            leadStatuses: CreateLeadStatuses());
+
+        var contact = new ContentItem();
+        contact.Alter<LeadPart>(part => part.StatusId = "open");
+        var context = CreateContext();
+        context.Contact = contact;
+        context.Activity.ContactResolutionStatus = ContactResolutionStatus.Resolved;
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("working", GetLeadStatusId(contact));
+        contentManager.Verify(x => x.UpdateAsync(contact), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_LeadPastTheDefaultStatus_KeepsItsStatus()
+    {
+        // Arrange
+        var contentManager = new Mock<IContentManager>();
+        var executor = CreateExecutor(
+            CreateAction(OmnichannelConstants.ActionTypes.Finish, SubjectActionOwnerAssignmentType.SameOwner),
+            new Mock<ISession>(),
+            contentManager: contentManager,
+            leadStatuses: CreateLeadStatuses());
+
+        var contact = new ContentItem();
+        contact.Alter<LeadPart>(part => part.StatusId = "nurturing");
+        var context = CreateContext();
+        context.Contact = contact;
+        context.Activity.ContactResolutionStatus = ContactResolutionStatus.Resolved;
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("nurturing", GetLeadStatusId(contact));
+        contentManager.Verify(x => x.UpdateAsync(It.IsAny<ContentItem>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_DispositionNamesALeadStatus_ContactedStatusDoesNotOverrideIt()
+    {
+        // Arrange
+        var contentManager = new Mock<IContentManager>();
+        var executor = CreateExecutor(
+            CreateAction(OmnichannelConstants.ActionTypes.Finish, SubjectActionOwnerAssignmentType.SameOwner),
+            new Mock<ISession>(),
+            contentManager: contentManager,
+            leadStatuses: CreateLeadStatuses());
+
+        var contact = new ContentItem();
+        contact.Alter<LeadPart>(part => part.StatusId = "open");
+        var context = CreateContext();
+        context.Contact = contact;
+        context.Disposition.Put(new SetLeadStatusActionMetadata { StatusId = "nurturing" });
+        context.Activity.ContactResolutionStatus = ContactResolutionStatus.Resolved;
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("nurturing", GetLeadStatusId(contact));
+        contentManager.Verify(x => x.UpdateAsync(contact), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_NotInServiceAndLeadHasNoNumberLeft_ClosesTheLead()
+    {
+        // Arrange
+        // A lead that cannot be reached on any number is closed, so no load calls it again.
+        var contentManager = new Mock<IContentManager>();
+        var notInService = new Mock<INotInServiceNumberService>();
+        notInService
+            .Setup(x => x.GetNotInServiceAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new HashSet<string>());
+        var executor = CreateExecutor(
+            CreateAction(OmnichannelConstants.ActionTypes.Finish, SubjectActionOwnerAssignmentType.SameOwner),
+            new Mock<ISession>(),
+            contentManager: contentManager,
+            leadStatuses: CreateLeadStatuses(),
+            notInServiceNumbers: notInService.Object);
+
+        var contact = new ContentItem();
+        contact.Alter<LeadPart>(part => part.StatusId = "open");
+        var context = CreateContext();
+        context.Contact = contact;
+        context.Disposition.Outcome = DispositionOutcome.NotInService;
+        context.Activity.ContactResolutionStatus = ContactResolutionStatus.Resolved;
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("closed", GetLeadStatusId(contact));
+    }
+
+    private static INamedCatalog<LeadStatus> CreateLeadStatuses()
+    {
+        var statuses = new Mock<INamedCatalog<LeadStatus>>();
+        statuses
+            .Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+            [
+                new LeadStatus { ItemId = "open", Name = "Open - Not Contacted", Order = 10, IsDefault = true },
+                new LeadStatus { ItemId = "working", Name = "Working - Contacted", Order = 20, IsContacted = true },
+                new LeadStatus { ItemId = "nurturing", Name = "Nurturing", Order = 30 },
+                new LeadStatus { ItemId = "converted", Name = "Converted", Order = 35, IsClosed = true, IsConverted = true },
+                new LeadStatus { ItemId = "closed", Name = "Closed - Not Converted", Order = 40, IsClosed = true },
+            ]);
+
+        return statuses.Object;
+    }
+
     private static string GetLeadStatusId(ContentItem contact)
         => contact.TryGet<LeadPart>(out var part) ? part.StatusId : null;
 
@@ -639,7 +764,9 @@ public sealed class DefaultSubjectActionExecutorTests
         Mock<ISession> session,
         ILocalClock localClock = null,
         Mock<IContentManager> contentManager = null,
-        IEnumerable<IFollowUpActivityHandler> followUpHandlers = null)
+        IEnumerable<IFollowUpActivityHandler> followUpHandlers = null,
+        INamedCatalog<LeadStatus> leadStatuses = null,
+        INotInServiceNumberService notInServiceNumbers = null)
     {
         var actionCatalog = new Mock<ISourceCatalog<SubjectAction>>();
         actionCatalog
@@ -658,13 +785,14 @@ public sealed class DefaultSubjectActionExecutorTests
             actionCatalog.Object,
             Mock.Of<ISubjectFlowSettingsService>(),
             contentManager.Object,
-            Mock.Of<INotInServiceNumberService>(),
+            notInServiceNumbers ?? Mock.Of<INotInServiceNumberService>(),
             session.Object,
             clock.Object,
             localClock ?? Mock.Of<ILocalClock>(),
             TestContactMethods.Accessor,
             NullLogger<DefaultSubjectActionExecutor>.Instance,
-            followUpHandlers: followUpHandlers);
+            followUpHandlers: followUpHandlers,
+            leadStatuses: leadStatuses);
     }
 
     private static SubjectAction CreateAction(

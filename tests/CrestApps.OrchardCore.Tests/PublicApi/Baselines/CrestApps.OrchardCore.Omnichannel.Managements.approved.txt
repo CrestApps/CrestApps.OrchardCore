@@ -953,6 +953,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations
         public System.Threading.Tasks.Task<int> UpdateFrom4Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom5Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom6Async() { }
+        public int UpdateFrom7() { }
     }
     public sealed class OmnichannelContactsMigrations : CrestApps.OrchardCore.Omnichannel.Managements.Migrations.OmnichannelIndexMigration
     {
@@ -1857,6 +1858,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
     {
         public LeadStatusViewModel() { }
         public string Description { get; set; }
+        public bool IsContacted { get; set; }
         public bool IsDefault { get; set; }
         public bool IsNew { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.LeadStatusKind Kind { get; set; }
@@ -2110,6 +2112,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         public System.DateTime? CompletedLocal { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ContactCandidates { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public System.DateTime? CreatedLocal { get; set; }
         public string DispositionId { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public string DispositionedByName { get; set; }

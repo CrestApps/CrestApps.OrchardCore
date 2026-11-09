@@ -154,6 +154,11 @@ The **Convert Lead** action runs before the other actions of the same dispositio
 
 Every subject action also has a **Set lead status** field. When the activity belongs to a lead, the lead moves to that status, for example *Working - Contacted* after a no-answer. It has no effect on contacts.
 
+When neither the subject action nor the disposition sets a lead status, the lead still moves once its activity is completed:
+
+- A lead still in the default status, such as *Open - Not Contacted*, moves to the **contacted** status, *Working - Contacted* by default. A load that picks only the default status then no longer loads a lead that was already called.
+- A lead dispositioned as a number not in service, with no other number left in service, moves to the first closed status by order, such as *Closed - Not Converted*.
+
 ## Accounts
 
 <YouTube video="omnichannel-accounts-opportunities" title="Video of the account page, its contacts and its activities" start={48} end={78} />
@@ -202,7 +207,7 @@ The **Lead source** fields of leads and opportunities are content pickers of thi
 Manage both lists under **Interaction Center > Management**. Unlike lead sources, these lists are part of the CRM itself, because their settings decide how leads and opportunities behave.
 
 - **Lead Statuses** (permission **Manage lead statuses**): each status has a **Name**, a **Description**, an **Order** (lists show the lowest first) and a **Type**:
-  - **Open**: leads in it are still worked and loaded. Only an open status can be the one where **A new lead starts in this status**, and only one status can be that default.
+  - **Open**: leads in it are still worked and loaded. Only an open status can be the one where **A new lead starts in this status**, and only one status can be that default. One other open status can be the one where **A lead moves to this status once it is contacted**: a lead still in the default status moves there when an activity for it is completed.
   - **Closed**: leads in it are finished without being converted, and activity loads skip them unless a load asks for them.
   - **Converted**: the status conversion gives a lead. You cannot set it on a lead by hand. Only one status has this type: giving it to another status turns the old one into a closed status. The converted status cannot be deleted.
 - **Opportunity Stages** (permission **Manage opportunity stages**): each stage has a **Name**, a **Description**, an **Order**, a **Probability** from 0 to 100 (the weighted pipeline uses it), and whether opportunities in it are **closed** and **won**. A stage can only be won if it is closed, and closed opportunities are left out of the open pipeline.

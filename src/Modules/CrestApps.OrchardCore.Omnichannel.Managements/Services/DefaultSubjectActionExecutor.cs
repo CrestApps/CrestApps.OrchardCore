@@ -27,6 +27,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
     private readonly ILogger _logger;
     private readonly IEnumerable<ISubjectActionHandler> _handlers;
     private readonly IEnumerable<IFollowUpActivityHandler> _followUpHandlers;
+    private readonly INamedCatalog<LeadStatus> _leadStatuses;
 
     public DefaultSubjectActionExecutor(
         ISourceCatalog<SubjectAction> actionCatalog,
@@ -39,7 +40,8 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         IContactMethodsAccessor contactMethods,
         ILogger<DefaultSubjectActionExecutor> logger,
         IEnumerable<ISubjectActionHandler> handlers = null,
-        IEnumerable<IFollowUpActivityHandler> followUpHandlers = null)
+        IEnumerable<IFollowUpActivityHandler> followUpHandlers = null,
+        INamedCatalog<LeadStatus> leadStatuses = null)
     {
         _actionCatalog = actionCatalog;
         _subjectFlowSettingsService = subjectFlowSettingsService;
@@ -52,6 +54,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         _logger = logger;
         _handlers = handlers ?? [];
         _followUpHandlers = followUpHandlers ?? [];
+        _leadStatuses = leadStatuses;
     }
 
     public async Task ExecuteAsync(SubjectActionExecutionContext context, CancellationToken cancellationToken = default)
@@ -105,6 +108,93 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         }
 
         await ApplyDispositionLeadStatusAsync(context, actions);
+
+        if (!NamesLeadStatus(context.Disposition) && !actions.Any(NamesLeadStatus))
+        {
+            await ApplyFallbackLeadStatusAsync(context, cancellationToken);
+        }
+    }
+
+    private static bool NamesLeadStatus(OmnichannelDisposition disposition)
+        => disposition.TryGet<SetLeadStatusActionMetadata>(out var metadata) && !string.IsNullOrEmpty(metadata.StatusId);
+
+    private static bool NamesLeadStatus(SubjectAction action)
+        => action.TryGet<SetLeadStatusActionMetadata>(out var metadata) && !string.IsNullOrEmpty(metadata.StatusId);
+
+    /// <summary>
+    /// Moves a lead whose disposition and actions name no status of their own. A lead whose every number is now known not
+    /// to be in service cannot be reached, so it moves to the first closed status; a lead still in the default status
+    /// was just contacted, or tried, so it moves to the contacted status. Without this, a lead called once stayed
+    /// <c>Open - Not Contacted</c> and a load that picks that status loaded it again.
+    /// </summary>
+    private async Task ApplyFallbackLeadStatusAsync(SubjectActionExecutionContext context, CancellationToken cancellationToken)
+    {
+        var contact = context.Contact;
+
+        if (_leadStatuses is null ||
+            contact is null ||
+            !contact.TryGet<LeadPart>(out var leadPart) ||
+            leadPart.IsConverted)
+        {
+            return;
+        }
+
+        var statuses = await _leadStatuses.GetAllAsync();
+        var current = statuses.FirstOrDefault(status => status.ItemId == leadPart.StatusId);
+
+        if (current is { IsClosed: true })
+        {
+            return;
+        }
+
+        if (context.Disposition.Outcome == DispositionOutcome.NotInService &&
+            await HasNoNumberInServiceAsync(context, contact, cancellationToken))
+        {
+            var closed = statuses
+                .Where(status => status.IsClosed && !status.IsConverted)
+                .OrderBy(status => status.Order)
+                .FirstOrDefault();
+
+            if (closed is not null)
+            {
+                await ApplyLeadStatusAsync(closed.ItemId, contact);
+
+                return;
+            }
+        }
+
+        // A lead with no status yet is treated as being in the default one, which is where a new lead starts.
+        if (current is not null && !current.IsDefault)
+        {
+            return;
+        }
+
+        var contacted = statuses.FirstOrDefault(status => status.IsContacted && !status.IsClosed && !status.IsConverted);
+
+        if (contacted is not null)
+        {
+            await ApplyLeadStatusAsync(contacted.ItemId, contact);
+        }
+    }
+
+    private async Task<bool> HasNoNumberInServiceAsync(SubjectActionExecutionContext context, ContentItem contact, CancellationToken cancellationToken)
+    {
+        var numbers = OmnichannelHelper.GetPhoneNumbers(_contactMethods.Get(contact))
+            .Where(number => !string.IsNullOrWhiteSpace(number))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (numbers.Length == 0)
+        {
+            return true;
+        }
+
+        // The number this activity dialed was just marked, and the mark may not be readable until it is committed.
+        var dialed = context.Activity.PreferredDestination;
+        var notInService = await _notInServiceNumbers.GetNotInServiceAsync(numbers, cancellationToken);
+
+        return numbers.All(number => notInService.Contains(number) ||
+            (!string.IsNullOrWhiteSpace(dialed) && string.Equals(number, dialed, StringComparison.OrdinalIgnoreCase)));
     }
 
     /// <summary>
