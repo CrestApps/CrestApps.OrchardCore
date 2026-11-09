@@ -502,8 +502,22 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
             catch (Exception exception)
             {
                 // The balance is settled. A redemption counter that failed to move is a bookkeeping problem to
-                // reconcile, not a reason to undo the settlement.
+                // reconcile, not a reason to undo the settlement, so it is listed for an operator as well as logged.
                 _logger.LogError(exception, "The discount provider '{ProviderKey}' failed to record its redemptions.", provider.Key);
+
+                if (_serviceProvider.GetService<IPaymentIssueRecorder>() is { } issues)
+                {
+                    await issues.RecordAsync(new PaymentIssue
+                    {
+                        Kind = PaymentIssueKinds.DiscountRedemptionFailed,
+                        Message = "Record the use of these promotion codes by hand: the payment was settled but the codes' use was not counted.",
+                        Error = exception.Message,
+                        ReferenceType = "CheckoutSession",
+                        ReferenceId = flow.Session.SessionId,
+                        ProviderKey = provider.Key,
+                        ProviderReference = string.Join(", ", discounts.Select(discount => discount.Code).Where(code => !string.IsNullOrEmpty(code))),
+                    });
+                }
             }
         }
     }

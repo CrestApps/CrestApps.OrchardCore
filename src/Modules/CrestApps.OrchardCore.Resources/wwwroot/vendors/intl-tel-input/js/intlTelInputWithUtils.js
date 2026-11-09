@@ -1,5 +1,5 @@
 /*
- * International Telephone Input v29.5.5
+ * International Telephone Input v29.5.6
  * git+https://github.com/jackocnr/intl-tel-input.git
  * Licensed under the MIT license
  */
@@ -5045,7 +5045,7 @@ var _factory = (() => {
       attachUtils,
       startedLoadingUtils: false,
       startedLoadingAutoCountry: false,
-      version: "29.5.5",
+      version: "29.5.6",
       NUMBER_FORMAT,
       NUMBER_TYPE,
       VALIDATION_ERROR,

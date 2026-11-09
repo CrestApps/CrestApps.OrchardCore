@@ -7,6 +7,12 @@
   },
   {
     "action": "vite",
+    "name": "calendar-widget.js",
+    "source": "Assets/js/calendar-widget.js",
+    "dest": "wwwroot/scripts/calendar-widget.js"
+  },
+  {
+    "action": "vite",
     "name": "calendar-reminders.js",
     "source": "Assets/js/calendar-reminders.js",
     "dest": "wwwroot/scripts/calendar-reminders.js"

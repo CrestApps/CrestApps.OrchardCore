@@ -27,6 +27,36 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// </summary>
     private const int OpeningSilenceDurationMilliseconds = 500;
 
+    /// <summary>
+    /// How long the caller must be quiet before the session treats their turn as finished. Longer than the
+    /// provider default, because a person on the phone pauses mid-sentence and a call carries noise through those
+    /// pauses; cutting in on them is what makes an assistant feel like it is not listening.
+    /// </summary>
+    /// <remarks>
+    /// Only in effect when the session runs <c>server_vad</c>, which is a tenant setting. Under the default
+    /// semantic detector Core drops it: see <see cref="ApplyTelephonyTurnDetectionAsync"/>.
+    /// </remarks>
+    private const int TelephonySilenceDurationMilliseconds = 900;
+
+    /// <summary>
+    /// How confident the detector must be that it is hearing speech.
+    /// </summary>
+    /// <remarks>
+    /// Left at roughly the provider default on purpose. Raising it to 0.62 to suppress phantom turns seemed to
+    /// suppress them, and a caller's short quiet "yeah" on the same build reached the model as a fragment that came
+    /// back transcribed as "That's causing a fever somewhere." The assistant read that as a brush-off and politely
+    /// ended the call on somebody who had just agreed to talk.
+    /// <para>
+    /// Neither observation can be pinned on this number. Like the silence above, it only applies under
+    /// <c>server_vad</c>, and the tenant these calls run on configures no detector, so it gets the default semantic
+    /// one, which ignores it. It stays at the default all the same: a short affirmative is the most common thing a caller
+    /// says, and a detector made harder to trigger is exactly what clips one. Phantom turns are dealt with before
+    /// the detector instead, by <see cref="CallerEchoGuard"/>, which leaves the caller's audio untouched whenever
+    /// the assistant is not speaking.
+    /// </para>
+    /// </remarks>
+    private const float TelephonyVadThreshold = 0.5f;
+
     // One while the call is still on the opening detector.
     private int _openingDetector;
 

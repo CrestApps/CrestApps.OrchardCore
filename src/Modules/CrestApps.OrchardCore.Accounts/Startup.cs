@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Accounts.Navigation;
 using CrestApps.OrchardCore.Accounts.Recipes;
 using CrestApps.OrchardCore.Accounts.Services;
 using CrestApps.OrchardCore.ContentTransfer;
+using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.Recipes.Core;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -41,6 +42,9 @@ public sealed class Startup : StartupBase
             .AddHandler<AccountPartHandler>();
 
         services.AddScoped<IAccountContentTypeProvider, AccountContentTypeProvider>();
+
+        // Accounts are parties: pickers and lists in any module (asset owners, work orders) find and name them.
+        services.AddPartySource<AccountPartySource>();
         services.AddScoped<AccountListSynchronizer>();
         services.AddScoped<IContentDefinitionEventHandler, AccountsContentDefinitionEventHandler>();
         services.AddScoped<IContentDisplayDriver, AccountPickerDisplayDriver>();
@@ -95,7 +99,7 @@ public sealed class LocationsStartup : StartupBase
 /// <summary>
 /// Keeps the account lists up to date after a recipe defines content types, and registers the Accounts recipe step.
 /// </summary>
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class RecipesStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -109,7 +113,7 @@ public sealed class RecipesStartup : StartupBase
 /// <summary>
 /// Registers the Accounts deployment step.
 /// </summary>
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class DeploymentStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -124,7 +128,7 @@ public sealed class DeploymentStartup : StartupBase
 /// Describes the Accounts recipe and deployment steps to CrestApps Recipes, so they can be checked and written with
 /// help.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class RecipesSchemaStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -132,6 +136,35 @@ public sealed class RecipesSchemaStartup : StartupBase
     {
         services.AddScoped<IRecipeStep, AccountsRecipeStepSchema>();
         services.AddDeploymentStepSchema<AccountsDeploymentStepSchema>();
+        services.AddScoped<IContentSchemaDefinition, AccountPartSchemaDefinition>();
+    }
+}
+
+/// <summary>
+/// Describes the account members part to CrestApps Recipes.
+/// </summary>
+[Feature(AccountsConstants.MembersFeature)]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
+public sealed class MembersRecipesSchemaStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentSchemaDefinition, AccountMembersPartSchemaDefinition>();
+    }
+}
+
+/// <summary>
+/// Describes the account locations part to CrestApps Recipes.
+/// </summary>
+[Feature(AccountsConstants.LocationsFeature)]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
+public sealed class LocationsRecipesSchemaStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentSchemaDefinition, AccountLocationsPartSchemaDefinition>();
     }
 }
 

@@ -26,7 +26,7 @@ public sealed class OmnichannelLeadStatusRecipeStep : IRecipeStep
                         .Type(SchemaValueType.Object)
                         .Properties(
                             ("ItemId", CatalogRecipeStepSchemas.ItemId("lead status")),
-                            ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Unique name of the lead status.")),
+                            ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Unique name of the lead status. An entry whose ItemId matches no stored status is matched by this name, so a second run updates it.")),
                             ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Administrative description of the lead status.")),
                             ("Order", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Position of the status in lists, lowest first.")),
                             ("IsDefault", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether a new lead starts in this status.")),

@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Products.Core;
 using CrestApps.OrchardCore.Receipts.Core;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Transactions;
+using CrestApps.OrchardCore.Users;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -20,10 +21,10 @@ using OrchardCore.Modules.Manifest;
     Category = "Subscriptions",
     Dependencies =
     [
-        "OrchardCore.Contents",
-        "OrchardCore.ContentTypes",
-        "OrchardCore.Title",
-        "CrestApps.OrchardCore.Users",
+        OrchardCoreFeatureIds.Contents,
+        OrchardCoreFeatureIds.ContentTypes,
+        OrchardCoreFeatureIds.Title,
+        UsersConstants.Feature.Area,
         ProductConstants.Feature.ModuleId,
 
         // Subscriptions never collects money itself. Checkout is a hard dependency because it owns the
@@ -44,7 +45,7 @@ using OrchardCore.Modules.Manifest;
         SubscriptionConstants.Features.Area,
 
         // Tenants brings the setup services that create a site.
-        "OrchardCore.Tenants",
+        OrchardCoreFeatureIds.Tenants,
     ]
 )]
 
@@ -63,6 +64,6 @@ using OrchardCore.Modules.Manifest;
         CheckoutConstants.Features.Area,
 
         // A plan belongs to a customer account, and a new customer can be created with the plan.
-        "OrchardCore.Users",
+        OrchardCoreFeatureIds.Users,
     ]
 )]

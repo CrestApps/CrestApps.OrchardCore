@@ -6,9 +6,13 @@ using CrestApps.OrchardCore.Assets.Fleet;
 using CrestApps.OrchardCore.Assets.Migrations;
 using CrestApps.OrchardCore.Assets.Navigation;
 using CrestApps.OrchardCore.Assets.Owners;
-using CrestApps.OrchardCore.Assets.Services;
 using CrestApps.OrchardCore.Assets.ViewModels;
+using CrestApps.OrchardCore.Inventory.Core;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Parties;
+using CrestApps.OrchardCore.Users.Core;
+using CrestApps.OrchardCore.Users.Core.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -43,6 +47,7 @@ public sealed class Startup : StartupBase
 
         services.AddDisplayDriver<AssetTypeRow, AssetTypeRowDisplayDriver>();
         services.AddDisplayDriver<AssetRow, AssetRowDisplayDriver>();
+        services.AddDisplayDriver<Asset, AssetDisplayDriver>();
         services.AddNavigationProvider<AssetsAdminMenu>();
     }
 
@@ -54,29 +59,30 @@ public sealed class Startup : StartupBase
 }
 
 /// <summary>
-/// Lets users, the customers of the store, own assets.
+/// Lets users, the customers of the store, own assets: users are a party source (owner kind Customer, party kind User).
 /// </summary>
-[RequireFeatures("OrchardCore.Users")]
+[RequireFeatures(OrchardCoreFeatureIds.Users)]
 public sealed class CustomerOwnersStartup : StartupBase
 {
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAssetOwnerSource, CustomerAssetOwnerSource>());
+        services.AddUserSearchService();
+        services.AddPartySource<UserPartySource>();
     }
 }
 
 /// <summary>
 /// Lets CRM contacts own assets, and lists them on contact and account pages.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Omnichannel.Managements")]
+[RequireFeatures(OmnichannelConstants.Features.Managements)]
 public sealed class ContactOwnersStartup : StartupBase
 {
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
         services.TryAddScoped<IOmnichannelContactTypeProvider, ContentDefinitionOmnichannelContactTypeProvider>();
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAssetOwnerSource, ContactAssetOwnerSource>());
+        services.AddPartySource<ContactPartySource>();
         services.AddScoped<IContentDisplayDriver, ContactAssetsDisplayDriver>();
     }
 }
@@ -99,7 +105,7 @@ public sealed class FleetStartup : StartupBase
 /// Registers van stock: an Inventory location for each asset that carries stock.
 /// </summary>
 [Feature(AssetsConstants.Features.Fleet)]
-[RequireFeatures("CrestApps.OrchardCore.Inventory")]
+[RequireFeatures(InventoryConstants.Features.Inventory)]
 public sealed class FleetInventoryStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -110,7 +116,7 @@ public sealed class FleetInventoryStartup : StartupBase
 }
 
 /// <summary>
-/// Lets accounts, the organizations of the Accounts module, own assets, and shows an account's assets on its page.
+/// Shows an account's assets on its page. Accounts own assets through the party source the Accounts module registers.
 /// </summary>
 [RequireFeatures(AccountsConstants.Feature)]
 public sealed class AccountOwnersStartup : StartupBase
@@ -118,7 +124,6 @@ public sealed class AccountOwnersStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAssetOwnerSource, AccountAssetOwnerSource>());
         services.AddScoped<IContentDisplayDriver, AccountAssetsDisplayDriver>();
     }
 }

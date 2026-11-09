@@ -16,4 +16,8 @@
     <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.PhoneNumbers.Abstractions\CrestApps.OrchardCore.PhoneNumbers.Abstractions.csproj" />
+  </ItemGroup>
+
 </Project>

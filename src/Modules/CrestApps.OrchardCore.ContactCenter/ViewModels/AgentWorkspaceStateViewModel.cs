@@ -70,6 +70,13 @@ public sealed class AgentWorkspaceStateViewModel
     public WorkspacePendingDialViewModel PendingDial { get; set; }
 
     /// <summary>
+    /// Gets or sets the activity routing or the dialer assigned to the agent that is still theirs to complete when no
+    /// offer, call or dial shows it, or <see langword="null"/> when there is none. An agent must complete it before they
+    /// are available again, so the bar keeps it in reach until they do.
+    /// </summary>
+    public WorkspaceHeldActivityViewModel HeldActivity { get; set; }
+
+    /// <summary>
     /// Gets or sets the agent's most recent interactions.
     /// </summary>
     public IList<WorkspaceHistoryEntryViewModel> RecentHistory { get; set; } = [];

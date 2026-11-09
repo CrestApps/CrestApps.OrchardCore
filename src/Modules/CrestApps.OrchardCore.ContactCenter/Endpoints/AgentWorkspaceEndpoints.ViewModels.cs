@@ -82,6 +82,55 @@ internal static partial class AgentWorkspaceEndpoints
         };
     }
 
+    // The newest work assigned to the agent whose activity they may still complete.
+    internal static async Task<WorkspaceHeldActivityViewModel> BuildHeldActivityAsync(
+        AgentProfile profile,
+        IEnumerable<WorkspaceCampaignViewModel> campaigns,
+        IQueueItemManager queueItemManager,
+        IAuthorizationService authorizationService,
+        IOmnichannelActivityManager activityManager,
+        IActivityQueueManager queueManager,
+        IContentManager contentManager,
+        LinkGenerator linkGenerator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var openWork = await queueItemManager.GetOpenByAgentIdsAsync([profile.ItemId], cancellationToken) ?? [];
+        var item = openWork
+            .Where(candidate => candidate?.Status == QueueItemStatus.Assigned &&
+                string.Equals(candidate.AgentId, profile.ItemId, StringComparison.Ordinal) &&
+                !string.IsNullOrEmpty(candidate.ActivityItemId))
+            .OrderByDescending(candidate => candidate.ModifiedUtc ?? candidate.QueueEnteredUtc)
+            .FirstOrDefault();
+
+        if (item is null)
+        {
+            return null;
+        }
+
+        var activity = await activityManager.FindByIdAsync(item.ActivityItemId, cancellationToken);
+
+        if (!await CanCompleteActivityAsync(activity, authorizationService, httpContext))
+        {
+            return null;
+        }
+
+        // A campaign's work runs under a queue that is never stored, so it is named by its campaign.
+        var campaignId = ContactCenterConstants.CampaignQueue.GetCampaignId(item.QueueId);
+        var queueName = campaignId is not null
+            ? campaigns?.FirstOrDefault(campaign => string.Equals(campaign.Id, campaignId, StringComparison.Ordinal))?.Name
+            : string.IsNullOrEmpty(item.QueueId) ? null : (await queueManager.FindByIdAsync(item.QueueId, cancellationToken))?.Name;
+
+        return new WorkspaceHeldActivityViewModel
+        {
+            ActivityItemId = activity.ItemId,
+            CustomerLabel = await ResolveCustomerLabelAsync(activity, null, contentManager),
+            QueueName = queueName,
+            CompleteUrl = await BuildCompleteActivityUrlAsync(activity, authorizationService, linkGenerator, httpContext),
+            AssignedUtc = item.ModifiedUtc ?? (item.QueueEnteredUtc == default ? null : item.QueueEnteredUtc),
+        };
+    }
+
     private static async Task<(WorkspaceActiveInteractionViewModel ActiveInteraction, WorkspacePendingDialViewModel PendingDial)> BuildActiveInteractionAsync(
         AgentProfile profile,
         IReadOnlyCollection<Interaction> recentInteractions,
@@ -415,16 +464,23 @@ internal static partial class AgentWorkspaceEndpoints
             new { area = "OrchardCore.Contents", contentItemId = activity.ContactContentItemId });
     }
 
+    // An activity that is still open and that the signed-in user may complete.
+    private static async Task<bool> CanCompleteActivityAsync(
+        OmnichannelActivity activity,
+        IAuthorizationService authorizationService,
+        HttpContext httpContext)
+        => activity is not null &&
+            !string.IsNullOrEmpty(activity.ItemId) &&
+            activity.Status is not (ActivityStatus.Completed or ActivityStatus.Cancelled or ActivityStatus.Purged) &&
+            await authorizationService.AuthorizeAsync(httpContext.User, OmnichannelConstants.Permissions.CompleteActivity, activity);
+
     private static async Task<string> BuildCompleteActivityUrlAsync(
         OmnichannelActivity activity,
         IAuthorizationService authorizationService,
         LinkGenerator linkGenerator,
         HttpContext httpContext)
     {
-        if (activity is null ||
-            string.IsNullOrEmpty(activity.ItemId) ||
-            activity.Status is ActivityStatus.Completed or ActivityStatus.Cancelled or ActivityStatus.Purged ||
-            !await authorizationService.AuthorizeAsync(httpContext.User, OmnichannelConstants.Permissions.CompleteActivity, activity))
+        if (!await CanCompleteActivityAsync(activity, authorizationService, httpContext))
         {
             return null;
         }

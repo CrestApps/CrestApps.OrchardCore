@@ -1,3 +1,5 @@
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Telephony")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
 namespace CrestApps.OrchardCore.Telephony.Core.Indexes
 {
     public sealed class TelephonyExtensionIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
@@ -77,7 +79,7 @@ namespace CrestApps.OrchardCore.Telephony.Core.Services
     {
         System.Threading.Tasks.Task<bool> IngestAsync(CrestApps.OrchardCore.Telephony.Models.ProviderVoiceEvent providerEvent, System.Threading.CancellationToken cancellationToken = default);
     }
-    public interface IProviderIdentityResolver
+    public interface IProviderIdentityResolver : CrestApps.OrchardCore.Webhooks.IWebhookProviderNameNormalizer
     {
         string Canonicalize(string providerName);
     }
@@ -115,10 +117,14 @@ namespace CrestApps.OrchardCore.Telephony.Core.Services
         public NormalizedVoiceEventIngestor(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Telephony.Core.Services.INormalizedVoiceEventHandler> handlers, CrestApps.OrchardCore.Telephony.Core.Services.IProviderIdentityResolver providerIdentityResolver, CrestApps.OrchardCore.Telephony.Core.Services.IVoiceIngressGate ingressGate, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Telephony.Core.Services.NormalizedVoiceEventIngestor> logger) { }
         public System.Threading.Tasks.Task<bool> IngestAsync(CrestApps.OrchardCore.Telephony.Models.ProviderVoiceEvent providerEvent, System.Threading.CancellationToken cancellationToken = default) { }
     }
-    public sealed class ProviderIdentityResolver : CrestApps.OrchardCore.Telephony.Core.Services.IProviderIdentityResolver
+    public sealed class ProviderIdentityResolver : CrestApps.OrchardCore.Telephony.Core.Services.IProviderIdentityResolver, CrestApps.OrchardCore.Webhooks.IWebhookProviderNameNormalizer
     {
         public ProviderIdentityResolver(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Telephony.IProviderIdentityProvider> identityProviders) { }
         public string Canonicalize(string providerName) { }
+    }
+    public static class ProviderIdentityServiceCollectionExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddProviderIdentityResolver(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
     public sealed class TelephonyExtensionManager : CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.Telephony.Core.Models.TelephonyExtension>, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Telephony.Core.Models.TelephonyExtension>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.Telephony.Core.Models.TelephonyExtension>, CrestApps.OrchardCore.Telephony.Core.Services.ITelephonyExtensionManager
     {
@@ -158,6 +164,14 @@ namespace CrestApps.OrchardCore.Telephony.Core.Services
 }
 namespace CrestApps.OrchardCore.Telephony.Services
 {
+    public sealed class LocalEncryptedRecordingMediaStore : CrestApps.OrchardCore.Telephony.IRecordingMediaStore, CrestApps.OrchardCore.Telephony.ISupportsTenantMediaPurge
+    {
+        public LocalEncryptedRecordingMediaStore(OrchardCore.FileStorage.IFileStore fileStore, Microsoft.AspNetCore.DataProtection.IDataProtectionProvider dataProtectionProvider) { }
+        public System.Threading.Tasks.Task<bool> DeleteAsync(string storageReference, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.IO.Stream> OpenReadAsync(string storageReference, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<string> StoreAsync(CrestApps.OrchardCore.Telephony.Models.RecordingMediaWriteRequest request, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> TryPurgeAllAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class VoiceAgentMediaProviderResolver : CrestApps.OrchardCore.Telephony.Services.IVoiceAgentMediaProviderResolver
     {
         public VoiceAgentMediaProviderResolver(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Telephony.Services.IVoiceAgentMediaProvider> providers) { }

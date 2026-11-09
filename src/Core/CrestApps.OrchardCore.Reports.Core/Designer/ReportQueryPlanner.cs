@@ -65,7 +65,7 @@ public sealed partial class ReportQueryPlanner
             return plan;
         }
 
-        var scope = new PlanScope(plan);
+        var scope = new PlanScope(plan, _functions, S);
 
         AddRowCount(plan);
         PlanJoins(query, plan, scope);
@@ -168,7 +168,7 @@ public sealed partial class ReportQueryPlanner
             Label = S["Number of rows"],
             DataType = DataFieldType.Integer,
             Kind = PlannedFieldKind.AggregateCalculation,
-            Expression = ExpressionCompiler.Compile("COUNT()", new PlanScope(plan), _functions, S),
+            Expression = ExpressionCompiler.Compile("COUNT()", new CheckScope(plan), _functions, S),
         };
     }
 
@@ -261,11 +261,16 @@ public sealed partial class ReportQueryPlanner
         }
     }
 
+    // Every calculated field is checked, in order, so the designer lists all of their problems. A field is compiled to
+    // run, given a slot, and has its data set fields read only once a column, a filter, or another field in use reads it
+    // (see PlanScope.Use): a report that copies the same calculated fields into several queries computes, in each, only
+    // the ones that query shows or filters on.
     private void PlanCalculatedFields(ReportQueryDefinition query, ReportQueryPlan plan, PlanScope scope)
     {
         var aliases = plan.DataSets
             .Select(dataSet => dataSet.Reference.Alias)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var checkScope = new CheckScope(plan);
 
         foreach (var calculated in query.CalculatedFields ?? [])
         {
@@ -287,7 +292,7 @@ public sealed partial class ReportQueryPlanner
 
             try
             {
-                compiled = ExpressionCompiler.Compile(calculated.Expression, scope, _functions, S);
+                compiled = ExpressionCompiler.Compile(calculated.Expression, checkScope, _functions, S);
             }
             catch (ExpressionException exception)
             {
@@ -315,12 +320,7 @@ public sealed partial class ReportQueryPlanner
             };
 
             plan.Fields[field.Key] = field;
-
-            if (!compiled.IsAggregate)
-            {
-                field.Slot = scope.AllocateSlot();
-                plan.RowCalculations.Add(field);
-            }
+            scope.Defer(field, calculated.Expression);
         }
     }
 
@@ -544,13 +544,24 @@ public sealed partial class ReportQueryPlanner
     [GeneratedRegex("^[A-Za-z][A-Za-z0-9_]*$")]
     private static partial Regex NamePattern();
 
+    // Resolves the fields of a plan. A data set field gets a slot and is marked read the first time it is used; a
+    // calculated field is compiled to run the first time it is used, after the fields it reads, so a row calculation
+    // comes after the row calculations it reads.
     private sealed class PlanScope : IExpressionScope
     {
         private readonly ReportQueryPlan _plan;
+        private readonly IExpressionFunctionCatalog _functions;
+        private readonly IStringLocalizer S;
+        private readonly Dictionary<PlannedField, string> _deferred = [];
 
-        public PlanScope(ReportQueryPlan plan)
+        public PlanScope(
+            ReportQueryPlan plan,
+            IExpressionFunctionCatalog functions,
+            IStringLocalizer stringLocalizer)
         {
             _plan = plan;
+            _functions = functions;
+            S = stringLocalizer;
         }
 
         public int Width { get; private set; }
@@ -558,6 +569,12 @@ public sealed partial class ReportQueryPlanner
         public int AllocateSlot()
         {
             return Width++;
+        }
+
+        // A calculated field that was checked, to compile when it is used.
+        public void Defer(PlannedField field, string expression)
+        {
+            _deferred[field] = expression;
         }
 
         public PlannedField Use(string key)
@@ -573,6 +590,16 @@ public sealed partial class ReportQueryPlanner
 
                 var dataSet = _plan.DataSets.First(candidate => string.Equals(candidate.Reference.Alias, field.Alias, StringComparison.Ordinal));
                 dataSet.UsedFields[field.FieldName] = field;
+            }
+            else if (_deferred.Remove(field, out var expression))
+            {
+                field.Expression = ExpressionCompiler.Compile(expression, this, _functions, S);
+
+                if (!field.IsAggregate)
+                {
+                    field.Slot = AllocateSlot();
+                    _plan.RowCalculations.Add(field);
+                }
             }
 
             return field;
@@ -603,6 +630,39 @@ public sealed partial class ReportQueryPlanner
                 Key = field.Key,
                 DataType = field.DataType,
                 Index = field.Slot,
+                Aggregate = field.IsAggregate ? field.Expression : null,
+                References = field.Expression?.References,
+            };
+
+            return true;
+        }
+    }
+
+    // Resolves the fields a formula reads only to check it, without using them: the data set fields and the calculated
+    // fields listed before it.
+    private sealed class CheckScope : IExpressionScope
+    {
+        private readonly ReportQueryPlan _plan;
+
+        public CheckScope(ReportQueryPlan plan)
+        {
+            _plan = plan;
+        }
+
+        public bool TryResolve(string key, out ExpressionFieldBinding binding)
+        {
+            if (string.IsNullOrEmpty(key) || !_plan.Fields.TryGetValue(key, out var field))
+            {
+                binding = null;
+
+                return false;
+            }
+
+            binding = new ExpressionFieldBinding
+            {
+                Key = field.Key,
+                DataType = field.DataType,
+                Index = 0,
                 Aggregate = field.IsAggregate ? field.Expression : null,
                 References = field.Expression?.References,
             };

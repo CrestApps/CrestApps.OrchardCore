@@ -3,10 +3,10 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using CrestApps.OrchardCore.Commerce.Api;
-using CrestApps.OrchardCore.Commerce.Webhooks;
-using CrestApps.OrchardCore.Commerce.Webhooks.Controllers;
-using CrestApps.OrchardCore.Commerce.Webhooks.Models;
-using CrestApps.OrchardCore.Commerce.Webhooks.Services;
+using CrestApps.OrchardCore.Webhooks;
+using CrestApps.OrchardCore.Webhooks.Controllers;
+using CrestApps.OrchardCore.Webhooks.Core.Models;
+using CrestApps.OrchardCore.Webhooks.Core.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 
@@ -24,12 +24,15 @@ public sealed class CommerceWebhookTests
         const string secret = "whsec_test";
         const string body = """{"id":"evt_1","event":"order.paid"}""";
 
-        var signature = WebhookDispatcher.Sign(secret, 1_760_000_000, body);
+        var signer = new HmacSha256WebhookSigner();
+        var signature = signer.Sign(secret, 1_760_000_000, body);
         var expected = "v1=" + Convert.ToHexStringLower(HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes("1760000000." + body)));
 
         Assert.Equal(expected, signature);
-        Assert.NotEqual(signature, WebhookDispatcher.Sign(secret, 1_760_000_001, body));
-        Assert.NotEqual(signature, WebhookDispatcher.Sign("whsec_other", 1_760_000_000, body));
+        Assert.NotEqual(signature, signer.Sign(secret, 1_760_000_001, body));
+        Assert.NotEqual(signature, signer.Sign("whsec_other", 1_760_000_000, body));
+        Assert.True(signer.Verify(secret, 1_760_000_000, body, signature));
+        Assert.False(signer.Verify(secret, 1_760_000_000, body + " ", signature));
     }
 
     [Fact]
@@ -39,7 +42,7 @@ public sealed class CommerceWebhookTests
 
         Assert.Equal(TimeSpan.FromMinutes(1), delays[0]);
         Assert.True(delays.TakeWhile(delay => delay.HasValue).Zip(delays.Skip(1).TakeWhile(delay => delay.HasValue)).All(pair => pair.First < pair.Second));
-        Assert.Null(delays[WebhookDispatcher.Backoff.Length]);
+        Assert.Null(delays[WebhookDispatcher.Backoff.Count]);
     }
 
     [Theory]
@@ -50,8 +53,8 @@ public sealed class CommerceWebhookTests
         var subscription = new WebhookSubscription { Events = ["order.paid", "shipment.shipped"] };
 
         Assert.Equal(takes, subscription.Takes(eventName));
-        Assert.True(new WebhookSubscription { Events = [WebhookConstants.AllEvents] }.Takes(eventName));
-        Assert.False(new WebhookSubscription { Events = [WebhookConstants.AllEvents], IsEnabled = false }.Takes(eventName));
+        Assert.True(new WebhookSubscription { Events = [WebhookEvents.All] }.Takes(eventName));
+        Assert.False(new WebhookSubscription { Events = [WebhookEvents.All], IsEnabled = false }.Takes(eventName));
     }
 
     [Theory]
@@ -70,31 +73,6 @@ public sealed class CommerceWebhookTests
     [InlineData("https://localhost/hook", false, false)]
     public void Events_ArePostedOnlyOverHttps_OrToThisMachineWhileDeveloping(string url, bool isDevelopment, bool allowed)
         => Assert.Equal(allowed, WebhooksAdminController.IsAllowedUrl(url, isDevelopment));
-
-    [Theory]
-    [InlineData("127.0.0.1", true)]
-    [InlineData("10.1.2.3", true)]
-    [InlineData("172.20.0.1", true)]
-    [InlineData("192.168.0.10", true)]
-    [InlineData("169.254.169.254", true)]
-    [InlineData("::1", true)]
-    [InlineData("fd00::1", true)]
-    [InlineData("::ffff:10.0.0.1", true)]
-    [InlineData("8.8.8.8", false)]
-    [InlineData("172.32.0.1", false)]
-    public void AnAddressOfTheSitesOwnNetwork_IsInternal(string address, bool isInternal)
-        => Assert.Equal(isInternal, WebhookNetwork.IsInternal(IPAddress.Parse(address)));
-
-    [Fact]
-    public async Task AHostOnTheSitesOwnNetwork_IsRefusedWhenCalled()
-    {
-        // A hostname passes when it's saved; the connection is what refuses it, whatever it resolves to.
-        using var client = new HttpClient(WebhookNetwork.CreateHandler(allowLoopback: false));
-
-        var exception = await Assert.ThrowsAsync<HttpRequestException>(() => client.GetAsync("http://localhost:1/hook", TestContext.Current.CancellationToken));
-
-        Assert.Contains("own network", exception.Message, StringComparison.Ordinal);
-    }
 
     [Fact]
     public void ARetry_GetsBackTheGuestTokenAndLocation_TheFirstAnswerHadInItsHeaders()

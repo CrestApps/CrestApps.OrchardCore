@@ -2,6 +2,7 @@ using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging;
+using CrestApps.OrchardCore.Outreach;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -23,7 +24,8 @@ using OrchardCore.Modules.Manifest;
         OmnichannelConstants.Features.ChannelEndpoints,
         ContactCenterConstants.Feature.AgentServices,
         ContactCenterConstants.Feature.EntryPoints,
-        "OrchardCore.SignalR",
+        OrchardCoreFeatureIds.SignalR,
+        OutreachConstants.Feature,
     ]
 )]
 

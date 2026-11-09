@@ -1,4 +1,5 @@
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.Checkout.Models;
 
@@ -11,7 +12,7 @@ namespace CrestApps.OrchardCore.Checkout.Models;
 /// discounting long after the promotion is over. Both are enforced when the coupon is applied, not merely
 /// documented on it.
 /// </remarks>
-public sealed class Coupon : CatalogItem
+public sealed class Coupon : CatalogItem, ITimestampedModel
 {
     /// <summary>
     /// Gets or sets the YesSql document identifier.

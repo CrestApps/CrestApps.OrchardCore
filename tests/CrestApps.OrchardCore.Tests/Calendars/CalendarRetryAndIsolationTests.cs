@@ -88,7 +88,7 @@ public sealed class CalendarRetryAndIsolationTests
         // Act
         var first = await RunRemindersAsync(harness);
         var second = await RunRemindersAsync(harness);
-        var purged = await harness.RunAsync(services => services.GetRequiredService<CalendarReminderService>().PurgeAsync(CalendarTestHarness.Now.AddDays(-7)));
+        var purged = await harness.RunAsync(services => new CalendarReminderLogRetentionPolicy(services.GetRequiredService<global::YesSql.ISession>()).PurgeBatchAsync(CalendarTestHarness.Now.AddDays(-CalendarReminderLogRetentionPolicy.RetentionDays), 500, TestContext.Current.CancellationToken));
         var third = await RunRemindersAsync(harness);
 
         // Assert

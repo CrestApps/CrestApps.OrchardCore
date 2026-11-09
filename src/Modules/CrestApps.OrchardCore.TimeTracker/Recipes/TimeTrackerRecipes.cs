@@ -1,7 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
-using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using CrestApps.OrchardCore.TimeTracker.Core.Services;
 using CrestApps.OrchardCore.TimeTracker.Models;
@@ -220,33 +219,6 @@ internal sealed class TimeTrackerRecipeStep : NamedRecipeStepHandler
         }
 
         return true;
-    }
-}
-
-/// <summary>
-/// Describes the TimeTracker recipe step.
-/// </summary>
-internal sealed class TimeTrackerRecipeStepSchema : IRecipeStep
-{
-    private JsonSchema _cached;
-
-    public string Name => TimeTrackerConstants.RecipeStepName;
-
-    public ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
-    {
-        _cached ??= new JsonSchemaBuilder()
-            .Type(SchemaValueType.Object)
-            .Description("Creates or updates time categories and stages by name, and adds time entries.")
-            .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const(TimeTrackerConstants.RecipeStepName).Description("Recipe step discriminator. Must be 'TimeTracker'.")),
-                ("Categories", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true)).Description("Categories, matched by ItemId and then name: name, code, color, position, factor (how a minute counts, 1 by default) and enabled.")),
-                ("Stages", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true)).Description("Stages, matched by ItemId and then name: name, code, color, position, selfService, enabled, and categories, the names of the categories its time counts toward.")),
-                ("Entries", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true)).Description("Entries: userName, stage (a stage name), startUtc, endUtc, source and note. An entry is skipped when the person already has time then.")))
-            .Required("name")
-            .AdditionalProperties(true)
-            .Build();
-
-        return ValueTask.FromResult(_cached);
     }
 }
 

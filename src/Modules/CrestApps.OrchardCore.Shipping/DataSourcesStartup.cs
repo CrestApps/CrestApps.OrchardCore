@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.Shipping;
 /// Exposes shipping as a data source of Orchard Core, for reports and data pipelines: the data source, and the data sets
 /// of the shipments, the order lines they hold, the shipping zones and the methods each zone offers.
 /// </summary>
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class DataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

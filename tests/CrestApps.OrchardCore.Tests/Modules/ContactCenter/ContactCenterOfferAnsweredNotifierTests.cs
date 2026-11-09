@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.SignalR.Core;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -46,9 +47,8 @@ public sealed class ContactCenterOfferAnsweredNotifierTests
 
         var notifier = new ContactCenterOfferAnsweredNotifier(
             realTimeNotifier.Object,
-            hubContext.Object,
-            NullLogger<ContactCenterOfferAnsweredNotifier>.Instance,
-            _shellSettings);
+            new SoftPhoneClientNotifier(hubContext.Object, _shellSettings),
+            NullLogger<ContactCenterOfferAnsweredNotifier>.Instance);
 
         var reservation = new ActivityReservation { ItemId = "r1", AgentId = "a1", ActivityItemId = "act1", QueueId = "q1" };
 
@@ -76,9 +76,8 @@ public sealed class ContactCenterOfferAnsweredNotifierTests
 
         var notifier = new ContactCenterOfferAnsweredNotifier(
             new Mock<IContactCenterRealTimeNotifier>().Object,
-            hubContext.Object,
-            NullLogger<ContactCenterOfferAnsweredNotifier>.Instance,
-            _shellSettings);
+            new SoftPhoneClientNotifier(hubContext.Object, _shellSettings),
+            NullLogger<ContactCenterOfferAnsweredNotifier>.Instance);
 
         // Act
         var exception = await Record.ExceptionAsync(() => notifier.NotifyAnsweredAsync(

@@ -244,7 +244,8 @@ public sealed class MessagingSubjectChannelTests
             return Task.FromResult(NextResult ?? MessageDispatchResult.Success("m-1"));
         }
 
-        public bool IsOptedOut(ContentItem contact) => false;
+        public Task<bool> IsOptedOutAsync(ContentItem contact, string address, CancellationToken cancellationToken = default)
+            => Task.FromResult(false);
 
         public IReadOnlyList<string> GetContactAddresses(ContentItem contact) => [];
 

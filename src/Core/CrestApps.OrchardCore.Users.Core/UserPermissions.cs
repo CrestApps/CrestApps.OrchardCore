@@ -6,9 +6,9 @@ namespace CrestApps.OrchardCore.Users.Core;
 /// <summary>
 /// Represents the user permissions.
 /// </summary>
-public class UserPermissions
+public static class UserPermissions
 {
-    public readonly static Permission ManageDisplaySettings = new("ManageDisplaySettings", LocalizationSource.Create<UserPermissions>("Manage the user display name settings."));
+    public readonly static Permission ManageDisplaySettings = new("ManageDisplaySettings", LocalizationSource.Create("Manage the user display name settings.", typeof(UserPermissions)));
 
-    public readonly static Permission ManageAvatarSettings = new("ManageAvatarSettings", LocalizationSource.Create<UserPermissions>("Manage the avatar settings."));
+    public readonly static Permission ManageAvatarSettings = new("ManageAvatarSettings", LocalizationSource.Create("Manage the avatar settings.", typeof(UserPermissions)));
 }

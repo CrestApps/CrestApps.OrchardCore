@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Consent;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -16,7 +17,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services;
 /// <summary>
 /// The email channel of the messaging workspace. Addresses are email addresses in their canonical lower-case form, a
 /// message leaves through the transport of the address it is sent from, and a contact is reached at the email addresses
-/// on their record and opted out by the Omnichannel contact's <c>Do not email</c> flag.
+/// on their record and opted out when the consent service says so (the Omnichannel contact's <c>Do not email</c> flag).
 /// </summary>
 public sealed class EmailMessagingChannel : IMessagingChannel
 {
@@ -48,6 +49,7 @@ public sealed class EmailMessagingChannel : IMessagingChannel
     private readonly Lazy<IEmailDispatcher> _dispatcher;
     private readonly IOmnichannelContactTypeProvider _contactTypeProvider;
     private readonly IContactMethodsAccessor _contactMethods;
+    private readonly IConsentService _consentService;
     private readonly ISession _session;
     private readonly IStringLocalizer S;
 
@@ -59,18 +61,21 @@ public sealed class EmailMessagingChannel : IMessagingChannel
     /// <param name="session">The session the contact indexes are read from.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="contactMethods">Reads a contact's email addresses.</param>
+    /// <param name="consentService">Answers whether a contact or an address has opted out of email.</param>
     public EmailMessagingChannel(
         Lazy<IEmailDispatcher> dispatcher,
         IOmnichannelContactTypeProvider contactTypeProvider,
         ISession session,
         IStringLocalizer<EmailMessagingChannel> stringLocalizer,
-        IContactMethodsAccessor contactMethods)
+        IContactMethodsAccessor contactMethods,
+        IConsentService consentService)
     {
         _dispatcher = dispatcher;
         _contactTypeProvider = contactTypeProvider;
         _session = session;
         S = stringLocalizer;
         _contactMethods = contactMethods;
+        _consentService = consentService;
     }
 
     /// <inheritdoc/>
@@ -109,10 +114,21 @@ public sealed class EmailMessagingChannel : IMessagingChannel
     }
 
     /// <inheritdoc/>
-    public bool IsOptedOut(ContentItem contact)
-        => contact is not null &&
-            contact.TryGet<OmnichannelContactPart>(out var part) &&
-            part.DoNotEmail;
+    public async Task<bool> IsOptedOutAsync(ContentItem contact, string address, CancellationToken cancellationToken = default)
+    {
+        // Asked of the consent service, as the SMS channel does, so an unsubscribe recorded on another record that holds
+        // the address counts as well as this contact's own flag.
+        var consent = await _consentService.GetAsync(new ConsentQuery
+        {
+            Channel = ConsentChannels.Email,
+            Address = address,
+            ContactKind = ConsentContactKinds.Contact,
+            ContactId = contact?.ContentItemId,
+            Contact = contact,
+        }, cancellationToken);
+
+        return consent.HasOptedOut;
+    }
 
     /// <inheritdoc/>
     public IReadOnlyList<string> GetContactAddresses(ContentItem contact)

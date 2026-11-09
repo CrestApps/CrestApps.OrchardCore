@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Core.Workflows;
 using CrestApps.OrchardCore.AgentSkills.Mcp.Extensions;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core;
@@ -15,7 +16,7 @@ using CrestApps.OrchardCore.AI.Mcp.Migrations;
 using CrestApps.OrchardCore.AI.Mcp.Recipes;
 using CrestApps.OrchardCore.AI.Mcp.Services;
 using CrestApps.OrchardCore.AI.Services;
-using CrestApps.OrchardCore.AI.Workflows.Models;
+using CrestApps.OrchardCore.Recipes.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -96,7 +97,7 @@ public sealed class StdIoStartup : StartupBase
 /// Registers services and configuration for the Recipes feature.
 /// </summary>
 [Feature(AIConstants.Feature.ConnectionManagement)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class RecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -109,7 +110,7 @@ public sealed class RecipesStartup : StartupBase
 /// Registers services and configuration for the OCDeployments feature.
 /// </summary>
 [Feature(AIConstants.Feature.ConnectionManagement)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class OCDeploymentsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -228,7 +229,7 @@ public sealed class McpServerStartup : StartupBase
 /// Registers services and configuration for the McpPromptRecipes feature.
 /// </summary>
 [Feature(McpPermissions.Feature.Server)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class McpPromptRecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -241,7 +242,7 @@ public sealed class McpPromptRecipesStartup : StartupBase
 /// Registers services and configuration for the McpPromptDeployments feature.
 /// </summary>
 [Feature(McpPermissions.Feature.Server)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class McpPromptDeploymentsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -254,7 +255,7 @@ public sealed class McpPromptDeploymentsStartup : StartupBase
 /// Registers services and configuration for the McpResourceRecipes feature.
 /// </summary>
 [Feature(McpPermissions.Feature.Server)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class McpResourceRecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -267,7 +268,7 @@ public sealed class McpResourceRecipesStartup : StartupBase
 /// Registers services and configuration for the McpResourceDeployments feature.
 /// </summary>
 [Feature(McpPermissions.Feature.Server)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class McpResourceDeploymentsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -280,7 +281,7 @@ public sealed class McpResourceDeploymentsStartup : StartupBase
 /// Registers services and configuration for the McpContentResource feature.
 /// </summary>
 [Feature(McpPermissions.Feature.Server)]
-[RequireFeatures("OrchardCore.ContentManagement")]
+[RequireFeatures(OrchardCoreFeatureIds.ContentManagement)]
 public sealed class McpContentResourceStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -323,7 +324,7 @@ public sealed class McpContentResourceStartup : StartupBase
 /// Registers services and configuration for the McpRecipeSchemaResource feature.
 /// </summary>
 [Feature(McpPermissions.Feature.Server)]
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class McpRecipeSchemaResourceStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -371,7 +372,7 @@ public sealed class McpRecipeSchemaResourceStartup : StartupBase
 /// Registers services and configuration for the McpMediaResource feature.
 /// </summary>
 [Feature(McpPermissions.Feature.Server)]
-[RequireFeatures("OrchardCore.Media")]
+[RequireFeatures(OrchardCoreFeatureIds.Media)]
 public sealed class McpMediaResourceStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -402,7 +403,7 @@ public sealed class McpMediaResourceStartup : StartupBase
 /// <summary>
 /// Contributes the MCP connections field to the AI completion with config workflow activity.
 /// </summary>
-[RequireFeatures(McpPermissions.Feature.Area, "CrestApps.OrchardCore.AI.Chat.Interactions", "OrchardCore.Workflows")]
+[RequireFeatures(McpPermissions.Feature.Area, "CrestApps.OrchardCore.AI.Chat.Interactions", OrchardCoreFeatureIds.Workflows)]
 public sealed class ChatInteractionsWorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

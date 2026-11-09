@@ -1,4 +1,6 @@
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Core.Drivers;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Tools.Services;
 
 namespace CrestApps.OrchardCore.AI.Tools.Drivers;

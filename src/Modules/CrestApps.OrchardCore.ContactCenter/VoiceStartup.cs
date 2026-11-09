@@ -16,6 +16,9 @@ using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.OrchardCore.Webhooks;
+using CrestApps.OrchardCore.Webhooks.Core.Models;
+using CrestApps.OrchardCore.Webhooks.Core.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -278,7 +281,7 @@ public sealed class VoiceSoftPhoneStartup : StartupBase
 /// pays for them.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Voice)]
-[RequireFeatures("OrchardCore.HealthChecks")]
+[RequireFeatures(OrchardCoreFeatureIds.HealthChecks)]
 public sealed class VoiceHealthChecksStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

@@ -79,8 +79,8 @@ public class ContentImportManagerTests
     public async Task GetColumnsAsync_WithContentImportHandler_ReturnsHandlerColumns()
     {
         var handler = new Mock<IContentImportHandler>();
-        handler.Setup(x => x.GetColumns(It.IsAny<ImportContentContext>()))
-            .Returns(new[] { new ImportColumn { Name = "TestColumn" } });
+        handler.Setup(x => x.GetColumnsAsync(It.IsAny<ImportContentContext>()))
+            .ReturnsAsync(new[] { new ImportColumn { Name = "TestColumn" } });
 
         var manager = new ContentImportManager(
             _handlerResolver.Object,
@@ -300,7 +300,7 @@ public class CommonContentImportHandlerTests
     }
 
     [Fact]
-    public void GetColumns_ReturnsContentItemIdColumn()
+    public async Task GetColumns_ReturnsContentItemIdColumn()
     {
         var context = new ImportContentContext
         {
@@ -308,13 +308,13 @@ public class CommonContentImportHandlerTests
             ContentTypeDefinition = new ContentTypeDefinition("Test", "Test"),
         };
 
-        var columns = _handler.GetColumns(context);
+        var columns = await _handler.GetColumnsAsync(context);
 
         Assert.Contains(columns, c => c.Name == nameof(ContentItem.ContentItemId));
     }
 
     [Fact]
-    public void GetColumns_ReturnsCreatedUtcAsExportOnly()
+    public async Task GetColumns_ReturnsCreatedUtcAsExportOnly()
     {
         var context = new ImportContentContext
         {
@@ -322,7 +322,7 @@ public class CommonContentImportHandlerTests
             ContentTypeDefinition = new ContentTypeDefinition("Test", "Test"),
         };
 
-        var columns = _handler.GetColumns(context);
+        var columns = await _handler.GetColumnsAsync(context);
 
         var createdUtcCol = columns.FirstOrDefault(c => c.Name == nameof(ContentItem.CreatedUtc));
         Assert.NotNull(createdUtcCol);
@@ -330,7 +330,7 @@ public class CommonContentImportHandlerTests
     }
 
     [Fact]
-    public void GetColumns_ReturnsModifiedUtcAsExportOnly()
+    public async Task GetColumns_ReturnsModifiedUtcAsExportOnly()
     {
         var context = new ImportContentContext
         {
@@ -338,7 +338,7 @@ public class CommonContentImportHandlerTests
             ContentTypeDefinition = new ContentTypeDefinition("Test", "Test"),
         };
 
-        var columns = _handler.GetColumns(context);
+        var columns = await _handler.GetColumnsAsync(context);
 
         var modifiedUtcCol = columns.FirstOrDefault(c => c.Name == nameof(ContentItem.ModifiedUtc));
         Assert.NotNull(modifiedUtcCol);

@@ -6,6 +6,7 @@ using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AI;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.Core.Migrations;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -131,6 +132,7 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
             quotedContentColumnName,
             quotedTableName);
         var importedCount = 0;
+        var skipped = new MigrationSkipReport(nameof(AIDeploymentIndexMigrations), logger);
         var existingDeployments = (await deploymentManager.GetAllAsync()).ToList();
 
         foreach (var document in documents)
@@ -189,9 +191,7 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
                 {
                     if (string.IsNullOrWhiteSpace(sourceName))
                     {
-                        logger.LogWarning(
-                            "Skipping legacy AI deployment {ItemId} because no source/client name was found.",
-                            itemId);
+                        skipped.Skip(itemId, "no source/client name was found");
                         continue;
                     }
 
@@ -226,10 +226,9 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
                 var validationResult = await deploymentManager.ValidateAsync(deployment);
                 if (!validationResult.Succeeded)
                 {
-                    logger.LogWarning(
-                        "Skipping legacy AI deployment {ItemId} because validation failed: {Errors}",
+                    skipped.Skip(
                         itemId,
-                        string.Join("; ", validationResult.Errors.Select(error => error.ErrorMessage)));
+                        "validation failed: " + string.Join("; ", validationResult.Errors.Select(error => error.ErrorMessage)));
                     continue;
                 }
 
@@ -238,6 +237,8 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
                 importedCount++;
             }
         }
+
+        await skipped.LogSummaryAsync(serviceProvider);
 
         var connections = (await connectionManager.GetAllAsync()).ToList();
         var deploymentDefaults = await CollectDeploymentDefaultsAsync(deploymentManager, existingDeployments);

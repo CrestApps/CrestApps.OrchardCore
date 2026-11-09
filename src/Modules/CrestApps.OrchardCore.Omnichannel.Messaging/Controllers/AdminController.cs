@@ -28,8 +28,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Controllers;
 /// </summary>
 public sealed class AdminController : Controller
 {
-    private static readonly char[] _recipientSeparators = ['\n', '\r', ',', ';'];
-
     private readonly IMessagingConversationStore _conversationStore;
     private readonly IMessagingConversationService _conversationService;
     private readonly IMessagingConversationTransferService _transferService;
@@ -253,7 +251,7 @@ public sealed class AdminController : Controller
         // An address can be used on several channels; the composer sends on the first messaging channel it has.
         var channel = endpoint is null ? null : _channelResolver.GetAll().FirstOrDefault(candidate => endpoint.HasCapability(candidate.Name));
 
-        var addresses = ParseRecipients(model.Recipients)
+        var addresses = MessagingRecipients.Parse(model.Recipients)
             .Concat(model.ContactAddresses ?? [])
             .Where(address => !string.IsNullOrWhiteSpace(address))
             .ToList();
@@ -745,20 +743,6 @@ public sealed class AdminController : Controller
         }
 
         return (conversation, null);
-    }
-
-
-    private static List<string> ParseRecipients(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return [];
-        }
-
-        return text
-            .Split(_recipientSeparators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
     }
 
     // The composer opens in the conversation pane of the workspace, beside the customer list, rather than on a page of

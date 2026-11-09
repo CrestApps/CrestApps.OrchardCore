@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Taxation.Models;
 
 namespace CrestApps.OrchardCore.Taxation.Core.Models;
@@ -10,9 +11,11 @@ namespace CrestApps.OrchardCore.Taxation.Core.Models;
 public sealed class TaxationOptions
 {
     /// <summary>
-    /// Gets or sets the number of decimal places tax amounts are rounded to. Defaults to <c>2</c>.
+    /// Gets or sets the number of decimal places every tax amount is rounded to, whatever its currency. Defaults to
+    /// <see langword="null"/>: each amount is rounded to its currency's precision from <c>CurrencyScale</c>, so yen
+    /// tax has no decimals and Kuwaiti dinar tax three, the same as the payment.
     /// </summary>
-    public int DecimalPlaces { get; set; } = 2;
+    public int? DecimalPlaces { get; set; }
 
     /// <summary>
     /// Gets or sets the midpoint rounding mode. Defaults to <see cref="MidpointRounding.AwayFromZero"/>.

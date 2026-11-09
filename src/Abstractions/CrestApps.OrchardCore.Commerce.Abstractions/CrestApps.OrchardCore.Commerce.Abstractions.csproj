@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Commerce</RootNamespace>
+    <Title>CrestApps OrchardCore Commerce Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Contracts every commerce module shares: the store's e-mails (a kind, a model and the store's own Liquid
+      template of it) and the store's profile and locations (name, logo, tax ID and address).
+    </Description>
+    <PackageTags>$(PackageTags) Commerce Emails Store Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Addresses.Abstractions\CrestApps.OrchardCore.Addresses.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

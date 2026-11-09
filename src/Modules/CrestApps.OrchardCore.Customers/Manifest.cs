@@ -20,7 +20,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         CommerceConstants.Features.Area,
-        "OrchardCore.Users",
+        OrchardCoreFeatureIds.Users,
         AddressConstants.Feature.ModuleId,
     ]
 )]
@@ -70,8 +70,8 @@ using OrchardCore.Modules.Manifest;
     [
         CustomersConstants.Features.Customers,
         OrderConstants.Features.Orders,
-        "OrchardCore.Contents",
-        "OrchardCore.ContentTypes",
+        OrchardCoreFeatureIds.Contents,
+        OrchardCoreFeatureIds.ContentTypes,
     ]
 )]
 

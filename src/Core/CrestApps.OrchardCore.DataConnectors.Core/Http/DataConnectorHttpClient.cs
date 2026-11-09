@@ -5,6 +5,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using CrestApps.OrchardCore.DataConnectors.Models;
 using Microsoft.Extensions.Options;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.DataConnectors.Http;
 
@@ -22,15 +23,18 @@ internal sealed class DataConnectorHttpClient
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly HttpRequestAuthenticator _authenticator;
     private readonly DataConnectorNetworkOptions _networkOptions;
+    private readonly IClock _clock;
 
     public DataConnectorHttpClient(
         IHttpClientFactory httpClientFactory,
         HttpRequestAuthenticator authenticator,
-        IOptions<DataConnectorNetworkOptions> networkOptions)
+        IOptions<DataConnectorNetworkOptions> networkOptions,
+        IClock clock)
     {
         _httpClientFactory = httpClientFactory;
         _authenticator = authenticator;
         _networkOptions = networkOptions.Value;
+        _clock = clock;
     }
 
     /// <summary>
@@ -294,10 +298,10 @@ internal sealed class DataConnectorHttpClient
         => statusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests or HttpStatusCode.InternalServerError
             or HttpStatusCode.BadGateway or HttpStatusCode.ServiceUnavailable or HttpStatusCode.GatewayTimeout;
 
-    private static TimeSpan RetryDelay(int attempt, RetryConditionHeaderValue retryAfter)
+    private TimeSpan RetryDelay(int attempt, RetryConditionHeaderValue retryAfter)
     {
         var delay = retryAfter?.Delta
-            ?? (retryAfter?.Date is { } date ? date - DateTimeOffset.UtcNow : TimeSpan.FromSeconds(Math.Pow(2, attempt - 1)));
+            ?? (retryAfter?.Date is { } date ? date - new DateTimeOffset(DateTime.SpecifyKind(_clock.UtcNow, DateTimeKind.Utc)) : TimeSpan.FromSeconds(Math.Pow(2, attempt - 1)));
 
         if (delay < TimeSpan.Zero)
         {

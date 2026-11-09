@@ -1,14 +1,17 @@
 using System.Text.Json.Nodes;
-using CrestApps.Core;
 using CrestApps.Core.AI.A2A.Models;
+using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Recipes;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Recipes.Models;
-using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.AI.A2A.Recipes;
 
-internal sealed class A2AConnectionStep : NamedRecipeStepHandler
+/// <summary>
+/// Imports A2A connections, matched by their item id.
+/// </summary>
+internal sealed class A2AConnectionStep : CatalogRecipeStepBase<A2AConnection>
 {
     public const string StepKey = "A2AConnection";
 
@@ -24,70 +27,24 @@ internal sealed class A2AConnectionStep : NamedRecipeStepHandler
     public A2AConnectionStep(
         ICatalogManager<A2AConnection> manager,
         IStringLocalizer<A2AConnectionStep> stringLocalizer)
-    : base(StepKey)
+        : base(StepKey, "Connections")
     {
         _manager = manager;
         S = stringLocalizer;
     }
 
-    protected override async Task HandleAsync(RecipeExecutionContext context)
-    {
-        var model = context.Step.ToObject<A2AConnectionsStepModel>();
-        var tokens = model.Connections.Cast<JsonObject>() ?? [];
+    protected override ValueTask<A2AConnection> FindByIdAsync(string id)
+        => _manager.FindByIdAsync(id);
 
-        foreach (var token in tokens)
-        {
-            A2AConnection connection = null;
-            var isNew = false;
+    protected override ValueTask UpdateAsync(A2AConnection entry, JsonObject token)
+        => _manager.UpdateAsync(entry, token);
 
-            var id = token[nameof(A2AConnection.ItemId)]?.GetValue<string>();
+    protected override ValueTask<A2AConnection> NewAsync(JsonObject token, RecipeExecutionContext context)
+        => _manager.NewAsync(token);
 
-            var hasId = !string.IsNullOrEmpty(id);
+    protected override ValueTask<ValidationResultDetails> ValidateAsync(A2AConnection entry)
+        => _manager.ValidateAsync(entry);
 
-            if (hasId)
-            {
-                connection = await _manager.FindByIdAsync(id);
-            }
-
-            if (connection is not null)
-            {
-                await _manager.UpdateAsync(connection, token);
-            }
-            else
-            {
-                isNew = true;
-                connection = await _manager.NewAsync(token);
-
-                if (hasId && UniqueId.IsValid(id))
-                {
-                    connection.ItemId = id;
-                }
-            }
-
-            var validationResult = await _manager.ValidateAsync(connection);
-
-            if (!validationResult.Succeeded)
-            {
-                foreach (var error in validationResult.Errors)
-                {
-                    context.Errors.Add(error.ErrorMessage);
-                }
-
-                continue;
-            }
-
-            if (isNew)
-            {
-                await _manager.CreateAsync(connection);
-            }
-        }
-    }
-
-    private sealed class A2AConnectionsStepModel
-    {
-        /// <summary>
-        /// Gets or sets the A2A connections to import.
-        /// </summary>
-        public JsonArray Connections { get; set; }
-    }
+    protected override ValueTask CreateAsync(A2AConnection entry)
+        => _manager.CreateAsync(entry);
 }

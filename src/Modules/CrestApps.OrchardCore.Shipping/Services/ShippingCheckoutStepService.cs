@@ -1,16 +1,14 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Addresses.Core.Editing;
 using CrestApps.OrchardCore.Addresses.Models;
+using CrestApps.OrchardCore.Addresses.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Services;
-using CrestApps.OrchardCore.Customers.Core.Models;
-using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Shipping.Models;
 using CrestApps.OrchardCore.Taxation.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Entities;
 using OrchardCore.Settings;
@@ -29,7 +27,8 @@ public sealed class ShippingCheckoutStepService
     private readonly ShippingOrderRateService _orderRates;
     private readonly IAddressEditorService _addressEditor;
     private readonly CheckoutInvoiceBuilder _invoiceBuilder;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IEnumerable<IShippingAddressSource> _addressSources;
+    private readonly IEnumerable<IShippingAddressBook> _addressBooks;
     private readonly ISiteService _siteService;
 
     internal readonly IStringLocalizer S;
@@ -39,7 +38,8 @@ public sealed class ShippingCheckoutStepService
         ShippingOrderRateService orderRates,
         IAddressEditorService addressEditor,
         CheckoutInvoiceBuilder invoiceBuilder,
-        IServiceProvider serviceProvider,
+        IEnumerable<IShippingAddressSource> addressSources,
+        IEnumerable<IShippingAddressBook> addressBooks,
         ISiteService siteService,
         IStringLocalizer<ShippingCheckoutStepService> stringLocalizer)
     {
@@ -47,7 +47,8 @@ public sealed class ShippingCheckoutStepService
         _orderRates = orderRates;
         _addressEditor = addressEditor;
         _invoiceBuilder = invoiceBuilder;
-        _serviceProvider = serviceProvider;
+        _addressSources = addressSources;
+        _addressBooks = addressBooks;
         _siteService = siteService;
         S = stringLocalizer;
     }
@@ -114,8 +115,8 @@ public sealed class ShippingCheckoutStepService
             return ShippingStepResult.Done(quote: null);
         }
 
-        var customer = await GetCustomerAsync(session);
-        var saved = string.IsNullOrEmpty(model.AddressId) ? null : customer?.FindAddress(model.AddressId);
+        var addressBook = await GetAddressBookAsync(session);
+        var saved = string.IsNullOrEmpty(model.AddressId) ? null : addressBook?.FindAddress(model.AddressId);
 
         // An address from another source, such as a location of the business account the buyer buys for, is shipped
         // to as it is.
@@ -134,7 +135,7 @@ public sealed class ShippingCheckoutStepService
         }
         else
         {
-            var result = await _addressEditor.ValidateAsync(model.Address ?? new AddressEditorViewModel(), modelState, Key(prefix, nameof(model.Address)), EditorOptions(session, customer));
+            var result = await _addressEditor.ValidateAsync(model.Address ?? new AddressEditorViewModel(), modelState, Key(prefix, nameof(model.Address)), EditorOptions(session, addressBook));
 
             if (result.IsValid)
             {
@@ -191,7 +192,7 @@ public sealed class ShippingCheckoutStepService
             AddressId = saved?.AddressId ?? sourced?.AddressId,
             Address = address,
             RateId = rate.RateId,
-            SaveAddress = saved is null && sourced is null && customer is not null && model.SaveAddress,
+            SaveAddress = saved is null && sourced is null && addressBook is not null && model.SaveAddress,
         }, address, rate, stockLocationId: null);
 
         await _invoiceBuilder.BuildAsync(flow);
@@ -253,14 +254,14 @@ public sealed class ShippingCheckoutStepService
     /// Returns the options the shipping address is entered with: who receives the parcel and a phone the carrier can
     /// call.
     /// </summary>
-    public static AddressEditorOptions EditorOptions(ICheckoutFlowSession session, Customer customer)
+    public static AddressEditorOptions EditorOptions(ICheckoutFlowSession session, ShippingAddressBook addressBook)
         => new()
         {
             ShowName = true,
             RequireName = true,
             ShowCompany = true,
             ShowPhone = true,
-            DefaultCountry = (session.TryGet<CheckoutContactInfo>(out var contact) ? contact.BillingAddress : null)?.Country ?? customer?.GetDefaultBillingAddress()?.Address?.Country,
+            DefaultCountry = (session.TryGet<CheckoutContactInfo>(out var contact) ? contact.BillingAddress : null)?.Country ?? addressBook?.GetDefaultBillingAddress()?.Address?.Country,
         };
 
     public async Task<Order> GetOrderAsync(ICheckoutFlowSession session)
@@ -279,7 +280,7 @@ public sealed class ShippingCheckoutStepService
 
         var options = new List<ShippingAddressOption>();
 
-        foreach (var source in _serviceProvider.GetServices<IShippingAddressSource>())
+        foreach (var source in _addressSources)
         {
             options.AddRange((await source.GetAddressesAsync(session.OwnerId, cancellationToken) ?? [])
                 .Where(option => !string.IsNullOrEmpty(option?.AddressId) && option.Address is not null));
@@ -288,10 +289,14 @@ public sealed class ShippingCheckoutStepService
         return options;
     }
 
-    public async Task<Customer> GetCustomerAsync(ICheckoutFlowSession session)
-        => string.IsNullOrEmpty(session.OwnerId) || _serviceProvider.GetService<ICustomerService>() is not { } customers
+    /// <summary>
+    /// Returns the signed-in buyer's address book, from the module that keeps address books (Customers), or
+    /// <see langword="null"/> for a guest or when no module keeps address books.
+    /// </summary>
+    public async Task<ShippingAddressBook> GetAddressBookAsync(ICheckoutFlowSession session, CancellationToken cancellationToken = default)
+        => string.IsNullOrEmpty(session?.OwnerId) || _addressBooks.LastOrDefault() is not { } addressBooks
             ? null
-            : await customers.GetOrCreateForUserAsync(session.OwnerId);
+            : await addressBooks.GetAsync(session.OwnerId, cancellationToken);
 
     private static string Key(string prefix, string field)
         => string.IsNullOrEmpty(prefix) ? field : prefix + "." + field;

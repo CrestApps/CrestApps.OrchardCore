@@ -23,7 +23,7 @@ internal sealed class StructuredDataFilter : ILiquidFilter
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var json = input?.ToStringValue();
+        var json = input?.ToStringValue(context);
 
         if (!string.IsNullOrWhiteSpace(json) &&
             !context.Services.GetRequiredService<IPageStructuredData>().AddJsonLd(json))

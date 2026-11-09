@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Globalization;
+using CrestApps.OrchardCore.Currencies;
 
 namespace CrestApps.OrchardCore.Products.Core.Services;
 
@@ -60,7 +61,7 @@ public static class ProductPriceFormatter
 
                 if (string.Equals(region.ISOCurrencySymbol, currency, StringComparison.OrdinalIgnoreCase))
                 {
-                    return (region.CurrencySymbol, culture.NumberFormat.CurrencyDecimalDigits);
+                    return (region.CurrencySymbol, CurrencyScale.GetDecimalPlaces(currency));
                 }
             }
             catch (ArgumentException)
@@ -69,6 +70,6 @@ public static class ProductPriceFormatter
             }
         }
 
-        return (currency.ToUpperInvariant() + " ", 2);
+        return (currency.ToUpperInvariant() + " ", CurrencyScale.GetDecimalPlaces(currency));
     }
 }

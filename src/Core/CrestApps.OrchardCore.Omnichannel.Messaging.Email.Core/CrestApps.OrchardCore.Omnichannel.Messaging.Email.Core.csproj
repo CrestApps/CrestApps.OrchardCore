@@ -33,10 +33,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Consent.Abstractions/CrestApps.OrchardCore.Consent.Abstractions.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Omnichannel.Messaging.Abstractions/CrestApps.OrchardCore.Omnichannel.Messaging.Abstractions.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Webhooks.Abstractions/CrestApps.OrchardCore.Webhooks.Abstractions.csproj" />
     <ProjectReference Include="../CrestApps.OrchardCore.Omnichannel.Messaging.Core/CrestApps.OrchardCore.Omnichannel.Messaging.Core.csproj" />
     <ProjectReference Include="../CrestApps.OrchardCore.Omnichannel.Core/CrestApps.OrchardCore.Omnichannel.Core.csproj" />
-    <ProjectReference Include="../CrestApps.OrchardCore.ContactCenter.Core/CrestApps.OrchardCore.ContactCenter.Core.csproj" />
   </ItemGroup>
 
 </Project>

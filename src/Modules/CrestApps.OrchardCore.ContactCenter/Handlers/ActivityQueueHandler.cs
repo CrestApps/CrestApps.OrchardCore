@@ -3,7 +3,7 @@ using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Deployments;
+using CrestApps.OrchardCore.Core.Deployments;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
@@ -40,7 +40,7 @@ internal sealed class ActivityQueueHandler : CatalogEntryHandlerBase<ActivityQue
     /// <inheritdoc/>
     public override Task InitializingAsync(InitializingContext<ActivityQueue> context, CancellationToken cancellationToken = default)
     {
-        ContactCenterDeploymentSerializer.Populate(context.Model, context.Data);
+        CatalogDeploymentSerializer.Populate(context.Model, context.Data);
 
         return Task.CompletedTask;
     }
@@ -56,7 +56,7 @@ internal sealed class ActivityQueueHandler : CatalogEntryHandlerBase<ActivityQue
     /// <inheritdoc/>
     public override Task UpdatingAsync(UpdatingContext<ActivityQueue> context, CancellationToken cancellationToken = default)
     {
-        ContactCenterDeploymentSerializer.Populate(context.Model, context.Data);
+        CatalogDeploymentSerializer.Populate(context.Model, context.Data);
 
         context.Model.ModifiedUtc = _clock.UtcNow;
 

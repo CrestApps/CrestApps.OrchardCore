@@ -1,39 +1,21 @@
-using System.Text.Json.Nodes;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps;
-using OrchardCore.Deployment;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Sources;
 
-internal sealed class OmnichannelDispositionDeploymentSource : DeploymentSourceBase<OmnichannelDispositionDeploymentStep>
+/// <summary>
+/// Exports every entry of the catalog as the <c>Disposition</c> recipe step.
+/// </summary>
+internal sealed class OmnichannelDispositionDeploymentSource : CatalogDeploymentSource<OmnichannelDispositionDeploymentStep, OmnichannelDisposition>
 {
-    private readonly INamedCatalogManager<OmnichannelDisposition> _manager;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelDispositionDeploymentSource"/> class.
     /// </summary>
     /// <param name="manager">The manager that owns the dispositions.</param>
     public OmnichannelDispositionDeploymentSource(INamedCatalogManager<OmnichannelDisposition> manager)
+        : base("Dispositions", manager)
     {
-        _manager = manager;
-    }
-
-    protected override async Task ProcessAsync(OmnichannelDispositionDeploymentStep step, DeploymentPlanResult result)
-    {
-        var entries = await _manager.GetAllAsync();
-
-        var data = new JsonArray();
-
-        foreach (var entry in entries)
-        {
-            data.Add(OmnichannelDeploymentSerializer.Export(entry));
-        }
-
-        result.Steps.Add(new JsonObject
-        {
-            ["name"] = OmnichannelDeploymentSteps.Disposition,
-            ["Dispositions"] = data,
-        });
     }
 }

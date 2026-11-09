@@ -111,6 +111,50 @@ public sealed class AccountPortabilityTests
     }
 
     [Fact]
+    public async Task TheAccountsDeploymentStep_ReadsTheAccountsAPageAtATime_AndExportsThemAll()
+    {
+        // Arrange
+        var path = Path.Combine(Path.GetTempPath(), $"crestapps-accounts-pages-{Guid.NewGuid():N}.db");
+        var store = await CreateStoreAsync(path);
+
+        try
+        {
+            await using (var session = store.CreateSession())
+            {
+                for (var index = 1; index <= 5; index++)
+                {
+                    await session.SaveAsync(Account($"account-{index}"), cancellationToken: TestContext.Current.CancellationToken);
+                    await session.SaveAsync(Contact($"contact-{index}", $"account-{index}"), cancellationToken: TestContext.Current.CancellationToken);
+                }
+
+                await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            var definitions = new InMemoryContentDefinitionManager();
+            await definitions.StoreTypeDefinitionAsync(new ContentTypeDefinitionBuilder().WithName("Account").WithPart(AccountsConstants.ContentParts.Account).Build());
+            var provider = new AccountContentTypeProvider(definitions, []);
+
+            // Act
+            JsonObject exported;
+
+            await using (var session = store.CreateSession())
+            {
+                exported = await ExportAsync(new AccountsDeploymentSource(session, provider) { BatchSize = 2 }, new AccountsDeploymentStep());
+            }
+
+            // Assert
+            Assert.Equal(
+                ["account-1", "account-2", "account-3", "account-4", "account-5"],
+                exported["Accounts"]!.AsArray().Select(account => account!["ContentItemId"]!.GetValue<string>()));
+            Assert.Equal(5, exported["Records"]!.AsArray().Count);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, path);
+        }
+    }
+
+    [Fact]
     public void AccountPageTabs_PlaceEachTabInTheSameOrder_WhicheverModuleAddsIt()
     {
         Assert.Equal("Content:1#Overview;0", AccountPageTabs.Location(AccountPageTabs.Overview));

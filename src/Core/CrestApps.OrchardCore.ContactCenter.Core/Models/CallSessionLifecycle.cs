@@ -1,4 +1,4 @@
-using System.Collections.Frozen;
+using CrestApps.OrchardCore.StateMachines;
 using CrestApps.OrchardCore.Telephony.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -14,8 +14,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 /// </summary>
 public static class CallSessionLifecycle
 {
-    private static readonly FrozenDictionary<VoiceCallState, FrozenSet<VoiceCallState>> _transitions =
-        new Dictionary<VoiceCallState, FrozenSet<VoiceCallState>>
+    private static readonly TransitionTable<VoiceCallState> _transitions = new(
+        new Dictionary<VoiceCallState, VoiceCallState[]>
         {
             // Ended is admitted from every alerting state. Providers do not all distinguish why a call that was
             // never answered stopped: some report NoAnswer or Rejected, others report a plain hangup. Refusing
@@ -26,7 +26,7 @@ public static class CallSessionLifecycle
             // in the same round trip that creates the record, so the session is born connected. Held is still
             // refused from planned: a call that was never answered cannot have been placed on hold, and that is
             // the reading this table exists to reject.
-            [VoiceCallState.Planned] = FrozenSet.ToFrozenSet(
+            [VoiceCallState.Planned] =
             [
                 VoiceCallState.Dialing,
                 VoiceCallState.Ringing,
@@ -34,8 +34,8 @@ public static class CallSessionLifecycle
                 VoiceCallState.Ended,
                 VoiceCallState.Canceled,
                 VoiceCallState.Failed,
-            ]),
-            [VoiceCallState.Dialing] = FrozenSet.ToFrozenSet(
+            ],
+            [VoiceCallState.Dialing] =
             [
                 VoiceCallState.Ringing,
                 VoiceCallState.Connected,
@@ -45,8 +45,8 @@ public static class CallSessionLifecycle
                 VoiceCallState.Rejected,
                 VoiceCallState.Canceled,
                 VoiceCallState.Failed,
-            ]),
-            [VoiceCallState.Ringing] = FrozenSet.ToFrozenSet(
+            ],
+            [VoiceCallState.Ringing] =
             [
                 VoiceCallState.Connected,
                 VoiceCallState.Ending,
@@ -55,12 +55,12 @@ public static class CallSessionLifecycle
                 VoiceCallState.Rejected,
                 VoiceCallState.Canceled,
                 VoiceCallState.Failed,
-            ]),
+            ],
             // Ringing is admitted back from the established states because the customer leg and the agent leg
             // share one session. A queue transfer keeps the customer up while the agent leg alerts the next
             // agent, so the session alerts again without the call ever having dropped. No terminal state admits
             // it, so this cannot resurrect a call that ended.
-            [VoiceCallState.Connected] = FrozenSet.ToFrozenSet(
+            [VoiceCallState.Connected] =
             [
                 VoiceCallState.Ringing,
                 VoiceCallState.OnHold,
@@ -68,8 +68,8 @@ public static class CallSessionLifecycle
                 VoiceCallState.Ended,
                 VoiceCallState.Transferred,
                 VoiceCallState.Failed,
-            ]),
-            [VoiceCallState.OnHold] = FrozenSet.ToFrozenSet(
+            ],
+            [VoiceCallState.OnHold] =
             [
                 VoiceCallState.Ringing,
                 VoiceCallState.Connected,
@@ -77,33 +77,24 @@ public static class CallSessionLifecycle
                 VoiceCallState.Ended,
                 VoiceCallState.Transferred,
                 VoiceCallState.Failed,
-            ]),
-            [VoiceCallState.Ending] = FrozenSet.ToFrozenSet(
+            ],
+            [VoiceCallState.Ending] =
             [
                 VoiceCallState.Ended,
                 VoiceCallState.Transferred,
                 VoiceCallState.Failed,
-            ]),
+            ],
 
             // Every outcome is final. A call that ended cannot start ringing again; that is a new call, and
             // reusing the session for it would merge two calls into one history.
-            [VoiceCallState.Ended] = FrozenSet<VoiceCallState>.Empty,
-            [VoiceCallState.Failed] = FrozenSet<VoiceCallState>.Empty,
-            [VoiceCallState.NoAnswer] = FrozenSet<VoiceCallState>.Empty,
-            [VoiceCallState.Rejected] = FrozenSet<VoiceCallState>.Empty,
-            [VoiceCallState.Canceled] = FrozenSet<VoiceCallState>.Empty,
-            [VoiceCallState.Transferred] = FrozenSet<VoiceCallState>.Empty,
-        }.ToFrozenDictionary();
-
-    private static readonly FrozenSet<VoiceCallState> _terminalStates = FrozenSet.ToFrozenSet(
-    [
-        VoiceCallState.Ended,
-        VoiceCallState.Failed,
-        VoiceCallState.NoAnswer,
-        VoiceCallState.Rejected,
-        VoiceCallState.Canceled,
-        VoiceCallState.Transferred,
-    ]);
+            [VoiceCallState.Ended] = [],
+            [VoiceCallState.Failed] = [],
+            [VoiceCallState.NoAnswer] = [],
+            [VoiceCallState.Rejected] = [],
+            [VoiceCallState.Canceled] = [],
+            [VoiceCallState.Transferred] = [],
+        },
+        allowStaying: true);
 
     /// <summary>
     /// Determines whether a call session in one state may move to another.
@@ -112,14 +103,7 @@ public static class CallSessionLifecycle
     /// <param name="to">The state the call would move to.</param>
     /// <returns><see langword="true"/> when the transition is admitted; otherwise <see langword="false"/>.</returns>
     public static bool CanTransition(VoiceCallState from, VoiceCallState to)
-    {
-        if (from == to)
-        {
-            return true;
-        }
-
-        return _transitions.TryGetValue(from, out var allowed) && allowed.Contains(to);
-    }
+        => _transitions.CanMove(from, to);
 
     /// <summary>
     /// Determines whether a normalized call state is terminal.
@@ -127,5 +111,5 @@ public static class CallSessionLifecycle
     /// <param name="state">The state to inspect.</param>
     /// <returns><see langword="true"/> when the state is terminal; otherwise <see langword="false"/>.</returns>
     public static bool IsTerminal(VoiceCallState state)
-        => _terminalStates.Contains(state);
+        => VoiceCallStateProjection.IsTerminal(state);
 }

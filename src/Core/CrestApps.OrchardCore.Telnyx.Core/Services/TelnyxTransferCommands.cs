@@ -380,7 +380,7 @@ public sealed class TelnyxTransferCommands
             From = state.PartyNumber,
             Direction = CallDirection.Inbound,
             Outcome = CallOutcome.InProgress,
-            StartedUtc = _clock?.UtcNow ?? DateTime.UtcNow,
+            StartedUtc = _clock.UtcNow,
             AwaitingAnswer = true,
         }, cancellationToken);
     }

@@ -41,9 +41,25 @@ namespace CrestApps.OrchardCore.Accounts
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Accounts.Locations")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.Recipes"})]
+    public sealed class LocationsRecipesSchemaStartup : OrchardCore.Modules.StartupBase
+    {
+        public LocationsRecipesSchemaStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Accounts.Locations")]
     public sealed class LocationsStartup : OrchardCore.Modules.StartupBase
     {
         public LocationsStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Accounts.Members")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.Recipes"})]
+    public sealed class MembersRecipesSchemaStartup : OrchardCore.Modules.StartupBase
+    {
+        public MembersRecipesSchemaStartup() { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Accounts.Members")]

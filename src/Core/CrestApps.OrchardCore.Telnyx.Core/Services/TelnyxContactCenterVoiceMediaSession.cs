@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Diagnostics;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using CrestApps.Core.Support;
@@ -53,7 +54,7 @@ internal sealed class TelnyxContactCenterVoiceMediaSession : IContactCenterVoice
     private WebSocketRendezvous _connection;
     private WebSocketRendezvous _standby;
     private int _generation;
-    private long _lastReplacedTicks;
+    private long _lastReplacedTimestamp;
     private int _streamFailed;
     private int _lost;
 
@@ -456,7 +457,7 @@ internal sealed class TelnyxContactCenterVoiceMediaSession : IContactCenterVoice
 
             Volatile.Write(ref _webSocket, webSocket);
             Volatile.Write(ref _connection, connection);
-            Interlocked.Exchange(ref _lastReplacedTicks, DateTime.UtcNow.Ticks);
+            Interlocked.Exchange(ref _lastReplacedTimestamp, Stopwatch.GetTimestamp());
             Volatile.Write(ref _streamFailed, 0);
             Interlocked.Increment(ref _generation);
         }
@@ -487,7 +488,7 @@ internal sealed class TelnyxContactCenterVoiceMediaSession : IContactCenterVoice
             return false;
         }
 
-        var deadline = DateTime.UtcNow + _reconnect.Grace;
+        var waitStarted = Stopwatch.GetTimestamp();
 
         while (true)
         {
@@ -503,7 +504,7 @@ internal sealed class TelnyxContactCenterVoiceMediaSession : IContactCenterVoice
 
             // A socket that ends with no failure reported is most often the call ending. Once Telnyx has said the
             // stream failed, the recovery decides instead, so a restart under way is not given up on early.
-            if (Volatile.Read(ref _streamFailed) == 0 && DateTime.UtcNow >= deadline)
+            if (Volatile.Read(ref _streamFailed) == 0 && Stopwatch.GetElapsedTime(waitStarted) >= _reconnect.Grace)
             {
                 return false;
             }
@@ -531,7 +532,9 @@ internal sealed class TelnyxContactCenterVoiceMediaSession : IContactCenterVoice
         }
 
         // Telnyx dialed back in on its own a moment ago; the failure it reports is the socket that was replaced.
-        if (DateTime.UtcNow.Ticks - Interlocked.Read(ref _lastReplacedTicks) < _recentReplacementWindow.Ticks)
+        var lastReplaced = Interlocked.Read(ref _lastReplacedTimestamp);
+
+        if (lastReplaced != 0 && Stopwatch.GetElapsedTime(lastReplaced) < _recentReplacementWindow)
         {
             return;
         }
@@ -564,9 +567,9 @@ internal sealed class TelnyxContactCenterVoiceMediaSession : IContactCenterVoice
                 ProviderCallId.SanitizeLogValue());
         }
 
-        var deadline = DateTime.UtcNow + _reconnect.Grace;
+        var waitStarted = Stopwatch.GetTimestamp();
 
-        while (DateTime.UtcNow < deadline)
+        while (Stopwatch.GetElapsedTime(waitStarted) < _reconnect.Grace)
         {
             if (Volatile.Read(ref _generation) != generation || Volatile.Read(ref _stopped) != 0)
             {

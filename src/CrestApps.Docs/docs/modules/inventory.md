@@ -96,6 +96,18 @@ With Product Listing on, `InventorySearchDocumentContributor` writes the built-i
   ```
 
 - **Deployment step `Stock`** (`StockDeploymentStep`, *Commerce*) exports every item that isn't archived with its ids, SKU and `OnHand`.
+- **Recipe step `StockLocations`** (`StockLocationsStep`): the store's own `Locations`, each with `Name`, an optional `Address` and its `Position`. A location keeps the `ItemId` it is given, such as `default`, so stock, registers and movements keep pointing at it; one without an id is matched by its name. A location without a name is a recipe error. Run it before `Stock`. The **Stock locations** deployment step (`StockLocationsDeploymentStep`, *Commerce*) writes them in order. Locations another module owns (`OwnerKind`), such as a technician's van, are left out: that module keeps them.
+
+  ```json
+  {
+    "name": "StockLocations",
+    "Locations": [
+      { "ItemId": "default", "Name": "Main warehouse", "Address": "1 Dock Rd", "Position": 1 },
+      { "ItemId": "4sl00000000000000000000001", "Name": "Downtown store", "Position": 2 }
+    ]
+  }
+  ```
+
 - **Content Transfer.** `InventoryPartContentImportHandler` adds the `InventoryPart_*` columns: `TrackInventory`, `AllowBackorder`, `LowStockThreshold`, `ShipsFrom`, `Stock` (available, for a product without variants) and `VariantStock` (each variant's, by SKU or options, such as `TEE-S=4; M / Red=2`). Counts are set once the import has saved the product (`InventoryCountApplier`, in a deferred task after the stock items are synced), keeping the units unpaid orders hold on hand besides them.
 
 ## Orders
@@ -298,7 +310,7 @@ The **Back-in-Stock Alerts** feature (`CrestApps.OrchardCore.Inventory.StockAler
 
 ## Purchase orders
 
-The **Purchase Orders** feature (`CrestApps.OrchardCore.Inventory.PurchaseOrders`) adds **Commerce > Purchase orders**. A `PurchaseOrder` (`Inventory` collection, `PurchaseOrderIndex` on number, supplier, status, location and dates) has a `Number` (such as `PO-261019-K3QZ`), `Supplier`, `SupplierEmail`, the `LocationId` received at, `Currency`, `ExpectedUtc`, `Note`, `Lines` (`PurchaseOrderLine`: `StockItemId`, title, SKU, `Ordered`, `Received`, `UnitCost`) and a `Status`: `Draft`, `Ordered`, `PartiallyReceived`, `Received` or `Canceled`.
+The **Purchase Orders** feature (`CrestApps.OrchardCore.Inventory.PurchaseOrders`) adds **Commerce > Purchase orders**. A `PurchaseOrder` (`Inventory` collection, `PurchaseOrderIndex` on number, supplier, status, location and dates) has a `Number` (such as `PO-261019-K3QZ7`: the date and five characters made from the purchase order's place in the `Inventory.PurchaseOrder` series of the shared `INumberSequence`, so two purchase orders never share a number), `Supplier`, `SupplierEmail`, the `LocationId` received at, `Currency`, `ExpectedUtc`, `Note`, `Lines` (`PurchaseOrderLine`: `StockItemId`, title, SKU, `Ordered`, `Received`, `UnitCost`) and a `Status`: `Draft`, `Ordered`, `PartiallyReceived`, `Received` or `Canceled`.
 
 - `PurchaseOrdersAdminController` (`purchase-orders`, viewing with `ViewInventory`, changes with `ManageInventory`) lists them through an `AdminList` with a status filter and search by number or supplier, and creates (optionally from the location's low-stock items, each up to twice its threshold), edits, marks ordered, receives, cancels and deletes drafts. Lines can be added and removed only while it's a draft. Items are found through `Admin/api/crestapps/inventory/stock-items/search`.
 - `PurchaseOrderReceiver.ReceiveAsync(order, quantities, actor)` receives units of its lines at its location through `IInventoryService.ReceiveAsync`, never more than are still to come, with the order's number as the movement's reason, and marks it received once nothing is.

@@ -362,7 +362,7 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
         }
 
         return await _session
-            .Query<TelephonyInteraction, TelephonyInteractionIndex>(x => x.CallId == callId && x.UserId != userId)
+            .QueryIndex<TelephonyInteractionIndex>(x => x.CallId == callId && x.UserId != userId)
             .FirstOrDefaultAsync(cancellationToken) is not null;
     }
 

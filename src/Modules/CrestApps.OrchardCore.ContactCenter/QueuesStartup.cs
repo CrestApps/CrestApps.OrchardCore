@@ -186,7 +186,7 @@ public sealed class QueuesStartup : StartupBase
 /// Registers the deployment steps that export the routing configuration owned by the queues feature.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Queues)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class QueuesDeploymentStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -202,7 +202,7 @@ public sealed class QueuesDeploymentStartup : StartupBase
 /// Registers the recipe steps that import the routing configuration owned by the queues feature.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Queues)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class QueuesRecipesStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -219,7 +219,7 @@ public sealed class QueuesRecipesStartup : StartupBase
 /// Queues feature are enabled so the required queue service is always resolvable.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Queues)]
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class ContactCenterQueuesWorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -239,7 +239,7 @@ public sealed class ContactCenterQueuesWorkflowsStartup : StartupBase
 /// pays for them.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Queues)]
-[RequireFeatures("OrchardCore.HealthChecks")]
+[RequireFeatures(OrchardCoreFeatureIds.HealthChecks)]
 public sealed class ContactCenterQueuesHealthChecksStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

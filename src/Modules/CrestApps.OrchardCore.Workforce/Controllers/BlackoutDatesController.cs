@@ -13,6 +13,7 @@ using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using QueryContext = CrestApps.Core.Models.QueryContext;
 
 namespace CrestApps.OrchardCore.Workforce.Controllers;
 
@@ -74,16 +75,16 @@ public sealed class BlackoutDatesController : Controller
             return Forbid();
         }
 
-        var items = (await _blackoutManager.GetAllAsync(HttpContext.RequestAborted))
-            .OrderByDescending(item => item.StartDate)
-            .ToList();
         var pager = new Pager(pagerParameters, pagerOptions.Value);
+
+        // Paged and counted in SQL, the latest first.
+        var items = await _blackoutManager.PageAsync(pager.Page, pager.PageSize, new QueryContext(), HttpContext.RequestAborted);
 
         return View(new WorkforceListViewModel
         {
             List = new AdminListContext<BlackoutPeriod>
             {
-                Source = items.Skip(pager.GetStartIndex()).Take(pager.PageSize).ToList(),
+                Source = [.. items.Entries],
                 Pager = await shapeFactory.PagerAsync(pager, items.Count),
             },
         });

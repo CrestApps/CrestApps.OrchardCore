@@ -1,5 +1,6 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Customers.Indexes;
 using CrestApps.OrchardCore.Customers.Models;
@@ -27,35 +28,18 @@ public interface ILoyaltyStore : ICatalog<LoyaltyAccount>
 /// </summary>
 public sealed class LoyaltyStore : DocumentCatalog<LoyaltyAccount, LoyaltyAccountIndex>, ILoyaltyStore
 {
-    private readonly IClock _clock;
-
     protected override bool CheckConcurrency => true;
 
     public LoyaltyStore(ISession session, IClock clock)
-        : base(session)
+        : base(session, clock)
     {
         CollectionName = CustomersConstants.CollectionName;
-        _clock = clock;
     }
 
     public Task<LoyaltyAccount> FindByCustomerAsync(string customerId, CancellationToken cancellationToken = default)
         => string.IsNullOrEmpty(customerId)
             ? Task.FromResult<LoyaltyAccount>(null)
             : Session.Query<LoyaltyAccount, LoyaltyAccountIndex>(index => index.CustomerId == customerId, collection: CollectionName).FirstOrDefaultAsync(cancellationToken);
-
-    protected override ValueTask SavingAsync(LoyaltyAccount record)
-    {
-        var now = _clock.UtcNow;
-
-        if (record.CreatedUtc == default)
-        {
-            record.CreatedUtc = now;
-        }
-
-        record.UpdatedUtc = now;
-
-        return ValueTask.CompletedTask;
-    }
 }
 
 /// <summary>
@@ -134,7 +118,7 @@ public sealed class LoyaltyService
             return 0m;
         }
 
-        var factor = (decimal)Math.Pow(10, Payments.CurrencyScale.GetDecimalPlaces(currency));
+        var factor = (decimal)Math.Pow(10, Currencies.CurrencyScale.GetDecimalPlaces(currency));
 
         return Math.Floor(points * settings.PointValue * factor) / factor;
     }

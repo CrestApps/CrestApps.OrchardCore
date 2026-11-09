@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Tests.Customers;
+using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Modules;
@@ -29,7 +30,7 @@ public sealed class AbandonedOrderSweeperTests
             .Setup(store => store.GetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string id, CancellationToken _) => _sessions.GetValueOrDefault(id));
 
-        var service = new OrderService(_orders, [], clock.Object, NullLogger<OrderService>.Instance);
+        var service = new OrderService(_orders, [], new InMemoryNumberSequence(), clock.Object, NullLogger<OrderService>.Instance);
 
         return new AbandonedOrderSweeper(_orders, service, sessions.Object, clock.Object, NullLogger<AbandonedOrderSweeper>.Instance);
     }

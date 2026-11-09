@@ -47,6 +47,21 @@
   transition: opacity 0.15s;
 }
 
+/* A Calendar dashboard widget (see calendar-widget.js) is small: a smaller title and a compact toolbar. */
+.calendar-widget .calendar-fc-toolbar [role="heading"] {
+  font-size: 1rem;
+}
+
+.calendar-widget .calendar-fc-toolbar {
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.calendar-widget.calendar-loading .calendar-fc-view {
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
 /* A narrow calendar (see calendar-view.js) gets a smaller title. */
 #calendar-view.calendar-narrow .calendar-fc-toolbar [role="heading"] {
   font-size: 1rem;

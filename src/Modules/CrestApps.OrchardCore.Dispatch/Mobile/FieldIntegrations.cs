@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Assets;
 using CrestApps.OrchardCore.Assets.Core.Services;
-using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Dispatch.Controllers;
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;

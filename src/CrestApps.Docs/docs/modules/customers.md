@@ -132,7 +132,7 @@ The **Referrals** feature (`CrestApps.OrchardCore.Customers.Referrals`, depends 
 
 `ICustomerMergeService.MergeVerifiedGuestsAsync(userId)` joins a guest's history to their account. It runs when a user signs in (`ILoginFormEvent.LoggedInAsync`), registers (`IRegistrationFormEvents.RegisteredAsync`) or confirms their email (`IUserEventHandler.ConfirmedAsync`), and does nothing unless the user's `EmailConfirmed` is true. Under a per-user distributed lock it takes every active guest customer with the user's email (`ICustomerStore.ListGuestsByEmailAsync`) and, for each:
 
-- calls every `ICustomerMergeHandler`. With Orders on, `OrderCustomerMergeHandler` moves the guest's orders to the account's customer (setting `UserId` too, so they appear under My Orders) and, with Transactions on, turns the guest transactions paying for them into the user's;
+- calls every `ICustomerMergeHandler`. With Orders on, the Orders module's `OrderCustomerMergeHandler` moves the guest's orders to the account's customer (setting `UserId` too, so they appear under My Orders) and, with Transactions on, turns the guest transactions paying for them into the user's;
 - moves the guest's addresses into the account's book, skipping duplicates, up to 20;
 - marks the guest `Merged` with `MergedIntoCustomerId` and `MergedUtc`, and adds it to the account customer's `MergedCustomerIds`.
 
@@ -142,17 +142,17 @@ The event handlers resolve the merge service when they run: Orchard Core's user 
 
 `ICustomerPrivacyService` answers access and erasure requests and applies the retention windows.
 
-- **`EraseAsync(customer, by)`** calls every `ICustomerPrivacyHandler.ErasingAsync`, then `Customer.Anonymize`: names, company, tax id, email, phone, addresses, outside ids and marketing consent are cleared, the account is unlinked (`UserId`), and the status becomes `Anonymized`. With Orders on, `OrderCustomerPrivacyHandler` anonymizes the customer's orders (by `CustomerId`, and by `UserId` for an account holder's older orders) through `OrderAnonymizer`: `Order.Anonymize` clears the name, email and phone and keeps only the billing address's country and region, and the guest contact of the transactions paying for the order is cleared. Every checkout session behind the order (the one it names and any earlier attempt for it) and behind those transactions is anonymized through `ICheckoutSessionAnonymizer`, which clears the owner, contact, IP address, user agent and saved steps; see [Checkout](checkout). Handlers see the account before it is unlinked (`CustomerPrivacyContext.UserId`), and run by `ICustomerPrivacyHandler.Order` (lower first, then in registration order). Erasing an anonymized customer does nothing.
+- **`EraseAsync(customer, by)`** calls every `ICustomerPrivacyHandler.ErasingAsync`, then `Customer.Anonymize`: names, company, tax id, email, phone, addresses, outside ids and marketing consent are cleared, the account is unlinked (`UserId`), and the status becomes `Anonymized`. With Orders on, the Orders module's `OrderCustomerPrivacyHandler` anonymizes the customer's orders (by `CustomerId`, and by `UserId` for an account holder's older orders) through `OrderAnonymizer`: `Order.Anonymize` clears the name, email and phone and keeps only the billing address's country and region, and the guest contact of the transactions paying for the order is cleared. Every checkout session behind the order (the one it names and any earlier attempt for it) and behind those transactions is anonymized through `ICheckoutSessionAnonymizer`, which clears the owner, contact, IP address, user agent and saved steps; see [Checkout](checkout). Handlers see the account before it is unlinked (`CustomerPrivacyContext.UserId`), and run by `ICustomerPrivacyHandler.Order` (lower first, then in registration order). Erasing an anonymized customer does nothing.
 - **`ExportAsync(customer, by)`** returns a `JsonObject` with the customer and their addresses; each handler's `ExportingAsync` adds its own section (`orders`, each with its `transactions`).
-- **`CommercePersonalDataCustomerPrivacyHandler`** covers what the other commerce modules keep, through `ICommercePersonalDataService`: the customer is identified by their account (when they have one) and their email. Erasing anonymizes their checkout sessions, transactions, subscriptions, installment plans, coupon redemptions and Stripe customers, clearing names the same way the customer record is cleared; exporting adds a `commerce` section with those records and the payments and refunds of their checkouts. It runs before the other handlers (`Order` is `-100`), because they erase the checkout emails and owners it follows to the customer's guest transactions, subscriptions and plans. See [Personal data requests](commerce#personal-data-requests).
-- **`ExpireAsync(customer)`** erases as the retention task.
+- **`PersonalDataCustomerPrivacyHandler`** covers what every other module keeps, through the one [personal-data service](personal-data) (`IPersonalDataService`): the customer is identified by their account (when they have one), their email and their phone number. Erasing anonymizes their records in every module with a personal-data contributor (commerce checkouts, transactions, subscriptions, installment plans, coupon redemptions and Stripe customers, and the CRM, Workforce, Scheduling, Bookings, Marketing, Classifieds, Business Buying and Point of Sale records), clearing names the same way the customer record is cleared; exporting adds a `personalData` section with every record, each with its `kind`, `title` and `fields`. It runs before the other handlers (`Order` is `-100`), because they erase the checkout emails and owners it follows to the customer's guest transactions, subscriptions and plans. See [Personal data requests](commerce#personal-data-requests).
+- **`ExpireAsync(customer)`** erases as the retention task. The handlers see `CustomerPrivacyContext.Action` as `Expired` (`Erased` for an admin's erasure), and `PersonalDataCustomerPrivacyHandler` then calls `IPersonalDataService.ExpireAsync`, which reaches only the commerce records (checkouts, transactions, payments, refunds, subscriptions, installment plans, coupon redemptions, payment-provider customers and stock alerts). The CRM, Workforce, Scheduling, Bookings and the other modules' records are left alone; only an explicit erasure reaches them.
 
 Each export and erasure appends a `CustomerPrivacyEntry` (`Utc`, `Action`: `Exported`, `Erased` or `Expired`, `By`) to `Customer.PrivacyLog`.
 
 **Retention.** `CustomerRetentionBackgroundTask` runs daily at 03:30 under the background-task lock and reads `CustomerPrivacySettings` (Settings › Commerce › Customers; zero turns a window off):
 
 - `InactiveGuestMonths` (24): guests (`HasAccount = false`, merged ones included) whose `LastActivityUtc` is older are expired. Customers with an account are not, since the account holds the same data; erase them on request.
-- `GuestOrderMonths` (12): orders placed without an account (`OrderQuery.GuestsOnly`), `Paid` or `Canceled`, created before the window, are anonymized, with the checkout sessions behind them. Orders awaiting payment keep their contact.
+- `GuestOrderMonths` (12): guest records other modules keep, created before the window, are anonymized through each module's **`IGuestRetentionHandler`** (`CrestApps.OrchardCore.Customers.Abstractions`). Orders implements it (`OrderGuestRetentionHandler`): orders placed without an account (`OrderQuery.GuestsOnly`), `Paid` or `Canceled`, are anonymized with the checkout sessions behind them, and orders awaiting payment keep their contact. The order handlers live in the Orders module and are registered when Customers is enabled, so Customers does not own order code.
 
 Each run handles up to 500 of each, and queries leave out what is already anonymized (`CustomerQuery.NotAnonymized`, `OrderQuery.NotAnonymized` on the new `OrderIndex.AnonymizedUtc`, upgrade step 4), so a backlog is worked off over a few days.
 
@@ -185,7 +185,40 @@ The `Customers` recipe step adds or updates guest and business customers, for sa
 }
 ```
 
-A customer is matched by `ItemId`, then by the email of a guest, so running a recipe again updates rather than duplicates. Customers with an account are made from their user, and erased or merged customers are left alone. Customers are personal data, so there is no deployment step that exports them. The **Product listing: online store sample** recipe uses this step for its two sample customers.
+A customer is matched by `ItemId`, then by the email of a guest, so running a recipe again updates rather than duplicates. Customers with an account are made from their user, and erased or merged customers are left alone. The **Product listing: online store sample** recipe uses this step for its two sample customers.
+
+The **Customers** deployment step (`CustomersDeploymentStep`) writes the guest and business customers in the shape this step reads. Customers are personal data: an administrator must add the step to a plan, and it leaves out customers who have a user account and customers who were erased or merged.
+
+Store credit, loyalty points and referral codes have their own steps, each with a deployment step that writes every record, so you can move them after the customers. Each record is matched by `ItemId`, then by its customer (and currency, for store credit), and is carried with its balance or points and its activity. Only the database document id of the exporting site is left out.
+
+| Feature | Recipe step | Array | Matched by | Deployment step |
+| --- | --- | --- | --- | --- |
+| Store credit | `StoreCreditAccounts` | `Accounts` | `ItemId`, then `CustomerId` and `Currency` | **Store credit** |
+| Loyalty | `LoyaltyAccounts` | `Accounts` | `ItemId`, then `CustomerId` | **Loyalty points** |
+| Referrals | `ReferralProfiles` | `Profiles` | `ItemId`, then `CustomerId`; a `Code` another customer uses is refused | **Referral codes** |
+
+```json
+{
+  "steps": [
+    {
+      "name": "StoreCreditAccounts",
+      "Accounts": [
+        { "ItemId": "4cr00000000000000000000001", "CustomerId": "4cs00000000000000000000001", "Currency": "USD", "Balance": 25, "Activity": [] }
+      ]
+    },
+    {
+      "name": "LoyaltyAccounts",
+      "Accounts": [ { "CustomerId": "4cs00000000000000000000001", "Points": 1200, "Activity": [] } ]
+    },
+    {
+      "name": "ReferralProfiles",
+      "Profiles": [ { "CustomerId": "4cs00000000000000000000001", "Code": "ANA10", "Referrals": [] } ]
+    }
+  ]
+}
+```
+
+A record names its customer by id, so import the customers first. A customer with a user account is made from the user on each site, with that site's own id, so the step imports such a customer's store credit, points or code under the id it carries, and they show only where a customer has that id.
 
 ## API
 

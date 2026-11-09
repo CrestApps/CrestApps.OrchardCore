@@ -3,7 +3,6 @@ using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Assets.Core.Services;
 using CrestApps.OrchardCore.Assets.Models;
 using CrestApps.OrchardCore.Core.Recipes;
-using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using Json.Schema;
 using Microsoft.Extensions.DependencyInjection;
@@ -39,35 +38,6 @@ internal sealed class AssetsRecipeStep : NamedRecipeStepHandler
         await CatalogRecipeSections.ImportAsync(context, "Types", _services.GetRequiredService<AssetTypeManager>(), "asset type");
         await CatalogRecipeSections.ImportAsync(context, "Assets", _services.GetRequiredService<AssetManager>(), "asset");
     }
-}
-
-/// <summary>
-/// Describes the Assets recipe step.
-/// </summary>
-internal sealed class AssetsRecipeStepSchema : IRecipeStep
-{
-    private JsonSchema _cached;
-
-    public string Name => AssetsRecipeStep.RecipeName;
-
-    public ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
-    {
-        _cached ??= new JsonSchemaBuilder()
-            .Type(SchemaValueType.Object)
-            .Description("Every asset type, and every asset with its owner, place and parent. Records are matched by ItemId.")
-            .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const(AssetsRecipeStep.RecipeName).Description("Recipe step discriminator. Must be 'Assets'.")),
-                ("Types", Array("Asset types with their attributes and meters.")),
-                ("Assets", Array("Assets, parents first; their meter readings stay where they were taken.")))
-            .Required("name")
-            .AdditionalProperties(true)
-            .Build();
-
-        return ValueTask.FromResult(_cached);
-    }
-
-    private static JsonSchemaBuilder Array(string description)
-        => new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true)).Description(description);
 }
 
 /// <summary>

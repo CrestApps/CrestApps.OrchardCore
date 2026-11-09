@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
+using CrestApps.OrchardCore.Commerce.Core;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Customers.PersonalData;
@@ -18,6 +19,7 @@ using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Environment.Shell.Configuration;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
@@ -91,7 +93,8 @@ public sealed class CheckoutStartup : StartupBase
         // The rows of the payments and refunds ledgers.
         services
             .AddDisplayDriver<PaymentAttempt, PaymentAttemptDisplayDriver>()
-            .AddDisplayDriver<PaymentRefund, PaymentRefundDisplayDriver>();
+            .AddDisplayDriver<PaymentRefund, PaymentRefundDisplayDriver>()
+            .AddDisplayDriver<PaymentIssue, PaymentIssueDisplayDriver>();
         services.AddScoped<ICommercePersonalDataContributor, TransactionSettlementPersonalDataContributor>();
     }
 }
@@ -107,6 +110,8 @@ public sealed class NotificationStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ITransactionReminderService, DefaultTransactionReminderService>();
+        services.AddCommerceEmailSender()
+            .AddCommerceEmailKind(TransactionEmailKinds.PaymentReminder, LocalizationSource.Create<NotificationStartup>("Payment reminder"), LocalizationSource.Create<NotificationStartup>("{{ Transaction }}: the transaction, such as {{ Transaction.Title }}."));
 
         services
             .AddSiteDisplayDriver<TransactionReminderSettingsDisplayDriver>()
@@ -145,6 +150,9 @@ public sealed class ReceiptsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<PaymentReceiptTransactionPaymentHandler>();
+        services.AddCommerceEmailSender()
+            .AddCommerceEmailKind(TransactionEmailKinds.PaymentReceipt, LocalizationSource.Create<ReceiptsStartup>("Payment receipt"), LocalizationSource.Create<ReceiptsStartup>("{{ Transaction }}: the transaction, such as {{ Transaction.Title }}."))
+            .AddCommerceEmailKind(TransactionEmailKinds.Refund, LocalizationSource.Create<ReceiptsStartup>("Refund"), LocalizationSource.Create<ReceiptsStartup>("{{ Transaction }}: the transaction, such as {{ Transaction.Title }}."));
         services.AddScoped<ITransactionPaymentHandler>(sp => sp.GetRequiredService<PaymentReceiptTransactionPaymentHandler>());
         services.AddScoped<IPaymentRefundHandler>(sp => sp.GetRequiredService<PaymentReceiptTransactionPaymentHandler>());
     }

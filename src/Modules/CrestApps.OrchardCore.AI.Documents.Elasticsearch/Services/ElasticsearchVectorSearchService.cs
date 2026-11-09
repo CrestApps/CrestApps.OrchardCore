@@ -1,7 +1,7 @@
 ﻿using System.Text.Json.Nodes;
+using CrestApps.Core.Infrastructure;
 using CrestApps.Core.Infrastructure.Indexing;
 using CrestApps.Core.Infrastructure.Indexing.Models;
-using CrestApps.OrchardCore.AI.Core;
 using Elastic.Clients.Elasticsearch;
 using Microsoft.Extensions.Logging;
 
@@ -52,7 +52,7 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
             var response = await _elasticClient.SearchAsync<JsonObject>(s => s
                 .Indices(indexProfile.IndexFullName)
                 .Knn(k => k
-                .Field(AIConstants.ColumnNames.Embedding)
+                .Field(DocumentIndexConstants.ColumnNames.Embedding)
                 .QueryVector(embedding)
                 .K(topN)
                 .NumCandidates(topN * 10)
@@ -60,11 +60,11 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
                 .Bool(b => b
                 .Must(
                     m => m.Term(t => t
-                    .Field(AIConstants.ColumnNames.ReferenceId)
+                    .Field(DocumentIndexConstants.ColumnNames.ReferenceId)
                         .Value(referenceId)
             ),
             m => m.Term(t => t
-                .Field(AIConstants.ColumnNames.ReferenceType)
+                .Field(DocumentIndexConstants.ColumnNames.ReferenceType)
                 .Value(referenceType)
             )
             )
@@ -96,24 +96,24 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
                     continue;
                 }
 
-                var chunkText = document.TryGetPropertyValue(AIConstants.ColumnNames.Content, out var textNode)
+                var chunkText = document.TryGetPropertyValue(DocumentIndexConstants.ColumnNames.Content, out var textNode)
                 ? textNode?.GetValue<string>()
                 : null;
 
                 var chunkIndex = 0;
 
-                if (document.TryGetPropertyValue(AIConstants.ColumnNames.ChunkIndex, out var indexNode) && indexNode != null)
+                if (document.TryGetPropertyValue(DocumentIndexConstants.ColumnNames.ChunkIndex, out var indexNode) && indexNode != null)
                 {
                     chunkIndex = indexNode.GetValue<int>();
                 }
 
                 if (!string.IsNullOrEmpty(chunkText))
                 {
-                    var documentKey = document.TryGetPropertyValue(AIConstants.ColumnNames.DocumentId, out var docIdNode)
+                    var documentKey = document.TryGetPropertyValue(DocumentIndexConstants.ColumnNames.DocumentId, out var docIdNode)
                     ? docIdNode?.GetValue<string>()
                     : null;
 
-                    var fileName = document.TryGetPropertyValue(AIConstants.ColumnNames.FileName, out var fileNameNode)
+                    var fileName = document.TryGetPropertyValue(DocumentIndexConstants.ColumnNames.FileName, out var fileNameNode)
                     ? fileNameNode?.GetValue<string>()
                     : null;
 

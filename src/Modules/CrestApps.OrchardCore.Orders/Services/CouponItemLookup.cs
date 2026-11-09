@@ -38,8 +38,8 @@ public sealed class CouponItemLookup
 
         var search = query?.Trim();
         var items = string.IsNullOrEmpty(search)
-            ? await _session.Query<ContentItem, ContentItemIndex>(index => index.Latest && index.ContentType.IsIn(types)).OrderBy(index => index.DisplayText).Take(take).ListAsync()
-            : await _session.Query<ContentItem, ContentItemIndex>(index => index.Latest && index.ContentType.IsIn(types) && index.DisplayText.Contains(search)).OrderBy(index => index.DisplayText).Take(take).ListAsync();
+            ? await _session.QueryIndex<ContentItemIndex>(index => index.Latest && index.ContentType.IsIn(types)).OrderBy(index => index.DisplayText).Take(take).ListAsync()
+            : await _session.QueryIndex<ContentItemIndex>(index => index.Latest && index.ContentType.IsIn(types) && index.DisplayText.Contains(search)).OrderBy(index => index.DisplayText).Take(take).ListAsync();
 
         return [.. items.Select(item => new CouponItem(item.ContentItemId, item.DisplayText, item.ContentType))];
     }
@@ -56,7 +56,7 @@ public sealed class CouponItemLookup
             return [];
         }
 
-        var items = await _session.Query<ContentItem, ContentItemIndex>(index => index.Latest && index.ContentItemId.IsIn(wanted)).ListAsync();
+        var items = await _session.QueryIndex<ContentItemIndex>(index => index.Latest && index.ContentItemId.IsIn(wanted)).ListAsync();
         var found = items.ToDictionary(item => item.ContentItemId, StringComparer.Ordinal);
 
         // A product deleted since keeps its place, so saving the coupon doesn't quietly drop the limit.
@@ -95,7 +95,7 @@ public sealed class CouponItemLookup
 
     private async Task<string[]> GetProductTypesAsync()
         => [.. (await _contentDefinitionManager.ListTypeDefinitionsAsync())
-            .Where(type => type.Parts.Any(part => part.PartDefinition.Name == nameof(ProductPart)))
+            .Where(type => type.HasPart(nameof(ProductPart)))
             .Select(type => type.Name)];
 
     private async Task<List<CouponItem>> GetTermsAsync()

@@ -1,6 +1,4 @@
-using System.Text.Json;
-using CrestApps.OrchardCore.Calendars.Core;
-using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Scheduling.Core.Services;
 using CrestApps.OrchardCore.Scheduling.Models;
 using CrestApps.OrchardCore.Scheduling.Services;
@@ -8,32 +6,31 @@ using CrestApps.OrchardCore.Scheduling.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
-using OrchardCore.Modules;
 using OrchardCore.Navigation;
-using OrchardCore.Settings;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Scheduling.Controllers;
 
 /// <summary>
-/// The list of scheduling resources and their editor.
+/// The list of scheduling resources and their editor. The editor is built by the display drivers of
+/// <see cref="SchedulingResource"/>, so other modules add their own sections to it.
 /// </summary>
 public sealed class SchedulingResourcesController : Controller
 {
     private readonly IAuthorizationService _authorizationService;
     private readonly SchedulingResourceStore _resourceStore;
     private readonly SchedulingResourceCalendars _resourceCalendars;
-    private readonly ICalendarService _calendarService;
-    private readonly IClock _clock;
+    private readonly IDisplayManager<SchedulingResource> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
+    private readonly ISession _session;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
-    internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SchedulingResourcesController"/> class.
@@ -41,29 +38,29 @@ public sealed class SchedulingResourcesController : Controller
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="resourceStore">The resource store.</param>
     /// <param name="resourceCalendars">The resource calendar service.</param>
-    /// <param name="calendarService">The calendar service.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="displayManager">The display manager that builds the resource editor.</param>
+    /// <param name="updateModelAccessor">The accessor of the model updater the editor binds with.</param>
+    /// <param name="session">The database session, cancelled when an edit is refused.</param>
     /// <param name="notifier">The notifier.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
-    /// <param name="stringLocalizer">The string localizer.</param>
     public SchedulingResourcesController(
         IAuthorizationService authorizationService,
         SchedulingResourceStore resourceStore,
         SchedulingResourceCalendars resourceCalendars,
-        ICalendarService calendarService,
-        IClock clock,
+        IDisplayManager<SchedulingResource> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
+        ISession session,
         INotifier notifier,
-        IHtmlLocalizer<SchedulingResourcesController> htmlLocalizer,
-        IStringLocalizer<SchedulingResourcesController> stringLocalizer)
+        IHtmlLocalizer<SchedulingResourcesController> htmlLocalizer)
     {
         _authorizationService = authorizationService;
         _resourceStore = resourceStore;
         _resourceCalendars = resourceCalendars;
-        _calendarService = calendarService;
-        _clock = clock;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
+        _session = session;
         _notifier = notifier;
         H = htmlLocalizer;
-        S = stringLocalizer;
     }
 
     /// <summary>
@@ -81,15 +78,15 @@ public sealed class SchedulingResourcesController : Controller
             return Forbid();
         }
 
-        var resources = await _resourceStore.ListAsync();
         var pager = new Pager(pagerParameters, pagerOptions.Value);
+        var (count, resources) = await _resourceStore.PageAsync(pager.GetStartIndex(), pager.PageSize, HttpContext.RequestAborted);
 
         return View(new SchedulingListViewModel
         {
             List = new AdminListContext<SchedulingResource>
             {
-                Source = resources.Skip(pager.GetStartIndex()).Take(pager.PageSize).ToList(),
-                Pager = await shapeFactory.PagerAsync(pager, resources.Count),
+                Source = resources,
+                Pager = await shapeFactory.PagerAsync(pager, count),
             },
         });
     }
@@ -98,105 +95,69 @@ public sealed class SchedulingResourcesController : Controller
     /// Shows the editor of a new or existing resource.
     /// </summary>
     /// <param name="id">The resource's id, or empty for a new one.</param>
-    /// <param name="siteService">The site service.</param>
     /// <returns>The editor.</returns>
     [Admin("scheduling/resources/edit/{id?}", "SchedulingResourcesEdit")]
-    public async Task<IActionResult> Edit(string id, [FromServices] ISiteService siteService)
+    public async Task<IActionResult> Edit(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, SchedulingPermissions.ManageScheduling))
         {
             return Forbid();
         }
 
-        var resource = string.IsNullOrEmpty(id) ? NewResource() : await _resourceStore.FindByIdAsync(id);
+        var isNew = string.IsNullOrEmpty(id);
+        var resource = isNew ? NewResource() : await _resourceStore.FindByIdAsync(id);
 
         if (resource is null)
         {
             return NotFound();
         }
 
-        var model = new SchedulingResourceViewModel
+        return View(new EditCatalogEntryViewModel
         {
-            Id = resource.ItemId,
-            Name = resource.Name,
-            Kind = resource.Kind.ToString(),
-            UserId = resource.UserId,
-            CalendarId = resource.CalendarId,
-            // A new resource starts in the site's time zone rather than the first one in the list.
-            TimeZoneId = resource.TimeZoneId ?? (await siteService.GetSiteSettingsAsync()).TimeZoneId,
-            AvailabilityMode = resource.AvailabilityMode.ToString(),
-            ShiftCalendarIds = (resource.ShiftCalendarIds ?? []).Append(resource.ShiftCalendarId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray(),
-            WorkingHours = SchedulingFormat.WriteHours(resource.WorkingHours),
-            DateOverrides = SchedulingFormat.WriteOverrides(resource.DateOverrides),
-            Enabled = resource.Enabled,
-        };
-
-        await FillAsync(model);
-
-        return View(model);
+            DisplayName = resource.Name,
+            Editor = await _displayManager.BuildEditorAsync(resource, _updateModelAccessor.ModelUpdater, isNew),
+        });
     }
 
     /// <summary>
     /// Saves a resource.
     /// </summary>
-    /// <param name="model">The fields.</param>
+    /// <param name="id">The resource's id, or empty for a new one.</param>
     /// <returns>A redirect to the list, or the editor with errors.</returns>
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("scheduling/resources/edit/{id?}", "SchedulingResourcesEdit")]
-    public async Task<IActionResult> EditPost(SchedulingResourceViewModel model)
+    public async Task<IActionResult> EditPost(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, SchedulingPermissions.ManageScheduling))
         {
             return Forbid();
         }
 
-        var resource = string.IsNullOrEmpty(model.Id) ? NewResource() : await _resourceStore.FindByIdAsync(model.Id);
+        var isNew = string.IsNullOrEmpty(id);
+        var resource = isNew ? NewResource() : await _resourceStore.FindByIdAsync(id);
 
         if (resource is null)
         {
             return NotFound();
         }
 
-        var errors = new List<string>();
-        var hours = SchedulingFormat.ReadHours(model.WorkingHours, errors);
-        var overrides = SchedulingFormat.ReadOverrides(model.DateOverrides, errors);
-
-        if (string.IsNullOrWhiteSpace(model.Name))
-        {
-            ModelState.AddModelError(nameof(model.Name), S["The name is required."]);
-        }
-
-        foreach (var error in errors)
-        {
-            ModelState.AddModelError(nameof(model.WorkingHours), S["This line can't be read: {0}", error]);
-        }
-
-        if (!string.IsNullOrWhiteSpace(model.TimeZoneId) && !CalendarTime.IsValidZone(model.TimeZoneId))
-        {
-            ModelState.AddModelError(nameof(model.TimeZoneId), S["'{0}' is not a time zone.", model.TimeZoneId]);
-        }
+        var displayName = resource.Name;
+        var editor = await _displayManager.UpdateEditorAsync(resource, _updateModelAccessor.ModelUpdater, isNew);
 
         if (!ModelState.IsValid)
         {
-            await FillAsync(model);
+            // A section that saved records of its own is rolled back with the resource.
+            await _session.CancelAsync();
 
-            return View(model);
+            return View(new EditCatalogEntryViewModel
+            {
+                DisplayName = displayName,
+                Editor = editor,
+            });
         }
 
-        resource.Name = model.Name.Trim();
-        resource.Kind = Enum.TryParse<SchedulingResourceKind>(model.Kind, out var kind) ? kind : SchedulingResourceKind.Staff;
-        resource.UserId = resource.Kind == SchedulingResourceKind.Staff && !string.IsNullOrWhiteSpace(model.UserId) ? model.UserId.Trim() : null;
-        resource.CalendarId = string.IsNullOrWhiteSpace(model.CalendarId) ? null : model.CalendarId;
-        resource.TimeZoneId = CalendarTime.NormalizeZoneId(model.TimeZoneId) ?? resource.TimeZoneId ?? "UTC";
-        resource.AvailabilityMode = Enum.TryParse<SchedulingAvailabilityMode>(model.AvailabilityMode, out var mode) ? mode : SchedulingAvailabilityMode.WorkingHours;
-        resource.ShiftCalendarIds = (model.ShiftCalendarIds ?? []).Where(id => !string.IsNullOrWhiteSpace(id)).Distinct(StringComparer.Ordinal).ToList();
-        resource.ShiftCalendarId = null;
-        resource.WorkingHours = hours;
-        resource.DateOverrides = overrides;
-        resource.Enabled = model.Enabled;
-
-        if (string.IsNullOrEmpty(resource.ItemId))
+        if (isNew)
         {
             resource.ItemId = CrestApps.Core.UniqueId.GenerateId();
             await _resourceCalendars.EnsureCalendarAsync(resource);
@@ -248,22 +209,5 @@ public sealed class SchedulingResourcesController : Controller
         }
 
         return resource;
-    }
-
-    private async Task FillAsync(SchedulingResourceViewModel model)
-    {
-        var calendars = await _calendarService.ListAsync(new CalendarListQuery { Enabled = true, Limit = 500 });
-
-        model.CalendarOptions = calendars.Select(calendar => new SelectListItem($"{calendar.Name} ({calendar.Type})", calendar.ItemId, calendar.ItemId == model.CalendarId)).ToList();
-        model.ShiftCalendarOptions = calendars.Select(calendar => new SelectListItem($"{calendar.Name} ({calendar.Type})", calendar.ItemId, model.ShiftCalendarIds?.Contains(calendar.ItemId) == true)).ToList();
-        model.KindOptions =
-        [
-            new SelectListItem(S["Staff member"], nameof(SchedulingResourceKind.Staff)),
-            new SelectListItem(S["Room"], nameof(SchedulingResourceKind.Room)),
-            new SelectListItem(S["Equipment"], nameof(SchedulingResourceKind.Equipment)),
-            new SelectListItem(S["Other"], nameof(SchedulingResourceKind.Other)),
-        ];
-        model.TimeZoneOptions = _clock.GetTimeZones().Select(zone => new SelectListItem(zone.TimeZoneId, zone.TimeZoneId, zone.TimeZoneId == model.TimeZoneId)).ToList();
-        model.InitialUserJson = string.IsNullOrEmpty(model.UserId) ? "[]" : JsonSerializer.Serialize(new[] { new { value = model.UserId, text = model.UserId } });
     }
 }

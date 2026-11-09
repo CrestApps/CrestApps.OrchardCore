@@ -86,6 +86,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     private readonly IContentManager _contentManager;
     private readonly AIGuardrailService _guardrails;
     private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -123,7 +124,8 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         IContentManager contentManager,
         IClock clock,
         ILogger<VoiceAgentConversationLoop> logger,
-        IStringLocalizer<VoiceAgentConversationLoop> stringLocalizer)
+        IStringLocalizer<VoiceAgentConversationLoop> stringLocalizer,
+        TimeProvider timeProvider = null)
     {
         _activityStore = activityStore;
         _chatSessionManager = chatSessionManager;
@@ -156,6 +158,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         _guardrails = guardrails;
         _contentManager = contentManager;
         _clock = clock;
+        _timeProvider = timeProvider ?? TimeProvider.System;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -467,23 +470,6 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         }
 
         return null;
-    }
-
-    /// <summary>
-    /// The name of the person being called, or <see langword="null"/> when the contact has none.
-    /// </summary>
-    /// <param name="activity">The call's activity.</param>
-    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    private async Task<string> ResolveContactNameAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(activity?.ContactContentItemId))
-        {
-            return null;
-        }
-
-        var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
-
-        return string.IsNullOrWhiteSpace(contact?.DisplayText) ? null : contact.DisplayText.Trim();
     }
 
     /// <summary>

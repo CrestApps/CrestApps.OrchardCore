@@ -5,37 +5,6 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 namespace CrestApps.OrchardCore.AI.ViewModels;
 
 /// <summary>
-/// The QA dashboard.
-/// </summary>
-public class AIQADashboardViewModel
-{
-    /// <summary>
-    /// Gets or sets the cohort shown, or <see langword="null"/> for every scored conversation.
-    /// </summary>
-    public string CohortId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the period in days.
-    /// </summary>
-    public int Days { get; set; }
-
-    /// <summary>
-    /// Gets or sets the cohorts to choose from.
-    /// </summary>
-    public IList<SelectListItem> Cohorts { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the periods to choose from.
-    /// </summary>
-    public IList<SelectListItem> Periods { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the figures.
-    /// </summary>
-    public AIQADashboard Dashboard { get; set; } = new();
-}
-
-/// <summary>
 /// The editor of a QA cohort.
 /// </summary>
 public class AIQACohortViewModel
@@ -174,11 +143,6 @@ public class AICostSettingsViewModel
     /// Gets or sets the carrier's price of a text message.
     /// </summary>
     public decimal SmsPerMessage { get; set; }
-
-    /// <summary>
-    /// Gets or sets the deployment prices, one per line.
-    /// </summary>
-    public string DeploymentPrices { get; set; }
 }
 
 /// <summary>

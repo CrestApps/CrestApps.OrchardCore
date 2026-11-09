@@ -116,7 +116,7 @@ public sealed class ProductAttributeSettingsDisplayDriver : ContentPartFieldDefi
         }
 
         return (await _contentDefinitionManager.ListTypeDefinitionsAsync()).Any(type =>
-            type.Parts.Any(part => part.PartDefinition.Name == nameof(ProductPart)) &&
-            type.Parts.Any(part => part.PartDefinition.Name == partName));
+            type.HasPart(nameof(ProductPart)) &&
+            type.HasPart(partName));
     }
 }

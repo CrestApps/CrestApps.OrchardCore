@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Designer.Models;
 using CrestApps.OrchardCore.Reports.Designer.Services;
 using CrestApps.OrchardCore.Reports.Designer.ViewModels;
+using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
@@ -13,10 +14,6 @@ using OrchardCore.DataPipelines.SharedLinks;
 using OrchardCore.DataSources;
 using OrchardCore.DataSources.Expressions;
 using OrchardCore.Modules;
-using OrchardCore.Users.Indexes;
-using OrchardCore.Users.Models;
-using YesSql;
-using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Reports.Controllers;
 
@@ -35,7 +32,7 @@ public sealed class ReportDesignerApiController : Controller
     private readonly ReportDesignService _designService;
     private readonly ISharedLinkManager _sharedLinks;
     private readonly IAuthorizationService _authorizationService;
-    private readonly ISession _session;
+    private readonly IUserSearchService _userSearchService;
     private readonly ILogger _logger;
     private readonly IStringLocalizer S;
 
@@ -49,7 +46,7 @@ public sealed class ReportDesignerApiController : Controller
     /// <param name="designService">The design service.</param>
     /// <param name="sharedLinks">The shared links of Orchard Core.</param>
     /// <param name="authorizationService">The authorization service.</param>
-    /// <param name="session">The YesSql session used to search users.</param>
+    /// <param name="userSearchService">The shared user search, for the people a report can be shared with.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ReportDesignerApiController(
@@ -60,7 +57,7 @@ public sealed class ReportDesignerApiController : Controller
         ReportDesignService designService,
         ISharedLinkManager sharedLinks,
         IAuthorizationService authorizationService,
-        ISession session,
+        IUserSearchService userSearchService,
         ILogger<ReportDesignerApiController> logger,
         IStringLocalizer<ReportDesignerApiController> stringLocalizer)
     {
@@ -71,7 +68,7 @@ public sealed class ReportDesignerApiController : Controller
         _designService = designService;
         _sharedLinks = sharedLinks;
         _authorizationService = authorizationService;
-        _session = session;
+        _userSearchService = userSearchService;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -294,10 +291,12 @@ public sealed class ReportDesignerApiController : Controller
             return Json(Array.Empty<object>());
         }
 
-        var users = await _session.Query<User, UserIndex>(index => index.NormalizedUserName.Contains(search) || index.NormalizedEmail.Contains(search))
-            .OrderBy(index => index.NormalizedUserName)
-            .Take(20)
-            .ListAsync();
+        var users = await _userSearchService.SearchAsync(new UserSearchQuery
+        {
+            Text = search,
+            MatchEmail = true,
+            MaxResults = 20,
+        }, HttpContext.RequestAborted);
 
         return Json(users.Select(user => new
         {

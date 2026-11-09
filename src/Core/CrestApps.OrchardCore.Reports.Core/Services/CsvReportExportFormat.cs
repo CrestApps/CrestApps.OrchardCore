@@ -1,13 +1,15 @@
 using System.Globalization;
 using System.Text;
 using CrestApps.OrchardCore.Reports.Models;
+using CrestApps.OrchardCore.Tabular;
 using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Reports.Services;
 
 /// <summary>
-/// Serializes a report document to CSV. Every section is written in order: metrics as label/value
-/// pairs, tables as a header row plus data rows, bars as label/value pairs, and charts as label/series tables.
+/// Serializes a report document to CSV with <see cref="CsvWriter"/>, which guards against formula injection. Every
+/// section is written in order: metrics as label/value pairs, tables as a header row plus data rows, bars as label/value
+/// pairs, and charts as label/series tables.
 /// </summary>
 public sealed class CsvReportExportFormat : IReportExportFormat
 {
@@ -43,11 +45,11 @@ public sealed class CsvReportExportFormat : IReportExportFormat
             switch (section.Kind)
             {
                 case ReportSectionKind.Metrics:
-                    AppendRow(builder, "Metric", "Value");
+                    CsvWriter.AppendRow(builder, "Metric", "Value");
 
                     foreach (var metric in section.Metrics)
                     {
-                        AppendRow(builder, metric.Label, metric.Value);
+                        CsvWriter.AppendRow(builder, metric.Label, metric.Value);
                     }
 
                     break;
@@ -55,23 +57,23 @@ public sealed class CsvReportExportFormat : IReportExportFormat
                     // The rows that group the columns: each label in the first cell of the columns it spans.
                     foreach (var headerRow in section.HeaderRows ?? [])
                     {
-                        AppendRow(builder, [.. (headerRow?.Cells ?? []).SelectMany(cell => Enumerable.Range(0, Math.Max(1, cell.Span)).Select(position => position == 0 ? cell.Label : string.Empty))]);
+                        CsvWriter.AppendRow(builder, [.. (headerRow?.Cells ?? []).SelectMany(cell => Enumerable.Range(0, Math.Max(1, cell.Span)).Select(position => position == 0 ? cell.Label : string.Empty))]);
                     }
 
-                    AppendRow(builder, [.. section.Columns.Select(column => column.Label)]);
+                    CsvWriter.AppendRow(builder, [.. section.Columns.Select(column => column.Label)]);
 
                     foreach (var row in section.Rows)
                     {
-                        AppendRow(builder, [.. row.Cells]);
+                        CsvWriter.AppendRow(builder, [.. row.Cells]);
                     }
 
                     break;
                 case ReportSectionKind.Bars:
-                    AppendRow(builder, "Label", "Value");
+                    CsvWriter.AppendRow(builder, "Label", "Value");
 
                     foreach (var bar in section.Bars)
                     {
-                        AppendRow(builder, bar.Label, bar.Value);
+                        CsvWriter.AppendRow(builder, bar.Label, bar.Value);
                     }
 
                     break;
@@ -91,7 +93,7 @@ public sealed class CsvReportExportFormat : IReportExportFormat
             return;
         }
 
-        AppendRow(builder, ["Label", .. chart.Datasets.Select(dataset => dataset.Label)]);
+        CsvWriter.AppendRow(builder, ["Label", .. chart.Datasets.Select(dataset => dataset.Label)]);
 
         for (var labelIndex = 0; labelIndex < chart.Labels.Count; labelIndex++)
         {
@@ -106,37 +108,7 @@ public sealed class CsvReportExportFormat : IReportExportFormat
                     : string.Empty;
             }
 
-            AppendRow(builder, values);
+            CsvWriter.AppendRow(builder, values);
         }
-    }
-
-    private static void AppendRow(StringBuilder builder, params string[] values)
-    {
-        for (var i = 0; i < values.Length; i++)
-        {
-            if (i > 0)
-            {
-                builder.Append(',');
-            }
-
-            builder.Append(Escape(values[i]));
-        }
-
-        builder.Append("\r\n");
-    }
-
-    private static string Escape(string value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return string.Empty;
-        }
-
-        if (value.Contains('"') || value.Contains(',') || value.Contains('\n') || value.Contains('\r'))
-        {
-            return $"\"{value.Replace("\"", "\"\"")}\"";
-        }
-
-        return value;
     }
 }

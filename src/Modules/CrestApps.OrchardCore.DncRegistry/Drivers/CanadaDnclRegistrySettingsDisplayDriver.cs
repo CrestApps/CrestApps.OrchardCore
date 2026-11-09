@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.DncRegistry.Models;
 using CrestApps.OrchardCore.DncRegistry.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -48,7 +49,7 @@ public sealed class CanadaDnclRegistrySettingsDisplayDriver : SiteDisplayDriver<
     {
         return Initialize<CanadaDnclRegistrySettingsViewModel>("CanadaDnclRegistrySettings_Edit", viewModel =>
         {
-            viewModel.HasApiKey = !string.IsNullOrWhiteSpace(settings.ProtectedApiKey);
+            viewModel.HasApiKey = ProtectedSettingExtensions.HasSecret(settings.ProtectedApiKey);
             viewModel.AccountNumber = settings.AccountNumber;
             viewModel.BaseUrl = settings.BaseUrl;
         }).Location("Content:10")
@@ -84,12 +85,9 @@ public sealed class CanadaDnclRegistrySettingsDisplayDriver : SiteDisplayDriver<
             context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.BaseUrl), S["Base URL is required."]);
         }
 
-        if (!string.IsNullOrWhiteSpace(viewModel.ApiKey))
-        {
-            var protector = _dataProtectionProvider.CreateProtector(ProtectorPurpose);
-            settings.ProtectedApiKey = protector.Protect(viewModel.ApiKey);
-        }
-        else if (string.IsNullOrWhiteSpace(settings.ProtectedApiKey))
+        settings.ProtectedApiKey = _dataProtectionProvider.ApplySecret(ProtectorPurpose, settings.ProtectedApiKey, viewModel.ApiKey);
+
+        if (!ProtectedSettingExtensions.HasSecret(settings.ProtectedApiKey))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.ApiKey), S["API key is required."]);
         }

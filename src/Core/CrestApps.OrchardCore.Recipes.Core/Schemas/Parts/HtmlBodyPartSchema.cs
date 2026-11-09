@@ -20,8 +20,7 @@ public sealed class HtmlBodyPartSchema : PartSchemaDefinitionBase
                         ("SanitizeHtml", new JsonSchemaBuilder()
                             .Type(SchemaValueType.Boolean)
                             .Default(true)
-                            .Description("Sanitize HTML input.")),
-                        ("RenderLiquid", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)))
+                            .Description("Sanitize HTML input.")))
                     .AdditionalProperties(false)),
                 ("HtmlBodyPartMonacoEditorSettings", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Object)

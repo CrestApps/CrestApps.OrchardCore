@@ -5,8 +5,9 @@ using OrchardCore.Localization;
 namespace CrestApps.OrchardCore.Workforce.Deployments;
 
 /// <summary>
-/// Exports the Workforce settings: shift templates, time-off types, policies, allotments and blackout dates, and the
-/// time clock's pay periods, pay codes and policies, as the recipe steps of the features that are on.
+/// Exports the Workforce settings: shift templates, rotations and coverage requirements, time-off types, policies,
+/// allotments and blackout dates, the time clock's pay periods, pay codes, policies, kiosks and payroll CSV columns, and
+/// the labor rule sets, as the recipe steps of the features that are on.
 /// </summary>
 public sealed class WorkforceSettingsDeploymentStep : DeploymentStep
 {

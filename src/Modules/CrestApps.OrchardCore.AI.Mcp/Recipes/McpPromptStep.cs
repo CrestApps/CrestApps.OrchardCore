@@ -1,15 +1,18 @@
 ﻿using System.Text.Json.Nodes;
-using CrestApps.Core;
 using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Recipes;
 using Microsoft.Extensions.Localization;
 using ModelContextProtocol.Protocol;
 using OrchardCore.Recipes.Models;
-using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Recipes;
 
-internal sealed class McpPromptStep : NamedRecipeStepHandler
+/// <summary>
+/// Imports MCP prompts, matched by their item id. An update applies the fields the recipe carries.
+/// </summary>
+internal sealed class McpPromptStep : CatalogRecipeStepBase<McpPrompt>
 {
     public const string StepKey = "McpPrompt";
 
@@ -25,58 +28,37 @@ internal sealed class McpPromptStep : NamedRecipeStepHandler
     public McpPromptStep(
         INamedCatalogManager<McpPrompt> manager,
         IStringLocalizer<McpPromptStep> stringLocalizer)
-    : base(StepKey)
+        : base(StepKey, "Prompts")
     {
         _manager = manager;
         S = stringLocalizer;
     }
 
-    protected override async Task HandleAsync(RecipeExecutionContext context)
+    protected override bool ValidateUpdatedEntries => false;
+
+    protected override ValueTask<McpPrompt> FindByIdAsync(string id)
+        => _manager.FindByIdAsync(id);
+
+    protected override ValueTask UpdateAsync(McpPrompt entry, JsonObject token)
     {
-        var model = context.Step.ToObject<McpPromptDeploymentStepModel>();
-        var tokens = model.Prompts.Cast<JsonObject>() ?? [];
+        PopulateEntry(entry, token);
 
-        foreach (var token in tokens)
-        {
-            var id = token[nameof(McpPrompt.ItemId)]?.GetValue<string>();
-
-            var hasId = !string.IsNullOrEmpty(id);
-
-            McpPrompt entry = hasId ? await _manager.FindByIdAsync(id) : null;
-
-            if (entry is not null)
-            {
-                // Update existing prompt
-                PopulateEntry(entry, token);
-                await _manager.UpdateAsync(entry);
-            }
-            else
-            {
-                // Create new prompt
-                entry = await _manager.NewAsync(token);
-                PopulateEntry(entry, token);
-
-                if (hasId && UniqueId.IsValid(id))
-                {
-                    entry.ItemId = id;
-                }
-
-                var validationResult = await _manager.ValidateAsync(entry);
-
-                if (!validationResult.Succeeded)
-                {
-                    foreach (var error in validationResult.Errors)
-                    {
-                        context.Errors.Add(error.ErrorMessage);
-                    }
-
-                    continue;
-                }
-
-                await _manager.CreateAsync(entry);
-            }
-        }
+        return _manager.UpdateAsync(entry);
     }
+
+    protected override async ValueTask<McpPrompt> NewAsync(JsonObject token, RecipeExecutionContext context)
+    {
+        var entry = await _manager.NewAsync(token);
+        PopulateEntry(entry, token);
+
+        return entry;
+    }
+
+    protected override ValueTask<ValidationResultDetails> ValidateAsync(McpPrompt entry)
+        => _manager.ValidateAsync(entry);
+
+    protected override ValueTask CreateAsync(McpPrompt entry)
+        => _manager.CreateAsync(entry);
 
     private static void PopulateEntry(McpPrompt entry, JsonObject token)
     {
@@ -148,13 +130,5 @@ internal sealed class McpPromptStep : NamedRecipeStepHandler
                 .Where(m => !string.IsNullOrWhiteSpace(m.Content))
                 .ToList();
         }
-    }
-
-    private sealed class McpPromptDeploymentStepModel
-    {
-        /// <summary>
-        /// Gets or sets the prompts.
-        /// </summary>
-        public JsonArray Prompts { get; set; }
     }
 }

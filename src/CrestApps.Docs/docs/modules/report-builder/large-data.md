@@ -41,7 +41,7 @@ A report over one data set that groups by fields or date periods and counts, sum
 
 The engine asks the source only when the report:
 
-- reads one data set, with no joins and no row-level calculated fields;
+- reads one data set, with no joins and no row-level calculated fields among those its columns and filters use (calculated fields the query has but doesn't use don't count);
 - groups by data set fields, as they are or with the **Hour of day** (date-times), **Day**, **Week**, **Day of week**, **Month**, **Month of year**, **Quarter** or **Year** transform;
 - measures data set fields without a transform with **Count**, **Sum**, **Average**, **Minimum** or **Maximum**, or counts rows;
 - filters rows on data set fields with conditions the source can apply exactly, and has no viewer filter that lists options.
@@ -74,6 +74,16 @@ A view's **Refresh** setting (`ReportView.RefreshIntervalMinutes`: `0` for live;
 
 How people schedule a view is described in the User Manual: [Reusable views](../../user-manual/report-builder/views.md#refresh-a-view-on-a-schedule).
 
+## Calculated fields a query doesn't use
+
+A query computes only the calculated fields its columns and filters use, and the fields those read, and reads from its data sets only the fields it needs. A dashboard whose queries are copies of one query, each with the same set of calculated fields, computes in each query only the fields that query shows or filters on. Every calculated field is still checked, so the builder lists the problems of all of them.
+
+## Queries that read the same data set
+
+The queries of one run that read the same data set share one read (see [Interactive dashboards](interactive-dashboards.md#how-a-report-runs)): the first one reads it from its source, with every field any of the queries reads, and keeps the rows; the others read the rows kept. A query whose row filters include all of those of a kept read, such as one a click filters, reads the kept rows too. A run keeps at most `MaxSharedReadRows` rows of one read; a larger data set is read once per query.
+
+On a scorecard dashboard shaped like a real one (2,000 calls, four queries that copy the same 70 calculated fields that search each call's summary, and three viewer filters), the full run reads the data set once instead of four times, and clicking an agent reads it once for the calls and the trend chart. The test `ReportDashboardScaleTests` builds that dashboard and writes the time it takes to its output.
+
 ## Checklist for a large data set
 
 - Give the data set a main date, and keep a date filter on reports over it.
@@ -82,3 +92,39 @@ How people schedule a view is described in the User Manual: [Reusable views](../
 - For a heavy view that many reports read, schedule it.
 - Read the store a page at a time (`ReportIndexPages` for YesSql) rather than loading every record at once.
 - Raise the row limits in [Configuration](index.md#configuration) only after the above: memory stays bounded, but every row read takes time, and rows that don't fit in memory are written to disk.
+
+## Telemetry
+
+Report runs emit OpenTelemetry spans and metrics through the .NET `ActivitySource` and `Meter` named `CrestApps.OrchardCore.Reports` (`ReportTelemetry.SourceName` and `ReportTelemetry.MeterName`). While nothing listens to them, no span is started and no measurement is taken. To export them, add the names to the host's OpenTelemetry setup, for example in the `Program.cs` of the web host, or in the `ConfigureOpenTelemetry` method of an Aspire service defaults project:
+
+```csharp
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing => tracing.AddSource("CrestApps.OrchardCore.Reports"))
+    .WithMetrics(metrics => metrics.AddMeter("CrestApps.OrchardCore.Reports"));
+```
+
+Spans:
+
+| Span | One per | Tags besides the common ones |
+| --- | --- | --- |
+| `report.run` | Run of a report, including the preview and a click that refreshes some visuals | `crestapps.report.click_filtered`, `crestapps.report.refreshed_visuals` (the visuals a click refreshes), `crestapps.report.rows.returned`, `crestapps.report.warnings`, `crestapps.report.outcome` |
+| `report.plan` | Run of a query (a query filtered by a click is a run of its own) | `crestapps.report.calculated_fields`, `crestapps.report.row_calculations` (the ones it computes), `crestapps.report.errors` |
+| `report.query` | Run of a query | `crestapps.report.gate_wait_ms` (time waiting for `MaxConcurrentRuns`), `crestapps.report.rows.source`, `crestapps.report.rows.filtered`, `crestapps.report.rows.returned`, `crestapps.report.calculate_ms`, `crestapps.report.grouped`, `crestapps.report.grouped_by_source`, `crestapps.report.sorted`, `crestapps.report.spills` |
+| `report.read` | Read of a data set | `crestapps.report.data_source`, `crestapps.report.data_set`, `crestapps.report.fields`, `crestapps.report.rows.read`, `crestapps.report.read_shared` (read from the rows another query kept), `crestapps.report.truncated`, `crestapps.report.join_key_batches` |
+| `report.join` | Join | `crestapps.report.data_source`, `crestapps.report.data_set`, `crestapps.report.join_type`, `crestapps.report.join_keys`, `crestapps.report.rows.joined` |
+| `report.result` | Run of a query, while it builds its result and the groupings its totals, charts and pivots need | |
+| `report.render` | Run of a query that shows visuals, while it builds their sections | `crestapps.report.visuals` |
+
+Every span carries `crestapps.report.id`, `crestapps.report.title`, `crestapps.report.source` (`Admin`, `Shared` or `Link` for the report pages, `Preview` for the builder, `Other` for widgets, workflows and views) and `crestapps.report.query.id` (empty for the main query). Rows stream through a query, so the read, join and calculation of one query overlap: `report.read` lasts while its rows are consumed, and `crestapps.report.calculate_ms` adds up the time spent on calculated fields.
+
+Metrics:
+
+| Instrument | Kind | Unit | Tags |
+| --- | --- | --- | --- |
+| `crestapps.report.run.duration` | Histogram | s | `crestapps.report.id`, `crestapps.report.source`, `crestapps.report.outcome` |
+| `crestapps.report.query.duration` | Histogram | s | `crestapps.report.id`, `crestapps.report.source`, `crestapps.report.query.id` |
+| `crestapps.report.rows.read` | Counter | rows | the query tags, `crestapps.report.data_source`, `crestapps.report.data_set` |
+| `crestapps.report.reads.shared` | Counter | reads | the query tags, `crestapps.report.data_source`, `crestapps.report.data_set` |
+| `crestapps.report.rows.returned` | Counter | rows | the query tags |
+| `crestapps.report.run.failures` | Counter | runs | the run or query tags; a run that was canceled isn't a failure |
+| `crestapps.report.spills` | Counter | files | the query tags: the temporary files a query wrote because its rows didn't fit in `MemoryLimitMegabytes` |

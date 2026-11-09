@@ -36,6 +36,30 @@ public sealed class ProductVolumePricingTests
         => Assert.Equal(26.99m, ProductVolumePricing.Apply(29.99m, 10m));
 
     [Theory]
+    [InlineData("JPY", 1999, 1799)]
+    [InlineData("USD", 29.99, 26.99)]
+    [InlineData("KWD", 1.235, 1.112)]
+    public void TheDiscountIsRoundedToTheCurrencysPrecision(string currency, decimal unitPrice, decimal expected)
+        => Assert.Equal(expected, ProductVolumePricing.Apply(unitPrice, 10m, currency));
+
+    [Fact]
+    public void AYenPrice_IsFormattedInWholeYen()
+    {
+        var culture = System.Globalization.CultureInfo.CurrentCulture;
+
+        try
+        {
+            System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.GetCultureInfo("en-US");
+
+            Assert.EndsWith("1,800", ProductPriceFormatter.Format(1799.5m, "JPY"), StringComparison.Ordinal);
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentCulture = culture;
+        }
+    }
+
+    [Theory]
     [InlineData(2, ProductQuantityRule.BelowMinimum)]
     [InlineData(4, ProductQuantityRule.NotAMultiple)]
     [InlineData(6, ProductQuantityRule.None)]

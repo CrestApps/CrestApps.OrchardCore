@@ -1,9 +1,12 @@
 using CrestApps.OrchardCore.Bookings.Indexes;
 using CrestApps.OrchardCore.Bookings.Models;
 using CrestApps.OrchardCore.YesSql.Core.Migrations;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
+using OrchardCore.Environment.Shell.Scope;
+using YesSql;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Bookings.Migrations;
@@ -102,8 +105,9 @@ internal sealed class BookingMigrations : DataMigration
         );
 
         await CreateReportIndexesAsync();
+        await AddPersonColumnsAsync();
 
-        return 2;
+        return 3;
     }
 
     /// <summary>
@@ -116,6 +120,37 @@ internal sealed class BookingMigrations : DataMigration
         await CreateReportIndexesAsync();
 
         return 2;
+    }
+
+    /// <summary>
+    /// Adds the user and the email a booking was made by to the booking index, so a privacy request finds a person's
+    /// bookings. Bookings saved before this step are indexed again once the tenant has started, outside activation.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await AddPersonColumnsAsync();
+
+        ShellScope.AddDeferredTask(scope => CatalogIndexBackfill.ReindexAsync<Booking, BookingIndex>(
+            scope.ServiceProvider.GetRequiredService<ISession>(),
+            BookingsConstants.CollectionName));
+
+        return 3;
+    }
+
+    private async Task AddPersonColumnsAsync()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<BookingIndex>(table =>
+        {
+            table.AddColumn<string>("UserId", column => column.Nullable().WithLength(26));
+            table.AddColumn<string>("CustomerEmail", column => column.Nullable().WithLength(255));
+        }, collection: BookingsConstants.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<BookingIndex>(table =>
+        {
+            table.CreateIndex("IDX_BookingIndex_UserId", "UserId");
+            table.CreateIndex("IDX_BookingIndex_CustomerEmail", "CustomerEmail");
+        }, collection: BookingsConstants.CollectionName);
     }
 
     private async Task CreateReportIndexesAsync()

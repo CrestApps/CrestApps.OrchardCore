@@ -54,4 +54,24 @@ public static class TaxationDeploymentSteps
     /// The member of the <see cref="TaxTable"/> step that holds the tax tables.
     /// </summary>
     public const string TaxTableEntries = "TaxTables";
+
+    /// <summary>
+    /// The recipe step that carries the store's own tax registrations.
+    /// </summary>
+    public const string MerchantTaxRegistration = "MerchantTaxRegistration";
+
+    /// <summary>
+    /// The member of the <see cref="MerchantTaxRegistration"/> step that holds the registrations.
+    /// </summary>
+    public const string MerchantTaxRegistrationEntries = "MerchantTaxRegistrations";
+
+    /// <summary>
+    /// The recipe step that carries customers' tax exemption certificates.
+    /// </summary>
+    public const string ExemptionCertificate = "ExemptionCertificate";
+
+    /// <summary>
+    /// The member of the <see cref="ExemptionCertificate"/> step that holds the certificates.
+    /// </summary>
+    public const string ExemptionCertificateEntries = "ExemptionCertificates";
 }

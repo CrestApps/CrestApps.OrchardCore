@@ -1,8 +1,8 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Webhooks;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 using YesSql;
@@ -40,7 +40,7 @@ public sealed class EmailInboundInboxHandler : IProviderWebhookInboxHandler
     public string TechnicalName => EmailChannelConstants.InboxHandlerName;
 
     /// <inheritdoc/>
-    public ContactCenterHandlerReplaySafety ReplaySafety => ContactCenterHandlerReplaySafety.GuardedByDurableStore;
+    public WebhookHandlerReplaySafety ReplaySafety => WebhookHandlerReplaySafety.GuardedByDurableStore;
 
     /// <inheritdoc/>
     public async Task HandleAsync(string payload, CancellationToken cancellationToken = default)

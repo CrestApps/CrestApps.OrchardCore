@@ -38,7 +38,7 @@ internal sealed class TeamsRecipeStepSchema : IRecipeStep
             .Properties(
                 ("itemId", Text("The team id; omit to match by name.")),
                 ("name", Text("The team name.")),
-                ("kind", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Organization", "Region", "Site", "Department", "Team", "Crew")),
+                ("kind", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Organization", "Region", "Site", "Department", "Team", "Crew").Description("The level of the team in the organization chart. Team when omitted.")),
                 ("parentName", Text("The name of the team it belongs to, which may be listed after it.")),
                 ("parentId", Text("The id of the team it belongs to.")),
                 ("description", Text("What the team does.")),

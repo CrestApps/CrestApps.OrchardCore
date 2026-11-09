@@ -182,26 +182,47 @@ A signed-in buyer asks for a quote from their cart when `OrderSettings.AllowQuot
 
 ### Commerce emails and their templates
 
-Every email the commerce modules send a customer goes through `ICommerceEmailSender` (Orders.Core, registered with `services.AddCommerceEmailSender()`): the order confirmation, the order to pay and the quote, the shipped email, the return emails, the gift card, the recovery email, Find my order, the booking emails, donation receipts, listing emails and the point of sale receipt. A sender passes a `CommerceEmail` (`Kind`, `To`, `Order`, `Culture`, `Reference`) and a callback that builds the `CommerceEmailContent` (`Subject`, `Text`, `Html` and the template's `Values`). `ICommerceEmailSender` then does the following:
+Every email the commerce modules send a customer goes through `ICommerceEmailSender` (Commerce.Abstractions, namespace `CrestApps.OrchardCore.Commerce.Emails`; registered with `services.AddCommerceEmailSender()` from Commerce.Core): the order confirmation, the order to pay and the quote, the shipped email, the return emails, the gift card, the recovery email, Find my order, the booking emails, business order approvals, back-in-stock alerts, review requests, donation receipts, listing emails and the point of sale receipt. A sender passes a `CommerceEmail` (`Kind`, `To`, `Models`, `Culture`, `Reference`) and a callback that builds the `CommerceEmailContent` (`Subject`, `Text`, `Html` and the template's `Values`). `Models` holds the records the email is about by the name the template reads them under; an email about an order passes `OrderEmailModels.For(order)`, which the template reads as `{{ Order }}`. `ICommerceEmailSender` then does the following:
 
 - It sends nothing, and returns `false`, when the Email feature is off, the email has no recipient, or the callback returns `null`.
 - It builds the email in `Culture`, such as the language the buyer shopped in (`Order.Culture`).
-- It passes an email with a `Kind` through `IOrderEmailTemplates`, the store's template of that kind and its layout. An email without a kind goes as built.
+- It passes an email with a `Kind` through `ICommerceEmailTemplates`, the store's template of that kind and its layout. An email without a kind goes as built.
 - It sends the email, and logs a send that fails or throws and returns `false`. A failed send never undoes what the email is about.
 
-The kinds the store can write templates of are registered by the feature that sends them, with `services.AddCommerceEmailKind(name, title, values)`. The title and the description of the email's own values are `LocalizationSource`s, and **Settings > Commerce > Emails** lists the kinds in the order they were registered. Orders registers `order-confirmation`, `order-invoice`, `order-quote` and `checkout-recovery` (`OrderEmailKinds`), Returns `order-return`, Gift Cards `gift-card`, Shipping `order-shipped` and Bookings `booking`. Saving the page keeps the templates of kinds that no enabled feature registers.
+Messages that reach a buyer through `ICustomerOwnerNotifier` (notifications for a buyer with an account, email for a guest) take the same templates: a `CustomerOwnerMessage` with a `Kind`, `Models` and `Values` passes through `ICommerceEmailTemplates` before it's sent. Payment reminders, payment receipts, refund notices and installment plan notices go this way.
+
+The kinds the store can write templates of are registered by the feature that sends them, with `services.AddCommerceEmailKind(name, title, values)` (Commerce.Abstractions). The title and the description of the email's own values are `LocalizationSource`s, and **Settings > Commerce > Emails** lists the kinds in the order they were registered:
+
+| Kind | Feature | Records |
+| --- | --- | --- |
+| `order-confirmation`, `order-invoice`, `order-quote`, `checkout-recovery` (`OrderEmailKinds`) | Orders | `Order` |
+| `order-return` | Returns | `Order` |
+| `gift-card` | Gift Cards | `Order` |
+| `order-shipped` | Shipping | `Order` |
+| `booking` | Bookings | `Order` |
+| `b2b-approval-requested`, `b2b-approval-decided` | Accounts B2B | `Order` |
+| `stock-alert` | Inventory stock alerts | `StockItem` |
+| `review-request` | Reviews | `Order` |
+| `payment-reminder` | Transactions notifications | `Transaction` |
+| `payment-receipt`, `payment-refund` (`TransactionEmailKinds`) | Transactions receipts | `Transaction` |
+| `installment-plan-notice` | Installment plans | `InstallmentPlan` |
+| `donation-receipt` | Fundraising | `Donation` |
+| `classified-listing` | Classifieds | none |
+| `pos-receipt` | Point of Sale | `Order` |
+
+Saving the page keeps the templates of kinds that no enabled feature registers.
 
 ```csharp
 services.AddCommerceEmailSender()
     .AddCommerceEmailKind("giftwrap-sent", LocalizationSource.Create<Startup>("Gift wrapped"), LocalizationSource.Create<Startup>("{{ Message }}: the gift message."));
 ```
 
-`LiquidOrderEmailTemplates` reads `OrderEmailTemplateSettings` (**Settings > Commerce > Emails**, group `order-emails`):
+`LiquidCommerceEmailTemplates` (Commerce.Core) reads `OrderEmailTemplateSettings` (**Settings > Commerce > Emails**, group `order-emails`). The settings keep the name they had when they served orders only, so the templates a store wrote, its recipes and its deployment plans keep working:
 
-- A `Layout` around every email, with `{{ Content }}`.
+- A `Layout` around every email with a kind and an HTML body, with `{{ Content }}`. A text-only email stays text-only unless its template writes a body.
 - `Templates` by kind, each with `IsEnabled`, a `Subject` and a `Body` in Liquid.
 
-The Liquid has `Content` (the built HTML, unencoded), `Subject`, `StoreName`, `Order` (the order as plain values, statuses by name) and the email's own values (`OrderUrl`, `PayUrl`, `TrackingUrl`, `Carrier`, `ShipmentNumber`, `ReturnNumber`, `ReturnStatus`, `Code`, `Amount`, `RecipientName`, `Message`, `RecoveryUrl`). A template that's used rewrites the text part from its HTML. Liquid that doesn't parse is refused when saved. A template that throws when rendered sends the built email and logs why.
+The Liquid has `Content` (the built HTML, unencoded), `Subject`, `StoreName`, each of the email's records by name (as plain values, statuses by name) and the email's own values (`OrderUrl`, `PayUrl`, `TrackingUrl`, `Carrier`, `ShipmentNumber`, `ReturnNumber`, `ReturnStatus`, `Code`, `Amount`, `RecipientName`, `Message`, `RecoveryUrl`, `ProductUrl`, `Url`). A template that's used rewrites the text part from its HTML. Liquid that doesn't parse is refused when saved. A template that throws when rendered sends the built email and logs why. Without the Liquid feature, every email goes as built.
 
 ### Sales channels
 
@@ -219,7 +240,7 @@ Every order records where it was made, in `Order.Channel` (`OrderChannels`):
 
 ### Returns
 
-The **Returns** feature (`CrestApps.OrchardCore.Orders.Returns`) adds buyer-requested returns. An `OrderReturn` (in the `Orders` collection, `OrderReturnIndex` on number, order, user, status and date) has a `Number` (such as `R-261019-K3QZ`), the order, the buyer, `Lines` (`OrderReturnLine`: order `LineId`, title, SKU, quantity, the unit price paid, `Reason`, `Restocked`), a `Resolution` (`Refund` or `Exchange`, with `ExchangeFor`), the buyer's `Comment`, the store's `StoreMessage`, `RefundedAmount`, `RestockLocationId`, and a `Status`: `Requested`, `Approved`, `Received`, `Completed`, `Rejected` or `Canceled` (withdrawn by the buyer).
+The **Returns** feature (`CrestApps.OrchardCore.Orders.Returns`) adds buyer-requested returns. An `OrderReturn` (in the `Orders` collection, `OrderReturnIndex` on number, order, user, status and date) has a `Number` (such as `RMA-261019-K3QZ7`: the date and five characters made from the return's place in the `Orders.Return` series of the shared `INumberSequence`, so two returns never share a number; returns made before used `R-261019-K3QZ`, which looked like a receipt number), the order, the buyer, `Lines` (`OrderReturnLine`: order `LineId`, title, SKU, quantity, the unit price paid, `Reason`, `Restocked`), a `Resolution` (`Refund` or `Exchange`, with `ExchangeFor`), the buyer's `Comment`, the store's `StoreMessage`, `RefundedAmount`, `RestockLocationId`, and a `Status`: `Requested`, `Approved`, `Received`, `Completed`, `Rejected` or `Canceled` (withdrawn by the buyer).
 
 - **Policy.** `OrderReturnPolicy.GetReturnable(order, returns)` gives the units of each good (`ProductType.Good` or undefined) not covered by an active return; `IsOpen(order, settings, utcNow)` is true for a paid order within `ReturnSettings.WindowDays` of `PaidUtc`. `UnitPriceOf(line)` is the line total over its quantity, add-ons and line discounts included.
 - **Buyer.** `account/orders/{orderId}/return` (`AccountOrderReturn`) and `orders/view/{token}/return` (`GuestOrderReturn`) show the `OrderReturnRequest` shape and post the request; `…/returns/{returnId}/withdraw` withdraws one still `Requested`. `OrderReturnsDisplayDriver` adds `OrderReturns_Detail` (the buyer's returns, with **Return items** and the return instructions once approved) to a paid order's `Detail` display, and `OrderReturns_DetailAdmin` to the store's.
@@ -294,6 +315,8 @@ A user with `ManageOrders` manages an order from its page, through `OrderOperati
 - **Notes** (`Order.Notes`) are what the store writes and what happened: each refund, cancellation and resend adds an event note with who did it.
 
 Refunds are recorded on the order by `OrderRefundRecorder`, an `IPaymentRefundHandler`, wherever they were started: the order's page, the payments page or the Pay Later transaction. It finds the order from the refund's checkout (an order's, or a pay link's for the order's transaction) and records each refund once. `OrderOperationScope` carries who is acting and whether stock goes back to it.
+
+Other modules act on orders through `IOrderOperationsService` in `Orders.Core`, which the Orders feature provides through `OrderOperationsService`; Point of Sale refunds a till return that way. `OrderOperationResult`, `OrderMoney` and `OrderPermissions` are in `Orders.Core` too, so no module uses the Orders module's own classes.
 
 ### Disputes and fraud rating
 

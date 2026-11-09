@@ -2,6 +2,7 @@ using CrestApps.Core.AI.Memory;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Infrastructure;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.DataSources.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -41,7 +42,7 @@ internal sealed class AIDataSourceSearchIndexProfileDisplayDriver : DisplayDrive
     public override IDisplayResult Edit(AIDataSource dataSource, BuildEditorContext context)
     {
         if (!string.Equals(
-            AIDataSourceDriverHelper.GetSourceType(dataSource),
+            AIDataSourceExtensions.GetSourceType(dataSource),
             AIDataSourceSourceTypes.SearchIndexProfile,
             StringComparison.OrdinalIgnoreCase))
         {
@@ -51,7 +52,7 @@ internal sealed class AIDataSourceSearchIndexProfileDisplayDriver : DisplayDrive
         return Initialize<EditAIDataSourceSearchIndexProfileViewModel>("AIDataSourceSearchIndexProfile_Edit", async model =>
         {
             model.SourceIndexProfileName = dataSource.SourceIndexProfileName;
-            model.IsConfigurationLocked = AIDataSourceDriverHelper.IsConfigurationLocked(dataSource);
+            model.IsConfigurationLocked = AIDataSourceExtensions.IsConfigurationLocked(dataSource);
 
             var allIndexes = await _indexProfileStore.GetAllAsync();
             var sourceIndexes = allIndexes
@@ -67,7 +68,7 @@ internal sealed class AIDataSourceSearchIndexProfileDisplayDriver : DisplayDrive
     public override async Task<IDisplayResult> UpdateAsync(AIDataSource dataSource, UpdateEditorContext context)
     {
         if (!string.Equals(
-            AIDataSourceDriverHelper.GetSourceType(dataSource),
+            AIDataSourceExtensions.GetSourceType(dataSource),
             AIDataSourceSourceTypes.SearchIndexProfile,
             StringComparison.OrdinalIgnoreCase))
         {
@@ -83,7 +84,7 @@ internal sealed class AIDataSourceSearchIndexProfileDisplayDriver : DisplayDrive
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.SourceIndexProfileName), S["The source index is required."]);
         }
 
-        if (!AIDataSourceDriverHelper.IsConfigurationLocked(dataSource))
+        if (!AIDataSourceExtensions.IsConfigurationLocked(dataSource))
         {
             dataSource.SourceIndexProfileName = model.SourceIndexProfileName;
         }

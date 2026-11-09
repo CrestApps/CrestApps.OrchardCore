@@ -1,5 +1,5 @@
 using CrestApps.Core.AI.Models;
-using CrestApps.OrchardCore.AI.Core;
+using CrestApps.Core.Infrastructure;
 using OrchardCore.AzureAI;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
@@ -29,15 +29,15 @@ public sealed class AIDocumentAzureAISearchDocumentIndexHandler : IDocumentIndex
             return Task.CompletedTask;
         }
 
-        context.DocumentIndex.Set(AIConstants.ColumnNames.ChunkId, chunk.ChunkId, DocumentIndexOptions.Store);
-        context.DocumentIndex.Set(AIConstants.ColumnNames.DocumentId, chunk.DocumentId, DocumentIndexOptions.Store);
-        context.DocumentIndex.Set(AIConstants.ColumnNames.Content, chunk.Content, DocumentIndexOptions.Store);
-        context.DocumentIndex.Set(AIConstants.ColumnNames.FileName, chunk.FileName, DocumentIndexOptions.Store);
-        context.DocumentIndex.Set(AIConstants.ColumnNames.ReferenceId, chunk.ReferenceId, DocumentIndexOptions.Store);
-        context.DocumentIndex.Set(AIConstants.ColumnNames.ReferenceType, chunk.ReferenceType, DocumentIndexOptions.Store);
-        context.DocumentIndex.Set(AIConstants.ColumnNames.ChunkIndex, chunk.ChunkIndex, DocumentIndexOptions.Store);
+        context.DocumentIndex.Set(DocumentIndexConstants.ColumnNames.ChunkId, chunk.ChunkId, DocumentIndexOptions.Store);
+        context.DocumentIndex.Set(DocumentIndexConstants.ColumnNames.DocumentId, chunk.DocumentId, DocumentIndexOptions.Store);
+        context.DocumentIndex.Set(DocumentIndexConstants.ColumnNames.Content, chunk.Content, DocumentIndexOptions.Store);
+        context.DocumentIndex.Set(DocumentIndexConstants.ColumnNames.FileName, chunk.FileName, DocumentIndexOptions.Store);
+        context.DocumentIndex.Set(DocumentIndexConstants.ColumnNames.ReferenceId, chunk.ReferenceId, DocumentIndexOptions.Store);
+        context.DocumentIndex.Set(DocumentIndexConstants.ColumnNames.ReferenceType, chunk.ReferenceType, DocumentIndexOptions.Store);
+        context.DocumentIndex.Set(DocumentIndexConstants.ColumnNames.ChunkIndex, chunk.ChunkIndex, DocumentIndexOptions.Store);
 
-        context.DocumentIndex.Set(AIConstants.ColumnNames.Embedding, chunk.Embedding, chunk.Embedding?.Length ?? 0, DocumentIndexOptions.Store, new Dictionary<string, object>
+        context.DocumentIndex.Set(DocumentIndexConstants.ColumnNames.Embedding, chunk.Embedding, chunk.Embedding?.Length ?? 0, DocumentIndexOptions.Store, new Dictionary<string, object>
         {
             ["VectorSearchConfiguration"] = "default",
         });

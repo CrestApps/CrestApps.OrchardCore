@@ -21,6 +21,12 @@ public static class CommerceConstants
         /// <c>[RequireFeatures]</c> on it.
         /// </summary>
         public const string Webhooks = "CrestApps.OrchardCore.Commerce.Webhooks";
+
+        /// <summary>
+        /// The Store Profile feature: the store's name, logo, tax ID, contact and address under Settings › Commerce ›
+        /// Store, which receipts, the ship-from address and the tax origin fall back to.
+        /// </summary>
+        public const string StoreProfile = "CrestApps.OrchardCore.Commerce.StoreProfile";
     }
 
     /// <summary>

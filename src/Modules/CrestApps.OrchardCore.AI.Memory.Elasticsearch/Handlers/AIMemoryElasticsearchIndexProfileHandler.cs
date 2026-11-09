@@ -2,8 +2,9 @@ using CrestApps.Core;
 using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Memory;
-using CrestApps.OrchardCore.AI.Memory.Handlers;
+using CrestApps.OrchardCore.AI.Core.Handlers;
 using Elastic.Clients.Elasticsearch.Mapping;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Elasticsearch;
 using OrchardCore.Elasticsearch.Core.Models;
 using OrchardCore.Elasticsearch.Models;
@@ -23,10 +24,12 @@ public sealed class AIMemoryElasticsearchIndexProfileHandler : AIMemoryIndexProf
     /// </summary>
     /// <param name="deploymentManager">The deployment manager.</param>
     /// <param name="aiClientFactory">The ai client factory.</param>
+    /// <param name="logger">The logger.</param>
     public AIMemoryElasticsearchIndexProfileHandler(
         IAIDeploymentManager deploymentManager,
-        IAIClientFactory aiClientFactory)
-    : base(ElasticsearchConstants.ProviderName, deploymentManager, aiClientFactory)
+        IAIClientFactory aiClientFactory,
+        ILogger<AIMemoryElasticsearchIndexProfileHandler> logger)
+    : base(ElasticsearchConstants.ProviderName, deploymentManager, aiClientFactory, logger)
     {
     }
 

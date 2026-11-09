@@ -37,6 +37,17 @@ public static class TenantHierarchyConstants
     }
 
     /// <summary>
+    /// Contains the names of the tenant hierarchy recipe and deployment steps.
+    /// </summary>
+    public static class Recipes
+    {
+        /// <summary>
+        /// The recipe step that adds or updates who in the parent tenant may sign in to child tenants, and with which roles.
+        /// </summary>
+        public const string AccessGrants = "TenantHierarchyAccessGrants";
+    }
+
+    /// <summary>
     /// Contains the role values a tenant can have in a hierarchy.
     /// </summary>
     public static class Roles

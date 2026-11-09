@@ -13,8 +13,6 @@ namespace CrestApps.OrchardCore.Subscriptions.Core.Services;
 /// </summary>
 public sealed class SubscriptionStore : DocumentCatalog<Subscription, SubscriptionRecordIndex>, ISubscriptionStore
 {
-    private readonly IClock _clock;
-
     /// <summary>
     /// Enables YesSql document-version concurrency checks, so a renewal and a cancellation arriving at the
     /// same moment cannot silently overwrite one another. Losing either would either bill a customer who
@@ -28,10 +26,9 @@ public sealed class SubscriptionStore : DocumentCatalog<Subscription, Subscripti
     /// <param name="session">The tenant YesSql session.</param>
     /// <param name="clock">The clock used for timestamps.</param>
     public SubscriptionStore(ISession session, IClock clock)
-        : base(session)
+        : base(session, clock)
     {
         CollectionName = SubscriptionConstants.SubscriptionCollectionName;
-        _clock = clock;
     }
 
     /// <inheritdoc/>
@@ -161,20 +158,5 @@ public sealed class SubscriptionStore : DocumentCatalog<Subscription, Subscripti
             Count = count,
             Entries = entries.ToArray(),
         };
-    }
-
-    /// <inheritdoc/>
-    protected override ValueTask SavingAsync(Subscription record)
-    {
-        var now = _clock.UtcNow;
-
-        if (record.CreatedUtc == default)
-        {
-            record.CreatedUtc = now;
-        }
-
-        record.UpdatedUtc = now;
-
-        return ValueTask.CompletedTask;
     }
 }

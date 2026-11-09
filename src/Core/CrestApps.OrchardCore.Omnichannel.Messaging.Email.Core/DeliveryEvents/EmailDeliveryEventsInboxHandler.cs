@@ -1,5 +1,5 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.Webhooks;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.DeliveryEvents;
 
@@ -19,7 +19,7 @@ public sealed class EmailDeliveryEventsInboxHandler : IProviderWebhookInboxHandl
 
     public string TechnicalName => EmailChannelConstants.DeliveryEventsInboxHandlerName;
 
-    public ContactCenterHandlerReplaySafety ReplaySafety => ContactCenterHandlerReplaySafety.GuardedByDurableStore;
+    public WebhookHandlerReplaySafety ReplaySafety => WebhookHandlerReplaySafety.GuardedByDurableStore;
 
     public async Task HandleAsync(string payload, CancellationToken cancellationToken = default)
     {

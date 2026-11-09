@@ -1,11 +1,13 @@
 @model TimesheetDetailsViewModel
-@using CrestApps.OrchardCore.Calendars.Core
+@using CrestApps.OrchardCore.Calendars
+@inject IEnumerable<CrestApps.OrchardCore.Workforce.Services.ITimePunchSourceProvider> SourceProviders
+@inject OrchardCore.Modules.IClock Clock
 @{
     var timesheet = Model.Timesheet;
     var editable = timesheet.IsEditable;
     var returnUrl = Context.Request.Path + Context.Request.QueryString;
     string Local(DateTime utc) => CalendarTime.ToLocal(utc, Model.TimeZoneId).ToString("t");
-    var today = DateOnly.FromDateTime(CalendarTime.ToLocal(DateTime.UtcNow, Model.TimeZoneId));
+    var today = DateOnly.FromDateTime(CalendarTime.ToLocal(Clock.UtcNow, Model.TimeZoneId));
     var defaultDay = (today < timesheet.PeriodStart ? timesheet.PeriodStart : today > timesheet.PeriodEnd ? timesheet.PeriodEnd : today).ToString("yyyy-MM-dd");
     var manualCodes = Model.PayCodes.Values.Where(code => code.Enabled).OrderBy(code => code.Kind).ThenBy(code => code.Code).ToList();
 }
@@ -350,13 +352,13 @@
         _ => T["Finished a job"].Value,
     };
 
-    private string SourceName(TimePunchSource source) => source switch
+    private string SourceName(string source) => source switch
     {
         TimePunchSource.Web => T["browser"].Value,
         TimePunchSource.Mobile => T["app"].Value,
         TimePunchSource.Kiosk => T["kiosk"].Value,
-        TimePunchSource.ContactCenter => T["contact center"].Value,
         TimePunchSource.Api => T["API"].Value,
-        _ => T["manager"].Value,
+        TimePunchSource.Manager => T["manager"].Value,
+        _ => SourceProviders.SelectMany(provider => provider.GetSources()).FirstOrDefault(descriptor => descriptor.Name == source)?.DisplayName.Value ?? source,
     };
 }

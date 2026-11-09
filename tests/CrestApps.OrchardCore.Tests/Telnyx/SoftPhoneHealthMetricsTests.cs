@@ -1,13 +1,28 @@
 using CrestApps.OrchardCore.Telnyx.Services;
+using Moq;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Telnyx;
 
 public sealed class SoftPhoneHealthMetricsTests
 {
+    private static readonly DateTime _startedUtc = new(2026, 11, 4, 9, 30, 0, DateTimeKind.Utc);
+    private static readonly IClock _clock = Mock.Of<IClock>(clock => clock.UtcNow == _startedUtc);
+
+    [Fact]
+    public void GetSnapshot_ReportsCountersSinceTheClockTimeTheyStarted()
+    {
+        var metrics = new SoftPhoneHealthMetrics(_clock);
+
+        var snapshot = metrics.GetSnapshot();
+
+        Assert.Equal(new DateTimeOffset(_startedUtc), snapshot.SinceUtc);
+    }
+
     [Fact]
     public void GetSnapshot_WithNoActivity_ReportsPerfectRates()
     {
-        var metrics = new SoftPhoneHealthMetrics();
+        var metrics = new SoftPhoneHealthMetrics(_clock);
 
         var snapshot = metrics.GetSnapshot();
 
@@ -20,7 +35,7 @@ public sealed class SoftPhoneHealthMetricsTests
     [Fact]
     public void RecordCredential_CountsAndComputesSuccessRate()
     {
-        var metrics = new SoftPhoneHealthMetrics();
+        var metrics = new SoftPhoneHealthMetrics(_clock);
 
         metrics.RecordCredentialIssued();
         metrics.RecordCredentialIssued();
@@ -37,7 +52,7 @@ public sealed class SoftPhoneHealthMetricsTests
     [Fact]
     public void RecordWebhookProcessed_CountsSuccessAndFailureSeparately()
     {
-        var metrics = new SoftPhoneHealthMetrics();
+        var metrics = new SoftPhoneHealthMetrics(_clock);
 
         metrics.RecordWebhookProcessed(true);
         metrics.RecordWebhookProcessed(true);
@@ -53,7 +68,7 @@ public sealed class SoftPhoneHealthMetricsTests
     [Fact]
     public void Counters_AreThreadSafe()
     {
-        var metrics = new SoftPhoneHealthMetrics();
+        var metrics = new SoftPhoneHealthMetrics(_clock);
 
         Parallel.For(0, 1000, _ =>
         {

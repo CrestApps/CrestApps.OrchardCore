@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.Products;
 /// sets of the products, their variants and their named prices. The bundles and product listing features register the
 /// data sets of their own records, so a data set is listed only while its feature is on.
 /// </summary>
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class DataSourcesStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -30,7 +30,7 @@ public sealed class DataSourcesStartup : StartupBase
 /// Registers the data set of the product bundles feature.
 /// </summary>
 [Feature(ProductConstants.Feature.Bundles)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class BundlesDataSourcesStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -44,7 +44,7 @@ public sealed class BundlesDataSourcesStartup : StartupBase
 /// Registers the data set of the product listing feature.
 /// </summary>
 [Feature(ProductConstants.Feature.Listing)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class ListingDataSourcesStartup : StartupBase
 {
     /// <inheritdoc/>

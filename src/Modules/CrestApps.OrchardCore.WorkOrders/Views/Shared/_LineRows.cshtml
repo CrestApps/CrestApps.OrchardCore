@@ -1,6 +1,11 @@
 @using Microsoft.AspNetCore.Mvc.Rendering
 @model (List<LineEditModel> Lines, IList<SelectListItem> StockItems)
 
+@{
+    // In an editor section the rows post under the section's prefix, such as WorkOrder.Lines[0].Description.
+    var lines = ViewData.TemplateInfo.GetFullHtmlFieldName("Lines");
+}
+
 <div class="table-responsive mb-3">
     <table class="table table-sm align-middle">
         <thead>
@@ -22,19 +27,19 @@
                 var line = Model.Lines[i];
                 <tr>
                     <td>
-                        <input type="hidden" name="Lines[@i].Id" value="@line.Id" />
-                        <select name="Lines[@i].Kind" class="form-select form-select-sm" aria-label="@T["Kind"]">
+                        <input type="hidden" name="@(lines)[@i].Id" value="@line.Id" />
+                        <select name="@(lines)[@i].Kind" class="form-select form-select-sm" aria-label="@T["Kind"]">
                             @foreach (var kind in Enum.GetValues<WorkOrderLineKind>())
                             {
                                 <option value="@kind" selected="@(kind == line.Kind)">@kind</option>
                             }
                         </select>
                     </td>
-                    <td><input name="Lines[@i].Description" value="@line.Description" class="form-control form-control-sm" aria-label="@T["Description"]" /></td>
+                    <td><input name="@(lines)[@i].Description" value="@line.Description" class="form-control form-control-sm" aria-label="@T["Description"]" /></td>
                     @if (Model.StockItems.Count > 0)
                     {
                         <td>
-                            <select name="Lines[@i].StockItemId" class="form-select form-select-sm" aria-label="@T["Stock item"]">
+                            <select name="@(lines)[@i].StockItemId" class="form-select form-select-sm" aria-label="@T["Stock item"]">
                                 <option value="">@T["Not counted"]</option>
                                 @foreach (var item in Model.StockItems)
                                 {
@@ -43,11 +48,11 @@
                             </select>
                         </td>
                     }
-                    <td><input name="Lines[@i].Quantity" value="@line.Quantity.ToString("0.##", CultureInfo.InvariantCulture)" type="number" min="0" step="any" class="form-control form-control-sm" aria-label="@T["Quantity"]" /></td>
-                    <td><input name="Lines[@i].UnitPrice" value="@line.UnitPrice.ToString("0.00", CultureInfo.InvariantCulture)" type="number" min="0" step="0.01" class="form-control form-control-sm" aria-label="@T["Unit price"]" /></td>
+                    <td><input name="@(lines)[@i].Quantity" value="@line.Quantity.ToString("0.##", CultureInfo.InvariantCulture)" type="number" min="0" step="any" class="form-control form-control-sm" aria-label="@T["Quantity"]" /></td>
+                    <td><input name="@(lines)[@i].UnitPrice" value="@line.UnitPrice.ToString("0.00", CultureInfo.InvariantCulture)" type="number" min="0" step="0.01" class="form-control form-control-sm" aria-label="@T["Unit price"]" /></td>
                     <td>
-                        <input type="checkbox" name="Lines[@i].Billable" value="true" class="form-check-input" checked="@line.Billable" aria-label="@T["Billed"]" />
-                        <input type="hidden" name="Lines[@i].Billable" value="false" />
+                        <input type="checkbox" name="@(lines)[@i].Billable" value="true" class="form-check-input" checked="@line.Billable" aria-label="@T["Billed"]" />
+                        <input type="hidden" name="@(lines)[@i].Billable" value="false" />
                     </td>
                 </tr>
             }

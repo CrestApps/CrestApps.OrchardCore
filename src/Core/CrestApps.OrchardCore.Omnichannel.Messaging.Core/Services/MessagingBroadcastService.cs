@@ -1,35 +1,43 @@
 using CrestApps.Core.Support;
-using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
+using CrestApps.OrchardCore.Consent;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Outreach;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
+using CrestApps.OrchardCore.Outreach;
+using CrestApps.OrchardCore.Outreach.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 
 /// <summary>
-/// The default <see cref="IMessagingBroadcastService"/>: works a broadcast's recipient list one message at a time
-/// through the two-way send path, so each recipient gets an individual 1:1 thread (no cross-visibility) and a
-/// resumed run never re-sends a recipient it already processed.
+/// The default <see cref="IMessagingBroadcastService"/>: hands a queued broadcast to the outreach engine, which sends it
+/// to each recipient in their own 1:1 thread (no cross-visibility), a page at a time, skipping recipients who opted out
+/// and holding the sends in the channel's quiet hours. The broadcast keeps its recipient list and shows the run's
+/// progress.
 /// </summary>
 public sealed class MessagingBroadcastService : IMessagingBroadcastService
 {
     private readonly IMessagingBroadcastStore _broadcastStore;
-    private readonly IMessagingConversationService _conversationService;
+    private readonly IOutreachEngine _outreachEngine;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MessagingBroadcastService"/> class.
     /// </summary>
+    /// <param name="broadcastStore">The broadcast store.</param>
+    /// <param name="outreachEngine">The outreach engine that sends the broadcasts.</param>
+    /// <param name="clock">The clock.</param>
+    /// <param name="logger">The logger.</param>
     public MessagingBroadcastService(
         IMessagingBroadcastStore broadcastStore,
-        IMessagingConversationService conversationService,
+        IOutreachEngine outreachEngine,
         IClock clock,
         ILogger<MessagingBroadcastService> logger)
     {
         _broadcastStore = broadcastStore;
-        _conversationService = conversationService;
+        _outreachEngine = outreachEngine;
         _clock = clock;
         _logger = logger;
     }
@@ -52,6 +60,12 @@ public sealed class MessagingBroadcastService : IMessagingBroadcastService
     {
         ArgumentNullException.ThrowIfNull(broadcast);
 
+        // Already handed to the engine, which reports its progress back on the broadcast.
+        if (!string.IsNullOrEmpty(broadcast.OutreachRunId))
+        {
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(broadcast.Channel) || string.IsNullOrWhiteSpace(broadcast.ServiceAddress) || string.IsNullOrWhiteSpace(broadcast.Body))
         {
             broadcast.Status = MessagingBroadcastStatus.Failed;
@@ -63,64 +77,31 @@ public sealed class MessagingBroadcastService : IMessagingBroadcastService
             return;
         }
 
-        broadcast.Status = MessagingBroadcastStatus.Running;
-        await _broadcastStore.UpdateAsync(broadcast, cancellationToken);
-
-        var processed = new HashSet<string>(broadcast.ProcessedRecipients, StringComparer.OrdinalIgnoreCase);
-
-        foreach (var recipient in broadcast.Recipients)
+        // A broadcast that was half sent before the engine existed carries its counts over; its audience source leaves
+        // out the recipients it already processed.
+        var run = await _outreachEngine.StartAsync(new OutreachRun
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            Name = broadcast.Name,
+            OwnerType = MessagingOutreachConstants.BroadcastOwnerType,
+            OwnerId = broadcast.ItemId,
+            AudienceSource = MessagingOutreachConstants.BroadcastAudienceSource,
+            Sender = MessagingOutreachConstants.Sender,
+            Channel = broadcast.Channel,
 
-            if (string.IsNullOrWhiteSpace(recipient) || !processed.Add(recipient))
-            {
-                continue;
-            }
+            // The engine asks the consent service about the broadcast's channel, so a recipient who opted out (a STOP,
+            // a do-not-text flag on any record holding the number) is skipped rather than sent and refused.
+            ConsentChannel = broadcast.Channel,
+            ConsentContactKind = ConsentContactKinds.Contact,
+            SenderAddress = broadcast.ServiceAddress,
+            ActorId = broadcast.OwnerAgentId,
+            Template = new OutreachTemplate { Subject = broadcast.Subject, Body = broadcast.Body },
+            Sent = broadcast.SentCount,
+            Failed = broadcast.FailedCount,
+            Skipped = broadcast.SkippedCount,
+        }, cancellationToken);
 
-            MessagingSendResult result;
-
-            try
-            {
-                result = await _conversationService.SendDirectAsync(new MessagingDirectSendRequest
-                {
-                    Channel = broadcast.Channel,
-                    ServiceAddress = broadcast.ServiceAddress,
-                    ContactAddress = recipient,
-                    Subject = broadcast.Subject,
-                    Body = broadcast.Body,
-                    ActingAgentId = broadcast.OwnerAgentId,
-                    Purpose = MessagingOutboundPurpose.Broadcast,
-                }, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                result = MessagingSendResult.Failed(ex.Message);
-
-                _logger.LogError(ex, "Broadcast {BroadcastId} failed to send to a recipient.", broadcast.ItemId.SanitizeLogValue());
-            }
-
-            if (result.Succeeded)
-            {
-                broadcast.SentCount++;
-            }
-            else if (string.Equals(result.Message?.DeliveryStatus, MessageDeliveryStatus.Queued.ToString(), StringComparison.Ordinal))
-            {
-                // Held back by the address's sending limits, or waiting for a retry: the outbox sends it later.
-                broadcast.QueuedCount++;
-            }
-            else
-            {
-                broadcast.FailedCount++;
-            }
-
-            broadcast.ProcessedRecipients.Add(recipient);
-
-            // Persist progress after each recipient so a restart resumes without re-sending processed numbers.
-            await _broadcastStore.UpdateAsync(broadcast, cancellationToken);
-        }
-
-        broadcast.Status = MessagingBroadcastStatus.Completed;
-        broadcast.CompletedUtc = _clock.UtcNow;
+        broadcast.OutreachRunId = run.ItemId;
+        broadcast.Status = MessagingBroadcastStatus.Running;
         await _broadcastStore.UpdateAsync(broadcast, cancellationToken);
     }
 }

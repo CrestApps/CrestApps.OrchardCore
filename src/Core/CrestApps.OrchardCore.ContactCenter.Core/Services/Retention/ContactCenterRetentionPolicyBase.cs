@@ -3,6 +3,7 @@ using CrestApps.Core.Data.YesSql.Indexes;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.YesSql.Core.Retention;
 using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services.Retention;
@@ -13,11 +14,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services.Retention;
 /// </summary>
 /// <typeparam name="TModel">The catalog item type being purged.</typeparam>
 /// <typeparam name="TIndex">The index type whose table carries the age column.</typeparam>
-public abstract class ContactCenterRetentionPolicyBase<TModel, TIndex> : IContactCenterRetentionPolicy
+public abstract class ContactCenterRetentionPolicyBase<TModel, TIndex> : DocumentRetentionPolicyBase<TModel, TIndex>, IContactCenterRetentionPolicy
     where TModel : CatalogItem
     where TIndex : CatalogItemIndex
 {
-    private readonly ISession _session;
     private readonly ICatalog<TModel> _catalog;
 
     /// <summary>
@@ -31,13 +31,16 @@ public abstract class ContactCenterRetentionPolicyBase<TModel, TIndex> : IContac
     protected ContactCenterRetentionPolicyBase(
         ISession session,
         ICatalog<TModel> catalog)
+        : base(session, ContactCenterStorage.CollectionName)
     {
-        _session = session;
         _catalog = catalog;
     }
 
     /// <inheritdoc/>
     public abstract string EntityName { get; }
+
+    /// <inheritdoc/>
+    public override string Name => EntityName;
 
     /// <inheritdoc/>
     public Type IndexType => typeof(TIndex);
@@ -73,14 +76,6 @@ public abstract class ContactCenterRetentionPolicyBase<TModel, TIndex> : IContac
     /// <returns>The entity-specific floor in days.</returns>
     protected virtual double GetEntityFloorDays(ContactCenterRetentionOptions options) => 0;
 
-    /// <summary>
-    /// Builds the predicate that selects records eligible for purging. It must exclude records that are still
-    /// live, because age alone never makes an in-flight record safe to delete.
-    /// </summary>
-    /// <param name="cutoffUtc">The exclusive UTC cutoff.</param>
-    /// <returns>The expired-record predicate.</returns>
-    protected abstract Expression<Func<TIndex, bool>> BuildExpiredPredicate(DateTime cutoffUtc);
-
     /// <inheritdoc/>
     public bool TryGetCutoff(DateTime nowUtc, ContactCenterRetentionOptions options, out DateTime cutoffUtc)
     {
@@ -105,57 +100,17 @@ public abstract class ContactCenterRetentionPolicyBase<TModel, TIndex> : IContac
     public LambdaExpression GetExpiredPredicate(DateTime cutoffUtc) => BuildExpiredPredicate(cutoffUtc);
 
     /// <summary>
-    /// Prepares an expired record for deletion, giving the entity a chance to run deletion side effects (such as
-    /// enqueuing dependent cleanup for data the row points at) and to veto deletion for records that must be
-    /// preserved. The default proceeds with deletion and runs no side effects.
+    /// Contact Center windows come from <see cref="ContactCenterRetentionOptions"/>, which only the Contact Center
+    /// retention service passes, so without them a policy keeps its records.
     /// </summary>
-    /// <param name="record">The expired record that is about to be deleted.</param>
-    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    /// <returns><see langword="true"/> to proceed with deleting the record; otherwise, <see langword="false"/> to skip it.</returns>
-    protected virtual Task<bool> TryPrepareForDeletionAsync(TModel record, CancellationToken cancellationToken)
-        => Task.FromResult(true);
+    /// <returns>Zero, which keeps the records.</returns>
+    protected sealed override double GetRetentionDays() => 0;
 
     /// <inheritdoc/>
-    public async Task<int> PurgeBatchAsync(DateTime cutoffUtc, int batchSize, CancellationToken cancellationToken = default)
-    {
-        var take = batchSize <= 0 ? 100 : batchSize;
+    protected override async ValueTask DeleteAsync(TModel record, CancellationToken cancellationToken)
+        => await _catalog.DeleteAsync(record, cancellationToken);
 
-        var expired = await _session
-            .Query<TModel, TIndex>(BuildExpiredPredicate(cutoffUtc), collection: ContactCenterStorage.CollectionName)
-            .Take(take)
-            .ListAsync(cancellationToken);
-
-        var purged = 0;
-
-        foreach (var record in expired)
-        {
-            try
-            {
-                // A record can veto its own deletion (for example a recording under legal hold) or run deletion side
-                // effects (for example enqueuing media deletion) before the row is removed. A vetoed record is skipped
-                // rather than deleted, and the side effects share this batch's unit of work so they commit atomically
-                // with the delete once the whole batch succeeds. Both the prepare step and the delete are guarded so
-                // that a failure anywhere in the batch is reported to the caller, which discards the entire batch
-                // instead of letting a half-staged record leak into an unrelated entity's later flush.
-                if (!await TryPrepareForDeletionAsync(record, cancellationToken))
-                {
-                    continue;
-                }
-
-                await _catalog.DeleteAsync(record, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                // A record failed after staging some of its side effects, and earlier records in this batch are staged
-                // too. The shared session cannot selectively withdraw the staged work, so the batch is reported as
-                // failed and the caller discards the whole batch rather than committing any of it; the count is carried
-                // only for diagnostics. Every record this batch touched is retried cleanly on the next cycle.
-                throw new ContactCenterRetentionBatchException(EntityName, purged, ex);
-            }
-
-            purged++;
-        }
-
-        return purged;
-    }
+    /// <inheritdoc/>
+    protected override Exception OnBatchFailed(int stagedCount, Exception exception)
+        => new ContactCenterRetentionBatchException(EntityName, stagedCount, exception);
 }

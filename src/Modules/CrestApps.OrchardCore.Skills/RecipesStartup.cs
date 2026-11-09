@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Skills.Deployments;
 using CrestApps.OrchardCore.Skills.Recipes;
+using CrestApps.OrchardCore.Skills.Recipes.Workflows;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Deployment;
 using OrchardCore.Modules;
@@ -11,7 +12,7 @@ namespace CrestApps.OrchardCore.Skills;
 /// <summary>
 /// Imports the Skills recipe step.
 /// </summary>
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class RecipesStartup : StartupBase
 {
     /// <inheritdoc />
@@ -24,7 +25,7 @@ public sealed class RecipesStartup : StartupBase
 /// <summary>
 /// Exports skills and certifications with a deployment step.
 /// </summary>
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class DeploymentStartup : StartupBase
 {
     /// <inheritdoc />
@@ -37,7 +38,7 @@ public sealed class DeploymentStartup : StartupBase
 /// <summary>
 /// Describes the Skills recipe and deployment steps to CrestApps Recipes.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class RecipesSchemaStartup : StartupBase
 {
     /// <inheritdoc />
@@ -45,5 +46,22 @@ public sealed class RecipesSchemaStartup : StartupBase
     {
         services.AddScoped<IRecipeStep, SkillsRecipeStepSchema>();
         services.AddDeploymentStepSchema<SkillsDeploymentStepSchema>();
+    }
+}
+
+/// <summary>
+/// Describes the skills workflow events and task to CrestApps Recipes.
+/// </summary>
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area, OrchardCoreFeatureIds.Workflows)]
+public sealed class WorkflowsRecipesSchemaStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddWorkflowActivitySchema<CertificationExpiringEventSchema>()
+            .AddWorkflowActivitySchema<CertificationExpiredEventSchema>()
+            .AddWorkflowActivitySchema<SkillsChangedEventSchema>()
+            .AddWorkflowActivitySchema<AssignSkillTaskSchema>();
     }
 }

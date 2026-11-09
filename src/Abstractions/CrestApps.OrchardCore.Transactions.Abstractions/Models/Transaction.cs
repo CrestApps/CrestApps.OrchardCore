@@ -1,5 +1,6 @@
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Customers.Models;
+using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.Transactions.Models;
 
@@ -9,7 +10,7 @@ namespace CrestApps.OrchardCore.Transactions.Models;
 /// committed without being settled immediately (for example an offline Pay Later commitment), and it is
 /// updated as reminders are sent and payments are recorded until it reaches a terminal state.
 /// </summary>
-public sealed class Transaction : CatalogItem
+public sealed class Transaction : CatalogItem, ITimestampedModel
 {
     /// <summary>
     /// Gets or sets the YesSql document identifier.

@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.DncRegistry;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers;
@@ -30,6 +31,53 @@ public sealed class DialerEligibilityServiceTests
 
         // Assert
         Assert.False(result.IsEligible);
+        Assert.Equal(DialerSuppressionReason.NoDestination, result.Reason);
+    }
+
+    // An activity copies its contact's number when it is created and nothing refreshed it, so a record loaded before its
+    // contact had a number told the agent "The activity has no destination to dial" on a contact that plainly has one.
+    [Fact]
+    public async Task EvaluateAsync_WhenTheActivityHasNoNumberButItsContactNowDoes_DialsTheContactsNumber()
+    {
+        // Arrange
+        var harness = new Harness();
+        var contact = new ContentItem { ContentItemId = "contact1", ContentType = "Lead" };
+        harness.ContentManager
+            .Setup(manager => manager.GetAsync("contact1", It.IsAny<VersionOptions>()))
+            .ReturnsAsync(contact);
+        harness.ContactMethods
+            .Setup(accessor => accessor.Get(contact))
+            .Returns(new ContactMethodSet(
+                [new ContactPhoneNumber { PhoneNumber = "+14255551212", Type = ContactPhoneTypes.Cell }],
+                []));
+        var activity = new OmnichannelActivity { ItemId = "act1", ContactContentItemId = "contact1", PreferredDestination = null };
+
+        // Act
+        var result = await harness.EvaluateAsync(Profile(), activity);
+
+        // Assert
+        Assert.NotEqual(DialerSuppressionReason.NoDestination, result.Reason);
+        Assert.Equal("+14255551212", activity.PreferredDestination);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WhenNeitherTheActivityNorItsContactHasANumber_SuppressesNoDestination()
+    {
+        // Arrange
+        var harness = new Harness();
+        var contact = new ContentItem { ContentItemId = "contact1", ContentType = "Lead" };
+        harness.ContentManager
+            .Setup(manager => manager.GetAsync("contact1", It.IsAny<VersionOptions>()))
+            .ReturnsAsync(contact);
+        harness.ContactMethods
+            .Setup(accessor => accessor.Get(contact))
+            .Returns(ContactMethodSet.Empty);
+        var activity = new OmnichannelActivity { ItemId = "act1", ContactContentItemId = "contact1", PreferredDestination = null };
+
+        // Act
+        var result = await harness.EvaluateAsync(Profile(), activity);
+
+        // Assert
         Assert.Equal(DialerSuppressionReason.NoDestination, result.Reason);
     }
 
@@ -120,6 +168,57 @@ public sealed class DialerEligibilityServiceTests
             ItemId = "act1",
             PreferredDestination = "+14255551212",
             ContactContentItemId = "contact1",
+        };
+
+        // Act
+        var result = await harness.EvaluateAsync(Profile(), activity);
+
+        // Assert
+        Assert.False(result.IsEligible);
+        Assert.Equal(DialerSuppressionReason.DoNotCall, result.Reason);
+    }
+
+    // Bug: the dialer read the contact's own Do not call flag, so a stop recorded on another record that holds the same
+    // number was missed. It now asks the opt-out resolver, which follows shared numbers.
+    [Fact]
+    public async Task EvaluateAsync_WhenAnotherRecordAtTheNumberOptedOut_SuppressesDoNotCall()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.OptOutResolver.SomebodyAtTheNumberOptedOut = true;
+        var contact = new ContentItem();
+        contact.Apply(new OmnichannelContactPart());
+
+        harness.ContentManager
+            .Setup(m => m.GetAsync("contact1", It.IsAny<VersionOptions>()))
+            .ReturnsAsync(contact);
+
+        var activity = new OmnichannelActivity
+        {
+            ItemId = "act1",
+            PreferredDestination = "+14255551212",
+            ContactContentItemId = "contact1",
+        };
+
+        // Act
+        var result = await harness.EvaluateAsync(Profile(), activity);
+
+        // Assert
+        Assert.False(result.IsEligible);
+        Assert.Equal(DialerSuppressionReason.DoNotCall, result.Reason);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WhenTheNumberOptedOutOfCallsWithoutAContact_SuppressesDoNotCall()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.OptOutResolver.AddressOptOuts.Add(new ContactAddressOptOut { Channel = OmnichannelConstants.Channels.Phone, Address = "+14255551212" });
+
+        var activity = new OmnichannelActivity
+        {
+            ItemId = "act1",
+            PreferredDestination = "+14255551212",
         };
 
         // Act
@@ -428,6 +527,10 @@ public sealed class DialerEligibilityServiceTests
 
         public Mock<INotInServiceNumberService> NotInServiceNumbers { get; } = new();
 
+        public global::CrestApps.OrchardCore.Tests.Modules.Omnichannel.Sms.SharedNumberOptOutResolver OptOutResolver { get; } = new();
+
+        public Mock<IContactMethodsAccessor> ContactMethods { get; } = new();
+
         public Harness()
         {
             AbandonmentPolicyService
@@ -461,8 +564,10 @@ public sealed class DialerEligibilityServiceTests
                 AbandonmentPolicyService.Object,
                 Registries,
                 NotInServiceNumbers.Object,
+                CrestApps.OrchardCore.Tests.Doubles.ConsentDoubles.Over(OptOutResolver, ContentManager.Object),
                 clock.Object,
-                NullLogger<DefaultDialerEligibilityService>.Instance);
+                NullLogger<DefaultDialerEligibilityService>.Instance,
+                ContactMethods.Object);
 
             return await service.EvaluateAsync(new DialerEligibilityContext
             {

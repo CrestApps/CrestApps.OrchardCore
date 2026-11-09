@@ -95,12 +95,14 @@ public interface IMessagingChannel
     Task<MessageDispatchResult> SendAsync(MessagingOutboundMessage message, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Determines whether the contact has asked not to be reached on this channel. The workspace refuses to send
-    /// to an opted-out contact and sends them nothing automated.
+    /// Determines whether the contact, or the person at the address, has asked not to be reached on this channel. The
+    /// workspace refuses to send to an opted-out contact or address and sends them nothing automated.
     /// </summary>
-    /// <param name="contact">The contact content item.</param>
-    /// <returns><see langword="true"/> when the contact has opted out of this channel.</returns>
-    bool IsOptedOut(ContentItem contact);
+    /// <param name="contact">The contact content item, or <see langword="null"/> when no contact holds the address.</param>
+    /// <param name="address">The address the message would be sent to.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see langword="true"/> when the contact or the address has opted out of this channel.</returns>
+    Task<bool> IsOptedOutAsync(ContentItem contact, string address, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists the addresses the contact can be reached at on this channel, preferred first.

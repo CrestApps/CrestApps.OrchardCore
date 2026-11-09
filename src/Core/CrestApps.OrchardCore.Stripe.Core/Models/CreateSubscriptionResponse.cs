@@ -3,7 +3,7 @@ namespace CrestApps.OrchardCore.Stripe.Core.Models;
 /// <summary>
 /// Represents the result returned after a Stripe subscription is created.
 /// </summary>
-public class CreateSubscriptionResponse
+public sealed class CreateSubscriptionResponse
 {
     /// <summary>
     /// Gets or sets the Stripe subscription identifier.

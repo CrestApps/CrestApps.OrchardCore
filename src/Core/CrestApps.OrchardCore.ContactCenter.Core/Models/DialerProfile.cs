@@ -61,6 +61,33 @@ public sealed class DialerProfile : CatalogItem, INameAwareModel, IModifiedUtcAw
     public int RingTimeoutSeconds { get; set; } = DialerAbandonment.DefaultRingTimeoutSeconds;
 
     /// <summary>
+    /// The shortest time a preview offer may stay with the agent it was offered to, in seconds.
+    /// </summary>
+    public const int MinimumPreviewOfferTimeoutSeconds = 15;
+
+    /// <summary>
+    /// The longest time a preview offer may stay with the agent it was offered to, in seconds.
+    /// </summary>
+    public const int MaximumPreviewOfferTimeoutSeconds = 3600;
+
+    /// <summary>
+    /// The time a preview offer stays with the agent when the profile does not say, in seconds.
+    /// </summary>
+    public const int DefaultPreviewOfferTimeoutSeconds = 180;
+
+    /// <summary>
+    /// Gets or sets how many seconds a preview record stays reserved for the agent it was offered to before it goes
+    /// back to the queue for someone else.
+    /// </summary>
+    /// <remarks>
+    /// A campaign's queue is never stored, so it has no offer timeout of its own, and a preview offer used to expire
+    /// after thirty seconds. Reviewing a record, updating the contact and choosing a disposition takes longer than
+    /// that, so the offer expired under the agent, the record was offered again, and the agent was refused the
+    /// disposition they had just filled in. Zero means <see cref="DefaultPreviewOfferTimeoutSeconds"/>.
+    /// </remarks>
+    public int PreviewOfferTimeoutSeconds { get; set; } = DefaultPreviewOfferTimeoutSeconds;
+
+    /// <summary>
     /// Gets or sets the seconds added to a preview offer when the agent asks for more time.
     /// </summary>
     /// <remarks>

@@ -427,7 +427,7 @@ Typical uses:
 - identifiers or external keys
 - timestamps or workflow markers stored outside a part
 
-`GetColumns()` defines the columns that should appear in templates and exports. `ImportAsync()` reads values from the current row. `ExportAsync()` writes values back to the export row.
+`GetColumnsAsync()` defines the columns that should appear in templates and exports. `ImportAsync()` reads values from the current row. `ExportAsync()` writes values back to the export row.
 
 ```csharp
 using System.Data;
@@ -435,14 +435,15 @@ using CrestApps.OrchardCore.ContentTransfer;
 
 public sealed class ProductContentImportHandler : IContentImportHandler
 {
-    public IReadOnlyCollection<ImportColumn> GetColumns(ImportContentContext context)
-        => [
+    public Task<IReadOnlyCollection<ImportColumn>> GetColumnsAsync(ImportContentContext context)
+        => Task.FromResult<IReadOnlyCollection<ImportColumn>>(
+        [
             new ImportColumn
             {
                 Name = "ExternalSku",
                 Description = "The external SKU used by the product system.",
             },
-        ];
+        ]);
 
     public Task ImportAsync(ContentImportContext context)
     {
@@ -742,17 +743,17 @@ services.AddScoped<IDisplayDriver<ExportRequest>, ProductExportOptionsDisplayDri
 
 ### Read the option back and add columns
 
-The export entry is available to `IContentImportHandler` as `context.Entry` on both `GetColumns` (via `ImportContentContext`) and `ExportAsync` (via `ContentExportContext`). Return export-only columns when your option is enabled, and fill them per row:
+The export entry is available to `IContentImportHandler` as `context.Entry` on both `GetColumnsAsync` (via `ImportContentContext`) and `ExportAsync` (via `ContentExportContext`). Return export-only columns when your option is enabled, and fill them per row:
 
 ```csharp
-public IReadOnlyCollection<ImportColumn> GetColumns(ImportContentContext context)
+public Task<IReadOnlyCollection<ImportColumn>> GetColumnsAsync(ImportContentContext context)
 {
     if (context.Entry is null || !context.Entry.TryGet<ProductExportOptionsPart>(out var options) || !options.IncludeCatalogSnapshot)
     {
-        return [];
+        return Task.FromResult<IReadOnlyCollection<ImportColumn>>([]);
     }
 
-    return [new ImportColumn { Name = "Catalog snapshot", Type = ImportColumnType.ExportOnly }];
+    return Task.FromResult<IReadOnlyCollection<ImportColumn>>([new ImportColumn { Name = "Catalog snapshot", Type = ImportColumnType.ExportOnly }]);
 }
 ```
 

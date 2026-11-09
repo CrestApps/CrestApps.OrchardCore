@@ -8,6 +8,7 @@ using CrestApps.Core.AI.Resilience;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.Infrastructure;
 using CrestApps.Core.Infrastructure.Indexing.DataSources;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Indexing;
@@ -675,7 +676,7 @@ public sealed class DataSourceIndexingService
         {
             dataSources = dataSources
                 .Where(dataSource => string.Equals(
-                    GetSourceType(dataSource),
+                    AIDataSourceExtensions.GetSourceType(dataSource),
                     AIDataSourceSourceTypes.SearchIndexProfile,
                     StringComparison.OrdinalIgnoreCase))
                 .ToArray();
@@ -815,7 +816,7 @@ public sealed class DataSourceIndexingService
         {
             _logger.LogWarning(
                 "No source handler found for source type '{SourceType}' on data source '{DataSourceId}'.",
-                GetSourceType(dataSource),
+                AIDataSourceExtensions.GetSourceType(dataSource),
                 dataSource.ItemId);
 
             return;
@@ -1093,7 +1094,7 @@ public sealed class DataSourceIndexingService
 
     private static bool HasSourceConfiguration(AIDataSource dataSource)
     {
-        var sourceType = GetSourceType(dataSource);
+        var sourceType = AIDataSourceExtensions.GetSourceType(dataSource);
 
         return !string.IsNullOrWhiteSpace(sourceType) &&
             (!string.Equals(sourceType, AIDataSourceSourceTypes.SearchIndexProfile, StringComparison.OrdinalIgnoreCase) ||
@@ -1104,18 +1105,9 @@ public sealed class DataSourceIndexingService
     {
         ArgumentNullException.ThrowIfNull(dataSource);
 
-        var sourceType = GetSourceType(dataSource);
+        var sourceType = AIDataSourceExtensions.GetSourceType(dataSource);
 
         return _serviceProvider.GetKeyedService<IAIDataSourceSourceHandler>(sourceType);
-    }
-
-    private static string GetSourceType(AIDataSource dataSource)
-    {
-        ArgumentNullException.ThrowIfNull(dataSource);
-
-        return string.IsNullOrWhiteSpace(dataSource.Source)
-            ? AIDataSourceSourceTypes.SearchIndexProfile
-            : dataSource.Source;
     }
 
     private static bool HasEmbeddingDeployment(IndexProfile profile)

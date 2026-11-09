@@ -82,6 +82,8 @@ internal sealed class AgentSkillsSync
             }
         }
 
+        var previous = Syncing;
+
         Syncing = true;
 
         try
@@ -116,7 +118,7 @@ internal sealed class AgentSkillsSync
         }
         finally
         {
-            Syncing = false;
+            Syncing = previous;
         }
 
         profile.Put(new SharedSkillsSyncState { Fingerprint = Fingerprint(profile.SkillProficiencies) });

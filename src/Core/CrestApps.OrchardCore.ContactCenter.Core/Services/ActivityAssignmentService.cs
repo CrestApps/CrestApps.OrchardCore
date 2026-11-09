@@ -32,6 +32,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
     private readonly ContactCenterCoordinationOptions _coordinationOptions;
     private readonly IQueuedDialerWorkGate _dialerWorkGate;
     private readonly IDialerDecisionLog _decisionLog;
+    private readonly IDialerProfileReader _dialerProfileReader;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -72,8 +73,10 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         IOptions<ContactCenterCoordinationOptions> coordinationOptions,
         ILogger<ActivityAssignmentService> logger,
         IQueuedDialerWorkGate dialerWorkGate,
-        IDialerDecisionLog decisionLog)
+        IDialerDecisionLog decisionLog,
+        IDialerProfileReader dialerProfileReader)
     {
+        _dialerProfileReader = dialerProfileReader;
         _queueItemManager = queueItemManager;
         _availabilityService = availabilityService;
         _queueManager = queueManager;
@@ -361,6 +364,21 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         var timeout = queue.ReservationTimeoutSeconds > 0
             ? queue.ReservationTimeoutSeconds
             : 30;
+
+        // A campaign's queue is never stored, so its offers always had the thirty-second default, which a preview
+        // agent reviewing a record outlasts. The profile the record is dialed under says how long its offer lasts.
+        if (ContactCenterConstants.IsCampaignQueue(queueId) &&
+            !string.IsNullOrEmpty(topItem.DialerProfileId))
+        {
+            var profile = await _dialerProfileReader.FindByIdAsync(topItem.DialerProfileId, cancellationToken);
+
+            if (profile is not null && profile.Mode is DialerMode.Preview or DialerMode.Manual)
+            {
+                timeout = profile.PreviewOfferTimeoutSeconds > 0
+                    ? profile.PreviewOfferTimeoutSeconds
+                    : DialerProfile.DefaultPreviewOfferTimeoutSeconds;
+            }
+        }
 
         if (_logger.IsEnabled(LogLevel.Debug))
         {

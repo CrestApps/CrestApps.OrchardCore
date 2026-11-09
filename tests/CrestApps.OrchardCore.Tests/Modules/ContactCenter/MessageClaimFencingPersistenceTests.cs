@@ -7,6 +7,10 @@ using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
+using CrestApps.OrchardCore.Webhooks.Core.Indexes;
+using CrestApps.OrchardCore.Webhooks.Core.Models;
+using CrestApps.OrchardCore.Webhooks.Core.Services;
+using CrestApps.OrchardCore.Webhooks.Indexes;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -253,9 +257,9 @@ public sealed class MessageClaimFencingPersistenceTests
                 settlementSession,
                 new Mock<IDistributedLock>().Object,
                 new ProviderIdentityResolver([]),
-                new Mock<IContactCenterScopeExecutor>().Object,
+                new Mock<IProviderWebhookInboxScopeExecutor>().Object,
                 CreateClock(),
-                Options.Create(new ContactCenterRetentionOptions()),
+                Options.Create(new ProviderWebhookInboxOptions()),
                 NullLogger<ProviderWebhookInbox>.Instance);
             var exception = await Record.ExceptionAsync(() => settlement.SettleClaimAsync(
                 "message-1",

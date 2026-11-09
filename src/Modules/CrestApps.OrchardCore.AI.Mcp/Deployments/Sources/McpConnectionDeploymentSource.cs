@@ -4,11 +4,14 @@ using CrestApps.Core.AI.Mcp;
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Mcp.Deployments.Steps;
-using OrchardCore.Deployment;
+using CrestApps.OrchardCore.Core.Deployments;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Deployments.Sources;
 
-internal sealed class McpConnectionDeploymentSource : DeploymentSourceBase<McpConnectionDeploymentStep>
+/// <summary>
+/// Writes the selected MCP client connections to a deployment plan, with the credentials of SSE connections blanked.
+/// </summary>
+internal sealed class McpConnectionDeploymentSource : CatalogDeploymentSourceBase<McpConnectionDeploymentStep, McpConnection>
 {
     private readonly ISourceCatalog<McpConnection> _store;
 
@@ -17,51 +20,36 @@ internal sealed class McpConnectionDeploymentSource : DeploymentSourceBase<McpCo
     /// </summary>
     /// <param name="store">The store.</param>
     public McpConnectionDeploymentSource(ISourceCatalog<McpConnection> store)
+        : base("Connections")
     {
         _store = store;
     }
 
-    protected override async Task ProcessAsync(McpConnectionDeploymentStep step, DeploymentPlanResult result)
+    protected override async Task<IEnumerable<McpConnection>> GetEntriesAsync()
+        => await _store.GetAllAsync();
+
+    protected override bool IsSelected(McpConnectionDeploymentStep step, McpConnection entry)
+        => IsSelectedByKey(step.IncludeAll, step.ConnectionIds, entry.ItemId);
+
+    protected override JsonObject Export(McpConnection entry)
     {
-        var connections = await _store.GetAllAsync();
-
-        var connectionsData = new JsonArray();
-
-        var connectionIds = step.IncludeAll
-        ? []
-        : step.ConnectionIds ?? [];
-
-        foreach (var connection in connections)
+        var deploymentInfo = new JsonObject()
         {
-            if (connectionIds.Length > 0 && !connectionIds.Contains(connection.ItemId))
-            {
-                continue;
-            }
+            { "ItemId", entry.ItemId },
+            { "DisplayText", entry.DisplayText },
+            { "Source", entry.Source },
+            { "Author", entry.Author },
+            { "CreatedUtc", entry.CreatedUtc },
+            { "OwnerId", entry.OwnerId },
+        };
 
-            var deploymentInfo = new JsonObject()
-            {
-                { "ItemId", connection.ItemId },
-                { "DisplayText", connection.DisplayText },
-                { "Source", connection.Source },
-                { "Author", connection.Author },
-                { "CreatedUtc" , connection.CreatedUtc },
-                { "OwnerId" , connection.OwnerId },
-            };
+        var properties = JsonSerializer.SerializeToNode(entry.Properties)?.AsObject() ?? new JsonObject();
 
-            var properties = JsonSerializer.SerializeToNode(connection.Properties)?.AsObject() ?? new JsonObject();
+        SanitizeSensitiveData(entry, properties);
 
-            SanitizeSensitiveData(connection, properties);
+        deploymentInfo["Properties"] = properties;
 
-            deploymentInfo["Properties"] = properties;
-
-            connectionsData.Add(deploymentInfo);
-        }
-
-        result.Steps.Add(new JsonObject
-        {
-            ["name"] = step.Name,
-            ["Connections"] = connectionsData,
-        });
+        return deploymentInfo;
     }
 
     private static void SanitizeSensitiveData(McpConnection connection, JsonObject properties)

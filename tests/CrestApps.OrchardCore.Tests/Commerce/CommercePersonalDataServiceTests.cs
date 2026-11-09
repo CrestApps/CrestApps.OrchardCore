@@ -12,6 +12,7 @@ using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Customers.Handlers;
 using CrestApps.OrchardCore.Customers.Models;
+using CrestApps.OrchardCore.PersonalData.Core.Services;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Core.Models;
 using CrestApps.OrchardCore.Stripe.Services;
@@ -270,15 +271,20 @@ public sealed class CommercePersonalDataServiceTests : IAsyncLifetime
 
         await customers.CreateAsync(customer, TestContext.Current.CancellationToken);
 
-        var privacy = new DefaultCustomerPrivacyService(customers, [new CommercePersonalDataCustomerPrivacyHandler(CreateService())], Clock());
+        // The commerce contract reaches the Customers privacy request through the one personal-data service.
+        var personalData = new DefaultPersonalDataService([new CommercePersonalDataContributor(CreateService())], Clock());
+        var privacy = new DefaultCustomerPrivacyService(customers, [new PersonalDataCustomerPrivacyHandler(personalData)], Clock());
 
         // Act
         var export = await privacy.ExportAsync(customer, "admin", TestContext.Current.CancellationToken);
         await privacy.EraseAsync(customer, "admin", TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(2, export["commerce"]?["transactions"]?.AsArray().Count);
-        Assert.Single(export["commerce"]?["installmentPlans"]?.AsArray());
+        var records = export["personalData"]?["records"]?.AsArray();
+        Assert.NotNull(records);
+        Assert.Equal(2, records.Count(record => record?["kind"]?.GetValue<string>() == CommercePersonalDataContributor.TransactionKind));
+        Assert.Single(records, record => record?["kind"]?.GetValue<string>() == CommercePersonalDataContributor.InstallmentPlanKind);
+        Assert.All(records, record => Assert.False(string.IsNullOrEmpty(record?["title"]?.GetValue<string>())));
 
         foreach (var record in await GetPersonsRecordsAsync())
         {

@@ -22,7 +22,7 @@ public sealed class AzureEmailSettingsSchema : SiteSettingsSchemaBase
             .Properties(
                 ("IsEnabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the Azure email provider is enabled.")),
                 ("DefaultSender", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The default sender email address.")),
-                ("ConnectionString", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The Azure Communication Services connection string.")))
-            .Required("ConnectionString")
+                ("ConnectionString", ProtectedCredential("Azure Communication Services connection string", "ConnectionStringSecretName")),
+                ("ConnectionStringSecretName", SecretName("Azure Communication Services connection string")))
             .AdditionalProperties(false);
 }

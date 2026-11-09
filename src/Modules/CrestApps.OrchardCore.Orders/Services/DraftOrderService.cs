@@ -3,9 +3,11 @@ using System.Text.Encodings.Web;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Carts.Core.Models;
 using CrestApps.OrchardCore.Carts.Core.Services;
+using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
@@ -214,7 +216,7 @@ public sealed class DraftOrderService
         {
             Kind = order.Quote is null ? OrderEmailKinds.Invoice : OrderEmailKinds.Quote,
             To = order.CustomerEmail,
-            Order = order,
+            Models = OrderEmailModels.For(order),
             Reference = order.ItemId,
         }, async _ =>
         {
@@ -269,7 +271,7 @@ public sealed class DraftOrderService
     {
         var prices = lines
             .Where(line => line.UnitPrice is >= 0)
-            .ToDictionary(line => line.LineId, line => Math.Round(line.UnitPrice.Value, 2, MidpointRounding.AwayFromZero), StringComparer.Ordinal);
+            .ToDictionary(line => line.LineId, line => Money.Round(line.UnitPrice.Value, order.Currency), StringComparer.Ordinal);
 
         foreach (var line in order.Lines)
         {

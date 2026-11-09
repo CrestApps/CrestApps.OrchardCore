@@ -12,6 +12,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Fluid;
 using Fluid.Values;
 using Microsoft.AspNetCore.Html;
 using Microsoft.Extensions.AI;
@@ -246,11 +247,11 @@ public sealed class SmsOmnichannelProcessorTests
             new[] { "Activity", "Contact", "FlowSettings", "Profile", "Session" },
             harness.Liquid.Properties.Keys.OrderBy(key => key, StringComparer.Ordinal));
 
-        Assert.Same(activity, harness.Liquid.Properties["Activity"].ToObjectValue());
-        Assert.Same(contact, harness.Liquid.Properties["Contact"].ToObjectValue());
-        Assert.Same(harness.FlowSettings.Find(activity.SubjectContentType), harness.Liquid.Properties["FlowSettings"].ToObjectValue());
-        Assert.Same(harness.Profiles.Find("profile-1"), harness.Liquid.Properties["Profile"].ToObjectValue());
-        Assert.Same(Assert.Single(harness.Sessions.Saved), harness.Liquid.Properties["Session"].ToObjectValue());
+        Assert.Same(activity, harness.Liquid.Properties["Activity"].ToObjectValue(new TemplateContext()));
+        Assert.Same(contact, harness.Liquid.Properties["Contact"].ToObjectValue(new TemplateContext()));
+        Assert.Same(harness.FlowSettings.Find(activity.SubjectContentType), harness.Liquid.Properties["FlowSettings"].ToObjectValue(new TemplateContext()));
+        Assert.Same(harness.Profiles.Find("profile-1"), harness.Liquid.Properties["Profile"].ToObjectValue(new TemplateContext()));
+        Assert.Same(Assert.Single(harness.Sessions.Saved), harness.Liquid.Properties["Session"].ToObjectValue(new TemplateContext()));
     }
 
     [Fact]
@@ -273,7 +274,7 @@ public sealed class SmsOmnichannelProcessorTests
         await harness.CreateProcessor().StartAsync(activity, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Same(campaign, harness.Liquid.Properties["Campaign"].ToObjectValue());
+        Assert.Same(campaign, harness.Liquid.Properties["Campaign"].ToObjectValue(new TemplateContext()));
     }
 
     [Fact]
@@ -635,7 +636,7 @@ public sealed class SmsOmnichannelProcessorTests
                 Sms,
                 Liquid,
                 contentManager.Object,
-                OptOutResolver,
+                CrestApps.OrchardCore.Tests.Doubles.ConsentDoubles.Over(OptOutResolver, contentManager.Object),
                 new StubClock(_now),
                 new PassThroughStringLocalizer<SmsOmnichannelProcessor>());
         }

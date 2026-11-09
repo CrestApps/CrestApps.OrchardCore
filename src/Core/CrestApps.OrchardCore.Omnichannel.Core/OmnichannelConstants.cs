@@ -132,6 +132,19 @@ public static class OmnichannelConstants
     }
 
     /// <summary>
+    /// The stable technical names of the provider webhook inbox handlers that process Omnichannel deliveries. A
+    /// delivery stores the handler name with its payload, so a name never changes once it ships.
+    /// </summary>
+    public static class WebhookInboxHandlers
+    {
+        /// <summary>
+        /// The handler that stores an inbound text and raises <see cref="Events.SmsReceived"/>. Every SMS webhook
+        /// (Twilio, Telnyx and Azure Event Grid) accepts its inbound texts under this name.
+        /// </summary>
+        public const string SmsReceived = "sms-inbound";
+    }
+
+    /// <summary>
     /// Well-known stable reason codes recorded on <see cref="Models.OmnichannelActivity.TerminalReasonCode"/>
     /// when an automated activity reaches a terminal state.
     /// </summary>
@@ -268,6 +281,8 @@ public static class OmnichannelConstants
         public const string Managements = "CrestApps.OrchardCore.Omnichannel.Managements";
 
         public const string Crm = "CrestApps.OrchardCore.Omnichannel.Crm";
+
+        public const string EmailAutomation = "CrestApps.OrchardCore.Omnichannel.Email";
     }
 
     /// <summary>

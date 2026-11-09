@@ -12,7 +12,7 @@ namespace CrestApps.OrchardCore.Reports.Designer.RealTime;
 /// open, and offers to reload when someone else changes, publishes, or discards it.
 /// </summary>
 [Feature(ReportsConstants.BuilderFeature)]
-[RequireFeatures("OrchardCore.SignalR")]
+[RequireFeatures(OrchardCoreFeatureIds.SignalR)]
 public sealed class ReportsRealTimeStartup : StartupBase
 {
     // Runs after DesignerStartup, so its notifier replaces the default one.

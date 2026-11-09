@@ -1,14 +1,17 @@
 using System.Text.Json.Nodes;
-using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Core.Recipes;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Recipes.Models;
-using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.AI.Recipes;
 
-internal sealed class AIProfileStep : NamedRecipeStepHandler
+/// <summary>
+/// Imports AI profiles. A profile is matched by its item id, then by its name.
+/// </summary>
+internal sealed class AIProfileStep : CatalogRecipeStepBase<AIProfile>
 {
     /// <summary>
     /// The recipe step key used to identify this handler.
@@ -27,80 +30,31 @@ internal sealed class AIProfileStep : NamedRecipeStepHandler
     public AIProfileStep(
         IAIProfileManager profileManager,
         IStringLocalizer<AIProfileStep> stringLocalizer)
-    : base(StepKey)
+        : base(StepKey, "Profiles")
     {
         _profileManager = profileManager;
         S = stringLocalizer;
     }
 
-    protected override async Task HandleAsync(RecipeExecutionContext context)
+    protected override ValueTask<AIProfile> FindByIdAsync(string id)
+        => _profileManager.FindByIdAsync(id);
+
+    protected override async ValueTask<CatalogRecipeLookup<AIProfile>> FindExistingAsync(JsonObject token, RecipeExecutionContext context)
     {
-        var model = context.Step.ToObject<AIProfileStepModel>();
-        var tokens = model.Profiles.Cast<JsonObject>() ?? [];
+        var name = token[nameof(AIProfile.Name)]?.GetValue<string>()?.Trim();
 
-        foreach (var token in tokens)
-        {
-            AIProfile profile = null;
-            var isNew = false;
-
-            var id = token[nameof(AIProfile.ItemId)]?.GetValue<string>();
-
-            var hasId = !string.IsNullOrEmpty(id);
-
-            if (hasId)
-            {
-                profile = await _profileManager.FindByIdAsync(id);
-            }
-
-            if (profile is null)
-            {
-                var name = token[nameof(AIProfile.Name)]?.GetValue<string>()?.Trim();
-
-                if (!string.IsNullOrEmpty(name))
-                {
-                    profile = await _profileManager.FindByNameAsync(name);
-                }
-            }
-
-            if (profile is not null)
-            {
-                await _profileManager.UpdateAsync(profile, token);
-            }
-            else
-            {
-                isNew = true;
-                profile = await _profileManager.NewAsync(token);
-
-                if (hasId && UniqueId.IsValid(id))
-                {
-                    profile.ItemId = id;
-                }
-            }
-
-            var validationResult = await _profileManager.ValidateAsync(profile);
-
-            if (!validationResult.Succeeded)
-            {
-                foreach (var error in validationResult.Errors)
-                {
-                    context.Errors.Add(error.ErrorMessage);
-                }
-
-                continue;
-            }
-
-            if (isNew)
-            {
-                await _profileManager.CreateAsync(profile);
-            }
-        }
+        return CatalogRecipeLookup<AIProfile>.Found(string.IsNullOrEmpty(name) ? null : await _profileManager.FindByNameAsync(name));
     }
 
-    private sealed class AIProfileStepModel
-    {
-        /// <summary>
-        /// Gets or sets the collection of AI profile definitions to import.
-        /// </summary>
-        public JsonArray Profiles { get; set; }
-    }
+    protected override ValueTask UpdateAsync(AIProfile entry, JsonObject token)
+        => _profileManager.UpdateAsync(entry, token);
+
+    protected override ValueTask<AIProfile> NewAsync(JsonObject token, RecipeExecutionContext context)
+        => _profileManager.NewAsync(token);
+
+    protected override ValueTask<ValidationResultDetails> ValidateAsync(AIProfile entry)
+        => _profileManager.ValidateAsync(entry);
+
+    protected override ValueTask CreateAsync(AIProfile entry)
+        => _profileManager.CreateAsync(entry);
 }

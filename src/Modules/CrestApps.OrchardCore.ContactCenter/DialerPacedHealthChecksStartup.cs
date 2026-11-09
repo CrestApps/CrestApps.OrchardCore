@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// it.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.DialerPaced)]
-[RequireFeatures("OrchardCore.HealthChecks")]
+[RequireFeatures(OrchardCoreFeatureIds.HealthChecks)]
 public sealed class DialerPacedHealthChecksStartup : StartupBase
 {
     /// <inheritdoc/>

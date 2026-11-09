@@ -72,7 +72,7 @@ public sealed class ChatInteractionsStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the UserMemory feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Users")]
+[RequireFeatures(OrchardCoreFeatureIds.Users)]
 public sealed class UserMemoryStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

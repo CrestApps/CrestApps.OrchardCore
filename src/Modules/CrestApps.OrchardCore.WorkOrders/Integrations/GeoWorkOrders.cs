@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Geo.Services;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.WorkOrders.Services;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.WorkOrders.Integrations;
 
@@ -70,16 +71,19 @@ internal sealed class WorkOrderAddressGeocodeTarget : IGeocodeTarget
 {
     private readonly WorkOrderStore _store;
     private readonly ITerritoryResolver _territories;
+    private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WorkOrderAddressGeocodeTarget"/> class.
     /// </summary>
     /// <param name="store">The work order store.</param>
     /// <param name="territories">The territory resolver.</param>
-    public WorkOrderAddressGeocodeTarget(WorkOrderStore store, ITerritoryResolver territories)
+    /// <param name="clock">The clock the geocoded address is stamped with.</param>
+    public WorkOrderAddressGeocodeTarget(WorkOrderStore store, ITerritoryResolver territories, IClock clock)
     {
         _store = store;
         _territories = territories;
+        _clock = clock;
     }
 
     /// <inheritdoc/>
@@ -114,7 +118,7 @@ internal sealed class WorkOrderAddressGeocodeTarget : IGeocodeTarget
             Phone = located.Phone,
             Latitude = candidate.Point.Latitude,
             Longitude = candidate.Point.Longitude,
-            GeocodedUtc = DateTime.UtcNow,
+            GeocodedUtc = _clock.UtcNow,
             GeocodeSource = source,
         };
 

@@ -38,4 +38,21 @@ public abstract class SiteSettingsSchemaBase : ISiteSettingsSchemaDefinition
     /// </summary>
     protected static JsonSchemaBuilder OpenObject()
         => RecipeStepSchemaBuilders.Object(additionalProperties: true);
+
+    /// <summary>
+    /// Creates the schema of a credential that Orchard Core stores protected with ASP.NET Core Data Protection.
+    /// </summary>
+    /// <param name="credential">The credential, for example "SMTP password".</param>
+    /// <param name="secretNameProperty">The name of the sibling property that references a secret instead.</param>
+    protected static JsonSchemaBuilder ProtectedCredential(string credential, string secretNameProperty)
+        => RecipeStepSchemaBuilders.String()
+            .Description($"The {credential}, protected with the tenant's ASP.NET Core Data Protection keys. A clear value does not work. In recipes, set '{secretNameProperty}' instead.");
+
+    /// <summary>
+    /// Creates the schema of a property that references a secret of the Orchard Core Secrets module.
+    /// </summary>
+    /// <param name="credential">The credential, for example "SMTP password".</param>
+    protected static JsonSchemaBuilder SecretName(string credential)
+        => RecipeStepSchemaBuilders.String()
+            .Description($"The name of the secret (OrchardCore.Secrets feature) that holds the {credential}. When it is set, it takes precedence over the protected value. Create the secret with the 'Secrets' recipe step.");
 }

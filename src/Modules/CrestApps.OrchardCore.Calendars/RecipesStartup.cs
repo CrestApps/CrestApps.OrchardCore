@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Calendars;
 /// <summary>
 /// Registers the Calendars recipe step.
 /// </summary>
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class RecipesStartup : StartupBase
 {
     /// <inheritdoc />

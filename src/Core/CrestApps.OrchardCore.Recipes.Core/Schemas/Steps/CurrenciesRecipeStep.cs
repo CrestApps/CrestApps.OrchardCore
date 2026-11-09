@@ -14,12 +14,11 @@ public sealed class CurrenciesRecipeStep : RecipeStepSchemaBase
     {
         var currencySchema = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
+            .Description("A currency, matched by ItemId, then by its code.")
             .Properties(
-                ("ItemId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional unique identifier.")),
-                ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The ISO-4217 currency code, for example USD.")),
-                ("DisplayName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The friendly name shown in currency dropdowns, for example US Dollar.")),
-                ("OwnerId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The user id of the user creating the entry. Leave it blank to use the current user's Id.")),
-                ("Author", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The username of the user creating the entry. Leave it blank to use the current username.")))
+                ("ItemId", CatalogRecipeStepSchemas.ItemId("currency")),
+                ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Pattern("^[A-Z]{3}$").Description("The three-letter ISO-4217 currency code in upper case, for example USD. A currency without a matching ItemId is matched by this code.")),
+                ("DisplayName", new JsonSchemaBuilder().Type(SchemaValueType.String).MinLength(1).Description("The friendly name shown in currency dropdowns, for example US Dollar.")))
             .Required("Name", "DisplayName")
             .AdditionalProperties(true);
 

@@ -12,7 +12,7 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// sets of the records the base feature stores (interactions, their events, call sessions, and call quality). Every
 /// other feature registers the data sets of its own records, so a data set is listed only while its feature is on.
 /// </summary>
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class DataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -31,7 +31,7 @@ public sealed class DataSourcesStartup : StartupBase
 /// log of the routing decisions it makes (and the dial suppressions of the dialer, which builds on it).
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Queues)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class QueuesDataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -48,7 +48,7 @@ public sealed class QueuesDataSourcesStartup : StartupBase
 /// Registers the data sets of the outbound dialer feature: dialer profiles and callback requests.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Dialer)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class DialerDataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -63,7 +63,7 @@ public sealed class DialerDataSourcesStartup : StartupBase
 /// Registers the data set of the paced dialing feature: the pacing cycles it records.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.DialerPaced)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class DialerPacedDataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -76,7 +76,7 @@ public sealed class DialerPacedDataSourcesStartup : StartupBase
 /// Registers the data set of the call recording feature.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Recording)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class RecordingDataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -89,7 +89,7 @@ public sealed class RecordingDataSourcesStartup : StartupBase
 /// Registers the data set of the agent services feature: agent profiles.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.AgentServices)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class AgentServicesDataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -102,7 +102,7 @@ public sealed class AgentServicesDataSourcesStartup : StartupBase
 /// Registers the data sets of the agents feature: agent sessions, and the agent state changes it records.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Agents)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class AgentsDataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -117,7 +117,7 @@ public sealed class AgentsDataSourcesStartup : StartupBase
 /// Registers the data set of the inbound voice feature: shared voicemails.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.InboundVoice)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class InboundVoiceDataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

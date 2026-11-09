@@ -155,6 +155,8 @@ The `ask` AI tool takes the same `query`, `context` and `prefer` arguments as `P
 
 A caller picks one of the selected indexes by its name in `query.site`. Without a match, the first index is used.
 
+The **NLWeb settings** deployment step writes them into a `Settings` step like the one above, so they move to another site with a deployment plan. The index profiles, the AI deployment and the data source are named, not copied: create them on the other site too.
+
 ## Permissions
 
 | Permission | Key | Default roles |

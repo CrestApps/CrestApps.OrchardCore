@@ -23,7 +23,8 @@ public sealed class AzureAISearchDefaultSettingsSchema : SiteSettingsSchemaBase
                 ("UseCustomConfiguration", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to use custom configuration instead of the default.")),
                 ("AuthenticationType", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The authentication type for Azure AI Search.").Enum("Default", "ApiKey", "ManagedIdentity")),
                 ("Endpoint", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The Azure AI Search service endpoint URL.")),
-                ("ApiKey", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The API key for authenticating with Azure AI Search.")),
+                ("ApiKey", ProtectedCredential("Azure AI Search API key", "ApiKeySecretName")),
+                ("ApiKeySecretName", SecretName("Azure AI Search API key")),
                 ("IdentityClientId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The client ID of the managed identity to use.")))
             .AdditionalProperties(false);
 }

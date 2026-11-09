@@ -12,8 +12,6 @@ namespace CrestApps.OrchardCore.Subscriptions.Core.Services;
 /// </summary>
 public sealed class TenantProvisioningJobStore : DocumentCatalog<TenantProvisioningJob, TenantProvisioningJobIndex>, ITenantProvisioningJobStore
 {
-    private readonly IClock _clock;
-
     /// <summary>
     /// Enables document-version concurrency checks so two nodes cannot both claim the same job and create
     /// the tenant twice.
@@ -26,10 +24,9 @@ public sealed class TenantProvisioningJobStore : DocumentCatalog<TenantProvision
     /// <param name="session">The tenant YesSql session.</param>
     /// <param name="clock">The clock used for timestamps.</param>
     public TenantProvisioningJobStore(ISession session, IClock clock)
-        : base(session)
+        : base(session, clock)
     {
         CollectionName = SubscriptionConstants.TenantProvisioningCollectionName;
-        _clock = clock;
     }
 
     /// <inheritdoc/>
@@ -81,20 +78,5 @@ public sealed class TenantProvisioningJobStore : DocumentCatalog<TenantProvision
             .ListAsync(cancellationToken);
 
         return records.ToArray();
-    }
-
-    /// <inheritdoc/>
-    protected override ValueTask SavingAsync(TenantProvisioningJob record)
-    {
-        var now = _clock.UtcNow;
-
-        if (record.CreatedUtc == default)
-        {
-            record.CreatedUtc = now;
-        }
-
-        record.UpdatedUtc = now;
-
-        return ValueTask.CompletedTask;
     }
 }

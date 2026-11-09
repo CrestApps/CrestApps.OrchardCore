@@ -202,6 +202,13 @@
 
                 var node = root.document.importNode(fresh, true);
 
+                // The chart drawn on the old canvas stops listening to the page before the new one is drawn.
+                section.querySelectorAll('canvas[data-report-chart]').forEach(function (canvas) {
+                    if (canvas.reportChart && canvas.reportChart.destroy) {
+                        canvas.reportChart.destroy();
+                    }
+                });
+
                 section.replaceWith(node);
 
                 if (root.CrestAppsReportCharts) {
@@ -213,9 +220,19 @@
                 return;
             }
 
+            // The visuals keep their rows, and say they could not be filtered, so they aren't taken for filtered ones.
             sections.forEach(function (section) {
                 section.classList.remove('is-refreshing');
                 section.removeAttribute('aria-busy');
+
+                if (!section.querySelector(':scope > .report-refresh-failed')) {
+                    var alert = root.document.createElement('div');
+
+                    alert.className = 'alert alert-warning py-1 px-2 small report-refresh-failed';
+                    alert.setAttribute('role', 'alert');
+                    alert.textContent = form.getAttribute('data-report-refresh-failed-text') || 'This visual could not be filtered. Reload the page to try again.';
+                    section.insertBefore(alert, section.firstChild);
+                }
             });
         });
     }

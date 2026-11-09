@@ -2,13 +2,9 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.SignalR.Core;
 using CrestApps.OrchardCore.Telephony;
-using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
@@ -24,27 +20,23 @@ namespace CrestApps.OrchardCore.ContactCenter.Services;
 public sealed class ContactCenterOfferAnsweredNotifier : IContactCenterOfferAnsweredNotifier
 {
     private readonly IContactCenterRealTimeNotifier _realTimeNotifier;
-    private readonly IHubContext<TelephonyHub, ITelephonyClient> _telephonyHubContext;
+    private readonly ISoftPhoneClientNotifier _softPhones;
     private readonly ILogger _logger;
-    private readonly string _tenantName;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterOfferAnsweredNotifier"/> class.
     /// </summary>
     /// <param name="realTimeNotifier">The Contact Center real-time notifier.</param>
-    /// <param name="telephonyHubContext">The Telephony hub the soft phones listen on.</param>
+    /// <param name="softPhones">Pushes to the agent's soft phones.</param>
     /// <param name="logger">The logger.</param>
-    /// <param name="shellSettings">The current tenant, which scopes the user's SignalR group.</param>
     public ContactCenterOfferAnsweredNotifier(
         IContactCenterRealTimeNotifier realTimeNotifier,
-        IHubContext<TelephonyHub, ITelephonyClient> telephonyHubContext,
-        ILogger<ContactCenterOfferAnsweredNotifier> logger,
-        ShellSettings shellSettings)
+        ISoftPhoneClientNotifier softPhones,
+        ILogger<ContactCenterOfferAnsweredNotifier> logger)
     {
         _realTimeNotifier = realTimeNotifier;
-        _telephonyHubContext = telephonyHubContext;
+        _softPhones = softPhones;
         _logger = logger;
-        _tenantName = shellSettings.Name;
     }
 
     /// <inheritdoc/>
@@ -64,13 +56,11 @@ public sealed class ContactCenterOfferAnsweredNotifier : IContactCenterOfferAnsw
         try
         {
             // The soft phones first: they are the ones ringing in the agent's ear.
-            await _telephonyHubContext.Clients
-                .Group(TenantSignalRGroupName.ForUser(_tenantName, agentUserId))
-                .IncomingCallAnswered(new IncomingCallAnsweredNotification
-                {
-                    CallId = providerCallId,
-                    OfferId = reservation.ItemId,
-                });
+            await _softPhones.IncomingCallAnsweredAsync(agentUserId, new IncomingCallAnsweredNotification
+            {
+                CallId = providerCallId,
+                OfferId = reservation.ItemId,
+            });
 
             await _realTimeNotifier.NotifyOfferRevokedAsync(new AgentOfferRevokedNotification
             {

@@ -56,7 +56,7 @@ public sealed partial class RealtimeVoiceConversationRunner
         string activityId,
         CancellationToken cancellationToken)
     {
-        var now = DateTime.UtcNow.Ticks;
+        var now = UtcNowTicks;
         var playsUntil = Interlocked.Read(ref _assistantSpeechEndsTicks);
 
         // Nothing is left playing, so there is nothing to take back: the caller is simply answering.

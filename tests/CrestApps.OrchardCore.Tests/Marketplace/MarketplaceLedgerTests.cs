@@ -26,6 +26,19 @@ public sealed class MarketplaceLedgerTests
     }
 
     [Fact]
+    public void APayoutKey_IsStableForTheSameVendorOrderAndEarnings()
+    {
+        var key = MarketplaceLedger.GetPayoutKey("v1", "o1", ["e2", "e1"], 0);
+
+        Assert.Equal(key, MarketplaceLedger.GetPayoutKey("v1", "o1", ["e1", "e2"], 0));
+        Assert.NotEqual(key, MarketplaceLedger.GetPayoutKey("v1", "o1", ["e1"], 0));
+        Assert.NotEqual(key, MarketplaceLedger.GetPayoutKey("v2", "o1", ["e1", "e2"], 0));
+        Assert.NotEqual(key, MarketplaceLedger.GetPayoutKey("v1", "o2", ["e1", "e2"], 0));
+        Assert.NotEqual(key, MarketplaceLedger.GetPayoutKey("v1", "o1", ["e1", "e2"], 1));
+        Assert.True(key.Length <= 200);
+    }
+
+    [Fact]
     public void ARefund_TakesBackTheSameShareOfEachSale()
     {
         // Half of a 100 order refunded takes back half of a 54 line.

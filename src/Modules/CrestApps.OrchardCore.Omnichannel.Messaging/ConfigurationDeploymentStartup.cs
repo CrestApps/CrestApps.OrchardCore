@@ -14,12 +14,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging;
 /// Registers the deployment step that exports the messaging workspace's canned-response templates.
 /// </summary>
 /// <remarks>
-/// Conversations, broadcasts and the unread and assignment state of the inbox are the workspace's operational record,
-/// not its configuration, so they are deliberately left out of a deployment plan. The routing a channel endpoint carries
+/// Conversations and the unread and assignment state of the inbox are the workspace's operational record, not its
+/// configuration, so they are deliberately left out of a deployment plan. Broadcasts travel with their own step, as
+/// drafts without their delivery (see <see cref="BroadcastsRecipesStartup"/>). The routing a channel endpoint carries
 /// travels with the endpoint's own step.
 /// </remarks>
 [Feature(MessagingConstants.Feature.Workspace)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class ConfigurationDeploymentStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -34,7 +35,7 @@ public sealed class ConfigurationDeploymentStartup : StartupBase
 /// Registers the recipe step that imports the messaging workspace's canned-response templates.
 /// </summary>
 [Feature(MessagingConstants.Feature.Workspace)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class ConfigurationRecipesStartup : StartupBase
 {
     /// <inheritdoc/>

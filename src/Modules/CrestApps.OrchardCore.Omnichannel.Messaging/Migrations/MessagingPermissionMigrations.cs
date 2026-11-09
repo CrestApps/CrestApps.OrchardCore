@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -25,7 +26,7 @@ internal sealed class MessagingPermissionMigrations : DataMigration
     public static int Create()
     {
         // The roles are documents; they are written once this step's own transaction has committed.
-        ShellScope.AddDeferredTask(scope => MessagingRolePermissions.GrantAsync(
+        ShellScope.AddDeferredTask(scope => RolePermissionMigrations.GrantAsync(
             scope.ServiceProvider,
             _grants,
             scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger<MessagingPermissionMigrations>()));

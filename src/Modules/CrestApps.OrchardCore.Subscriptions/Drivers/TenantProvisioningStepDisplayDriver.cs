@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core;
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.ViewModels;
@@ -83,7 +84,7 @@ public sealed class TenantProvisioningStepDisplayDriver : CheckoutFlowDisplayDri
 
             // A password is never rendered back. The customer retypes it if they revisit the step, which is
             // the same trade every setup form makes.
-            model.HasPassword = !string.IsNullOrEmpty(saved?.ProtectedAdminPassword);
+            model.HasPassword = ProtectedSettingExtensions.HasSecret(saved?.ProtectedAdminPassword);
 
             model.Recipes = [.. recipes
                 .Where(recipe => !string.IsNullOrEmpty(recipe.Name))
@@ -146,7 +147,7 @@ public sealed class TenantProvisioningStepDisplayDriver : CheckoutFlowDisplayDri
 
         // A password already captured on a previous visit stays valid, so the customer is not forced to
         // retype it every time they step back through the checkout.
-        var hasExistingPassword = !string.IsNullOrEmpty(saved?.ProtectedAdminPassword);
+        var hasExistingPassword = ProtectedSettingExtensions.HasSecret(saved?.ProtectedAdminPassword);
 
         if (string.IsNullOrEmpty(model.AdminPassword) && !hasExistingPassword)
         {
@@ -174,9 +175,7 @@ public sealed class TenantProvisioningStepDisplayDriver : CheckoutFlowDisplayDri
                 // the session store even briefly.
                 ProtectedAdminPassword = string.IsNullOrEmpty(model.AdminPassword)
                     ? saved?.ProtectedAdminPassword
-                    : _dataProtectionProvider
-                        .CreateProtector(SubscriptionConstants.ProtectorPurposes.TenantOnboardingStep)
-                        .Protect(model.AdminPassword),
+                    : _dataProtectionProvider.ProtectSetting(SubscriptionConstants.ProtectorPurposes.TenantOnboardingStep, model.AdminPassword),
             };
 
             flow.Session.SavedSteps[StepKey] = JsonSerializer.SerializeToNode(step, _jsonOptions.SerializerOptions);

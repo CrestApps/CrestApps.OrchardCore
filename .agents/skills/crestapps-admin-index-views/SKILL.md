@@ -131,6 +131,12 @@ viewModel.List = new AdminListContext<AIProfile>
   driver), `ToolbarActions` (a shape at the end of the toolbar, e.g. filter selects), `Toolbar` (a toolbar of the
   page's own), `ShowToolbar = false`, `Data`, `Layout` (force one layout), `ShowLayoutSelector = false`.
 - A page with **two lists** gives each its own `AdminListContext` and a distinct list name.
+- A **catalog** section (`ICatalogManager<T>` records edited through `IDisplayManager<T>`) derives its controller
+  from `CatalogAdminController<T>` (`CrestApps.OrchardCore.Core.Controllers`) instead of writing the actions: each
+  public action carries its `[Admin(...)]` route and calls `IndexAsync` (paged, searched) or `IndexAllAsync` (one
+  page, ordered by `OrderAll`), `CreateAsync`, `CreatePostAsync`, `EditAsync`, `EditPostAsync`, `DeleteAsync`,
+  `BulkDeleteAsync` or `ClonePostAsync`. Editor-only rules go in `ValidateEntryAsync`, work after a save in
+  `OnSavedAsync`, and a refused delete in `CanDeleteAsync`.
 
 ## 4. Index view
 

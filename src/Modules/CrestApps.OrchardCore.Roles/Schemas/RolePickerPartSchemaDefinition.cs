@@ -19,12 +19,13 @@ public sealed class RolePickerPartSchemaDefinition : PartSchemaDefinitionBase
                 ("RolePickerPartSettings", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Object)
                     .Properties(
-                        ("Required", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
-                        ("AllowSelectMultiple", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
+                        ("Required", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether at least one role must be picked.")),
+                        ("AllowSelectMultiple", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether more than one role may be picked.")),
                         ("ExcludedRoles", new JsonSchemaBuilder()
-                            .Type(SchemaValueType.Array)
-                            .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))),
-                        ("Hint", new JsonSchemaBuilder().Type(SchemaValueType.String)))
+                            .Type(SchemaValueType.Array, SchemaValueType.Null)
+                            .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
+                            .Description("The role names that are not offered.")),
+                        ("Hint", new JsonSchemaBuilder().Type(SchemaValueType.String, SchemaValueType.Null).Description("The hint shown under the picker.")))
                     .AdditionalProperties(false)))
             .AdditionalProperties(true);
 
@@ -33,7 +34,7 @@ public sealed class RolePickerPartSchemaDefinition : PartSchemaDefinitionBase
             .Type(SchemaValueType.Object)
             .Properties(
                 ("RoleNames", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Array)
+                    .Type(SchemaValueType.Array, SchemaValueType.Null)
                     .Items(new JsonSchemaBuilder()
                         .Type(SchemaValueType.String))
                     .Description("The selected role names.")))

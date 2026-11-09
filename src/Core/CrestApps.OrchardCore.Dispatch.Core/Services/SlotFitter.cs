@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Geo.Models;
+using CrestApps.OrchardCore.Calendars;
 
 namespace CrestApps.OrchardCore.Dispatch.Core.Services;
 
@@ -85,17 +86,17 @@ public sealed class SlotFitter
         var duration = TimeSpan.FromMinutes(durationMinutes);
         var buffer = TimeSpan.FromMinutes(bufferMinutes);
 
-        foreach (var open in availability.Open.Where(open => open.End > fromUtc && open.Start < toUtc))
+        foreach (var open in availability.Open.Where(open => open.EndUtc > fromUtc && open.StartUtc < toUtc))
         {
-            var visits = availability.Visits.Where(visit => visit.StartUtc < open.End && visit.EndUtc > open.Start).ToList();
+            var visits = availability.Visits.Where(visit => visit.StartUtc < open.EndUtc && visit.EndUtc > open.StartUtc).ToList();
 
             // The gaps: before the first visit, between each two, and after the last.
             for (var i = 0; i <= visits.Count; i++)
             {
                 var before = i == 0 ? null : visits[i - 1];
                 var after = i == visits.Count ? null : visits[i];
-                var gapStart = before is null ? open.Start : Max(open.Start, before.EndUtc.Value + buffer);
-                var gapEnd = after is null ? open.End : Min(open.End, after.StartUtc.Value - buffer);
+                var gapStart = before is null ? open.StartUtc : Max(open.StartUtc, before.EndUtc.Value + buffer);
+                var gapEnd = after is null ? open.EndUtc : Min(open.EndUtc, after.StartUtc.Value - buffer);
 
                 if (gapEnd - gapStart < duration)
                 {
@@ -151,12 +152,12 @@ public sealed class SlotFitter
             return (null, new SlotProblem(SlotProblemKind.Overlaps, overlapping));
         }
 
-        if (availability.TimeOff.Any(span => span.Overlaps(startUtc, endUtc)))
+        if (availability.TimeOff.Any(span => span.Overlaps(new TimeWindow(startUtc, endUtc))))
         {
             return (null, new SlotProblem(SlotProblemKind.TimeOff));
         }
 
-        if (!availability.Open.Any(open => open.Start <= startUtc && open.End >= endUtc))
+        if (!availability.Open.Any(open => open.StartUtc <= startUtc && open.EndUtc >= endUtc))
         {
             return (null, new SlotProblem(SlotProblemKind.OffShift));
         }

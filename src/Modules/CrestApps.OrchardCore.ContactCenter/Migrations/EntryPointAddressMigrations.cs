@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Data.Migration;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 
@@ -30,6 +31,7 @@ internal sealed class EntryPointAddressMigrations : DataMigration
     private readonly IOmnichannelChannelEndpointManager _addressManager;
     private readonly IEnumerable<IActivityQueueManager> _queueManagers;
     private readonly IPhoneNumberService _phoneNumberService;
+    private readonly IClock _clock;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -39,18 +41,21 @@ internal sealed class EntryPointAddressMigrations : DataMigration
     /// <param name="addressManager">The address list.</param>
     /// <param name="queueManagers">The queues, which may name a number of their own.</param>
     /// <param name="phoneNumberService">The phone number service, to compare numbers in one form.</param>
+    /// <param name="clock">The clock the records created here are stamped with.</param>
     /// <param name="logger">The logger.</param>
     public EntryPointAddressMigrations(
         IContactCenterEntryPointManager entryPointManager,
         IOmnichannelChannelEndpointManager addressManager,
         IEnumerable<IActivityQueueManager> queueManagers,
         IPhoneNumberService phoneNumberService,
+        IClock clock,
         ILogger<EntryPointAddressMigrations> logger)
     {
         _entryPointManager = entryPointManager;
         _addressManager = addressManager;
         _queueManagers = queueManagers;
         _phoneNumberService = phoneNumberService;
+        _clock = clock;
         _logger = logger;
     }
 
@@ -124,7 +129,7 @@ internal sealed class EntryPointAddressMigrations : DataMigration
                     address.AddressType = OmnichannelAddressTypes.PhoneNumber;
                     address.Capabilities = [OmnichannelConstants.Channels.Phone];
                     address.Value = value;
-                    address.CreatedUtc = DateTime.UtcNow;
+                    address.CreatedUtc = _clock.UtcNow;
 
                     await _addressManager.CreateAsync(address);
                     addresses.Add(address);
@@ -168,7 +173,7 @@ internal sealed class EntryPointAddressMigrations : DataMigration
                     entryPoint.TargetType = Models.EntryPointTargetType.Queue;
                     entryPoint.TargetQueueId = queue.ItemId;
                     entryPoint.Enabled = queue.Enabled;
-                    entryPoint.CreatedUtc = DateTime.UtcNow;
+                    entryPoint.CreatedUtc = _clock.UtcNow;
 
                     await _entryPointManager.CreateAsync(entryPoint);
                     entryPoints.Add(entryPoint);

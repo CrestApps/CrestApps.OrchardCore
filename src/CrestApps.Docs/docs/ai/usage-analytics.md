@@ -11,10 +11,10 @@ user_manual:
 | --- | --- |
 | **Feature Name** | AI Usage Analytics |
 | **Feature ID** | `CrestApps.OrchardCore.AI.UsageAnalytics` |
-| **Page** | **Reports → Billing & Usage → AI Usage Analytics** (`/Admin/AI/UsageAnalytics/Index`) |
+| **Report** | **Reports → Billing & Usage → AI Usage Analytics** (`/Admin/Reports/view/ai-usage-analytics`, `AIUsageAnalyticsReport`) |
 | **Permission** | `ViewChatAnalytics` |
 
-The AI Usage Analytics page reports what AI cost a tenant, in three parts:
+The AI Usage Analytics report reports what AI cost a tenant, in three parts:
 
 - **Metered usage** — every request sent to an AI provider, of every kind and from every feature: chat
   completions, embeddings, images, speech-to-text, text-to-speech and realtime voice, with every unit the
@@ -24,8 +24,9 @@ The AI Usage Analytics page reports what AI cost a tenant, in three parts:
 - **Voice** — one summary per automated AI voice call: how long the caller heard the assistant, how long the caller
   spoke, how long neither did, how the call ended, and which model held it.
 
-All three are captured only while the **AI Usage Analytics** feature is enabled; the report and its menu entry
-come with it. Nothing used before the feature was enabled can be reported.
+All three are captured only while the **AI Usage Analytics** feature is enabled; the report comes with it. The
+feature depends on **Reports**, which lists the report, renders it with its date range filter, and exports it as CSV
+(and Excel with **Reports (OpenXml)**). Nothing used before the feature was enabled can be reported.
 
 Running the report and reading its figures is described in the User Manual under
 [AI Usage Analytics](../user-manual/ai/analytics.md#ai-usage-analytics). This page covers what is recorded
@@ -35,7 +36,7 @@ and how each figure is measured.
 
 | Filter | Applies to | What it does |
 | --- | --- | --- |
-| **Date range** | All | The dates to report on, picked from presets such as Today or Last 30 Days, or set as a custom range, in the site's time zone. Completions are matched on when they were recorded; voice calls on when their summary was written, which is when the assistant's part of the call ended. |
+| **Date range** | All Time | The dates to report on, picked from presets such as Today or Last 30 Days, or set as a custom range, in the site's time zone. The report starts on **All Time**, as the old page did, and takes a single bound as "on or after" or "on or before". Completions are matched on when they were recorded; voice calls on when their summary was written, which is when the assistant's part of the call ended. |
 | **AI profile** | All | Limits the report to one chat profile. Metered requests that belong to no profile, such as indexing, are left out while a profile is chosen. |
 | **Group metered usage by** | Metered usage | **Model**, **Model and category** or **Model and purpose**. |
 | **Group audio usage by** | Audio usage | **Model**, **Model and voice** or **Model and language**. |
@@ -100,10 +101,59 @@ var completion = await completionService.CompleteAsync(deployment, messages, con
 
 ### Turning usage into cost
 
+Each AI deployment can carry its prices (**Artificial Intelligence > Deployments > Edit > Pricing**). The report then shows the **Est. cost** of every row of the metered, audio and chat completion tables, and the estimated total per currency above the metered table. Requests to a deployment without prices have no cost. See [Deployment pricing](#deployment-pricing).
+
 Multiplying a row by the provider's list prices gives an estimate. To match what was actually paid, take the cost
 of each billing meter from the provider's invoice for a period and divide it in proportion to the units each row
 used on that meter in the same period. Discounts, credits and committed capacity are then included, and the shares
 always add up to the bill.
+
+### Deployment pricing
+
+A deployment stores its prices as `AIDeploymentPricing` (from CrestApps.Core): a `Currency` and a list of `Prices`. Each price is an `Amount` for `Per` base units of one `Meter`:
+
+| Meter | Base unit | Typical `Per` |
+| --- | --- | --- |
+| `InputTokens`, `CachedInputTokens`, `CacheWriteInputTokens`, `OutputTokens` | token | `1000000` |
+| `InputAudioTokens`, `CachedInputAudioTokens`, `OutputAudioTokens` | token | `1000000` |
+| `InputImageTokens`, `OutputImageTokens` | token | `1000000` |
+| `AudioSeconds` | second of audio | `60` (per minute) or `3600` (per hour) |
+| `Characters` | character | `1000000` |
+| `Images` | image | `1` |
+| `Requests` | request | `1` |
+| `WebSearches`, `WebFetches` | search or page fetch | `1000` |
+| `AdditionalCount` | the count named in `CountName` | any |
+
+Cached, cache-write, audio and image tokens are part of the input and output token counts. Each is taken out and billed at its own price only when the deployment has a price for it; otherwise it stays in at the token price. Several prices for the same meter add up. `AboveInputTokens` makes a price a long-context price, which replaces the meter's regular price for requests with more input tokens. `Increment` rounds each request's quantity up, such as `15` for audio billed in 15-second steps.
+
+The **AIDeployment** deployment step exports the prices in a `Pricing` section of each deployment, and the **AIDeployment** recipe step imports them from it. Leave `Pricing` out to keep a deployment's prices, or set it to `null` to remove them. Prices under `Properties.AIDeploymentPricing` are read the same way.
+
+```json
+{
+  "steps": [
+    {
+      "name": "AIDeployment",
+      "Deployments": [
+        {
+          "Name": "gpt-4o",
+          "ClientName": "OpenAI",
+          "ConnectionName": "default",
+          "Pricing": {
+            "Currency": "USD",
+            "Prices": [
+              { "Meter": "InputTokens", "Amount": 2.5, "Per": 1000000 },
+              { "Meter": "CachedInputTokens", "Amount": 1.25, "Per": 1000000 },
+              { "Meter": "OutputTokens", "Amount": 10, "Per": 1000000 }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+The recipe schema of the **AIDeployment** step describes `Pricing` and its fields. Prices that were entered on the **Costs** card of **Settings > Artificial Intelligence** before this release are moved onto the matching deployments once, when the site starts after the upgrade.
 
 ## Audio usage
 
@@ -236,7 +286,8 @@ Both data sets are filled only while **Enable AI usage tracking** is on. A usage
 | **Request** | `CreatedUtc` (when the request was recorded), `OperationType` (the kind: `Chat`, `Embedding`, `Image`, `SpeechToText`, `TextToSpeech`, `Realtime` or `RealtimeTranscription`; a request recorded before kinds were recorded is `Chat`), `ContextType` (the category), `Purpose`, `IsStreaming`, `ResponseLatencyMs` |
 | **Model** | `ClientName` (the provider), `ConnectionName`, `DeploymentName`, `ModelName` (the model the provider reported, empty when it reported none), `Model` (the model the provider reported, or the deployment when it reported none) |
 | **Context** | `ProfileId` (identifier), `ProfileName` (the current name of the AI profile), `SessionId` (identifier, references `AIChat.ChatSessions.SessionId`), `InteractionId` (identifier), `UserId` (identifier, references `Users.UserId`), `UserName`, `IsAuthenticated` |
-| **Billing units** | `InputTokenCount`, `OutputTokenCount`, `TotalTokenCount`, `CachedInputTokenCount`, `ReasoningTokenCount`, `InputAudioTokenCount`, `OutputAudioTokenCount`, `AudioDurationMs`, `AudioMinutes`, `CharacterCount`, `ImageCount` |
+| **Billing units** | `InputTokenCount`, `OutputTokenCount`, `TotalTokenCount`, `CachedInputTokenCount`, `ReasoningTokenCount`, `InputAudioTokenCount`, `OutputAudioTokenCount`, `AudioDurationMs`, `AudioMinutes`, `CharacterCount`, `ImageCount`, `CacheWriteInputTokenCount`, `CachedInputAudioTokenCount`, `InputImageTokenCount`, `OutputImageTokenCount`, `RejectedPredictionTokenCount`, `WebSearchCount`, `WebFetchCount` |
+| **Cost** | `EstimatedCost` (the request at the prices set on its deployment; empty when the deployment has no prices), `CostCurrency` |
 
 The client identifier, the visitor identifier and the provider's response identifier are not exposed.
 
@@ -258,15 +309,18 @@ A measurement that the engine of the call cannot make is empty, as described in 
 
 Each AI call's summary carries an estimated cost when prices are set under **Settings > Artificial Intelligence**, in **Costs**:
 
-- the **Currency**;
-- the carrier's price of a **Phone call, per minute** and of a **Text message**;
-- the price of each **AI deployment**, one per line: `name | input | output | audio input | audio output | per minute`, with token prices per million tokens. Use **per minute** for a model billed by the minute.
+- the **Currency** of the carrier's prices;
+- the carrier's price of a **Phone call, per minute** and of a **Text message**.
 
-The cost is the call's minutes at the carrier's price, plus its minutes or tokens at its deployment's prices. It is written when the call ends, with the prices of that moment, so a price change applies to later calls only. It is an estimate: to match an invoice, see [Turning usage into cost](#turning-usage-into-cost).
+The AI part of the cost comes from the [prices of the deployment](#deployment-pricing) that answered the call: its text, audio and cached tokens at the token prices, and the call's length at an **Audio duration** price for a model billed by the minute.
+
+The cost is the call's minutes at the carrier's price, plus its tokens or minutes at its deployment's prices. When the carrier's prices and the deployment's prices are in different currencies, they cannot be added, and the summary keeps the AI part in the deployment's currency. It is written when the call ends, with the prices of that moment, so a price change applies to later calls only. It is an estimate: to match an invoice, see [Turning usage into cost](#turning-usage-into-cost).
 
 ### Cost per model
 
-To estimate the cost of each model, group **AI completion usage** by `Model` (and `OperationType` when a model is billed for more than one kind of request), and add a [calculated field](../modules/report-builder/formulas.md) that multiplies each billing unit by the provider's price for it. For example, with prices per million tokens, and `Usage` as the alias of the data set in the report:
+The `EstimatedCost` field prices each request at the prices set on its deployment, in the `CostCurrency`. Group **AI completion usage** by `Model` (or `DeploymentName`) and `CostCurrency`, and add `EstimatedCost` as a measure with the **Sum** aggregate.
+
+To price models that have no prices on their deployment, or to use other prices, group **AI completion usage** by `Model` (and `OperationType` when a model is billed for more than one kind of request), and add a [calculated field](../modules/report-builder/formulas.md) that multiplies each billing unit by the provider's price for it. For example, with prices per million tokens, and `Usage` as the alias of the data set in the report:
 
 ```text
 IF([Usage.Model] = 'gpt-4o', ([Usage.InputTokenCount] - [Usage.CachedInputTokenCount]) * 2.50 / 1000000 + [Usage.CachedInputTokenCount] * 1.25 / 1000000 + [Usage.OutputTokenCount] * 10.00 / 1000000, 0)

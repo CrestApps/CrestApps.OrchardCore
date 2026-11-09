@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.SignalR.Core;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -227,8 +228,7 @@ public sealed class ContactCenterSoftPhonePacedDialTests
                 callSessionManager.Object,
                 agentManager.Object,
                 Store.Object,
-                hubContext.Object,
-                _shellSettings,
+                new SoftPhoneClientNotifier(hubContext.Object, _shellSettings),
                 activityStore.Object,
                 NullLogger<ContactCenterSoftPhoneEventHandler>.Instance);
         }

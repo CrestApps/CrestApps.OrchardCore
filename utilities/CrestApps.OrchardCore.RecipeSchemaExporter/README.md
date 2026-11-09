@@ -8,6 +8,8 @@ It generates:
 - `recipe.schema.json` for the root recipe contract
 - `index.json` for step-to-file lookup
 
+The schemas live where their feature lives: `CrestApps.OrchardCore.Recipes.Core` holds the Orchard Core ones and some older CrestApps ones, and each CrestApps module owns the schemas of its own recipe steps, workflow activities, site settings, parts and fields. The exporter references the `CrestApps.OrchardCore.Cms.Core.Targets` bundle so every module assembly is copied next to it, and it reads the schema definitions (public or internal) from every `CrestApps.OrchardCore.*` assembly it finds there. Building the exporter therefore builds every module.
+
 The exporter exists so contributors can refresh the recipe schema reference files that AI skills use when generating Orchard Core recipes.
 
 ## Default output behavior

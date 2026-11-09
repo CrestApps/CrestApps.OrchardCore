@@ -49,8 +49,9 @@ Read first:
 
 ## 1. Reference and depend
 
-- Project reference: `CrestApps.OrchardCore.Calendars.Abstractions` (and `.Core` only if you need `CalendarTime`, the
-  iCalendar reader/writer or `ICalendarProvider`).
+- Project reference: `CrestApps.OrchardCore.Calendars.Abstractions`. It holds `CalendarTime`, `TimeWindow`,
+  `RecurrenceRule` and `RecurrenceExpander` too; reference `.Core` only for the iCalendar reader/writer or
+  `ICalendarProvider`.
 - Feature dependency: `CrestApps.OrchardCore.Calendars` (`CalendarsConstants.Features.Calendars`), either in the
   feature's `Dependencies` when your feature can't work without calendars or, for an optional integration (the
   recommended way), a startup of your own feature with `[RequireFeatures(CalendarsConstants.Features.Calendars)]`, as
@@ -297,7 +298,7 @@ await authorizationService.AuthorizeAsync(User, CalendarPermissions.ViewCalendar
   in the `Properties` bag, needs the same converter. Store instants as `...Utc` with `DateTimeKind.Utc`.
 - **Never set `StartUtc`/`EndUtc` yourself.** They are recomputed from the wall-clock times and the zone on every save,
   which keeps a 09:00 weekly meeting at 09:00 across daylight saving. Convert with `CalendarTime.ToLocal` /
-  `CalendarTime.ToUtc` (Core). All-day events store dates with an exclusive end.
+  `CalendarTime.ToUtc` (Abstractions). All-day events store dates with an exclusive end.
 - **Overrides are separate events.** A changed occurrence is its own `CalendarEvent` with `SeriesId` and
   `OriginalStartUtc`. Don't edit a master's rule to move one occurrence; use `UpdateOccurrenceAsync`.
 - **Overlap limits are enforced under locks.** `LimitConcurrent` calendars are checked under a distributed lock

@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.Dispatch;
 /// <summary>
 /// Exports the Dispatch settings with a deployment; Orchard Core's Settings recipe step imports them.
 /// </summary>
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class DeploymentStartup : StartupBase
 {
     /// <inheritdoc/>

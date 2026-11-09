@@ -117,8 +117,8 @@ internal sealed class OmnichannelContactDisplayDriver : ContentDisplayDriver
         _evaluatedContentTypes[contentItem.ContentType] = contentTypeDefinition;
 
         if (contentTypeDefinition is null ||
-            !contentTypeDefinition.Parts.Any(x => x.Name == OmnichannelConstants.ContentParts.OmnichannelContact) ||
-            contentTypeDefinition.Parts.Any(x => x.PartDefinition.Name == ContactListPartShapeTableProvider.ListPartName))
+            !contentTypeDefinition.HasPart(OmnichannelConstants.ContentParts.OmnichannelContact) ||
+            contentTypeDefinition.HasPart(ContactListPartShapeTableProvider.ListPartName))
         {
             return null;
         }

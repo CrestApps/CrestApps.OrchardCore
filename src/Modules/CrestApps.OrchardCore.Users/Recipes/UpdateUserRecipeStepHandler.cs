@@ -89,7 +89,7 @@ public sealed class UpdateUserRecipeStepHandler : NamedRecipeStepHandler
             return _session.Query<User>().CountAsync();
         }
 
-        return _session.Query<User, UserIndex>(u => u.IsEnabled).CountAsync();
+        return _session.QueryIndex<UserIndex>(u => u.IsEnabled).CountAsync();
     }
 
     private sealed class UpdateUserRecipeStepModel

@@ -1,16 +1,19 @@
 using System.Text.Json.Nodes;
-using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Tooling;
+using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Recipes;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Recipes.Models;
-using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.AI.Recipes;
 
-internal sealed class AIToolInstanceStep : NamedRecipeStepHandler
+/// <summary>
+/// Imports AI tool instances. An instance is matched by its item id, then by its name.
+/// </summary>
+internal sealed class AIToolInstanceStep : CatalogRecipeStepBase<AIToolInstance>
 {
     /// <summary>
     /// The recipe step key used to identify this handler.
@@ -35,7 +38,7 @@ internal sealed class AIToolInstanceStep : NamedRecipeStepHandler
         INamedCatalog<AIToolInstance> instancesCatalog,
         IOptions<AIOptions> aiOptions,
         IStringLocalizer<AIToolInstanceStep> stringLocalizer)
-    : base(StepKey)
+        : base(StepKey, "Instances")
     {
         _manager = manager;
         _instancesCatalog = instancesCatalog;
@@ -43,92 +46,43 @@ internal sealed class AIToolInstanceStep : NamedRecipeStepHandler
         S = stringLocalizer;
     }
 
-    protected override async Task HandleAsync(RecipeExecutionContext context)
-    {
-        var model = context.Step.ToObject<AIToolInstanceStepModel>();
-        var tokens = model.Instances.Cast<JsonObject>() ?? [];
+    protected override ValueTask<AIToolInstance> FindByIdAsync(string id)
+        => _manager.FindByIdAsync(id);
 
-        foreach (var token in tokens)
+    protected override async ValueTask<CatalogRecipeLookup<AIToolInstance>> FindExistingAsync(JsonObject token, RecipeExecutionContext context)
+    {
+        var name = token[nameof(AIToolInstance.Name)]?.GetValue<string>()?.Trim();
+
+        return CatalogRecipeLookup<AIToolInstance>.Found(string.IsNullOrEmpty(name) ? null : await _instancesCatalog.FindByNameAsync(name));
+    }
+
+    protected override ValueTask UpdateAsync(AIToolInstance entry, JsonObject token)
+        => _manager.UpdateAsync(entry, token);
+
+    protected override async ValueTask<AIToolInstance> NewAsync(JsonObject token, RecipeExecutionContext context)
+    {
+        var source = token[nameof(AIToolInstance.Source)]?.GetValue<string>();
+
+        if (string.IsNullOrEmpty(source))
         {
-            AIToolInstance instance = null;
-            var isNew = false;
+            context.Errors.Add(S["Could not find tool instance source value. The tool instance will not be imported."]);
 
-            var id = token[nameof(AIToolInstance.ItemId)]?.GetValue<string>();
-
-            var hasId = !string.IsNullOrEmpty(id);
-
-            if (hasId)
-            {
-                instance = await _manager.FindByIdAsync(id);
-            }
-
-            var sourceName = token[nameof(AIToolInstance.Source)]?.GetValue<string>();
-            var hasSource = !string.IsNullOrEmpty(sourceName);
-
-            if (instance is null)
-            {
-                var name = token[nameof(AIToolInstance.Name)]?.GetValue<string>()?.Trim();
-
-                if (!string.IsNullOrEmpty(name))
-                {
-                    instance = await _instancesCatalog.FindByNameAsync(name);
-                }
-            }
-
-            if (instance is not null)
-            {
-                await _manager.UpdateAsync(instance, token);
-            }
-            else
-            {
-                isNew = true;
-
-                if (!hasSource)
-                {
-                    context.Errors.Add(S["Could not find tool instance source value. The tool instance will not be imported."]);
-
-                    continue;
-                }
-
-                if (!_aiOptions.ToolInstanceSources.TryGetValue(sourceName, out _))
-                {
-                    context.Errors.Add(S["Unable to find a tool instance source that can handle the source '{0}'.", sourceName]);
-
-                    return;
-                }
-
-                instance = await _manager.NewAsync(sourceName, token);
-
-                if (hasId && UniqueId.IsValid(id))
-                {
-                    instance.ItemId = id;
-                }
-            }
-
-            var validationResult = await _manager.ValidateAsync(instance);
-
-            if (!validationResult.Succeeded)
-            {
-                foreach (var error in validationResult.Errors)
-                {
-                    context.Errors.Add(error.ErrorMessage);
-                }
-
-                continue;
-            }
-
-            if (isNew)
-            {
-                await _manager.CreateAsync(instance);
-            }
+            return null;
         }
+
+        if (!_aiOptions.ToolInstanceSources.TryGetValue(source, out _))
+        {
+            context.Errors.Add(S["Unable to find a tool instance source that can handle the source '{0}'.", source]);
+
+            return null;
+        }
+
+        return await _manager.NewAsync(source, token);
     }
 
-    private sealed class AIToolInstanceStepModel
-    {
-        /// <summary>
-        /// Gets or sets the collection of AI tool instance definitions to import.
-        /// </summary>
-        public JsonArray Instances { get; set; }
-    }
+    protected override ValueTask<ValidationResultDetails> ValidateAsync(AIToolInstance entry)
+        => _manager.ValidateAsync(entry);
+
+    protected override ValueTask CreateAsync(AIToolInstance entry)
+        => _manager.CreateAsync(entry);
 }

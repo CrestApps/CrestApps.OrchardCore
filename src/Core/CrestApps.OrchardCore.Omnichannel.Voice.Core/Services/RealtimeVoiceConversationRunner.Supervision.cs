@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
 using CrestApps.OrchardCore.AI.Core.Conversations;
@@ -196,9 +197,9 @@ public sealed partial class RealtimeVoiceConversationRunner
         {
             // Asking for a reply while one is being spoken produces two replies over each other, so the note waits
             // for the current one, and goes anyway once it has waited long enough.
-            var waitedUntil = DateTime.UtcNow + SupervisorNoteWait;
+            var waitStarted = Stopwatch.GetTimestamp();
 
-            while (Volatile.Read(ref _responseInFlight) == 1 && DateTime.UtcNow < waitedUntil)
+            while (Volatile.Read(ref _responseInFlight) == 1 && Stopwatch.GetElapsedTime(waitStarted) < SupervisorNoteWait)
             {
                 await Task.Delay(TimeSpan.FromMilliseconds(250), callToken);
             }

@@ -8,6 +8,7 @@ using CrestApps.Core.AI.Tooling.Instances.DataSources;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore.AI.Core.Workflows;
 using CrestApps.OrchardCore.AI.DataSources.BackgroundTasks;
 using CrestApps.OrchardCore.AI.DataSources.Deployments;
 using CrestApps.OrchardCore.AI.DataSources.Drivers;
@@ -17,7 +18,7 @@ using CrestApps.OrchardCore.AI.DataSources.Migrations;
 using CrestApps.OrchardCore.AI.DataSources.Recipes;
 using CrestApps.OrchardCore.AI.DataSources.Services;
 using CrestApps.OrchardCore.AI.Services;
-using CrestApps.OrchardCore.AI.Workflows.Models;
+using CrestApps.OrchardCore.Core.Migrations;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -46,6 +47,7 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddMigrationSkipLog();
         services.AddCoreAIDataSourceRag()
             .AddCoreAIDataSourceStoresYesSql();
 
@@ -92,7 +94,7 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Registers services and configuration for the DataSourcesContents feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Contents")]
+[RequireFeatures(OrchardCoreFeatureIds.Contents)]
 public sealed class DataSourcesContentsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -104,7 +106,7 @@ public sealed class DataSourcesContentsStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the DataSourcesRecipes feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class DataSourcesRecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -116,7 +118,7 @@ public sealed class DataSourcesRecipesStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the DataSourcesOCDeployment feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class DataSourcesOCDeploymentStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -128,7 +130,7 @@ public sealed class DataSourcesOCDeploymentStartup : StartupBase
 /// <summary>
 /// Contributes the data source configuration to the AI completion with config workflow activity.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI.Chat.Interactions", "OrchardCore.Workflows")]
+[RequireFeatures("CrestApps.OrchardCore.AI.Chat.Interactions", OrchardCoreFeatureIds.Workflows)]
 public sealed class ChatInteractionsWorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

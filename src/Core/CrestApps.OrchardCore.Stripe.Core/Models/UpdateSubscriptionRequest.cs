@@ -3,7 +3,7 @@ namespace CrestApps.OrchardCore.Stripe.Core.Models;
 /// <summary>
 /// Represents a request to change what a Stripe subscription bills.
 /// </summary>
-public class UpdateSubscriptionRequest : StripeWriteRequest
+public sealed class UpdateSubscriptionRequest : StripeWriteRequest
 {
     /// <summary>
     /// Gets or sets the Stripe subscription identifier.

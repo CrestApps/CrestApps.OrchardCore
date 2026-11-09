@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Data.YesSql;
+using CrestApps.OrchardCore.Core.Migrations;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -86,6 +87,7 @@ internal sealed class AIProfileV1DocumentMigrations : DataMigration
         }
 
         var totalMigrated = 0;
+        var skipped = new MigrationSkipReport(nameof(AIProfileV1DocumentMigrations), logger);
 
         foreach (var batch in BatchDocuments(documents))
         {
@@ -141,10 +143,9 @@ internal sealed class AIProfileV1DocumentMigrations : DataMigration
 
                         if (!validationResult.Succeeded)
                         {
-                            logger.LogWarning(
-                                "Skipping v1 AI profile {ItemId} because validation failed: {Errors}",
+                            skipped.Skip(
                                 itemId ?? name ?? record.Key,
-                                string.Join("; ", validationResult.Errors.Select(error => error.ErrorMessage)));
+                                "validation failed: " + string.Join("; ", validationResult.Errors.Select(error => error.ErrorMessage)));
                             continue;
                         }
 
@@ -153,11 +154,13 @@ internal sealed class AIProfileV1DocumentMigrations : DataMigration
                     }
                     catch (Exception ex)
                     {
-                        logger.LogWarning(ex, "Failed to migrate v1 AIProfile with key '{Key}'. Skipping.", record.Key);
+                        skipped.Skip(record.Key, "the record could not be migrated", ex);
                     }
                 }
             }
         }
+
+        await skipped.LogSummaryAsync(serviceProvider);
 
         if (totalMigrated > 0 && logger.IsEnabled(LogLevel.Information))
         {

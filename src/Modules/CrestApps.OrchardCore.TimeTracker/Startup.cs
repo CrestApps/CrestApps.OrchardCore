@@ -1,4 +1,7 @@
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Reports.Models;
+using CrestApps.OrchardCore.TimeTracker.Reports;
 using CrestApps.OrchardCore.TimeTracker.Core.Indexes;
 using CrestApps.OrchardCore.TimeTracker.Drivers;
 using CrestApps.OrchardCore.TimeTracker.Integrations;
@@ -47,7 +50,7 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Records every change to a time entry in the Audit Trail.
 /// </summary>
-[RequireFeatures("OrchardCore.AuditTrail")]
+[RequireFeatures(OrchardCoreFeatureIds.AuditTrail)]
 public sealed class AuditTrailStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -61,7 +64,7 @@ public sealed class AuditTrailStartup : StartupBase
 /// <summary>
 /// Imports stages, categories and entries from recipes.
 /// </summary>
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class RecipesStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -74,7 +77,7 @@ public sealed class RecipesStartup : StartupBase
 /// <summary>
 /// Exports stages, categories and, when asked, entries.
 /// </summary>
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class DeploymentStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -87,7 +90,7 @@ public sealed class DeploymentStartup : StartupBase
 /// <summary>
 /// Describes the recipe and deployment steps for the CrestApps recipes schema.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class RecipesSchemaStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -95,5 +98,20 @@ public sealed class RecipesSchemaStartup : StartupBase
     {
         services.AddScoped<IRecipeStep, TimeTrackerRecipeStepSchema>();
         services.AddDeploymentStepSchema<TimeTrackerDeploymentStepSchema>();
+    }
+}
+
+/// <summary>
+/// Publishes the hours by category report, with its search and per-day filters, while Reports is enabled.
+/// </summary>
+[RequireFeatures(ReportsConstants.Feature)]
+public sealed class ReportsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddReport<HoursByCategoryReport>()
+            .AddDisplayDriver<ReportFilter, HoursByCategoryReportFilterDisplayDriver>();
     }
 }

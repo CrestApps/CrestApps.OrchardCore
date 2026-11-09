@@ -70,6 +70,7 @@ A deployment is one model you use through a connection, such as `gpt-4.1-mini` f
 | **Technical name** | A unique name used by profiles and settings, filled in from the model name. It cannot be changed later. |
 | **Connection name** | The connection the model is used through. Picked for you when the provider has only one. |
 | **Model capabilities** | What the model can do. See below. At least one is required. |
+| **Pricing** | Optional. What the model costs, so the AI reports can show an estimated cost. See below. |
 
 ### Model capabilities
 
@@ -93,6 +94,37 @@ Tick, under **Trained features**, only what the model really supports. The site 
 | **Audio input**, **Audio output**, **Video input**, **Video output** | Models that accept or produce audio or video directly. |
 
 **Reasoning effort** lets profiles choose how hard a reasoning model thinks: **Minimal**, **Low**, **Medium**, **High** or **Extra high**. Tick it, then optionally narrow the **Supported values** to those your model accepts, and pick a **Default value** (it starts on **Medium**). Higher effort gives more careful answers but is slower and costs more.
+
+### Pricing
+
+Set what your provider charges for the model, and the **AI Usage Analytics** report shows an estimated cost for its usage. You can skip it: a model without prices is reported without a cost.
+
+1. In **Currency**, type the currency your prices are in, such as `USD`.
+2. Click **Add price** and pick what the price is for, such as **Input tokens**.
+3. Type the price and pick the quantity it is for in **per**, such as **1M tokens**.
+4. Repeat for each thing the provider charges for, then click **Save**.
+
+Add one price for each thing the provider charges for. For example, a chat model gets **Input tokens**, **Cached input tokens (cache reads)** and **Output tokens**, a speech-to-text model gets **Audio duration** per **minute** or per **hour**, and a text-to-speech model gets **Characters**. A model that charges per request and per token gets both a **Requests** price and its token prices. Remove a price with its trash button.
+
+| Price for | Use it when the provider charges for |
+| --- | --- |
+| **Input tokens**, **Output tokens** | The text the model reads and writes. |
+| **Cached input tokens (cache reads)**, **Cache write tokens** | Text served from, or written to, the provider's prompt cache. |
+| **Audio input tokens**, **Cached audio input tokens**, **Audio output tokens** | Speech the model hears or speaks, for models that count audio in tokens. |
+| **Image input tokens**, **Image output tokens** | Pictures the model reads or creates, for models that count images in tokens. |
+| **Audio duration** | The length of the audio, per second, minute or hour. |
+| **Characters** | The characters read aloud. |
+| **Images** | Each picture created. |
+| **Requests** | Each request. |
+| **Web searches**, **Web fetches** | Web searches and page reads the provider makes for the model. |
+| **Other reported count** | Any other count your provider reports. Type its name in **Count name** exactly as the usage report shows it. |
+
+Click the sliders button of a price for two more options:
+
+- **Only above** ... **input tokens**: the price applies only to requests with more input tokens than this, in place of the regular price. Use it for models that charge more for long requests.
+- **Round up to**: each request is billed in steps of this size, such as `15` seconds of audio.
+
+The estimate uses your prices, not your bill. Your provider's discounts and credits are not in it.
 
 ### Special deployments
 

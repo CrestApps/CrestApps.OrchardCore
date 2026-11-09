@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.Webhooks;
 
 namespace CrestApps.OrchardCore.Telnyx.Services;
 
@@ -28,7 +29,7 @@ public sealed class TelnyxWebhookInboxHandler : IProviderWebhookInboxHandler
     public string TechnicalName => HandlerTechnicalName;
 
     /// <inheritdoc/>
-    public ContactCenterHandlerReplaySafety ReplaySafety => ContactCenterHandlerReplaySafety.GuardedByDurableStore;
+    public WebhookHandlerReplaySafety ReplaySafety => WebhookHandlerReplaySafety.GuardedByDurableStore;
 
     /// <inheritdoc/>
     public async Task HandleAsync(string payload, CancellationToken cancellationToken = default)

@@ -1,5 +1,5 @@
 using System.Globalization;
-using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
 using CrestApps.OrchardCore.Geo.Models;
@@ -115,12 +115,12 @@ public sealed class DefaultDispatchCandidateFinder : IDispatchCandidateFinder
         {
             var zone = await _settingsProvider.GetTimeZoneIdAsync();
 
-            zone = Calendars.Core.CalendarTime.IsValidZone(zone) ? zone : "UTC";
+            zone = Calendars.CalendarTime.IsValidZone(zone) ? zone : "UTC";
 
             return new DispatchCandidateResult
             {
                 Message = workOrder?.EarliestUtc is { } earliest && workOrder.LatestUtc is { } window
-                    ? S["The work order is to be done from {0} to {1}.", Calendars.Core.CalendarTime.ToLocal(earliest, zone).ToString("ddd d MMM HH:mm", CultureInfo.CurrentCulture), Calendars.Core.CalendarTime.ToLocal(window, zone).ToString("ddd d MMM HH:mm", CultureInfo.CurrentCulture)]
+                    ? S["The work order is to be done from {0} to {1}.", Calendars.CalendarTime.ToLocal(earliest, zone).ToString("ddd d MMM HH:mm", CultureInfo.CurrentCulture), Calendars.CalendarTime.ToLocal(window, zone).ToString("ddd d MMM HH:mm", CultureInfo.CurrentCulture)]
                     : S["That time has passed."],
             };
         }

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -540,7 +541,7 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
     // wait is over.
     private async Task<bool> BridgeWhenAnsweredAsync(string takeOverLegId, string customerLegId, CancellationToken cancellationToken)
     {
-        var deadline = DateTime.UtcNow + _takeOverAnswerWait;
+        var waitStarted = Stopwatch.GetTimestamp();
         TelnyxApiResult bridged;
 
         while (true)
@@ -553,7 +554,7 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
                 ["park_after_unbridge"] = "self",
             }, cancellationToken);
 
-            if (bridged.Succeeded || !TelnyxApiErrors.IsCallNotAnsweredYet(bridged) || DateTime.UtcNow + _takeOverBridgeRetry > deadline)
+            if (bridged.Succeeded || !TelnyxApiErrors.IsCallNotAnsweredYet(bridged) || Stopwatch.GetElapsedTime(waitStarted) + _takeOverBridgeRetry > _takeOverAnswerWait)
             {
                 break;
             }

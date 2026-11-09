@@ -205,6 +205,8 @@ Roles already gate content, features, and permissions across Orchard Core, so pu
 
 The role is added when the subscription becomes current and removed when it stops being current — which is later than when it stops billing. A subscriber who cancels mid-cycle keeps the role through the period they paid for, and one whose renewal failed keeps it through the grace window. Removing it when access genuinely ends matters as much as granting it: a subscriber who stops paying and keeps the role keeps everything they were paying for.
 
+The role goes through `IRoleGrantService`, which records the grant on the user by source (`Subscription`) and the subscription's ID. When the subscription ends, the role is removed only when nothing else still grants it, such as an active membership, and never when the user was in the role before the subscription granted it. `SubscriptionRoleGrantSource` reports the roles of current subscriptions made before grants were recorded.
+
 To ask the question from your own code, inject **`ISubscriptionAccessService`**:
 
 | Member | Returns |

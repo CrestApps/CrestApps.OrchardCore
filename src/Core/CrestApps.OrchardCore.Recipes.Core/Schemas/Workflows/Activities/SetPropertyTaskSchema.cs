@@ -29,8 +29,8 @@ public sealed class SetPropertyTaskSchema : WorkflowActivitySchemaDefinitionBase
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("PropertyName", WorkflowActivitySchemaBuilders.String("The workflow property to set. The property is added when it does not exist yet."));
-        yield return ("Value", WorkflowActivitySchemaBuilders.ScriptExpression("The value to store in the specified property. Required when 'Syntax' is 'JavaScript'."));
-        yield return ("LiquidValue", WorkflowActivitySchemaBuilders.LiquidExpression("The value to store in the specified property. Required when 'Syntax' is 'Liquid'."));
-        yield return ("Syntax", WorkflowActivitySchemaBuilders.EnumValue("The syntax used to evaluate the value. Defaults to 'JavaScript'.", "JavaScript", "Liquid"));
+        yield return ("Value", WorkflowActivitySchemaBuilders.SyntaxExpression("The value to store in the specified property.", "JavaScript"));
+        yield return ("LiquidValue", WorkflowActivitySchemaBuilders.LiquidExpression("Legacy: the Liquid value, used when 'Value' has no syntax and 'Syntax' is 'Liquid'."));
+        yield return ("Syntax", WorkflowActivitySchemaBuilders.EnumValue("Legacy: selects the JavaScript expression or its Liquid counterpart when the expression has no 'Syntax' of its own. Defaults to 'JavaScript'. Prefer setting 'Syntax' on the expression.", "JavaScript", "Liquid"));
     }
 }

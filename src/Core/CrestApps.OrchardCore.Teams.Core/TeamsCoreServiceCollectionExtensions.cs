@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.Teams.Core;
 public static class TeamsCoreServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the team store, the team manager and the catalog handler that keeps the hierarchy a tree. It is safe to
+    /// Registers the team store, the team manager, the membership service and the catalog handler that keeps the hierarchy a tree. It is safe to
     /// call more than once, so a module that builds on teams can call it from its own registration.
     /// </summary>
     /// <param name="services">The service collection.</param>
@@ -25,6 +25,7 @@ public static class TeamsCoreServiceCollectionExtensions
 
         services.TryAddScoped<TeamStore>();
         services.TryAddScoped<ITeamManager, TeamManager>();
+        services.TryAddScoped<ITeamMembershipService, DefaultTeamMembershipService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Team>, TeamCatalogHandler>());
 
         return services;

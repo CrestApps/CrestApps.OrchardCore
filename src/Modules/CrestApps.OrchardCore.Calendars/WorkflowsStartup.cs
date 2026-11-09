@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.Calendars;
 /// <summary>
 /// Registers the calendar workflow events and tasks.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class WorkflowsStartup : StartupBase
 {
     /// <inheritdoc />

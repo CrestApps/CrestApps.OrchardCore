@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Addresses.Core.Autocomplete;
+using CrestApps.OrchardCore.Recipes.Core;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -47,5 +48,19 @@ public sealed class GooglePlacesAdminMenu : AdminNavigationProvider
                     .LocalNav()));
 
         return ValueTask.CompletedTask;
+    }
+}
+
+/// <summary>
+/// Describes the Google Places site settings to CrestApps Recipes.
+/// </summary>
+[Feature(AddressConstants.Feature.GooglePlaces)]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
+public sealed class GooglePlacesRecipesSchemaStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<ISiteSettingsSchemaDefinition, GooglePlacesSettingsSchema>();
     }
 }

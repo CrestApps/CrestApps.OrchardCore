@@ -1,4 +1,6 @@
 using System.Globalization;
+using CrestApps.OrchardCore.Commerce.Core.Emails;
+using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
@@ -25,12 +27,12 @@ public sealed class CommerceEmailSenderTests
     public async Task AnEmailOfAKind_GoesThroughTheStoresTemplate_WithItsValues()
     {
         // Arrange
-        OrderEmailContext applied = null;
-        var templates = new Mock<IOrderEmailTemplates>();
+        CommerceEmailContext applied = null;
+        var templates = new Mock<ICommerceEmailTemplates>();
         templates
-            .Setup(value => value.ApplyAsync(It.IsAny<OrderEmailContext>(), It.IsAny<CancellationToken>()))
-            .Callback<OrderEmailContext, CancellationToken>((context, _) => applied = context)
-            .ReturnsAsync(new OrderEmailMessage("Templated", "Templated text", "<p>Templated</p>"));
+            .Setup(value => value.ApplyAsync(It.IsAny<CommerceEmailContext>(), It.IsAny<CancellationToken>()))
+            .Callback<CommerceEmailContext, CancellationToken>((context, _) => applied = context)
+            .ReturnsAsync(new CommerceEmailMessage("Templated", "Templated text", "<p>Templated</p>"));
 
         var order = new Order { OrderNumber = "261021-MAIL01" };
         var sender = new CommerceEmailSender(Services(EmailService(succeeds: true)), templates.Object, NullLogger<CommerceEmailSender>.Instance);
@@ -41,7 +43,7 @@ public sealed class CommerceEmailSenderTests
         // Assert
         Assert.True(sent);
         Assert.Equal(OrderEmailKinds.Confirmation, applied.Kind);
-        Assert.Same(order, applied.Order);
+        Assert.Same(order, applied.Models[OrderEmailModels.OrderName]);
         Assert.Equal("https://store.test/orders/view/token", applied.Values["OrderUrl"]);
 
         var message = Assert.Single(_sent);
@@ -55,7 +57,7 @@ public sealed class CommerceEmailSenderTests
     public async Task AnEmailWithoutAKind_GoesAsBuilt()
     {
         // Arrange
-        var templates = new Mock<IOrderEmailTemplates>(MockBehavior.Strict);
+        var templates = new Mock<ICommerceEmailTemplates>(MockBehavior.Strict);
         var sender = new CommerceEmailSender(Services(EmailService(succeeds: true)), templates.Object, NullLogger<CommerceEmailSender>.Instance);
 
         // Act
@@ -165,7 +167,7 @@ public sealed class CommerceEmailSenderTests
         {
             Kind = kind,
             To = "sam@example.com",
-            Order = order,
+            Models = OrderEmailModels.For(order),
             Reference = "test",
         };
 

@@ -32,7 +32,7 @@ public sealed class Startup : StartupBase
     }
 }
 
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class RecipesSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -57,17 +57,11 @@ public sealed class AddressFieldStartup : StartupBase
         services.AddDataMigration<AddressFieldIndexMigrations>();
         // Scoped, like Orchard Core's own field indexes: it reads the scoped content definitions.
         services.AddScopedIndexProvider<AddressFieldIndexProvider>();
-
-        services.Configure<TemplateOptions>(options =>
-        {
-            options.MemberAccessStrategy.Register<AddressField>();
-            options.MemberAccessStrategy.Register<Address>();
-        });
     }
 }
 
 [Feature("CrestApps.OrchardCore.ContentFields.Address")]
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class AddressFieldRecipesSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

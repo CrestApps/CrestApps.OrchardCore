@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Commerce.Core;
+using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Seo;
 using CrestApps.OrchardCore.Reviews.StructuredData;
 using CrestApps.OrchardCore.Customers.Core;
@@ -16,6 +18,7 @@ using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
@@ -35,6 +38,7 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<ProductReviewIndexProvider>();
 
         services.AddScoped<ReviewService>();
+        services.AddScoped<ICommercePersonalDataContributor, ReviewPersonalDataContributor>();
         services.AddScoped<ReviewPhotoStore>();
         services.AddScoped<ProductRatingReader>();
         services.AddContentPart<ProductPart>()
@@ -74,12 +78,14 @@ public sealed class ReportsStartup : StartupBase
 /// <summary>
 /// Asks buyers to review what they bought, by email, when the store has email and customer records.
 /// </summary>
-[RequireFeatures("OrchardCore.Email", CustomersConstants.Features.Customers)]
+[RequireFeatures(OrchardCoreFeatureIds.Email, CustomersConstants.Features.Customers)]
 public sealed class ReviewRequestsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ReviewRequestService>();
+        services.AddCommerceEmailSender()
+            .AddCommerceEmailKind(ReviewRequestService.EmailKind, LocalizationSource.Create<ReviewRequestsStartup>("Review request"));
         services.AddSingleton<global::OrchardCore.BackgroundTasks.IBackgroundTask, ReviewRequestBackgroundTask>();
     }
 }

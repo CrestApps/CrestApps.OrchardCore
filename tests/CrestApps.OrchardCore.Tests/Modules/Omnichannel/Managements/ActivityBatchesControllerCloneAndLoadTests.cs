@@ -244,7 +244,8 @@ public sealed class ActivityBatchesControllerCloneAndLoadTests
             notifier.Object,
             Microsoft.Extensions.Options.Options.Create(sources),
             new TestHtmlLocalizer(),
-            new TestStringLocalizer())
+            new TestStringLocalizer(),
+            new CrestApps.OrchardCore.Tests.Telephony.Doubles.StubClock())
         {
             ControllerContext = new ControllerContext
             {

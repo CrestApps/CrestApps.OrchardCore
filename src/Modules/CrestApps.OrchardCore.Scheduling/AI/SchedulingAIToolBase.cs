@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Security.Claims;
 using System.Text.Json;
-using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Scheduling.Core.Services;
 using CrestApps.OrchardCore.Scheduling.Models;
 using CrestApps.OrchardCore.Scheduling.Services;
@@ -22,7 +22,7 @@ public abstract class SchedulingAIToolBase : AIFunction
     /// <summary>
     /// The options the tools write their results with.
     /// </summary>
-    protected static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    protected static readonly JsonSerializerOptions JsonOptions = JsonSerializerOptions.Web;
 
     /// <inheritdoc />
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object> { ["Strict"] = false };

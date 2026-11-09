@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Commerce.Stores;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Shipping.Models;
 using CrestApps.OrchardCore.Shipping.Services;
@@ -73,7 +74,7 @@ public sealed class ShipmentLabelsAdminController : Controller
             Height = settings.DefaultParcelHeight,
         };
 
-        return View(Populate(model, shipment, order, carrier, settings));
+        return View(Populate(model, shipment, order, carrier, settings, await GetShipFromAsync(settings)));
     }
 
     [HttpPost]
@@ -88,8 +89,9 @@ public sealed class ShipmentLabelsAdminController : Controller
         }
 
         var settings = await _siteService.GetSettingsAsync<ShippingSettings>();
+        var shipFrom = await GetShipFromAsync(settings);
 
-        Populate(model, shipment, order, carrier, settings);
+        Populate(model, shipment, order, carrier, settings, shipFrom);
 
         if (!model.HasShipFrom || order.ShippingAddress is null)
         {
@@ -105,7 +107,7 @@ public sealed class ShipmentLabelsAdminController : Controller
 
         var quote = await carrier.QuoteAsync(new CarrierShipmentRequest
         {
-            From = settings.ShipFrom,
+            From = shipFrom,
             To = order.ShippingAddress,
             Reference = $"{order.OrderNumber}-{shipment.Number}",
             Parcel = new CarrierParcel
@@ -203,12 +205,16 @@ public sealed class ShipmentLabelsAdminController : Controller
         return (shipment, order, carrier, null);
     }
 
-    private static ShipmentLabelViewModel Populate(ShipmentLabelViewModel model, Shipment shipment, Orders.Core.Models.Order order, ICarrierProvider carrier, ShippingSettings settings)
+    // The shipping settings' ship-from address, or the store's address when it's empty.
+    private async Task<Addresses.Models.Address> GetShipFromAsync(ShippingSettings settings)
+        => settings.ShipFrom ?? (await _siteService.GetStoreProfileAsync()).Address;
+
+    private static ShipmentLabelViewModel Populate(ShipmentLabelViewModel model, Shipment shipment, Orders.Core.Models.Order order, ICarrierProvider carrier, ShippingSettings settings, Addresses.Models.Address shipFrom)
     {
         model.Shipment = shipment;
         model.Order = order;
         model.WeightUnit = settings.WeightUnit;
-        model.HasShipFrom = settings.ShipFrom is not null;
+        model.HasShipFrom = shipFrom is not null;
         model.CarrierName = carrier.DisplayName;
 
         return model;

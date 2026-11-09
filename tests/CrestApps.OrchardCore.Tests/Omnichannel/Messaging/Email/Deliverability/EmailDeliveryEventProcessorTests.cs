@@ -77,7 +77,7 @@ public sealed class EmailDeliveryEventProcessorTests
         Assert.Equal(entriesAfterFirst, harness.Log.Entries.Count);
         Assert.Equal(2, harness.Suppressions.Items.Count);
         harness.OptOut.Verify(service => service.OptOutAsync("bob@example.com", It.IsAny<CancellationToken>()), Times.Once);
-        Assert.Equal(ContactCenter.ContactCenterHandlerReplaySafety.GuardedByDurableStore, handler.ReplaySafety);
+        Assert.Equal(Webhooks.WebhookHandlerReplaySafety.GuardedByDurableStore, handler.ReplaySafety);
     }
 
     [Fact]

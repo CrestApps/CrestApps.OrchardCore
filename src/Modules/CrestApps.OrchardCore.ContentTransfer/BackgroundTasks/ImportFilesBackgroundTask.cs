@@ -634,8 +634,10 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
             for (var colIndex = 0; colIndex < rowValues.Length && colIndex < dataTable.Columns.Count; colIndex++)
             {
-                var value = rowValues[colIndex];
-                dataRow[colIndex] = value;
+                var value = NormalizeCellValue(rowValues[colIndex]);
+
+                // A DataRow cannot hold null; DBNull is its null, and reads back as no text like an empty cell.
+                dataRow[colIndex] = (object)value ?? DBNull.Value;
 
                 if (!string.IsNullOrWhiteSpace(value))
                 {
@@ -948,6 +950,16 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             newRecords[rowContext.RowIndex] = rowContext.Row;
         }
     }
+
+    /// <summary>
+    /// Files exported from a database or a spreadsheet write a missing value as the text <c>NULL</c>. That text is
+    /// not a value, and storing it would put the word "NULL" in the content item, so a cell that holds only
+    /// <c>NULL</c> (in any case) is read as no value at all, the same as an empty cell.
+    /// </summary>
+    internal static string NormalizeCellValue(string value)
+        => value is not null && value.AsSpan().Trim().Equals("NULL", StringComparison.OrdinalIgnoreCase)
+            ? null
+            : value;
 
     internal static string GetImportContentItemId(DataRow dataRow, int indexOfKeyColumn)
         => indexOfKeyColumn > -1
@@ -1303,7 +1315,8 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
     {
         await using var scope = serviceProvider.CreateAsyncScope();
         var session = scope.ServiceProvider.GetRequiredService<ISession>();
-        var currentEntry = await session.Query<ContentTransferEntry, ContentTransferEntryIndex>(x => x.EntryId == entryId).FirstOrDefaultAsync(cancellationToken);
+        // Only the status is needed, and the index row carries it, so the entry document with its progress is not read.
+        var currentEntry = await session.QueryIndex<ContentTransferEntryIndex>(x => x.EntryId == entryId).FirstOrDefaultAsync(cancellationToken);
 
         return currentEntry?.Status.ShouldStopImport() == true;
     }

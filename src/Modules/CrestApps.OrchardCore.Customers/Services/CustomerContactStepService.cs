@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Customers.Handlers;
 using CrestApps.OrchardCore.Customers.Models;
+using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Entities;
@@ -26,6 +27,7 @@ public sealed class CustomerContactStepService
     private readonly ICustomerService _customerService;
     private readonly IAddressEditorService _addressEditor;
     private readonly CheckoutInvoiceBuilder _invoiceBuilder;
+    private readonly IPhoneNumberService _phoneNumberService;
 
     internal readonly IStringLocalizer S;
 
@@ -33,12 +35,14 @@ public sealed class CustomerContactStepService
         ICustomerService customerService,
         IAddressEditorService addressEditor,
         CheckoutInvoiceBuilder invoiceBuilder,
-        IStringLocalizer<CustomerContactStepService> stringLocalizer)
+        IStringLocalizer<CustomerContactStepService> stringLocalizer,
+        IEnumerable<IPhoneNumberService> phoneNumberServices = null)
     {
         _customerService = customerService;
         _addressEditor = addressEditor;
         _invoiceBuilder = invoiceBuilder;
         S = stringLocalizer;
+        _phoneNumberService = phoneNumberServices?.FirstOrDefault();
     }
 
     /// <summary>
@@ -121,7 +125,7 @@ public sealed class CustomerContactStepService
                         PostalCode = result.Address.PostalCode,
                         SortingCode = result.Address.SortingCode,
                         Country = result.Address.Country,
-                        Phone = phone,
+                        Phone = PhoneNumberNormalization.ToE164OrTrimmed(phone, _phoneNumberService, result.Address.Country),
                     };
                 }
             }
@@ -131,6 +135,10 @@ public sealed class CustomerContactStepService
         {
             return false;
         }
+
+        // The phone is kept in E.164 form when it parses, read in the billing address's country, so it matches the CRM,
+        // the do-not-call lists and caller ID; a number that doesn't parse is kept as typed.
+        phone = PhoneNumberNormalization.ToE164OrTrimmed(phone, _phoneNumberService, billingAddress?.Country);
 
         var step = new CustomerContactStep
         {

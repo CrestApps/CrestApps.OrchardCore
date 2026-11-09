@@ -23,6 +23,22 @@ public class ValidationOwnershipArchitectureTests
         @"class\s+(?<step>\w+)\s*:\s*NamedRecipeStepHandler",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
+    // A step built on the Core catalog recipe step names its entity as the base class's type argument.
+    private static readonly Regex _catalogRecipeStepDeclarationRegex = new(
+        @"class\s+(?<step>\w+)\s*:\s*(?:Named)?CatalogRecipeStep<\s*(?<entity>\w+)\s*>",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// Steps that became visible to these gates when they moved onto the Core catalog recipe step, whose editors still
+    /// hold rules that belong in the entry's handlers. Never add an entry; remove one as soon as its rules have moved.
+    /// </summary>
+    private static readonly HashSet<string> _notYetGovernedSteps = new(StringComparer.Ordinal)
+    {
+        "CurrencyStep",
+        "ShippingZonesStep",
+        "TimeZoneMapStep",
+    };
+
     private static readonly Regex _recipeStepEntityRegex = new(
         @"^\s*(?<entity>\w+)\s+entry\s*=\s*null;",
         RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.Multiline);
@@ -395,6 +411,20 @@ public class ValidationOwnershipArchitectureTests
         foreach (var file in EnumerateApplicationFiles("*.cs"))
         {
             var text = File.ReadAllText(file.FullPath);
+            var catalogStep = _catalogRecipeStepDeclarationRegex.Match(text);
+
+            if (catalogStep.Success)
+            {
+                if (_notYetGovernedSteps.Contains(catalogStep.Groups["step"].Value))
+                {
+                    continue;
+                }
+
+                entitiesByStep[catalogStep.Groups["step"].Value] = catalogStep.Groups["entity"].Value;
+
+                continue;
+            }
+
             var declaration = _recipeStepDeclarationRegex.Match(text);
 
             if (!declaration.Success)

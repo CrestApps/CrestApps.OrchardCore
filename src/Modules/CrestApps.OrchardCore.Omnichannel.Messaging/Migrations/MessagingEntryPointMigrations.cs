@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Data.Migration;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Migrations;
 
@@ -38,6 +39,7 @@ internal sealed class MessagingEntryPointMigrations : DataMigration
 
     private readonly IContactCenterEntryPointManager _entryPointManager;
     private readonly IOmnichannelChannelEndpointManager _addressManager;
+    private readonly IClock _clock;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -45,14 +47,17 @@ internal sealed class MessagingEntryPointMigrations : DataMigration
     /// </summary>
     /// <param name="entryPointManager">The entry points.</param>
     /// <param name="addressManager">The address list.</param>
+    /// <param name="clock">The clock the records created here are stamped with.</param>
     /// <param name="logger">The logger.</param>
     public MessagingEntryPointMigrations(
         IContactCenterEntryPointManager entryPointManager,
         IOmnichannelChannelEndpointManager addressManager,
+        IClock clock,
         ILogger<MessagingEntryPointMigrations> logger)
     {
         _entryPointManager = entryPointManager;
         _addressManager = addressManager;
+        _clock = clock;
         _logger = logger;
     }
 
@@ -62,7 +67,7 @@ internal sealed class MessagingEntryPointMigrations : DataMigration
     /// <returns>The migration version number.</returns>
     public async Task<int> CreateAsync()
     {
-        await MoveRoutingToEntryPointsAsync(_entryPointManager, _addressManager, _logger);
+        await MoveRoutingToEntryPointsAsync(_entryPointManager, _addressManager, _clock, _logger);
 
         return 2;
     }
@@ -74,7 +79,7 @@ internal sealed class MessagingEntryPointMigrations : DataMigration
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom1Async()
     {
-        await MoveRoutingToEntryPointsAsync(_entryPointManager, _addressManager, _logger);
+        await MoveRoutingToEntryPointsAsync(_entryPointManager, _addressManager, _clock, _logger);
 
         return 2;
     }
@@ -89,11 +94,13 @@ internal sealed class MessagingEntryPointMigrations : DataMigration
         => MoveRoutingToEntryPointsAsync(
             serviceProvider.GetRequiredService<IContactCenterEntryPointManager>(),
             serviceProvider.GetRequiredService<IOmnichannelChannelEndpointManager>(),
+            serviceProvider.GetRequiredService<IClock>(),
             serviceProvider.GetRequiredService<ILogger<MessagingEntryPointMigrations>>());
 
     internal static async Task MoveRoutingToEntryPointsAsync(
         IContactCenterEntryPointManager entryPointManager,
         IOmnichannelChannelEndpointManager addressManager,
+        IClock clock,
         ILogger logger)
     {
         var key = nameof(MessagingEndpointRoutingSettings);
@@ -162,7 +169,7 @@ internal sealed class MessagingEntryPointMigrations : DataMigration
                     entryPoint.TargetAgentId = isAgent ? routing.TargetId : null;
                     entryPoint.TargetQueueId = isAgent ? null : routing.TargetId;
                     entryPoint.Enabled = true;
-                    entryPoint.CreatedUtc = DateTime.UtcNow;
+                    entryPoint.CreatedUtc = clock.UtcNow;
                     entryPoint.Put(new MessagingEntryPointSettings
                     {
                         DistributionMode = routing.DistributionMode,

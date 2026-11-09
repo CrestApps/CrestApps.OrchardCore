@@ -9,7 +9,7 @@ user_manual: user-manual/commerce/marketing
 | --- | --- |
 | **Feature** | `CrestApps.OrchardCore.Marketing` (Marketing) |
 | **Category** | Commerce |
-| **Depends on** | Commerce, Customers, Orders |
+| **Depends on** | Commerce, Customers, Orders, Orchard Core Email, [Outreach](outreach.md) |
 | **Seams it fills** | `IOrderEventHandler` (Orders) |
 
 <YouTube video="marketing" title="Narrated video overview of Marketing" />
@@ -39,7 +39,9 @@ The Liquid has:
 | `StoreName` | The site's name. |
 | `UnsubscribeUrl` | The customer's own unsubscribe link. One is added at the end when the body has none. |
 
-`CampaignService.SendBatchAsync` sends 50 customers at a time, at most ten batches a run of `MarketingBackgroundTask`, from the cursor. It skips a customer who isn't `Active`, doesn't accept marketing, or has no email. A scheduled campaign starts when its time comes. Sending needs an `IEmailService` and the site's `BaseUrl`. The text part is the HTML without its tags.
+Campaigns are sent by the [outreach engine](outreach.md). `MarketingBackgroundTask` starts a scheduled campaign when its time comes, and `CampaignService.StartSendingAsync` hands a sending campaign to the engine as an outreach run (`Campaign.OutreachRunId`): the `MarketingSegment` audience source pages the segment 50 customers at a time from the cursor and skips a customer who isn't `Active`, doesn't accept marketing, or has no email, and the engine asks the consent service (`Email`, as a `Customer`) before each e-mail, so an unsubscribe recorded mid-run still stops it; the `MarketingCampaign` renderer renders the Liquid with the customer's unsubscribe link; the `Email` sender sends it with a text part (the HTML without its tags). The run's counts and cursor are copied back onto the campaign, which becomes `Sent` when the run completes. A batch that keeps failing (for example because the site's `BaseUrl` was removed) fails the run, and the campaign is then `Canceled`. Canceling a campaign stops its run. A campaign that was half sent before the engine resumes at its cursor with its counts.
+
+Marketing depends on Orchard Core's **Email** feature, so campaigns can always be sent once the site's e-mail is set up. Until a default e-mail provider is configured (`IEmailProviderResolver`), `CampaignService.CanSendAsync` is false and the campaign editor says so instead of queueing a campaign that sends nothing.
 
 ## Unsubscribing
 
@@ -52,6 +54,31 @@ The Liquid has:
 | **Commerce > Segments** (`SegmentsAdminController`, `marketing/segments`) and **Commerce > Campaigns** (`CampaignsAdminController`, `marketing/campaigns`), on Orchard Core's `AdminList` | `ManageMarketing` (**Manage marketing**) | Administrator |
 
 A segment's editor counts its customers and those who accept marketing (up to 10,000). A campaign's editor sends a test, as the segment's first customer would get it.
+
+## Recipes and deployment
+
+The **Marketing segments and campaigns** deployment step (Commerce category) writes a `MarketingSegments` step, then a `MarketingCampaigns` step, so each campaign's segment is imported first. Both are matched by `ItemId`, so a second run adds nothing, and they are checked the way their editors check them.
+
+A recipe never sends email. A campaign is exported without its delivery (status, schedule, cursor and counts), a new campaign always imports as a draft, and a campaign that is scheduled or sending on the site is left as it is.
+
+```json
+{
+  "steps": [
+    {
+      "name": "MarketingSegments",
+      "Segments": [
+        { "ItemId": "4sg00000000000000000000001", "Name": "Lapsed buyers", "Rules": { "MinOrders": 1, "LastOrderAtLeastDaysAgo": 180 } }
+      ]
+    },
+    {
+      "name": "MarketingCampaigns",
+      "Campaigns": [
+        { "ItemId": "4cp00000000000000000000001", "Name": "Win back", "SegmentId": "4sg00000000000000000000001", "Subject": "We miss you", "Body": "Come back for 10% off." }
+      ]
+    }
+  ]
+}
+```
 
 ## Related modules
 

@@ -79,7 +79,7 @@ public sealed class ContactActivityExportHandler : IContentImportHandler, IConte
         _displayNameProvider = displayNameProvider;
     }
 
-    public IReadOnlyCollection<ImportColumn> GetColumns(ImportContentContext context)
+    public async Task<IReadOnlyCollection<ImportColumn>> GetColumnsAsync(ImportContentContext context)
     {
         if (!TryGetOptions(context.Entry, out var part))
         {
@@ -95,7 +95,7 @@ public sealed class ContactActivityExportHandler : IContentImportHandler, IConte
             ExportColumn(SubjectColumn),
         };
 
-        foreach (var mapping in GetSubjectColumnMap(part.SubjectContentType, context.ContentTypeDefinition))
+        foreach (var mapping in await GetSubjectColumnMapAsync(part.SubjectContentType, context.ContentTypeDefinition))
         {
             columns.Add(ExportColumn(mapping.Value));
         }
@@ -209,7 +209,7 @@ public sealed class ContactActivityExportHandler : IContentImportHandler, IConte
 
     private async Task ExportSubjectFieldsAsync(ContentExportContext content, string subjectContentType, ContentItem subject)
     {
-        var map = GetSubjectColumnMap(subjectContentType, content.ContentTypeDefinition);
+        var map = await GetSubjectColumnMapAsync(subjectContentType, content.ContentTypeDefinition);
 
         if (map.Count == 0)
         {
@@ -331,7 +331,7 @@ public sealed class ContactActivityExportHandler : IContentImportHandler, IConte
     /// the export). Type-specific subject fields keep their own names; a name that would collide with a
     /// contact column or a base last-activity column is prefixed to stay unique.
     /// </summary>
-    private IReadOnlyList<KeyValuePair<string, string>> GetSubjectColumnMap(string subjectContentType, ContentTypeDefinition contactDefinition)
+    private async Task<IReadOnlyList<KeyValuePair<string, string>>> GetSubjectColumnMapAsync(string subjectContentType, ContentTypeDefinition contactDefinition)
     {
         // The map depends on both types: the subject supplies the columns, the contact supplies the names to
         // avoid colliding with.
@@ -342,9 +342,8 @@ public sealed class ContactActivityExportHandler : IContentImportHandler, IConte
             return _subjectColumnMap;
         }
 
-        // GetColumns is synchronous by contract; this runs on the export background thread which has no
-        // synchronization context, so blocking here is safe. The result is cached for the export.
-        var subjectDefinition = _contentDefinitionManager.GetTypeDefinitionAsync(subjectContentType).GetAwaiter().GetResult();
+        // The result is cached for the export.
+        var subjectDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(subjectContentType);
 
         if (subjectDefinition is null)
         {
@@ -356,15 +355,13 @@ public sealed class ContactActivityExportHandler : IContentImportHandler, IConte
 
         var importManager = _serviceProvider.GetRequiredService<IContentImportManager>();
 
-        var subjectColumns = importManager
-            .GetColumnsAsync(new ImportContentContext { ContentTypeDefinition = subjectDefinition })
-            .GetAwaiter().GetResult()
+        var subjectColumns = (await importManager.GetColumnsAsync(new ImportContentContext { ContentTypeDefinition = subjectDefinition }))
             .Where(column => column.Type != ImportColumnType.ImportOnly && !_excludedSubjectColumns.Contains(column.Name))
             .Select(column => column.Name);
 
         // Names already taken by the contact's own columns and the base last-activity columns; a subject
         // column that collides is prefixed so the export never emits duplicate column names.
-        var taken = new HashSet<string>(GetContactColumnNames(contactDefinition, importManager), StringComparer.OrdinalIgnoreCase)
+        var taken = new HashSet<string>(await GetContactColumnNamesAsync(contactDefinition, importManager), StringComparer.OrdinalIgnoreCase)
         {
             NoteColumn,
             CompletedColumn,
@@ -388,7 +385,7 @@ public sealed class ContactActivityExportHandler : IContentImportHandler, IConte
         return _subjectColumnMap;
     }
 
-    private static IEnumerable<string> GetContactColumnNames(ContentTypeDefinition contactDefinition, IContentImportManager importManager)
+    private static async Task<IEnumerable<string>> GetContactColumnNamesAsync(ContentTypeDefinition contactDefinition, IContentImportManager importManager)
     {
         if (contactDefinition is null)
         {
@@ -396,9 +393,7 @@ public sealed class ContactActivityExportHandler : IContentImportHandler, IConte
         }
 
         // Entry is intentionally omitted so this handler does not contribute (and re-enter) here.
-        return importManager
-            .GetColumnsAsync(new ImportContentContext { ContentTypeDefinition = contactDefinition })
-            .GetAwaiter().GetResult()
+        return (await importManager.GetColumnsAsync(new ImportContentContext { ContentTypeDefinition = contactDefinition }))
             .Select(column => column.Name);
     }
 

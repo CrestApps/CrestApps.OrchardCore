@@ -23,7 +23,8 @@ public sealed class TwilioSettingsSchema : SiteSettingsSchemaBase
                 ("IsEnabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the Twilio SMS provider is enabled.")),
                 ("PhoneNumber", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The Twilio phone number to send SMS messages from.")),
                 ("AccountSID", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The Twilio Account SID.")),
-                ("AuthToken", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The Twilio Auth Token.")))
-            .Required("PhoneNumber", "AccountSID", "AuthToken")
+                ("AuthToken", ProtectedCredential("Twilio auth token", "AuthTokenSecretName")),
+                ("AuthTokenSecretName", SecretName("Twilio auth token")))
+            .Required("PhoneNumber", "AccountSID")
             .AdditionalProperties(false);
 }

@@ -5,6 +5,7 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
 using YesSql.Indexes;
+using static CrestApps.OrchardCore.StringTruncation;
 
 namespace CrestApps.OrchardCore.ContentFields.Indexes;
 
@@ -63,7 +64,4 @@ public sealed class AddressFieldIndexProvider : ContentFieldIndexProvider
                     });
             });
     }
-
-    private static string Truncate(string value, int length)
-        => value is null || value.Length <= length ? value : value[..length];
 }

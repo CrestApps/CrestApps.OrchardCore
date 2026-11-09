@@ -37,17 +37,21 @@
     <PackageReference Include="OrchardCore.Email.Abstractions" />
     <PackageReference Include="OrchardCore.Sms.Abstractions" />
     <PackageReference Include="OrchardCore.Media.Abstractions" />
+    <PackageReference Include="CrestApps.Core.AI" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Dispatch.Abstractions\CrestApps.OrchardCore.Dispatch.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Scheduling.Abstractions\CrestApps.OrchardCore.Scheduling.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Workforce.Abstractions\CrestApps.OrchardCore.Workforce.Abstractions.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Assets.Core\CrestApps.OrchardCore.Assets.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Dispatch.Core\CrestApps.OrchardCore.Dispatch.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Inventory.Core\CrestApps.OrchardCore.Inventory.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Recipes.Core\CrestApps.OrchardCore.Recipes.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.SignalR.Core\CrestApps.OrchardCore.SignalR.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Workforce.Core\CrestApps.OrchardCore.Workforce.Core.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Workforce\CrestApps.OrchardCore.Workforce.csproj" />
   </ItemGroup>
 

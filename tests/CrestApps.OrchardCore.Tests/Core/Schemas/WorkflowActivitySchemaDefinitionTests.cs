@@ -47,6 +47,7 @@ public sealed class WorkflowActivitySchemaDefinitionTests
         "CreateAIActivityTask",
         "CreateContentTask",
         "CreateTenantTask",
+        "DataPipelineRunCompletedEvent",
         "DeclineConversationTask",
         "DeleteContentTask",
         "DisableTenantTask",
@@ -54,6 +55,7 @@ public sealed class WorkflowActivitySchemaDefinitionTests
         "EnableTenantTask",
         "EnqueueActivityTask",
         "EvaluateConversationTask",
+        "ExecuteWorkflowTask",
         "ForEachTask",
         "ForLoopTask",
         "ForkTask",
@@ -68,6 +70,7 @@ public sealed class WorkflowActivitySchemaDefinitionTests
         "JoinTask",
         "LiquidTask",
         "LogTask",
+        "MetaConversionsApiEventTask",
         "NotifyContentOwnerTask",
         "NotifyTask",
         "NotifyUserTask",
@@ -75,6 +78,7 @@ public sealed class WorkflowActivitySchemaDefinitionTests
         "RegisterUserTask",
         "RerunConversationAnalysisTask",
         "RetrieveContentTask",
+        "RunDataPipelineTask",
         "ScheduleCallbackTask",
         "ScriptTask",
         "SendSignedWebhookTask",
@@ -82,6 +86,7 @@ public sealed class WorkflowActivitySchemaDefinitionTests
         "SetConversationVariablesTask",
         "SetOutputTask",
         "SetPropertyTask",
+        "SetVariableTask",
         "SetupTenantTask",
         "SignalEvent",
         "SimulateConversationTask",
@@ -89,6 +94,7 @@ public sealed class WorkflowActivitySchemaDefinitionTests
         "SplitTrafficTask",
         "StartCallRecordingTask",
         "StartOmnichannelActivityTask",
+        "StartedByWorkflowEvent",
         "StopCallRecordingTask",
         "TimerEvent",
         "TransferAICallTask",
@@ -106,6 +112,7 @@ public sealed class WorkflowActivitySchemaDefinitionTests
         "UserDisabledEvent",
         "UserEnabledEvent",
         "UserLoggedInEvent",
+        "UserLoggedOutEvent",
         "UserTaskEvent",
         "UserUpdatedEvent",
         "ValidateAntiforgeryTokenTask",
@@ -158,8 +165,9 @@ public sealed class WorkflowActivitySchemaDefinitionTests
         Assert.Empty(duplicates);
     }
 
+    // The AI module registers the schemas of its own workflow activities, in a startup that requires the Recipes feature.
     [Fact]
-    public void EverySchemaDefinition_IsRegisteredByTheRecipesModule()
+    public void EverySchemaDefinition_IsRegisteredByTheRecipesModuleOrItsOwner()
     {
         var registered = GetRegisteredDefinitionTypes();
         var declared = GetDefinitionTypes()
@@ -313,11 +321,13 @@ public sealed class WorkflowActivitySchemaDefinitionTests
         Assert.Equal(
             [
                 "ActivityMetadata",
+                "ActivityRetryPolicy",
                 "Author",
                 "Bcc",
                 "BodyFormat",
                 "Cc",
                 "HtmlBody",
+                "OutputBindings",
                 "Recipients",
                 "ReplyTo",
                 "Sender",
@@ -377,11 +387,92 @@ public sealed class WorkflowActivitySchemaDefinitionTests
         using var document = JsonDocument.Parse(
             """
             {
-                "Recipients": { "Expression": "sales@example.com", "Syntax": "Liquid" }
+                "Recipients": { "Expression": "sales@example.com", "Language": "Liquid" }
             }
             """);
 
         Assert.False(schema.Evaluate(document.RootElement).IsValid);
+    }
+
+    [Fact]
+    public async Task ExpressionProperties_AcceptASyntax()
+    {
+        var schema = await BuildPropertiesSchemaAsync("EmailTask");
+
+        using var document = JsonDocument.Parse(
+            """
+            {
+                "Recipients": { "Expression": "sales@example.com", "Syntax": "Literal" }
+            }
+            """);
+
+        Assert.True(schema.Evaluate(document.RootElement).IsValid);
+    }
+
+    [Fact]
+    public async Task TaskProperties_AcceptOutputBindingsAndARetryPolicy()
+    {
+        var schema = await BuildPropertiesSchemaAsync("SetVariableTask");
+
+        using var document = JsonDocument.Parse(
+            """
+            {
+                "VariableName": "total",
+                "Value": { "Expression": "variable('quantity') * variable('unitPrice')", "Syntax": "JavaScript" },
+                "OutputBindings": { "Result": "total" },
+                "ActivityRetryPolicy": { "MaxRetries": 3, "DelaySeconds": 10, "Backoff": "Exponential", "OnFailure": "FollowFailedOutcome" }
+            }
+            """);
+
+        Assert.True(schema.Evaluate(document.RootElement).IsValid);
+    }
+
+    [Fact]
+    public async Task TaskProperties_RejectARetryPolicyAboveTheLimit()
+    {
+        var schema = await BuildPropertiesSchemaAsync("SetVariableTask");
+
+        using var document = JsonDocument.Parse(
+            """
+            {
+                "VariableName": "total",
+                "ActivityRetryPolicy": { "MaxRetries": 11 }
+            }
+            """);
+
+        Assert.False(schema.Evaluate(document.RootElement).IsValid);
+    }
+
+    [Fact]
+    public async Task EventProperties_DoNotDescribeARetryPolicy()
+    {
+        IWorkflowActivitySchemaDefinition definition = new StartedByWorkflowEventSchema();
+        var schema = await definition.GetActivitySchemaAsync(
+            CreateContext("StartedByWorkflowEvent", isEvent: true),
+            TestContext.Current.CancellationToken);
+        var properties = GetProperties(ToNode(schema.Properties)).Select(property => property.Key).ToArray();
+
+        Assert.Contains("OutputBindings", properties);
+        Assert.DoesNotContain("ActivityRetryPolicy", properties);
+    }
+
+    [Fact]
+    public async Task ExecuteWorkflowTaskSchema_AcceptsInputsWithASyntax()
+    {
+        var schema = await BuildPropertiesSchemaAsync("ExecuteWorkflowTask");
+
+        using var document = JsonDocument.Parse(
+            """
+            {
+                "WorkflowTypeId": "samplegreetingformat",
+                "WaitForCompletion": true,
+                "Inputs": { "name": { "Expression": "queryString('name') || 'world'", "Syntax": "JavaScript" } },
+                "Outputs": [ { "Name": "greeting", "TypeName": "string", "Description": "Output: the greeting." } ],
+                "OutputBindings": { "greeting": "reply" }
+            }
+            """);
+
+        Assert.True(schema.Evaluate(document.RootElement).IsValid);
     }
 
     [Fact]
@@ -534,6 +625,22 @@ public sealed class WorkflowActivitySchemaDefinitionTests
     }
 
     [Fact]
+    public async Task ForEachTaskSchema_AcceptsAnEnumerableWithItsOwnSyntaxWhateverTheLegacySyntax()
+    {
+        var schema = await BuildPropertiesSchemaAsync("ForEachTask");
+
+        using var document = JsonDocument.Parse(
+            """
+            {
+                "Syntax": "Liquid",
+                "Enumerable": { "Expression": "{{ Workflow.Input.Items }}", "Syntax": "Liquid" }
+            }
+            """);
+
+        Assert.True(schema.Evaluate(document.RootElement).IsValid);
+    }
+
+    [Fact]
     public async Task BuildActivitySchemaAsync_CanBeOverriddenToShapeTheSchema()
     {
         IWorkflowActivitySchemaDefinition definition = new AsyncOverrideActivitySchema();
@@ -645,8 +752,8 @@ public sealed class WorkflowActivitySchemaDefinitionTests
     private static string[] GetRegisteredDefinitionTypes()
     {
         var services = new ServiceCollection();
-        var startupTypes = Assembly.Load("CrestApps.OrchardCore.Recipes")
-            .GetTypes()
+        var startupTypes = new[] { "CrestApps.OrchardCore.Recipes", "CrestApps.OrchardCore.AI" }
+            .SelectMany(name => Assembly.Load(name).GetTypes())
             .Where(type => !type.IsAbstract && typeof(IStartup).IsAssignableFrom(type))
             .Where(type => type.GetConstructor(BindingFlags.Public | BindingFlags.Instance, []) is not null);
 

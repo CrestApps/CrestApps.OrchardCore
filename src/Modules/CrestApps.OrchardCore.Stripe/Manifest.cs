@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Stripe.Core;
-using CrestApps.OrchardCore.Users.Core;
+using CrestApps.OrchardCore.Users;
+using CrestApps.OrchardCore.Webhooks;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -18,5 +19,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         UsersConstants.Feature.Area,
+        WebhooksConstants.Feature.ProviderInbox,
     ]
 )]

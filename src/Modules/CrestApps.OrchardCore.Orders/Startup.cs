@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Accounts;
 using CrestApps.OrchardCore.Commerce;
+using CrestApps.OrchardCore.Commerce.Core;
 using CrestApps.OrchardCore.Carts.Core.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Orders.BackgroundTasks;
@@ -7,6 +8,10 @@ using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Customers.Core;
+using CrestApps.OrchardCore.Customers.Core.Services;
+using CrestApps.OrchardCore.Customers.Services;
+using CrestApps.OrchardCore.Orders.Customers;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Handlers;
 using CrestApps.OrchardCore.Orders.Core.Indexes;
@@ -20,6 +25,7 @@ using CrestApps.OrchardCore.Orders.Navigation;
 using CrestApps.OrchardCore.Orders.Services;
 using Fluid;
 using CrestApps.OrchardCore.Commerce.Webhooks;
+using CrestApps.OrchardCore.Webhooks;
 using CrestApps.OrchardCore.Orders.Api;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -53,6 +59,7 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<OrderIndexProvider>();
 
         services.AddScoped<IOrderStore, OrderStore>();
+        services.AddNumberSequence();
         services.AddScoped<IOrderService, OrderService>();
         services.AddScoped<IStoreSetupStep, TestOrderSetupStep>();
 
@@ -89,7 +96,6 @@ public sealed class Startup : StartupBase
         services.AddSiteDisplayDriver<OrderSettingsDisplayDriver>();
         services.AddSiteDisplayDriver<OrderEmailTemplateSettingsDisplayDriver>();
         services.AddSiteSettingsPermission(OrderEmailTemplateSettingsDisplayDriver.GroupId, OrderPermissions.ManageOrders);
-        services.AddScoped<IOrderEmailTemplates, LiquidOrderEmailTemplates>();
         services.AddCommerceEmailSender()
             .AddCommerceEmailKind(OrderEmailKinds.Confirmation, LocalizationSource.Create<Startup>("Order confirmation"), LocalizationSource.Create<Startup>("{{ OrderUrl }}: the order's page, for a guest."))
             .AddCommerceEmailKind(OrderEmailKinds.Invoice, LocalizationSource.Create<Startup>("Order to pay (sent by staff)"), LocalizationSource.Create<Startup>("{{ PayUrl }}: where the buyer pays."))
@@ -109,6 +115,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<OrderOperationScope>();
         services.AddScoped<OrderConfirmationSender>();
         services.AddScoped<OrderOperationsService>();
+        services.AddScoped<IOrderOperationsService>(sp => sp.GetRequiredService<OrderOperationsService>());
         services.AddScoped<IOrderRefunder, OrderRefunder>();
         services.AddScoped<IOrderRequestService, OrderRequestService>();
         services.AddScoped<CartCheckoutService>();
@@ -127,12 +134,6 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICheckoutReferenceDescriber, OrderCheckoutReferenceDescriber>();
         services.AddScoped<CouponItemLookup>();
         services.AddDisplayDriver<Coupon, CouponItemLimitsDisplayDriver>();
-
-        services.Configure<TemplateOptions>(options =>
-        {
-            options.MemberAccessStrategy.Register<Order>();
-            options.MemberAccessStrategy.Register<OrderLine>();
-        });
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
@@ -145,6 +146,22 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Adds the Orders tab to an account's page.
 /// </summary>
+/// <summary>
+/// Takes orders into the Customers privacy and retention actions: erasing or exporting a customer covers their orders,
+/// merging a guest moves their orders, and guest orders are anonymized when the retention window runs out.
+/// </summary>
+[RequireFeatures(CustomersConstants.Features.Customers)]
+public sealed class CustomersStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<OrderAnonymizer>();
+        services.AddScoped<ICustomerMergeHandler, OrderCustomerMergeHandler>();
+        services.AddScoped<ICustomerPrivacyHandler, OrderCustomerPrivacyHandler>();
+        services.AddScoped<IGuestRetentionHandler, OrderGuestRetentionHandler>();
+    }
+}
+
 [RequireFeatures(AccountsConstants.Feature)]
 public sealed class AccountsStartup : StartupBase
 {
@@ -179,7 +196,7 @@ public sealed class ReportsStartup : StartupBase
 /// <summary>
 /// Starts workflows when orders are paid, canceled and refunded.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class WorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -278,9 +295,9 @@ public sealed class WebhooksStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IOrderEventHandler, OrderWebhookEventHandler>();
-        services.AddCommerceWebhookEvent(CommerceWebhookEvents.OrderCreated, "Order placed", "Orders");
-        services.AddCommerceWebhookEvent(CommerceWebhookEvents.OrderPaid, "Order paid", "Orders");
-        services.AddCommerceWebhookEvent(CommerceWebhookEvents.OrderCanceled, "Order canceled", "Orders");
-        services.AddCommerceWebhookEvent(CommerceWebhookEvents.OrderRefunded, "Order refunded", "Orders");
+        services.AddWebhookEvent(CommerceWebhookEvents.OrderCreated, "Order placed", "Orders");
+        services.AddWebhookEvent(CommerceWebhookEvents.OrderPaid, "Order paid", "Orders");
+        services.AddWebhookEvent(CommerceWebhookEvents.OrderCanceled, "Order canceled", "Orders");
+        services.AddWebhookEvent(CommerceWebhookEvents.OrderRefunded, "Order refunded", "Orders");
     }
 }

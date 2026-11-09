@@ -75,7 +75,7 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Puts sample files on products from a recipe.
 /// </summary>
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class RecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

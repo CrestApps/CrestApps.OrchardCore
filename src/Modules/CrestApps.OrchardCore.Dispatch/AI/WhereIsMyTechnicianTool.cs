@@ -1,5 +1,5 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Dispatch.Core;
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
@@ -24,7 +24,7 @@ public sealed class WhereIsMyTechnicianTool : AIFunction
 
     private const int MinimumDigits = 7;
 
-    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions _jsonOptions = JsonSerializerOptions.Web;
 
     private static readonly JsonElement _schema = JsonSerializer.Deserialize<JsonElement>("""
         {

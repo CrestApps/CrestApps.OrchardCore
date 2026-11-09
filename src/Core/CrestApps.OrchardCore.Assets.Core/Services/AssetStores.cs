@@ -27,6 +27,18 @@ public sealed class AssetTypeStore : DocumentCatalog<AssetType, AssetTypeIndex>
     {
         CollectionName = AssetsConstants.CollectionName;
     }
+
+    /// <summary>
+    /// Returns a page of the asset types, ordered by name, and how many there are, read in the database.
+    /// </summary>
+    /// <param name="skip">How many types to skip.</param>
+    /// <param name="take">How many types to return.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>How many types there are, and the page of them.</returns>
+    public Task<(int Count, IReadOnlyList<AssetType> Items)> PageAsync(int skip, int take, CancellationToken cancellationToken = default)
+    {
+        return PageByNameAsync(index => index.Name, null, skip, take, cancellationToken);
+    }
 }
 
 /// <summary>
@@ -59,6 +71,26 @@ public sealed class AssetStore : DocumentCatalog<Asset, AssetIndex>
         : base(session)
     {
         CollectionName = AssetsConstants.CollectionName;
+    }
+
+    /// <summary>
+    /// Counts the assets of each type, in the database, without loading them.
+    /// </summary>
+    /// <param name="typeIds">The asset types.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The number of assets of each type.</returns>
+    public async Task<IReadOnlyDictionary<string, int>> CountByTypeAsync(IEnumerable<string> typeIds, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(typeIds);
+
+        var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        foreach (var typeId in typeIds.Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal))
+        {
+            counts[typeId] = await Session.QueryIndex<AssetIndex>(index => index.AssetTypeId == typeId, collection: CollectionName).CountAsync(cancellationToken);
+        }
+
+        return counts;
     }
 }
 

@@ -126,7 +126,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.ContactCenter.RealTime` | Contact Center Real-Time (dependency only) | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
 | `CrestApps.OrchardCore.Telnyx.AiVoice` | Telnyx AI Voice Agent | [Telnyx AI Voice Agent](./telephony/telnyx#telnyx-ai-voice-agent) |
 | `CrestApps.OrchardCore.ContactCenter.BusinessHours` | Contact Center Business Hours | [Business hours and overflow](./contact-center/agents-queues-dialer#business-hours-and-overflow) |
-| `CrestApps.OrchardCore.ContactCenter.ProviderInbox` | Contact Center Provider Webhook Inbox (dependency only) | [Voice routing](./contact-center/voice-routing) |
+| `CrestApps.OrchardCore.ContactCenter.ProviderInbox` | Provider Webhook Inbox (dependency only, in the Webhooks module) | [Webhooks](./modules/webhooks#provider-webhook-inbox) |
 | `CrestApps.OrchardCore.ContactCenter.Recording.Core` | Contact Center Recording Governance (dependency only) | [Recording governance](./contact-center/#recording-governance) |
 | `CrestApps.OrchardCore.Omnichannel.Messaging.RoutedDistribution` | Omnichannel Messaging Routed Distribution | [Messaging Workspace](./omnichannel/messaging-workspace) |
 | `CrestApps.OrchardCore.Omnichannel.Voice` | Automated Voice | [Telnyx AI Voice Agent](./telephony/telnyx#telnyx-ai-voice-agent) |
@@ -279,6 +279,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Shipping.Api` | Shipping API | [Shipping](./modules/shipping#api) |
 | `CrestApps.OrchardCore.Inventory.Api` | Inventory API | [Inventory](./modules/inventory#api) |
 | `CrestApps.OrchardCore.Commerce.Webhooks` | Commerce Webhooks | [Commerce Webhooks](./modules/commerce-webhooks) |
+| `CrestApps.OrchardCore.Webhooks` | Webhooks | [Webhooks](./modules/webhooks#outbound-webhooks) |
 | `CrestApps.OrchardCore.PointOfSale` | Point of Sale | [Point of Sale](./modules/point-of-sale) |
 | `CrestApps.OrchardCore.PayLater` | Pay Later | [Pay Later](./modules/pay-later) |
 | `CrestApps.OrchardCore.Receipts` | Receipts | [Receipts](./modules/receipts) |
@@ -311,6 +312,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.SignalR.Redis` | SignalR Redis Backplane (Deprecated) | [SignalR](./modules/signalr) |
 | `CrestApps.OrchardCore.SignalR.Azure` | SignalR Azure Backplane (Deprecated) | [SignalR](./modules/signalr) |
 | `CrestApps.OrchardCore.Telnyx.Sms` | Telnyx SMS | [Telnyx SMS](./telephony/telnyx#telnyx-sms) |
+| `CrestApps.OrchardCore.Outreach` | Outreach (dependency only) | [Outreach](./modules/outreach) |
 
 ## Users
 

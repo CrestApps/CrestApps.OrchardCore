@@ -1,5 +1,5 @@
 using System.Globalization;
-using CrestApps.OrchardCore.Calendars.Core.Recurrence;
+using CrestApps.OrchardCore.Calendars.Recurrence;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
 using Microsoft.Extensions.Localization;

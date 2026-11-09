@@ -32,17 +32,22 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.BusinessHours.Core/CrestApps.OrchardCore.BusinessHours.Core.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.Consent.Core/CrestApps.OrchardCore.Consent.Core.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Accounts.Abstractions/CrestApps.OrchardCore.Accounts.Abstractions.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.Accounts.Core/CrestApps.OrchardCore.Accounts.Core.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.ContentTransfer.Core/CrestApps.OrchardCore.ContentTransfer.Core.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.Omnichannel.Core/CrestApps.OrchardCore.Omnichannel.Core.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Calendars.Abstractions/CrestApps.OrchardCore.Calendars.Abstractions.csproj" />
-    <ProjectReference Include="../../Core/CrestApps.OrchardCore.Calendars.Core/CrestApps.OrchardCore.Calendars.Core.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.YesSql.Core/CrestApps.OrchardCore.YesSql.Core.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.ContentFields.Abstractions/CrestApps.OrchardCore.ContentFields.Abstractions.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.DncRegistry.Abstractions/CrestApps.OrchardCore.DncRegistry.Abstractions.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.PersonalData.Core/CrestApps.OrchardCore.PersonalData.Core.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Reports.Abstractions/CrestApps.OrchardCore.Reports.Abstractions.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.Reports.Core/CrestApps.OrchardCore.Reports.Core.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.Recipes.Core/CrestApps.OrchardCore.Recipes.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

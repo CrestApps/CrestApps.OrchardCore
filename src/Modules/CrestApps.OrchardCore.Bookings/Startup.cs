@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Bookings.BackgroundTasks;
+using CrestApps.OrchardCore.Bookings.Deployments;
 using CrestApps.OrchardCore.Bookings.Drivers;
 using CrestApps.OrchardCore.Bookings.Handlers;
 using CrestApps.OrchardCore.Bookings.Indexes;
@@ -6,13 +7,19 @@ using CrestApps.OrchardCore.Bookings.Migrations;
 using CrestApps.OrchardCore.Bookings.Models;
 using CrestApps.OrchardCore.Bookings.Navigation;
 using CrestApps.OrchardCore.Bookings.Recipes;
+using CrestApps.OrchardCore.Bookings.Recipes.Workflows;
 using CrestApps.OrchardCore.Bookings.Services;
 using CrestApps.OrchardCore.Carts.Core.Models;
 using CrestApps.OrchardCore.Carts.Core.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Commerce.Core;
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.PersonalData.Core;
+using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
@@ -20,6 +27,7 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Localization;
 using OrchardCore.Modules;
@@ -42,6 +50,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IBookingSlotStore, BookingSlotStore>();
         services.AddScoped<IBookingStore, BookingStore>();
         services.AddScoped<IBookingBalanceStore, BookingBalanceStore>();
+        services.AddPersonalDataContributor<BookingPersonalDataContributor>();
         services.AddScoped<BookingCapacityService>();
         services.AddScoped<BookingService>();
         services.AddScoped<BookingEmailSender>();
@@ -69,15 +78,56 @@ public sealed class Startup : StartupBase
         services.AddSingleton<IBackgroundTask, BookingsBackgroundTask>();
         services.AddPermissionProvider<BookingsPermissionProvider>();
         services.AddNavigationProvider<BookingsAdminMenu>();
+
+        // The upcoming open dates are exported in the shape the BookingDates recipe step reads.
+        services.AddDeployment<BookingDatesDeploymentSource, BookingDatesDeploymentStep, SummaryDeploymentStepDisplayDriver<BookingDatesDeploymentStep>>();
     }
 }
 
 /// <summary>
 /// Adds dates to booking products from a recipe, such as a sample tour's departures.
 /// </summary>
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class RecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
-        => services.AddRecipeExecutionStep<BookingDatesStep>();
+    {
+        services.AddRecipeExecutionStep<BookingDatesStep>();
+    }
+}
+
+/// <summary>
+/// Describes the BookingDates recipe and deployment steps and the booking part to CrestApps Recipes.
+/// </summary>
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
+public sealed class RecipesSchemaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, BookingDatesRecipeStepSchema>();
+        services.AddDeploymentStepSchema<BookingDatesDeploymentStepSchema>();
+        services.AddScoped<IContentSchemaDefinition, BookingPartSchemaDefinition>();
+    }
+}
+
+/// <summary>
+/// Describes the booking workflow events to CrestApps Recipes.
+/// </summary>
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area, OrchardCoreFeatureIds.Workflows)]
+public sealed class WorkflowsRecipesSchemaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddWorkflowActivitySchema<BookingCreatedEventSchema>()
+            .AddWorkflowActivitySchema<BookingConfirmedEventSchema>()
+            .AddWorkflowActivitySchema<BookingRescheduledEventSchema>()
+            .AddWorkflowActivitySchema<BookingCanceledEventSchema>()
+            .AddWorkflowActivitySchema<BookingCompletedEventSchema>()
+            .AddWorkflowActivitySchema<BookingNoShowEventSchema>()
+            .AddWorkflowActivitySchema<BookingExpiredEventSchema>()
+            .AddWorkflowActivitySchema<BookingPaymentReceivedEventSchema>()
+            .AddWorkflowActivitySchema<BookingPaymentFailedEventSchema>()
+            .AddWorkflowActivitySchema<BookingRefundedEventSchema>();
+    }
 }

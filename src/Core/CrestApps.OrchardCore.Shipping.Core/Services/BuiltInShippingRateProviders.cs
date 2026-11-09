@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Commerce.Stores;
+using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Shipping.Models;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Localization;
@@ -184,14 +186,17 @@ public sealed class CarrierShippingRateProvider : IShippingRateProvider
         var shipping = await _siteService.GetSettingsAsync<ShippingSettings>();
         var carrier = await _carriers.GetDefaultAsync();
 
-        if (carrier is null || shipping.ShipFrom is null || context.Request.Destination is null)
+        // The shipping settings' ship-from address, or the store's address when it's empty.
+        var shipFrom = shipping.ShipFrom ?? (await _siteService.GetStoreProfileAsync()).Address;
+
+        if (carrier is null || shipFrom is null || context.Request.Destination is null)
         {
             return Fallback(context, settings);
         }
 
         var request = new CarrierShipmentRequest
         {
-            From = shipping.ShipFrom,
+            From = shipFrom,
             To = context.Request.Destination,
             Parcel = new CarrierParcel
             {
@@ -232,7 +237,7 @@ public sealed class CarrierShippingRateProvider : IShippingRateProvider
         var offered = (settings.MaxRates > 0 ? rates.Take(settings.MaxRates) : rates)
             .Select(rate =>
             {
-                var amount = Math.Round((rate.Amount * (1 + (settings.MarkupPercent / 100m))) + settings.MarkupAmount, 2, MidpointRounding.AwayFromZero);
+                var amount = Money.Round((rate.Amount * (1 + (settings.MarkupPercent / 100m))) + settings.MarkupAmount, rate.Currency ?? context.Request.Currency);
                 var shippingRate = context.CreateRate(amount, $"{rate.Carrier}-{rate.Service}".ToLowerInvariant(), $"{rate.Carrier} {DescribeService(rate.Carrier, rate.Service)}");
 
                 return rate.DeliveryDays is { } days

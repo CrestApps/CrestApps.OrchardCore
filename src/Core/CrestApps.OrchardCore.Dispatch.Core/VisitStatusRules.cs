@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Dispatch.Models;
+using CrestApps.OrchardCore.StateMachines;
 
 namespace CrestApps.OrchardCore.Dispatch.Core;
 
@@ -7,7 +8,7 @@ namespace CrestApps.OrchardCore.Dispatch.Core;
 /// </summary>
 public static class VisitStatusRules
 {
-    private static readonly Dictionary<VisitStatus, VisitStatus[]> _next = new()
+    private static readonly TransitionTable<VisitStatus> _next = new(new Dictionary<VisitStatus, VisitStatus[]>
     {
         [VisitStatus.Unscheduled] = [VisitStatus.Canceled],
         [VisitStatus.Scheduled] = [VisitStatus.Dispatched, VisitStatus.EnRoute, VisitStatus.OnSite, VisitStatus.Canceled],
@@ -18,14 +19,14 @@ public static class VisitStatusRules
         [VisitStatus.Completed] = [],
         [VisitStatus.Incomplete] = [],
         [VisitStatus.Canceled] = [],
-    };
+    });
 
     /// <summary>
     /// Gives the statuses a visit can move to with a status change.
     /// </summary>
     /// <param name="from">The status it is in.</param>
     /// <returns>The statuses.</returns>
-    public static IReadOnlyList<VisitStatus> Next(VisitStatus from) => _next.GetValueOrDefault(from, []);
+    public static IReadOnlyList<VisitStatus> Next(VisitStatus from) => _next.Next(from);
 
     /// <summary>
     /// Tells whether a visit can move from one status to another with a status change.
@@ -33,7 +34,7 @@ public static class VisitStatusRules
     /// <param name="from">The status it is in.</param>
     /// <param name="to">The status it moves to.</param>
     /// <returns>Whether it can.</returns>
-    public static bool CanMove(VisitStatus from, VisitStatus to) => Next(from).Contains(to);
+    public static bool CanMove(VisitStatus from, VisitStatus to) => _next.CanMove(from, to);
 
     /// <summary>
     /// Tells whether a visit is still to happen or happening.

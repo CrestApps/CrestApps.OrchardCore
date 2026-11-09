@@ -145,6 +145,10 @@ public sealed class DialerStartup : StartupBase
                 "Manual dialing calling-window enforcement requires a calling calendar id.")
             .ValidateOnStart();
 
+        // The eligibility service reads a contact's current number through the accessor; registering it here
+        // keeps the dialer working on a tenant that has no CRM feature enabled.
+        services.AddContactMethods();
+
         services
             .AddScoped<IDialerAbandonmentPolicyService, DefaultDialerAbandonmentPolicyService>()
             // The live answers and abandoned calls the cap is measured against, counted from the event log.
@@ -165,7 +169,7 @@ public sealed class DialerStartup : StartupBase
 /// Registers the deployment steps that export the dialer profiles owned by the dialer feature.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Dialer)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class DialerDeploymentStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -179,7 +183,7 @@ public sealed class DialerDeploymentStartup : StartupBase
 /// Registers the recipe steps that import the dialer profiles owned by the dialer feature.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Dialer)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class DialerRecipesStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -194,7 +198,7 @@ public sealed class DialerRecipesStartup : StartupBase
 /// Dialer feature are enabled so the required callback service is always resolvable.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Dialer)]
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class ContactCenterDialerWorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

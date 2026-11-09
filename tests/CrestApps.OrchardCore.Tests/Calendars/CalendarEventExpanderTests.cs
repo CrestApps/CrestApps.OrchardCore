@@ -1,5 +1,5 @@
-using CrestApps.OrchardCore.Calendars.Core;
-using CrestApps.OrchardCore.Calendars.Core.Recurrence;
+using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Calendars.Recurrence;
 using CrestApps.OrchardCore.Calendars.Models;
 
 namespace CrestApps.OrchardCore.Tests.Calendars;

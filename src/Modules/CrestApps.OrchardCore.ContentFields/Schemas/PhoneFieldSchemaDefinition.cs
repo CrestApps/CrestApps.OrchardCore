@@ -15,12 +15,13 @@ internal sealed class PhoneFieldSchemaDefinition : FieldSchemaDefinitionBase
                 ("PhoneFieldSettings", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Object)
                     .Properties(
-                        ("Hint", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                        ("Required", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
+                        ("Hint", new JsonSchemaBuilder().Type(SchemaValueType.String, SchemaValueType.Null).Description("The hint shown under the field in the editor.")),
+                        ("Required", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether a phone number must be entered.")),
                         ("InitialCountryMode", new JsonSchemaBuilder()
-                            .Type(SchemaValueType.String)
-                            .Enum("Globe", "CurrentCulture", "Specific")),
-                        ("SpecificCountryCode", CountryCodeSchema()))
+                            .Enum("Globe", "CurrentCulture", "Specific", 0, 1, 2)
+                            .Description("The country the editor starts on: Globe (0, none), CurrentCulture (1, the request culture's country) or Specific (2, SpecificCountryCode).")),
+                        ("SpecificCountryCode", NullableCountryCodeSchema()
+                            .Description("The ISO 3166-1 alpha-2 country the editor starts on when InitialCountryMode is Specific.")))
                     .AdditionalProperties(false)))
             .AdditionalProperties(true);
     }
@@ -31,20 +32,21 @@ internal sealed class PhoneFieldSchemaDefinition : FieldSchemaDefinitionBase
             .Type(SchemaValueType.Object)
             .Properties(
                 ("PhoneNumber", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.String)
+                    .Type(SchemaValueType.String, SchemaValueType.Null)
                     .Description("The phone number in E.164 format (e.g., \"+14155552671\").")),
-                ("CountryCode", CountryCodeSchema()
+                ("CountryCode", NullableCountryCodeSchema()
                     .Description("The ISO 3166-1 alpha-2 country code (e.g., \"US\", \"CA\").")),
                 ("NationalNumber", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.String)
+                    .Type(SchemaValueType.String, SchemaValueType.Null)
                     .Description("The national phone number without the country calling code.")))
             .AdditionalProperties(true);
     }
 
-    private static JsonSchemaBuilder CountryCodeSchema()
+    private static JsonSchemaBuilder NullableCountryCodeSchema()
         => new JsonSchemaBuilder()
-            .Type(SchemaValueType.String)
-            .Enum(_iso3166Alpha2CountryCodes);
+            .AnyOf(
+                new JsonSchemaBuilder().Type(SchemaValueType.String).Enum(_iso3166Alpha2CountryCodes),
+                new JsonSchemaBuilder().Type(SchemaValueType.Null));
 
     /// <summary>
     /// All ISO 3166-1 alpha-2 country codes.

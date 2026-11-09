@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Teams.Models;
 using Microsoft.Extensions.Localization;
@@ -55,7 +56,7 @@ internal sealed class TeamCatalogHandler : CatalogEntryHandlerBase<Team>
     {
         var team = context.Model;
 
-        if (!string.IsNullOrWhiteSpace(team.TimeZoneId) && !TeamTimeZones.IsValid(team.TimeZoneId))
+        if (!string.IsNullOrWhiteSpace(team.TimeZoneId) && !CalendarTimeZones.IsValid(team.TimeZoneId))
         {
             context.Result.Fail(new ValidationResult(S["'{0}' is not a time zone.", team.TimeZoneId], [nameof(Team.TimeZoneId)]));
         }
@@ -101,6 +102,6 @@ internal sealed class TeamCatalogHandler : CatalogEntryHandlerBase<Team>
         team.Description = string.IsNullOrWhiteSpace(team.Description) ? null : team.Description.Trim();
         team.ParentId = string.IsNullOrWhiteSpace(team.ParentId) ? null : team.ParentId;
         team.LinkedRoleName = string.IsNullOrWhiteSpace(team.LinkedRoleName) ? null : team.LinkedRoleName.Trim();
-        team.TimeZoneId = TeamTimeZones.Normalize(team.TimeZoneId);
+        team.TimeZoneId = CalendarTimeZones.Normalize(team.TimeZoneId);
     }
 }

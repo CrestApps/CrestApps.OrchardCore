@@ -4,6 +4,11 @@ using CrestApps.OrchardCore.ContactCenter.DistributedTests.Infrastructure;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.OrchardCore.Webhooks;
+using CrestApps.OrchardCore.Webhooks.Core.Models;
+using CrestApps.OrchardCore.Webhooks.Core.Services;
+using CrestApps.OrchardCore.Webhooks.Indexes;
+using CrestApps.OrchardCore.Webhooks.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -69,7 +74,7 @@ public sealed class ProviderWebhookInboxTombstoneTests
             new ProviderIdentityResolver([]),
             scopeExecutor,
             clock.Object,
-            Options.Create(new ContactCenterRetentionOptions()),
+            Options.Create(new ProviderWebhookInboxOptions()),
             NullLogger<ProviderWebhookInbox>.Instance);
     }
 
@@ -105,7 +110,7 @@ public sealed class ProviderWebhookInboxTombstoneTests
 
         public string TechnicalName => Name;
 
-        public ContactCenterHandlerReplaySafety ReplaySafety => ContactCenterHandlerReplaySafety.NaturallyIdempotent;
+        public WebhookHandlerReplaySafety ReplaySafety => WebhookHandlerReplaySafety.NaturallyIdempotent;
 
         public Task HandleAsync(string payload, CancellationToken cancellationToken = default)
         {
@@ -115,29 +120,13 @@ public sealed class ProviderWebhookInboxTombstoneTests
         }
     }
 
-    private sealed class SameScopeExecutor : IContactCenterScopeExecutor
+    private sealed class SameScopeExecutor : IProviderWebhookInboxScopeExecutor
     {
         public IProviderWebhookInbox Context { get; set; }
 
-        public Task ExecuteAsync<TContext>(Func<TContext, Task> operation)
-            where TContext : notnull
+        public Task ExecuteAsync(Func<IProviderWebhookInbox, Task> operation)
         {
-            return operation((TContext)Context);
-        }
-
-        public Task ExecuteAsync(Func<IServiceProvider, Task> operation)
-            => throw new NotSupportedException("This test does not use the service-provider scope overload.");
-
-
-        public bool ScheduleAfterCommit<TContext>(Func<TContext, Task> operation)
-            where TContext : notnull
-        {
-            return false;
-        }
-
-        public bool ScheduleAfterCommit(Func<Task> operation)
-        {
-            return false;
+            return operation(Context);
         }
     }
 }

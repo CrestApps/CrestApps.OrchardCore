@@ -18,6 +18,14 @@ public interface IAttendanceService
     Task<(int Count, IReadOnlyList<AttendanceException> Items)> PageAsync(AttendanceQuery query, int skip, int take, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Finds an attendance exception by its id.
+    /// </summary>
+    /// <param name="id">The id.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The exception, or <see langword="null"/>.</returns>
+    Task<AttendanceException> FindByIdAsync(string id, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Excuses an exception, so it earns no points.
     /// </summary>
     /// <param name="id">The id.</param>

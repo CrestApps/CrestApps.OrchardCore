@@ -7,7 +7,6 @@ using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 
@@ -16,6 +15,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <inheritdoc/>
 public sealed class DialerAbandonmentTracker : IDialerAbandonmentTracker
 {
+    /// <summary>
+    /// The prefix of the deadline key a safety hang-up is held under; the call id follows it.
+    /// </summary>
+    internal const string SafetyHangupKeyPrefix = "dialer-abandon-hangup:";
+
     // How fast the abandoned-call message is assumed to be read, in words a second, to bound how long the person may be
     // held for it. Text-to-speech reads about 150 words a minute.
     private const double WordsPerSecond = 2.5;
@@ -32,8 +36,7 @@ public sealed class DialerAbandonmentTracker : IDialerAbandonmentTracker
     private readonly IQueueTreatmentProvider _treatmentProvider;
     private readonly ICallSessionManager _callSessionManager;
     private readonly ISiteService _siteService;
-    private readonly IShellHost _shellHost;
-    private readonly ShellSettings _shellSettings;
+    private readonly IContactCenterDeadlineScheduler _deadlineScheduler;
     private readonly IClock _clock;
     private readonly ILogger _logger;
     private readonly Dictionary<string, DialerProfile> _profiles = new(StringComparer.Ordinal);
@@ -46,8 +49,7 @@ public sealed class DialerAbandonmentTracker : IDialerAbandonmentTracker
     /// <param name="treatmentProvider">The provider that speaks the message on the person's leg and then ends the call.</param>
     /// <param name="callSessionManager">The call sessions, for the number the call was placed from.</param>
     /// <param name="siteService">The site settings, for the name the call is made on behalf of.</param>
-    /// <param name="shellHost">The shell host, used to open a scope for the safety hang-up that outlives the request.</param>
-    /// <param name="shellSettings">The tenant the call belongs to.</param>
+    /// <param name="deadlineScheduler">The scheduler that runs the safety hang-up, in a scope of its own, after the request.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
     public DialerAbandonmentTracker(
@@ -56,8 +58,7 @@ public sealed class DialerAbandonmentTracker : IDialerAbandonmentTracker
         IQueueTreatmentProvider treatmentProvider,
         ICallSessionManager callSessionManager,
         ISiteService siteService,
-        IShellHost shellHost,
-        ShellSettings shellSettings,
+        IContactCenterDeadlineScheduler deadlineScheduler,
         IClock clock,
         ILogger<DialerAbandonmentTracker> logger)
     {
@@ -66,8 +67,7 @@ public sealed class DialerAbandonmentTracker : IDialerAbandonmentTracker
         _treatmentProvider = treatmentProvider;
         _callSessionManager = callSessionManager;
         _siteService = siteService;
-        _shellHost = shellHost;
-        _shellSettings = shellSettings;
+        _deadlineScheduler = deadlineScheduler;
         _clock = clock;
         _logger = logger;
     }
@@ -248,60 +248,69 @@ public sealed class DialerAbandonmentTracker : IDialerAbandonmentTracker
     // The provider ends the call when it reports the message finished. Should that report never come -- the message is
     // refused after it was accepted, or the webhook is lost -- the person would be held on a silent line, so the call is
     // hung up anyway once the message has had more than enough time. Hanging up a call that already ended is harmless.
-    private void ArmSafetyHangup(string providerCallId, string message)
+    internal void ArmSafetyHangup(string providerCallId, string message)
     {
-        var words = message.Split((char[])null, StringSplitOptions.RemoveEmptyEntries).Length;
+        var delay = GetSafetyHangupDelay(message);
+
+        // The request that started the message has to be answered now, so the wait is not tied to it. It was a discarded
+        // task; the tenant's deadline scheduler now holds it, runs it in a scope of its own, records a failure and drops
+        // it when the tenant shuts down, instead of a task nothing tracked.
+        _deadlineScheduler.Schedule(
+            SafetyHangupKeyPrefix + providerCallId,
+            _clock.UtcNow + delay,
+            (services, cancellationToken) => HangUpAsync(services, providerCallId, delay, cancellationToken));
+    }
+
+    /// <summary>
+    /// Returns how long the abandoned-call message may take before the call is hung up anyway: its reading time plus a
+    /// margin, within fixed bounds.
+    /// </summary>
+    /// <param name="message">The message.</param>
+    internal static TimeSpan GetSafetyHangupDelay(string message)
+    {
+        var words = (message ?? string.Empty).Split((char[])null, StringSplitOptions.RemoveEmptyEntries).Length;
         var delay = TimeSpan.FromSeconds(words / WordsPerSecond) + _safetyMargin;
 
         if (delay < _minimumSafetyDelay)
         {
-            delay = _minimumSafetyDelay;
-        }
-        else if (delay > _maximumSafetyDelay)
-        {
-            delay = _maximumSafetyDelay;
+            return _minimumSafetyDelay;
         }
 
-        // Not awaited: the request that started the message has to be answered now, and the wait must not depend on it
-        // living long enough to see it through. A scope taken from the shell host belongs to the tenant and outlives it.
-        _ = HangUpLaterAsync(providerCallId, delay);
+        return delay > _maximumSafetyDelay
+            ? _maximumSafetyDelay
+            : delay;
     }
 
-    private async Task HangUpLaterAsync(string providerCallId, TimeSpan delay)
+    private async Task<DateTime?> HangUpAsync(IServiceProvider services, string providerCallId, TimeSpan delay, CancellationToken cancellationToken)
     {
         try
         {
-            await Task.Delay(delay);
+            var telephonyService = services.GetService<ITelephonyService>();
 
-            var scope = await _shellHost.GetScopeAsync(_shellSettings);
-
-            await scope.UsingAsync(async childScope =>
+            if (telephonyService is null)
             {
-                var telephonyService = childScope.ServiceProvider.GetService<ITelephonyService>();
+                return null;
+            }
 
-                if (telephonyService is null)
-                {
-                    return;
-                }
+            var result = await telephonyService.HangupAsync(new CallReference
+            {
+                CallId = providerCallId,
+            }, cancellationToken);
 
-                var result = await telephonyService.HangupAsync(new CallReference
-                {
-                    CallId = providerCallId,
-                }, CancellationToken.None);
-
-                if (result?.Succeeded == true && _logger.IsEnabled(LogLevel.Information))
-                {
-                    _logger.LogInformation(
-                        "Hung up call {CallId} {Seconds:0} seconds after its abandoned-call message started, because the provider never reported the message finished.",
-                        providerCallId.SanitizeLogValue(),
-                        delay.TotalSeconds);
-                }
-            });
+            if (result?.Succeeded == true && _logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Hung up call {CallId} {Seconds:0} seconds after its abandoned-call message started, because the provider never reported the message finished.",
+                    providerCallId.SanitizeLogValue(),
+                    delay.TotalSeconds);
+            }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogWarning(ex, "The safety hang-up after the abandoned-call message on call {CallId} failed.", providerCallId.SanitizeLogValue());
         }
+
+        return null;
     }
 
     private async Task<string> RenderMessageAsync(DialerProfile profile, Interaction interaction, CancellationToken cancellationToken)

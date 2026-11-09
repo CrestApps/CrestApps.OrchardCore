@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers;
 using OrchardCore.ContentManagement;
 using YesSql.Indexes;
+using static CrestApps.OrchardCore.StringTruncation;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
 
@@ -47,7 +48,7 @@ internal sealed class OmnichannelContactPhoneNumberIndexProvider : IndexProvider
             return [];
         }
 
-        var contentType = Truncate(contact.ContentType, 255);
+        var contentType = TruncateOrNull(contact.ContentType, 255);
         var isConverted = contact.TryGet<LeadPart>(out var leadPart) && leadPart.IsConverted;
         var indexes = new List<OmnichannelContactPhoneNumberIndex>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -70,18 +71,11 @@ internal sealed class OmnichannelContactPhoneNumberIndexProvider : IndexProvider
                 IsConverted = isConverted,
                 Published = contact.Published,
                 Latest = contact.Latest,
-                PhoneType = Truncate(phoneNumber.Type, 50),
+                PhoneType = TruncateOrNull(phoneNumber.Type, 50),
                 NormalizedPhoneNumber = normalized,
             });
         }
 
         return indexes;
-    }
-
-    private static string Truncate(string value, int maxLength)
-    {
-        return string.IsNullOrEmpty(value)
-            ? null
-            : value.Substring(0, Math.Min(maxLength, value.Length));
     }
 }

@@ -16,6 +16,6 @@ public sealed class IndexUsersRecipeStep : RecipeStepSchemaBase
             Name,
             [
                 ("IncludeDisabledUsers", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Default(false).Description("Whether disabled users are indexed too. By default only enabled users are.")),
-                ("BatchSize", new JsonSchemaBuilder().Type(SchemaValueType.Integer | SchemaValueType.Null).Minimum(1).Maximum(1000).Default(250).Description("How many users are saved per batch. Defaults to 250; values over 1000 are capped at 1000.")),
+                ("BatchSize", new JsonSchemaBuilder().Type(SchemaValueType.Integer | SchemaValueType.Null).Minimum(1).Default(250).Description("How many users are re-saved per batch so their indexes are rebuilt. Defaults to 250; values over 1000 are capped at 1000.")),
             ]);
 }

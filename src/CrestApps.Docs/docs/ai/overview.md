@@ -157,6 +157,10 @@ Enable **OrchardCore.Deployment** (and the same AI features on both sites), then
 
 Click **Execute** on the plan and choose **File Download** to get the result as a file, then import it on the other site with **Tools > Deployments > JSON Import** (paste a recipe) or **Package Import** (upload the file). Treat the exported file as sensitive, re-enter any secret that was left out, and run the knowledge syncs again on the new site: uploaded files and indexed content are not part of these steps.
 
+## Upgrade migrations that skip records
+
+The AI and AI Data Sources upgrades move older profiles, deployments, connections, chat sessions and data sources onto the current records. A record that cannot be moved is skipped and logged with its ID (`MigrationSkipReport`), and the migration also keeps a summary through `IMigrationSkipLog` (`CrestApps.OrchardCore.Core`). While a summary is kept, people with **Manage AI profiles** see a warning on admin pages naming each migration and how many records it skipped, with a **Dismiss** button. The log lists each record and why. Another module's migration takes part by calling `services.AddMigrationSkipLog()` and `await report.LogSummaryAsync(serviceProvider)`.
+
 ## Framework references
 
 The modules in this repository build on **CrestApps.Core**. Framework-oriented topics such as service APIs, orchestration loops, response handlers, tool registration, and programmatic host composition are documented on the Core site:

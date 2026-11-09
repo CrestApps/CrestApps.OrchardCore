@@ -275,6 +275,7 @@ public sealed class AsteriskInboundSimulationCoordinator
         }
         catch (JsonException)
         {
+            // A reply that is not JSON carries no agent or reason; the result keeps what was read.
         }
 
         return result;

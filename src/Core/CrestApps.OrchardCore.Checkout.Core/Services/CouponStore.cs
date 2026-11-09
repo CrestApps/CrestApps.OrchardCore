@@ -1,8 +1,8 @@
+using CrestApps.OrchardCore.Numbering;
 using CrestApps.OrchardCore.Transactions.Core.Indexes;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.YesSql.Core.Services;
-using System.Security.Cryptography;
 using System.Text.Json;
 using CrestApps.Core.Services;
 using OrchardCore;
@@ -20,10 +20,6 @@ public sealed class CouponStore : DocumentCatalog<Coupon, CouponIndex>, ICouponS
 {
     private const int CodeLength = 8;
 
-    // No 0, O, 1 or I, which people misread on a card.
-    private static readonly char[] _codeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".ToCharArray();
-
-    private readonly IClock _clock;
 
     /// <summary>
     /// Enables document-version concurrency checks so two purchases redeeming the same coupon at once
@@ -37,10 +33,9 @@ public sealed class CouponStore : DocumentCatalog<Coupon, CouponIndex>, ICouponS
     /// <param name="session">The tenant YesSql session.</param>
     /// <param name="clock">The clock used for timestamps.</param>
     public CouponStore(ISession session, IClock clock)
-        : base(session)
+        : base(session, clock)
     {
         CollectionName = CheckoutConstants.CouponCollectionName;
-        _clock = clock;
     }
 
     /// <inheritdoc/>
@@ -142,7 +137,7 @@ public sealed class CouponStore : DocumentCatalog<Coupon, CouponIndex>, ICouponS
 
             while (candidates.Count < count - codes.Count)
             {
-                var code = prefix + new string(RandomNumberGenerator.GetItems<char>(_codeAlphabet, CodeLength));
+                var code = prefix + ReadableCodes.Generate(CodeLength);
 
                 if (!codes.Contains(code))
                 {
@@ -162,7 +157,7 @@ public sealed class CouponStore : DocumentCatalog<Coupon, CouponIndex>, ICouponS
             }
         }
 
-        var now = _clock.UtcNow;
+        var now = Clock.UtcNow;
         var generated = new List<CouponCode>();
 
         foreach (var code in codes.Take(count))
@@ -220,19 +215,4 @@ public sealed class CouponStore : DocumentCatalog<Coupon, CouponIndex>, ICouponS
         => [.. await Session
             .Query<Coupon, CouponIndex>(x => x.IsAutomatic && x.IsEnabled, collection: CollectionName)
             .ListAsync(cancellationToken)];
-
-    /// <inheritdoc/>
-    protected override ValueTask SavingAsync(Coupon record)
-    {
-        var now = _clock.UtcNow;
-
-        if (record.CreatedUtc == default)
-        {
-            record.CreatedUtc = now;
-        }
-
-        record.UpdatedUtc = now;
-
-        return ValueTask.CompletedTask;
-    }
 }

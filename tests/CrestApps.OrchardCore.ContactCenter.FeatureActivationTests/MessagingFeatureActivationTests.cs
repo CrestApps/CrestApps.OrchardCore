@@ -13,6 +13,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Transports;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Webhooks;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
+using CrestApps.OrchardCore.Webhooks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Shell;
@@ -287,7 +288,7 @@ public sealed class MessagingFeatureActivationTests
             var inboxHandler = Assert.Single(
                 services.GetServices<IProviderWebhookInboxHandler>(),
                 handler => handler.TechnicalName == EmailChannelConstants.InboxHandlerName);
-            Assert.Equal(ContactCenterHandlerReplaySafety.GuardedByDurableStore, inboxHandler.ReplaySafety);
+            Assert.Equal(WebhookHandlerReplaySafety.GuardedByDurableStore, inboxHandler.ReplaySafety);
 
             return Task.CompletedTask;
         });

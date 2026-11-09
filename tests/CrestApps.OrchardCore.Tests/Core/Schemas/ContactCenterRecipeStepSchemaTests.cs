@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Asterisk.Models;
+using CrestApps.OrchardCore.ContactCenter.Recipes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
@@ -84,6 +85,7 @@ public sealed class ContactCenterRecipeStepSchemaTests
         (new ContactCenterExternalTransferSettingsSchema(), typeof(ContactCenterExternalTransferSettings)),
         (new ContactCenterRecordingSettingsSchema(), typeof(ContactCenterRecordingSettings)),
         (new SecureCaptureSettingsSchema(), typeof(SecureCaptureSettings)),
+        (new ContactCenterDefaultAddressSettingsSchema(), typeof(ContactCenterDefaultAddressSettings)),
         (new TelnyxSettingsSchema(), typeof(TelnyxSettings)),
         (new TelnyxSmsSettingsSchema(), typeof(TelnyxSmsSettings)),
         (new AsteriskSettingsSchema(), typeof(AsteriskSettings)),

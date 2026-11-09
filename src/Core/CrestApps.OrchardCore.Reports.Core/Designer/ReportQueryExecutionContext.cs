@@ -44,4 +44,30 @@ public sealed class ReportQueryExecutionContext
     /// The rows behind the result aren't kept, so it can only be regrouped as asked here.
     /// </summary>
     public IList<IReadOnlyList<string>> Groupings { get; } = [];
+
+    /// <summary>
+    /// Gets or sets the reads the queries of one report run share, or <see langword="null"/> to read every data set from
+    /// its data source.
+    /// </summary>
+    public ReportSharedReads SharedReads { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the run is for, such as a report page or the designer preview, to tag its telemetry with.
+    /// </summary>
+    public string Source { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the report being run, to tag its telemetry with.
+    /// </summary>
+    public string ReportId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the title of the report being run, to tag its telemetry with.
+    /// </summary>
+    public string ReportTitle { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the query being run, empty for the main query, to tag its telemetry with.
+    /// </summary>
+    public string QueryId { get; set; }
 }

@@ -99,7 +99,7 @@ internal sealed class ClassifiedUpgradeOrderHandler : OrderEventHandlerBase
         foreach (var line in context.Order.Lines ?? [])
         {
             if (line.Details?.GetValueOrDefault(ClassifiedsConstants.ListingDetail) is { Length: > 0 } listingId &&
-                (await _contentManager.GetAsync(line.ContentItemId, VersionOptions.Latest))?.TryGet<ClassifiedUpgradePart>(out var upgrade) == true)
+                (await _contentManager.GetPurchasedAsync(line))?.TryGet<ClassifiedUpgradePart>(out var upgrade) == true)
             {
                 await _classifieds.UpgradeAsync(listingId, upgrade, line.Quantity);
             }

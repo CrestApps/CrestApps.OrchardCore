@@ -1,5 +1,5 @@
 using System.Globalization;
-using CrestApps.OrchardCore.Calendars.Core;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Dispatch.Core;
 using CrestApps.OrchardCore.Dispatch.Core.Services;
 using CrestApps.OrchardCore.Dispatch.Models;
@@ -121,8 +121,8 @@ public sealed class DispatchBoardController : Controller
 
             foreach (var span in availability.Open)
             {
-                earliest = Math.Min(earliest, Hours(span.Start, fromUtc));
-                latest = Math.Max(latest, Hours(span.End, fromUtc));
+                earliest = Math.Min(earliest, Hours(span.StartUtc, fromUtc));
+                latest = Math.Max(latest, Hours(span.EndUtc, fromUtc));
             }
 
             rows.Add(new
@@ -130,8 +130,8 @@ public sealed class DispatchBoardController : Controller
                 id = worker.ItemId,
                 name = worker.DisplayName,
                 team = team?.Name,
-                open = availability.Open.Select(span => new { start = span.Start, end = span.End }),
-                timeOff = availability.TimeOff.Select(span => new { start = span.Start, end = span.End }),
+                open = availability.Open.Select(span => new { start = span.StartUtc, end = span.EndUtc }),
+                timeOff = availability.TimeOff.Select(span => new { start = span.StartUtc, end = span.EndUtc }),
                 onShift = availability.HasShift,
             });
         }

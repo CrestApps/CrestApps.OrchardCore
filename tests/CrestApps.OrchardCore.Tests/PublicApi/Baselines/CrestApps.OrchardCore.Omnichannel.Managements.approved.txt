@@ -144,6 +144,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements
     }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Crm")]
     [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.Recipes"})]
+    public sealed class CrmRecipeSchemasStartup : OrchardCore.Modules.StartupBase
+    {
+        public CrmRecipeSchemasStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Crm")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
             "OrchardCore.Recipes.Core"})]
     public sealed class CrmRecipesStartup : OrchardCore.Modules.StartupBase
     {
@@ -162,6 +170,15 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements
     public sealed class CrmStartup : OrchardCore.Modules.StartupBase
     {
         public CrmStartup(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.CrmStartup> stringLocalizer) { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Crm")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.Recipes",
+            "OrchardCore.Workflows"})]
+    public sealed class CrmWorkflowRecipeSchemasStartup : OrchardCore.Modules.StartupBase
+    {
+        public CrmWorkflowRecipeSchemasStartup() { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Crm")]
@@ -320,6 +337,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/activities/edit/{id}", null)]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> EditAsync(string id) { }
+        [Microsoft.AspNetCore.Mvc.HttpPost]
+        [Microsoft.AspNetCore.Mvc.ValidateAntiForgeryToken]
+        [OrchardCore.Admin.Admin("omnichannel/activities/keep-alive/{id}", null)]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> KeepAlive(string id) { }
         [OrchardCore.Admin.Admin("omnichannel/activities/{contentItemId}", null)]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> List(string contentItemId, OrchardCore.Navigation.PagerParameters pagerParameters, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="s")] OrchardCore.Navigation.PagerParameters scheduledPagerParameters, [Microsoft.AspNetCore.Mvc.FromServices] Microsoft.Extensions.Options.IOptions<OrchardCore.Navigation.PagerOptions> pagerOptions, [Microsoft.AspNetCore.Mvc.FromServices] OrchardCore.DisplayManagement.IShapeFactory shapeFactory) { }
         [Microsoft.AspNetCore.Mvc.HttpGet]
@@ -343,7 +364,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
     [OrchardCore.Admin.Admin(null, null)]
     public sealed class ActivityBatchesController : Microsoft.AspNetCore.Mvc.Controller
     {
-        public ActivityBatchesController(CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch> manager, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch> batchDisplayManager, OrchardCore.DisplayManagement.Notify.INotifier notifier, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityBatchSourceOptions> activityBatchSourceOptions, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.ActivityBatchesController> htmlLocalizer, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.ActivityBatchesController> stringLocalizer, OrchardCore.Modules.IClock clock = null) { }
+        public ActivityBatchesController(CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch> manager, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch> batchDisplayManager, OrchardCore.DisplayManagement.Notify.INotifier notifier, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityBatchSourceOptions> activityBatchSourceOptions, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.ActivityBatchesController> htmlLocalizer, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.ActivityBatchesController> stringLocalizer, OrchardCore.Modules.IClock clock) { }
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/activity/batches/clone/{id}", "OmnichannelActivityBatchesClone")]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> Clone(string id) { }
@@ -394,80 +415,98 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> Load(string id) { }
     }
     [OrchardCore.Admin.Admin(null, null)]
-    public sealed class CadencesController : Microsoft.AspNetCore.Mvc.Controller
+    public sealed class CadencesController : CrestApps.OrchardCore.Core.Controllers.CatalogAdminController<CrestApps.OrchardCore.Omnichannel.Core.Models.Cadence>
     {
         public CadencesController(CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.Cadence> manager, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.Cadence> displayManager, OrchardCore.DisplayManagement.Notify.INotifier notifier, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.CadencesController> htmlLocalizer, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.CadencesController> stringLocalizer) { }
+        protected override Microsoft.Extensions.Localization.LocalizedString CreateDisplayName { get; }
+        protected override Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString CreatedNotification { get; }
+        protected override Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString DeletedNotification { get; }
+        protected override OrchardCore.Security.Permissions.Permission ManagePermission { get; }
+        protected override Microsoft.Extensions.Localization.LocalizedString NewDisplayName { get; }
+        protected override Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString UpdatedNotification { get; }
         [OrchardCore.Admin.Admin("omnichannel/cadences/create", "OmnichannelCadencesCreate")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> Create() { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Create() { }
         [Microsoft.AspNetCore.Mvc.ActionName("Create")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/cadences/create", "OmnichannelCadencesCreate")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> CreatePost() { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> CreatePost() { }
         [Microsoft.AspNetCore.Mvc.ActionName("Delete")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/cadences/delete/{id}", "OmnichannelCadencesDelete")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> DeletePost(string id) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> DeletePost(string id) { }
         [OrchardCore.Admin.Admin("omnichannel/cadences/edit/{id}", "OmnichannelCadencesEdit")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> Edit(string id) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Edit(string id) { }
         [Microsoft.AspNetCore.Mvc.ActionName("Edit")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/cadences/edit/{id}", "OmnichannelCadencesEdit")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> EditPost(string id) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> EditPost(string id) { }
         [OrchardCore.Admin.Admin("omnichannel/cadences", "OmnichannelCadencesIndex")]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Index(CrestApps.OrchardCore.Core.Models.CatalogEntryOptions options, OrchardCore.Navigation.PagerParameters pagerParameters, [Microsoft.AspNetCore.Mvc.FromServices] Microsoft.Extensions.Options.IOptions<OrchardCore.Navigation.PagerOptions> pagerOptions, [Microsoft.AspNetCore.Mvc.FromServices] OrchardCore.DisplayManagement.IShapeFactory shapeFactory) { }
         [Microsoft.AspNetCore.Mvc.ActionName("Index")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/cadences", "OmnichannelCadencesIndex")]
         [OrchardCore.Routing.FormValueRequired("submit.Filter")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> IndexFilterPost(CrestApps.OrchardCore.Core.Models.ListCatalogEntryViewModel model, OrchardCore.Navigation.PagerParameters pagerParameters) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> IndexFilterPost(CrestApps.OrchardCore.Core.Models.ListCatalogEntryViewModel model, OrchardCore.Navigation.PagerParameters pagerParameters) { }
     }
     [OrchardCore.Admin.Admin(null, null)]
-    public sealed class CampaignGroupsController : Microsoft.AspNetCore.Mvc.Controller
+    public sealed class CampaignGroupsController : CrestApps.OrchardCore.Core.Controllers.CatalogAdminController<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaignGroup>
     {
         public CampaignGroupsController(CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaignGroup> manager, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaignGroup> displayManager, OrchardCore.DisplayManagement.Notify.INotifier notifier, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.CampaignGroupsController> htmlLocalizer, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.CampaignGroupsController> stringLocalizer) { }
+        protected override Microsoft.Extensions.Localization.LocalizedString CreateDisplayName { get; }
+        protected override Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString CreatedNotification { get; }
+        protected override Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString DeletedNotification { get; }
+        protected override OrchardCore.Security.Permissions.Permission ManagePermission { get; }
+        protected override Microsoft.Extensions.Localization.LocalizedString NewDisplayName { get; }
+        protected override Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString UpdatedNotification { get; }
         [OrchardCore.Admin.Admin("omnichannel/campaign-groups/create", "OmnichannelCampaignGroupsCreate")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> Create() { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Create() { }
         [Microsoft.AspNetCore.Mvc.ActionName("Create")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/campaign-groups/create", "OmnichannelCampaignGroupsCreate")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> CreatePost() { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> CreatePost() { }
         [OrchardCore.Admin.Admin("omnichannel/campaign-groups/edit/{id}", "OmnichannelCampaignGroupsEdit")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> Edit(string id) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Edit(string id) { }
         [Microsoft.AspNetCore.Mvc.ActionName("Edit")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/campaign-groups/edit/{id}", "OmnichannelCampaignGroupsEdit")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> EditPost(string id) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> EditPost(string id) { }
         [OrchardCore.Admin.Admin("omnichannel/campaign-groups", "OmnichannelCampaignGroupsIndex")]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Index(CrestApps.OrchardCore.Core.Models.CatalogEntryOptions options, OrchardCore.Navigation.PagerParameters pagerParameters, [Microsoft.AspNetCore.Mvc.FromServices] Microsoft.Extensions.Options.IOptions<OrchardCore.Navigation.PagerOptions> pagerOptions, [Microsoft.AspNetCore.Mvc.FromServices] OrchardCore.DisplayManagement.IShapeFactory shapeFactory) { }
         [Microsoft.AspNetCore.Mvc.ActionName("Index")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/campaign-groups", "OmnichannelCampaignGroupsIndex")]
         [OrchardCore.Routing.FormValueRequired("submit.Filter")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> IndexFilterPost(CrestApps.OrchardCore.Core.Models.ListCatalogEntryViewModel model, OrchardCore.Navigation.PagerParameters pagerParameters) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> IndexFilterPost(CrestApps.OrchardCore.Core.Models.ListCatalogEntryViewModel model, OrchardCore.Navigation.PagerParameters pagerParameters) { }
     }
     [OrchardCore.Admin.Admin(null, null)]
-    public sealed class CampaignsController : Microsoft.AspNetCore.Mvc.Controller
+    public sealed class CampaignsController : CrestApps.OrchardCore.Core.Controllers.CatalogAdminController<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign>
     {
         public CampaignsController(CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> manager, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> displayManager, OrchardCore.DisplayManagement.Notify.INotifier notifier, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.CampaignsController> htmlLocalizer, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.CampaignsController> stringLocalizer) { }
+        protected override Microsoft.Extensions.Localization.LocalizedString CreateDisplayName { get; }
+        protected override Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString CreatedNotification { get; }
+        protected override Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString DeletedNotification { get; }
+        protected override OrchardCore.Security.Permissions.Permission ManagePermission { get; }
+        protected override Microsoft.Extensions.Localization.LocalizedString NewDisplayName { get; }
+        protected override Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString UpdatedNotification { get; }
         [OrchardCore.Admin.Admin("omnichannel/campaigns/create", "OmnichannelCampaignsCreate")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> Create() { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Create() { }
         [Microsoft.AspNetCore.Mvc.ActionName("Create")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/campaigns/create", "OmnichannelCampaignsCreate")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> CreatePost() { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> CreatePost() { }
         [OrchardCore.Admin.Admin("omnichannel/campaigns/edit/{id}", "OmnichannelCampaignsEdit")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> Edit(string id) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Edit(string id) { }
         [Microsoft.AspNetCore.Mvc.ActionName("Edit")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/campaigns/edit/{id}", "OmnichannelCampaignsEdit")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> EditPost(string id) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> EditPost(string id) { }
         [OrchardCore.Admin.Admin("omnichannel/campaigns", "OmnichannelCampaignsIndex")]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Index(CrestApps.OrchardCore.Core.Models.CatalogEntryOptions options, OrchardCore.Navigation.PagerParameters pagerParameters, [Microsoft.AspNetCore.Mvc.FromServices] Microsoft.Extensions.Options.IOptions<OrchardCore.Navigation.PagerOptions> pagerOptions, [Microsoft.AspNetCore.Mvc.FromServices] OrchardCore.DisplayManagement.IShapeFactory shapeFactory) { }
         [Microsoft.AspNetCore.Mvc.ActionName("Index")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/campaigns", "OmnichannelCampaignsIndex")]
         [OrchardCore.Routing.FormValueRequired("submit.Filter")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> IndexFilterPost(CrestApps.OrchardCore.Core.Models.ListCatalogEntryViewModel model, OrchardCore.Navigation.PagerParameters pagerParameters) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> IndexFilterPost(CrestApps.OrchardCore.Core.Models.ListCatalogEntryViewModel model, OrchardCore.Navigation.PagerParameters pagerParameters) { }
     }
     [OrchardCore.Admin.Admin(null, null)]
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.ChannelEndpoints")]
@@ -495,55 +534,72 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> IndexFilterPost(CrestApps.OrchardCore.Core.Models.ListCatalogEntryViewModel model, OrchardCore.Navigation.PagerParameters pagerParameters) { }
     }
     [OrchardCore.Admin.Admin(null, null)]
-    public sealed class DispositionsController : Microsoft.AspNetCore.Mvc.Controller
+    public sealed class DispositionsController : CrestApps.OrchardCore.Core.Controllers.CatalogAdminController<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition>
     {
-        public DispositionsController(CrestApps.Core.Services.INamedCatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> manager, CrestApps.Core.Services.INamedCatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> catalog, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> displayManager, OrchardCore.DisplayManagement.Notify.INotifier notifier, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.DispositionsController> htmlLocalizer, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.DispositionsController> stringLocalizer) { }
+        public DispositionsController(CrestApps.Core.Services.INamedCatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> manager, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> displayManager, OrchardCore.DisplayManagement.Notify.INotifier notifier, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.DispositionsController> htmlLocalizer, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.DispositionsController> stringLocalizer) { }
+        protected override Microsoft.Extensions.Localization.LocalizedString CreateDisplayName { get; }
+        protected override Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString CreatedNotification { get; }
+        protected override Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString DeletedNotification { get; }
+        protected override OrchardCore.Security.Permissions.Permission ManagePermission { get; }
+        protected override Microsoft.Extensions.Localization.LocalizedString NewDisplayName { get; }
+        protected override Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString UpdatedNotification { get; }
         [OrchardCore.Admin.Admin("omnichannel/dispositions/create", "OmnichannelDispositionsCreate")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> Create() { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Create() { }
         [Microsoft.AspNetCore.Mvc.ActionName("Create")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/dispositions/create", "OmnichannelDispositionsCreate")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> CreatePost() { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> CreatePost() { }
         [Microsoft.AspNetCore.Mvc.ActionName("Delete")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/dispositions/delete/{id}", "OmnichannelDispositionsDelete")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> DeletePost(string id) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> DeletePost(string id) { }
         [OrchardCore.Admin.Admin("omnichannel/dispositions/edit/{id}", "OmnichannelDispositionsEdit")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> Edit(string id) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Edit(string id) { }
         [Microsoft.AspNetCore.Mvc.ActionName("Edit")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/dispositions/edit/{id}", "OmnichannelDispositionsEdit")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> EditPost(string id) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> EditPost(string id) { }
         [OrchardCore.Admin.Admin("omnichannel/dispositions", "OmnichannelDispositionsIndex")]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Index(CrestApps.OrchardCore.Core.Models.CatalogEntryOptions options, OrchardCore.Navigation.PagerParameters pagerParameters, [Microsoft.AspNetCore.Mvc.FromServices] Microsoft.Extensions.Options.IOptions<OrchardCore.Navigation.PagerOptions> pagerOptions, [Microsoft.AspNetCore.Mvc.FromServices] OrchardCore.DisplayManagement.IShapeFactory shapeFactory) { }
         [Microsoft.AspNetCore.Mvc.ActionName("Index")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/dispositions", "OmnichannelDispositionsIndex")]
         [OrchardCore.Routing.FormValueRequired("submit.Filter")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> IndexFilterPost(CrestApps.OrchardCore.Core.Models.ListCatalogEntryViewModel model, OrchardCore.Navigation.PagerParameters pagerParameters) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> IndexFilterPost(CrestApps.OrchardCore.Core.Models.ListCatalogEntryViewModel model, OrchardCore.Navigation.PagerParameters pagerParameters) { }
+        protected override System.Threading.Tasks.Task ValidateEntryAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition model, bool isNew) { }
     }
     [OrchardCore.Admin.Admin(null, null)]
-    public sealed class LeadStatusesController : Microsoft.AspNetCore.Mvc.Controller
+    public sealed class LeadStatusesController : CrestApps.OrchardCore.Core.Controllers.CatalogAdminController<CrestApps.OrchardCore.Omnichannel.Core.Models.LeadStatus>
     {
-        public LeadStatusesController(CrestApps.Core.Services.INamedCatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.LeadStatus> manager, CrestApps.Core.Services.INamedCatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.LeadStatus> catalog, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.LeadStatus> displayManager, OrchardCore.DisplayManagement.Notify.INotifier notifier, CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadStatusFlagService flagService, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.LeadStatusesController> htmlLocalizer, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.LeadStatusesController> stringLocalizer) { }
+        public LeadStatusesController(CrestApps.Core.Services.INamedCatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.LeadStatus> manager, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.LeadStatus> displayManager, OrchardCore.DisplayManagement.Notify.INotifier notifier, CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadStatusFlagService flagService, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.LeadStatusesController> htmlLocalizer, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.LeadStatusesController> stringLocalizer) { }
+        protected override Microsoft.Extensions.Localization.LocalizedString CreateDisplayName { get; }
+        protected override Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString CreatedNotification { get; }
+        protected override Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString DeletedNotification { get; }
+        protected override OrchardCore.Security.Permissions.Permission ManagePermission { get; }
+        protected override Microsoft.Extensions.Localization.LocalizedString NewDisplayName { get; }
+        protected override Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString UpdatedNotification { get; }
+        protected override System.Threading.Tasks.Task<bool> CanDeleteAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.LeadStatus model) { }
         [OrchardCore.Admin.Admin("omnichannel/lead-statuses/create", "LeadStatusesCreate")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> Create() { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Create() { }
         [Microsoft.AspNetCore.Mvc.ActionName("Create")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/lead-statuses/create", "LeadStatusesCreate")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> CreatePost() { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> CreatePost() { }
         [Microsoft.AspNetCore.Mvc.ActionName("Delete")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/lead-statuses/delete/{id}", "LeadStatusesDelete")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> DeletePost(string id) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> DeletePost(string id) { }
         [OrchardCore.Admin.Admin("omnichannel/lead-statuses/edit/{id}", "LeadStatusesEdit")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> Edit(string id) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Edit(string id) { }
         [Microsoft.AspNetCore.Mvc.ActionName("Edit")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/lead-statuses/edit/{id}", "LeadStatusesEdit")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> EditPost(string id) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> EditPost(string id) { }
         [OrchardCore.Admin.Admin("omnichannel/lead-statuses", "LeadStatusesIndex")]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Index() { }
+        protected override System.Threading.Tasks.Task OnSavedAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.LeadStatus model, bool isNew) { }
+        protected override System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.LeadStatus> OrderAll(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.LeadStatus> entries) { }
+        protected override System.Threading.Tasks.Task ValidateEntryAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.LeadStatus model, bool isNew) { }
     }
     [OrchardCore.Admin.Admin(null, null)]
     public sealed class LeadsController : Microsoft.AspNetCore.Mvc.Controller
@@ -580,27 +636,35 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Mark(string phoneNumber) { }
     }
     [OrchardCore.Admin.Admin(null, null)]
-    public sealed class OpportunityStagesController : Microsoft.AspNetCore.Mvc.Controller
+    public sealed class OpportunityStagesController : CrestApps.OrchardCore.Core.Controllers.CatalogAdminController<CrestApps.OrchardCore.Omnichannel.Core.Models.OpportunityStage>
     {
-        public OpportunityStagesController(CrestApps.Core.Services.INamedCatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OpportunityStage> manager, CrestApps.Core.Services.INamedCatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OpportunityStage> catalog, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OpportunityStage> displayManager, OrchardCore.DisplayManagement.Notify.INotifier notifier, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.OpportunityStagesController> htmlLocalizer, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.OpportunityStagesController> stringLocalizer) { }
+        public OpportunityStagesController(CrestApps.Core.Services.INamedCatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OpportunityStage> manager, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OpportunityStage> displayManager, OrchardCore.DisplayManagement.Notify.INotifier notifier, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.OpportunityStagesController> htmlLocalizer, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.OpportunityStagesController> stringLocalizer) { }
+        protected override Microsoft.Extensions.Localization.LocalizedString CreateDisplayName { get; }
+        protected override Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString CreatedNotification { get; }
+        protected override Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString DeletedNotification { get; }
+        protected override OrchardCore.Security.Permissions.Permission ManagePermission { get; }
+        protected override Microsoft.Extensions.Localization.LocalizedString NewDisplayName { get; }
+        protected override Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString UpdatedNotification { get; }
         [OrchardCore.Admin.Admin("omnichannel/opportunity-stages/create", "OpportunityStagesCreate")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> Create() { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Create() { }
         [Microsoft.AspNetCore.Mvc.ActionName("Create")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/opportunity-stages/create", "OpportunityStagesCreate")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> CreatePost() { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> CreatePost() { }
         [Microsoft.AspNetCore.Mvc.ActionName("Delete")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/opportunity-stages/delete/{id}", "OpportunityStagesDelete")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> DeletePost(string id) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> DeletePost(string id) { }
         [OrchardCore.Admin.Admin("omnichannel/opportunity-stages/edit/{id}", "OpportunityStagesEdit")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> Edit(string id) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Edit(string id) { }
         [Microsoft.AspNetCore.Mvc.ActionName("Edit")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/opportunity-stages/edit/{id}", "OpportunityStagesEdit")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> EditPost(string id) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> EditPost(string id) { }
         [OrchardCore.Admin.Admin("omnichannel/opportunity-stages", "OpportunityStagesIndex")]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Index() { }
+        protected override System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.OpportunityStage> OrderAll(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.OpportunityStage> entries) { }
+        protected override System.Threading.Tasks.Task ValidateEntryAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OpportunityStage model, bool isNew) { }
     }
     [OrchardCore.Admin.Admin(null, null)]
     public sealed class SubjectFlowsController : Microsoft.AspNetCore.Mvc.Controller
@@ -820,7 +884,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers
     {
         public ContactActivityExportHandler(System.IServiceProvider serviceProvider, OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager, YesSql.ISession session, CrestApps.Core.Services.INamedCatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> dispositionCatalog, CrestApps.OrchardCore.Users.IDisplayNameProvider displayNameProvider) { }
         public System.Threading.Tasks.Task ExportAsync(CrestApps.OrchardCore.ContentTransfer.ContentExportContext content) { }
-        public System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContentTransfer.ImportColumn> GetColumns(CrestApps.OrchardCore.ContentTransfer.ImportContentContext context) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContentTransfer.ImportColumn>> GetColumnsAsync(CrestApps.OrchardCore.ContentTransfer.ImportContentContext context) { }
         public System.Threading.Tasks.Task ImportAsync(CrestApps.OrchardCore.ContentTransfer.ContentImportContext content) { }
         public System.Threading.Tasks.Task PrepareExportBatchAsync(CrestApps.OrchardCore.ContentTransfer.ContentExportBatchContext context) { }
     }
@@ -828,7 +892,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers
     {
         public LeadExportFilterHandler() { }
         public System.Threading.Tasks.Task ExportAsync(CrestApps.OrchardCore.ContentTransfer.ContentExportContext content) { }
-        public System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContentTransfer.ImportColumn> GetColumns(CrestApps.OrchardCore.ContentTransfer.ImportContentContext context) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContentTransfer.ImportColumn>> GetColumnsAsync(CrestApps.OrchardCore.ContentTransfer.ImportContentContext context) { }
         public System.Threading.Tasks.Task ImportAsync(CrestApps.OrchardCore.ContentTransfer.ContentImportContext content) { }
     }
     public sealed class LeadPartContentImportHandler : CrestApps.OrchardCore.ContentTransfer.Handlers.ContentImportHandlerBase, CrestApps.OrchardCore.ContentTransfer.IContentPartImportHandler
@@ -1261,7 +1325,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
     }
     public sealed class DefaultActivityBatchLoadCoordinator : CrestApps.OrchardCore.Omnichannel.Managements.Services.IActivityBatchLoadCoordinator
     {
-        public DefaultActivityBatchLoadCoordinator(CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch> catalog, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityBatchLoader> loaders, CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultContactActivityBatchLoader defaultLoader, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultActivityBatchLoadCoordinator> logger, CrestApps.OrchardCore.Omnichannel.Managements.Services.ActivityBatchLoadRegistry registry = null, OrchardCore.Modules.IClock clock = null) { }
+        public DefaultActivityBatchLoadCoordinator(CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch> catalog, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityBatchLoader> loaders, CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultContactActivityBatchLoader defaultLoader, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultActivityBatchLoadCoordinator> logger, OrchardCore.Modules.IClock clock, CrestApps.OrchardCore.Omnichannel.Managements.Services.ActivityBatchLoadRegistry registry = null) { }
         public System.Threading.Tasks.Task LoadAsync(string batchId, string loaderId, string loaderUserName, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Managements.Services.ActivityBatchLoadPreview> PreviewAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch batch, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task ResumeAsync(string batchId, System.Threading.CancellationToken cancellationToken = default) { }
@@ -1271,7 +1335,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
         public DefaultActivityDispositionService(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, CrestApps.Core.Services.INamedCatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> dispositionsCatalog, OrchardCore.ContentManagement.IContentManager contentManager, CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectActionExecutor subjectActionExecutor, CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService subjectFlowSettingsService, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityDispositionHandler> handlers, OrchardCore.Modules.IClock clock) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDispositionResult> ApplyAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDispositionRequest request, System.Threading.CancellationToken cancellationToken = default) { }
     }
-    public class DefaultContactActivityBatchLoader : CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityBatchLoader
+    public sealed class DefaultContactActivityBatchLoader : CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityBatchLoader
     {
         public DefaultContactActivityBatchLoader(
                     CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch> catalog,
@@ -1290,9 +1354,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
                     CrestApps.OrchardCore.Omnichannel.Core.Services.IContactMethodsAccessor contactMethods,
                     Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultContactActivityBatchLoader> logger,
                     System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelContactTypeProvider> contactTypeProviders = null) { }
-        public virtual string Source { get; }
-        public virtual System.Threading.Tasks.Task LoadAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityBatchLoadContext context, System.Threading.CancellationToken cancellationToken = default) { }
-        protected System.Threading.Tasks.Task StopAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityBatchLoadContext context, string reason, System.Threading.CancellationToken cancellationToken) { }
+        public string Source { get; }
+        public System.Threading.Tasks.Task LoadAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityBatchLoadContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public interface IActivityBatchLoadCoordinator
     {
@@ -1320,7 +1383,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
     }
     public sealed class LeadImportProvider
     {
-        public LeadImportProvider(YesSql.ISession session, OrchardCore.Modules.ILocalClock localClock, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadImportProvider> stringLocalizer, OrchardCore.Documents.IDocumentManager<CrestApps.OrchardCore.Omnichannel.Managements.Models.OmnichannelBackfillState> backfillState = null, OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager = null, CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadImportListCache importsCache = null) { }
+        public LeadImportProvider(YesSql.ISession session, OrchardCore.Modules.ILocalClock localClock, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadImportProvider> stringLocalizer, OrchardCore.Documents.IDocumentManager<CrestApps.OrchardCore.Omnichannel.Managements.Models.OmnichannelBackfillState> backfillState = null, OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager = null, CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadImportListCache importsCache = null) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadImportSummary>> GetImportsAsync() { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>> GetOptionsAsync(string selectedEntryId) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>> GetSelectedOptionsAsync(string selectedEntryId) { }

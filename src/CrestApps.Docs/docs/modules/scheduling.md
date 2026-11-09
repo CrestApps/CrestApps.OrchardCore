@@ -89,11 +89,11 @@ A request sent twice takes effect once. `BookAsync` refuses, with `Conflict`, a 
 
 Every booking and reschedule:
 
-1. Takes a distributed lock `SCHEDULING_RESOURCE_{id}` on every resource it could take, from every resource requirement (narrowed by a chosen resource), in ordinal key order so two requests never deadlock. With a per-customer limit, the customer's `SCHEDULING_CUSTOMER_...` keys join the same ordered set.
+1. Takes a distributed lock `SCHEDULING_RESOURCE_{id}` on every resource it could take, from every resource requirement (narrowed by a chosen resource), in ordinal key order so two requests never deadlock. The calendars of those resources are locked too, under the name Calendars uses (`CalendarLockKeys.Calendar`), so an event added to a linked calendar such as a room can't take the time meanwhile. With a per-customer limit, the customer's `SCHEDULING_CUSTOMER_...` keys join the same ordered set.
 2. Checks availability again under the locks.
 3. Picks a resource (or all of them) from each requirement.
 4. Raises the `BookingVersion` of every resource it took, in every group, and saves them with YesSql's concurrency check, so two nodes can't book the same staff member, room or piece of equipment for the same time even when their bookings share only one resource.
-5. Writes the appointment and its calendar event (`Source = Scheduling`, `SourceId` = the appointment; tentative while held or requested, confirmed once booked) in the same session. The calendar write uses `SkipConflictCheck`, because Scheduling has already checked under its own locks.
+5. Writes the appointment and its calendar event (`Source = Scheduling`, `SourceId` = the appointment; tentative while held or requested, confirmed once booked) in the same session. The calendar write sets `CalendarLocksHeld`, so a calendar that limits overlapping events (a room) runs its own overlap check, under the locks Scheduling already holds, and refuses a time taken there.
 
 ## Booking policies
 
@@ -129,6 +129,7 @@ A group session (`Capacity` > 1) shares one calendar event per time, with `Sourc
 | `ISchedulingAvailabilityService` | Find open times for an appointment type. |
 | `IAppointmentSlotFilter` | `FilterAsync(AppointmentSlotFilterContext, slots)` narrows the open times the resources' hours give: it can drop slots or lower `Remaining`, never add any. The context has the `AppointmentType` and the `ExcludeAppointmentId` of a booking being moved. Booking and rescheduling check the time against the same slots, so a time a filter drops can't be booked. Dispatch uses it for technicians' capacity. |
 | `IAppointmentObserver` | `OnChangedAsync(AppointmentChange)` after the change commits: `Kind` (`Held`, `Requested`, `Confirmed`, `Rescheduled`, `Cancelled`, `Completed`, `NoShow`, `HoldExpired`, `WaitlistSlotAvailable`), `Appointment`, `AppointmentType`, `PreviousStartUtc`, `WaitlistEntry`, `Actor`. The workflow integration listens here. |
+| `DisplayDriver<SchedulingResource>`, `DisplayDriver<AppointmentType>` | Add a section to the resource editor (`scheduling/resources/edit/{id?}`) or the appointment type editor (`scheduling/types/edit/{id?}`), which are built with `IDisplayManager<T>`. The built-in fields are one driver each (`SchedulingResourceFields_Edit` and `AppointmentTypeFields_Edit`, at `Content:1`). Register yours with `services.AddDisplayDriver<T, TDriver>()`, bind your own view model with the driver's `Prefix`, and report errors under it (`$"{Prefix}.Field"`): any error keeps the record from being saved, and the editor cancels the session. |
 | Calendar seams | Appointments are calendar events, so `ICalendarEventObserver`, the calendar workflows and free/busy all see them. Busy time from an `ICalendarBusyTimeSource` closes slots. |
 
 ## Self-service

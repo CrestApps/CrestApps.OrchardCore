@@ -1,4 +1,5 @@
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.Subscriptions.Models;
 
@@ -15,7 +16,7 @@ namespace CrestApps.OrchardCore.Subscriptions.Models;
 /// checkout's part is only to record what was bought; a sweep does the work and keeps trying until it
 /// either succeeds or has failed enough times that a human should look at it.
 /// </remarks>
-public sealed class TenantProvisioningJob : CatalogItem
+public sealed class TenantProvisioningJob : CatalogItem, ITimestampedModel
 {
     /// <summary>
     /// Gets or sets the YesSql document identifier.

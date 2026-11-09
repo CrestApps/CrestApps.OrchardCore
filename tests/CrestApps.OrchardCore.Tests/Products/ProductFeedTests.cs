@@ -72,7 +72,7 @@ public sealed class ProductFeedTests
         var csv = ProductFeedWriter.ToCsv(new ProductFeed([item], [], DateTime.UtcNow)).Split('\n');
 
         Assert.StartsWith("id,item_group_id,title,", csv[0], StringComparison.Ordinal);
-        Assert.Contains("\"15.00 USD\"", csv[1], StringComparison.Ordinal);
+        Assert.Contains(",15.00 USD,", csv[1], StringComparison.Ordinal);
     }
 
     [Fact]

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Resources;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -18,8 +19,8 @@ using OrchardCore.Modules.Manifest;
     Category = "Reporting",
     Dependencies =
     [
-        "CrestApps.OrchardCore.Resources",
-        "OrchardCore.Users",
+        ResourcesConstants.Feature.Area,
+        OrchardCoreFeatureIds.Users,
     ]
 )]
 
@@ -31,7 +32,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         ReportsConstants.Feature,
-        "OrchardCore.Email",
+        OrchardCoreFeatureIds.Email,
     ]
 )]
 
@@ -43,6 +44,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         ReportsConstants.Feature,
-        "OrchardCore.DataPipelines.Core",
+        OrchardCoreFeatureIds.DataPipelinesCore,
     ]
 )]

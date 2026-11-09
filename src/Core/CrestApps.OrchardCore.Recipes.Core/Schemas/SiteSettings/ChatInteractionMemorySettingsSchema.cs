@@ -1,4 +1,4 @@
-using Json.Schema;
+﻿using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
 
@@ -20,6 +20,8 @@ public sealed class ChatInteractionMemorySettingsSchema : SiteSettingsSchemaBase
             .Type(SchemaValueType.Object)
             .Description("Configuration for user memory in chat interactions.")
             .Properties(
-                ("EnableUserMemory", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to enable per-user memory in chat interactions.")))
+                ("EnableUserMemory", new JsonSchemaBuilder().Type(SchemaValueType.Boolean | SchemaValueType.Null).Description("Whether to enable per-user memory in chat interactions.")),
+                ("EnableSessionMemory", new JsonSchemaBuilder().Type(SchemaValueType.Boolean | SchemaValueType.Null).Description("Whether the assistant remembers the earlier parts of a long conversation: messages that fall out of the past-messages window are summarized and relevant older turns recalled.")),
+                ("EnablePastConversations", new JsonSchemaBuilder().Type(SchemaValueType.Boolean | SchemaValueType.Null).Description("Whether the assistant can look up the signed-in user's past conversations with the same profile.")))
             .AdditionalProperties(false);
 }

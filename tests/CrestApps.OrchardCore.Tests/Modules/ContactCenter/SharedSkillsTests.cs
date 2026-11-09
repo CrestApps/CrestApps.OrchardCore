@@ -8,11 +8,13 @@ using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.SharedSkills;
 using CrestApps.OrchardCore.Skills;
+using CrestApps.OrchardCore.Skills.Core.Indexes;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
 using CrestApps.OrchardCore.Tests.Skills;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
 using OrchardCore.Security;
 using YesSql.Sql;
@@ -233,8 +235,77 @@ public sealed class SharedSkillsTests
         Assert.Equal(spanish.ItemId, Assert.Single(assignments).SkillId);
     }
 
-    private static Task<SkillsTestHarness> CreateAsync(Action<IServiceCollection> configure = null)
+    [Fact]
+    public async Task SavingAnAgent_WhenTheSkillsTablesAreMissing_KeepsTheAgentsChanges()
     {
+        // Arrange
+        var pending = new PendingAgentSkillsSyncs();
+        await using var harness = await CreateAsync(pending: pending);
+        await harness.AddSkillAsync("Spanish");
+        await SaveAgentAsync(harness, new AgentSkill { SkillId = "Spanish", Proficiency = 4 });
+
+        // A Skills migration that timed out at startup leaves the catalog's tables missing.
+        await DropSkillIndexTableAsync(harness);
+
+        // Act (a supervisor frees the agent, and their skills changed since the last sync)
+        await harness.RunAsync(async services =>
+        {
+            var manager = services.GetRequiredService<IAgentProfileManager>();
+            var profile = await manager.FindByUserIdAsync(AgentUserId);
+
+            profile.PresenceStatus = AgentPresenceStatus.Available;
+            profile.SkillProficiencies = [new AgentSkill { SkillId = "Spanish", Proficiency = 2 }];
+            await manager.UpdateAsync(profile);
+        });
+        var saved = await GetAgentAsync(harness);
+
+        // Assert (the save is committed and the sync waits for later; a sync run inside the save cancelled the whole
+        // session, so the state change was silently thrown away)
+        Assert.Equal(AgentPresenceStatus.Available, saved.PresenceStatus);
+        Assert.Equal(2, Assert.Single(saved.SkillProficiencies).Proficiency);
+        Assert.Equal([saved.ItemId], pending.AgentIds);
+    }
+
+    [Fact]
+    public async Task SavingAnAgent_RunsTheSyncAfterTheSave_OncePerScope()
+    {
+        // Arrange
+        var pending = new PendingAgentSkillsSyncs();
+        await using var harness = await CreateAsync(pending: pending);
+        await harness.AddSkillAsync("Spanish");
+
+        // Act (one request saves the same agent twice)
+        await harness.RunAsync(async services =>
+        {
+            var manager = services.GetRequiredService<IAgentProfileManager>();
+            var profile = await manager.NewAsync();
+
+            profile.Name = "agent";
+            profile.UserId = AgentUserId;
+            profile.SkillProficiencies = [new AgentSkill { SkillId = "Spanish", Proficiency = 4 }];
+            await manager.CreateAsync(profile);
+
+            profile.PresenceStatus = AgentPresenceStatus.Available;
+            await manager.UpdateAsync(profile);
+        });
+        var before = await GetAssignmentsAsync(harness);
+        var agentIds = pending.AgentIds.ToArray();
+
+        await pending.RunAsync(harness);
+        var after = await GetAssignmentsAsync(harness);
+        var synced = await GetAgentAsync(harness);
+
+        // Assert
+        Assert.Empty(before);
+        Assert.Single(agentIds);
+        Assert.Equal(4, Assert.Single(after).Proficiency);
+        Assert.True(AgentSkillsSync.IsInStep(synced));
+    }
+
+    private static Task<SkillsTestHarness> CreateAsync(Action<IServiceCollection> configure = null, PendingAgentSkillsSyncs pending = null)
+    {
+        pending ??= new PendingAgentSkillsSyncs();
+
         return SkillsTestHarness.CreateAsync(
             services =>
             {
@@ -245,6 +316,10 @@ public sealed class SharedSkillsTests
                 services.AddSingleton<IContactCenterConfigurationCache, PassThroughConfigurationCache>();
                 ContactCenterSharedSkills.AddCatalog(services);
                 ContactCenterSharedSkills.AddAgentSync(services);
+
+                // No shell scope runs deferred tasks here, so the syncs are collected and run by the test.
+                services.AddSingleton(pending);
+                services.Replace(ServiceDescriptor.Scoped<IAgentSkillsSyncScheduler>(provider => new CollectingScheduler(provider.GetRequiredService<PendingAgentSkillsSyncs>())));
                 configure?.Invoke(services);
             },
             CreateContactCenterSchemaAsync,
@@ -268,7 +343,25 @@ public sealed class SharedSkillsTests
             collection: ContactCenterStorage.CollectionName);
     }
 
-    private static Task SaveAgentAsync(SkillsTestHarness harness, params AgentSkill[] skills)
+    private static async Task DropSkillIndexTableAsync(SkillsTestHarness harness)
+    {
+        await using var connection = harness.Store.Configuration.ConnectionFactory.CreateConnection();
+        await connection.OpenAsync(TestContext.Current.CancellationToken);
+        await using var command = connection.CreateCommand();
+
+        command.CommandText = $"DROP TABLE \"{SkillsConstants.CollectionName}_{nameof(SkillIndex)}\"";
+        await command.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+    }
+
+    // Saves the agent in one scope, then runs the shared skills sync the save scheduled, as the request's deferred
+    // task does.
+    private static async Task SaveAgentAsync(SkillsTestHarness harness, params AgentSkill[] skills)
+    {
+        await SaveAgentProfileAsync(harness, skills);
+        await harness.Services.GetRequiredService<PendingAgentSkillsSyncs>().RunAsync(harness);
+    }
+
+    private static Task SaveAgentProfileAsync(SkillsTestHarness harness, params AgentSkill[] skills)
     {
         return harness.RunAsync(async services =>
         {
@@ -299,6 +392,46 @@ public sealed class SharedSkillsTests
     private static Task<IReadOnlyList<SkillAssignment>> GetAssignmentsAsync(SkillsTestHarness harness)
     {
         return harness.RunAsync(services => services.GetRequiredService<ISkillAssignmentService>().GetAssignmentsAsync(SkillSubject.User(AgentUserId)), commit: false);
+    }
+
+    private sealed class PendingAgentSkillsSyncs
+    {
+        private readonly List<string> _agentIds = [];
+
+        public IReadOnlyList<string> AgentIds => _agentIds;
+
+        public void Add(string agentId) => _agentIds.Add(agentId);
+
+        public async Task RunAsync(SkillsTestHarness harness)
+        {
+            var agentIds = _agentIds.ToArray();
+
+            _agentIds.Clear();
+
+            foreach (var agentId in agentIds)
+            {
+                await harness.RunAsync(services => services.GetRequiredService<AgentSkillsSyncRunner>().RunAsync(agentId, TestContext.Current.CancellationToken));
+            }
+        }
+    }
+
+    private sealed class CollectingScheduler : IAgentSkillsSyncScheduler
+    {
+        private readonly PendingAgentSkillsSyncs _pending;
+        private readonly HashSet<string> _scheduled = new(StringComparer.Ordinal);
+
+        public CollectingScheduler(PendingAgentSkillsSyncs pending)
+        {
+            _pending = pending;
+        }
+
+        public void Schedule(string agentId)
+        {
+            if (_scheduled.Add(agentId))
+            {
+                _pending.Add(agentId);
+            }
+        }
     }
 
     private sealed class PassThroughConfigurationCache : IContactCenterConfigurationCache

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Customers.Core.Indexes;
 using CrestApps.OrchardCore.Customers.Core.Models;
+using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using YesSql;
 
@@ -53,13 +54,23 @@ public sealed class CustomerStore : DocumentCatalog<Customer, CustomerIndex>, IC
     protected override bool CheckConcurrency => true;
 
     private readonly IEnumerable<ICustomerHandler> _handlers;
+    private readonly IPhoneNumberService _phoneNumberService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CustomerStore"/> class.
+    /// </summary>
+    /// <param name="session">The session.</param>
+    /// <param name="handlers">The handlers told about a new customer.</param>
+    /// <param name="phoneNumberServices">The phone number service, when the Phone Numbers feature is on, which keeps a
+    /// customer's phone in E.164 form.</param>
     public CustomerStore(
         ISession session,
-        IEnumerable<ICustomerHandler> handlers)
+        IEnumerable<ICustomerHandler> handlers,
+        IEnumerable<IPhoneNumberService> phoneNumberServices = null)
         : base(session)
     {
         _handlers = handlers;
+        _phoneNumberService = phoneNumberServices?.FirstOrDefault();
         CollectionName = CustomersConstants.CollectionName;
     }
 
@@ -134,6 +145,17 @@ public sealed class CustomerStore : DocumentCatalog<Customer, CustomerIndex>, IC
         var page = await customers.OrderByDescending(index => index.LastActivityUtc).Skip(skip).Take(take).ListAsync(cancellationToken);
 
         return (count, page.ToArray());
+    }
+
+    // The phone is kept in E.164 form when it parses, read in the country of the customer's address, so it matches the
+    // CRM, the do-not-call lists and caller ID; a number that doesn't parse is kept as typed.
+    protected override ValueTask SavingAsync(Customer record)
+    {
+        var country = (record.GetDefaultBillingAddress() ?? record.GetDefaultShippingAddress() ?? record.Addresses?.FirstOrDefault())?.Address?.Country;
+
+        record.Phone = PhoneNumberNormalization.ToE164OrTrimmed(record.Phone, _phoneNumberService, country);
+
+        return ValueTask.CompletedTask;
     }
 
     protected override async ValueTask CreatedAsync(Customer record, CancellationToken cancellationToken)

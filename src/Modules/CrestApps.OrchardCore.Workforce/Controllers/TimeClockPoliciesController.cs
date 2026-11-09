@@ -13,6 +13,7 @@ using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using QueryContext = CrestApps.Core.Models.QueryContext;
 
 namespace CrestApps.OrchardCore.Workforce.Controllers;
 
@@ -26,6 +27,7 @@ public sealed class TimeClockPoliciesController : Controller
     private readonly ITimeClockPolicyManager _manager;
     private readonly INotifier _notifier;
     private readonly IPayPeriodCalendarManager _calendarManager;
+    private readonly IEnumerable<ITimePunchSourceProvider> _sourceProviders;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -37,6 +39,7 @@ public sealed class TimeClockPoliciesController : Controller
     /// <param name="manager">The manager.</param>
     /// <param name="notifier">The notifier.</param>
     /// <param name="calendarManager">The pay period manager.</param>
+    /// <param name="sourceProviders">The providers of the punch sources other modules add.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public TimeClockPoliciesController(
@@ -44,6 +47,7 @@ public sealed class TimeClockPoliciesController : Controller
         ITimeClockPolicyManager manager,
         INotifier notifier,
         IPayPeriodCalendarManager calendarManager,
+        IEnumerable<ITimePunchSourceProvider> sourceProviders,
         IHtmlLocalizer<TimeClockPoliciesController> htmlLocalizer,
         IStringLocalizer<TimeClockPoliciesController> stringLocalizer)
     {
@@ -51,6 +55,7 @@ public sealed class TimeClockPoliciesController : Controller
         _manager = manager;
         _notifier = notifier;
         _calendarManager = calendarManager;
+        _sourceProviders = sourceProviders;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -70,16 +75,16 @@ public sealed class TimeClockPoliciesController : Controller
             return Forbid();
         }
 
-        var items = (await _manager.GetAllAsync(HttpContext.RequestAborted))
-            .OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase)
-            .ToList();
         var pager = new Pager(pagerParameters, pagerOptions.Value);
+
+        // Paged and counted in SQL, ordered by the name in the index.
+        var items = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext { Sorted = true }, HttpContext.RequestAborted);
 
         return View(new WorkforceListViewModel
         {
             List = new AdminListContext<TimeClockPolicy>
             {
-                Source = items.Skip(pager.GetStartIndex()).Take(pager.PageSize).ToList(),
+                Source = [.. items.Entries],
                 Pager = await shapeFactory.PagerAsync(pager, items.Count),
             },
         });
@@ -119,7 +124,7 @@ public sealed class TimeClockPoliciesController : Controller
             AutoMealAfterHours = item.AutoMealAfterHours,
             AutoMealMinutes = item.AutoMealMinutes,
             LongMealMinutes = item.LongMealMinutes,
-            AllowedSources = item.AllowedSources.Select(source => source.ToString()).ToList(),
+            AllowedSources = [.. item.AllowedSources],
             RequireGeofence = item.RequireGeofence,
             GeofenceRadiusMeters = item.GeofenceRadiusMeters,
             MissedPunchHandling = item.MissedPunchHandling.ToString(),
@@ -174,7 +179,8 @@ public sealed class TimeClockPoliciesController : Controller
         item.AutoMealAfterHours = model.AutoMealAfterHours;
         item.AutoMealMinutes = model.AutoMealMinutes;
         item.LongMealMinutes = model.LongMealMinutes;
-        item.AllowedSources = (model.AllowedSources ?? []).Select(source => Enum.TryParse<TimePunchSource>(source, out var parsed) ? parsed : (TimePunchSource?)null).Where(source => source.HasValue && source != TimePunchSource.Manager).Select(source => source.Value).Distinct().ToList();
+        var knownSources = new HashSet<string>([TimePunchSource.Web, TimePunchSource.Mobile, TimePunchSource.Kiosk, TimePunchSource.Api, .. AdditionalSources().Select(source => source.Name)], StringComparer.Ordinal);
+        item.AllowedSources = [.. (model.AllowedSources ?? []).Where(knownSources.Contains).Distinct(StringComparer.Ordinal)];
         item.RequireGeofence = model.RequireGeofence;
         item.GeofenceRadiusMeters = model.GeofenceRadiusMeters;
         item.MissedPunchHandling = Enum.TryParse<MissedPunchHandling>(model.MissedPunchHandling, out var missed) ? missed : MissedPunchHandling.Flag;
@@ -265,8 +271,12 @@ public sealed class TimeClockPoliciesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    private IEnumerable<TimePunchSourceDescriptor> AdditionalSources()
+        => _sourceProviders.SelectMany(provider => provider.GetSources());
+
     private async Task PopulateAsync(TimeClockPolicyEditViewModel model)
     {
+        model.AdditionalSources = [.. AdditionalSources()];
         model.CalendarOptions = (await _calendarManager.ListEnabledAsync(HttpContext.RequestAborted))
             .Select(calendar => new SelectListItem(calendar.Name, calendar.ItemId, calendar.ItemId == model.PayPeriodCalendarId))
             .ToList();

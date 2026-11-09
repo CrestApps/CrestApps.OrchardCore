@@ -168,6 +168,11 @@
             init.keepalive = true;
         }
 
+        // A request its caller replaces, such as a preview of a design that changed, is cancelled with this signal.
+        if (settings.signal) {
+            init.signal = settings.signal;
+        }
+
         if (settings.body !== undefined) {
             init.method = settings.method || 'POST';
             init.body = JSON.stringify(settings.body);

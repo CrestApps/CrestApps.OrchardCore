@@ -5,7 +5,9 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Modules.Omnichannel;
+using CrestApps.OrchardCore.Tests.Modules.Omnichannel.Sms;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Moq;
 using OrchardCore.ContentFields.Fields;
@@ -76,7 +78,7 @@ public sealed class EmailMessagingChannelTests
     }
 
     [Fact]
-    public void IsOptedOut_ReadsTheDoNotEmailFlag()
+    public async Task IsOptedOutAsync_ReadsTheDoNotEmailFlag()
     {
         // Arrange
         var channel = CreateChannel(Mock.Of<IEmailDispatcher>());
@@ -85,8 +87,21 @@ public sealed class EmailMessagingChannelTests
         contact.Alter<OmnichannelContactPart>(part => part.DoNotEmail = true);
 
         // Act & Assert
-        Assert.True(channel.IsOptedOut(contact));
-        Assert.False(channel.IsOptedOut(new ContentItem { ContentType = "Contact" }));
+        Assert.True(await channel.IsOptedOutAsync(contact, "ann@example.com", TestContext.Current.CancellationToken));
+        Assert.False(await channel.IsOptedOutAsync(new ContentItem { ContentType = "Contact" }, "ann@example.com", TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task IsOptedOutAsync_RefusesAnAddressThatUnsubscribedWithoutAContact()
+    {
+        // Arrange
+        var resolver = new SharedNumberOptOutResolver();
+        resolver.AddressOptOuts.Add(new ContactAddressOptOut { Channel = "Email", Address = "ann@example.com" });
+        var channel = CreateChannel(Mock.Of<IEmailDispatcher>(), resolver);
+
+        // Act & Assert
+        Assert.True(await channel.IsOptedOutAsync(null, "ann@example.com", TestContext.Current.CancellationToken));
+        Assert.False(await channel.IsOptedOutAsync(null, "bob@example.com", TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -117,11 +132,12 @@ public sealed class EmailMessagingChannelTests
         return method;
     }
 
-    private static EmailMessagingChannel CreateChannel(IEmailDispatcher dispatcher)
+    private static EmailMessagingChannel CreateChannel(IEmailDispatcher dispatcher, IContactOptOutResolver optOutResolver = null)
         => new(
             new Lazy<IEmailDispatcher>(() => dispatcher),
             Mock.Of<IOmnichannelContactTypeProvider>(),
             Mock.Of<ISession>(),
             new PassThroughStringLocalizer<EmailMessagingChannel>(),
-            TestContactMethods.Accessor);
+            TestContactMethods.Accessor,
+            ConsentDoubles.Over(optOutResolver ?? new SharedNumberOptOutResolver()));
 }

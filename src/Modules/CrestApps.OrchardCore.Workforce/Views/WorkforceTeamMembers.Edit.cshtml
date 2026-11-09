@@ -1,0 +1,31 @@
+@model WorkforceTeamMembersViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Members"]</div>
+    <div class="card-body">
+        @if (Model.Members.Count == 0)
+        {
+            <p class="hint mb-0">@T["No worker is on this team today. Add a team to a worker on the worker's page."] <a asp-area="CrestApps.OrchardCore.Workforce" asp-controller="Workers" asp-action="Edit" asp-route-teamId="@Model.TeamId">@T["Add a worker"]</a></p>
+        }
+        else
+        {
+            <ul class="list-unstyled mb-2">
+                @foreach (var member in Model.Members)
+                {
+                    <li>
+                        <a asp-area="CrestApps.OrchardCore.Workforce" asp-controller="Workers" asp-action="Edit" asp-route-id="@member.WorkerId">@member.DisplayName</a>
+                        @if (!string.IsNullOrEmpty(member.Role))
+                        {
+                            <span class="badge text-bg-secondary ms-1">@member.Role</span>
+                        }
+                        @if (!member.HasUser)
+                        {
+                            <span class="hint ms-1">@T["(no user account)"]</span>
+                        }
+                    </li>
+                }
+            </ul>
+            <span class="hint">@T["The workers on this team today, from their worker pages. Workers with a user account are the team's members for team calendars and other modules; the members of sub-teams count too."]</span>
+        }
+    </div>
+</div>

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Orders.Core.Indexes;
 using CrestApps.OrchardCore.Orders.Core.Models;
+using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using YesSql;
 using YesSql.Services;
@@ -110,10 +111,30 @@ public sealed class OrderStore : DocumentCatalog<Order, OrderIndex>, IOrderStore
     // Completing a checkout and starting a new one from the same cart must not overwrite each other.
     protected override bool CheckConcurrency => true;
 
-    public OrderStore(ISession session)
+    private readonly IPhoneNumberService _phoneNumberService;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OrderStore"/> class.
+    /// </summary>
+    /// <param name="session">The session.</param>
+    /// <param name="phoneNumberServices">The phone number service, when the Phone Numbers feature is on, which keeps the
+    /// buyer's phone in E.164 form.</param>
+    public OrderStore(ISession session, IEnumerable<IPhoneNumberService> phoneNumberServices = null)
         : base(session)
     {
+        _phoneNumberService = phoneNumberServices?.FirstOrDefault();
         CollectionName = OrderConstants.CollectionName;
+    }
+
+    // The buyer's phone is kept in E.164 form when it parses, read in the country of the order's address, so it matches
+    // the CRM, the do-not-call lists and caller ID; a number that doesn't parse is kept as typed.
+    protected override ValueTask SavingAsync(Order record)
+    {
+        var country = record.BillingAddress?.Country ?? record.ShippingAddress?.Country;
+
+        record.CustomerPhone = PhoneNumberNormalization.ToE164OrTrimmed(record.CustomerPhone, _phoneNumberService, country);
+
+        return ValueTask.CompletedTask;
     }
 
     public Task<Order> FindByNumberAsync(string orderNumber, CancellationToken cancellationToken = default)

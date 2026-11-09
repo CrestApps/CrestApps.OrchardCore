@@ -139,6 +139,9 @@ internal sealed class StripeConnectPayoutProvider : IVendorPayoutProvider
         _logger = logger;
     }
 
+    public string Name
+        => MarketplaceConstants.StripeConnectPayoutProvider;
+
     public async Task<(string TransferId, string Failure)> PayAsync(Vendor vendor, Order order, decimal amount, string currency, string idempotencyKey, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(vendor?.StripeAccountId))

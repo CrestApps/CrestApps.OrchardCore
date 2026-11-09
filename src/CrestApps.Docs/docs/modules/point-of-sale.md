@@ -319,6 +319,21 @@ Content-Type: application/json
 - **Commerce > Point of sale > Registers** (`point-of-sale/registers`, `RegistersAdminController`) lists registers through the `AdminList` shape, with **Add register** and each register's editor.
 - **Commerce > Point of sale > Shifts** (`point-of-sale/shifts`) lists shifts, newest first, with a register filter in the list toolbar; a shift's page shows its sales by tender and its cash drawer (float, put in less taken out, expected, counted, difference), its cash movements and its close note.
 
+## Recipes and deployment
+
+The `Registers` recipe step (`RegistersStep`) creates or updates registers. A register is matched by its `ItemId`, then by its name, so running a recipe twice changes nothing. It is checked as on the admin screen: a name, a store location that exists (import the [stock locations](./inventory.md) first), an address with a street, a city and a two-letter country, and a three-letter currency or none. The **Registers** deployment step (`RegistersDeploymentStep`, *Commerce*) writes every register; shifts and sales stay on the site.
+
+```json
+{
+  "name": "Registers",
+  "Registers": [
+    { "ItemId": "4rg00000000000000000000001", "Name": "Front till", "LocationId": "default",
+      "Address": { "AddressLine1": "1 Main St", "City": "Springfield", "Region": "IL", "PostalCode": "62701", "Country": "US" },
+      "Currency": "USD", "Roles": [ "Cashier" ], "IsEnabled": true }
+  ]
+}
+```
+
 ## Permissions
 
 | Permission | Allows |

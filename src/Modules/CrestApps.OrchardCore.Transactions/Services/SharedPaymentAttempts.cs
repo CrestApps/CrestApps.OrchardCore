@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Transactions.Models;
 using Microsoft.Extensions.DependencyInjection;

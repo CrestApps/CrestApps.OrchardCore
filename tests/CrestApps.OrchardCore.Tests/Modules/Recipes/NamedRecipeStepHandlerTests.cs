@@ -428,7 +428,7 @@ public sealed class NamedRecipeStepHandlerTests
     /// </summary>
     /// <param name="manager">The manager that owns the reason codes.</param>
     private static AgentStateReasonCodeStep CreateReasonCodeHandler(IAgentStateReasonCodeManager manager)
-        => new(manager, new PassThroughStringLocalizer<AgentStateReasonCodeStep>());
+        => new(manager);
 
     [Fact]
     public async Task AgentStateReasonCodeStep_WhenReasonCodeExists_ShouldUpdateInsteadOfCreate()
@@ -443,7 +443,7 @@ public sealed class NamedRecipeStepHandlerTests
         var manager = new Mock<IAgentStateReasonCodeManager>();
         manager.Setup(x => x.FindByIdAsync("reason-1", It.IsAny<CancellationToken>()))
             .Returns(() => ValueTask.FromResult(reasonCode));
-        manager.Setup(x => x.ValidateAsync(reasonCode, It.IsAny<CancellationToken>()))
+        manager.Setup(x => x.ValidateAsync(It.IsAny<AgentStateReasonCode>(), It.IsAny<CancellationToken>()))
             .Returns(() => ValueTask.FromResult(new ValidationResultDetails()));
 
         var handler = CreateReasonCodeHandler(manager.Object);
@@ -660,9 +660,18 @@ public sealed class NamedRecipeStepHandlerTests
         entityQuery.Setup(x => x.With<UserIndex>(It.IsAny<Expression<Func<UserIndex, bool>>>()))
             .Returns(query.Object);
 
+        // The total is counted from the index rows alone.
+        var countQuery = new Mock<IQueryIndex<UserIndex>>();
+        countQuery.Setup(x => x.Where(It.IsAny<Expression<Func<UserIndex, bool>>>()))
+            .Returns(countQuery.Object);
+        countQuery.Setup(x => x.CountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
+
         var rootQuery = new Mock<IQuery>();
         rootQuery.Setup(x => x.For<User>(false))
             .Returns(entityQuery.Object);
+        rootQuery.Setup(x => x.ForIndex<UserIndex>())
+            .Returns(countQuery.Object);
 
         var session = new Mock<ISession>();
         session.Setup(x => x.Query(null))

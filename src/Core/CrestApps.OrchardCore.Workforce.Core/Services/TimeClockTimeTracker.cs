@@ -177,14 +177,16 @@ internal sealed class TimeClockDaySync
         return entries;
     }
 
-    private static string Source(TimePunchSource source) => source switch
+    private static string Source(string source) => source switch
     {
         TimePunchSource.Web => TimeTrackerConstants.Sources.Self,
         TimePunchSource.Mobile => TimeTrackerConstants.Sources.Mobile,
         TimePunchSource.Kiosk => TimeTrackerConstants.Sources.Kiosk,
-        TimePunchSource.ContactCenter => TimeTrackerConstants.Sources.ContactCenter,
         TimePunchSource.Manager => TimeTrackerConstants.Sources.Manager,
-        _ => TimeTrackerConstants.Sources.Api,
+        TimePunchSource.Api or null or "" => TimeTrackerConstants.Sources.Api,
+
+        // A source another module adds (such as the contact center's sign-in) is kept as it is named.
+        _ => source,
     };
 }
 
@@ -444,7 +446,8 @@ internal sealed class TimeClockTrackerBackfill
             return 0;
         }
 
-        var workers = await _session.Query<WorkerProfile, WorkerIndex>(index => index.UserId != null, collection: WorkforceConstants.CollectionName)
+        // Only the worker ids are needed, so the index rows are enough.
+        var workers = await _session.QueryIndex<WorkerIndex>(index => index.UserId != null, collection: WorkforceConstants.CollectionName)
             .OrderBy(index => index.ItemId)
             .Skip(state.Done)
             .Take(batchSize)

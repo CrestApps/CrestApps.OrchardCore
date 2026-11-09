@@ -59,7 +59,7 @@ internal sealed class MediaFilesDataConnector : IDataConnector
         _fileFormatManager = fileFormatManager;
     }
 
-    public static string Name => "MediaFiles";
+    public static string Name => DataConnectorConstants.Connectors.MediaFiles;
 
     public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<MediaFilesDataConnector>("Media library files");
 

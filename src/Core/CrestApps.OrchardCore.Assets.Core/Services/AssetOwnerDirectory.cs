@@ -1,42 +1,39 @@
 using CrestApps.OrchardCore.Assets.Models;
-using CrestApps.OrchardCore.Assets.Services;
+using CrestApps.OrchardCore.Parties.Models;
+using CrestApps.OrchardCore.Parties.Services;
 
 namespace CrestApps.OrchardCore.Assets.Core.Services;
 
 /// <summary>
-/// Names asset owners through the registered <see cref="IAssetOwnerSource"/>s, and says which kinds can be picked.
+/// Names asset owners through the shared parties (<see cref="IPartyDirectory"/>), and says which kinds can be picked.
+/// Each <see cref="AssetOwnerKind"/> reads the party source of its party kind (<see cref="AssetOwners.ToPartyKind"/>).
 /// </summary>
 public sealed class AssetOwnerDirectory
 {
-    private readonly Dictionary<AssetOwnerKind, IAssetOwnerSource> _sources;
+    private readonly IPartyDirectory _parties;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AssetOwnerDirectory"/> class.
     /// </summary>
-    /// <param name="sources">The owner sources.</param>
-    public AssetOwnerDirectory(IEnumerable<IAssetOwnerSource> sources)
+    /// <param name="parties">The party directory.</param>
+    public AssetOwnerDirectory(IPartyDirectory parties)
     {
-        _sources = [];
-
-        foreach (var source in sources)
-        {
-            _sources.TryAdd(source.Kind, source);
-        }
+        _parties = parties;
     }
 
     /// <summary>
-    /// Gets the kinds of owner that can be picked: Internal, then those with a source.
+    /// Gets the kinds of owner that can be picked: Internal, then those with a party source.
     /// </summary>
     public IReadOnlyList<AssetOwnerKind> Kinds
-        => [AssetOwnerKind.Internal, .. Enum.GetValues<AssetOwnerKind>().Where(_sources.ContainsKey)];
+        => [AssetOwnerKind.Internal, .. Enum.GetValues<AssetOwnerKind>().Where(kind => GetSource(kind) is not null)];
 
     /// <summary>
-    /// Gets the source of a kind of owner, or <see langword="null"/> when nothing registers one.
+    /// Gets the party source of a kind of owner, or <see langword="null"/> when nothing registers one.
     /// </summary>
     /// <param name="kind">The kind.</param>
     /// <returns>The source.</returns>
-    public IAssetOwnerSource GetSource(AssetOwnerKind kind)
-        => _sources.GetValueOrDefault(kind);
+    public IPartySource GetSource(AssetOwnerKind kind)
+        => kind.ToPartyKind() is { } partyKind ? _parties.GetSource(partyKind) : null;
 
     /// <summary>
     /// Gets an owner's name, or <see langword="null"/> when it isn't found.
@@ -45,14 +42,14 @@ public sealed class AssetOwnerDirectory
     /// <param name="id">The owner's id.</param>
     /// <param name="cancellationToken">A token to cancel the lookup.</param>
     /// <returns>The name.</returns>
-    public async Task<string> GetNameAsync(AssetOwnerKind kind, string id, CancellationToken cancellationToken = default)
+    public Task<string> GetNameAsync(AssetOwnerKind kind, string id, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrEmpty(id) || GetSource(kind) is not { } source)
+        if (string.IsNullOrEmpty(id) || kind.ToPartyKind() is not { } partyKind)
         {
-            return null;
+            return Task.FromResult<string>(null);
         }
 
-        return (await source.GetNamesAsync([id], cancellationToken)).GetValueOrDefault(id);
+        return _parties.GetNameAsync(new PartyRef(partyKind, id), cancellationToken);
     }
 
     /// <summary>
@@ -63,18 +60,17 @@ public sealed class AssetOwnerDirectory
     /// <returns>The names, keyed by <see cref="Key"/>.</returns>
     public async Task<IReadOnlyDictionary<string, string>> GetNamesAsync(IEnumerable<Asset> assets, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(assets);
+
+        var owned = assets.Select(asset => (asset.OwnerKind, Party: asset.ToParty())).Where(owner => !owner.Party.IsEmpty).ToList();
+        var found = await _parties.GetNamesAsync(owned.Select(owner => owner.Party), cancellationToken);
         var names = new Dictionary<string, string>(StringComparer.Ordinal);
 
-        foreach (var group in assets.Where(asset => asset.OwnerKind != AssetOwnerKind.Internal && !string.IsNullOrEmpty(asset.OwnerId)).GroupBy(asset => asset.OwnerKind))
+        foreach (var (kind, party) in owned)
         {
-            if (GetSource(group.Key) is not { } source)
+            if (found.TryGetValue(party, out var name))
             {
-                continue;
-            }
-
-            foreach (var (id, name) in await source.GetNamesAsync([.. group.Select(asset => asset.OwnerId).Distinct(StringComparer.Ordinal)], cancellationToken))
-            {
-                names[Key(group.Key, id)] = name;
+                names[Key(kind, party.Id)] = name;
             }
         }
 

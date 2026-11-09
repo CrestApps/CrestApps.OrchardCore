@@ -49,6 +49,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
     private readonly ISession _session;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly IPaymentIssueRecorder _paymentIssues;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultCheckoutEngine"/> class.
@@ -65,6 +66,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
     /// <param name="clock">The clock used for timestamps.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="paymentGates">The gates that hold what a purchase needs before it is paid for, such as a coupon's use.</param>
+    /// <param name="paymentIssues">Records a refund that failed, for an operator to finish by hand.</param>
     public DefaultCheckoutEngine(
         ICheckoutSessionStore sessionStore,
         IPaymentAttemptStore attemptStore,
@@ -77,8 +79,10 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         ISession session,
         IClock clock,
         ILogger<DefaultCheckoutEngine> logger,
-        IEnumerable<ICheckoutPaymentGate> paymentGates = null)
+        IEnumerable<ICheckoutPaymentGate> paymentGates = null,
+        IPaymentIssueRecorder paymentIssues = null)
     {
+        _paymentIssues = paymentIssues;
         _sessionStore = sessionStore;
         _attemptStore = attemptStore;
         _providerResolver = providerResolver;
@@ -1181,8 +1185,25 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             }
             catch (Exception exception)
             {
-                // The customer's money is at stake, so a failure here is loud: an operator has to resolve it.
+                // The customer's money is at stake, so a failure here is loud: an operator has to resolve it, so it is
+                // listed as a payment issue as well as logged.
                 _logger.LogError(exception, "Failed to compensate settled obligation '{ObligationId}' of checkout '{SessionId}'. This payment must be refunded manually.", attempt.ObligationId, session.SessionId);
+
+                if (_paymentIssues is not null)
+                {
+                    await _paymentIssues.RecordAsync(new PaymentIssue
+                    {
+                        Kind = PaymentIssueKinds.RefundFailed,
+                        Message = "Refund this payment in the payment provider's dashboard: the checkout could not be completed and the automatic refund failed.",
+                        Error = exception.Message,
+                        ReferenceType = "CheckoutSession",
+                        ReferenceId = session.SessionId,
+                        ProviderKey = attempt.ProviderKey,
+                        ProviderReference = attempt.TransactionId,
+                        Amount = attempt.ConfirmedAmount > 0m ? attempt.ConfirmedAmount : attempt.ExpectedAmount,
+                        Currency = attempt.Currency,
+                    }, cancellationToken);
+                }
             }
         }
     }

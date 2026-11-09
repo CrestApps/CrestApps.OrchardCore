@@ -1,9 +1,11 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Consent;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.DncRegistry;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers;
@@ -29,8 +31,10 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
     private readonly IDialerAbandonmentPolicyService _abandonmentPolicyService;
     private readonly IEnumerable<INationalDoNotCallRegistry> _doNotCallRegistries;
     private readonly INotInServiceNumberService _notInServiceNumbers;
+    private readonly IConsentService _consentService;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly IContactMethodsAccessor _contactMethods;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultDialerEligibilityService"/> class.
@@ -43,6 +47,7 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
     /// <param name="abandonmentPolicyService">The policy service used to evaluate the rolling abandonment-rate cap.</param>
     /// <param name="doNotCallRegistries">The registered national do-not-call registries, if any.</param>
     /// <param name="notInServiceNumbers">The list of numbers known not to be in service.</param>
+    /// <param name="optOutResolver">The resolver that decides whether the contact, anybody at their numbers, or the number itself has opted out of calls.</param>
     /// <param name="clock">The clock used to evaluate cool-down and calling-window timing.</param>
     /// <param name="logger">The logger used to record why an attempt could not be screened.</param>
     public DefaultDialerEligibilityService(
@@ -54,9 +59,12 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
         IDialerAbandonmentPolicyService abandonmentPolicyService,
         IEnumerable<INationalDoNotCallRegistry> doNotCallRegistries,
         INotInServiceNumberService notInServiceNumbers,
+        IConsentService consentService,
         IClock clock,
-        ILogger<DefaultDialerEligibilityService> logger)
+        ILogger<DefaultDialerEligibilityService> logger,
+        IContactMethodsAccessor contactMethods)
     {
+        _contactMethods = contactMethods;
         _interactionManager = interactionManager;
         _workStateService = workStateService;
         _contentManager = contentManager;
@@ -65,6 +73,7 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
         _abandonmentPolicyService = abandonmentPolicyService;
         _doNotCallRegistries = doNotCallRegistries;
         _notInServiceNumbers = notInServiceNumbers;
+        _consentService = consentService;
         _clock = clock;
         _logger = logger;
     }
@@ -78,6 +87,15 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
 
         var profile = context.Profile;
         var activity = context.Activity;
+
+        // The activity's number is copied from the contact when the activity is created, and nothing refreshes it. A
+        // record loaded before its contact had a number -- or whose number was added or corrected since -- kept an empty
+        // destination, and agents were told "The activity has no destination to dial" on a contact that plainly has one.
+        // The contact is asked for its number now, before the record is given up as undialable.
+        if (string.IsNullOrEmpty(activity.PreferredDestination))
+        {
+            activity.PreferredDestination = await FindContactPhoneNumberAsync(activity, cancellationToken);
+        }
 
         if (string.IsNullOrEmpty(activity.PreferredDestination))
         {
@@ -131,9 +149,24 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
             return coolDown;
         }
 
-        var contactPart = await LoadContactPartAsync(activity, cancellationToken);
+        var contact = await LoadContactAsync(activity, cancellationToken);
+        var contactPart = contact is not null && contact.TryGet<OmnichannelContactPart>(out var part)
+            ? part
+            : null;
 
-        if (profile.RespectDoNotCall && contactPart is not null && contactPart.DoNotCall)
+        // Asked of the consent service, not of the contact's own flag: a stop recorded on another record that holds the
+        // same number, or against the number while no record held it, is the same person asking. The do-not-call lists
+        // are screened below with the national registries, under their own reason.
+        if (profile.RespectDoNotCall &&
+            (await _consentService.GetAsync(new ConsentQuery
+            {
+                Channel = ConsentChannels.Phone,
+                Address = destination.Value,
+                ContactKind = ConsentContactKinds.Contact,
+                ContactId = contact?.ContentItemId,
+                Contact = contact,
+                ExcludedSources = [ConsentSourceNames.DoNotCallLists],
+            }, cancellationToken)).HasOptedOut)
         {
             return DialerEligibilityResult.Suppressed(
                 DialerSuppressionReason.DoNotCall,
@@ -233,7 +266,7 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
         return DialerEligibilityResult.Eligible();
     }
 
-    private async Task<OmnichannelContactPart> LoadContactPartAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
+    private async Task<ContentItem> LoadContactAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(activity.ContactContentItemId))
         {
@@ -242,14 +275,7 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Published);
-
-        if (contact is null || !contact.TryGet<OmnichannelContactPart>(out var contactPart))
-        {
-            return null;
-        }
-
-        return contactPart;
+        return await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Published);
     }
 
     private static string ResolveCallingCalendarId(DialerProfile profile, string regionCode)
@@ -284,5 +310,34 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Reads the contact's preferred phone number as it is now, for an activity that was created without one.
+    /// </summary>
+    private async Task<string> FindContactPhoneNumberAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(activity.ContactContentItemId))
+        {
+            return null;
+        }
+
+        var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Published);
+
+        if (contact is null)
+        {
+            return null;
+        }
+
+        var phoneNumber = _contactMethods.Get(contact).GetPreferredPhoneNumber()?.PhoneNumber;
+
+        if (!string.IsNullOrEmpty(phoneNumber) && _logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Activity '{ActivityItemId}' had no number to dial; using its contact's current number instead.",
+                activity.ItemId.SanitizeLogValue());
+        }
+
+        return phoneNumber;
     }
 }

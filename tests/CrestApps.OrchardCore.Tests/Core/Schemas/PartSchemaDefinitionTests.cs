@@ -193,19 +193,19 @@ public sealed class PartSchemaDefinitionTests
 
         Assert.Contains("SanitizeHtml", json);
         Assert.Contains("\"default\":true", json);
-        Assert.Contains("RenderLiquid", json);
+        Assert.DoesNotContain("RenderLiquid", json);
         Assert.Contains("HtmlBodyPartMonacoEditorSettings", json);
         Assert.Contains("HtmlBodyPartTrumbowygEditorSettings", json);
     }
 
     [Fact]
-    public async Task MarkdownBodyPartSchema_ContainsRenderLiquidAndMarkdownValue()
+    public async Task MarkdownBodyPartSchema_ContainsMarkdownValueWithoutRenderLiquid()
     {
         var def = new MarkdownBodyPartSchema();
         var settingsSchema = await def.GetSettingsSchemaAsync(TestContext.Current.CancellationToken);
         var settingsJson = settingsSchema.Build().Root.Source.GetRawText();
 
-        Assert.Contains("RenderLiquid", settingsJson);
+        Assert.DoesNotContain("RenderLiquid", settingsJson);
         Assert.Contains("MarkdownBodyPartWysiwygEditorSettings", settingsJson);
 
         var partSchema = await ((IContentPartSchemaDefinition)def).GetPartSchemaAsync(

@@ -1,5 +1,6 @@
 using CrestApps.Core.AI;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Recipes.Core;
@@ -65,6 +66,7 @@ public sealed class SignInPunchesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IContactCenterEventHandler, SignInPunchHandler>();
+        services.AddScoped<ITimePunchSourceProvider, ContactCenterTimePunchSourceProvider>();
     }
 }
 
@@ -159,7 +161,7 @@ public sealed class IntradayStartup : StartupBase
 /// Registers the Agent Out Of Adherence workflow event.
 /// </summary>
 [Feature(WorkforceContactCenterConstants.Features.Adherence)]
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class AdherenceWorkflowsStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -170,10 +172,24 @@ public sealed class AdherenceWorkflowsStartup : StartupBase
 }
 
 /// <summary>
+/// Describes the Agent Out Of Adherence workflow event to CrestApps Recipes.
+/// </summary>
+[Feature(WorkforceContactCenterConstants.Features.Adherence)]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area, OrchardCoreFeatureIds.Workflows)]
+public sealed class AdherenceWorkflowsRecipeSchemaStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddWorkflowActivitySchema<WorkforceOutOfAdherenceEventSchema>();
+    }
+}
+
+/// <summary>
 /// Registers the adherence data sets of the Workforce report data source.
 /// </summary>
 [Feature(WorkforceContactCenterConstants.Features.Adherence)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class AdherenceReportsStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -188,7 +204,7 @@ public sealed class AdherenceReportsStartup : StartupBase
 /// Registers the forecast intervals data set of the Workforce report data source.
 /// </summary>
 [Feature(WorkforceContactCenterConstants.Features.Forecasting)]
-[RequireFeatures("OrchardCore.DataPipelines.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
 public sealed class ForecastingReportsStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -202,7 +218,7 @@ public sealed class ForecastingReportsStartup : StartupBase
 /// Adds the forecast summary AI tool.
 /// </summary>
 [Feature(WorkforceContactCenterConstants.Features.Forecasting)]
-[RequireFeatures("CrestApps.OrchardCore.AI")]
+[RequireFeatures(AIConstants.Feature.Area)]
 public sealed class ForecastingAIToolsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -231,7 +247,7 @@ public sealed class ForecastingAIToolsStartup : StartupBase
 /// Adds the out of adherence AI tool.
 /// </summary>
 [Feature(WorkforceContactCenterConstants.Features.Adherence)]
-[RequireFeatures("CrestApps.OrchardCore.AI")]
+[RequireFeatures(AIConstants.Feature.Area)]
 public sealed class AdherenceAIToolsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -260,7 +276,7 @@ public sealed class AdherenceAIToolsStartup : StartupBase
 /// Imports the WorkforceForecasting recipe step.
 /// </summary>
 [Feature(WorkforceContactCenterConstants.Features.Forecasting)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class ForecastingRecipesStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -274,7 +290,7 @@ public sealed class ForecastingRecipesStartup : StartupBase
 /// Describes the WorkforceForecasting recipe step to CrestApps Recipes.
 /// </summary>
 [Feature(WorkforceContactCenterConstants.Features.Forecasting)]
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class ForecastingRecipesSchemaStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -288,7 +304,7 @@ public sealed class ForecastingRecipesSchemaStartup : StartupBase
 /// Imports the WorkforceAdherence recipe step.
 /// </summary>
 [Feature(WorkforceContactCenterConstants.Features.Adherence)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class AdherenceRecipesStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -302,7 +318,7 @@ public sealed class AdherenceRecipesStartup : StartupBase
 /// Describes the WorkforceAdherence recipe step to CrestApps Recipes.
 /// </summary>
 [Feature(WorkforceContactCenterConstants.Features.Adherence)]
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class AdherenceRecipesSchemaStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -332,7 +348,7 @@ public sealed class ContactCenterTimeTrackerStartup : StartupBase
 /// Lets the stages of agents' states be exported with a deployment.
 /// </summary>
 [Feature(WorkforceContactCenterConstants.Features.TimeTracker)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class ContactCenterTimeTrackerDeploymentStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -348,7 +364,7 @@ public sealed class ContactCenterTimeTrackerDeploymentStartup : StartupBase
 /// Exports the adherence rule sets with a deployment.
 /// </summary>
 [Feature(WorkforceContactCenterConstants.Features.Adherence)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class AdherenceDeploymentStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -362,7 +378,7 @@ public sealed class AdherenceDeploymentStartup : StartupBase
 /// Exports the forecasting setup with a deployment.
 /// </summary>
 [Feature(WorkforceContactCenterConstants.Features.Forecasting)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class ForecastingDeploymentStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -376,7 +392,7 @@ public sealed class ForecastingDeploymentStartup : StartupBase
 /// Describes the adherence and forecasting deployment steps to CrestApps Recipes.
 /// </summary>
 [Feature(WorkforceContactCenterConstants.Features.ContactCenter)]
-[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
 public sealed class DeploymentSchemaStartup : StartupBase
 {
     /// <inheritdoc/>

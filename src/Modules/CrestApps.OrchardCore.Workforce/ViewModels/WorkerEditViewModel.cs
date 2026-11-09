@@ -4,15 +4,10 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 namespace CrestApps.OrchardCore.Workforce.ViewModels;
 
 /// <summary>
-/// The worker editor.
+/// The fields of the worker editor: who the worker is, their employment, teams, hours and availability.
 /// </summary>
 public class WorkerEditViewModel
 {
-    /// <summary>
-    /// Gets or sets the worker id, or empty for a new worker.
-    /// </summary>
-    public string Id { get; set; }
-
     /// <summary>
     /// Gets or sets the name.
     /// </summary>
@@ -125,21 +120,10 @@ public class WorkerEditViewModel
     public IList<TeamMembershipRowViewModel> Memberships { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets one proficiency row per enabled skill.
-    /// </summary>
-    public IList<WorkerSkillRowViewModel> Skills { get; set; } = [];
-
-    /// <summary>
     /// Gets or sets whether the editing user may see and change sensitive details.
     /// </summary>
     [BindNever]
     public bool CanSeeSensitive { get; set; }
-
-    /// <summary>
-    /// Gets or sets the worker's certificates, shown read-only.
-    /// </summary>
-    [BindNever]
-    public IList<WorkerCertificateViewModel> Certificates { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the teams to choose from.
@@ -164,10 +148,4 @@ public class WorkerEditViewModel
     /// </summary>
     [BindNever]
     public IList<SelectListItem> TimeZoneOptions { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the certifications to add a certificate of.
-    /// </summary>
-    [BindNever]
-    public IList<SelectListItem> CertificationOptions { get; set; } = [];
 }

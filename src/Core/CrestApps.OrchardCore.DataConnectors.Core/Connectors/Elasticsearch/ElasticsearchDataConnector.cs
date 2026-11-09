@@ -47,7 +47,7 @@ internal sealed class ElasticsearchDataConnector : IDataConnector
         _httpClient = httpClient;
     }
 
-    public static string Name => "Elasticsearch";
+    public static string Name => DataConnectorConstants.Connectors.Elasticsearch;
 
     public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<ElasticsearchDataConnector>("Elasticsearch");
 

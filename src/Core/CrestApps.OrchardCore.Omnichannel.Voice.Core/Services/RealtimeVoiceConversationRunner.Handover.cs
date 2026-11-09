@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using CrestApps.Core;
 using CrestApps.Core.AI.Capabilities;
 using CrestApps.Core.AI.Deployments;
@@ -66,9 +67,9 @@ public sealed partial class RealtimeVoiceConversationRunner
     {
         try
         {
-            var giveUpAt = DateTime.UtcNow + SupervisorNoteWait;
+            var waitStarted = Stopwatch.GetTimestamp();
 
-            while (DateTime.UtcNow < giveUpAt && !IsLineQuiet())
+            while (Stopwatch.GetElapsedTime(waitStarted) < SupervisorNoteWait && !IsLineQuiet())
             {
                 await Task.Delay(TimeSpan.FromMilliseconds(50), callToken);
             }
@@ -83,7 +84,7 @@ public sealed partial class RealtimeVoiceConversationRunner
 
     private bool IsLineQuiet()
     {
-        var now = DateTime.UtcNow.Ticks;
+        var now = UtcNowTicks;
 
         return Volatile.Read(ref _responseInFlight) == 0 &&
             now - Interlocked.Read(ref _lastResponseEndedTicks) >= HandoverSettle.Ticks &&
@@ -286,7 +287,7 @@ public sealed partial class RealtimeVoiceConversationRunner
             while (await timer.WaitForNextTickAsync(cancellationToken))
             {
                 // Counted as the assistant's audio: the room bed waits behind it, and the silence clocks do not run.
-                Interlocked.Exchange(ref _lastAssistantAudioTicks, DateTime.UtcNow.Ticks);
+                Interlocked.Exchange(ref _lastAssistantAudioTicks, UtcNowTicks);
 
                 await WriteToLineAsync(media, _outgoing.Encode(tone.NextPcmBytes(samplesPerFrame)), cancellationToken);
             }

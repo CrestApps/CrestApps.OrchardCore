@@ -2,13 +2,12 @@ using System.ComponentModel.DataAnnotations;
 using CrestApps.Core;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Omnichannel.Managements.Deployments;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Users.Indexes;
-using OrchardCore.Users.Models;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
@@ -42,7 +41,7 @@ internal sealed class SubjectActionHandler : CatalogEntryHandlerBase<SubjectActi
     /// <inheritdoc/>
     public override Task InitializingAsync(InitializingContext<SubjectAction> context, CancellationToken cancellationToken = default)
     {
-        OmnichannelDeploymentSerializer.Populate(context.Model, context.Data);
+        CatalogDeploymentSerializer.Populate(context.Model, context.Data);
 
         return Task.CompletedTask;
     }
@@ -50,7 +49,7 @@ internal sealed class SubjectActionHandler : CatalogEntryHandlerBase<SubjectActi
     /// <inheritdoc/>
     public override Task UpdatingAsync(UpdatingContext<SubjectAction> context, CancellationToken cancellationToken = default)
     {
-        OmnichannelDeploymentSerializer.Populate(context.Model, context.Data);
+        CatalogDeploymentSerializer.Populate(context.Model, context.Data);
 
         return Task.CompletedTask;
     }
@@ -106,7 +105,7 @@ internal sealed class SubjectActionHandler : CatalogEntryHandlerBase<SubjectActi
             return;
         }
 
-        if (await _session.Query<User, UserIndex>(x => x.NormalizedUserName == owner).FirstOrDefaultAsync() is null)
+        if (await _session.QueryIndex<UserIndex>(x => x.NormalizedUserName == owner).FirstOrDefaultAsync() is null)
         {
             context.Result.Fail(new ValidationResult(S["The selected user does not exist."], [nameof(NewActivityActionMetadata.NormalizedUserName)]));
         }

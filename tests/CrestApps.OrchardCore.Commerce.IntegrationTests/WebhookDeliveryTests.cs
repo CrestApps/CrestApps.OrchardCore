@@ -4,8 +4,8 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Commerce.Webhooks;
-using CrestApps.OrchardCore.Commerce.Webhooks.Models;
-using CrestApps.OrchardCore.Commerce.Webhooks.Services;
+using CrestApps.OrchardCore.Webhooks.Core.Models;
+using CrestApps.OrchardCore.Webhooks.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore;
 
@@ -58,7 +58,7 @@ public sealed class WebhookDeliveryTests
             Assert.Equal(orderId, body["data"]["order"]["id"].GetValue<string>());
             Assert.Equal("paid", body["data"]["order"]["status"].GetValue<string>());
             Assert.Equal(body["id"].GetValue<string>(), paid.Headers["X-Webhook-Id"]);
-            Assert.Equal(WebhookDispatcher.Sign(secret, long.Parse(paid.Headers["X-Webhook-Timestamp"]), paid.Body), paid.Headers["X-Webhook-Signature"]);
+            Assert.Equal(new HmacSha256WebhookSigner().Sign(secret, long.Parse(paid.Headers["X-Webhook-Timestamp"]), paid.Body), paid.Headers["X-Webhook-Signature"]);
             Assert.NotEqual(paid.Headers["X-Webhook-Id"], created.Headers["X-Webhook-Id"]);
         }
         finally

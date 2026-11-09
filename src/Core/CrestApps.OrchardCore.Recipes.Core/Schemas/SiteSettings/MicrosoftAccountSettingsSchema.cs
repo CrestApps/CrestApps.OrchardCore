@@ -21,9 +21,10 @@ public sealed class MicrosoftAccountSettingsSchema : SiteSettingsSchemaBase
             .Description("Configuration for Microsoft Account authentication.")
             .Properties(
                 ("AppId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The Application (client) ID from the Microsoft app registration.")),
-                ("AppSecret", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The application secret (client secret) from the Microsoft app registration.")),
+                ("AppSecret", ProtectedCredential("Microsoft application (client) secret", "AppSecretSecretName")),
+                ("AppSecretSecretName", SecretName("Microsoft application (client) secret")),
                 ("CallbackPath", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The request path within the application's base path where the user-agent will be returned after sign-in.")),
                 ("SaveTokens", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to save the access and refresh tokens in the authentication properties.")))
-            .Required("AppId", "AppSecret")
+            .Required("AppId")
             .AdditionalProperties(false);
 }

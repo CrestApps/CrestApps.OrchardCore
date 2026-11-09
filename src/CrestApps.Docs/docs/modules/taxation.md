@@ -392,7 +392,7 @@ Rounding is explicit and controlled by `TaxationOptions` (or `TaxCalculationCont
 | `Jurisdiction` | Amounts are aggregated per jurisdiction, then rounded. |
 | `Transaction` | The whole transaction is rounded once. |
 
-`TaxationOptions` also configures `DecimalPlaces`, `MidpointRounding`, and per-currency decimal overrides.
+`TaxationOptions` also configures `DecimalPlaces`, `MidpointRounding`, and per-currency decimal overrides. By default `DecimalPlaces` is empty and tax is rounded to each currency's precision from `CurrencyScale` (ISO 4217): no decimals for JPY, three for KWD, two for USD, the same precision the payment uses. Set `DecimalPlaces` only to force one precision for every currency; a per-currency override still wins.
 
 ## Extending the framework
 
@@ -594,6 +594,29 @@ When the **`CrestApps.OrchardCore.Recipes`** feature is enabled, JSON Schema is 
 The Taxation module ships the **EU VAT standard rates** recipe (`EuVatStandardRates`, `Recipes/eu-vat.recipe.json`, not a setup recipe), run from **Configuration > Recipes**. It enables Taxation and adds the 27 EU member states as `TaxJurisdiction`s (level `Country`, with the ISO code as code and country, Greece as `GR`), and a `Percentage` `TaxRule` for each (`TaxType` `VAT`, `TaxName` *VAT*, the country's standard rate, `AppliesToShipping`, priority 0). Its entries have fixed `ItemId`s (`4evatj…` for jurisdictions, `4evatr…` for rules), so running it again updates the same entries. Rates change: check them before relying on the recipe, and add reduced-rate rules by category.
 
 **Deployment steps** with the same five names are available under **Configuration → Deployment**, so an existing tenant's taxation catalog can be exported into a deployment plan and re-imported elsewhere. The exported JSON is identical in shape to the recipe payloads above.
+
+### Tax registrations and exemption certificates
+
+The `MerchantTaxRegistration` step (`MerchantTaxRegistrations` array) imports the store's own registrations, matched by `ItemId`, then by name; a registration needs a name and a `JurisdictionId`. The `ExemptionCertificate` step (`ExemptionCertificates` array) imports customers' certificates. A certificate keeps its `ItemId`, which the customer's `ExemptionCertificateIds` list; one without an id is matched by its `CustomerId` and `CertificateNumber`. A certificate needs its customer and a name or a number, and must expire after it takes effect. Import the customers and jurisdictions first. Both records are carried with their dates; only the store's document id is left out. The **Tax registrations** (`MerchantTaxRegistrationDeploymentStep`) and **Exemption certificates** (`ExemptionCertificateDeploymentStep`) deployment steps, under *Taxation*, write them in the same shape.
+
+```json
+{
+  "steps": [
+    {
+      "name": "MerchantTaxRegistration",
+      "MerchantTaxRegistrations": [
+        { "ItemId": "4tr00000000000000000000001", "Name": "California sales tax", "JurisdictionId": "us-ca", "TaxType": "SalesTax", "RegistrationNumber": "123-456", "IsActive": true, "ThresholdAmount": 100000 }
+      ]
+    },
+    {
+      "name": "ExemptionCertificate",
+      "ExemptionCertificates": [
+        { "ItemId": "4ec00000000000000000000001", "Name": "Resale", "CertificateNumber": "R-1001", "CustomerId": "4cs00000000000000000000001", "ExemptionType": "Resale", "Status": "Active", "TaxTypes": [ "SalesTax" ], "JurisdictionIds": [ "us-ca" ] }
+      ]
+    }
+  ]
+}
+```
 
 ## Taxes on orders and the one-stop shop
 

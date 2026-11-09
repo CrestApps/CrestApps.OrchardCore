@@ -23,6 +23,8 @@ public sealed class AssetTypesController : Controller
 
     private readonly IAuthorizationService _authorizationService;
     private readonly AssetTypeManager _manager;
+    private readonly AssetTypeStore _typeStore;
+    private readonly AssetStore _assetStore;
     private readonly ISession _session;
     private readonly INotifier _notifier;
 
@@ -33,13 +35,24 @@ public sealed class AssetTypesController : Controller
     /// </summary>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="manager">The asset type manager.</param>
+    /// <param name="typeStore">The asset type store.</param>
+    /// <param name="assetStore">The asset store.</param>
     /// <param name="session">The session.</param>
     /// <param name="notifier">The notifier.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
-    public AssetTypesController(IAuthorizationService authorizationService, AssetTypeManager manager, ISession session, INotifier notifier, IHtmlLocalizer<AssetTypesController> htmlLocalizer)
+    public AssetTypesController(
+        IAuthorizationService authorizationService,
+        AssetTypeManager manager,
+        AssetTypeStore typeStore,
+        AssetStore assetStore,
+        ISession session,
+        INotifier notifier,
+        IHtmlLocalizer<AssetTypesController> htmlLocalizer)
     {
         _authorizationService = authorizationService;
         _manager = manager;
+        _typeStore = typeStore;
+        _assetStore = assetStore;
         _session = session;
         _notifier = notifier;
         H = htmlLocalizer;
@@ -60,18 +73,18 @@ public sealed class AssetTypesController : Controller
             return Forbid();
         }
 
-        var counts = (await _session.QueryIndex<AssetIndex>(collection: AssetsConstants.CollectionName).ListAsync(HttpContext.RequestAborted))
-            .GroupBy(index => index.AssetTypeId ?? string.Empty, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
-        var items = (await _manager.GetAllAsync(HttpContext.RequestAborted)).OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
         var pager = new Pager(pagerParameters, pagerOptions.Value);
+
+        // The page and the counts of its types are read in the database, so a large catalog is never loaded whole.
+        var (count, items) = await _typeStore.PageAsync(pager.GetStartIndex(), pager.PageSize, HttpContext.RequestAborted);
+        var counts = await _assetStore.CountByTypeAsync(items.Select(item => item.ItemId), HttpContext.RequestAborted);
 
         return View(new AssetsListViewModel
         {
             List = new AdminListContext<AssetTypeRow>
             {
-                Source = items.Skip(pager.GetStartIndex()).Take(pager.PageSize).Select(item => new AssetTypeRow { Type = item, AssetCount = counts.GetValueOrDefault(item.ItemId) }).ToList(),
-                Pager = await shapeFactory.PagerAsync(pager, items.Count),
+                Source = items.Select(item => new AssetTypeRow { Type = item, AssetCount = counts.GetValueOrDefault(item.ItemId) }).ToList(),
+                Pager = await shapeFactory.PagerAsync(pager, count),
             },
         });
     }

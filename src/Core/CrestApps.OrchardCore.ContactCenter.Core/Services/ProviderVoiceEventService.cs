@@ -1,4 +1,4 @@
-﻿using CrestApps.Core.Support;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
@@ -765,14 +765,8 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
     }
 
     private static bool IsTerminalState(VoiceCallState state)
-    {
-        return state is VoiceCallState.Ended or
-            VoiceCallState.Failed or
-            VoiceCallState.NoAnswer or
-            VoiceCallState.Rejected or
-            VoiceCallState.Canceled or
-            VoiceCallState.Transferred;
-    }
+        => VoiceCallStateProjection.IsTerminal(state);
+
 
     private static string ResolveEventIdempotencyKey(string providerEventKey, string eventType)
     {

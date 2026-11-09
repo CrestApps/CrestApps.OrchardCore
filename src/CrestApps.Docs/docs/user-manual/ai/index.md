@@ -38,7 +38,7 @@ Give each role only what it needs, under **Access Control > Roles**. The permiss
 | Building assistants | **Manage AI profiles**, **Manage AI deployments**, **Manage AI profile templates**, **Manage AI data sources**, **Manage file sources**, **Manage web crawlers**, **Manage AI tool instances**, **Manage MCP Connections**, **Manage Agent-to-Agent Connections** |
 | Changing the connections to AI services | **Manage AI Provider Connections** (give it with care) |
 | Chatting | **Query any AI profile**, or **Query AI profile** for one profile only; **Delete chat session**, **Delete all chat sessions**, **Clear AI memory**; the chat interaction permissions, such as **List chat interactions** |
-| Reports | **View AI Chat Analytics**, **Export AI Chat Analytics** |
+| Reports | **View AI Chat Analytics** to see the AI reports; **Export AI Chat Analytics** as well to export AI Chat Session Analytics, AI Chat Extracted Data and AI Chat Conversion Goals |
 | Tools | **Access any AI tool** (marked Security Critical) opens every tool; each tool also has its own **Access AI tool** permission |
 | Public assistants | Give the **Anonymous** role only **Query AI profile** for the public profile |
 

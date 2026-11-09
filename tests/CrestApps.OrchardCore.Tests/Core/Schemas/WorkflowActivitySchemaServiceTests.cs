@@ -272,6 +272,43 @@ public sealed class WorkflowActivitySchemaServiceTests
     }
 
     [Fact]
+    public async Task WorkflowTypeRecipeStep_AcceptsVariablesAndExecutionSettings()
+    {
+        var schema = await new WorkflowTypeRecipeStep(CreateService()).GetSchemaAsync(TestContext.Current.CancellationToken);
+        var recipe = JsonNode.Parse(CreateWorkflowRecipe()).AsObject();
+        var workflowType = recipe["data"][0].AsObject();
+
+        workflowType["IsSingletonPerCorrelation"] = true;
+        workflowType["IsActivity"] = true;
+        workflowType["BranchingMode"] = "All";
+        workflowType["FaultOnScriptErrors"] = true;
+        workflowType["RecordActivityData"] = false;
+        workflowType["Variables"] = JsonNode.Parse(
+            """
+            [
+                { "Name": "quantity", "TypeName": "number", "DefaultValue": 1, "Description": "How many items." },
+                { "Name": "greeting", "TypeName": "string", "IsOutput": true }
+            ]
+            """);
+
+        Assert.True(Evaluate(schema, recipe.ToJsonString()));
+    }
+
+    [Theory]
+    [InlineData("BranchingMode", "\"EveryTransition\"")]
+    [InlineData("Variables", "[ { \"Name\": \"1st\", \"TypeName\": \"string\" } ]")]
+    [InlineData("Variables", "[ { \"TypeName\": \"string\" } ]")]
+    public async Task WorkflowTypeRecipeStep_RejectsInvalidExecutionSettings(string propertyName, string value)
+    {
+        var schema = await new WorkflowTypeRecipeStep(CreateService()).GetSchemaAsync(TestContext.Current.CancellationToken);
+        var recipe = JsonNode.Parse(CreateWorkflowRecipe()).AsObject();
+
+        recipe["data"][0][propertyName] = JsonNode.Parse(value);
+
+        Assert.False(Evaluate(schema, recipe.ToJsonString()));
+    }
+
+    [Fact]
     public async Task WorkflowTypeRecipeStep_RejectsANonObjectWorkflowTypePropertyBag()
     {
         var schema = await new WorkflowTypeRecipeStep(CreateService()).GetSchemaAsync(TestContext.Current.CancellationToken);

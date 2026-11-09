@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Consent;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.Core.Support;
@@ -33,7 +34,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
     private readonly ISmsProviderRouter _smsProviderRouter;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IContentManager _contentManager;
-    private readonly IContactOptOutResolver _optOutResolver;
+    private readonly IConsentService _consentService;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
@@ -62,7 +63,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
         ISmsProviderRouter smsProviderRouter,
         ILiquidTemplateManager liquidTemplateManager,
         IContentManager contentManager,
-        IContactOptOutResolver optOutResolver,
+        IConsentService consentService,
         IClock clock,
         IStringLocalizer<SmsOmnichannelProcessor> stringLocalizer)
     {
@@ -75,7 +76,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
         _smsProviderRouter = smsProviderRouter;
         _liquidTemplateManager = liquidTemplateManager;
         _contentManager = contentManager;
-        _optOutResolver = optOutResolver;
+        _consentService = consentService;
         _clock = clock;
         S = stringLocalizer;
     }
@@ -142,16 +143,16 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
 
         var templateContext = new Dictionary<string, FluidValue>
         {
-            ["Activity"] = new ObjectValue(activity),
-            ["Contact"] = new ObjectValue(contact),
-            ["FlowSettings"] = new ObjectValue(flowSettings),
-            ["Profile"] = new ObjectValue(profile),
-            ["Session"] = new ObjectValue(chatSession),
+            ["Activity"] = ObjectValue.Create(activity),
+            ["Contact"] = ObjectValue.Create(contact),
+            ["FlowSettings"] = ObjectValue.Create(flowSettings),
+            ["Profile"] = ObjectValue.Create(profile),
+            ["Session"] = ObjectValue.Create(chatSession),
         };
 
         if (campaign is not null)
         {
-            templateContext["Campaign"] = new ObjectValue(campaign);
+            templateContext["Campaign"] = ObjectValue.Create(campaign);
         }
 
         var initialPrompt = await _liquidTemplateManager.RenderStringAsync(
@@ -190,7 +191,14 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
         //
         // Asked of everybody reachable at the number, not only this record: a person who said stop on one record
         // is the same person on another that holds their number, and texting them there is the same violation.
-        if (await _optOutResolver.HasOptedOutAsync(contact, activity.Channel, cancellationToken))
+        if ((await _consentService.GetAsync(new ConsentQuery
+        {
+            Channel = activity.Channel,
+            Address = activity.PreferredDestination,
+            ContactKind = ConsentContactKinds.Contact,
+            ContactId = contact?.ContentItemId,
+            Contact = contact,
+        }, cancellationToken)).HasOptedOut)
         {
             return;
         }

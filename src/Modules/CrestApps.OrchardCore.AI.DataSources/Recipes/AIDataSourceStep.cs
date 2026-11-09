@@ -1,15 +1,18 @@
 using System.Text.Json.Nodes;
-using CrestApps.Core;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Recipes;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Recipes.Models;
-using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.AI.DataSources.Recipes;
 
-internal sealed class AIDataSourceStep : NamedRecipeStepHandler
+/// <summary>
+/// Imports AI data sources, matched by their item id. A data source without a source reads a search index profile.
+/// </summary>
+internal sealed class AIDataSourceStep : CatalogRecipeStepBase<AIDataSource>
 {
     public const string StepKey = "AIDataSource";
 
@@ -28,87 +31,48 @@ internal sealed class AIDataSourceStep : NamedRecipeStepHandler
         ISourceCatalogManager<AIDataSource> dataManager,
         IOptions<AIDataSourceSourceOptions> sourceOptions,
         IStringLocalizer<AIDataSourceStep> stringLocalizer)
-    : base(StepKey)
+        : base(StepKey, "DataSources")
     {
         _dataManager = dataManager;
         _sourceOptions = sourceOptions.Value;
         S = stringLocalizer;
     }
 
-    protected override async Task HandleAsync(RecipeExecutionContext context)
+    protected override bool CanImport(JsonObject token, RecipeExecutionContext context)
     {
-        var model = context.Step.ToObject<AIDataSourcesStepModel>();
-        var tokens = model.DataSources.Cast<JsonObject>() ?? [];
+        var source = GetSource(token);
 
-        foreach (var token in tokens)
+        if (_sourceOptions.Sources.Any(entry => string.Equals(entry.SourceType, source, StringComparison.OrdinalIgnoreCase)))
         {
-            AIDataSource dataSource = null;
-            var isNew = false;
-
-            var source = token[nameof(AIDataSource.Source)]?.GetValue<string>();
-            source = string.IsNullOrWhiteSpace(source)
-                ? AIDataSourceSourceTypes.SearchIndexProfile
-                : source;
-
-            if (!TryGetSource(source))
-            {
-                context.Errors.Add(S["Invalid source used for AI data source '{0}'.", source]);
-
-                continue;
-            }
-
-            var id = token[nameof(AIDataSource.ItemId)]?.GetValue<string>();
-
-            var hasId = !string.IsNullOrEmpty(id);
-
-            if (hasId)
-            {
-                dataSource = await _dataManager.FindByIdAsync(id);
-            }
-
-            if (dataSource is not null)
-            {
-                await _dataManager.UpdateAsync(dataSource, token);
-            }
-            else
-            {
-                isNew = true;
-                dataSource = await _dataManager.NewAsync(source, token);
-
-                if (hasId && UniqueId.IsValid(id))
-                {
-                    dataSource.ItemId = id;
-                }
-            }
-
-            var validationResult = await _dataManager.ValidateAsync(dataSource);
-
-            if (!validationResult.Succeeded)
-            {
-                foreach (var error in validationResult.Errors)
-                {
-                    context.Errors.Add(error.ErrorMessage);
-                }
-
-                continue;
-            }
-
-            if (isNew)
-            {
-                await _dataManager.CreateAsync(dataSource);
-            }
+            return true;
         }
+
+        context.Errors.Add(S["Invalid source used for AI data source '{0}'.", source]);
+
+        return false;
     }
 
-    private bool TryGetSource(string sourceType)
-        => _sourceOptions.Sources.Any(entry =>
-            string.Equals(entry.SourceType, sourceType, StringComparison.OrdinalIgnoreCase));
+    protected override ValueTask<AIDataSource> FindByIdAsync(string id)
+        => _dataManager.FindByIdAsync(id);
 
-    private sealed class AIDataSourcesStepModel
+    protected override ValueTask UpdateAsync(AIDataSource entry, JsonObject token)
+        => _dataManager.UpdateAsync(entry, token);
+
+    protected override ValueTask<AIDataSource> NewAsync(JsonObject token, RecipeExecutionContext context)
+        => _dataManager.NewAsync(GetSource(token), token);
+
+    protected override ValueTask<ValidationResultDetails> ValidateAsync(AIDataSource entry)
+        => _dataManager.ValidateAsync(entry);
+
+    protected override ValueTask CreateAsync(AIDataSource entry)
+        => _dataManager.CreateAsync(entry);
+
+    private static string GetSource(JsonObject token)
     {
-        /// <summary>
-        /// Gets or sets the data sources.
-        /// </summary>
-        public JsonArray DataSources { get; set; }
+        var source = token[nameof(AIDataSource.Source)]?.GetValue<string>();
+
+        return string.IsNullOrWhiteSpace(source)
+            ? AIDataSourceSourceTypes.SearchIndexProfile
+            : source;
     }
 }

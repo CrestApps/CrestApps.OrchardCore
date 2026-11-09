@@ -1,0 +1,41 @@
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<PaymentIssue>
+@inject TransactionDisplayText DisplayText
+
+@{
+    var issue = Model.Value;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Recorded"]">
+    <i class="fa-regular fa-calendar text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Recorded"]</span>
+    @await DisplayAsync(await New.DateTime(Utc: issue.CreatedUtc, Format: "g"))
+</span>
+@if (!string.IsNullOrEmpty(issue.ProviderKey))
+{
+    <span class="badge ta-badge bg-primary-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Method"]">
+        <i class="fa-solid fa-credit-card text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Method"]</span>
+        @DisplayText.PaymentMethodName(issue.ProviderKey)
+    </span>
+}
+@if (!string.IsNullOrEmpty(issue.ProviderReference))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Provider's reference"]">
+        <i class="fa-solid fa-hashtag text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Provider's reference"]</span>
+        @issue.ProviderReference
+    </span>
+}
+@if (!string.IsNullOrEmpty(issue.ReferenceId))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@issue.ReferenceType">
+        <i class="fa-solid fa-link text-secondary" aria-hidden="true"></i><span class="visually-hidden">@issue.ReferenceType</span>
+        @issue.ReferenceId
+    </span>
+}
+@if (issue.ResolvedUtc.HasValue)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Resolved by {0}", issue.ResolvedBy ?? "-"]">
+        <i class="fa-solid fa-check text-success" aria-hidden="true"></i><span class="visually-hidden">@T["Resolved"]</span>
+        @await DisplayAsync(await New.DateTime(Utc: issue.ResolvedUtc.Value, Format: "g"))
+    </span>
+}

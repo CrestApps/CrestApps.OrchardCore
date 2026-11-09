@@ -95,7 +95,7 @@ Do not rename or replace the `ContactMethods` bag in custom definitions. Instead
 
 The management feature depends on `OrchardCore.Flows` so the enforced `ContactMethods` bag renders with the standard Orchard bag editor when you edit a contact content item. The bag is injected during Orchard's content-type definition build pipeline, so content types that attach `OmnichannelContactPart` always materialize with the named `ContactMethods` bag even when the stored type definition does not yet include it.
 
-If you use the built-in `PhoneNumberInfoPart`, the `Number` field is a `PhoneField` (from `CrestApps.OrchardCore.ContentFields`) that stores the phone number in E.164 format alongside the ISO country code, so the correct country flag is always displayed when the field is edited again.
+If you use the built-in `PhoneNumberInfoPart`, the `Number` field is a `PhoneField` (the CrestApps Content Fields module's field, whose class is in `CrestApps.OrchardCore.ContentFields.Abstractions`) that stores the phone number in E.164 format alongside the ISO country code, so the correct country flag is always displayed when the field is edited again.
 
 `OmnichannelContactPart` has these part settings (`OmnichannelContactPartSettings`), edited in the content-type editor:
 
@@ -358,11 +358,28 @@ The contact content types are read from the cached `OmnichannelContentTypeProvid
 
 ## Matching a number to a contact
 
-Every lookup of a record by an exact phone number reads every number the record has, as the contact-methods accessor reads it (from the `ContactMethods` bag or the content type's own provider), whatever type it is saved as: Cell, Home, Work, Office, Other or Fax, and a second number of the same type. That covers an incoming call (the **Matched customers** cards), the sender of an incoming text, the shared-number opt-out check, lead-to-contact matching at conversion, the import duplicate check, and the dialer's check for leads that are already contacts. A contact reached at its work number is therefore recognized when it calls or texts back from that number. A request not to be called or texted, recorded on one record, also stops every other record that holds the same number, under any type.
+Every lookup of a record by an exact phone number reads every number the record has, as the contact-methods accessor reads it (from the `ContactMethods` bag or the content type's own provider), whatever type it is saved as: Cell, Home, Work, Office, Other or Fax, and a second number of the same type. That covers an incoming call (the **Matched customers** cards), the sender of an incoming text, the shared-number opt-out check, lead-to-contact matching at conversion, the import duplicate check, and the dialer's check for leads that are already contacts. A contact reached at its work number is therefore recognized when it calls or texts back from that number. A request not to be called or texted, recorded on one record, also stops every other record that holds the same number, under any type. A STOP texted from a number that no record holds is recorded against the number itself (the `ContactAddressOptOutIndex`, read through `IContactOptOutResolver.HasAddressOptedOutAsync`), so it also stops a record that is created for that number later. A provider that refuses a recipient because it opted out with the carrier is recorded the same way when no contact holds the number.
 
 The numbers come from `OmnichannelContactPhoneNumberIndex`, which holds one row per distinct number of each published or latest version of a contact or lead, in E.164 form, with its type, content type, converted-lead flag and version flags. A number that cannot be read as E.164 is not in it; the import duplicate check still compares such numbers by their national digits on the first Cell and Home numbers. Code that needs to find a record by number uses `IOmnichannelContactPhoneLookup` (`FindByNumbersAsync` and `GetNumbersAsync`), which compares one indexed column per query, in fixed batches of 50 numbers.
 
 The index starts empty on an upgraded tenant. The **Omnichannel Contact Phone Number Backfill** background task indexes the records saved before it, up to 2,000 a minute, resuming where it stopped after a restart; a record saved in the meantime is indexed by the save. Each page of 200 records is read from `OmnichannelContactIndex` alone, by document id after the stored cursor, so the database seeks to the cursor and reads one page; the records are then loaded by id. Until the backfill has finished, every lookup also reads the first Cell and Home numbers of the contact index, so no record that used to be found is missed.
+
+## Consent: may we reach them?
+
+`IConsentService` (Consent.Abstractions, namespace `CrestApps.OrchardCore.Consent`; `services.AddConsent()` in Consent.Core) is the one read and write API for whether a person may be contacted on a channel (`ConsentChannels.Phone`, `Sms`, `Email`) at an address. Consent to record a call is a different concept and isn't kept here.
+
+- `GetAsync(channel, address, contactId?)`, or `GetAsync(ConsentQuery)` with a `ContactKind` (`ConsentContactKinds.Contact` for a CRM contact, `Customer` for a commerce customer), a contact the caller already loaded and `ExcludedSources`, returns a `ConsentStatus`: `HasOptedOut` and the `Source` that says so. The sources are asked in registration order until one says the person opted out.
+- `RecordAsync(channel, address, ConsentChange)` records an opt-out or an opt-in (`OptedOut`, `Source`, `ContactKind`, `ContactId`) with every source that keeps that channel and kind of record.
+
+Each place consent is kept is an `IConsentSource`, registered with `services.AddConsentSource<T>()`:
+
+| Source (`ConsentSourceNames`) | Feature | Answers | Records |
+| --- | --- | --- | --- |
+| `contact-preferences` | Omnichannel activities | A CRM contact's do-not-call, do-not-text and do-not-e-mail flags (followed to every record that shares the number, through `IContactOptOutResolver`) and the opt-outs recorded against an address no contact held | Sets or clears the contact's flag; records or lifts the opt-out against the address when no contact holds it |
+| `do-not-call-lists` | Local DNC lists | A phone number on one of the site's completed do-not-call lists | Nothing; the lists are imported files |
+| `customer-marketing` | Customers | E-mail to a commerce customer (`ContactKind` `Customer`) who hasn't said yes to marketing | Sets the customer's `AcceptsMarketing` |
+
+The SMS STOP and START keywords record through it, as does a campaign's unsubscribe link. The SMS channel's opt-out check (which the messaging workspace and the broadcasts use), automated SMS activities and the dialer's do-not-call check read through it. The dialer leaves the do-not-call lists out of its question (`ExcludedSources`), because it screens them with the national registries under their own reason, so its answers and suppression reasons are what they were.
 
 ## Phone number search
 

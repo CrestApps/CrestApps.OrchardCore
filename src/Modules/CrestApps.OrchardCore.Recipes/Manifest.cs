@@ -10,6 +10,6 @@ using OrchardCore.Modules.Manifest;
     Category = "Infrastructure",
     Dependencies = new[]
     {
-        "OrchardCore.Recipes.Core",
+        OrchardCoreFeatureIds.RecipesCore,
     }
 )]

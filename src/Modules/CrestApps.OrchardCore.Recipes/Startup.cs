@@ -36,13 +36,53 @@ public sealed class Startup : StartupBase
         services.AddScoped<IRecipeStep, CustomSettingsRecipeStep>();
         services.AddScoped<IRecipeStep, CommandRecipeStep>();
         services.AddScoped<IRecipeStep, RecipesRecipeStep>();
+        services.AddScoped<IRecipeStep, ReloadTenantRecipeStep>();
+    }
+}
+
+/// <summary>
+/// Registers the schemas of the Secrets recipe and deployment steps.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.Secrets)]
+public sealed class SecretsRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, SecretsRecipeStep>();
+        services.AddDeploymentStepSchema<SecretsDeploymentStepSchema>();
+    }
+}
+
+/// <summary>
+/// Registers the schemas of the DataPipelines recipe and deployment steps.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelines)]
+public sealed class DataPipelinesRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, DataPipelinesRecipeStep>();
+        services.AddDeploymentStepSchema<DataPipelinesDeploymentStepSchema>();
+    }
+}
+
+/// <summary>
+/// Registers the schemas of the rate-limit policies recipe and deployment steps.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.RateLimits)]
+public sealed class RateLimitsRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, CreateOrUpdateRateLimitPoliciesRecipeStep>();
+        services.AddDeploymentStepSchema<AllRateLimitPoliciesDeploymentStepSchema>();
     }
 }
 
 /// <summary>
 /// Registers services and configuration for the FeatureRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Features")]
+[RequireFeatures(OrchardCoreFeatureIds.Features)]
 public sealed class FeatureRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -55,7 +95,7 @@ public sealed class FeatureRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the ThemesRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Themes")]
+[RequireFeatures(OrchardCoreFeatureIds.Themes)]
 public sealed class ThemesRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -67,7 +107,7 @@ public sealed class ThemesRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the ContentTypes feature.
 /// </summary>
-[RequireFeatures("OrchardCore.ContentTypes")]
+[RequireFeatures(OrchardCoreFeatureIds.ContentTypes)]
 public sealed class ContentTypesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -82,7 +122,7 @@ public sealed class ContentTypesStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the ContentRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Contents")]
+[RequireFeatures(OrchardCoreFeatureIds.Contents)]
 public sealed class ContentRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -94,7 +134,7 @@ public sealed class ContentRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the UsersRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Users")]
+[RequireFeatures(OrchardCoreFeatureIds.Users)]
 public sealed class UsersRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -106,7 +146,7 @@ public sealed class UsersRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the CustomUserSettingsRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Users.CustomUserSettings")]
+[RequireFeatures(OrchardCoreFeatureIds.UsersCustomUserSettings)]
 public sealed class CustomUserSettingsRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -118,7 +158,7 @@ public sealed class CustomUserSettingsRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the MediaRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Media")]
+[RequireFeatures(OrchardCoreFeatureIds.Media)]
 public sealed class MediaRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -132,7 +172,7 @@ public sealed class MediaRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the RolesRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Roles")]
+[RequireFeatures(OrchardCoreFeatureIds.Roles)]
 public sealed class RolesRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -144,7 +184,7 @@ public sealed class RolesRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the WorkflowRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class WorkflowRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -155,6 +195,7 @@ public sealed class WorkflowRecipeStartup : StartupBase
         services
             .AddWorkflowActivitySchema<CommitTransactionTaskSchema>()
             .AddWorkflowActivitySchema<CorrelateTaskSchema>()
+            .AddWorkflowActivitySchema<ExecuteWorkflowTaskSchema>()
             .AddWorkflowActivitySchema<ForEachTaskSchema>()
             .AddWorkflowActivitySchema<ForkTaskSchema>()
             .AddWorkflowActivitySchema<ForLoopTaskSchema>()
@@ -166,6 +207,8 @@ public sealed class WorkflowRecipeStartup : StartupBase
             .AddWorkflowActivitySchema<ScriptTaskSchema>()
             .AddWorkflowActivitySchema<SetOutputTaskSchema>()
             .AddWorkflowActivitySchema<SetPropertyTaskSchema>()
+            .AddWorkflowActivitySchema<SetVariableTaskSchema>()
+            .AddWorkflowActivitySchema<StartedByWorkflowEventSchema>()
             .AddWorkflowActivitySchema<WhileLoopTaskSchema>()
             .AddWorkflowActivitySchema<WorkflowFaultEventSchema>();
     }
@@ -174,7 +217,7 @@ public sealed class WorkflowRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the WorkflowHttpRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows.Http")]
+[RequireFeatures(OrchardCoreFeatureIds.WorkflowsHttp)]
 public sealed class WorkflowHttpRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -192,7 +235,7 @@ public sealed class WorkflowHttpRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the WorkflowTimersRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows.Timers")]
+[RequireFeatures(OrchardCoreFeatureIds.WorkflowsTimers)]
 public sealed class WorkflowTimersRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -204,7 +247,7 @@ public sealed class WorkflowTimersRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the WorkflowUserTasksRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows", "OrchardCore.Contents", "OrchardCore.Roles")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows, OrchardCoreFeatureIds.Contents, OrchardCoreFeatureIds.Roles)]
 public sealed class WorkflowUserTasksRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -216,7 +259,7 @@ public sealed class WorkflowUserTasksRecipeStartup : StartupBase
 /// <summary>
 /// Registers the workflow activity schemas for the content activities.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows", "OrchardCore.Contents")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows, OrchardCoreFeatureIds.Contents)]
 public sealed class ContentWorkflowRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -241,7 +284,7 @@ public sealed class ContentWorkflowRecipeStartup : StartupBase
 /// <summary>
 /// Registers the workflow activity schema for the email activities.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows", "OrchardCore.Email")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows, OrchardCoreFeatureIds.Email)]
 public sealed class EmailWorkflowRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -253,7 +296,7 @@ public sealed class EmailWorkflowRecipeStartup : StartupBase
 /// <summary>
 /// Registers the workflow activity schema for the SMS activities.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows", "OrchardCore.Sms")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows, OrchardCoreFeatureIds.Sms)]
 public sealed class SmsWorkflowRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -265,7 +308,7 @@ public sealed class SmsWorkflowRecipeStartup : StartupBase
 /// <summary>
 /// Registers the workflow activity schemas for the form activities.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows", "OrchardCore.Forms")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows, OrchardCoreFeatureIds.Forms)]
 public sealed class FormsWorkflowRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -283,7 +326,7 @@ public sealed class FormsWorkflowRecipeStartup : StartupBase
 /// <summary>
 /// Registers the workflow activity schemas for the notification activities.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows", "OrchardCore.Notifications")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows, OrchardCoreFeatureIds.Notifications)]
 public sealed class NotificationsWorkflowRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -297,7 +340,7 @@ public sealed class NotificationsWorkflowRecipeStartup : StartupBase
 /// <summary>
 /// Registers the workflow activity schema for the ReCaptcha activities.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows", "OrchardCore.ReCaptcha")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows, OrchardCoreFeatureIds.ReCaptcha)]
 public sealed class ReCaptchaWorkflowRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -309,7 +352,7 @@ public sealed class ReCaptchaWorkflowRecipeStartup : StartupBase
 /// <summary>
 /// Registers the workflow activity schemas for the role activities.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows", "OrchardCore.Roles")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows, OrchardCoreFeatureIds.Roles)]
 public sealed class RolesWorkflowRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -323,7 +366,7 @@ public sealed class RolesWorkflowRecipeStartup : StartupBase
 /// <summary>
 /// Registers the workflow activity schemas for the user activities.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows", "OrchardCore.Users")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows, OrchardCoreFeatureIds.Users)]
 public sealed class UsersWorkflowRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -337,6 +380,7 @@ public sealed class UsersWorkflowRecipeStartup : StartupBase
             .AddWorkflowActivitySchema<UserDisabledEventSchema>()
             .AddWorkflowActivitySchema<UserEnabledEventSchema>()
             .AddWorkflowActivitySchema<UserLoggedInEventSchema>()
+            .AddWorkflowActivitySchema<UserLoggedOutEventSchema>()
             .AddWorkflowActivitySchema<UserUpdatedEventSchema>()
             .AddWorkflowActivitySchema<ValidateUserTaskSchema>();
     }
@@ -345,7 +389,7 @@ public sealed class UsersWorkflowRecipeStartup : StartupBase
 /// <summary>
 /// Registers the workflow activity schemas for the tenant activities.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows", "OrchardCore.Tenants")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows, OrchardCoreFeatureIds.Tenants)]
 public sealed class TenantsWorkflowRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -361,7 +405,7 @@ public sealed class TenantsWorkflowRecipeStartup : StartupBase
 /// <summary>
 /// Registers the workflow activity schema for the Twitter activities.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows", "OrchardCore.Twitter")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows, OrchardCoreFeatureIds.Twitter)]
 public sealed class TwitterWorkflowRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -371,42 +415,35 @@ public sealed class TwitterWorkflowRecipeStartup : StartupBase
 }
 
 /// <summary>
-/// Registers the workflow activity schemas for the artificial intelligence activities.
+/// Registers the schemas of the Data Pipelines workflow activities.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows", "CrestApps.OrchardCore.AI")]
-public sealed class AIWorkflowRecipeStartup : StartupBase
+[RequireFeatures(OrchardCoreFeatureIds.Workflows, OrchardCoreFeatureIds.DataPipelines)]
+public sealed class DataPipelinesWorkflowRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddWorkflowActivitySchema<AIChatSessionAllFieldsExtractedEventSchema>()
-            .AddWorkflowActivitySchema<AIChatSessionClosedEventSchema>()
-            .AddWorkflowActivitySchema<AIConversationStartingEventSchema>()
-            .AddWorkflowActivitySchema<SetConversationVariablesTaskSchema>()
-            .AddWorkflowActivitySchema<UseAIProfileTaskSchema>()
-            .AddWorkflowActivitySchema<DeclineConversationTaskSchema>()
-            .AddWorkflowActivitySchema<AIToolCalledEventSchema>()
-            .AddWorkflowActivitySchema<AIConversationTurnEventSchema>()
-            .AddWorkflowActivitySchema<SplitTrafficTaskSchema>()
-            .AddWorkflowActivitySchema<EvaluateConversationTaskSchema>()
-            .AddWorkflowActivitySchema<AIConversationEvaluatedEventSchema>()
-            .AddWorkflowActivitySchema<SimulateConversationTaskSchema>()
-            .AddWorkflowActivitySchema<RerunConversationAnalysisTaskSchema>()
-            .AddWorkflowActivitySchema<CheckConversationMetricTaskSchema>()
-            .AddWorkflowActivitySchema<UpdateContactMemoryTaskSchema>()
-            .AddWorkflowActivitySchema<SendSignedWebhookTaskSchema>()
-            .AddWorkflowActivitySchema<AIGuardrailTriggeredEventSchema>()
-            .AddWorkflowActivitySchema<AIChatSessionFieldExtractedEventSchema>()
-            .AddWorkflowActivitySchema<AIChatSessionPostProcessedEventSchema>()
-            .AddWorkflowActivitySchema<AICompletionFromProfileTaskSchema>()
-            .AddWorkflowActivitySchema<AICompletionWithConfigTaskSchema>();
+            .AddWorkflowActivitySchema<DataPipelineRunCompletedEventSchema>()
+            .AddWorkflowActivitySchema<RunDataPipelineTaskSchema>();
+    }
+}
+
+/// <summary>
+/// Registers the schema of the Meta Conversions API workflow task.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.Workflows, OrchardCoreFeatureIds.FacebookPixel)]
+public sealed class FacebookPixelWorkflowRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddWorkflowActivitySchema<MetaConversionsApiEventTaskSchema>();
     }
 }
 
 /// <summary>
 /// Registers services and configuration for the LayersRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Layers")]
+[RequireFeatures(OrchardCoreFeatureIds.Layers)]
 public sealed class LayersRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -443,7 +480,7 @@ public sealed class LayersRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the QueriesRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Queries")]
+[RequireFeatures(OrchardCoreFeatureIds.Queries)]
 public sealed class QueriesRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -457,7 +494,7 @@ public sealed class QueriesRecipeStartup : StartupBase
 /// <summary>
 /// Registers the query source schema contributed by the SQL queries feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Queries", "OrchardCore.Queries.Sql")]
+[RequireFeatures(OrchardCoreFeatureIds.Queries, OrchardCoreFeatureIds.QueriesSql)]
 public sealed class QueriesSqlRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -469,7 +506,7 @@ public sealed class QueriesSqlRecipeStartup : StartupBase
 /// <summary>
 /// Registers the query source schema contributed by the Lucene feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Queries", "OrchardCore.Lucene")]
+[RequireFeatures(OrchardCoreFeatureIds.Queries, OrchardCoreFeatureIds.Lucene)]
 public sealed class QueriesLuceneRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -481,7 +518,7 @@ public sealed class QueriesLuceneRecipeStartup : StartupBase
 /// <summary>
 /// Registers the query source schema contributed by the Elasticsearch feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Queries", "OrchardCore.Elasticsearch")]
+[RequireFeatures(OrchardCoreFeatureIds.Queries, OrchardCoreFeatureIds.Elasticsearch)]
 public sealed class QueriesElasticsearchRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -493,7 +530,7 @@ public sealed class QueriesElasticsearchRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the TemplatesRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Templates")]
+[RequireFeatures(OrchardCoreFeatureIds.Templates)]
 public sealed class TemplatesRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -506,7 +543,7 @@ public sealed class TemplatesRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the ShortcodeTemplatesRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Shortcodes.Templates")]
+[RequireFeatures(OrchardCoreFeatureIds.ShortcodesTemplates)]
 public sealed class ShortcodeTemplatesRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -518,7 +555,7 @@ public sealed class ShortcodeTemplatesRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the PlacementsRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Placements")]
+[RequireFeatures(OrchardCoreFeatureIds.Placements)]
 public sealed class PlacementsRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -534,7 +571,7 @@ public sealed class PlacementsRecipeStartup : StartupBase
 /// <summary>
 /// Registers the placement node filters contributed by the content features.
 /// </summary>
-[RequireFeatures("OrchardCore.Placements", "OrchardCore.Contents")]
+[RequireFeatures(OrchardCoreFeatureIds.Placements, OrchardCoreFeatureIds.Contents)]
 public sealed class PlacementsContentsRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -547,7 +584,7 @@ public sealed class PlacementsContentsRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the AdminMenuRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.AdminMenu")]
+[RequireFeatures(OrchardCoreFeatureIds.AdminMenu)]
 public sealed class AdminMenuRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -565,7 +602,7 @@ public sealed class AdminMenuRecipeStartup : StartupBase
 /// <summary>
 /// Registers the admin menu node schema contributed by the content types feature.
 /// </summary>
-[RequireFeatures("OrchardCore.AdminMenu", "OrchardCore.Contents")]
+[RequireFeatures(OrchardCoreFeatureIds.AdminMenu, OrchardCoreFeatureIds.Contents)]
 public sealed class AdminMenuContentsRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -577,7 +614,7 @@ public sealed class AdminMenuContentsRecipeStartup : StartupBase
 /// <summary>
 /// Registers the admin menu node schema contributed by the lists feature.
 /// </summary>
-[RequireFeatures("OrchardCore.AdminMenu", "OrchardCore.Lists")]
+[RequireFeatures(OrchardCoreFeatureIds.AdminMenu, OrchardCoreFeatureIds.Lists)]
 public sealed class AdminMenuListsRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -589,7 +626,7 @@ public sealed class AdminMenuListsRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the DeploymentRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class DeploymentRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -635,7 +672,7 @@ public sealed class DeploymentRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the SitemapsRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Sitemaps")]
+[RequireFeatures(OrchardCoreFeatureIds.Sitemaps)]
 public sealed class SitemapsRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -654,7 +691,7 @@ public sealed class SitemapsRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the UrlRewritingRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.UrlRewriting")]
+[RequireFeatures(OrchardCoreFeatureIds.UrlRewriting)]
 public sealed class UrlRewritingRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -671,7 +708,7 @@ public sealed class UrlRewritingRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the TranslationsRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.DataLocalization")]
+[RequireFeatures(OrchardCoreFeatureIds.DataLocalization)]
 public sealed class TranslationsRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -684,7 +721,7 @@ public sealed class TranslationsRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the FeatureProfilesRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Tenants.FeatureProfiles")]
+[RequireFeatures(OrchardCoreFeatureIds.TenantsFeatureProfiles)]
 public sealed class FeatureProfilesRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -696,7 +733,7 @@ public sealed class FeatureProfilesRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the LuceneRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Lucene")]
+[RequireFeatures(OrchardCoreFeatureIds.Lucene)]
 public sealed class LuceneRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -710,7 +747,7 @@ public sealed class LuceneRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the ElasticRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Elasticsearch")]
+[RequireFeatures(OrchardCoreFeatureIds.Elasticsearch)]
 public sealed class ElasticRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -724,7 +761,7 @@ public sealed class ElasticRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the AzureAISearchRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.AzureAI")]
+[RequireFeatures(OrchardCoreFeatureIds.AzureAI)]
 public sealed class AzureAISearchRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -738,7 +775,7 @@ public sealed class AzureAISearchRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the IndexProfileRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Indexing")]
+[RequireFeatures(OrchardCoreFeatureIds.Indexing)]
 public sealed class IndexProfileRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -752,7 +789,7 @@ public sealed class IndexProfileRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the AzureADSettingsRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Microsoft.Authentication.AzureAD")]
+[RequireFeatures(OrchardCoreFeatureIds.MicrosoftAuthenticationAzureAD)]
 public sealed class AzureADSettingsRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -764,7 +801,7 @@ public sealed class AzureADSettingsRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the MicrosoftAccountSettingsRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Microsoft.Authentication.MicrosoftAccount")]
+[RequireFeatures(OrchardCoreFeatureIds.MicrosoftAuthenticationMicrosoftAccount)]
 public sealed class MicrosoftAccountSettingsRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -776,7 +813,7 @@ public sealed class MicrosoftAccountSettingsRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the FacebookCoreSettingsRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Facebook")]
+[RequireFeatures(OrchardCoreFeatureIds.Facebook)]
 public sealed class FacebookCoreSettingsRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -788,7 +825,7 @@ public sealed class FacebookCoreSettingsRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the FacebookLoginSettingsRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Facebook.Login")]
+[RequireFeatures(OrchardCoreFeatureIds.FacebookLogin)]
 public sealed class FacebookLoginSettingsRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -800,7 +837,7 @@ public sealed class FacebookLoginSettingsRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the GitHubAuthenticationSettingsRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.GitHub.Authentication")]
+[RequireFeatures(OrchardCoreFeatureIds.GitHubAuthentication)]
 public sealed class GitHubAuthenticationSettingsRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -812,7 +849,7 @@ public sealed class GitHubAuthenticationSettingsRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the TwitterSettingsRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Twitter.Signin")]
+[RequireFeatures(OrchardCoreFeatureIds.TwitterSignin)]
 public sealed class TwitterSettingsRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -824,7 +861,7 @@ public sealed class TwitterSettingsRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the OpenIdManagementRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.OpenId.Management")]
+[RequireFeatures(OrchardCoreFeatureIds.OpenIdManagement)]
 public sealed class OpenIdManagementRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -837,7 +874,7 @@ public sealed class OpenIdManagementRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the OpenIdClientRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.OpenId.Client")]
+[RequireFeatures(OrchardCoreFeatureIds.OpenIdClient)]
 public sealed class OpenIdClientRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -849,7 +886,7 @@ public sealed class OpenIdClientRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the OpenIdServerRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.OpenId.Server")]
+[RequireFeatures(OrchardCoreFeatureIds.OpenIdServer)]
 public sealed class OpenIdServerRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -861,7 +898,7 @@ public sealed class OpenIdServerRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the OpenIdValidationRecipe feature.
 /// </summary>
-[RequireFeatures("OrchardCore.OpenId.Validation")]
+[RequireFeatures(OrchardCoreFeatureIds.OpenIdValidation)]
 public sealed class OpenIdValidationRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -873,7 +910,7 @@ public sealed class OpenIdValidationRecipeStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the ContentsSchema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Contents")]
+[RequireFeatures(OrchardCoreFeatureIds.Contents)]
 public sealed class ContentsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -885,7 +922,7 @@ public sealed class ContentsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the content fields schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.ContentFields")]
+[RequireFeatures(OrchardCoreFeatureIds.ContentFields)]
 public sealed class ContentFieldsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -908,7 +945,7 @@ public sealed class ContentFieldsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the TitleSchema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Title")]
+[RequireFeatures(OrchardCoreFeatureIds.Title)]
 public sealed class TitleSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -920,7 +957,7 @@ public sealed class TitleSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the AutorouteSchema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Autoroute")]
+[RequireFeatures(OrchardCoreFeatureIds.Autoroute)]
 public sealed class AutorouteSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -932,7 +969,7 @@ public sealed class AutorouteSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the AliasSchema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Alias")]
+[RequireFeatures(OrchardCoreFeatureIds.Alias)]
 public sealed class AliasSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -944,7 +981,7 @@ public sealed class AliasSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the HtmlSchema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Html")]
+[RequireFeatures(OrchardCoreFeatureIds.Html)]
 public sealed class HtmlSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -954,9 +991,22 @@ public sealed class HtmlSchemaStartup : StartupBase
 }
 
 /// <summary>
+/// Registers the schemas of the Liquid part and the Liquid field.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.Liquid, OrchardCoreFeatureIds.Contents)]
+public sealed class LiquidSchemaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentSchemaDefinition, LiquidPartSchema>();
+        services.AddScoped<IContentSchemaDefinition, LiquidFieldSchema>();
+    }
+}
+
+/// <summary>
 /// Registers services and configuration for the MarkdownSchema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Markdown")]
+[RequireFeatures(OrchardCoreFeatureIds.Markdown)]
 public sealed class MarkdownSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -969,7 +1019,7 @@ public sealed class MarkdownSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the media schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Media")]
+[RequireFeatures(OrchardCoreFeatureIds.Media)]
 public sealed class MediaSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -981,7 +1031,7 @@ public sealed class MediaSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the ListSchema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.List")]
+[RequireFeatures(OrchardCoreFeatureIds.List)]
 public sealed class ListSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -994,7 +1044,7 @@ public sealed class ListSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the FlowsSchema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Flows")]
+[RequireFeatures(OrchardCoreFeatureIds.Flows)]
 public sealed class FlowsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1007,7 +1057,7 @@ public sealed class FlowsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the WidgetsSchema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Widgets")]
+[RequireFeatures(OrchardCoreFeatureIds.Widgets)]
 public sealed class WidgetsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1020,7 +1070,7 @@ public sealed class WidgetsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the PreviewSchema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.ContentPreview")]
+[RequireFeatures(OrchardCoreFeatureIds.ContentPreview)]
 public sealed class PreviewSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1032,7 +1082,7 @@ public sealed class PreviewSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the publish later schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.PublishLater")]
+[RequireFeatures(OrchardCoreFeatureIds.PublishLater)]
 public sealed class PublishLaterSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1044,7 +1094,7 @@ public sealed class PublishLaterSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the menu schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Menu")]
+[RequireFeatures(OrchardCoreFeatureIds.Menu)]
 public sealed class MenuSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1056,7 +1106,7 @@ public sealed class MenuSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the SeoSchema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Seo")]
+[RequireFeatures(OrchardCoreFeatureIds.Seo)]
 public sealed class SeoSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1068,7 +1118,7 @@ public sealed class SeoSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the spatial schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Spatial")]
+[RequireFeatures(OrchardCoreFeatureIds.Spatial)]
 public sealed class SpatialSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1080,7 +1130,7 @@ public sealed class SpatialSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the AuditTrailSchema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.AuditTrail")]
+[RequireFeatures(OrchardCoreFeatureIds.AuditTrail)]
 public sealed class AuditTrailSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1092,7 +1142,7 @@ public sealed class AuditTrailSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the taxonomy schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Taxonomies")]
+[RequireFeatures(OrchardCoreFeatureIds.Taxonomies)]
 public sealed class TaxonomiesSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1104,7 +1154,7 @@ public sealed class TaxonomiesSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the content localization schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.ContentLocalization")]
+[RequireFeatures(OrchardCoreFeatureIds.ContentLocalization)]
 public sealed class ContentLocalizationSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1116,7 +1166,7 @@ public sealed class ContentLocalizationSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Admin settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Admin")]
+[RequireFeatures(OrchardCoreFeatureIds.Admin)]
 public sealed class AdminSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1128,7 +1178,7 @@ public sealed class AdminSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Azure AD settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Microsoft.Authentication.AzureAD")]
+[RequireFeatures(OrchardCoreFeatureIds.MicrosoftAuthenticationAzureAD)]
 public sealed class AzureADSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1140,7 +1190,7 @@ public sealed class AzureADSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Microsoft Account settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Microsoft.Authentication.MicrosoftAccount")]
+[RequireFeatures(OrchardCoreFeatureIds.MicrosoftAuthenticationMicrosoftAccount)]
 public sealed class MicrosoftAccountSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1152,7 +1202,7 @@ public sealed class MicrosoftAccountSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Facebook settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Facebook")]
+[RequireFeatures(OrchardCoreFeatureIds.Facebook)]
 public sealed class FacebookSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1164,7 +1214,7 @@ public sealed class FacebookSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Facebook login settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Facebook.Login")]
+[RequireFeatures(OrchardCoreFeatureIds.FacebookLogin)]
 public sealed class FacebookLoginSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1176,7 +1226,7 @@ public sealed class FacebookLoginSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the GitHub authentication settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.GitHub.Authentication")]
+[RequireFeatures(OrchardCoreFeatureIds.GitHubAuthentication)]
 public sealed class GitHubAuthenticationSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1188,7 +1238,7 @@ public sealed class GitHubAuthenticationSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Twitter settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Twitter")]
+[RequireFeatures(OrchardCoreFeatureIds.Twitter)]
 public sealed class TwitterSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1200,7 +1250,7 @@ public sealed class TwitterSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the OpenID client settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.OpenId.Client")]
+[RequireFeatures(OrchardCoreFeatureIds.OpenIdClient)]
 public sealed class OpenIdClientSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1212,7 +1262,7 @@ public sealed class OpenIdClientSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the OpenID server settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.OpenId.Server")]
+[RequireFeatures(OrchardCoreFeatureIds.OpenIdServer)]
 public sealed class OpenIdServerSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1222,9 +1272,21 @@ public sealed class OpenIdServerSiteSettingsSchemaStartup : StartupBase
 }
 
 /// <summary>
+/// Registers the schema of the OpenID Connect secret settings.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.OpenIdSecrets)]
+public sealed class OpenIdSecretSiteSettingsSchemaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<ISiteSettingsSchemaDefinition, OpenIdSecretSettingsSchema>();
+    }
+}
+
+/// <summary>
 /// Registers services and configuration for the OpenID validation settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.OpenId.Validation")]
+[RequireFeatures(OrchardCoreFeatureIds.OpenIdValidation)]
 public sealed class OpenIdValidationSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1236,7 +1298,7 @@ public sealed class OpenIdValidationSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the audit trail settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.AuditTrail")]
+[RequireFeatures(OrchardCoreFeatureIds.AuditTrail)]
 public sealed class AuditTrailSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1249,7 +1311,7 @@ public sealed class AuditTrailSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Azure AI Search settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.AzureAI")]
+[RequireFeatures(OrchardCoreFeatureIds.AzureAI)]
 public sealed class AzureAISearchSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1261,7 +1323,7 @@ public sealed class AzureAISearchSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the content culture picker settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.ContentLocalization.ContentCulturePicker")]
+[RequireFeatures(OrchardCoreFeatureIds.ContentLocalizationContentCulturePicker)]
 public sealed class ContentCulturePickerSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1274,7 +1336,7 @@ public sealed class ContentCulturePickerSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the content audit trail settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Contents", "OrchardCore.AuditTrail")]
+[RequireFeatures(OrchardCoreFeatureIds.Contents, OrchardCoreFeatureIds.AuditTrail)]
 public sealed class ContentAuditTrailSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1286,7 +1348,7 @@ public sealed class ContentAuditTrailSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the export content to deployment target settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Contents.Deployment.ExportContentToDeploymentTarget")]
+[RequireFeatures(OrchardCoreFeatureIds.ContentsDeploymentExportContentToDeploymentTarget)]
 public sealed class ExportContentToDeploymentTargetSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1298,7 +1360,7 @@ public sealed class ExportContentToDeploymentTargetSiteSettingsSchemaStartup : S
 /// <summary>
 /// Registers services and configuration for the email settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Email")]
+[RequireFeatures(OrchardCoreFeatureIds.Email)]
 public sealed class EmailSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1310,7 +1372,7 @@ public sealed class EmailSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Azure email settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Email.Azure")]
+[RequireFeatures(OrchardCoreFeatureIds.EmailAzure)]
 public sealed class AzureEmailSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1322,7 +1384,7 @@ public sealed class AzureEmailSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the SMTP settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Email.Smtp")]
+[RequireFeatures(OrchardCoreFeatureIds.EmailSmtp)]
 public sealed class SmtpSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1334,7 +1396,7 @@ public sealed class SmtpSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Facebook Pixel settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Facebook.Pixel")]
+[RequireFeatures(OrchardCoreFeatureIds.FacebookPixel)]
 public sealed class FacebookPixelSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1346,7 +1408,7 @@ public sealed class FacebookPixelSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Google Authentication settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Google.GoogleAuthentication")]
+[RequireFeatures(OrchardCoreFeatureIds.GoogleGoogleAuthentication)]
 public sealed class GoogleAuthenticationSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1358,7 +1420,7 @@ public sealed class GoogleAuthenticationSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Google Analytics settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Google.Analytics")]
+[RequireFeatures(OrchardCoreFeatureIds.GoogleAnalytics)]
 public sealed class GoogleAnalyticsSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1370,7 +1432,7 @@ public sealed class GoogleAnalyticsSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Google Tag Manager settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Google.TagManager")]
+[RequireFeatures(OrchardCoreFeatureIds.GoogleTagManager)]
 public sealed class GoogleTagManagerSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1382,7 +1444,7 @@ public sealed class GoogleTagManagerSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the HTTPS settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Https")]
+[RequireFeatures(OrchardCoreFeatureIds.Https)]
 public sealed class HttpsSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1394,7 +1456,7 @@ public sealed class HttpsSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the layers settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Layers")]
+[RequireFeatures(OrchardCoreFeatureIds.Layers)]
 public sealed class LayersSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1406,7 +1468,7 @@ public sealed class LayersSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the localization settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Localization")]
+[RequireFeatures(OrchardCoreFeatureIds.Localization)]
 public sealed class LocalizationSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1418,7 +1480,7 @@ public sealed class LocalizationSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the reCAPTCHA settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.ReCaptcha")]
+[RequireFeatures(OrchardCoreFeatureIds.ReCaptcha)]
 public sealed class ReCaptchaSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1430,7 +1492,7 @@ public sealed class ReCaptchaSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the reverse proxy settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.ReverseProxy")]
+[RequireFeatures(OrchardCoreFeatureIds.ReverseProxy)]
 public sealed class ReverseProxySiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1442,7 +1504,7 @@ public sealed class ReverseProxySiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the search settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Search")]
+[RequireFeatures(OrchardCoreFeatureIds.Search)]
 public sealed class SearchSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1454,7 +1516,7 @@ public sealed class SearchSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the security settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Security")]
+[RequireFeatures(OrchardCoreFeatureIds.Security)]
 public sealed class SecuritySiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1466,7 +1528,7 @@ public sealed class SecuritySiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the robots settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Seo")]
+[RequireFeatures(OrchardCoreFeatureIds.Seo)]
 public sealed class RobotsSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1478,7 +1540,7 @@ public sealed class RobotsSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the sitemaps robots settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Sitemaps")]
+[RequireFeatures(OrchardCoreFeatureIds.Sitemaps)]
 public sealed class SitemapsRobotsSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1490,7 +1552,7 @@ public sealed class SitemapsRobotsSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the SMS settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Sms")]
+[RequireFeatures(OrchardCoreFeatureIds.Sms)]
 public sealed class SmsSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1503,7 +1565,7 @@ public sealed class SmsSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Azure SMS settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Sms.Azure")]
+[RequireFeatures(OrchardCoreFeatureIds.SmsAzure)]
 public sealed class AzureSmsSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1515,7 +1577,7 @@ public sealed class AzureSmsSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the taxonomy admin list settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Taxonomies.ContentsAdminList")]
+[RequireFeatures(OrchardCoreFeatureIds.TaxonomiesContentsAdminList)]
 public sealed class TaxonomyContentsAdminListSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1527,7 +1589,7 @@ public sealed class TaxonomyContentsAdminListSiteSettingsSchemaStartup : Startup
 /// <summary>
 /// Registers services and configuration for the Twitter signin settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Twitter.Signin")]
+[RequireFeatures(OrchardCoreFeatureIds.TwitterSignin)]
 public sealed class TwitterSigninSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1539,7 +1601,7 @@ public sealed class TwitterSigninSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the workflow trimming settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class WorkflowTrimmingSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1551,7 +1613,7 @@ public sealed class WorkflowTrimmingSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the login settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Users")]
+[RequireFeatures(OrchardCoreFeatureIds.Users)]
 public sealed class LoginSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1563,7 +1625,7 @@ public sealed class LoginSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the external authentication settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Users.ExternalAuthentication")]
+[RequireFeatures(OrchardCoreFeatureIds.UsersExternalAuthentication)]
 public sealed class ExternalAuthenticationSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1576,7 +1638,7 @@ public sealed class ExternalAuthenticationSiteSettingsSchemaStartup : StartupBas
 /// <summary>
 /// Registers services and configuration for the change email settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Users.ChangeEmail")]
+[RequireFeatures(OrchardCoreFeatureIds.UsersChangeEmail)]
 public sealed class ChangeEmailSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1588,7 +1650,7 @@ public sealed class ChangeEmailSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the registration settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Users.Registration")]
+[RequireFeatures(OrchardCoreFeatureIds.UsersRegistration)]
 public sealed class RegistrationSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1600,7 +1662,7 @@ public sealed class RegistrationSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the reset password settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Users.ResetPassword")]
+[RequireFeatures(OrchardCoreFeatureIds.UsersResetPassword)]
 public sealed class ResetPasswordSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1612,7 +1674,7 @@ public sealed class ResetPasswordSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the two-factor authentication settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Users.2FA")]
+[RequireFeatures(OrchardCoreFeatureIds.Users2FA)]
 public sealed class TwoFactorLoginSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1625,7 +1687,7 @@ public sealed class TwoFactorLoginSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the authenticator app settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Users.2FA.AuthenticatorApp")]
+[RequireFeatures(OrchardCoreFeatureIds.Users2FAAuthenticatorApp)]
 public sealed class AuthenticatorAppSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1637,7 +1699,7 @@ public sealed class AuthenticatorAppSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the email authenticator settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Users.2FA.Email")]
+[RequireFeatures(OrchardCoreFeatureIds.Users2FAEmail)]
 public sealed class EmailAuthenticatorSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -1649,122 +1711,12 @@ public sealed class EmailAuthenticatorSiteSettingsSchemaStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the SMS authenticator settings schema feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Users.2FA.Sms")]
+[RequireFeatures(OrchardCoreFeatureIds.Users2FASms)]
 public sealed class SmsAuthenticatorSiteSettingsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ISiteSettingsSchemaDefinition, SmsAuthenticatorLoginSettingsSchema>();
-    }
-}
-
-/// <summary>
-/// Registers services and configuration for the AI site settings schema feature.
-/// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI")]
-public sealed class AISiteSettingsSchemaStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<ISiteSettingsSchemaDefinition, GeneralAISettingsSchema>();
-        services.AddScoped<ISiteSettingsSchemaDefinition, DefaultAIDeploymentSettingsSchema>();
-    }
-}
-
-/// <summary>
-/// Registers services and configuration for the AI chat core site settings schema feature.
-/// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI.Chat.Core")]
-public sealed class AIChatCoreSiteSettingsSchemaStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<ISiteSettingsSchemaDefinition, DefaultOrchestratorSettingsSchema>();
-    }
-}
-
-/// <summary>
-/// Registers services and configuration for the AI chat admin widget site settings schema feature.
-/// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI.Chat.AdminWidget")]
-public sealed class AIChatAdminWidgetSiteSettingsSchemaStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<ISiteSettingsSchemaDefinition, AIChatAdminWidgetSettingsSchema>();
-    }
-}
-
-/// <summary>
-/// Registers services and configuration for the Copilot site settings schema feature.
-/// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI.Chat.Copilot")]
-public sealed class CopilotSiteSettingsSchemaStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<ISiteSettingsSchemaDefinition, CopilotSettingsSchema>();
-    }
-}
-
-/// <summary>
-/// Registers services and configuration for the Claude site settings schema feature.
-/// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI.Chat.Claude")]
-public sealed class ClaudeSiteSettingsSchemaStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<ISiteSettingsSchemaDefinition, ClaudeSettingsSchema>();
-    }
-}
-
-/// <summary>
-/// Registers services and configuration for the AI documents site settings schema feature.
-/// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI.Documents")]
-public sealed class AIDocumentsSiteSettingsSchemaStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<ISiteSettingsSchemaDefinition, InteractionDocumentSettingsSchema>();
-    }
-}
-
-/// <summary>
-/// Registers services and configuration for the AI data sources site settings schema feature.
-/// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI.DataSources")]
-public sealed class AIDataSourcesSiteSettingsSchemaStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<ISiteSettingsSchemaDefinition, AIDataSourceSettingsSchema>();
-    }
-}
-
-/// <summary>
-/// Registers services and configuration for the AI chat interactions site settings schema feature.
-/// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI.Chat.Interactions")]
-public sealed class AIChatInteractionsSiteSettingsSchemaStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<ISiteSettingsSchemaDefinition, ChatInteractionChatModeSettingsSchema>();
-        services.AddScoped<ISiteSettingsSchemaDefinition, ChatInteractionMemorySettingsSchema>();
-    }
-}
-
-/// <summary>
-/// Registers services and configuration for the AI memory site settings schema feature.
-/// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI.Memory")]
-public sealed class AIMemorySiteSettingsSchemaStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<ISiteSettingsSchemaDefinition, AIMemorySettingsSchema>();
     }
 }
 
@@ -1829,96 +1781,6 @@ public sealed class AvatarSiteSettingsSchemaStartup : StartupBase
 }
 
 /// <summary>
-/// Registers services and configuration for the AIRecipe feature.
-/// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI")]
-public sealed class AIRecipeStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IRecipeStep, AIProfileRecipeStep>();
-        services.AddScoped<IRecipeStep, CreateAIProfileFromTemplateRecipeStep>();
-        services.AddScoped<IRecipeStep, AIProfileTemplateRecipeStep>();
-        services.AddScoped<IRecipeStep, AIDeploymentRecipeStep>();
-        services.AddScoped<IRecipeStep, DeleteAIDeploymentsRecipeStep>();
-        services.AddScoped<IRecipeStep, AIProviderConnectionsRecipeStep>();
-    }
-}
-
-/// <summary>
-/// Registers services and configuration for the AI data sources recipe feature.
-/// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI.DataSources")]
-public sealed class AIDataSourcesRecipeStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IRecipeStep, AIDataSourceRecipeStep>();
-    }
-}
-
-/// <summary>
-/// Registers services and configuration for the AI tool instances recipe feature.
-/// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI.ToolInstances")]
-public sealed class AIToolInstancesRecipeStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IRecipeStep, AIToolInstanceRecipeStep>();
-    }
-}
-
-/// <summary>
-/// Registers services and configuration for the AI personas recipe feature.
-/// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI.Personas")]
-public sealed class AIPersonasRecipeStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IRecipeStep, AIPersonaRecipeStep>();
-    }
-}
-
-/// <summary>
-/// Registers the schema of the AI Personas deployment step, so a recipe that creates deployment plans can describe it.
-/// </summary>
-[RequireFeatures("OrchardCore.Deployment", "CrestApps.OrchardCore.AI.Personas")]
-public sealed class AIPersonasDeploymentRecipeStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddDeploymentStepSchema<AIPersonaDeploymentStepSchema>();
-    }
-}
-
-/// <summary>
-/// Registers services and configuration for the MCP connection recipe feature.
-/// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI.Mcp")]
-public sealed class McpConnectionsRecipeStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IRecipeStep, McpConnectionRecipeStep>();
-    }
-}
-
-/// <summary>
-/// Registers services and configuration for the MCP server recipe feature.
-/// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI.Mcp.Server")]
-public sealed class McpServerRecipeStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IRecipeStep, McpPromptRecipeStep>();
-        services.AddScoped<IRecipeStep, McpResourceRecipeStep>();
-    }
-}
-
-/// <summary>
 /// Registers the schemas of the Data Connectors recipe steps.
 /// </summary>
 [RequireFeatures("CrestApps.OrchardCore.DataConnectors")]
@@ -1928,18 +1790,6 @@ public sealed class DataConnectorsRecipeStartup : StartupBase
     {
         services.AddScoped<IRecipeStep, DataConnectionRecipeStep>();
         services.AddScoped<IRecipeStep, ConnectedDataSetRecipeStep>();
-    }
-}
-
-/// <summary>
-/// Registers services and configuration for the A2A recipe feature.
-/// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI.A2A")]
-public sealed class A2ARecipeStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IRecipeStep, A2AConnectionRecipeStep>();
     }
 }
 
@@ -2006,7 +1856,7 @@ public sealed class StripeRecipeStartup : StartupBase
 /// <summary>
 /// Registers recipe step schemas for the CrestApps Users feature, whose user re-index step needs Orchard Core Users.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.Users", "OrchardCore.Users")]
+[RequireFeatures("CrestApps.OrchardCore.Users", OrchardCoreFeatureIds.Users)]
 public sealed class CrestAppsUsersRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -2018,7 +1868,7 @@ public sealed class CrestAppsUsersRecipeStartup : StartupBase
 /// <summary>
 /// Registers workflow activity schemas for the Contact Center workflows feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows", "CrestApps.OrchardCore.ContactCenter")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows, "CrestApps.OrchardCore.ContactCenter")]
 public sealed class ContactCenterWorkflowRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

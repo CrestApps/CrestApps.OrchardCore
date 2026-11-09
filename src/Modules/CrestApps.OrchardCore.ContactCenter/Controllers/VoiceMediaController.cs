@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Core.Controllers;
 using CrestApps.OrchardCore.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,7 +22,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 /// Provides administration of the reusable voice media library (hold music, greetings, and IVR prompts).
 /// </summary>
 [Admin]
-public sealed class VoiceMediaController : ContactCenterCatalogController<VoiceMediaItem>
+public sealed class VoiceMediaController : CatalogAdminController<VoiceMediaItem>
 {
     private readonly IVoiceMediaItemManager _manager;
     private readonly IVoiceMediaProvisioningService _voiceMediaProvisioning;

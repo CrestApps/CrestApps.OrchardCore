@@ -1,21 +1,15 @@
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services;
 
 /// <summary>
-/// Classifies an inbound message as a carrier keyword and says what to reply. A keyword is the whole message:
-/// matching it as a prefix opted people out of a service they were in the middle of asking about ("stop by the
-/// shop later"), so only trailing punctuation and whitespace are tolerated.
+/// Classifies an inbound message as a carrier keyword and says what to reply. The keywords and the matching rule are
+/// the shared policy in <see cref="OmnichannelSmsComplianceHelper"/>, which the automated conversation uses too: a
+/// keyword is the whole message, so only surrounding whitespace and trailing punctuation are tolerated.
 /// </summary>
 public static class SmsKeywordPolicy
 {
-    private static readonly string[] _stopKeywords =
-        ["STOP", "STOPALL", "UNSUBSCRIBE", "CANCEL", "END", "QUIT"];
-
-    private static readonly string[] _helpKeywords = ["HELP", "INFO"];
-
-    private static readonly string[] _startKeywords = ["START", "UNSTOP", "YES"];
-
     /// <summary>
     /// The confirmation sent when a contact opts out, used when the tenant has not written its own. It has to
     /// exist: a tenant that configured nothing still owes a contact who texts STOP an answer.
@@ -33,30 +27,23 @@ public static class SmsKeywordPolicy
     public const string DefaultStartMessage = "You have been resubscribed and will receive messages again. Reply STOP to unsubscribe.";
 
     /// <summary>
-    /// Classifies an inbound message body.
+    /// Classifies an inbound message body with the shared keyword policy.
     /// </summary>
     /// <param name="body">The inbound message body.</param>
     /// <returns>The keyword the contact sent, or <see cref="SmsKeyword.None"/>.</returns>
     public static SmsKeyword Classify(string body)
     {
-        if (string.IsNullOrWhiteSpace(body))
-        {
-            return SmsKeyword.None;
-        }
-
-        var normalized = body.Trim().TrimEnd('.', '!', '?', ',', ';', ':');
-
-        if (Matches(normalized, _stopKeywords))
+        if (OmnichannelSmsComplianceHelper.IsOptOutRequest(body))
         {
             return SmsKeyword.Stop;
         }
 
-        if (Matches(normalized, _helpKeywords))
+        if (OmnichannelSmsComplianceHelper.IsHelpRequest(body))
         {
             return SmsKeyword.Help;
         }
 
-        return Matches(normalized, _startKeywords)
+        return OmnichannelSmsComplianceHelper.IsOptInRequest(body)
             ? SmsKeyword.Start
             : SmsKeyword.None;
     }
@@ -79,7 +66,4 @@ public static class SmsKeywordPolicy
 
     private static string Coalesce(string configured, string fallback)
         => string.IsNullOrWhiteSpace(configured) ? fallback : configured.Trim();
-
-    private static bool Matches(string normalized, string[] keywords)
-        => keywords.Any(keyword => string.Equals(normalized, keyword, StringComparison.OrdinalIgnoreCase));
 }

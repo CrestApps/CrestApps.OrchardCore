@@ -1,15 +1,12 @@
 using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Checkout.Core.Models;
+using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
-using CrestApps.OrchardCore.Customers.Models;
-using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
-using CrestApps.OrchardCore.Transactions;
-using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Entities;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Accounts.B2B.Services;
@@ -19,18 +16,15 @@ namespace CrestApps.OrchardCore.Accounts.B2B.Services;
 /// invoice due in the account's net days, on the ledger with its reminders. Refunding what went on account takes it off
 /// the invoice.
 /// </summary>
-public sealed class AccountTermsTenderProvider : ICheckoutTenderProvider
+public sealed class AccountTermsTenderProvider : DeferredBalanceTenderProviderBase
 {
     // The obligation an order's account invoice is recorded under, so completing a checkout twice owes once.
-    internal const string ObligationId = "account-terms";
+    internal const string TermsObligationId = "account-terms";
 
     private readonly AccountTermsService _terms;
     private readonly IB2BAccountStore _accounts;
-    private readonly ITransactionManager _transactions;
-    private readonly ITransactionCommandService _commands;
     private readonly IOrderStore _orders;
     private readonly IClock _clock;
-    private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
 
@@ -43,21 +37,22 @@ public sealed class AccountTermsTenderProvider : ICheckoutTenderProvider
         IClock clock,
         ILogger<AccountTermsTenderProvider> logger,
         IStringLocalizer<AccountTermsTenderProvider> stringLocalizer)
+        : base(transactions, commands, clock, logger, stringLocalizer)
     {
         _terms = terms;
         _accounts = accounts;
-        _transactions = transactions;
-        _commands = commands;
         _orders = orders;
         _clock = clock;
-        _logger = logger;
         S = stringLocalizer;
     }
 
-    public string Key
+    public override string Key
         => B2BAccountsConstants.TermsTenderKey;
 
-    public async Task<IReadOnlyList<TenderLine>> GetTendersAsync(CheckoutTenderContext context, CancellationToken cancellationToken = default)
+    protected override string ObligationId
+        => TermsObligationId;
+
+    public override async Task<IReadOnlyList<TenderLine>> GetTendersAsync(CheckoutTenderContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
 
@@ -87,7 +82,7 @@ public sealed class AccountTermsTenderProvider : ICheckoutTenderProvider
         ];
     }
 
-    public async Task<decimal?> GetBalanceAsync(string reference, string currency, CancellationToken cancellationToken = default)
+    public override async Task<decimal?> GetBalanceAsync(string reference, string currency, CancellationToken cancellationToken = default)
     {
         var (accountId, _) = AccountTermsService.FromReference(reference);
 
@@ -96,91 +91,37 @@ public sealed class AccountTermsTenderProvider : ICheckoutTenderProvider
             : null;
     }
 
-    public async Task DebitAsync(string reference, decimal amount, string currency, CheckoutFlow flow, CancellationToken cancellationToken = default)
+    protected override string GetSessionId(string reference)
+        => AccountTermsService.FromReference(reference).SessionId;
+
+    protected override async Task<DeferredBalanceDebit> PrepareDebitAsync(string reference, CheckoutSession session, decimal amount, string currency, CancellationToken cancellationToken)
     {
-        var (accountId, sessionId) = AccountTermsService.FromReference(reference);
+        var (accountId, _) = AccountTermsService.FromReference(reference);
 
-        if (flow?.Session is not CheckoutSession session ||
-            !string.Equals(session.SessionId, sessionId, StringComparison.Ordinal) ||
-            await _accounts.FindByIdAsync(accountId, cancellationToken) is not { } account)
+        if (await _accounts.FindByIdAsync(accountId, cancellationToken) is not { } account)
         {
-            throw new InvalidOperationException($"The account payment '{reference}' doesn't belong to this checkout.");
+            return null;
         }
 
-        if (await _transactions.GetByObligationAsync(session.SessionId, ObligationId, cancellationToken) is not null)
-        {
-            return;
-        }
-
-        var now = _clock.UtcNow;
         var order = string.Equals(session.ReferenceType, CheckoutReferenceTypes.Order, StringComparison.Ordinal)
             ? await _orders.FindByIdAsync(session.ReferenceId, cancellationToken)
             : null;
-        var transaction = await _transactions.NewAsync(cancellationToken: cancellationToken);
 
-        transaction.Title = order is null
-            ? S["{0} on account", account.Name].Value
-            : string.IsNullOrWhiteSpace(order.PurchaseOrderNumber)
-                ? S["Order {0} on account ({1})", order.OrderNumber, account.Name].Value
-                : S["Order {0}, PO {1}, on account ({2})", order.OrderNumber, order.PurchaseOrderNumber, account.Name].Value;
-        transaction.Source = B2BAccountsConstants.TransactionSource;
-        transaction.OwnerId = session.OwnerId;
-        transaction.OwnerKind = CustomerOwnerKind.Authenticated;
-        transaction.ReferenceType = session.ReferenceType;
-        transaction.ReferenceId = session.ReferenceId;
-        transaction.ReferenceVersionId = session.ReferenceVersionId;
-
-        // The invoice belongs to the account, whichever of its buyers placed the order, so the account's page finds it
-        // and what the account owes stays the same when a buyer leaves.
-        transaction.ParentReferenceType = AccountsConstants.ReferenceTypes.Account;
-        transaction.ParentReferenceId = account.AccountId;
-        transaction.CheckoutSessionId = session.SessionId;
-        transaction.ObligationId = ObligationId;
-        transaction.Currency = currency;
-        transaction.Amount = amount;
-        transaction.TaxAmount = 0m;
-        transaction.TotalAmount = amount;
-        transaction.AmountPaid = 0m;
-        transaction.Status = TransactionStatus.Outstanding;
-        transaction.CreatedUtc = now;
-        transaction.UpdatedUtc = now;
-        transaction.DueUtc = now.AddDays(account.Terms.NetDays ?? 0);
-        transaction.Events.Add(new TransactionEvent
+        return new DeferredBalanceDebit
         {
-            CreatedUtc = now,
-            Type = TransactionEventType.Created,
+            Title = order is null
+                ? S["{0} on account", account.Name].Value
+                : string.IsNullOrWhiteSpace(order.PurchaseOrderNumber)
+                    ? S["Order {0} on account ({1})", order.OrderNumber, account.Name].Value
+                    : S["Order {0}, PO {1}, on account ({2})", order.OrderNumber, order.PurchaseOrderNumber, account.Name].Value,
+            Source = B2BAccountsConstants.TransactionSource,
+
+            // The invoice belongs to the account, whichever of its buyers placed the order, so the account's page finds
+            // it and what the account owes stays the same when a buyer leaves.
+            ParentReferenceType = AccountsConstants.ReferenceTypes.Account,
+            ParentReferenceId = account.AccountId,
+            DueUtc = _clock.UtcNow.AddDays(account.Terms.NetDays ?? 0),
             Message = S["Put on {0}'s account, due in {1} days.", account.Name, account.Terms.NetDays ?? 0].Value,
-        });
-
-        await _transactions.CreateAsync(transaction, cancellationToken);
-    }
-
-    public async Task CreditAsync(string reference, decimal amount, string currency, string reason, CancellationToken cancellationToken = default)
-    {
-        var (_, sessionId) = AccountTermsService.FromReference(reference);
-
-        if (amount <= 0m || string.IsNullOrEmpty(sessionId) ||
-            await _transactions.GetByObligationAsync(sessionId, ObligationId, cancellationToken) is not { } transaction)
-        {
-            return;
-        }
-
-        // What's refunded comes off what's still owed; what was already paid on the invoice is refunded by the store.
-        var owed = transaction.OutstandingAmount;
-        var adjustment = Math.Min(amount, owed);
-
-        if (adjustment <= 0m)
-        {
-            _logger.LogWarning("A refund of {Amount} went to the account of checkout '{SessionId}', whose invoice was already paid; refund the account directly.", amount, sessionId);
-
-            return;
-        }
-
-        var result = await _commands.AdjustAsync(transaction.ItemId, adjustment, TransactionAdjustmentKind.Waiver, string.IsNullOrWhiteSpace(reason) ? S["Refunded"].Value : reason, cancellationToken);
-
-        if (!result.Succeeded)
-        {
-            _logger.LogWarning("The account invoice '{TransactionId}' couldn't be lowered by a refund: {Errors}", transaction.ItemId, string.Join(" ", result.Errors));
-        }
+        };
     }
 }

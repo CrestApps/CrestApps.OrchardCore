@@ -6,13 +6,16 @@ using CrestApps.OrchardCore.Accounts.B2B.Services;
 using CrestApps.OrchardCore.Accounts.Models;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Models;
+using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using OrchardCore.Entities;
 using OrchardCore.Settings;
@@ -157,6 +160,33 @@ public sealed class B2BAccountsTests
     }
 
     [Fact]
+    public async Task AnAdminsDecision_EmailsTheBuyer_AsItsOwnKindOfEmail_WithTheOrder()
+    {
+        var order = new Order
+        {
+            ItemId = "order-1",
+            OrderNumber = "261020-APPRV2",
+            CustomerEmail = "buyer@example.com",
+            Status = OrderStatus.AwaitingPayment,
+            Approval = new OrderApproval { Status = OrderApprovalStatus.Pending },
+        };
+
+        var emails = new RecordingCommerceEmailSender();
+        var approvals = Approvals(PaidThisMonth(0m).Object, emails);
+
+        Assert.True(await approvals.DecideAsync(order, approve: true, "admin", null, TestContext.Current.CancellationToken));
+
+        var (email, content) = Assert.Single(emails.Sent);
+
+        Assert.Equal(B2BApprovalService.ApprovalDecidedEmailKind, email.Kind);
+        Assert.Equal("buyer@example.com", email.To);
+        Assert.Same(order, email.Models[OrderEmailModels.OrderName]);
+        Assert.Equal("Order 261020-APPRV2 was approved", content.Subject);
+        Assert.Contains("admin approved order 261020-APPRV2. Pay it from your orders to place it.", content.Html);
+        Assert.StartsWith("admin approved order 261020-APPRV2.", content.Text);
+    }
+
+    [Fact]
     public async Task ASaleAtARegister_IsntABusinessOrder_EvenWhenTheCashierBuysForOne()
     {
         var orders = new Mock<IOrderStore>();
@@ -177,7 +207,7 @@ public sealed class B2BAccountsTests
         return orders;
     }
 
-    private static B2BApprovalService Approvals(IOrderStore orders)
+    private static B2BApprovalService Approvals(IOrderStore orders, ICommerceEmailSender emailSender = null)
     {
         var orderService = new Mock<IOrderService>();
         orderService.Setup(service => service.CancelAsync(It.IsAny<Order>(), It.IsAny<OrderCancelReason>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
@@ -189,9 +219,8 @@ public sealed class B2BAccountsTests
             orders,
             orderService.Object,
             SiteService(),
-            Mock.Of<IServiceProvider>(),
+            emailSender ?? CommerceEmailSenders.Create(new ServiceCollection().BuildServiceProvider()),
             clock.Object,
-            Microsoft.Extensions.Logging.Abstractions.NullLogger<B2BApprovalService>.Instance,
             new PassThroughStringLocalizer<B2BApprovalService>(),
             Mock.Of<IShopperCurrency>(),
             Mock.Of<IHttpContextAccessor>(),

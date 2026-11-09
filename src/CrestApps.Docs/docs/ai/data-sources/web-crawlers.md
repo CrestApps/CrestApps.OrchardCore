@@ -87,6 +87,33 @@ Scraped pages are indexed with their URL kept as the knowledge-base reference id
 
 The feature persists crawlers and per-page crawl state in the AI YesSql collection through the shared `CrestApps.Core` stores (`IWebCrawlerStore` and `IWebCrawlStateStore`). Migrations create the `WebCrawlerIndex` and `WebCrawlStateIndex` tables via the Core schema builders (`CreateWebCrawlerIndexSchemaAsync` and `CreateWebCrawlStateIndexSchemaAsync`).
 
+## Recipes and deployment
+
+The `WebCrawlers` recipe step creates or updates web crawlers. A crawler is matched by its `ItemId`, then by its `DisplayText` within the same crawl strategy, so running a recipe twice adds nothing. Its strategy (`Source`) must be registered on the site, and its `AIDataSourceId` names a Web AI data source, so import the data sources first.
+
+```json
+{
+  "steps": [
+    {
+      "name": "WebCrawlers",
+      "Crawlers": [
+        {
+          "ItemId": "4wc00000000000000000000001",
+          "Source": "Sitemap",
+          "DisplayText": "Help center",
+          "AIDataSourceId": "4ds00000000000000000000002",
+          "Enabled": true,
+          "ReindexIntervalMinutes": 1440,
+          "Properties": { }
+        }
+      ]
+    }
+  ]
+}
+```
+
+The **Web crawlers** deployment step (Artificial Intelligence category) exports every crawler with its strategy settings in `Properties`. Secrets in those settings are never exported, and a recipe that leaves one out keeps the stored one.
+
 ## Permissions
 
 The feature adds the **Manage web crawlers** (`ManageWebCrawlers`) permission, granted to the Administrator role by default. It controls access to the entire Web Crawlers admin area, including the synchronize action.

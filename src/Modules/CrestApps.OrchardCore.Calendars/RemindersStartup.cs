@@ -29,6 +29,7 @@ public sealed class RemindersStartup : StartupBase
             .AddIndexProvider<CalendarReminderLogIndexProvider>()
             .AddIndexProvider<CalendarUserReminderIndexProvider>();
         services.AddScoped<CalendarReminderService>();
+        services.AddRetentionPolicy<CalendarReminderLogRetentionPolicy>();
 
         // An event's own reminders show on its people's screens until they dismiss them.
         services.AddScoped<CalendarUserReminderStore>();

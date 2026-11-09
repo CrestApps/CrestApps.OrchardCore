@@ -1,8 +1,10 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
+using CrestApps.OrchardCore.Core.Migrations;
 using Dapper;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -69,6 +71,8 @@ internal sealed class AIChatSessionV1PromptDataMigrations : DataMigration
         {
             return;
         }
+
+        var skipped = new MigrationSkipReport(nameof(AIChatSessionV1PromptDataMigrations), logger);
 
         for (var batchStart = 0; batchStart < documents.Count; batchStart += _batchSize)
         {
@@ -175,12 +179,14 @@ internal sealed class AIChatSessionV1PromptDataMigrations : DataMigration
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "Failed to migrate v1 chat-session prompts for document ID {DocumentId}.", document.Id);
+                    skipped.Skip(document.Id.ToString(CultureInfo.InvariantCulture), "the v1 session's prompts could not be migrated", ex);
                 }
             }
 
             await session.SaveChangesAsync();
         }
+
+        await skipped.LogSummaryAsync(serviceProvider);
     }
 
     private static bool NormalizePersistedSessionDocument(JsonObject sessionObject)

@@ -240,7 +240,7 @@ public sealed partial class RealtimeVoiceConversationRunner
 
         // As when the caller talks over the assistant: the line is quiet from now, not from when the queued speech
         // would have ended, and whatever had not reached the line yet goes with it.
-        var now = DateTime.UtcNow.Ticks;
+        var now = UtcNowTicks;
         Interlocked.Exchange(ref _assistantSpeechEndsTicks, now);
         Interlocked.Exchange(ref _assistantVoiceEndsTicks, Math.Min(Interlocked.Read(ref _assistantVoiceEndsTicks), now));
         Interlocked.Exchange(ref _lastAssistantAudioTicks, now);

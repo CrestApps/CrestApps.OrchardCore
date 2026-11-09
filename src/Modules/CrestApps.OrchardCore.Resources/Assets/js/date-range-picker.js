@@ -1,8 +1,9 @@
 /*
 ** A reusable date-range picker. It enhances two machine-formatted date inputs
 ** (From/To) with a Bootstrap dropdown offering common presets (Today, Yesterday,
-** This Week, ... Last Year, calendar-month ranges), a Custom Range editable
-** through flatpickr, and single date/time "On or before" / "On or after" bounds.
+** Last 24 Hours, This Week, ... Last Year, calendar-month ranges), a Custom Range
+** editable through flatpickr, single date/time "On or before" / "On or after"
+** bounds, and, when the form offers it, All Time, which clears both bounds.
 ** Selecting an option writes
 ** machine-formatted values into the underlying inputs so the surrounding form
 ** submits them unchanged. It is registered as the "date-range-picker" script
@@ -95,6 +96,8 @@
             case 'yesterday':
                 var yesterday = addDays(today, -1);
                 return { from: yesterday, to: endOfDay(yesterday) };
+            case 'last24Hours':
+                return { from: new Date(now.getTime() - 24 * 60 * 60 * 1000), to: endOfDay(now) };
             case 'thisWeek':
                 var weekStartDate = startOfWeek(now, weekStart);
                 return { from: weekStartDate, to: endOfDay(addDays(weekStartDate, 6)) };
@@ -430,6 +433,16 @@
             }
 
             showPanel(null);
+
+            // All Time sets neither bound, for a form that accepts a range with neither.
+            if (key === 'all') {
+                clearInput(fromInput, fromPicker);
+                clearInput(toInput, toPicker);
+                label.textContent = labelForRadio(radio);
+                closeMenu();
+
+                return;
+            }
 
             var range = computePreset(key, weekStart);
 

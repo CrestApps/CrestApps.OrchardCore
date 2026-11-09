@@ -1,3 +1,6 @@
+using CrestApps.Core.AI.Completions;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Services;
 using CrestApps.OrchardCore.AI.Core.Models;
 
 namespace CrestApps.OrchardCore.AI.Core.Conversations;
@@ -48,44 +51,61 @@ public static class AICallMetrics
     }
 
     /// <summary>
-    /// Estimates what a call cost: its minutes with the carrier, its minutes or tokens with the AI deployment, and the
-    /// texts sent during it.
+    /// Estimates what a call cost: its minutes and the texts sent during it with the carrier, at the site's carrier
+    /// prices, and its tokens or minutes with the AI deployment, at the prices set on the deployment. The AI part is
+    /// priced like any metered request: input and output text and audio tokens, cached tokens, and the call's length
+    /// for deployments billed by the minute (<see cref="AIUsageMeters.AudioSeconds"/>).
     /// </summary>
     /// <param name="summary">The call's summary.</param>
-    /// <param name="settings">The prices.</param>
+    /// <param name="carrier">The carrier's prices, or <see langword="null"/>.</param>
+    /// <param name="pricing">The prices of the deployment that answered the call, or <see langword="null"/>.</param>
     /// <param name="textsSent">How many texts were sent during the call.</param>
-    /// <returns>The cost, or <see langword="null"/> when no price is set.</returns>
-    public static decimal? EstimateCost(AIVoiceSessionSummary summary, AICostSettings settings, int textsSent = 0)
+    /// <returns>The cost and its currency, or <see langword="null"/> for both when no price is set. When the carrier's
+    /// and the deployment's prices are in different currencies they cannot be added, and the AI part is returned.</returns>
+    public static (decimal? Cost, string Currency) EstimateCost(AIVoiceSessionSummary summary, AICostSettings carrier, AIDeploymentPricing pricing, int textsSent = 0)
     {
         ArgumentNullException.ThrowIfNull(summary);
 
-        if (settings is null)
-        {
-            return null;
-        }
-
-        var price = settings.Deployments?.FirstOrDefault(candidate => string.Equals(candidate.DeploymentName, summary.DeploymentName, StringComparison.OrdinalIgnoreCase));
-
-        if (settings.TelephonyPerMinute == 0 && settings.SmsPerMessage == 0 && price is null)
-        {
-            return null;
-        }
-
         var minutes = (decimal)(summary.SessionDurationMs ?? 0) / 60_000m;
-        var cost = minutes * settings.TelephonyPerMinute + textsSent * settings.SmsPerMessage;
+        decimal? carrierCost = carrier is { TelephonyPerMinute: > 0 } or { SmsPerMessage: > 0 }
+            ? minutes * carrier.TelephonyPerMinute + textsSent * carrier.SmsPerMessage
+            : null;
+        var aiCost = AIUsageCostEstimator.Estimate(ToUsageRecord(summary), pricing);
 
-        if (price is not null)
+        if (aiCost is null)
         {
-            cost += minutes * price.PerMinute;
-            cost += PerMillion(summary.InputTextTokens, price.InputPerMillion);
-            cost += PerMillion(summary.OutputTextTokens, price.OutputPerMillion);
-            cost += PerMillion(summary.InputAudioTokens, price.AudioInputPerMillion);
-            cost += PerMillion(summary.OutputAudioTokens, price.AudioOutputPerMillion);
+            return carrierCost is null
+                ? (null, null)
+                : (decimal.Round(carrierCost.Value, 4), carrier.Currency);
         }
 
-        return decimal.Round(cost, 4);
+        if (carrierCost is null || !string.Equals(carrier.Currency, pricing.Currency, StringComparison.OrdinalIgnoreCase))
+        {
+            return (decimal.Round(aiCost.Value, 4), pricing.Currency);
+        }
+
+        return (decimal.Round(carrierCost.Value + aiCost.Value, 4), pricing.Currency);
     }
 
-    private static decimal PerMillion(long? tokens, decimal pricePerMillion)
-        => tokens is > 0 ? tokens.Value * pricePerMillion / 1_000_000m : 0;
+    /// <summary>
+    /// Describes a call's AI usage as one metered request, so it is priced by the same rules as every other request.
+    /// </summary>
+    private static AICompletionUsageRecord ToUsageRecord(AIVoiceSessionSummary summary)
+    {
+        var inputAudioTokens = summary.InputAudioTokens ?? 0;
+        var outputAudioTokens = summary.OutputAudioTokens ?? 0;
+
+        return new AICompletionUsageRecord
+        {
+            DeploymentName = summary.DeploymentName,
+            InputTokenCount = ToInt((summary.InputTextTokens ?? 0) + inputAudioTokens),
+            OutputTokenCount = ToInt((summary.OutputTextTokens ?? 0) + outputAudioTokens),
+            InputAudioTokenCount = ToInt(inputAudioTokens),
+            OutputAudioTokenCount = ToInt(outputAudioTokens),
+            CachedInputTokenCount = ToInt(summary.CachedInputTokens ?? 0),
+            AudioDurationMs = summary.SessionDurationMs ?? 0,
+        };
+    }
+
+    private static int ToInt(long value) => (int)Math.Clamp(value, 0, int.MaxValue);
 }

@@ -26,6 +26,7 @@ public static class DataConnectorsServiceCollectionExtensions
         services.TryAddScoped<IDataConnectorManager, DataConnectorManager>();
         services.TryAddScoped<IDataConnectionSecretManager, DataConnectionSecretManager>();
         services.TryAddScoped<IDataConnectionStore, DataConnectionStore>();
+        services.TryAddScoped<IDataConnectionResolver, DataConnectionResolver>();
         services.TryAddScoped<IConnectedDataSetStore, ConnectedDataSetStore>();
         services.TryAddScoped<IDataSetRefreshRunStore, DataSetRefreshRunStore>();
         services.TryAddScoped<IDataSetRowStore, SqlDataSetRowStore>();

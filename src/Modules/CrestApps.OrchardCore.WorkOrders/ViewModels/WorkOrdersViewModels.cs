@@ -435,6 +435,11 @@ public class ServiceLevelPolicyEditViewModel
     public string TimeZoneId { get; set; }
 
     /// <summary>
+    /// Gets or sets the hours calendar the clock runs in, or <see langword="null"/> for the weekly hours or around the clock.
+    /// </summary>
+    public string HoursCalendarId { get; set; }
+
+    /// <summary>
     /// Gets or sets whether the clock runs only in opening hours.
     /// </summary>
     public bool BusinessHoursOnly { get; set; }
@@ -474,6 +479,12 @@ public class ServiceLevelPolicyEditViewModel
     /// </summary>
     [BindNever]
     public IList<SelectListItem> TimeZoneOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the hours calendars the policy can run in.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> HoursCalendarOptions { get; set; } = [];
 }
 
 /// <summary>
@@ -508,18 +519,23 @@ public class WorkOrderSubStatusEditViewModel
 }
 
 /// <summary>
-/// The work order editor.
+/// The main section of the work order editor, the <c>WorkOrderFields_Edit</c> shape.
 /// </summary>
+/// <remarks>
+/// It is the model of a shape, so it has no member named like one of <c>IShape</c>'s (such as <c>Id</c>).
+/// </remarks>
 public class WorkOrderEditViewModel
 {
     /// <summary>
     /// Gets or sets the id, or <see langword="null"/> for a new work order.
     /// </summary>
-    public string Id { get; set; }
+    [BindNever]
+    public string WorkOrderId { get; set; }
 
     /// <summary>
     /// Gets or sets the type.
     /// </summary>
+    [BindNever]
     public string TypeId { get; set; }
 
     /// <summary>

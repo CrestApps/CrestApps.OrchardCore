@@ -159,7 +159,7 @@ public sealed class AbstractApiPhoneNumberVerificationProvider : IPhoneNumberVer
             LineType = lineType,
             CountryCode = country?.Code,
             CountryName = country?.Name,
-            CountryPrefix = NormalizeCountryPrefix(country?.Prefix),
+            CountryPrefix = PhoneCountryCodes.NormalizeCallingCode(country?.Prefix),
             Carrier = validation?.Carrier ?? parsed.Carrier,
             LineStatus = lineStatus,
             MinimumAge = NormalizeMinimumAge(validation?.MinimumAge),
@@ -229,20 +229,6 @@ public sealed class AbstractApiPhoneNumberVerificationProvider : IPhoneNumberVer
         }
 
         return phoneNumber;
-    }
-
-    private static string NormalizeCountryPrefix(string countryPrefix)
-    {
-        if (string.IsNullOrWhiteSpace(countryPrefix))
-        {
-            return null;
-        }
-
-        var trimmed = countryPrefix.Trim();
-
-        return trimmed.StartsWith('+')
-            ? trimmed
-            : "+" + trimmed;
     }
 
     internal static Uri BuildRequestUri(string apiKey, string phoneNumber)

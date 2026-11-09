@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Workforce.Models;
 
 namespace CrestApps.OrchardCore.Workforce.Services;
@@ -20,7 +21,8 @@ public sealed class TimePunchRequest
     /// <summary>
     /// Gets or sets where it came from.
     /// </summary>
-    public TimePunchSource Source { get; set; } = TimePunchSource.Web;
+    [JsonConverter(typeof(TimePunchSourceJsonConverter))]
+    public string Source { get; set; } = TimePunchSource.Web;
 
     /// <summary>
     /// Gets or sets the UTC time it was made, for a punch made offline or by another system; <see langword="null"/>

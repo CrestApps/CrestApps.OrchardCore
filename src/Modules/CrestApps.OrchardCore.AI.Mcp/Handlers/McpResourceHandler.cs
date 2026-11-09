@@ -1,9 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Core.Handlers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using ModelContextProtocol.Protocol;
@@ -11,11 +11,8 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Handlers;
 
-internal sealed class McpResourceHandler : CatalogEntryHandlerBase<McpResource>
+internal sealed class McpResourceHandler : CatalogEntryAuditHandlerBase<McpResource>
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IClock _clock;
-
     internal readonly IStringLocalizer S;
 
     /// <summary>
@@ -28,10 +25,20 @@ internal sealed class McpResourceHandler : CatalogEntryHandlerBase<McpResource>
         IHttpContextAccessor httpContextAccessor,
         IClock clock,
         IStringLocalizer<McpResourceHandler> stringLocalizer)
+        : base(httpContextAccessor, clock)
     {
-        _httpContextAccessor = httpContextAccessor;
-        _clock = clock;
         S = stringLocalizer;
+    }
+
+    protected override void SetCreated(McpResource entry, DateTime createdUtc, string ownerId, string author, bool hasUser)
+    {
+        entry.CreatedUtc = createdUtc;
+
+        if (hasUser)
+        {
+            entry.OwnerId = ownerId;
+            entry.Author = author;
+        }
     }
 
     public override Task InitializingAsync(InitializingContext<McpResource> context, CancellationToken cancellationToken = default)
@@ -39,7 +46,7 @@ internal sealed class McpResourceHandler : CatalogEntryHandlerBase<McpResource>
 
     public override Task UpdatingAsync(UpdatingContext<McpResource> context, CancellationToken cancellationToken = default)
     {
-        context.Model.ModifiedUtc = _clock.UtcNow;
+        StampModified(context.Model);
 
         return PopulateAsync(context.Model, context.Data, false);
     }
@@ -73,15 +80,7 @@ internal sealed class McpResourceHandler : CatalogEntryHandlerBase<McpResource>
     {
         if (isNew)
         {
-            entry.CreatedUtc = _clock.UtcNow;
-
-            var user = _httpContextAccessor.HttpContext?.User;
-
-            if (user is not null)
-            {
-                entry.Author = user.Identity.Name;
-                entry.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            }
+            StampCreated(entry);
         }
 
         var displayText = data?[nameof(McpResource.DisplayText)]?.ToString();

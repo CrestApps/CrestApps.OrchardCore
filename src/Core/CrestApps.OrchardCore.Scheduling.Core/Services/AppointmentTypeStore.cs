@@ -31,6 +31,18 @@ public sealed class AppointmentTypeStore : DocumentCatalog<AppointmentType, Appo
     }
 
     /// <summary>
+    /// Returns a page of the records ordered by name, and how many there are in all, paged and counted in SQL.
+    /// </summary>
+    /// <param name="skip">How many records to skip.</param>
+    /// <param name="take">How many records to return.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>How many records there are, and the page of them.</returns>
+    public Task<(int Count, IReadOnlyList<AppointmentType> Items)> PageAsync(int skip, int take, CancellationToken cancellationToken = default)
+    {
+        return PageByNameAsync(index => index.Name, search: null, skip, take, cancellationToken);
+    }
+
+    /// <summary>
     /// Finds an appointment type by the address of its booking page.
     /// </summary>
     /// <param name="slug">The address.</param>

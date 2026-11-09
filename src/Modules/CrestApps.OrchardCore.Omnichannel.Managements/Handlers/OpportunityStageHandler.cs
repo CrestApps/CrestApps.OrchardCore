@@ -1,21 +1,17 @@
 using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
 using System.Text.Json.Nodes;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Omnichannel.Managements.Deployments;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 
-internal sealed class OpportunityStageHandler : CatalogEntryHandlerBase<OpportunityStage>
+internal sealed class OpportunityStageHandler : AuditedCatalogEntryHandlerBase<OpportunityStage>
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IClock _clock;
-
     internal readonly IStringLocalizer S;
 
     /// <summary>
@@ -28,20 +24,9 @@ internal sealed class OpportunityStageHandler : CatalogEntryHandlerBase<Opportun
         IHttpContextAccessor httpContextAccessor,
         IClock clock,
         IStringLocalizer<OpportunityStageHandler> stringLocalizer)
+        : base(httpContextAccessor, clock)
     {
-        _httpContextAccessor = httpContextAccessor;
-        _clock = clock;
         S = stringLocalizer;
-    }
-
-    public override Task InitializingAsync(InitializingContext<OpportunityStage> context, CancellationToken cancellationToken = default)
-        => PopulateAsync(context.Model, context.Data);
-
-    public override Task UpdatingAsync(UpdatingContext<OpportunityStage> context, CancellationToken cancellationToken = default)
-    {
-        context.Model.ModifiedUtc = _clock.UtcNow;
-
-        return PopulateAsync(context.Model, context.Data);
     }
 
     public override Task ValidatingAsync(ValidatingContext<OpportunityStage> context, CancellationToken cancellationToken = default)
@@ -64,24 +49,15 @@ internal sealed class OpportunityStageHandler : CatalogEntryHandlerBase<Opportun
         return Task.CompletedTask;
     }
 
-    public override Task InitializedAsync(InitializedContext<OpportunityStage> context, CancellationToken cancellationToken = default)
+    /// <inheritdoc/>
+    protected override void Populate(OpportunityStage model, JsonNode data)
     {
-        context.Model.CreatedUtc = _clock.UtcNow;
+        base.Populate(model, data);
 
-        var user = _httpContextAccessor.HttpContext?.User;
-
-        if (user != null)
+        if (data is null)
         {
-            context.Model.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            context.Model.Author = user.Identity.Name;
+            return;
         }
-
-        return Task.CompletedTask;
-    }
-
-    private static Task PopulateAsync(OpportunityStage model, JsonNode data)
-    {
-        OmnichannelDeploymentSerializer.Populate(model, data);
 
         var name = data[nameof(OpportunityStage.Name)]?.GetValue<string>()?.Trim();
 
@@ -101,7 +77,5 @@ internal sealed class OpportunityStageHandler : CatalogEntryHandlerBase<Opportun
                 model.Properties[key] = value;
             }
         }
-
-        return Task.CompletedTask;
     }
 }

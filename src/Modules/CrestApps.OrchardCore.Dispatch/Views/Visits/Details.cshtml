@@ -6,7 +6,7 @@
     var zone = Model.TimeZoneId;
     var address = workOrder?.ServiceAddress;
     var canAssign = Model.CanManage && VisitStatusRules.CanAssign(visit.Status);
-    var startValue = visit.StartUtc is { } start ? CrestApps.OrchardCore.Calendars.Core.CalendarTime.ToLocal(start, zone).ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture) : Model.Day + "T09:00";
+    var startValue = visit.StartUtc is { } start ? CrestApps.OrchardCore.Calendars.CalendarTime.ToLocal(start, zone).ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture) : Model.Day + "T09:00";
     var statusClass = visit.Status switch { VisitStatus.Unscheduled => "text-bg-warning", VisitStatus.Canceled or VisitStatus.Incomplete => "text-bg-secondary", VisitStatus.Completed => "text-bg-success", _ => "text-bg-primary" };
 }
 <style asp-name="bootstrap-select"></style>
@@ -305,6 +305,11 @@ else if (Model.CanManage && Model.NextStatuses.Count > 0)
             });
         </script>
     </div></div>
+}
+
+@if (Model.Panels is not null)
+{
+    @await DisplayAsync(Model.Panels)
 }
 
 <div class="row g-3">

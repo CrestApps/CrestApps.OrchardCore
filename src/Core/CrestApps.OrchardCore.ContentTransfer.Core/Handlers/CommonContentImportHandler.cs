@@ -19,7 +19,7 @@ public sealed class CommonContentImportHandler : ContentImportHandlerBase, ICont
         S = stringLocalizer;
     }
 
-    public IReadOnlyCollection<ImportColumn> GetColumns(ImportContentContext context)
+    public Task<IReadOnlyCollection<ImportColumn>> GetColumnsAsync(ImportContentContext context)
     {
         var columns = new List<ImportColumn>
         {
@@ -52,7 +52,7 @@ public sealed class CommonContentImportHandler : ContentImportHandlerBase, ICont
             });
         }
 
-        return columns;
+        return Task.FromResult<IReadOnlyCollection<ImportColumn>>(columns);
     }
 
     public Task ImportAsync(ContentImportContext context)

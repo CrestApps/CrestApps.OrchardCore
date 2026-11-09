@@ -58,6 +58,12 @@ public sealed class ReportQueryLimits
     public int MaxConcurrentRuns { get; set; } = 4;
 
     /// <summary>
+    /// Gets or sets the most rows of a data set one report run keeps in memory to share between its queries that read
+    /// the same data set with the same filters, or 0 to read the data set once for each query.
+    /// </summary>
+    public int MaxSharedReadRows { get; set; } = 50_000;
+
+    /// <summary>
     /// Copies the limits, so a run can change its copy.
     /// </summary>
     /// <returns>The copy.</returns>

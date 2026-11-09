@@ -17,6 +17,9 @@ public sealed class AppointmentStore : DocumentCatalog<Appointment, AppointmentI
     /// </summary>
     public static readonly AppointmentStatus[] ActiveStatuses = [AppointmentStatus.Held, AppointmentStatus.Requested, AppointmentStatus.Confirmed, AppointmentStatus.Completed];
 
+    // A privacy request reads at most this many appointments for each identifier of the person.
+    private const int MaxAppointmentsPerPerson = 1000;
+
     // A customer and a staff member changing the same appointment must not overwrite each other.
     protected override bool CheckConcurrency => true;
 
@@ -159,6 +162,63 @@ public sealed class AppointmentStore : DocumentCatalog<Appointment, AppointmentI
 
         return await LoadedAsync(appointments.DistinctBy(appointment => appointment.ItemId).OrderBy(appointment => appointment.StartUtc).Take(50));
     }
+
+    /// <summary>
+    /// Lists every appointment of a person, past and future, whatever its state, for a privacy request.
+    /// </summary>
+    /// <param name="userIds">The person's user IDs.</param>
+    /// <param name="emails">The person's emails.</param>
+    /// <param name="phoneNumbers">The person's phone numbers, as they were given.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The person's appointments, oldest first.</returns>
+    public async Task<IReadOnlyList<Appointment>> ListForPersonAsync(
+        IEnumerable<string> userIds,
+        IEnumerable<string> emails,
+        IEnumerable<string> phoneNumbers,
+        CancellationToken cancellationToken = default)
+    {
+        var users = Distinct(userIds, value => value);
+        var addresses = Distinct(emails, value => value.Trim().ToLowerInvariant());
+        var phones = Distinct(phoneNumbers, value => value.Trim());
+        var found = new Dictionary<string, Appointment>(StringComparer.Ordinal);
+
+        // One query per kind of identifier: an "a or b or c" filter over optional lists does not translate well to SQL.
+        if (users.Length > 0)
+        {
+            AddAll(found, await ListPersonAsync(index => index.UserId.IsIn(users), cancellationToken));
+        }
+
+        if (addresses.Length > 0)
+        {
+            AddAll(found, await ListPersonAsync(index => index.CustomerEmail.IsIn(addresses), cancellationToken));
+        }
+
+        if (phones.Length > 0)
+        {
+            AddAll(found, await ListPersonAsync(index => index.CustomerPhone.IsIn(phones), cancellationToken));
+        }
+
+        return [.. found.Values.OrderBy(appointment => appointment.StartUtc)];
+    }
+
+    private async Task<IEnumerable<Appointment>> ListPersonAsync(Expression<Func<AppointmentIndex, bool>> predicate, CancellationToken cancellationToken)
+    {
+        return await Session.Query<Appointment, AppointmentIndex>(predicate, collection: CollectionName)
+            .OrderBy(index => index.StartUtc)
+            .Take(MaxAppointmentsPerPerson)
+            .ListAsync(cancellationToken);
+    }
+
+    private static void AddAll(Dictionary<string, Appointment> found, IEnumerable<Appointment> appointments)
+    {
+        foreach (var appointment in appointments)
+        {
+            found.TryAdd(appointment.ItemId, appointment);
+        }
+    }
+
+    private static string[] Distinct(IEnumerable<string> values, Func<string, string> normalize)
+        => [.. (values ?? []).Where(value => !string.IsNullOrWhiteSpace(value)).Select(normalize).Distinct(StringComparer.Ordinal)];
 
     private async Task<IEnumerable<Appointment>> ListMatchingAsync(Expression<Func<AppointmentIndex, bool>> predicate)
     {

@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.SignalR.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Security.Permissions;
@@ -29,6 +30,7 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
     private readonly IContactCenterFeatureWorkManager _workManager;
     private readonly ContactCenterHubConnectionRegistry _connectionRegistry;
     private readonly string _tenantName;
+    private readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterHub"/> class.
@@ -38,18 +40,21 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
     /// <param name="workManager">The feature work manager.</param>
     /// <param name="connectionRegistry">The tenant-local hub connection registry.</param>
     /// <param name="shellSettings">The current Orchard shell settings.</param>
+    /// <param name="stringLocalizer">The localizer for the errors shown to agents.</param>
     public ContactCenterHub(
         ILogger<ContactCenterHub> logger,
         IContactCenterScopeExecutor scopeExecutor,
         IContactCenterFeatureWorkManager workManager,
         ContactCenterHubConnectionRegistry connectionRegistry,
-        ShellSettings shellSettings)
+        ShellSettings shellSettings,
+        IStringLocalizer<ContactCenterHub> stringLocalizer)
     {
         _logger = logger;
         _scopeExecutor = scopeExecutor;
         _workManager = workManager;
         _connectionRegistry = connectionRegistry;
         _tenantName = shellSettings.Name;
+        S = stringLocalizer;
     }
 
     /// <summary>
@@ -129,6 +134,23 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
 
         await _scopeExecutor.ExecuteAsync<ContactCenterHubScopeContext>(async services =>
         {
+            // The agent's profile is read once for the whole registration. Both the agent and the supervisor steps
+            // need it, and reading it again on the same unit of work only repeated the query: the session's identity
+            // map hands back the instance it already holds, so the second read could never see newer data.
+            AgentProfile profile = null;
+            var profileLoaded = false;
+
+            async Task<AgentProfile> GetProfileAsync()
+            {
+                if (!profileLoaded)
+                {
+                    profile = await services.AgentManager.FindByUserIdAsync(userId, HubConnectionWork.MustComplete);
+                    profileLoaded = true;
+                }
+
+                return profile;
+            }
+
             if (await AuthorizeAsync(services, ContactCenterPermissions.SignIntoQueues))
             {
                 authorized = true;
@@ -150,8 +172,10 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
                         await Groups.AddToGroupAsync(Context.ConnectionId, GetQueueGroup(queueId), HubConnectionWork.MustComplete);
                     }
 
-                    var snapshot = await services.SessionService.BuildSnapshotAsync(userId, HubConnectionWork.MustComplete);
-                    await UpdateQueueGroupsAsync(session.QueueIds, snapshot.QueueIds);
+                    // Reconcile the groups with the queues the profile entitles the agent to. Only the profile decides
+                    // them, so the full desktop snapshot this used to build (a second profile read plus a session
+                    // read) is not needed: the client asks for the snapshot itself as soon as it connects.
+                    await UpdateQueueGroupsAsync(session.QueueIds, GetEntitledQueueIds(await GetProfileAsync()));
                 }
                 catch (Exception ex)
                 {
@@ -175,9 +199,7 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
                 // One group for every supervisor used to carry every queue's events -- agents' names and states,
                 // offers, recordings, call quality -- so a supervisor limited to one queue heard about all of them.
                 // Each queue now has a supervisor group of its own, joined only for the queues this one oversees.
-                var supervisor = await services.AgentManager.FindByUserIdAsync(userId, HubConnectionWork.MustComplete);
-
-                foreach (var queueId in GetSupervisedQueueIds(supervisor))
+                foreach (var queueId in GetSupervisedQueueIds(await GetProfileAsync()))
                 {
                     await Groups.AddToGroupAsync(
                         Context.ConnectionId,
@@ -380,7 +402,7 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
 
             if (normalizedQueueIds.Count == 0 && normalizedCampaignIds.Count == 0)
             {
-                throw new HubException("Select at least one queue or campaign before signing in.");
+                throw new HubException(S["Select at least one queue or campaign before signing in."].Value);
             }
 
             try
@@ -448,7 +470,7 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
 
             if (normalizedQueueIds.Count == 0 && normalizedCampaignIds.Count == 0)
             {
-                throw new HubException("Use sign out to leave the final queue or campaign.");
+                throw new HubException(S["Use sign out to leave the final queue or campaign."].Value);
             }
 
             AgentProfile profile;
@@ -468,7 +490,7 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
 
             if (profile is null)
             {
-                throw new HubException("Sign in before changing queue or campaign memberships.");
+                throw new HubException(S["Sign in before changing queue or campaign memberships."].Value);
             }
 
             snapshot = await services.SessionService.BuildSnapshotAsync(userId, HubConnectionWork.MustComplete);
@@ -589,7 +611,7 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
 
         if (string.IsNullOrEmpty(userId))
         {
-            throw new HubException("The current connection is not associated with an authenticated Contact Center user.");
+            throw new HubException(S["The current connection is not associated with an authenticated Contact Center user."].Value);
         }
 
         return userId;
@@ -601,8 +623,17 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
     {
         if (!await AuthorizeAsync(services, permission))
         {
-            throw new HubException($"The current user is not authorized for '{permission.Name}'.");
+            throw new HubException(S["The current user is not authorized for '{0}'.", permission.Name].Value);
         }
+    }
+
+    // The queues an agent's connection belongs to: the ones they are signed in to that they are also entitled to, as the
+    // desktop snapshot reports them. An agent with no profile belongs to none.
+    internal static IList<string> GetEntitledQueueIds(AgentProfile profile)
+    {
+        return profile is null
+            ? []
+            : AgentEntitlementUtilities.FilterEntitled(profile.QueueIds, profile.AllowedQueueIds);
     }
 
     private async Task UpdateQueueGroupsAsync(IEnumerable<string> previousQueueIds, IEnumerable<string> currentQueueIds)

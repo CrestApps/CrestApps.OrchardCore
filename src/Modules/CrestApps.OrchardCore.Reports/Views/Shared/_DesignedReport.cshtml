@@ -13,7 +13,7 @@
     <p class="text-muted">@Model.Design.Description</p>
 }
 
-<form method="get" action="@Model.FormAction" class="designed-report" data-report-interactive="@(interactive ? "true" : null)">
+<form method="get" action="@Model.FormAction" class="designed-report" data-report-interactive="@(interactive ? "true" : null)" data-report-refresh-failed-text="@(interactive ? T["This visual could not be filtered. Reload the page to try again."].Value : null)">
     <input type="hidden" name="@ReportFilterValueBinder.AppliedField" value="1" />
     @foreach (var (name, value) in Model.HiddenFields)
     {

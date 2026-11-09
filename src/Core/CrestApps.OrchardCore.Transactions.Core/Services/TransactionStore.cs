@@ -14,8 +14,6 @@ namespace CrestApps.OrchardCore.Transactions.Core.Services;
 /// </summary>
 public sealed class TransactionStore : DocumentCatalog<Transaction, TransactionIndex>, ITransactionStore
 {
-    private readonly IClock _clock;
-
     /// <summary>
     /// Enables YesSql document-version concurrency checks so two nodes settling or updating the same
     /// transaction can never silently overwrite each other; a conflicting write fails instead of losing an
@@ -31,10 +29,9 @@ public sealed class TransactionStore : DocumentCatalog<Transaction, TransactionI
     public TransactionStore(
         ISession session,
         IClock clock)
-        : base(session)
+        : base(session, clock)
     {
         CollectionName = TransactionsConstants.CollectionName;
-        _clock = clock;
     }
 
     /// <inheritdoc/>
@@ -168,20 +165,5 @@ public sealed class TransactionStore : DocumentCatalog<Transaction, TransactionI
             .ListAsync(cancellationToken);
 
         return records.ToArray();
-    }
-
-    /// <inheritdoc/>
-    protected override ValueTask SavingAsync(Transaction record)
-    {
-        var now = _clock.UtcNow;
-
-        if (record.CreatedUtc == default)
-        {
-            record.CreatedUtc = now;
-        }
-
-        record.UpdatedUtc = now;
-
-        return ValueTask.CompletedTask;
     }
 }

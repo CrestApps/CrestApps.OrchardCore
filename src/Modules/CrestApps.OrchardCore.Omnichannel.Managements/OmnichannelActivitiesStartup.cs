@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core.Conversations;
+using CrestApps.OrchardCore.BusinessHours.Core;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
@@ -13,6 +14,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
+using CrestApps.OrchardCore.PersonalData.Core;
 using Fluid;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -70,15 +72,22 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AutomatedActivitiesProcessorBackgroundTask>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ActivityDialerProfileIndexBackfillBackgroundTask>());
 
-        // Shared with the Contact Center's outbound screening, so the loader and the dialler answer "may we reach
-        // them?" the same way. Whichever feature registers it first provides it.
-        services.TryAddScoped<IContactOptOutResolver, ContactOptOutResolver>();
+        // The one registration of the opt-out resolver. It lives in this feature, beside the contact phone index it
+        // reads, and every consumer (the loader, the dialer and manual screener, SMS automation, the messaging
+        // workspace) depends on this feature, so all of them answer "may we reach them?" the same way.
+        services.AddScoped<IContactOptOutResolver, ContactOptOutResolver>();
+
+        // The consent service answers "may we reach them?" for every channel; the contacts' flags and the address
+        // opt-outs are its CRM source.
+        services.AddConsentSource<ContactPreferencesConsentSource>();
 
         // The load editor and the automated sends take the business-hours gate as a plain dependency, and the
-        // contract is declared here, in Omnichannel, so its always-open default is registered here too. The business
-        // hours feature replaces it with the calendar-backed gate. It used to be registered by the Contact Center
-        // feature only, so a tenant without Contact Center could not open Load Activities.
-        services.TryAddScoped<IBusinessHoursGate, AlwaysOpenBusinessHoursGate>();
+        // contract is declared here, in Omnichannel, so it is registered here too. It reads the shared business hours:
+        // with no schedule source every moment is open, and a feature that keeps calendars (the Contact Center business
+        // hours) adds a source. It used to be registered by the Contact Center feature only, so a tenant without
+        // Contact Center could not open Load Activities.
+        services.AddOpenHours();
+        services.TryAddScoped<IBusinessHoursGate, OpenHoursBusinessHoursGate>();
 
         // Which content types are contacts and which are leads, for channels that match callers and search
         // contacts without the administration screens. Whichever feature registers it first provides it.
@@ -126,6 +135,12 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
             .AddIndexProvider<NotInServiceNumberIndexProvider>()
             .AddDataMigration<NotInServiceNumberIndexMigrations>();
 
+        // Opt-outs recorded against an address no contact holds (a STOP from an unknown number), read through the
+        // opt-out resolver by every send path.
+        services
+            .AddIndexProvider<ContactAddressOptOutIndexProvider>()
+            .AddDataMigration<ContactAddressOptOutIndexMigrations>();
+
         services.AddContentPart<OmnichannelContactPart>();
         services.AddContentPart<OmnichannelSubjectPart>();
         services.AddScoped<OmnichannelContactDefinitionService>();
@@ -154,12 +169,6 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
         services.AddScoped<IOmnichannelAIConversationStarting, OmnichannelAIConversationStarting>();
         services.TryAddScoped<IAIConversationStartingService, DefaultAIConversationStartingService>();
         services.TryAddScoped<IAIConversationTurnNotifier, AIConversationTurnNotifier>();
-        services.Configure<TemplateOptions>(options =>
-        {
-            options.MemberAccessStrategy.Register<OmnichannelActivity>();
-            options.MemberAccessStrategy.Register<OmnichannelCampaign>();
-            options.MemberAccessStrategy.Register<OmnichannelChannelEndpoint>();
-        });
 
         services.Configure<SubjectActionOptions>(options =>
         {
@@ -251,6 +260,11 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
             .AddIndexProvider<OmnichannelContactIndexProvider>()
             .AddIndexProvider<OmnichannelContactPhoneNumberIndexProvider>()
             .AddDataMigration<OmnichannelContactsMigrations>();
+
+        // Privacy requests export and anonymize a person's contacts, leads and activities.
+        services.AddScoped<CrmPersonalDataContacts>();
+        services.AddPersonalDataContributor<CrmActivityPersonalDataContributor>();
+        services.AddPersonalDataContributor<CrmContactPersonalDataContributor>();
 
         // Every lookup by phone number goes through this, so it finds a record by any of its numbers.
         services.AddScoped<IOmnichannelContactPhoneLookup, OmnichannelContactPhoneLookup>();

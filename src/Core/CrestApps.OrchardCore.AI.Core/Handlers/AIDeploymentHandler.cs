@@ -1,13 +1,15 @@
 using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
+using System.Text.Json.Settings;
 using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Connections;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Core.Handlers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -18,12 +20,17 @@ namespace CrestApps.OrchardCore.AI.Core.Handlers;
 /// <summary>
 /// Handles catalog lifecycle events for <see cref="AIDeployment"/> entries, including initialization, validation, and population from JSON data.
 /// </summary>
-public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
+public sealed class AIDeploymentHandler : CatalogEntryAuditHandlerBase<AIDeployment>
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
+    // Recipes are written by hand, so the pricing section is read without regard to case and accepts numbers as text.
+    private static readonly JsonSerializerOptions _pricingSerializerOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        NumberHandling = JsonNumberHandling.AllowReadingFromString,
+    };
+
     private readonly IAIProviderConnectionStore _connectionStore;
     private readonly AIOptions _aiOptions;
-    private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
 
@@ -41,12 +48,22 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
         IOptions<AIOptions> aiOptions,
         IClock clock,
         IStringLocalizer<AIDeploymentHandler> stringLocalizer)
+        : base(httpContextAccessor, clock)
     {
-        _httpContextAccessor = httpContextAccessor;
         _connectionStore = connectionsCatalog;
         _aiOptions = aiOptions.Value;
-        _clock = clock;
         S = stringLocalizer;
+    }
+
+    protected override void SetCreated(AIDeployment entry, DateTime createdUtc, string ownerId, string author, bool hasUser)
+    {
+        entry.CreatedUtc = createdUtc;
+
+        if (hasUser)
+        {
+            entry.OwnerId = ownerId;
+            entry.Author = author;
+        }
     }
 
     public override Task InitializingAsync(InitializingContext<AIDeployment> context, CancellationToken cancellationToken = default)
@@ -54,7 +71,7 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
 
     public override Task UpdatingAsync(UpdatingContext<AIDeployment> context, CancellationToken cancellationToken = default)
     {
-        context.Model.ModifiedUtc = _clock.UtcNow;
+        StampModified(context.Model);
 
         return PopulateAsync(context.Model, context.Data);
     }
@@ -115,21 +132,19 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
 
     public override Task InitializedAsync(InitializedContext<AIDeployment> context, CancellationToken cancellationToken = default)
     {
-        context.Model.CreatedUtc = _clock.UtcNow;
-
-        var user = _httpContextAccessor.HttpContext?.User;
-
-        if (user != null)
-        {
-            context.Model.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            context.Model.Author = user.Identity.Name;
-        }
+        StampCreated(context.Model);
 
         return Task.CompletedTask;
     }
 
     private static Task PopulateAsync(AIDeployment deployment, JsonNode data)
     {
+        // An update that carries no payload, such as one made in code, changes nothing here.
+        if (data is null)
+        {
+            return Task.CompletedTask;
+        }
+
         var name = data[nameof(AIDeployment.Name)]?.GetValue<string>()?.Trim();
 
         if (!string.IsNullOrEmpty(name))
@@ -174,9 +189,16 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
             deployment.Properties ??= new Dictionary<string, object>();
 
             var currentJson = JsonSerializer.SerializeToNode(deployment.Properties)?.AsObject() ?? [];
-            currentJson.Merge(properties);
+            // A list in the payload replaces the stored one. Concatenating them would repeat every capability each
+            // time the same deployment is imported again.
+            currentJson.Merge(properties, new JsonMergeSettings
+            {
+                MergeArrayHandling = MergeArrayHandling.Replace,
+            });
             deployment.Properties = JsonSerializer.Deserialize<Dictionary<string, object>>(currentJson) ?? [];
         }
+
+        PopulatePricing(deployment, data);
 
         // Runs after the properties merge so the already-declared features are visible to the rule. This is
         // the recipe, configuration, and API half of the read-time normalization; the store deserialization
@@ -186,6 +208,43 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
         LegacyAIDeploymentCapabilities.Normalize(deployment, legacyPurposes);
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Reads the deployment's prices from the <c>Pricing</c> section a recipe or API payload carries. Prices given
+    /// under <c>Properties.AIDeploymentPricing</c> are read the same way, so they are normalized too. A <c>Pricing</c>
+    /// section set to <see langword="null"/> removes the deployment's prices; one that is left out keeps them.
+    /// </summary>
+    private static void PopulatePricing(AIDeployment deployment, JsonNode data)
+    {
+        if (data is not JsonObject payload)
+        {
+            return;
+        }
+
+        JsonNode pricingNode;
+
+        if (payload.TryGetPropertyValue("Pricing", out pricingNode))
+        {
+            if (pricingNode is null)
+            {
+                deployment.SetPricing(null, []);
+
+                return;
+            }
+        }
+        else if (payload[nameof(AIDeployment.Properties)]?[nameof(AIDeploymentPricing)] is not { } propertiesPricing)
+        {
+            return;
+        }
+        else
+        {
+            pricingNode = propertiesPricing;
+        }
+
+        var pricing = pricingNode.Deserialize<AIDeploymentPricing>(_pricingSerializerOptions);
+
+        deployment.SetPricing(pricing?.Currency, pricing?.Prices);
     }
 
     private static void PopulateContainedConnectionAliases(AIDeployment deployment, JsonNode data)

@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Bookings.Models;
+using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Services;
@@ -97,7 +98,7 @@ public sealed class BookingEmailSender
         {
             Kind = EmailKind,
             To = to,
-            Order = order,
+            Models = OrderEmailModels.For(order),
             Culture = order?.Culture,
             Reference = order?.OrderNumber,
         }, _ => BuildAsync(name, describe), cancellationToken);

@@ -42,7 +42,7 @@ internal sealed class ScheduleNoticeRule : LaborRuleBase
 
             if (notice < days)
             {
-                var date = DateOnly.FromDateTime(Calendars.Core.CalendarTime.ToLocal(starts, context.TimeZoneId));
+                var date = DateOnly.FromDateTime(Calendars.CalendarTime.ToLocal(starts, context.TimeZoneId));
 
                 context.Report(this, instance, S["The change to the shift of {0} on {1} comes with {2} days' notice; {3} are needed.", context.Worker.DisplayName, Day(context, date), Format(Math.Max(0, Math.Round(notice, 1))), Format(days)], date, [change.ShiftKey]);
             }

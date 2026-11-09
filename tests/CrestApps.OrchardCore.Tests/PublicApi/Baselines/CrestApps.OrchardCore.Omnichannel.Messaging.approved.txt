@@ -4,7 +4,8 @@
         "CrestApps.OrchardCore.Omnichannel.ChannelEndpoints",
         "CrestApps.OrchardCore.ContactCenter.AgentServices",
         "CrestApps.OrchardCore.ContactCenter.EntryPoints",
-        "OrchardCore.SignalR"}, Description=@"Adds the human messaging workspace: a customer-centric inbox where each customer's conversations on every enabled channel sit side by side, routing to agents and queues through inbound entry points, templates, broadcasts, and its own SignalR hub for real-time messaging. It carries no channel of its own — enable a channel feature such as SMS Messaging Channel to send and receive. Reuses only the shared Contact Center agent-profile services for operator identity (via the dependency-only Agent Services feature) and the inbound entry points, which say where each number's messages go.", Id="CrestApps.OrchardCore.Omnichannel.Messaging", Name="Omnichannel Messaging Workspace")]
+        "OrchardCore.SignalR",
+        "CrestApps.OrchardCore.Outreach"}, Description=@"Adds the human messaging workspace: a customer-centric inbox where each customer's conversations on every enabled channel sit side by side, routing to agents and queues through inbound entry points, templates, broadcasts, and its own SignalR hub for real-time messaging. It carries no channel of its own — enable a channel feature such as SMS Messaging Channel to send and receive. Reuses only the shared Contact Center agent-profile services for operator identity (via the dependency-only Agent Services feature) and the inbound entry points, which say where each number's messages go.", Id="CrestApps.OrchardCore.Omnichannel.Messaging", Name="Omnichannel Messaging Workspace")]
 [assembly: OrchardCore.Modules.Manifest.Feature(Category="Contact Center", Dependencies=new string[] {
         "CrestApps.OrchardCore.Omnichannel.Messaging",
         "CrestApps.OrchardCore.ContactCenter.Queues"}, Description="Push-assigns new department conversations, on every messaging channel, to the lea" +
@@ -15,8 +16,8 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.BackgroundTasks
 {
-    [OrchardCore.BackgroundTasks.BackgroundTask(Description="Sends queued broadcasts to their recipients as individual 1:1 threads, resuming s" +
-        "afely after a restart.", LockExpiration=300000, LockTimeout=5000, Schedule="* * * * *", Title="Messaging Broadcast Fan-out")]
+    [OrchardCore.BackgroundTasks.BackgroundTask(Description="Starts sending queued broadcasts through the outreach engine, each recipient in a" +
+        "n individual 1:1 thread.", LockExpiration=300000, LockTimeout=5000, Schedule="* * * * *", Title="Messaging Broadcast Fan-out")]
     public sealed class MessagingBroadcastBackgroundTask : OrchardCore.BackgroundTasks.IBackgroundTask
     {
         public MessagingBroadcastBackgroundTask() { }
@@ -45,6 +46,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.BackgroundTasks
 }
 namespace CrestApps.OrchardCore.Omnichannel.Messaging
 {
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Messaging")]
+    public sealed class BroadcastsRecipesStartup : OrchardCore.Modules.StartupBase
+    {
+        public BroadcastsRecipesStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Messaging")]
     [OrchardCore.Modules.RequireFeatures(new string[] {
             "OrchardCore.Deployment"})]
@@ -222,6 +229,15 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Deployments
 }
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Deployments.Steps
 {
+    public sealed class MessagingBroadcastsDeploymentStep : OrchardCore.Deployment.DeploymentStep
+    {
+        public MessagingBroadcastsDeploymentStep() { }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public override OrchardCore.Localization.LocalizationSource Category { get; }
+        public override string Name { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public override OrchardCore.Localization.LocalizationSource Title { get; }
+    }
     public sealed class OmnichannelMessageTemplateDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public OmnichannelMessageTemplateDeploymentStep() { }
@@ -352,15 +368,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Services
     {
         public static string For(string key) { }
         public static string Initials(string name) { }
-    }
-    public sealed class LocalEncryptedMessagingAttachmentStore : CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.IMessagingAttachmentStore
-    {
-        public const string FolderName = "MessagingAttachments";
-        public const string ProtectorPurpose = "CrestApps.Omnichannel.Messaging.Attachments";
-        public LocalEncryptedMessagingAttachmentStore(OrchardCore.FileStorage.IFileStore fileStore, Microsoft.AspNetCore.DataProtection.IDataProtectionProvider dataProtectionProvider) { }
-        public System.Threading.Tasks.Task<bool> DeleteAsync(string attachmentId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<byte[]> ReadAsync(string attachmentId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task StoreAsync(string attachmentId, System.ReadOnlyMemory<byte> content, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class MessagingAdminMenu : OrchardCore.Navigation.AdminNavigationProvider
     {

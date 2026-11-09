@@ -1,5 +1,5 @@
+using CrestApps.OrchardCore.Users;
 using CrestApps.OrchardCore;
-using CrestApps.OrchardCore.Users.Core;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -24,7 +24,7 @@ using OrchardCore.Modules.Manifest;
     Id = UsersConstants.Feature.DisplayName,
     Dependencies =
     [
-        "OrchardCore.ContentFields",
+        OrchardCoreFeatureIds.ContentFields,
         UsersConstants.Feature.Area,
     ]
 )]
@@ -36,8 +36,8 @@ using OrchardCore.Modules.Manifest;
     Id = UsersConstants.Feature.EmailCodeSignIn,
     Dependencies =
     [
-        "OrchardCore.Users",
-        "OrchardCore.Email",
+        OrchardCoreFeatureIds.Users,
+        OrchardCoreFeatureIds.Email,
         UsersConstants.Feature.Area,
     ]
 )]
@@ -49,7 +49,7 @@ using OrchardCore.Modules.Manifest;
     Id = UsersConstants.Feature.Avatars,
     Dependencies =
     [
-        "OrchardCore.Media",
+        OrchardCoreFeatureIds.Media,
         UsersConstants.Feature.Area,
     ]
 )]

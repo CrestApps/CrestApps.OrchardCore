@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Outreach;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.Routing;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.Routers;
@@ -89,6 +90,13 @@ public sealed class Startup : StartupBase
             .AddScoped<IMessagingBroadcastManager, MessagingBroadcastManager>()
             .AddScoped<IMessagingBroadcastService, MessagingBroadcastService>()
             .AddScoped<ICatalogEntryHandler<MessagingBroadcast>, MessagingBroadcastHandler>();
+
+        // Broadcasts are sent by the outreach engine: their recipient list is the audience, the messaging channels are
+        // the sender, the engine skips recipients who opted out of the channel, and the run's progress is copied back onto the broadcast.
+        services
+            .AddOutreachAudienceSource<MessagingBroadcastAudienceSource>()
+            .AddOutreachChannelSender<MessagingOutreachChannelSender>()
+            .AddOutreachRunObserver<MessagingBroadcastRunObserver>();
 
         // Two-way send, through whichever channel the conversation runs on.
         services.AddScoped<IMessagingConversationService, MessagingConversationService>();

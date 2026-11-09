@@ -170,6 +170,7 @@ public sealed class InboundCallSimulatorService
             }
             catch (OperationCanceledException) when (reconciliationCancellation.IsCancellationRequested)
             {
+                // The reconciliation loop was cancelled just above; that is how it stops.
             }
         }
     }

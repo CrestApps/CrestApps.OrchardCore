@@ -1,0 +1,63 @@
+@using CrestApps.OrchardCore.Commerce.StoreProfile.ViewModels
+
+@model StoreProfileSettingsViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["The store"]</div>
+    <div class="card-body">
+        <p class="text-body-secondary">@T["Who the store is. Receipts, the address parcels ship from and the tax origin use these when their own settings are empty."]</p>
+        <div class="ocat-wrapper" asp-validation-class-for="Name">
+            <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+            <div class="ocat-end">
+                <input asp-for="Name" class="form-control" maxlength="200" placeholder="@Model.SiteName" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+                <span class="hint">@T["The business's legal or trading name. Empty uses the site's name."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="LogoUrl">
+            <label asp-for="LogoUrl" class="ocat-label">@T["Logo"]</label>
+            <div class="ocat-end">
+                <input asp-for="LogoUrl" class="form-control" maxlength="1000" placeholder="/media/logo.png" />
+                <span asp-validation-for="LogoUrl" class="text-danger"></span>
+                <span class="hint">@T["The logo's address, such as a media library path or a full URL."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="TaxId">
+            <label asp-for="TaxId" class="ocat-label">@T["Tax ID"]</label>
+            <div class="ocat-end">
+                <input asp-for="TaxId" class="form-control" maxlength="100" />
+                <span asp-validation-for="TaxId" class="text-danger"></span>
+                <span class="hint">@T["Such as a VAT, GST or EIN number."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["How customers reach the store"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="Email">
+            <label asp-for="Email" class="ocat-label">@T["Email"]</label>
+            <div class="ocat-end">
+                <input asp-for="Email" type="email" class="form-control" maxlength="254" />
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Phone">
+            <label asp-for="Phone" class="ocat-label">@T["Phone"]</label>
+            <div class="ocat-end">
+                <input asp-for="Phone" type="tel" class="form-control" maxlength="50" />
+                <span asp-validation-for="Phone" class="text-danger"></span>
+                <span class="hint">@T["Kept in international form when it can be read, in the country of the address below."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Address"]</div>
+    <div class="card-body">
+        @await DisplayAsync(Model.AddressEditor)
+        <span class="hint">@T["Optional. Where the store is: parcels ship from it and taxes are worked out from it unless the shipping and tax settings name another address. Leave it blank to remove it."]</span>
+    </div>
+</div>

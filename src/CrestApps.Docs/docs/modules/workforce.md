@@ -74,6 +74,10 @@ The module registers the `Workforce` calendar type with `ManagedByCode()` and cr
 
 The calendars it grants appear in each user's calendar list.
 
+## Team members for other modules
+
+`WorkerTeamMemberProvider` is an `ITeamMemberProvider` (Teams): it gives Teams each worker with a user account as a member of the teams in its team memberships, with the role and dates, read from the membership and worker indexes. Any module reads them through `ITeamMembershipService` without naming Workforce, as Team Calendars do. The team editor shows the team's workers today on a **Members** card, from `WorkforceTeamMembersDisplayDriver`.
+
 ## Shift planning
 
 The shift planning pages are under the **Calendars** menu, after Scheduling's, since what they publish lives on each team's Workforce calendar; `WorkforceCalendarRowDisplayDriver` adds **Shift schedules** to that calendar's actions on Manage Calendars, opening the team's schedules.
@@ -96,7 +100,7 @@ The **Workforce Shift Planning** feature (`CrestApps.OrchardCore.Workforce.Shift
 | Contract | What it does |
 | --- | --- |
 | `IShiftTemplateManager`, `IShiftPatternManager` | Catalog managers with `ListForTeamAsync`. Validation refuses a blank name, a template outside 15 minutes to 24 hours or with segments outside the shift, and a rotation without a team, outside 1 to 12 weeks, or with a day outside its weeks. |
-| `ICoverageService` | Lists, saves (validating the team, the rows and the dates) and deletes requirements. `ComputeAsync(CoverageQuery)` returns `CoverageInterval`s (minimum, target, maximum, scheduled, gap) for a team and days, in intervals of 5 to 240 minutes in the team's time zone, counting a draft scenario's shifts or, without a scenario, the published Shift events. A shift counts for an interval it covers entirely, except during a segment whose activity code doesn't count toward coverage. |
+| `ICoverageService` | Lists, saves (validating the team, the rows and the dates) and deletes requirements. `ComputeAsync(CoverageQuery)` returns `CoverageInterval`s (minimum, target, maximum, scheduled, gap) for a team and days, in intervals of 5 to 240 minutes in the team's time zone (its own, else the nearest parent team's, else the site's, as Dispatch reads it), counting a draft scenario's shifts or, without a scenario, the published Shift events. A shift counts for an interval it covers entirely, except during a segment whose activity code doesn't count toward coverage. |
 | `ISchedulePlanningService` | Creates, lists and deletes periods (only never-published ones can be deleted); saves and deletes draft shifts; `ApplyPatternsAsync` fills a scenario from the team's rotations for active workers on the team that day, skipping days that already have a shift; `CopyFromPeriodAsync` copies another period's primary scenario moved by the days between them; `PublishAsync` publishes; `ListChangesAsync` lists the change log. |
 | `ISchedulePublishHandler` | Called after a publish, in the same request, with the period and the `PlanningPublishResult` (added, updated, removed, open, changes, errors). |
 | `IShiftScheduleSolver` | The solver seam: `Name` and `SolveAsync(ShiftScheduleProblem)`, which returns a `ShiftScheduleProposal` (shifts as worker, day and template, coverage and minimum scores, runtime, timed out) and never writes. `ISchedulePlanningService.AutoScheduleAsync(scenarioId, AutoScheduleOptions)` builds the problem, picks the solver by name (`ShiftPlanningOptions.DefaultSolver`, `Default` for the built-in one), adds the proposed shifts to the scenario and stores the run. Another module registers its own solver with `TryAddEnumerable`. |
@@ -243,7 +247,7 @@ The **Workforce My Work Portal** feature (`CrestApps.OrchardCore.Workforce.Porta
 - `IScheduleChangeHandler`: each change outside a publish or approved time off (`ScheduleChange.Source` is `Publish` or `TimeOff` for those), such as a reassignment, a swap or a filled open shift;
 - time off approved (also by an allotment or the waitlist), declined and canceled;
 - a trade offered to a colleague, and accepted (waiting for a manager), turned down or declined;
-- `ShiftReminderService`, every five minutes (**Shift reminders** background task): each published shift starting within the worker's `ReminderMinutes` (60 by default; 0 turns it off; at most 240), once per shift and start, kept in the distributed cache for two days, so a moved shift is reminded again at its new time (`WorkforceNotificationKind.ShiftReminder`).
+- `ShiftReminderService`, every five minutes (**Shift reminders** background task): each published shift starting within the worker's `ReminderMinutes` (60 by default; 0 turns it off; at most 240), once per shift and start, so a moved shift is reminded again at its new time. A run takes a distributed lock, and each reminder is recorded (`ShiftReminderLog`, kept for two days) and saved before it is sent, so it is never sent twice, after a restart or on another node (`WorkforceNotificationKind.ShiftReminder`).
 
 **Web push.** `IWebPushService` makes the site's VAPID key pair (P-256) the first time `GetPublicKeyAsync` is called and keeps it in the Workforce collection, the private key protected with ASP.NET Core data protection. `SubscribeAsync` adds a device (`WebPushSubscription`, found again by the SHA-256 of its endpoint), `UnsubscribeAsync` removes it. The push channel encrypts each message for the device (`aes128gcm`) and signs it with VAPID through `Lib.Net.Http.WebPush` (MIT), using the `WorkforceWebPush` named `HttpClient`; a device the push service answers 404 or 410 for is deleted. The payload is `{ title, body, url }`.
 
@@ -278,14 +282,33 @@ The `Workforce` step imports activity codes (by id or name), teams (by id or nam
 
 The **Workforce teams and workers** deployment step exports the activity codes and teams, and optionally the workers, without their date of birth.
 
-Each feature has its own settings step, matching records by id or name (pay codes by code) so a second run updates them, and naming the records they refer to: `WorkforceShiftPlanning` (`Templates`, with `teamNames` and each segment's `activityName`), `WorkforceTimeOff` (`Types`; `Policies` with `typeName` and `teamNames`; `Allotments` and `BlackoutPeriods` with `teamName` and `typeNames`), `WorkforceLaborRules` (`RuleSets`) and `WorkforceTimeClock` (`PayPeriods`; `PayCodes`; `Policies` with `payPeriodsName` and `teamNames`, which gives those teams the policy). A name that doesn't exist is reported and its record skipped. The **Workforce settings** deployment step writes the steps of the features that are on.
+Each feature has its own settings step, matching records by id or name (pay codes by code) so a second run updates them, and naming the records they refer to: `WorkforceShiftPlanning` (`Templates`, with `teamNames` and each segment's `activityName`; `Patterns`, the rotations, with `teamName` and each day's `templateName`; `CoverageRequirements`, matched by id or by team and name, with `teamName` and `skillName`), `WorkforceTimeOff` (`Types`; `Policies` with `typeName` and `teamNames`; `Allotments` and `BlackoutPeriods` with `teamName` and `typeNames`), `WorkforceLaborRules` (`RuleSets`, with `teamNames`) and `WorkforceTimeClock` (`PayPeriods`; `PayCodes`; `Policies` with `payPeriodsName` and `teamNames`, which gives those teams the policy; `Kiosks` with `teamName`; `PayrollCsv`, the columns of the payroll CSV file). A name that doesn't exist is reported and its record skipped. The **Workforce settings** deployment step writes the steps of the features that are on.
+
+A kiosk's address is a secret: the deployment step never writes its token, and the recipe step never changes the token of a kiosk it updates. After you import a new kiosk, open it and select **Give it a new address**.
 
 ```json
 {
   "name": "WorkforceTimeClock",
   "PayPeriods": [ { "name": "Every two weeks", "frequency": "Biweekly", "anchorDate": "2026-01-04", "weekStart": "Sunday" } ],
   "PayCodes": [ { "code": "NIGHT", "kind": "ShiftDifferential", "windowStart": "22:00:00", "windowEnd": "06:00:00", "premiumPerHour": 2 } ],
-  "Policies": [ { "name": "Hourly staff", "payPeriodsName": "Every two weeks", "roundingMinutes": 5, "teamNames": [ "Front Desk" ] } ]
+  "Policies": [ { "name": "Hourly staff", "payPeriodsName": "Every two weeks", "roundingMinutes": 5, "teamNames": [ "Front Desk" ] } ],
+  "Kiosks": [ { "name": "Lobby", "teamName": "Front Desk", "enabled": true } ],
+  "PayrollCsv": { "columns": [ { "header": "EmployeeId", "field": "WorkerExternalId" }, { "header": "Hours", "field": "Hours" } ] }
+}
+```
+
+```json
+{
+  "name": "WorkforceShiftPlanning",
+  "Templates": [ { "name": "Early", "start": "07:00:00", "lengthMinutes": 480, "teamNames": [ "Front Desk" ] } ],
+  "Patterns": [
+    { "name": "Two-week rotation", "teamName": "Front Desk", "weekCount": 2,
+      "days": [ { "week": 0, "day": "Monday", "templateName": "Early" }, { "week": 1, "day": "Tuesday", "templateName": "Early" } ] }
+  ],
+  "CoverageRequirements": [
+    { "name": "Weekday mornings", "teamName": "Front Desk", "skillName": "Spanish",
+      "rows": [ { "day": "Monday", "start": "08:00:00", "end": "12:00:00", "minimum": 1, "target": 2 } ] }
+  ]
 }
 ```
 
@@ -296,6 +319,12 @@ The `workforce-sample` recipe uses every step; it is a starting point to copy.
 Services raise events through `IWorkforceEvents` after saving, named in `WorkforceEvents` (`WorkforceTimeOffRequestedEvent`, `WorkforceSchedulePublishedEvent`, `WorkforcePunchedInEvent`, `WorkforceAttendanceExceptionRaisedEvent`, `WorkforceTimesheetApprovedEvent` and the rest), with an input of `WorkerId`, `TeamId` and the record's ids. Every change to a published schedule, from a republish, a trade, a claim, time off or a manager on the shift's page, raises `WorkforceShiftAssignedEvent` (added, or an open shift filled), `WorkforceShiftRemovedEvent` or `WorkforceShiftChangedEvent` (moved, reassigned, swapped, breaks) from its `ScheduleChange` (`ShiftChangeEvents`, an `IScheduleChangeHandler`), with the shift key, kind, times before and after, the previous worker, the reason and who asked. A waitlisted request that gets a place raises `WorkforceTimeOffWaitlistPromotedEvent`, and a shift with nobody offered to the team, on its own or by a publish, raises `WorkforceOpenShiftPostedEvent`. Without Workflows nothing hears them; with it, `WorkflowWorkforceEvents` starts the workflows that begin with the event's activity (`IWorkflowManager.TriggerEventAsync`, correlated by the record's id). Each event activity can be limited to some teams. Replace `IWorkforceEvents` to send them elsewhere.
 
 The AI tools (`workforceWhoIsWorking`, `workforceMySchedule`, `workforceTimeOffBalance`, `workforceRequestTimeOff`, `workforceFindCover`, `workforceExplainViolations`) are registered with `AddCoreAITool` when the AI feature is on, each with its feature. They read the signed-in user from the request and use the same permission and scope checks as the admin; a person who manages no team gets an answer saying so.
+
+### Building on Workforce
+
+Modules that extend Workforce, such as Workforce Contact Center and Dispatch, build on base types in `CrestApps.OrchardCore.Workforce.Core`, never on the Workforce module's own classes: `WorkforceAIToolBase` for AI tools that run as the signed-in user, `MyWorkPortal` and `MyWorkNavViewModel` for pages in the My Work portal, `WorkforceSetupViewModel` and `WorkforceSetupStep` for a Get Started checklist, `RecipeImport` (with its `JsonOptions`) for recipe steps that save catalog records with the admin's checks, `IWorkforceReportDataSet`, `WorkforceReportDataSet<TRecord, TIndex>` and `WorkforceReportRow<T>` for report data sets, and `WorkforceEventActivity`, `WorkforceEventActivityDisplayDriver<TActivity>` and `WorkforceEventActivityViewModel` for workflow events limited to some teams. Their full type names are unchanged, so workflow activities keep their names.
+
+The worker editor (`workforce/workers/edit/{id?}`) is built with `IDisplayManager<WorkerProfile>`, so other modules add sections to it with a `DisplayDriver<WorkerProfile>` registered with `services.AddDisplayDriver<WorkerProfile, TDriver>()`. The worker's own fields are `WorkerProfileFields_Edit` at `Content:1`, and the Skills card is `WorkerSkills_Edit` at `Content:10`, a small driver on the Skills building block's `SkillSubjectSkillsDisplayDriverBase<WorkerProfile>` (see [Skills](./skills.md#extension-points)). Bind your own view model with the driver's `Prefix` and report errors under it (`$"{Prefix}.Field"`); the worker's own rules (`IWorkerManager.ValidateAsync`) run after every section and are reported under the `WorkerProfile` prefix. When anything fails the worker isn't saved and the editor cancels the session, so what a section wrote, such as skills, is not kept either. The certificates under the editor stay a separate form.
 
 ## Reports
 

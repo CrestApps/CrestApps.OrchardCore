@@ -3,8 +3,8 @@ using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Deployments;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -48,7 +48,7 @@ internal sealed class ContactCenterEntryPointHandler : CatalogEntryHandlerBase<C
     /// <inheritdoc/>
     public override Task InitializingAsync(InitializingContext<ContactCenterEntryPoint> context, CancellationToken cancellationToken = default)
     {
-        ContactCenterDeploymentSerializer.Populate(context.Model, context.Data);
+        CatalogDeploymentSerializer.Populate(context.Model, context.Data);
 
         return Task.CompletedTask;
     }
@@ -64,7 +64,7 @@ internal sealed class ContactCenterEntryPointHandler : CatalogEntryHandlerBase<C
     /// <inheritdoc/>
     public override Task UpdatingAsync(UpdatingContext<ContactCenterEntryPoint> context, CancellationToken cancellationToken = default)
     {
-        ContactCenterDeploymentSerializer.Populate(context.Model, context.Data);
+        CatalogDeploymentSerializer.Populate(context.Model, context.Data);
 
         context.Model.ModifiedUtc = _clock.UtcNow;
 

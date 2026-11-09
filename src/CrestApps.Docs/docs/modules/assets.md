@@ -29,13 +29,13 @@ All live in the `Assets` YesSql collection.
 
 ## Owners
 
-An asset is owned by the business, or by a customer, an account (of the Accounts module) or a CRM contact, picked in the editor by name. Each kind of owner comes from an `IAssetOwnerSource` (`Kind`, `SearchAsync`, `GetNamesAsync`), and only the kinds with a source can be chosen:
+An asset is owned by the business, or by a customer, an account (of the Accounts module) or a CRM contact, picked in the editor by name. Each kind of owner is read from the shared [parties](./parties.md): an `IPartySource` (`Kind`, `SearchAsync`, `GetNamesAsync`) of the party kind the owner kind maps to (`AssetOwners.ToPartyKind`), and only the kinds with a source can be chosen. The stored `OwnerKind` and `OwnerId` are unchanged; `asset.ToParty()` reads them as a `PartyRef`:
 
-| Kind | Source | Comes with |
+| Owner kind | Party kind and source | Comes with |
 | --- | --- | --- |
-| Customer | Users, by user name or email | `OrchardCore.Users` |
-| Account | The account types of `IAccountContentTypeProvider`, by display text; the editor's picker uses the Accounts search | Accounts (`CrestApps.OrchardCore.Accounts`) |
-| Contact | Content items with the Omnichannel Contact part, by display text | Omnichannel Management |
+| Customer | `User` (the owner id is a user id): `UserPartySource`, by user name or email | `OrchardCore.Users` (registered by Assets) or the CrestApps Users module |
+| Account | `Account`: `AccountPartySource`, the account types of `IAccountContentTypeProvider`, by display text; the editor's picker uses the Accounts search | Accounts (`CrestApps.OrchardCore.Accounts`) |
+| Contact | `Contact`: content items with the Omnichannel Contact part, by display text (registered by Assets) | Omnichannel Management |
 
 `AssetOwnerDirectory` names owners for the list, the asset's page and the editor; an owner it can't find shows its id. The editor's pickers search `Admin/api/crestapps/assets/owners/search?kind=&query=` (View assets), which returns up to 50 `{ value, text }` items. The asset list filters by owner with `ownerKind` and `ownerId`, and its **Add asset** keeps that owner.
 
@@ -53,6 +53,10 @@ For a vehicle, equipment or tool the business owns, `AssetFleet` keeps `Schedula
 - Stock locations moved from the Inventory settings to a `StockLocation` store (`ItemId` is the location id, `Name`, `Address`, `Position`, `OwnerKind`, `OwnerId`). A migration step moves the locations kept in the settings into it once it has run, keeping their ids and their order, so stock levels and movements still point at them; until then `InventoryLocationService` also reads the settings. The settings page edits the site's own locations in the store; locations owned by other records are managed with their owner.
 - `StockMovement` gains `ReferenceType` and `ReferenceId` (indexed) beside `OrderId`, and the `Consumed` kind.
 - `IInventoryService.ConsumeAsync(stockItemId, locationId, quantity, referenceType, referenceId, reason, actor)` uses units up at a location, refusing more than it has available, and records what they were for.
+
+## Extending
+
+- `DisplayDriver<Asset>`: adds a section to the asset editor (`assets/edit/{id?}`), which is built with `IDisplayManager<Asset>`. The built-in fields are one driver, `AssetFields_Edit` at `Content:1`. Register yours with `services.AddDisplayDriver<Asset, TDriver>()`, bind your own view model with the driver's `Prefix`, and report errors under it (`$"{Prefix}.Field"`). The asset's own rules (`AssetManager.ValidateAsync`) run after every section and are reported under the `Asset` prefix. When anything fails the asset isn't saved and the editor cancels the session, so records a section wrote are not kept either.
 
 ## Recipes and deployment
 

@@ -1,13 +1,12 @@
 using System.Net;
+using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Inventory.Core;
 using CrestApps.OrchardCore.Inventory.Core.Models;
 using CrestApps.OrchardCore.Inventory.Core.Services;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
-using OrchardCore.Email;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 using YesSql;
@@ -30,12 +29,18 @@ public sealed class StockAlertService
     /// </summary>
     public const int MaxPerRestock = 500;
 
+    /// <summary>
+    /// The kind of the back-in-stock email, which the store can write its own template of. The template reads the stock
+    /// item as <c>{{ StockItem }}</c>, such as <c>{{ StockItem.Title }}</c>.
+    /// </summary>
+    public const string EmailKind = "stock-alert";
+
     private readonly ISession _session;
     private readonly IStockItemStore _stockItems;
     private readonly IContentManager _contentManager;
     private readonly IClock _clock;
     private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger _logger;
+    private readonly ICommerceEmailSender _emailSender;
 
     internal readonly IStringLocalizer S;
 
@@ -45,7 +50,7 @@ public sealed class StockAlertService
         IContentManager contentManager,
         IClock clock,
         IServiceProvider serviceProvider,
-        ILogger<StockAlertService> logger,
+        ICommerceEmailSender emailSender,
         IStringLocalizer<StockAlertService> stringLocalizer)
     {
         _session = session;
@@ -53,7 +58,7 @@ public sealed class StockAlertService
         _contentManager = contentManager;
         _clock = clock;
         _serviceProvider = serviceProvider;
-        _logger = logger;
+        _emailSender = emailSender;
         S = stringLocalizer;
     }
 
@@ -117,7 +122,7 @@ public sealed class StockAlertService
     {
         ArgumentNullException.ThrowIfNull(item);
 
-        if (_serviceProvider.GetService<IEmailService>() is not { } emailService)
+        if (!_emailSender.CanSend)
         {
             return 0;
         }
@@ -138,26 +143,30 @@ public sealed class StockAlertService
 
         foreach (var alert in alerts)
         {
-            var text = S["Good news: {0} is back in stock.", item.Title].Value + (url is null ? string.Empty : "\n\n" + url) + "\n\n" + S["You asked to hear when it was back, so this is the only email about it."].Value;
-            var html = "<p>" + WebUtility.HtmlEncode(S["Good news: {0} is back in stock.", item.Title].Value) + "</p>" +
-                (url is null ? string.Empty : $"<p><a href=\"{WebUtility.HtmlEncode(url)}\">{WebUtility.HtmlEncode(S["See {0}", item.Title].Value)}</a></p>") +
-                "<p style=\"color:#6c757d;font-size:12px\">" + WebUtility.HtmlEncode(S["You asked to hear when it was back, so this is the only email about it."].Value) + "</p>";
-
-            var result = await emailService.SendAsync(new MailMessage
+            var wasSent = await _emailSender.SendAsync(new CommerceEmail
             {
+                Kind = EmailKind,
                 To = alert.Email,
-                Subject = subject,
-                TextBody = text,
-                HtmlBody = html,
-            }, cancellationToken: cancellationToken);
-
-            if (!result.Succeeded)
+                Models = new Dictionary<string, object>(StringComparer.Ordinal) { ["StockItem"] = item },
+                Reference = item.ItemId,
+            }, _ =>
             {
-                if (_logger.IsEnabled(LogLevel.Warning))
-                {
-                    _logger.LogWarning("The back-in-stock email for stock item '{StockItemId}' couldn't be sent.", item.ItemId);
-                }
+                var text = S["Good news: {0} is back in stock.", item.Title].Value + (url is null ? string.Empty : "\n\n" + url) + "\n\n" + S["You asked to hear when it was back, so this is the only email about it."].Value;
+                var html = "<p>" + WebUtility.HtmlEncode(S["Good news: {0} is back in stock.", item.Title].Value) + "</p>" +
+                    (url is null ? string.Empty : $"<p><a href=\"{WebUtility.HtmlEncode(url)}\">{WebUtility.HtmlEncode(S["See {0}", item.Title].Value)}</a></p>") +
+                    "<p style=\"color:#6c757d;font-size:12px\">" + WebUtility.HtmlEncode(S["You asked to hear when it was back, so this is the only email about it."].Value) + "</p>";
 
+                return Task.FromResult(new CommerceEmailContent
+                {
+                    Subject = subject,
+                    Text = text,
+                    Html = html,
+                    Values = new Dictionary<string, string> { ["ProductUrl"] = url ?? string.Empty },
+                });
+            }, cancellationToken);
+
+            if (!wasSent)
+            {
                 continue;
             }
 

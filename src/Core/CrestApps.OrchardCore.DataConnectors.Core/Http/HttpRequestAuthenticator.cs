@@ -347,6 +347,7 @@ internal sealed class HttpRequestAuthenticator
         }
         catch (JsonException)
         {
+            // The server's error body is not JSON, so the status code alone describes the failure.
         }
 
         return string.Empty;

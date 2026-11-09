@@ -17,6 +17,6 @@ using OrchardCore.Modules.Manifest;
     Description = "Provides friendly named time zone maps, picker services, recipe import, and deployment export support.",
     Dependencies =
     [
-        "OrchardCore.Recipes.Core",
+        OrchardCoreFeatureIds.RecipesCore,
     ]
 )]

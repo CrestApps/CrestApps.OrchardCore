@@ -1,0 +1,257 @@
+@using System.Text.Json
+@using CrestApps.Core.AI.Completions
+@using CrestApps.OrchardCore.AI.ViewModels
+@model EditDeploymentPricingViewModel
+
+@{
+    // The deployment editor drivers post under a field prefix, so every field the model binder reads carries it.
+    var fieldPrefix = ViewData.TemplateInfo.HtmlFieldPrefix;
+    var namePrefix = string.IsNullOrEmpty(fieldPrefix) ? string.Empty : fieldPrefix + ".";
+
+    var meters = AIUsageMeters.All;
+    var metersJson = JsonSerializer.Serialize(meters.Select(meter => new
+    {
+        name = meter.Name,
+        label = T[meter.DisplayName].Value,
+        baseUnit = T[meter.BaseUnit].Value,
+        requiresCountName = meter.RequiresCountName,
+        quantities = meter.Quantities.Select(quantity => new { per = quantity.Per, label = T[quantity.DisplayName].Value }),
+    }));
+    var pricesJson = JsonSerializer.Serialize(Model.Prices.Select(price => new
+    {
+        meter = price.Meter,
+        amount = price.Amount,
+        per = price.Per,
+        countName = price.CountName,
+        aboveInputTokens = price.AboveInputTokens,
+        increment = price.Increment,
+    }));
+    var priceErrors = ViewData.ModelState
+        .Where(entry => entry.Key.StartsWith(namePrefix + nameof(Model.Prices), StringComparison.Ordinal))
+        .SelectMany(entry => entry.Value.Errors.Select(error => error.ErrorMessage))
+        .Distinct()
+        .ToList();
+    var text = new
+    {
+        unit = T["Billed unit"].Value,
+        price = T["Price"].Value,
+        per = T["per"].Value,
+        quantity = T["Quantity"].Value,
+        options = T["Long-context price and billing increment"].Value,
+        remove = T["Remove this price"].Value,
+        countName = T["Count name"].Value,
+        countNameHint = T["The name the provider reports, as shown in the usage report"].Value,
+        onlyAbove = T["Only above"].Value,
+        inputTokens = T["input tokens"].Value,
+        threshold = T["Input tokens threshold"].Value,
+        thresholdHint = T["Long-context price: replaces this unit's regular price for requests with more input tokens."].Value,
+        roundUp = T["Round up to"].Value,
+        increment = T["Billing increment"].Value,
+        incrementHint = T["Billing increment per request, such as 15 seconds. 0 bills the exact amount."].Value,
+    };
+}
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="card mb-3" id="deploymentPricing" data-meters="@metersJson" data-prices="@pricesJson" data-name-prefix="@namePrefix" data-text="@JsonSerializer.Serialize(text)">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="card-title mb-0"><i class="fa-solid fa-coins"></i> @T["Pricing"]</h6>
+                <div class="dropdown">
+                    <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fa-solid fa-plus"></i> @T["Add price"]
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        @foreach (var meter in meters)
+                        {
+                            <li><button type="button" class="dropdown-item" data-price-add="@meter.Name">@T[meter.DisplayName]</button></li>
+                        }
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">
+                    @T["Optional. What this deployment costs with its provider, used to estimate the cost of its usage in the AI usage reports. Add one price per billed unit; a model billed per request and per token gets one of each. Cached, cache-write, audio, and image tokens are taken out of the input and output tokens when they have their own price. Use the sliders button for long-context prices and billing increments."]
+                </p>
+
+                @if (priceErrors.Count > 0)
+                {
+                    <div class="alert alert-danger py-2">
+                        @foreach (var error in priceErrors)
+                        {
+                            <div>@error</div>
+                        }
+                    </div>
+                }
+
+                <div class="mb-3">
+                    <label asp-for="Currency" class="form-label">@T["Currency"]</label>
+                    <input asp-for="Currency" class="form-control" maxlength="3" placeholder="USD" data-price-currency-input />
+                    <span class="hint">@T["The currency the prices below are in, such as USD."]</span>
+                </div>
+
+                <div data-price-rows></div>
+
+                <div class="text-muted small fst-italic" data-price-empty>
+                    @T["No prices. Usage of this deployment is reported without a cost."]
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        var container = document.getElementById('deploymentPricing');
+
+        if (!container) {
+            return;
+        }
+
+        var meters = JSON.parse(container.dataset.meters);
+        var text = JSON.parse(container.dataset.text);
+        var namePrefix = container.dataset.namePrefix || '';
+        var rows = container.querySelector('[data-price-rows]');
+        var empty = container.querySelector('[data-price-empty]');
+        var currencyInput = container.querySelector('[data-price-currency-input]');
+
+        function findMeter(name) {
+            return meters.find(function (meter) { return meter.name.toLowerCase() === String(name || '').toLowerCase(); }) || meters[0];
+        }
+
+        function currency() {
+            return (currencyInput.value || 'USD').trim().toUpperCase();
+        }
+
+        function escape(value) {
+            var div = document.createElement('div');
+            div.textContent = value;
+            return div.innerHTML.replace(/"/g, '&quot;');
+        }
+
+        function fillQuantities(select, meter, selected) {
+            select.innerHTML = '';
+            meter.quantities.forEach(function (quantity) {
+                var option = document.createElement('option');
+                option.value = quantity.per;
+                option.textContent = quantity.label;
+                option.selected = String(quantity.per) === String(selected);
+                select.appendChild(option);
+            });
+        }
+
+        function applyMeter(row, meter, selectedPer) {
+            fillQuantities(row.querySelector('[data-price-per]'), meter, selectedPer);
+            row.querySelector('[data-price-count]').classList.toggle('d-none', !meter.requiresCountName);
+            row.querySelector('[data-price-base-unit]').textContent = meter.baseUnit;
+        }
+
+        function reindex() {
+            rows.querySelectorAll('[data-price-row]').forEach(function (row, index) {
+                row.querySelectorAll('[data-name]').forEach(function (input) {
+                    input.name = namePrefix + 'Prices[' + index + '].' + input.dataset.name;
+                });
+            });
+            empty.classList.toggle('d-none', rows.children.length > 0);
+        }
+
+        function addRow(price, focus) {
+            var meter = findMeter(price.meter);
+            var hasOptions = !!(price.aboveInputTokens || price.increment);
+            var template = document.createElement('template');
+            template.innerHTML = (
+                '<div class="border rounded p-2 mb-2" data-price-row>' +
+                '  <div class="row g-2 align-items-center">' +
+                '    <div class="col-12 col-md-4"><select data-name="Meter" class="form-select" data-price-meter aria-label="' + escape(text.unit) + '"></select></div>' +
+                '    <div class="col-6 col-md-3"><div class="input-group"><span class="input-group-text" data-price-currency></span>' +
+                '      <input data-name="Amount" type="number" step="any" min="0" class="form-control" aria-label="' + escape(text.price) + '" /></div></div>' +
+                '    <div class="col-6 col-md-3"><div class="input-group"><span class="input-group-text">' + escape(text.per) + '</span>' +
+                '      <select data-name="Per" class="form-select" data-price-per aria-label="' + escape(text.quantity) + '"></select></div></div>' +
+                '    <div class="col-12 col-md-2 text-md-end text-nowrap">' +
+                '      <button type="button" class="btn btn-outline-secondary" data-price-options title="' + escape(text.options) + '" aria-label="' + escape(text.options) + '"><i class="fa-solid fa-sliders"></i></button>' +
+                '      <button type="button" class="btn btn-outline-danger" data-price-remove title="' + escape(text.remove) + '" aria-label="' + escape(text.remove) + '"><i class="fa-solid fa-trash"></i></button>' +
+                '    </div>' +
+                '  </div>' +
+                '  <div class="row g-2 mt-1 d-none" data-price-count>' +
+                '    <div class="col-12 col-md-7"><div class="input-group"><span class="input-group-text">' + escape(text.countName) + '</span>' +
+                '      <input data-name="CountName" class="form-control" placeholder="' + escape(text.countNameHint) + '" aria-label="' + escape(text.countName) + '" /></div></div>' +
+                '  </div>' +
+                '  <div class="row g-2 mt-1 d-none" data-price-extra>' +
+                '    <div class="col-12 col-md-6"><div class="input-group"><span class="input-group-text">' + escape(text.onlyAbove) + '</span>' +
+                '      <input data-name="AboveInputTokens" type="number" min="0" step="1" class="form-control" placeholder="200000" aria-label="' + escape(text.threshold) + '" />' +
+                '      <span class="input-group-text">' + escape(text.inputTokens) + '</span></div>' +
+                '      <div class="form-text">' + escape(text.thresholdHint) + '</div></div>' +
+                '    <div class="col-12 col-md-6"><div class="input-group"><span class="input-group-text">' + escape(text.roundUp) + '</span>' +
+                '      <input data-name="Increment" type="number" min="0" step="1" class="form-control" aria-label="' + escape(text.increment) + '" />' +
+                '      <span class="input-group-text" data-price-base-unit></span></div>' +
+                '      <div class="form-text">' + escape(text.incrementHint) + '</div></div>' +
+                '  </div>' +
+                '</div>').trim();
+            var row = template.content.firstChild;
+
+            var meterSelect = row.querySelector('[data-price-meter]');
+            meters.forEach(function (option) {
+                var item = document.createElement('option');
+                item.value = option.name;
+                item.textContent = option.label;
+                item.selected = option.name === meter.name;
+                meterSelect.appendChild(item);
+            });
+
+            row.querySelector('[data-price-currency]').textContent = currency();
+            row.querySelector('[data-name="Amount"]').value = price.amount != null ? price.amount : '';
+            row.querySelector('[data-name="CountName"]').value = price.countName || '';
+            row.querySelector('[data-name="AboveInputTokens"]').value = price.aboveInputTokens || '';
+            row.querySelector('[data-name="Increment"]').value = price.increment || 0;
+            row.querySelector('[data-price-extra]').classList.toggle('d-none', !hasOptions);
+            applyMeter(row, meter, price.per || meter.quantities[0].per);
+
+            rows.appendChild(row);
+            reindex();
+
+            if (focus) {
+                row.querySelector('[data-name="Amount"]').focus();
+            }
+        }
+
+        container.addEventListener('click', function (event) {
+            var add = event.target.closest('[data-price-add]');
+
+            if (add) {
+                addRow({ meter: add.dataset.priceAdd }, true);
+                return;
+            }
+
+            var options = event.target.closest('[data-price-options]');
+
+            if (options) {
+                options.closest('[data-price-row]').querySelector('[data-price-extra]').classList.toggle('d-none');
+                return;
+            }
+
+            var remove = event.target.closest('[data-price-remove]');
+
+            if (remove) {
+                remove.closest('[data-price-row]').remove();
+                reindex();
+            }
+        });
+
+        container.addEventListener('change', function (event) {
+            if (event.target.matches('[data-price-meter]')) {
+                var row = event.target.closest('[data-price-row]');
+                applyMeter(row, findMeter(event.target.value), row.querySelector('[data-price-per]').value);
+            }
+        });
+
+        currencyInput.addEventListener('input', function () {
+            container.querySelectorAll('[data-price-currency]').forEach(function (label) {
+                label.textContent = currency();
+            });
+        });
+
+        JSON.parse(container.dataset.prices).forEach(function (price) {
+            addRow(price, false);
+        });
+        reindex();
+    })();
+</script>

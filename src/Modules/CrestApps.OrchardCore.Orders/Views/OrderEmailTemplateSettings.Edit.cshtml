@@ -2,7 +2,7 @@
 
 <div class="ocat-wrapper">
     <div class="ocat-end-offset">
-        <p class="text-body-secondary">@T["Write the store's own emails about orders. In each, {{{{ Content }}}} is the email as the store would send it, {{{{ Order }}}} the order (such as {{{{ Order.OrderNumber }}}} and {{{{ Order.CustomerName }}}}), {{{{ Subject }}}} its subject and {{{{ StoreName }}}} the store's name. An email whose template can't render is sent as built."]</p>
+        <p class="text-body-secondary">@T["Write the store's own emails. In each, {{{{ Content }}}} is the email as the store would send it, {{{{ Subject }}}} its subject and {{{{ StoreName }}}} the store's name; an email about an order also has {{{{ Order }}}} (such as {{{{ Order.OrderNumber }}}} and {{{{ Order.CustomerName }}}}). Each email lists its own values. An email whose template can't render is sent as built."]</p>
     </div>
 </div>
 
@@ -11,7 +11,7 @@
     <div class="ocat-end">
         <textarea asp-for="Layout" class="form-control font-monospace" rows="6" placeholder="@T["<img src=&quot;...&quot; alt=&quot;Logo&quot;> {{{{ Content }}}} <p>Our address</p>"]"></textarea>
         <span asp-validation-for="Layout" class="text-danger"></span>
-        <span class="hint">@T["Optional. HTML around every email about an order, such as your logo and address, with {{{{ Content }}}} where the email goes."]</span>
+        <span class="hint">@T["Optional. HTML around every email listed here, such as your logo and address, with {{{{ Content }}}} where the email goes."]</span>
     </div>
 </div>
 

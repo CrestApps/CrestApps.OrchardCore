@@ -179,6 +179,17 @@ internal static partial class AgentWorkspaceEndpoints
         (model.ActiveInteraction, model.PendingDial) = await BuildActiveInteractionAsync(profile, recentInteractions, now, availabilityOptions.Value.MaximumWrapUpDuration, authorizationService, interactionManager, activityManager, queueManager, contentManager, voiceProviderResolver, dialerProfileReader, linkGenerator, httpContext, httpContext.RequestAborted);
         model.RecentHistory = BuildRecentHistory(recentInteractions);
 
+        // Work assigned to the agent that no offer, call or dial shows any more -- its call ended past the wrap-up
+        // window, or the site restarted under it -- still holds them until they complete it. It is looked for only
+        // while they are held, so an idle agent's poll costs nothing more.
+        if (model.Offer is null &&
+            model.ActiveInteraction is null &&
+            model.PendingDial is null &&
+            profile.PresenceStatus is AgentPresenceStatus.Busy or AgentPresenceStatus.WrapUp or AgentPresenceStatus.Reserved)
+        {
+            model.HeldActivity = await BuildHeldActivityAsync(profile, model.Campaigns, queueItemManager, authorizationService, activityManager, queueManager, contentManager, linkGenerator, httpContext, httpContext.RequestAborted);
+        }
+
         return TypedResults.Ok(model);
     }
 

@@ -17,6 +17,7 @@ using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using YesSql;
+using QueryContext = CrestApps.Core.Models.QueryContext;
 
 namespace CrestApps.OrchardCore.Workforce.ContactCenter.Controllers;
 
@@ -73,14 +74,16 @@ public sealed class ForecastEventsController : Controller
             return Forbid();
         }
 
-        var items = (await _manager.GetAllAsync(HttpContext.RequestAborted)).OrderByDescending(item => item.StartDate).ToList();
         var pager = new Pager(pagerParameters, pagerOptions.Value);
+
+        // Paged and counted in SQL, the latest first.
+        var items = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext(), HttpContext.RequestAborted);
 
         return View(new ForecastingListViewModel
         {
             List = new AdminListContext<ForecastEvent>
             {
-                Source = items.Skip(pager.GetStartIndex()).Take(pager.PageSize).ToList(),
+                Source = [.. items.Entries],
                 Pager = await shapeFactory.PagerAsync(pager, items.Count),
             },
         });

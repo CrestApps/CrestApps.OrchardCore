@@ -1,6 +1,7 @@
+using CrestApps.Core.AI.Completions;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Drivers;
 using CrestApps.OrchardCore.Omnichannel.Voice.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.AI.Conversations;
@@ -48,38 +49,49 @@ public sealed class AICallMetricsTests
             InputAudioTokens = 1_000_000,
             OutputTextTokens = 500_000,
         };
-        var settings = new AICostSettings
+        var carrier = new AICostSettings { TelephonyPerMinute = 0.01m };
+        var pricing = new AIDeploymentPricing
         {
-            TelephonyPerMinute = 0.01m,
-            Deployments =
+            Prices =
             [
-                new AIDeploymentPrice { DeploymentName = "Realtime", AudioInputPerMillion = 32, OutputPerMillion = 16, PerMinute = 0.05m },
+                new AIDeploymentPrice { Meter = AIUsageMeters.InputAudioTokens, Amount = 32, Per = 1_000_000 },
+                new AIDeploymentPrice { Meter = AIUsageMeters.OutputTokens, Amount = 16, Per = 1_000_000 },
+                new AIDeploymentPrice { Meter = AIUsageMeters.AudioSeconds, Amount = 0.05m, Per = 60 },
             ],
         };
 
         // Act
-        var cost = AICallMetrics.EstimateCost(summary, settings);
+        var (cost, currency) = AICallMetrics.EstimateCost(summary, carrier, pricing);
 
         // Assert
         Assert.Equal(0.02m + 0.10m + 32m + 8m, cost);
+        Assert.Equal("USD", currency);
     }
 
     [Fact]
     public void EstimateCost_IsUnknownWithoutPrices()
-        => Assert.Null(AICallMetrics.EstimateCost(new AIVoiceSessionSummary { SessionDurationMs = 60_000 }, new AICostSettings()));
+    {
+        var (cost, currency) = AICallMetrics.EstimateCost(new AIVoiceSessionSummary { SessionDurationMs = 60_000 }, new AICostSettings(), null);
+
+        Assert.Null(cost);
+        Assert.Null(currency);
+    }
 
     [Fact]
-    public void Prices_RoundTripAndReportBadLines()
+    public void EstimateCost_KeepsTheAIPartWhenTheCarrierUsesAnotherCurrency()
     {
-        // Act
-        var (prices, errors) = AICostSettingsDisplayDriver.ParsePrices("gpt-realtime | 4 | 16 | 32 | 64 | 0\nbad | x\n\nminute-billed | | | | | 0.06");
+        var summary = new AIVoiceSessionSummary { SessionDurationMs = 60_000 };
+        var carrier = new AICostSettings { Currency = "USD", TelephonyPerMinute = 0.01m };
+        var pricing = new AIDeploymentPricing
+        {
+            Currency = "EUR",
+            Prices = [new AIDeploymentPrice { Meter = AIUsageMeters.AudioSeconds, Amount = 0.06m, Per = 60 }],
+        };
 
-        // Assert
-        Assert.Equal(2, prices.Count);
-        Assert.Equal([2], errors);
-        Assert.Equal(64m, prices[0].AudioOutputPerMillion);
-        Assert.Equal(0.06m, prices[1].PerMinute);
-        Assert.Equal(prices.Count, AICostSettingsDisplayDriver.ParsePrices(AICostSettingsDisplayDriver.FormatPrices(prices)).Prices.Count);
+        var (cost, currency) = AICallMetrics.EstimateCost(summary, carrier, pricing);
+
+        Assert.Equal(0.06m, cost);
+        Assert.Equal("EUR", currency);
     }
 
     [Fact]

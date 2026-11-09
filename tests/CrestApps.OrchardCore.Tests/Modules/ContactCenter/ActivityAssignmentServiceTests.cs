@@ -149,6 +149,54 @@ public sealed class ActivityAssignmentServiceTests
         reservationService.Verify(s => s.ReserveAsync(topItem, idleAgent, 45, It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    // A campaign's queue is never stored, so its offers always had the thirty-second default. A preview agent reviewing
+    // the record, updating the contact and choosing a disposition outlasted it, lost the record and was refused the
+    // disposition. The preview profile now says how long the offer lasts; automated modes keep the queue default.
+    [Theory]
+    [InlineData(DialerMode.Preview, 240, 240)]
+    [InlineData(DialerMode.Preview, 0, DialerProfile.DefaultPreviewOfferTimeoutSeconds)]
+    [InlineData(DialerMode.Power, 240, 30)]
+    public async Task AssignNextAsync_ForACampaignRecord_OffersItForTheTimeItsDialerProfileAllows(DialerMode mode, int offerSeconds, int expectedTimeout)
+    {
+        // Arrange
+        var queueId = ContactCenterConstants.CampaignQueue.CreateId("campaign-1");
+        var topItem = new QueueItem { ItemId = "i1", QueueId = queueId, DialerProfileId = "profile-1" };
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager
+            .Setup(m => m.FindNextWaitingAsync(It.IsAny<ActivityQueue>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(topItem);
+
+        var agent = new AgentProfile { ItemId = "a1", UserId = "u1" };
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager
+            .Setup(m => m.GetAvailableForQueueAsync(queueId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([agent]);
+
+        var profileReader = new Mock<IDialerProfileReader>();
+        profileReader
+            .Setup(r => r.FindByIdAsync("profile-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DialerProfile { ItemId = "profile-1", Mode = mode, PreviewOfferTimeoutSeconds = offerSeconds });
+
+        var reservationService = new Mock<IActivityReservationService>();
+        reservationService
+            .Setup(s => s.ReserveAsync(topItem, agent, It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ActivityReservation { ItemId = "r1" });
+
+        var service = CreateService(
+            queueItemManager,
+            agentManager,
+            new Mock<IActivityQueueManager>(),
+            reservationService,
+            CreateDistributedLock(locked: true),
+            dialerProfileReader: profileReader.Object);
+
+        // Act
+        await service.AssignNextAsync(queueId, TestContext.Current.CancellationToken);
+
+        // Assert
+        reservationService.Verify(s => s.ReserveAsync(topItem, agent, expectedTimeout, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     [Fact]
     public async Task AssignSpecificAsync_ToAnAgentTheItemExcludes_ReservesNothing()
     {
@@ -457,7 +505,8 @@ public sealed class ActivityAssignmentServiceTests
         Mock<ISession> session = null,
         Mock<IAgentAvailabilityService> availabilityService = null,
         Mock<IContactCenterEventPublisher> publisher = null,
-        Mock<IDialerDecisionLog> decisionLog = null)
+        Mock<IDialerDecisionLog> decisionLog = null,
+        IDialerProfileReader dialerProfileReader = null)
     {
         var businessHours = new Mock<IBusinessHoursService>();
         businessHours
@@ -495,7 +544,8 @@ public sealed class ActivityAssignmentServiceTests
             CoordinationOptions(),
             NullLogger<ActivityAssignmentService>.Instance,
             Mock.Of<IQueuedDialerWorkGate>(),
-            (decisionLog ?? new Mock<IDialerDecisionLog>()).Object);
+            (decisionLog ?? new Mock<IDialerDecisionLog>()).Object,
+            dialerProfileReader ?? Mock.Of<IDialerProfileReader>());
     }
 
     private static Mock<IDistributedLock> CreateDistributedLock(bool locked)

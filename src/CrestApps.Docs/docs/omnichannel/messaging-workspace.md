@@ -65,7 +65,7 @@ Every notification the server sends is logged at the `Information` level (delive
 ## Enable the features
 
 1. Go to **Tools → Features**.
-2. Enable **SMS Messaging Channel**. This also enables the **Omnichannel Messaging Workspace** and everything it needs (Channel Endpoints, Contact Center Agent Services, Contact Center Provider Webhook Inbox, SignalR, Orchard Core SMS).
+2. Enable **SMS Messaging Channel**. This also enables the **Omnichannel Messaging Workspace** and everything it needs (Channel Endpoints, Contact Center Agent Services, Provider Webhook Inbox, SignalR, Orchard Core SMS).
 3. Optionally enable **Omnichannel Messaging Routed Distribution** to push department conversations to the least-loaded available agent. This needs Contact Center Work Distribution.
 
 Enabling the workspace on its own gives you the inbox with nothing to send or receive on. That is expected: channels come from channel features.
@@ -78,7 +78,7 @@ Enabling the workspace on its own gives you the inbox with nothing to send or re
 | **Contact Center Inbound Entry Points** | Where each number's messages go is set on the [inbound entry point](../user-manual/entry-points-and-ivr.md#text-entry-points) that answers it for the channel, with opening hours and auto-replies. Entry points route to a queue or an agent, so this brings Contact Center Work Distribution's queues and the agents with it. |
 | **Contact Center Agent Services** (dependency-only) | Operators are Contact Center **agent profiles**. A bare profile is created automatically the first time a permitted user opens the workspace, so no Contact Center administration is required. |
 | **Orchard Core SignalR** | The workspace's own real-time hub. |
-| **Contact Center Provider Webhook Inbox** *(SMS channel only)* | The durable inbox that inbound provider deliveries are committed to before they are processed, so a retried delivery is de-duplicated and none is lost. |
+| **Provider Webhook Inbox** *(SMS channel only)* | The durable inbox that inbound provider deliveries are committed to before they are processed, so a retried delivery is de-duplicated and none is lost. |
 | **Orchard Core SMS** *(SMS channel only)* | The SMS provider abstraction and the tenant default provider. |
 
 The workspace does **not** require Contact Center Voice, and it does not pull in the Omnichannel Management CRM.
@@ -102,9 +102,11 @@ The SMS channel applies the carrier keywords, whatever the workspace is doing:
 
 | Keyword | Synonyms | What happens | Default reply |
 | --- | --- | --- | --- |
-| **STOP** | STOPALL, UNSUBSCRIBE, CANCEL, END, QUIT | Closes the conversation, sets the contact's **Do not SMS** flag and sends one confirmation. | *You have been unsubscribed and will not receive further messages. Reply START to resubscribe.* |
+| **STOP** | STOPALL, UNSUBSCRIBE, CANCEL, END, QUIT | Closes the conversation, sets the contact's **Do not SMS** flag and sends one confirmation. When no contact holds the number, the opt-out is recorded against the number (`ContactAddressOptOut`), and every SMS send path (the workspace, auto-replies, broadcasts, automation and re-engagement) refuses that number until it texts START. | *You have been unsubscribed and will not receive further messages. Reply START to resubscribe.* |
 | **START** | UNSTOP, YES | Reverses an opt-out and confirms. It is ignored when the contact is not opted out, so an ordinary "Yes" stays part of the conversation. | *You have been resubscribed and will receive messages again. Reply STOP to unsubscribe.* |
 | **HELP** | INFO | Answers with the help reply. | *Reply STOP to unsubscribe. Message and data rates may apply.* |
+
+The message is trimmed, trailing punctuation (`. ! ? , ; :`) is removed, and the rest is compared without regard to case. An opt-out errs on the side of the person texting: a message opts out when it is an opt-out keyword or its first word is one, so "STOP", "stop." and "STOP please" all opt out, while "stopping by" and "please stop" do not. HELP and START must be the whole message, so "help me find my order" is an ordinary reply. SMS automation uses the same policy (`OmnichannelSmsComplianceHelper`), so a text means the same thing on both paths.
 
 A keyword silences the entry point's auto-reply for that message. Replies can be customised under the `CrestApps:Omnichannel:Messaging:Sms:KeywordReplies` configuration section (`StopMessage`, `HelpMessage`, `StartMessage`).
 
@@ -156,7 +158,7 @@ Permissions apply to every channel; there is no per-channel permission. Where a 
 
 **Messaging > Templates** (requires `ManageMessaging`) lists the canned responses agents insert from the composer. Each template has a **Name** and a **Body**.
 
-**Messaging > Broadcasts** (requires `SendGroupMessages`) lists sent broadcasts with their channel, sending address, status, recipient, sent and failed counts. A new broadcast names a sending channel endpoint (which decides the channel), contacts reachable on that channel and any additional addresses, and the message. It is queued and sent in the background; each recipient gets their own 1:1 thread and cannot see the others, and a queued broadcast cannot be cancelled. The step-by-step guide is in [Templates](../user-manual/messaging.md#templates) and [Broadcasts](../user-manual/messaging.md#broadcasts) in the User Manual.
+**Messaging > Broadcasts** (requires `SendGroupMessages`) lists sent broadcasts with their channel, sending address, status, recipient, sent and failed counts. A new broadcast names a sending channel endpoint (which decides the channel), contacts reachable on that channel and any additional addresses, and the message. It is queued and sent in the background by the [outreach engine](../modules/outreach.md), 50 recipients per batch; each recipient gets their own 1:1 thread and cannot see the others, recipients who opted out of the channel are skipped (`SkippedCount`), and a queued broadcast cannot be cancelled. The broadcast keeps its recipient list and shows the run's progress (`OutreachRunId`); a broadcast that was half sent before the engine never sends again to the recipients it had processed, carries its sent and failed counts over, and sends to every recipient it had not reached. A number listed more than once is sent to once. The step-by-step guide is in [Templates](../user-manual/messaging.md#templates) and [Broadcasts](../user-manual/messaging.md#broadcasts) in the User Manual.
 
 ### Exporting and importing templates
 
@@ -179,7 +181,31 @@ Templates travel between environments through the **Messaging Templates** deploy
 }
 ```
 
-Conversations and broadcasts do not travel: they are the workspace's record of what was said and sent, and replaying a broadcast would message its recipients again. Where a number's messages go travels with its entry point through the `ContactCenterEntryPoint` deployment step.
+Conversations do not travel: they are the workspace's record of what was said. Where a number's messages go travels with its entry point through the `ContactCenterEntryPoint` deployment step.
+
+### Exporting and importing broadcasts
+
+Broadcasts travel through the **Messaging broadcasts** deployment step and the `MessagingBroadcasts` recipe step, as drafts. The export leaves out a broadcast's delivery (its status, the recipients already sent to and the counts), and the import never queues a message: a new broadcast is always a draft, and a broadcast that is queued or sent on the site is left as it is, so replaying a plan never messages anyone again. A broadcast keeps its identifier, so a second run adds nothing. Recipients are personal data: add the step to a plan only to move them to a site you trust.
+
+```json
+{
+  "steps": [
+    {
+      "name": "MessagingBroadcasts",
+      "Broadcasts": [
+        {
+          "ItemId": "4bc00000000000000000000001",
+          "Name": "Holiday hours",
+          "Channel": "sms",
+          "ServiceAddress": "+12025550100",
+          "Body": "We close at noon on Friday.",
+          "Recipients": [ "+12025550101", "+12025550102" ]
+        }
+      ]
+    }
+  ]
+}
+```
 
 ## Configuration
 

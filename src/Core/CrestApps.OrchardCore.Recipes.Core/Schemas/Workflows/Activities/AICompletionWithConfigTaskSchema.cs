@@ -23,20 +23,63 @@ public sealed class AICompletionWithConfigTaskSchema : WorkflowActivitySchemaDef
     protected override IEnumerable<string> Outcomes => ["Done", "Drew Blank", "Failed"];
 
     /// <inheritdoc />
-    protected override IEnumerable<string> RequiredProperties => ["DeploymentName", "PromptTemplate", "ResultPropertyName"];
+    protected override IEnumerable<string> RequiredProperties => ["PromptTemplate", "ResultPropertyName"];
 
     /// <inheritdoc />
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
-        yield return ("DeploymentName", WorkflowActivitySchemaBuilders.String("The name or identifier of the chat deployment that should run this workflow task."));
+        yield return ("Interaction", BuildInteractionSchema());
         yield return ("PromptTemplate", WorkflowActivitySchemaBuilders.String("The template used to generate the prompt for the AI model. Supports Liquid syntax."));
-        yield return ("SystemMessage", WorkflowActivitySchemaBuilders.String("The system instruction that sets the AI's behavior and response style for the conversation."));
-        yield return ("FrequencyPenalty", WorkflowActivitySchemaBuilders.Number("Reduces the chance of repeating tokens proportionally based on how often they have appeared in the text so far. Value between 0 and 1."));
-        yield return ("PresencePenalty", WorkflowActivitySchemaBuilders.Number("Reduces the chance of repeating any token that has appeared so far, increasing the likelihood of introducing new topics. Value between 0 and 1."));
-        yield return ("Temperature", WorkflowActivitySchemaBuilders.Number("Controls randomness in responses. Lower values produce more deterministic output; higher values produce more creative responses. Value between 0 and 1."));
-        yield return ("TopP", WorkflowActivitySchemaBuilders.Number("Controls randomness via nucleus sampling. Lower values narrow token selection to higher-likelihood tokens. Value between 0 and 1."));
-        yield return ("MaxTokens", WorkflowActivitySchemaBuilders.Integer("The maximum number of tokens allowed in the model response. One token is roughly 4 characters for typical English text. Minimum 4."));
         yield return ("ResultPropertyName", WorkflowActivitySchemaBuilders.String("The workflow output property name where the AI response will be stored. Prefix with 'AI-' to avoid conflicts with other workflow properties."));
-        yield return ("ToolNames", WorkflowActivitySchemaBuilders.StringArray("The names of the AI tools to enable for this task."));
+    }
+
+    private static JsonSchemaBuilder BuildInteractionSchema()
+    {
+        static JsonSchemaBuilder Strings(string description)
+            => new JsonSchemaBuilder()
+                .Type(SchemaValueType.Array | SchemaValueType.Null)
+                .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
+                .Description(description);
+
+        static JsonSchemaBuilder Nullable(SchemaValueType type, string description)
+            => new JsonSchemaBuilder()
+                .Type(type | SchemaValueType.Null)
+                .Description(description);
+
+        var properties = new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object | SchemaValueType.Null)
+            .Properties(
+                ("AIToolInstanceMetadata", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Object)
+                    .Properties(("ToolInstanceNames", Strings("The names of the AI tool instances the task may call.")))
+                    .AdditionalProperties(true)
+                    .Description("The AI tool instances the task may call.")),
+                ("PromptTemplateMetadata", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Object)
+                    .AdditionalProperties(true)
+                    .Description("The prompt templates applied with the system message, as Templates: [{ TemplateId, Parameters }].")),
+                ("AIPersonaMetadata", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Object)
+                    .AdditionalProperties(true)
+                    .Description("The AI persona the task speaks as, as { PersonaId, Parameters }.")))
+            .AdditionalProperties(true)
+            .Description("Extension data of the configuration, keyed by the name of the metadata object. AI Data Sources adds DataSourceMetadata ({ DataSourceId }) and AIDataSourceRagMetadata (Strictness, TopNDocuments, IsInScope, Filter).");
+
+        return new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("ChatDeploymentName", Nullable(SchemaValueType.String, "Technical name of the chat deployment that runs the task. Empty uses the site's default chat deployment.")),
+                ("UtilityDeploymentName", Nullable(SchemaValueType.String, "Technical name of the utility deployment used for background steps. Empty uses the site's default.")),
+                ("OrchestratorName", Nullable(SchemaValueType.String, "Name of the orchestrator that runs the completion. Empty uses the default orchestrator.")),
+                ("SystemMessage", Nullable(SchemaValueType.String, "The system instruction that sets the AI's behavior and response style.")),
+                ("Temperature", Nullable(SchemaValueType.Number, "Controls randomness in responses. Lower values produce more deterministic output.")),
+                ("TopP", Nullable(SchemaValueType.Number, "Controls randomness via nucleus sampling.")),
+                ("FrequencyPenalty", Nullable(SchemaValueType.Number, "Reduces the chance of repeating tokens in proportion to how often they appeared.")),
+                ("PresencePenalty", Nullable(SchemaValueType.Number, "Reduces the chance of repeating any token that appeared, encouraging new topics.")),
+                ("MaxTokens", Nullable(SchemaValueType.Integer, "The maximum number of tokens in the response.")),
+                ("ToolNames", Strings("The names of the AI tools to enable for this task.")),
+                ("Properties", properties))
+            .AdditionalProperties(true)
+            .Description("The completion's configuration, stored as a chat interaction: the deployment, model parameters, tools and other settings.");
     }
 }

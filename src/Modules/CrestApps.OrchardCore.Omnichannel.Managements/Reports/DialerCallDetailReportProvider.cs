@@ -9,7 +9,6 @@ using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
-using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Records;
 using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
@@ -305,7 +304,8 @@ public sealed class DialerCallDetailReportProvider : OmnichannelReportBase, IRep
 
         foreach (var batch in contactIds.Chunk(LookupBatchSize))
         {
-            var contacts = await _session.Query<ContentItem, ContentItemIndex>(
+            // Only the name is needed, and the content item index row carries it, so the contact documents are not read.
+            var contacts = await _session.QueryIndex<ContentItemIndex>(
                     index => index.ContentItemId.IsIn(batch) && index.Latest)
                 .ListAsync(cancellationToken);
 

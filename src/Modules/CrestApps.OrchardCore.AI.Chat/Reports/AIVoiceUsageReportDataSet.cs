@@ -119,7 +119,7 @@ public sealed class AIVoiceUsageReportDataSet : IndexedReportDataSet<AIVoiceSess
             .Description = S["How long the live session's turn detector waited after the caller stopped talking."].Value;
         AddField(nameof(AIVoiceSessionSummary.LatencySamples), S["Answers measured"], DataFieldType.Integer, record => record.LatencySamples, time);
         AddField(nameof(AIVoiceSessionSummary.EstimatedCost), S["Estimated cost"], DataFieldType.Decimal, record => record.EstimatedCost, call)
-            .Description = S["The carrier's minutes and the AI's minutes or tokens, at the prices in Settings > Artificial Intelligence > Costs, in the currency set there."].Value;
+            .Description = S["The carrier's minutes at the prices in Settings > Artificial Intelligence > Costs, and the AI's tokens or minutes at the prices set on the AI deployment, in the cost currency."].Value;
         AddField(nameof(AIVoiceSessionSummary.CostCurrency), S["Cost currency"], DataFieldType.Text, record => record.CostCurrency, call);
 
         AddField(nameof(AIVoiceSessionSummary.AssistantTurns), S["AI turns"], DataFieldType.Integer, record => record.AssistantTurns, turns);

@@ -121,9 +121,9 @@ internal sealed class SchemaOrgPartStructuredDataProvider : IStructuredDataProvi
 
         var properties = new Dictionary<string, FluidValue>(StringComparer.OrdinalIgnoreCase)
         {
-            ["ContentItem"] = new ObjectValue(context.ContentItem),
-            ["Url"] = new StringValue(context.Url ?? string.Empty),
-            ["BaseUrl"] = new StringValue(context.BaseUrl),
+            ["ContentItem"] = ObjectValue.Create(context.ContentItem),
+            ["Url"] = StringValue.Create(context.Url ?? string.Empty),
+            ["BaseUrl"] = StringValue.Create(context.BaseUrl),
         };
 
         try

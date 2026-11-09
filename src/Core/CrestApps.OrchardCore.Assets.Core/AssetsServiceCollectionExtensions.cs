@@ -1,6 +1,7 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Assets.Core.Services;
 using CrestApps.OrchardCore.Assets.Models;
+using CrestApps.OrchardCore.Parties;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -25,6 +26,7 @@ public static class AssetsServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Asset>, AssetHandler>());
         services.TryAddScoped<AssetMeterReadingStore>();
         services.TryAddScoped<AssetService>();
+        services.AddPartyDirectory();
         services.TryAddScoped<AssetOwnerDirectory>();
 
         return services;

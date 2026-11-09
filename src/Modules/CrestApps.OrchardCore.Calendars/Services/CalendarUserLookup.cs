@@ -1,50 +1,38 @@
-using OrchardCore.Users.Indexes;
-using OrchardCore.Users.Models;
-using YesSql;
-using YesSql.Services;
+using CrestApps.OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.Calendars.Services;
 
 /// <summary>
-/// Finds users for the calendar pickers and shows their names.
+/// Finds users for the calendar pickers and shows their names, through the shared <see cref="IUserSearchService"/>.
 /// </summary>
 public sealed class CalendarUserLookup
 {
     private const int MaxResults = 30;
 
-    private readonly ISession _session;
+    private readonly IUserSearchService _userSearchService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CalendarUserLookup"/> class.
     /// </summary>
-    /// <param name="session">The YesSql session.</param>
-    public CalendarUserLookup(ISession session)
+    /// <param name="userSearchService">The shared user search.</param>
+    public CalendarUserLookup(IUserSearchService userSearchService)
     {
-        _session = session;
+        _userSearchService = userSearchService;
     }
 
     /// <summary>
-    /// Finds enabled users whose user name or email starts with or contains the text.
+    /// Finds enabled users whose user name or email contains the text.
     /// </summary>
     /// <param name="query">The text to look for.</param>
     /// <returns>The users.</returns>
     public async Task<IReadOnlyList<CalendarUserItem>> SearchAsync(string query)
     {
-        IEnumerable<User> users;
-
-        if (string.IsNullOrWhiteSpace(query))
+        var users = await _userSearchService.SearchAsync(new UserSearchQuery
         {
-            users = await _session.Query<User, UserIndex>(index => index.IsEnabled).OrderBy(index => index.NormalizedUserName).Take(MaxResults).ListAsync();
-        }
-        else
-        {
-            var normalized = query.Trim().ToUpperInvariant();
-
-            users = await _session.Query<User, UserIndex>(index => index.IsEnabled && (index.NormalizedUserName.Contains(normalized) || index.NormalizedEmail.Contains(normalized)))
-                .OrderBy(index => index.NormalizedUserName)
-                .Take(MaxResults)
-                .ListAsync();
-        }
+            Text = query,
+            MatchEmail = true,
+            MaxResults = MaxResults,
+        });
 
         return users.Select(ToItem).ToList();
     }
@@ -56,14 +44,7 @@ public sealed class CalendarUserLookup
     /// <returns>The users found.</returns>
     public async Task<IReadOnlyList<CalendarUserItem>> GetAsync(IEnumerable<string> userIds)
     {
-        var ids = userIds?.Where(id => !string.IsNullOrEmpty(id)).Distinct().ToArray() ?? [];
-
-        if (ids.Length == 0)
-        {
-            return [];
-        }
-
-        var users = await _session.Query<User, UserIndex>(index => index.UserId.IsIn(ids)).ListAsync();
+        var users = await _userSearchService.GetAsync(userIds ?? []);
 
         return users.Select(ToItem).ToList();
     }
@@ -80,12 +61,13 @@ public sealed class CalendarUserLookup
             return null;
         }
 
-        var user = await _session.Query<User, UserIndex>(index => index.UserId == userId).FirstOrDefaultAsync();
+        var users = await _userSearchService.GetAsync([userId]);
+        var user = users.Count > 0 ? users[0] : null;
 
         return user is null ? null : (user.Email, user.UserName);
     }
 
-    private static CalendarUserItem ToItem(User user)
+    private static CalendarUserItem ToItem(UserSearchResult user)
     {
         return new CalendarUserItem(user.UserId, string.IsNullOrEmpty(user.Email) ? user.UserName : $"{user.UserName} ({user.Email})");
     }

@@ -21,7 +21,7 @@ namespace CrestApps.OrchardCore.Workforce.Recipes;
 /// </summary>
 internal sealed class WorkforceRecipeStep : NamedRecipeStepHandler
 {
-    internal static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web) { Converters = { new JsonStringEnumConverter() } };
+    internal static readonly JsonSerializerOptions JsonOptions = RecipeImport.JsonOptions;
 
     private readonly IActivityCodeManager _activityCodeManager;
     private readonly ITeamManager _teamManager;

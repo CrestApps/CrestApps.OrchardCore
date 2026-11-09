@@ -10,7 +10,7 @@ Time Tracker records what people do through their working day, such as Work, Bre
 
 | | |
 | --- | --- |
-| **Menu** | Time Tracker > My Time, Time Entries, Stages, Categories; Reports > Time Tracker > Hours by category |
+| **Menu** | Time Tracker > My Time, Time Entries, Stages, Categories; Reports > Workforce & Payroll > Hours by Category |
 | **Permission** | Track one's own time for My Time; View anyone's time and the time report; Edit anyone's time; Manage time stages and categories |
 | **Feature** | Time Tracker; Audit Trail to record every change |
 
@@ -48,4 +48,4 @@ With Workforce Time Off on, every day of approved time off is kept here once the
 
 ## Hours by category
 
-**Reports > Time Tracker > Hours by category** shows a row for each person, with a column for each category and the total, for the days you choose (this week at first). Tick **A row per day** to see each day apart. A stage's time adds to each of its categories, so the columns don't add up to the total.
+**Reports > Workforce & Payroll > Hours by Category** shows a row for each person, with a column for each category and the total, for the date range you choose (this week, Monday to Sunday, at first). Days are counted in the site's time zone, whatever your own time zone is, and the report's heading names it. Search by user name with **Person**, and tick **A row per day** to see each day apart, such as *Mon 2 Nov* (an export writes the date as `2026-11-02`). It is a report of the **Reports** feature, so it needs Reports on, and it exports as CSV (and Excel with **Reports (OpenXml)**). A stage's time adds to each of its categories, so the columns don't add up to the total.

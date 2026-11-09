@@ -1,14 +1,15 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 /// <summary>
 /// Represents the omnichannel channel endpoint.
 /// </summary>
-public sealed class OmnichannelChannelEndpoint : CatalogItem, IDisplayTextAwareModel, IModifiedUtcAwareModel, ICloneable<OmnichannelChannelEndpoint>
+public sealed class OmnichannelChannelEndpoint : CatalogItem, IDisplayTextAwareModel, IAuditedModel, ICloneable<OmnichannelChannelEndpoint>
 {
     /// <summary>
     /// Gets or sets the display text.

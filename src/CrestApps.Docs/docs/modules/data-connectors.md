@@ -239,6 +239,12 @@ What is left out of an export:
 
 A recipe entry that breaks a rule is reported as a recipe error, and the others are still imported.
 
+## Use a connection from another module
+
+A connection is the one record of an external endpoint and its credentials, so other modules reference it instead of storing their own copy. `IDataConnectionResolver` (in `CrestApps.OrchardCore.DataConnectors.Abstractions`) lists the connections of given connectors for a picker and resolves a connection identifier to a `DataConnectorContext` (the connection and the reader of its protected secrets). It is registered while the Data Connectors feature is on, so a consumer takes it as an optional constructor parameter (`IDataConnectionResolver resolver = null`). `ResolveForAsync(connectionId, connectorNames)` also checks that the connection belongs to a connector the consumer can read and says why it can't be used otherwise.
+
+The consumer stores `DataConnectionReference` (`ConnectionId`) in its record's properties; a record without it keeps its own settings. The HTTP connection settings (`HttpConnectionSettings`, `HttpAuthenticationSettings`, `HttpAuthenticationSecrets`) and the connector names (`DataConnectorConstants.Connectors`) are in the abstractions too. Today the Elasticsearch AI data source uses Elasticsearch connections and the Azure AI Search AI data source uses HTTP API connections.
+
 ## Write a connector
 
 A connector is a class in any module; nothing in the Data Connectors modules changes.

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.Extensions.Localization;
@@ -71,7 +72,7 @@ internal sealed class ProductAddOnCartLineHandler : ICartLineHandler
 
         return addOn.PriceBasis switch
         {
-            ProductAddOnPriceBasis.PercentOfPrice => Math.Round(basePrice * Math.Min(price, 100m) / 100m, 2, MidpointRounding.AwayFromZero),
+            ProductAddOnPriceBasis.PercentOfPrice => Money.Round(basePrice * Math.Min(price, 100m) / 100m, context.Price?.Currency),
             ProductAddOnPriceBasis.PerPerson => await context.ConvertAsync(price, cancellationToken) * people,
             _ => await context.ConvertAsync(price, cancellationToken),
         };

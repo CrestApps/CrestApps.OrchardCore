@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Assets;
+using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Resources;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -16,7 +18,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Field Service",
     Dependencies =
     [
-        "CrestApps.OrchardCore.Resources",
+        ResourcesConstants.Feature.Area,
     ]
 )]
 
@@ -28,6 +30,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         AssetsConstants.Features.Assets,
-        "CrestApps.OrchardCore.Calendars.Resources",
+        CalendarsConstants.Features.Resources,
     ]
 )]

@@ -297,12 +297,6 @@ public sealed partial class ProviderVoiceOfferSynchronizationService : IProvider
         => session?.Legs.Any(leg => leg is not null && leg.Role == CallPartyRole.Agent && leg.AnsweredUtc.HasValue) == true;
 
     private static bool IsTerminalState(VoiceCallState? state)
-    {
-        return state is VoiceCallState.Ended or
-            VoiceCallState.Failed or
-            VoiceCallState.NoAnswer or
-            VoiceCallState.Rejected or
-            VoiceCallState.Canceled or
-            VoiceCallState.Transferred;
-    }
+        => state is { } value && VoiceCallStateProjection.IsTerminal(value);
+
 }

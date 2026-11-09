@@ -2,6 +2,7 @@ using CrestApps.Core.AI.Copilot.Models;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 using CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
@@ -68,13 +69,13 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
         {
             model.AuthenticationType = settings.AuthenticationType;
             model.ClientId = settings.ClientId;
-            model.HasSecret = !string.IsNullOrWhiteSpace(settings.ProtectedClientSecret);
+            model.HasSecret = ProtectedSettingExtensions.HasSecret(settings.ProtectedClientSecret);
             model.ComputedCallbackUrl = await _callbackUrlProvider.GetCallbackUrlAsync();
 
             // BYOK fields
             model.ProviderType = settings.ProviderType;
             model.BaseUrl = settings.BaseUrl;
-            model.HasApiKey = !string.IsNullOrWhiteSpace(settings.ProtectedApiKey);
+            model.HasApiKey = ProtectedSettingExtensions.HasSecret(settings.ProtectedApiKey);
             model.WireApi = settings.WireApi ?? "completions";
             model.DefaultModel = settings.DefaultModel;
             model.AzureApiVersion = settings.AzureApiVersion;
@@ -123,12 +124,9 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.ClientId), S["Client ID is required."]);
             }
 
-            if (!string.IsNullOrWhiteSpace(model.ClientSecret))
-            {
-                var protector = _dataProtectionProvider.CreateProtector(ProtectorPurpose);
-                settings.ProtectedClientSecret = protector.Protect(model.ClientSecret);
-            }
-            else if (string.IsNullOrWhiteSpace(settings.ProtectedClientSecret))
+            settings.ProtectedClientSecret = _dataProtectionProvider.ApplySecret(ProtectorPurpose, settings.ProtectedClientSecret, model.ClientSecret);
+
+            if (!ProtectedSettingExtensions.HasSecret(settings.ProtectedClientSecret))
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.ClientSecret), S["Client secret is required."]);
             }
@@ -157,11 +155,7 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.DefaultModel), S["Default model is required."]);
             }
 
-            if (!string.IsNullOrWhiteSpace(model.ApiKey))
-            {
-                var protector = _dataProtectionProvider.CreateProtector(ProtectorPurpose);
-                settings.ProtectedApiKey = protector.Protect(model.ApiKey);
-            }
+            settings.ProtectedApiKey = _dataProtectionProvider.ApplySecret(ProtectorPurpose, settings.ProtectedApiKey, model.ApiKey);
 
             if (string.Equals(settings.ProviderType, "azure", StringComparison.OrdinalIgnoreCase)
                 && string.IsNullOrWhiteSpace(settings.AzureApiVersion))

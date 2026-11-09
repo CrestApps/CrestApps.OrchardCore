@@ -47,6 +47,7 @@ public sealed class Startup : StartupBase
         services.AddElasticsearchODataFilterTranslator();
         services.AddIndexProfileHandler<DataSourceElasticsearchIndexProfileHandler>();
         services.AddScoped<IDocumentIndexHandler, DataSourceElasticsearchDocumentIndexHandler>();
+        services.TryAddScoped<AIDataSourceConnectionPicker>();
         services.AddDisplayDriver<AIDataSource, ElasticsearchAIDataSourceDisplayDriver>();
         services.AddKeyedScoped<IAIDataSourceSourceHandler, ElasticsearchAIDataSourceSourceHandler>(AIDataSourceSourceTypes.Elasticsearch);
 
@@ -56,7 +57,7 @@ public sealed class Startup : StartupBase
         services.Configure<AIDataSourceSourceOptions>(options => options.AddOrUpdate(
             AIDataSourceSourceTypes.Elasticsearch,
             S["Elasticsearch"],
-            S["Read source documents from an external Elasticsearch index using explicit or globally configured connection settings."]));
+            S["Read source documents from an external Elasticsearch index using a data connection, explicit or globally configured connection settings."]));
 
         services.AddElasticsearchIndexingSource(DataSourceConstants.IndexingTaskType, o =>
         {
@@ -75,9 +76,9 @@ public sealed class Startup : StartupBase
 
             options.AddFieldMapping(ElasticsearchConstants.ProviderName, AIConstants.AIDocumentsIndexingTaskType, mapping =>
             {
-                mapping.DefaultKeyField = AIConstants.ColumnNames.ChunkId;
-                mapping.DefaultTitleField = AIConstants.ColumnNames.FileName;
-                mapping.DefaultContentField = AIConstants.ColumnNames.Content;
+                mapping.DefaultKeyField = DocumentIndexConstants.ColumnNames.ChunkId;
+                mapping.DefaultTitleField = DocumentIndexConstants.ColumnNames.FileName;
+                mapping.DefaultContentField = DocumentIndexConstants.ColumnNames.Content;
             });
         });
     }

@@ -48,7 +48,7 @@ public sealed class Startup : StartupBase
 /// lands on a node which did not start the call is then answered deterministically, and the log names the node
 /// that can serve it, instead of the callback looking identical to an unknown key.
 /// </summary>
-[RequireFeatures("OrchardCore.Redis")]
+[RequireFeatures(OrchardCoreFeatureIds.Redis)]
 public sealed class DistributedRendezvousStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

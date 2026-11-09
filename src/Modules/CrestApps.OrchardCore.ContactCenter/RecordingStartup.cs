@@ -105,7 +105,7 @@ public sealed class RecordingStartup : StartupBase
 /// Recording feature are enabled so the required recording service is always resolvable.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Recording)]
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class ContactCenterRecordingWorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -119,7 +119,7 @@ public sealed class ContactCenterRecordingWorkflowsStartup : StartupBase
 /// Registers the Orchard Audit Trail receipt for confirmed recording-media deletion.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Recording)]
-[RequireFeatures("OrchardCore.AuditTrail")]
+[RequireFeatures(OrchardCoreFeatureIds.AuditTrail)]
 public sealed class RecordingAuditTrailStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

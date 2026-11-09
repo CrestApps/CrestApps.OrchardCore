@@ -107,7 +107,7 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
         var userPrompt = await _liquidTemplateManager.RenderStringAsync(PromptTemplate, NullEncoder.Default,
         new Dictionary<string, FluidValue>()
         {
-            ["Profile"] = new ObjectValue(profile),
+            ["Profile"] = ObjectValue.Create(profile),
         });
 
         if (string.IsNullOrWhiteSpace(userPrompt))

@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements;
+using CrestApps.OrchardCore.Tests.Modules.Omnichannel.Sms;
 using Microsoft.Extensions.Localization;
 using Moq;
 using OrchardCore.Sms;
@@ -51,8 +52,8 @@ internal static class MessagingTestChannels
     /// <summary>
     /// Creates the SMS channel over the specified dispatcher.
     /// </summary>
-    public static SmsMessagingChannel Sms(ISmsDispatcher dispatcher, ISession session = null)
-        => new(new Lazy<ISmsDispatcher>(() => dispatcher), session ?? Mock.Of<ISession>(), new PassThroughStringLocalizer<SmsMessagingChannel>(), Mock.Of<IOmnichannelContactTypeProvider>(), new DefaultPhoneNumberService(), global::CrestApps.OrchardCore.Tests.Modules.Omnichannel.TestContactMethods.Accessor, ContactPhoneTestStore.CreateEmptyLookup());
+    public static SmsMessagingChannel Sms(ISmsDispatcher dispatcher, ISession session = null, IContactOptOutResolver optOutResolver = null)
+        => new(new Lazy<ISmsDispatcher>(() => dispatcher), session ?? Mock.Of<ISession>(), new PassThroughStringLocalizer<SmsMessagingChannel>(), Mock.Of<IOmnichannelContactTypeProvider>(), new DefaultPhoneNumberService(), global::CrestApps.OrchardCore.Tests.Modules.Omnichannel.TestContactMethods.Accessor, ContactPhoneTestStore.CreateEmptyLookup(), global::CrestApps.OrchardCore.Tests.Doubles.ConsentDoubles.Over(optOutResolver ?? new SharedNumberOptOutResolver()));
 
     /// <summary>
     /// Creates a registry holding only the SMS channel over the specified dispatcher.

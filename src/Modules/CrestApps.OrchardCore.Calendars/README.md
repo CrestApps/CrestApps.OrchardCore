@@ -21,6 +21,10 @@ against a calendar's overlap limit under a distributed lock.
   providers are not available yet; only the `ICalendarProvider` seam and the iCalendar provider exist.
 - **Calendars API** (`.Api`): `/api/calendars/v1`.
 
+With `OrchardCore.AdminDashboard` on, Calendars adds a **Calendar** dashboard widget (`CalendarWidget`, with
+`CalendarWidgetPart`) that shows the viewer's own calendars, every calendar of a type, or chosen calendars; a dashboard
+can hold several (a startup with `[RequireFeatures("OrchardCore.AdminDashboard")]`, no feature of its own).
+
 With `CrestApps.OrchardCore.AI` on, Calendars also registers AI tools that list calendars and events, find free time,
 and create, move and cancel events (a startup with `[RequireFeatures("CrestApps.OrchardCore.AI")]`, no feature of its
 own).

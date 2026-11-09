@@ -4,13 +4,17 @@ using CrestApps.Core.AI.Tooling;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
 using CrestApps.OrchardCore.AI.Tools.Handlers;
+using CrestApps.OrchardCore.Core.Deployments;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Deployment;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Deployments.Sources;
 
-internal sealed class AIToolInstanceDeploymentSource : DeploymentSourceBase<AIToolInstanceDeploymentStep>
+/// <summary>
+/// Writes the selected AI tool instances to a deployment plan. The tool instance handlers strip the secrets while each
+/// instance is exported.
+/// </summary>
+internal sealed class AIToolInstanceDeploymentSource : CatalogDeploymentSourceBase<AIToolInstanceDeploymentStep, AIToolInstance>
 {
     private readonly INamedCatalog<AIToolInstance> _instancesCatalog;
     private readonly IEnumerable<IAIToolInstanceHandler> _handlers;
@@ -26,52 +30,37 @@ internal sealed class AIToolInstanceDeploymentSource : DeploymentSourceBase<AITo
         INamedCatalog<AIToolInstance> instancesCatalog,
         IEnumerable<IAIToolInstanceHandler> handlers,
         ILogger<AIToolInstanceDeploymentSource> logger)
+        : base("instances")
     {
         _instancesCatalog = instancesCatalog;
         _handlers = handlers;
         _logger = logger;
     }
 
-    protected override async Task ProcessAsync(AIToolInstanceDeploymentStep step, DeploymentPlanResult result)
+    protected override async Task<IEnumerable<AIToolInstance>> GetEntriesAsync()
+        => await _instancesCatalog.GetAllAsync();
+
+    protected override bool IsSelected(AIToolInstanceDeploymentStep step, AIToolInstance entry)
+        => IsSelectedByKey(step.IncludeAll, step.InstanceIds, entry.ItemId);
+
+    protected override JsonObject Export(AIToolInstance entry)
     {
-        var instances = await _instancesCatalog.GetAllAsync();
-
-        var instanceObjects = new JsonArray();
-
-        var instanceIds = step.IncludeAll
-        ? []
-        : step.InstanceIds ?? [];
-
-        foreach (var instance in instances)
+        var instanceObject = new JsonObject()
         {
-            if (instanceIds.Length > 0 && !instanceIds.Contains(instance.ItemId))
-            {
-                continue;
-            }
+            { "ItemId", entry.ItemId },
+            { "Source", entry.Source },
+            { "Name", entry.Name },
+            { "Description", entry.Description },
+            { "CreatedUtc", entry.CreatedUtc },
+            { "OwnerId", entry.OwnerId },
+            { "Author", entry.Author },
+            { "Properties", JsonSerializer.SerializeToNode(entry.Properties) },
+        };
 
-            var instanceObject = new JsonObject()
-            {
-                { "ItemId", instance.ItemId },
-                { "Source", instance.Source },
-                { "Name", instance.Name },
-                { "Description", instance.Description },
-                { "CreatedUtc", instance.CreatedUtc },
-                { "OwnerId", instance.OwnerId },
-                { "Author", instance.Author },
-                { "Properties", JsonSerializer.SerializeToNode(instance.Properties) },
-            };
+        var exportingContext = new ExportingAIToolInstanceContext(entry, instanceObject);
 
-            var exportingContext = new ExportingAIToolInstanceContext(instance, instanceObject);
+        _handlers.Invoke((handler, context) => handler.Exporting(context), exportingContext, _logger);
 
-            _handlers.Invoke((handler, context) => handler.Exporting(context), exportingContext, _logger);
-
-            instanceObjects.Add(instanceObject);
-        }
-
-        result.Steps.Add(new JsonObject
-        {
-            ["name"] = step.Name,
-            ["instances"] = instanceObjects,
-        });
+        return instanceObject;
     }
 }

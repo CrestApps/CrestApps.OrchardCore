@@ -18,7 +18,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Communication",
     Dependencies =
     [
-        "OrchardCore.SignalR",
+        OrchardCoreFeatureIds.SignalR,
     ]
 )]
 
@@ -30,8 +30,8 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         SignalRConstants.Feature.Area,
-        "OrchardCore.Redis",
-        "OrchardCore.SignalR.Redis",
+        OrchardCoreFeatureIds.Redis,
+        OrchardCoreFeatureIds.SignalRRedis,
     ]
 )]
 
@@ -43,6 +43,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         SignalRConstants.Feature.Area,
-        "OrchardCore.SignalR.Azure",
+        OrchardCoreFeatureIds.SignalRAzure,
     ]
 )]

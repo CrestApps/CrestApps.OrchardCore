@@ -2,8 +2,9 @@ using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Accounts;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
+using CrestApps.OrchardCore.Resources;
 using CrestApps.OrchardCore.TimeZones;
-using CrestApps.OrchardCore.Users.Core;
+using CrestApps.OrchardCore.Users;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -25,11 +26,11 @@ using OrchardCore.Modules.Manifest;
         UsersConstants.Feature.Area,
         "CrestApps.OrchardCore.ContentFields",
         PhoneNumberVerificationsConstants.Features.PhoneNumbers,
-        "OrchardCore.Contents",
-        "OrchardCore.Flows",
-        "OrchardCore.Users",
+        OrchardCoreFeatureIds.Contents,
+        OrchardCoreFeatureIds.Flows,
+        OrchardCoreFeatureIds.Users,
         TimeZonesConstants.Features.Area,
-        "CrestApps.OrchardCore.Users",
+        UsersConstants.Feature.Area,
     ]
 )]
 
@@ -42,8 +43,8 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         OmnichannelConstants.Features.Activities,
-        "CrestApps.OrchardCore.Resources",
-        "OrchardCore.Resources",
+        ResourcesConstants.Feature.Area,
+        OrchardCoreFeatureIds.Resources,
     ]
 )]
 
@@ -56,9 +57,9 @@ using OrchardCore.Modules.Manifest;
     [
         OmnichannelConstants.Features.Activities,
         OmnichannelConstants.Features.ChannelEndpoints,
-        "CrestApps.OrchardCore.Resources",
-        "OrchardCore.Resources",
-        "OrchardCore.ContentTypes",
+        ResourcesConstants.Feature.Area,
+        OrchardCoreFeatureIds.Resources,
+        OrchardCoreFeatureIds.ContentTypes,
     ]
 )]
 
@@ -73,8 +74,8 @@ using OrchardCore.Modules.Manifest;
 
         // Accounts are the Accounts feature's content type; the CRM puts contacts and opportunities in them.
         AccountsConstants.Feature,
-        "OrchardCore.ContentFields",
-        "OrchardCore.Lists",
-        "OrchardCore.Title",
+        OrchardCoreFeatureIds.ContentFields,
+        OrchardCoreFeatureIds.Lists,
+        OrchardCoreFeatureIds.Title,
     ]
 )]

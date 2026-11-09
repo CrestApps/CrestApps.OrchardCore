@@ -142,7 +142,7 @@ public sealed class CalendarAccessAndAvailabilityTests
         // Assert
         Assert.Equal([Utc(Local(9)), Utc(Local(13))], busy.Select(interval => interval.StartUtc));
         Assert.Equal(
-            [new CalendarTimeWindow(Utc(Local(10)), Utc(Local(13))), new CalendarTimeWindow(Utc(Local(14)), Utc(Local(18)))],
+            [new TimeWindow(Utc(Local(10)), Utc(Local(13))), new TimeWindow(Utc(Local(14)), Utc(Local(18)))],
             free);
     }
 

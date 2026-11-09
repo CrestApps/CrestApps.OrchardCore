@@ -2,6 +2,10 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.A2A.Recipes.Schemas;
+using CrestApps.OrchardCore.AI.DataSources.Recipes.Schemas;
+using CrestApps.OrchardCore.AI.Mcp.Recipes.Schemas;
+using CrestApps.OrchardCore.AI.Recipes.Schemas;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using Microsoft.Extensions.Options;
@@ -98,7 +102,7 @@ public sealed class AIProfileRecipeStepTests
         Assert.Contains("\"ChatModeProfileSettings\"", json);
         Assert.Contains("\"InitialResponseHandlerName\"", json);
         Assert.Contains("\"AgentAvailability\"", json);
-        Assert.Equal(["Name", "Source", "DisplayText"], requiredValues);
+        Assert.Equal(["Name", "Source"], requiredValues);
     }
 
     [Fact]

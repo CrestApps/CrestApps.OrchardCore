@@ -8,13 +8,13 @@ user_manual: user-manual/commerce/webhooks
 | | |
 | --- | --- |
 | **Feature** | `CrestApps.OrchardCore.Commerce.Webhooks` (Commerce Webhooks) |
-| **Contracts** | `CrestApps.OrchardCore.Abstractions`, namespace `CrestApps.OrchardCore.Commerce.Webhooks` |
+| **Contracts** | `CrestApps.OrchardCore.Webhooks.Abstractions` (publisher, events); event names in `CrestApps.OrchardCore.Abstractions`, namespace `CrestApps.OrchardCore.Commerce.Webhooks` |
 | **Category** | Commerce |
-| **Depends on** | Commerce |
+| **Depends on** | Commerce, [Webhooks](webhooks.md) |
 
 The **Commerce Webhooks** feature posts commerce events (an order paid, a shipment shipped, stock sold out) as signed JSON to the URLs merchants subscribe. Each event is queued in the same unit of work as the change that raised it, sent once that work is saved, and retried with backoff until the receiver answers with a `2xx` status. Every delivery is logged.
 
-The modules that raise events don't depend on this one: they resolve the publisher when an event happens, and skip when the feature is off.
+The subscriptions, the signing, the delivery outbox and the admin (**Configuration > Webhooks**) belong to the generic [Webhooks](webhooks.md#outbound-webhooks) building block, which this feature turns on. Commerce Webhooks is the switch the commerce modules gate their events on: Orders, Customers, Inventory and Shipping declare and publish their events in startups behind `[RequireFeatures(CommerceConstants.Features.Webhooks)]`.
 
 <YouTube video="webhooks" title="Narrated video overview of webhooks" />
 
@@ -24,23 +24,25 @@ This video shows adding a webhook in the admin:
 
 <YouTube video="payments" title="Video overview of payments" />
 
-Both documents live in the `Webhooks` YesSql collection.
+Both documents live in the `Webhooks` YesSql collection and are defined in `CrestApps.OrchardCore.Webhooks.Core.Models`. They keep the YesSql type names Commerce Webhooks first stored them under, so existing subscriptions and deliveries stay readable.
 
 - **`WebhookSubscription`** (`WebhookSubscriptionIndex`): `Name`, `Url`, `ProtectedSecret`, `Events` (event names, or `*` for every event, those added later included), `IsEnabled`, `CreatedUtc` and `ModifiedUtc`. `Takes(eventName)` says whether an enabled subscription wants an event.
 - **`WebhookDelivery`** (`WebhookDeliveryIndex`): one event for one subscription. `EventId` (the same for every subscription the event went to), `EventName`, `Payload` (the JSON posted, the same on every attempt), `Status` (`Pending`, `Delivered` or `Failed`), `Attempts`, `NextAttemptUtc`, `LastStatusCode`, `LastError` (cut to 500 characters), `CreatedUtc`, `LastAttemptUtc` and `DeliveredUtc`.
 
-The secret is made by `WebhookDispatcher.NewProtectedSecret()`: `whsec_` and 24 random bytes in URL-safe base 64, protected with ASP.NET Core Data Protection under the purpose `CrestApps.OrchardCore.Commerce.Webhooks.Secret`. The tenant's Data Protection keys must survive restarts and be shared by every node, or the secrets can't be read back.
+The secret is made by `WebhookDispatcher.NewProtectedSecret()`: `whsec_` and 24 random bytes in URL-safe base 64, protected with ASP.NET Core Data Protection under the purpose `CrestApps.OrchardCore.Commerce.Webhooks.Secret` (`WebhookStorage.SecretProtectionPurpose`; it keeps that value so stored secrets stay readable). The tenant's Data Protection keys must survive restarts and be shared by every node, or the secrets can't be read back.
 
 ## Publishing an event
 
 ```csharp
-public interface ICommerceWebhookPublisher
+public interface IWebhookPublisher
 {
-    Task PublishAsync(string eventName, object data, CancellationToken cancellationToken = default);
+    Task PublishAsync(string eventName, object payload, CancellationToken cancellationToken = default);
+
+    Task PublishAsync(string eventName, object payload, string eventId, CancellationToken cancellationToken = default);
 }
 ```
 
-`CommerceWebhookPublisher` reads the enabled subscriptions once per scope, and for each one that takes the event creates a pending `WebhookDelivery` in the current session, with the payload:
+`WebhookPublisher` sends only events an enabled feature declares, then reads the enabled subscriptions once per scope, and for each one that takes the event creates a pending `WebhookDelivery` in the current session, with the payload:
 
 ```json
 { "id": "evt_...", "event": "order.paid", "createdUtc": "2026-10-19T14:03:22.512Z", "data": { } }
@@ -48,7 +50,7 @@ public interface ICommerceWebhookPublisher
 
 `data` is serialized with `JsonSerializerOptions.Web` (camelCase). The event id is `evt_` and a new id, unless the caller passes one to `PublishAsync(eventName, data, eventId)`: an event that may be raised twice for the same thing passes a stable id, so receivers drop the repeat. A new delivery's `NextAttemptUtc` is a minute away (`Backoff[0]`), so the background task leaves it to the first send. It then adds a `ShellScope` deferred task that, after the request's work is committed, sends those deliveries in a scope of its own, so a slow receiver never holds up the request. An error while queuing is logged and swallowed: a webhook must never fail the order that raised it.
 
-A module offers an event to the admin's event picker with `AddCommerceWebhookEvent(name, displayName, group)` and publishes it from a handler that takes the publisher in its constructor. Both are registered in a startup behind `[RequireFeatures(CommerceConstants.Features.Webhooks)]`, so nothing is published, and no publisher is needed, while the feature is off:
+A module offers an event to the admin's event picker with `AddWebhookEvent(name, displayName, group)` (or an `IWebhookEventProvider`) and publishes it from a handler that takes `IWebhookPublisher` in its constructor. Both are registered in a startup behind `[RequireFeatures(CommerceConstants.Features.Webhooks)]`, so nothing is published, and no publisher is needed, while the feature is off:
 
 ```csharp
 [RequireFeatures(CommerceConstants.Features.Webhooks)]
@@ -57,11 +59,11 @@ public sealed class WebhooksStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ISubscriptionLifecycleHandler, SubscriptionWebhookHandler>();
-        services.AddCommerceWebhookEvent("subscription.renewed", "Subscription renewed", "Subscriptions");
+        services.AddWebhookEvent("subscription.renewed", "Subscription renewed", "Subscriptions");
     }
 }
 
-// In SubscriptionWebhookHandler, which takes ICommerceWebhookPublisher in its constructor:
+// In SubscriptionWebhookHandler, which takes IWebhookPublisher in its constructor:
 await _publisher.PublishAsync("subscription.renewed", new { subscription = ToApi(subscription) }, cancellationToken);
 ```
 
@@ -91,13 +93,14 @@ Customers made by the `Customers` recipe step aren't published.
 
 `WebhookDispatcher.SendAsync` makes one attempt at a pending delivery and saves what it came to.
 
-- It posts `Payload` with `Content-Type: application/json`, a `CrestApps-Commerce-Webhooks/1.0` user agent, and the headers in `WebhookConstants.Headers`: `X-Webhook-Id` (the event id), `X-Webhook-Event`, `X-Webhook-Timestamp` (Unix seconds, at this attempt) and `X-Webhook-Signature`.
-- The signature is `WebhookDispatcher.Sign(secret, timestamp, body)`: `v1=` and the lowercase hex HMAC-SHA256 of `{timestamp}.{body}`, keyed with the UTF-8 bytes of the whole secret.
-- It uses the named `HttpClient` `CommerceWebhooks`, with a 15-second timeout, and doesn't follow redirects: a `3xx` is an answer that isn't `2xx`. Its handler (`WebhookNetwork`) also refuses to connect when the host resolves only to loopback, private or link-local addresses, so a hostname can't reach the site's own network either; loopback is allowed while the host environment is Development. Of a refusal, only the first 500 characters are read, for at most 5 seconds.
+- It sends through `IWebhookSender`, which posts `Payload` with `Content-Type: application/json`, a `CrestApps-Webhooks/1.0` user agent, and the headers in `WebhookHeaders`: `X-Webhook-Id` (the event id), `X-Webhook-Event`, `X-Webhook-Timestamp` (Unix seconds, at this attempt) and `X-Webhook-Signature`.
+- The signature is `IWebhookSigner.Sign(secret, timestamp, body)` (`HmacSha256WebhookSigner`): `v1=` and the lowercase hex HMAC-SHA256 of `{timestamp}.{body}`, keyed with the UTF-8 bytes of the whole secret.
+- It uses the named `HttpClient` `CrestApps.Webhooks`, registered with `AddEgressGuardedHttpClient`, with a 15-second timeout, and doesn't follow redirects: a `3xx` is an answer that isn't `2xx`. The egress guard (`EgressNetwork`) refuses to connect when the host resolves only to loopback, private or link-local addresses, so a hostname can't reach the site's own network either; loopback is allowed while the host environment is Development. Of a refusal, only the first 500 characters are read, for at most 5 seconds.
+- A host the egress guard refuses fails the delivery at once: it would be refused again on every attempt.
 - A `2xx` answer marks it `Delivered`. Any other answer, a timeout or a connection error schedules the next attempt from `WebhookDispatcher.Backoff`: 1 minute, 5 minutes, 30 minutes, 2 hours, 6 hours, 12 hours and 24 hours after the attempts so far. After the eighth attempt fails it's `Failed`.
 - A delivery fails at once, without being sent, when its subscription was deleted (*The webhook was deleted.*), is turned off (*The webhook was turned off.*), or has a secret Data Protection can't unprotect (*The webhook's signing secret can't be read. Give it a new secret, then send it again.*).
 
-`WebhookDeliveriesBackgroundTask` runs every minute, under a 10-minute lock. It sends up to 20 pending deliveries whose `NextAttemptUtc` has come (`IWebhookDeliveryStore.ListDueAsync`, oldest first), loading each afresh and saving it as soon as it's sent, so a run that stops half way, or the next run, never sends it again. It then deletes up to 20 delivered or failed deliveries created more than 30 days ago.
+`WebhookDeliveriesBackgroundTask` runs every minute, under a 10-minute lock. It sends up to 20 pending deliveries whose `NextAttemptUtc` has come (`IWebhookDeliveryStore.ListDueAsync`, oldest first), loading each afresh and saving it as soon as it's sent, so a run that stops half way, or the next run, never sends it again. It then deletes up to 20 delivered or failed deliveries created more than 30 days ago, leaving out the events a feature keeps (AI Webhooks keeps every AI event); see [Delivery log retention](webhooks#delivery-log-retention).
 
 **Send again** in the admin (`WebhookDispatcher.ResendAsync`) resets a delivery to pending with no attempts and sends it at once.
 

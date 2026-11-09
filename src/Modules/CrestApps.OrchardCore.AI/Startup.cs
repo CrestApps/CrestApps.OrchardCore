@@ -23,6 +23,7 @@ using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Indexes;
 using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore.AI.Core.Workflows;
 using CrestApps.OrchardCore.AI.Deployments.Drivers;
 using CrestApps.OrchardCore.AI.Deployments.Sources;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
@@ -44,10 +45,14 @@ using CrestApps.OrchardCore.AI.Workflows.Flows;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using CrestApps.OrchardCore.AI.Workflows.Services;
 using CrestApps.OrchardCore.AI.Workflows.Tools;
+using CrestApps.OrchardCore.AI.Filters;
 using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Core.Migrations;
+using CrestApps.OrchardCore.Webhooks.Core;
 using CrestApps.OrchardCore.Core.Services;
 using Fluid;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -75,6 +80,10 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        // Data migrations that skip records show the people who manage AI profiles a warning on admin pages until it is dismissed.
+        services.AddMigrationSkipLog();
+        services.Configure<MvcOptions>(options => options.Filters.Add<MigrationSkipNoticeFilter>(order: -1000));
+
         services.AddAICoreServices()
             .AddCoreAIServicesStoresYesSql()
             // Has to follow the YesSql stores: they bind the connection and deployment catalogs to the
@@ -117,6 +126,7 @@ public sealed class Startup : StartupBase
             .AddPermissionProvider<AIDeploymentPermissionProvider>()
             .AddDisplayDriver<AIDeployment, AIDeploymentDisplayDriver>()
             .AddDisplayDriver<AIDeployment, AIDeploymentModelCapabilitiesDisplayDriver>()
+            .AddDisplayDriver<AIDeployment, AIDeploymentPricingDisplayDriver>()
             .AddDisplayDriver<AIDeployment, AIDeploymentCascadedRealtimeDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileDeploymentDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileModelParametersDisplayDriver>()
@@ -127,6 +137,7 @@ public sealed class Startup : StartupBase
             .AddNavigationProvider<AIDeploymentAdminMenu>()
             .AddDataMigration<AIDeploymentTypeMigrations>()
             .AddDataMigration<AIDeploymentV1DocumentMigrations>()
+            .AddDataMigration<AIDeploymentPricingMigrations>()
             .AddSiteDisplayDriver<DefaultAIDeploymentSettingsDisplayDriver>()
             .AddSiteDisplayDriver<AICostSettingsDisplayDriver>()
             .AddSiteDisplayDriver<AIContactMemorySettingsDisplayDriver>();
@@ -177,16 +188,6 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIProfileVersionEntry, AIProfileVersionEntryDisplayDriver>()
             .AddDataMigration<AIProfileVersionIndexMigrations>();
         services.AddScoped<IOrchestrationContextBuilderHandler, ChatConversationStartingOrchestrationHandler>();
-        services.Configure<TemplateOptions>(options =>
-        {
-            options.MemberAccessStrategy.Register<AIConversationTemplateModel>();
-            options.MemberAccessStrategy.Register<AIConversationTurn>();
-            options.MemberAccessStrategy.Register<AIConversationEvaluation>();
-            options.MemberAccessStrategy.Register<AIConversationCriterionResult>();
-            options.MemberAccessStrategy.Register<AIConversationIssue>();
-            options.MemberAccessStrategy.Register<AIChatSession>();
-            options.MemberAccessStrategy.Register<AIProfile>();
-        });
 
         services.AddDataMigration<AIProfileDefaultContextMigrations>();
         services.AddDataMigration<AIProfileDocumentMigrations>();
@@ -256,7 +257,7 @@ public sealed class CascadedRealtimeStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Indexing")]
+[RequireFeatures(OrchardCoreFeatureIds.Indexing)]
 public sealed class IndexingStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -268,7 +269,7 @@ public sealed class IndexingStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Recipes feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class RecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -285,7 +286,7 @@ public sealed class RecipesStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Workflows feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class WorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -298,17 +299,9 @@ public sealed class WorkflowsStartup : StartupBase
 
         // AI conversations: workflows that run before a conversation starts, and the tasks they decide with.
         services.AddActivity<AIConversationStartingEvent, AIConversationStartingEventDisplayDriver>();
-        services.AddActivity<SetConversationVariablesTask, SetConversationVariablesTaskDisplayDriver>();
         services.AddActivity<UseAIProfileTask, UseAIProfileTaskDisplayDriver>();
         services.AddActivity<AIAlertTriggeredEvent, AIAlertTriggeredEventDisplayDriver>();
 
-        // Conversation flows: stage-by-stage guidance built from workflow activities.
-        services.AddActivity<AIConversationFlowStartedEvent, AIConversationFlowStartedEventDisplayDriver>();
-        services.AddActivity<AIConversationStageTask, AIConversationStageTaskDisplayDriver>();
-        services.AddScoped<AIConversationFlows>();
-        services.AddScoped<IAICompletionContextBuilderHandler, AIConversationFlowCompletionHandler>();
-        services.AddScoped<IToolRegistryProvider, AIConversationFlowToolProvider>();
-        services.AddDisplayDriver<AIProfile, AIProfileFlowDisplayDriver>();
         services.AddActivity<AIAlertResolvedEvent, AIAlertResolvedEventDisplayDriver>();
         services.AddScoped<AIProfileVersionCopies>();
         services.AddActivity<DeclineConversationTask, DeclineConversationTaskDisplayDriver>();
@@ -317,20 +310,17 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddActivity<AIConversationTurnEvent, AIConversationTurnEventDisplayDriver>();
         services.AddScoped<IAIConversationTurnHandler, WorkflowAIConversationTurnHandler>();
 
-        // Quality: A/B splits, QA evaluations, simulated tests, analysis reruns and metric alerts.
+        // Quality: A/B splits and metric alerts. The tasks that read chat sessions are in ChatWorkflowsStartup.
         services.AddActivity<SplitTrafficTask, SplitTrafficTaskDisplayDriver>();
-        services.AddActivity<EvaluateConversationTask, EvaluateConversationTaskDisplayDriver>();
         services.AddActivity<AIConversationEvaluatedEvent, AIConversationEvaluatedEventDisplayDriver>();
-        services.AddActivity<SimulateConversationTask, SimulateConversationTaskDisplayDriver>();
-        services.AddActivity<RerunConversationAnalysisTask, RerunConversationAnalysisTaskDisplayDriver>();
         services.AddActivity<CheckConversationMetricTask, CheckConversationMetricTaskDisplayDriver>();
 
-        // Memory and integrations: rewriting a contact's memory, and signed webhooks to other systems.
-        services.AddActivity<UpdateContactMemoryTask, UpdateContactMemoryTaskDisplayDriver>();
+        // Integrations: signed webhooks to other systems.
         services.AddActivity<SendSignedWebhookTask, SendSignedWebhookTaskDisplayDriver>();
         services.AddActivity<AIGuardrailTriggeredEvent, AIGuardrailTriggeredEventDisplayDriver>();
         services.AddScoped<IAIGuardrailHandler, WorkflowAIGuardrailHandler>();
-        services.AddHttpClient(SendSignedWebhookTask.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(15));
+        // The task posts through the Webhooks building block: one signer, one egress-guarded client.
+        services.AddWebhookSender();
     }
 }
 
@@ -339,7 +329,7 @@ public sealed class WorkflowsStartup : StartupBase
 /// workflow's output.
 /// </summary>
 [Feature(AIConstants.Feature.ToolInstances)]
-[RequireFeatures("OrchardCore.Workflows")]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
 public sealed class WorkflowToolInstancesStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -385,7 +375,7 @@ public sealed class WorkflowToolInstancesStartup : StartupBase
 /// The activity relies on the Chat Interactions completion context builder to translate its configuration
 /// into an AI completion, so it is only available when that feature is enabled.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI.Chat.Interactions", "OrchardCore.Workflows")]
+[RequireFeatures("CrestApps.OrchardCore.AI.Chat.Interactions", OrchardCoreFeatureIds.Workflows)]
 public sealed class ChatInteractionsWorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -400,7 +390,7 @@ public sealed class ChatInteractionsWorkflowsStartup : StartupBase
 /// <summary>
 /// Contributes the prompt template selection field to the AI completion with config workflow activity.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI.Chat.Interactions", AIPromptingConstants.Feature.Area, "OrchardCore.Workflows")]
+[RequireFeatures("CrestApps.OrchardCore.AI.Chat.Interactions", AIPromptingConstants.Feature.Area, OrchardCoreFeatureIds.Workflows)]
 public sealed class ChatInteractionsPromptingWorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -412,7 +402,7 @@ public sealed class ChatInteractionsPromptingWorkflowsStartup : StartupBase
 /// <summary>
 /// Contributes the AI tool instances field to the AI completion with config workflow activity.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI.Chat.Interactions", AIConstants.Feature.ToolInstances, "OrchardCore.Workflows")]
+[RequireFeatures("CrestApps.OrchardCore.AI.Chat.Interactions", AIConstants.Feature.ToolInstances, OrchardCoreFeatureIds.Workflows)]
 public sealed class ChatInteractionsToolInstancesWorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -424,7 +414,7 @@ public sealed class ChatInteractionsToolInstancesWorkflowsStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the OCDeployments feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class OCDeploymentsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -498,7 +488,7 @@ public sealed class ChatCoreStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the ChatWorkflows feature.
 /// </summary>
-[RequireFeatures(AIConstants.Feature.ChatCore, "OrchardCore.Workflows")]
+[RequireFeatures(AIConstants.Feature.ChatCore, OrchardCoreFeatureIds.Workflows)]
 public sealed class ChatWorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -506,6 +496,25 @@ public sealed class ChatWorkflowsStartup : StartupBase
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, DataExtractionChatSessionHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, ConversationTurnChatSessionHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, PostSessionProcessingChatSessionHandler>());
+
+        // These activities and services read or change chat sessions, so they need the chat session manager and
+        // prompt store that only the ChatCore feature registers. A tenant with Workflows and AI but no chat cannot
+        // build them, and the workflow editor, which creates every activity, fails on that tenant.
+        services.AddActivity<SetConversationVariablesTask, SetConversationVariablesTaskDisplayDriver>();
+
+        // Conversation flows: stage-by-stage guidance built from workflow activities.
+        services.AddActivity<AIConversationFlowStartedEvent, AIConversationFlowStartedEventDisplayDriver>();
+        services.AddActivity<AIConversationStageTask, AIConversationStageTaskDisplayDriver>();
+        services.AddScoped<AIConversationFlows>();
+        services.AddScoped<IAICompletionContextBuilderHandler, AIConversationFlowCompletionHandler>();
+        services.AddScoped<IToolRegistryProvider, AIConversationFlowToolProvider>();
+        services.AddDisplayDriver<AIProfile, AIProfileFlowDisplayDriver>();
+
+        // Quality and memory: QA evaluations, simulated tests, analysis reruns and contact memory.
+        services.AddActivity<EvaluateConversationTask, EvaluateConversationTaskDisplayDriver>();
+        services.AddActivity<SimulateConversationTask, SimulateConversationTaskDisplayDriver>();
+        services.AddActivity<RerunConversationAnalysisTask, RerunConversationAnalysisTaskDisplayDriver>();
+        services.AddActivity<UpdateContactMemoryTask, UpdateContactMemoryTaskDisplayDriver>();
     }
 }
 
@@ -545,7 +554,7 @@ public sealed class ConnectionManagementStartup : StartupBase
 /// Registers services and configuration for the ConnectionManagementRecipes feature.
 /// </summary>
 [Feature(AIConstants.Feature.ConnectionManagement)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class ConnectionManagementRecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -558,7 +567,7 @@ public sealed class ConnectionManagementRecipesStartup : StartupBase
 /// Registers services and configuration for the ConnectionManagementOCDeployments feature.
 /// </summary>
 [Feature(AIConstants.Feature.ConnectionManagement)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class ConnectionManagementOCDeploymentsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -635,7 +644,7 @@ public sealed class ToolInstancesStartup : StartupBase
 /// Registers the recipe execution step for the ToolInstances feature.
 /// </summary>
 [Feature(AIConstants.Feature.ToolInstances)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class ToolInstancesRecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -648,7 +657,7 @@ public sealed class ToolInstancesRecipesStartup : StartupBase
 /// Registers the deployment step for the ToolInstances feature.
 /// </summary>
 [Feature(AIConstants.Feature.ToolInstances)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class ToolInstancesOCDeploymentsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -689,7 +698,7 @@ public sealed class PersonasStartup : StartupBase
 /// Registers the recipe execution step for the Personas feature.
 /// </summary>
 [Feature(AIConstants.Feature.Personas)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class PersonasRecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -702,7 +711,7 @@ public sealed class PersonasRecipesStartup : StartupBase
 /// Registers the deployment step for the Personas feature.
 /// </summary>
 [Feature(AIConstants.Feature.Personas)]
-[RequireFeatures("OrchardCore.Deployment")]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class PersonasOCDeploymentsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -714,7 +723,7 @@ public sealed class PersonasOCDeploymentsStartup : StartupBase
 /// <summary>
 /// Adds the persona picker to the "AI completion with configuration" workflow task.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.AI.Chat.Interactions", AIConstants.Feature.Personas, "OrchardCore.Workflows")]
+[RequireFeatures("CrestApps.OrchardCore.AI.Chat.Interactions", AIConstants.Feature.Personas, OrchardCoreFeatureIds.Workflows)]
 public sealed class ChatInteractionsPersonasWorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

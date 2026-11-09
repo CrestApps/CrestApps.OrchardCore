@@ -21,6 +21,21 @@
                 <span class="hint">@T["The Elasticsearch index name on the remote server."]</span>
             </div>
 
+            @if (Model.CanPickDataConnection)
+            {
+                <div class="mb-3">
+                    <label asp-for="DataConnectionId" class="form-label">@T["Data connection"]</label>
+                    <select asp-for="DataConnectionId" asp-items="Model.DataConnections" class="form-select" data-ai-data-source-data-connection></select>
+                    <span asp-validation-for="DataConnectionId" class="text-danger"></span>
+                    <span class="hint">@T["Reach the index through an Elasticsearch connection of Data Connectors, which holds the URL and the credentials, instead of storing them on this data source."]</span>
+                </div>
+            }
+            else if (!string.IsNullOrEmpty(Model.DataConnectionId))
+            {
+                <p class="text-body-secondary">@T["This data source reaches its index through a data connection. Only people who may manage data connections can change it."]</p>
+            }
+
+            <div data-ai-data-source-embedded-connection hidden="@(!string.IsNullOrEmpty(Model.DataConnectionId))">
             @if (Model.HasDefaultConnection)
             {
                 <div class="mb-3 form-check">
@@ -116,6 +131,7 @@
                     <span asp-validation-for="CertificateFingerprint" class="text-danger"></span>
                     <span class="hint">@T["Optional TLS certificate fingerprint for trusted server validation."]</span>
                 </div>
+            </div>
             </div>
         </div>
     </fieldset>

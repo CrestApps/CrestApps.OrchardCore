@@ -1,6 +1,7 @@
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.ElevenLabs;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.ElevenLabs.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
@@ -79,9 +80,7 @@ internal sealed class ElevenLabsDeploymentDisplayDriver : DisplayDriver<AIDeploy
 
         if (hasNewKey)
         {
-            var protector = _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
-
-            deployment.Properties[ApiKeyProperty] = protector.Protect(model.ApiKey);
+            deployment.Properties[ApiKeyProperty] = _dataProtectionProvider.ProtectSetting(AIConstants.ConnectionProtectorName, model.ApiKey.Trim());
         }
 
         return Edit(deployment, context);

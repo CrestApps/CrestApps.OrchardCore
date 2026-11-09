@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.Retention;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -51,18 +52,5 @@ public static class RetentionCutoffCalculator
     /// because purging is disabled and records are kept indefinitely.
     /// </returns>
     public static bool TryComputeCutoff(DateTime nowUtc, double retentionDays, double minimumRetentionDays, out DateTime cutoffUtc)
-    {
-        cutoffUtc = default;
-
-        if (retentionDays <= 0)
-        {
-            return false;
-        }
-
-        var effectiveDays = Math.Max(retentionDays, Math.Max(0, minimumRetentionDays));
-
-        cutoffUtc = nowUtc.AddDays(-effectiveDays);
-
-        return true;
-    }
+        => RetentionCutoff.TryCompute(nowUtc, retentionDays, minimumRetentionDays, out cutoffUtc);
 }

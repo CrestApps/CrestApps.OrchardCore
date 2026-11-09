@@ -29,8 +29,8 @@ public sealed class SetOutputTaskSchema : WorkflowActivitySchemaDefinitionBase
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("OutputName", WorkflowActivitySchemaBuilders.String("The name of the workflow output entry to write to."));
-        yield return ("Value", WorkflowActivitySchemaBuilders.ScriptExpression("The value to store in the specified output entry. Required when 'Syntax' is 'JavaScript'."));
-        yield return ("LiquidValue", WorkflowActivitySchemaBuilders.LiquidExpression("The value to store in the specified output entry. Required when 'Syntax' is 'Liquid'."));
-        yield return ("Syntax", WorkflowActivitySchemaBuilders.EnumValue("The syntax used to evaluate the value. Defaults to 'JavaScript'.", "JavaScript", "Liquid"));
+        yield return ("Value", WorkflowActivitySchemaBuilders.SyntaxExpression("The value to store in the specified output entry.", "JavaScript"));
+        yield return ("LiquidValue", WorkflowActivitySchemaBuilders.LiquidExpression("Legacy: the Liquid value, used when 'Value' has no syntax and 'Syntax' is 'Liquid'."));
+        yield return ("Syntax", WorkflowActivitySchemaBuilders.EnumValue("Legacy: selects the JavaScript expression or its Liquid counterpart when the expression has no 'Syntax' of its own. Defaults to 'JavaScript'. Prefer setting 'Syntax' on the expression.", "JavaScript", "Liquid"));
     }
 }

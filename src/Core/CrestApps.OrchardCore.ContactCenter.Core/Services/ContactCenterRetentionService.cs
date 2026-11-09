@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services.Retention;
+using CrestApps.OrchardCore.Retention;
+using CrestApps.OrchardCore.YesSql.Core.Retention;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
@@ -8,9 +10,10 @@ using YesSql;
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <summary>
-/// Provides the default implementation of <see cref="IContactCenterRetentionService"/>. It iterates the
-/// registered retention policies rather than hard-coding a purge per table, drains each entity until it is
-/// empty, and reports honestly when the cycle budget stopped it short instead of truncating silently.
+/// Provides the default implementation of <see cref="IContactCenterRetentionService"/>. It runs the registered
+/// Contact Center retention policies through the platform <see cref="RetentionRunner"/> with the windows, floors and
+/// batch budget of <see cref="ContactCenterRetentionOptions"/>, draining each entity and reporting honestly when the
+/// cycle budget stopped it short instead of truncating silently.
 /// </summary>
 public sealed class ContactCenterRetentionService : IContactCenterRetentionService
 {
@@ -45,152 +48,65 @@ public sealed class ContactCenterRetentionService : IContactCenterRetentionServi
     /// <inheritdoc/>
     public async Task<ContactCenterRetentionReport> PurgeAsync(CancellationToken cancellationToken = default)
     {
-        var nowUtc = _clock.UtcNow;
         var batchSize = _options.PurgeBatchSize > 0 ? _options.PurgeBatchSize : ContactCenterRetentionOptions.DefaultPurgeBatchSize;
         var batchBudget = _options.MaxPurgeBatchesPerCycle > 0
             ? _options.MaxPurgeBatchesPerCycle
             : ContactCenterRetentionOptions.DefaultMaxPurgeBatchesPerCycle;
 
+        var result = await RetentionRunner.RunAsync(
+            _policies.Select(policy => new OptionsBoundPolicy(policy, _options)).ToList(),
+            _session,
+            _clock.UtcNow,
+            batchSize,
+            batchBudget,
+            _logger,
+            cancellationToken);
+
         var report = new ContactCenterRetentionReport();
 
-        foreach (var policy in _policies)
+        foreach (var entity in result.Policies)
         {
-            // The budget is per entity. Sharing one budget across every entity would let whichever policy is
-            // registered first consume all of it, and the tables behind it would never be purged at all.
-            var remainingBatches = batchBudget;
-
-            var result = new ContactCenterEntityRetentionResult
+            report.Entities.Add(new ContactCenterEntityRetentionResult
             {
-                EntityName = policy.EntityName,
-            };
-
-            report.Entities.Add(result);
-
-            if (!policy.TryGetCutoff(nowUtc, _options, out var cutoffUtc))
-            {
-                continue;
-            }
-
-            result.IsEnabled = true;
-            result.CutoffUtc = cutoffUtc;
-
-            while (true)
-            {
-                if (remainingBatches <= 0 || cancellationToken.IsCancellationRequested)
-                {
-                    result.WorkRemains = true;
-
-                    break;
-                }
-
-                int purged;
-
-                try
-                {
-                    purged = await policy.PurgeBatchAsync(cutoffUtc, batchSize, cancellationToken);
-                }
-                catch (ContactCenterRetentionBatchException ex)
-                {
-                    // One entity failing must not stop the remaining entities from draining, otherwise a single
-                    // unhealthy table would keep every other table growing forever. The failed batch staged a mix of
-                    // completed records and the failing record's partial side effects into the shared session, and the
-                    // session cannot commit only the completed records. Committing here would flush the failing
-                    // record's partial state too — for example a recording-erased event whose outbox message was never
-                    // staged, which the next cycle's idempotency key would then suppress, orphaning the media. Discard
-                    // the whole batch instead so nothing partial is ever committed: every record it touched rolls back
-                    // and is retried cleanly on the next cycle, and repeated deletes are idempotent.
-                    _logger.LogError(ex, "Contact Center retention failed while purging entity {EntityName}; the batch was discarded and will be retried on the next cycle.", policy.EntityName);
-                    result.WorkRemains = true;
-
-                    try
-                    {
-                        await _session.ResetAsync();
-                    }
-                    catch (Exception resetException)
-                    {
-                        // A session that cannot even be reset is unusable, so stop the cycle rather than let the next
-                        // entity run against a poisoned session and appear to purge while its deletes are discarded.
-                        _logger.LogError(resetException, "Contact Center retention could not reset the session after a failed batch for entity {EntityName}. The cycle was stopped because the session cannot be reused.", policy.EntityName);
-                        MarkUnvisitedEntitiesAsUnfinished(report, nowUtc);
-
-                        return report;
-                    }
-
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    // Reaching here means the batch failed before it staged any work — the only uncaught path left in
-                    // a batch is the query that reads the expired records, and the per-record loop converts every
-                    // later failure (a delete or a prepare side effect) into a ContactCenterRetentionBatchException.
-                    // The session is therefore still usable, so the remaining entities can drain normally.
-                    _logger.LogError(ex, "Contact Center retention failed while reading expired records for entity {EntityName}.", policy.EntityName);
-                    result.WorkRemains = true;
-
-                    break;
-                }
-
-                remainingBatches--;
-
-                if (purged == 0)
-                {
-                    break;
-                }
-
-                try
-                {
-                    await _session.SaveChangesAsync(cancellationToken);
-                }
-                catch (Exception ex)
-                {
-                    // The deletes only reach the database here, so this is where a deadlock or a lost connection
-                    // surfaces. A failed flush cancels the session permanently, which means every later entity
-                    // would appear to purge while its deletes were silently discarded. Stop the cycle instead.
-                    _logger.LogError(ex, "Contact Center retention failed while committing purged records for entity {EntityName}. The cycle was stopped because the session cannot be reused.", policy.EntityName);
-                    result.WorkRemains = true;
-
-                    // Entities the cycle never reached still have work. Leaving them out of the report would make
-                    // an untouched backlog indistinguishable from a drained one in the operator warning.
-                    MarkUnvisitedEntitiesAsUnfinished(report, nowUtc);
-
-                    return report;
-                }
-
-                // Counted only once the deletes have actually committed, so a failed flush cannot over-report.
-                result.PurgedCount += purged;
-
-                if (purged < batchSize)
-                {
-                    break;
-                }
-            }
+                EntityName = entity.Name,
+                IsEnabled = entity.IsEnabled,
+                CutoffUtc = entity.CutoffUtc,
+                PurgedCount = entity.PurgedCount,
+                WorkRemains = entity.WorkRemains,
+            });
         }
 
         return report;
     }
 
-    private void MarkUnvisitedEntitiesAsUnfinished(ContactCenterRetentionReport report, DateTime nowUtc)
+    // Runs a Contact Center policy as a platform policy: its cutoff comes from the Contact Center options, and its
+    // failed batches are reported the way the platform runner discards them.
+    private sealed class OptionsBoundPolicy : IRetentionPolicy
     {
-        var visited = report.Entities.Select(entity => entity.EntityName).ToHashSet(StringComparer.Ordinal);
+        private readonly IContactCenterRetentionPolicy _policy;
+        private readonly ContactCenterRetentionOptions _options;
 
-        foreach (var policy in _policies)
+        public OptionsBoundPolicy(IContactCenterRetentionPolicy policy, ContactCenterRetentionOptions options)
         {
-            if (visited.Contains(policy.EntityName))
+            _policy = policy;
+            _options = options;
+        }
+
+        public string Name => _policy.EntityName;
+
+        public bool TryGetCutoff(DateTime nowUtc, out DateTime cutoffUtc)
+            => _policy.TryGetCutoff(nowUtc, _options, out cutoffUtc);
+
+        public async Task<int> PurgeBatchAsync(DateTime cutoffUtc, int batchSize, CancellationToken cancellationToken = default)
+        {
+            try
             {
-                continue;
+                return await _policy.PurgeBatchAsync(cutoffUtc, batchSize, cancellationToken);
             }
-
-            // An entity whose window is disabled purges nothing, so reporting it as unfinished would name a table
-            // in the operator warning that no amount of budget or window tuning could ever drain.
-            var isEnabled = policy.TryGetCutoff(nowUtc, _options, out var cutoffUtc);
-
-            report.Entities.Add(new ContactCenterEntityRetentionResult
+            catch (ContactCenterRetentionBatchException ex)
             {
-                EntityName = policy.EntityName,
-                IsEnabled = isEnabled,
-                CutoffUtc = isEnabled ? cutoffUtc : null,
-                WorkRemains = isEnabled,
-            });
+                throw new RetentionBatchException(_policy.EntityName, 0, ex);
+            }
         }
     }
 }

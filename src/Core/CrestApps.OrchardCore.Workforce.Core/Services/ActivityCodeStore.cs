@@ -27,6 +27,6 @@ internal sealed class ActivityCodeStore : DocumentCatalog<ActivityCode, Activity
 
     public Task<int> CountAsync(CancellationToken cancellationToken = default)
     {
-        return Session.Query<ActivityCode, ActivityCodeIndex>(collection: CollectionName).CountAsync(cancellationToken);
+        return Session.QueryIndex<ActivityCodeIndex>(collection: CollectionName).CountAsync(cancellationToken);
     }
 }

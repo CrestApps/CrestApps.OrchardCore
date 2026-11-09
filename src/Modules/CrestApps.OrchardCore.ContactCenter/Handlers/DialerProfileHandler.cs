@@ -1,10 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Deployments;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Environment.Shell;
@@ -49,7 +49,7 @@ internal sealed class DialerProfileHandler : CatalogEntryHandlerBase<DialerProfi
     /// <inheritdoc/>
     public override Task InitializingAsync(InitializingContext<DialerProfile> context, CancellationToken cancellationToken = default)
     {
-        ContactCenterDeploymentSerializer.Populate(context.Model, context.Data);
+        CatalogDeploymentSerializer.Populate(context.Model, context.Data);
 
         return Task.CompletedTask;
     }
@@ -65,7 +65,7 @@ internal sealed class DialerProfileHandler : CatalogEntryHandlerBase<DialerProfi
     /// <inheritdoc/>
     public override Task UpdatingAsync(UpdatingContext<DialerProfile> context, CancellationToken cancellationToken = default)
     {
-        ContactCenterDeploymentSerializer.Populate(context.Model, context.Data);
+        CatalogDeploymentSerializer.Populate(context.Model, context.Data);
 
         context.Model.ModifiedUtc = _clock.UtcNow;
 
@@ -132,6 +132,11 @@ internal sealed class DialerProfileHandler : CatalogEntryHandlerBase<DialerProfi
             profile.RingTimeoutSeconds is not 0 and (< DialerAbandonment.MinimumRingTimeoutSeconds or > DialerAbandonment.MaximumRingTimeoutSeconds))
         {
             context.Result.Fail(new ValidationResult(S["The ring time must be between {0} and {1} seconds. An unanswered automated call rings for at least {0} seconds.", DialerAbandonment.MinimumRingTimeoutSeconds, DialerAbandonment.MaximumRingTimeoutSeconds], [nameof(DialerProfile.RingTimeoutSeconds)]));
+        }
+
+        if (profile.PreviewOfferTimeoutSeconds is not 0 and (< DialerProfile.MinimumPreviewOfferTimeoutSeconds or > DialerProfile.MaximumPreviewOfferTimeoutSeconds))
+        {
+            context.Result.Fail(new ValidationResult(S["The preview offer time must be between {0} and {1} seconds.", DialerProfile.MinimumPreviewOfferTimeoutSeconds, DialerProfile.MaximumPreviewOfferTimeoutSeconds], [nameof(DialerProfile.PreviewOfferTimeoutSeconds)]));
         }
 
         if (profile.EnforceAbandonmentCap && profile.Mode.IsAutomated() && !profile.SafeHarborEnabled)

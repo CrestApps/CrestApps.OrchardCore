@@ -40,7 +40,8 @@ internal static class SchedulingRecipeSchemas
         ("calendarId", String("The calendar that holds its appointments (see the Calendars step).")),
         ("timeZoneId", String("The IANA time zone of its working hours.")),
         ("availabilityMode", Enum("Where its hours come from.", "WorkingHours", "Shifts")),
-        ("shiftCalendarId", String("With Shifts: the calendar whose Shift events name it.")),
+        ("shiftCalendarId", String("With Shifts: the calendar whose Shift events name it. Kept for older resources; shiftCalendarIds is read too.")),
+        ("shiftCalendarIds", Strings("With Shifts: the workforce calendars whose shifts it works, such as one for each team a staff member is on.")),
         ("workingHours", Array(Object(
             ("day", Enum("The day.", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")),
             ("start", String("When it starts, as HH:mm.")),

@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Orders.Core.Models;
+using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Products.Core.Models;
 
 namespace CrestApps.OrchardCore.Orders.Core.Services;
@@ -44,8 +45,11 @@ public static class OrderReturnPolicy
         => orderReturn.Lines.Sum(line => line.UnitPrice * line.Quantity);
 
     /// <summary>
-    /// Gets what one unit of an order line was paid, add-ons and line discounts included.
+    /// Gets what one unit of an order line was paid, add-ons and line discounts included, rounded to the currency's
+    /// precision.
     /// </summary>
-    public static decimal UnitPriceOf(OrderLine line)
-        => line.Quantity > 0 ? Math.Round(line.LineTotal / line.Quantity, 2, MidpointRounding.AwayFromZero) : line.UnitPrice;
+    /// <param name="line">The order line.</param>
+    /// <param name="currency">The order's currency, or <see langword="null"/> for two decimals.</param>
+    public static decimal UnitPriceOf(OrderLine line, string currency = null)
+        => line.Quantity > 0 ? Money.Round(line.LineTotal / line.Quantity, currency) : line.UnitPrice;
 }

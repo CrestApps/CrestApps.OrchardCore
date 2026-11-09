@@ -2,13 +2,14 @@ using System.Text.Json;
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 /// <summary>
 /// Represents the omnichannel campaign.
 /// </summary>
-public sealed class OmnichannelCampaign : CatalogItem, IDisplayTextAwareModel, IModifiedUtcAwareModel, ICloneable<OmnichannelCampaign>
+public sealed class OmnichannelCampaign : CatalogItem, IDisplayTextAwareModel, IAuditedModel, ICloneable<OmnichannelCampaign>
 {
     /// <summary>
     /// Gets or sets the display text.

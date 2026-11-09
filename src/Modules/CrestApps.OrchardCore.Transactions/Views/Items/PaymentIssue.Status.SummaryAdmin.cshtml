@@ -1,0 +1,12 @@
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<PaymentIssue>
+
+@if (Model.Value.Status == PaymentIssueStatus.Open)
+{
+    <span class="badge text-bg-warning">@T["Needs attention"]</span>
+}
+else
+{
+    <span class="badge text-bg-success">@T["Resolved"]</span>
+}

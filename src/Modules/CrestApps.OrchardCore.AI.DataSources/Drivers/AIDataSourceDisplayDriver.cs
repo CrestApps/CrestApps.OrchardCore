@@ -1,5 +1,6 @@
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Infrastructure;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.DataSources.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -99,7 +100,7 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
             context.Updater.ModelState.AddModelError(Prefix, nameof(sharedModel.AIKnowledgeBaseIndexProfileName), S["The destination index is required."]);
         }
 
-        var requiresFieldMapping = _fieldMappingOptions.IsRequired(AIDataSourceDriverHelper.GetSourceType(dataSource));
+        var requiresFieldMapping = _fieldMappingOptions.IsRequired(AIDataSourceExtensions.GetSourceType(dataSource));
 
         if (requiresFieldMapping && string.IsNullOrWhiteSpace(sharedModel.ContentFieldName))
         {
@@ -108,7 +109,7 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
 
         dataSource.DisplayText = fieldsModel.DisplayText;
 
-        if (!AIDataSourceDriverHelper.IsConfigurationLocked(dataSource))
+        if (!AIDataSourceExtensions.IsConfigurationLocked(dataSource))
         {
             dataSource.AIKnowledgeBaseIndexProfileName = sharedModel.AIKnowledgeBaseIndexProfileName;
             dataSource.KeyFieldName = sharedModel.KeyFieldName;
@@ -157,8 +158,8 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
         out string sourceType,
         out bool isConfigurationLocked)
     {
-        sourceType = AIDataSourceDriverHelper.GetSourceType(dataSource);
-        isConfigurationLocked = AIDataSourceDriverHelper.IsConfigurationLocked(dataSource);
+        sourceType = AIDataSourceExtensions.GetSourceType(dataSource);
+        isConfigurationLocked = AIDataSourceExtensions.IsConfigurationLocked(dataSource);
     }
 
     private static ValueTask PopulateFieldsEditorModelAsync(
