@@ -53,6 +53,7 @@
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Products.Core\CrestApps.OrchardCore.Products.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Recipes.Core\CrestApps.OrchardCore.Recipes.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Stripe.Core\CrestApps.OrchardCore.Stripe.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Shipping.Core\CrestApps.OrchardCore.Shipping.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Webhooks.Core\CrestApps.OrchardCore.Webhooks.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Checkout\CrestApps.OrchardCore.Checkout.csproj" PrivateAssets="none" />
