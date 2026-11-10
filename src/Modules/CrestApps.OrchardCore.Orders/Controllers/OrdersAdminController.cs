@@ -409,6 +409,7 @@ public sealed class OrdersAdminController : Controller
             new SelectListItem(S["Online"], OrderChannels.Online, options.Channel == OrderChannels.Online),
             new SelectListItem(S["Point of sale"], OrderChannels.PointOfSale, options.Channel == OrderChannels.PointOfSale),
             new SelectListItem(S["Drafts sent by staff"], OrderChannels.Draft, options.Channel == OrderChannels.Draft),
+            new SelectListItem(S["AI agents"], OrderChannels.Agent, options.Channel == OrderChannels.Agent),
         ];
 
         var routeData = new RouteData();
@@ -458,7 +459,7 @@ public sealed class OrdersAdminController : Controller
         {
             UserId = userId,
             Search = userId is null ? options.Search : null,
-            Channel = userId is null && options.Channel is OrderChannels.Online or OrderChannels.PointOfSale or OrderChannels.Draft ? options.Channel : null,
+            Channel = userId is null && options.Channel is OrderChannels.Online or OrderChannels.PointOfSale or OrderChannels.Draft or OrderChannels.Agent ? options.Channel : null,
             Statuses = userId is not null
                 ? [OrderStatus.Paid, OrderStatus.AwaitingPayment]
                 : options.Status switch

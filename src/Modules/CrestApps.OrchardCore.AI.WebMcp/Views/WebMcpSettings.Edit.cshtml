@@ -21,7 +21,19 @@
             <label class="form-check-label" asp-for="EnableOnFrontEndPages">
                 @T["Offer tools on front-end pages"]
             </label>
-            <span class="hint dashed">@T["When enabled, the site's public pages also offer WebMCP tools to signed-in users who have the permission. Anonymous visitors never get tools."]</span>
+            <span class="hint dashed">@T["When enabled, the site's public pages also offer WebMCP tools to signed-in users who have the permission. Anonymous visitors only get the storefront tools below."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnableStorefrontTools" />
+            <label class="form-check-label" asp-for="EnableStorefrontTools">
+                @T["Offer storefront tools to visitors"]
+            </label>
+            <span class="hint dashed">@T["When enabled, the site's public pages offer visitors who are not signed in (and signed-in users without the permission) the selected tools that are marked safe for anyone, such as searching products and using their own cart. Other tools and the page tools are never offered to them. Enable the Rate Limits feature to limit how often each visitor calls them."]</span>
         </div>
     </div>
 </div>

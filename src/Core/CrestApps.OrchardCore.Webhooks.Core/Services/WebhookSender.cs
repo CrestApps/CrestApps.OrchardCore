@@ -73,8 +73,25 @@ public sealed class WebhookSender : IWebhookSender
                 message.Headers.Add(WebhookHeaders.Event, request.EventName);
             }
 
-            message.Headers.Add(WebhookHeaders.Timestamp, timestamp.ToString(CultureInfo.InvariantCulture));
-            message.Headers.Add(WebhookHeaders.Signature, _signer.Sign(request.Secret, timestamp, body));
+            if (request.Sign)
+            {
+                message.Headers.Add(WebhookHeaders.Timestamp, timestamp.ToString(CultureInfo.InvariantCulture));
+                message.Headers.Add(WebhookHeaders.Signature, _signer.Sign(request.Secret, timestamp, body));
+            }
+
+            foreach (var (name, value) in request.Headers ?? new Dictionary<string, string>())
+            {
+                if (string.Equals(name, "Content-Type", StringComparison.OrdinalIgnoreCase) || string.Equals(name, "Content-Digest", StringComparison.OrdinalIgnoreCase))
+                {
+                    message.Content.Headers.Remove(name);
+                    message.Content.Headers.TryAddWithoutValidation(name, value);
+
+                    continue;
+                }
+
+                message.Headers.Remove(name);
+                message.Headers.TryAddWithoutValidation(name, value);
+            }
             message.Headers.UserAgent.Add(new ProductInfoHeaderValue("CrestApps-Webhooks", "1.0"));
 
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);

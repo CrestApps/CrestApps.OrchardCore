@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Products.Core.Feeds;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
@@ -27,6 +28,8 @@ internal sealed class ProductFeedPartDisplayDriver : ContentPartDisplayDriver<Pr
             model.Condition = part.Condition;
             model.GoogleProductCategory = part.GoogleProductCategory;
             model.ExcludeFromFeeds = part.ExcludeFromFeeds;
+            model.ShowToAgents = ToChoice(part.ShowToAgents);
+            model.AgentCheckout = ToChoice(part.AgentCheckout);
         });
 
     public override async Task<IDisplayResult> UpdateAsync(ProductFeedPart part, UpdatePartEditorContext context)
@@ -46,9 +49,27 @@ internal sealed class ProductFeedPartDisplayDriver : ContentPartDisplayDriver<Pr
         part.Condition = model.Condition is "new" or "refurbished" or "used" ? model.Condition : null;
         part.GoogleProductCategory = Clean(model.GoogleProductCategory, 250);
         part.ExcludeFromFeeds = model.ExcludeFromFeeds;
+        part.ShowToAgents = FromChoice(model.ShowToAgents);
+        part.AgentCheckout = FromChoice(model.AgentCheckout);
 
         return Edit(part, context);
     }
+
+    private static string ToChoice(bool? value)
+        => value switch
+        {
+            true => "yes",
+            false => "no",
+            _ => string.Empty,
+        };
+
+    private static bool? FromChoice(string value)
+        => value switch
+        {
+            "yes" => true,
+            "no" => false,
+            _ => null,
+        };
 
     private static string Clean(string value, int length)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim()[..Math.Min(value.Trim().Length, length)];

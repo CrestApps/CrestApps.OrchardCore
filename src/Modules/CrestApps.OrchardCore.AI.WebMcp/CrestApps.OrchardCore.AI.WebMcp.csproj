@@ -28,6 +28,7 @@
     <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />
     <PackageReference Include="OrchardCore.Data.Abstractions" />
     <PackageReference Include="OrchardCore.Contents.Core" />
+    <PackageReference Include="OrchardCore.RateLimits.Core" />
     <PackageReference Include="CrestApps.Core.AI.WebMcp" />
   </ItemGroup>
 

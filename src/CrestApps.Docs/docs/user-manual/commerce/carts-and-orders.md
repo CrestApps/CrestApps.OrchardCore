@@ -56,7 +56,7 @@ This video walks through finding, managing, refunding and creating orders, and t
 
 An order you gave money back for also shows **Partially refunded** or **Refunded** next to its status.
 
-The channel filter shows where orders were made: **Every channel**, **Online** (bought on your site or in an app), **Point of sale** (rung up at one of your stores' registers, which shows as a badge with the register) or **Drafts sent by staff**. See [Point of sale](point-of-sale.md).
+The channel filter shows where orders were made: **Every channel**, **Online** (bought on your site or in an app), **Point of sale** (rung up at one of your stores' registers, which shows as a badge with the register) **Drafts sent by staff** or **AI agents** (placed by an AI agent for the buyer; see [Sell through AI agents](ai-agents.md)). See [Point of sale](point-of-sale.md).
 
 Unpaid orders don't stay open for ever. When a checkout is canceled, declined or left unfinished past the checkout's session lifetime (24 hours by default), its order is canceled, and a check every 15 minutes catches any that were missed. An order canceled because the cart was checked out again can still be paid by the checkout that was open for it.
 

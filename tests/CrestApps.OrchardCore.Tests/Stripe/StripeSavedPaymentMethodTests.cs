@@ -114,7 +114,7 @@ public sealed class StripeSavedPaymentMethodTests
         var intents = new Mock<IStripePaymentIntentService>();
         intents
             .Setup(service => service.ChargeOffSessionAsync(It.IsAny<ChargeOffSessionRequest>()))
-            .ReturnsAsync(new ChargeOffSessionResponse { Succeeded = false, PaymentIntentId = "pi_declined", ErrorMessage = "Your card was declined.", DeclineCode = "generic_decline" });
+            .ReturnsAsync(new ChargeOffSessionResponse { Succeeded = false, Declined = true, PaymentIntentId = "pi_declined", ErrorMessage = "Your card was declined.", DeclineCode = "generic_decline" });
 
         var provider = CreateProvider(intents.Object);
 
@@ -126,6 +126,25 @@ public sealed class StripeSavedPaymentMethodTests
         Assert.True(result.Declined);
         Assert.Equal("Your card was declined.", result.ErrorMessage);
         Assert.Equal("pi_declined", result.ProviderReference);
+    }
+
+    [Fact]
+    public async Task BeginAsync_OffSessionStripeServerError_IsNotADecline_SoTheRetryKeepsTheKey()
+    {
+        // Arrange: Stripe answered 500, so whether it charged the card is unknown.
+        var intents = new Mock<IStripePaymentIntentService>();
+        intents
+            .Setup(service => service.ChargeOffSessionAsync(It.IsAny<ChargeOffSessionRequest>()))
+            .ReturnsAsync(new ChargeOffSessionResponse { Succeeded = false, Declined = false, ErrorMessage = "An unknown error occurred" });
+
+        var provider = CreateProvider(intents.Object);
+
+        // Act
+        var result = await provider.BeginAsync(CreateContext(OffSessionData()), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.False(result.Declined);
     }
 
     [Fact]
@@ -237,6 +256,129 @@ public sealed class StripeSavedPaymentMethodTests
     [Fact]
     public void Capabilities_DeclareSavedPaymentMethods()
         => Assert.True(CreateProvider(Mock.Of<IStripePaymentIntentService>()).Capabilities.SupportsSavedPaymentMethods);
+
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    public async Task BeginAsync_DelegatedCredential_IsADeclineOnlyWhenStripeDecided(bool stripeDeclined, bool expectedDecline)
+    {
+        // Arrange: a card error (decided), or a Stripe server error whose outcome is unknown.
+        ChargeDelegatedCredentialRequest captured = null;
+        var intents = new Mock<IStripePaymentIntentService>();
+        intents
+            .Setup(service => service.ChargeDelegatedAsync(It.IsAny<ChargeDelegatedCredentialRequest>()))
+            .Callback<ChargeDelegatedCredentialRequest>(request => captured = request)
+            .ReturnsAsync(new ChargeDelegatedCredentialResponse { Succeeded = false, Declined = stripeDeclined, ErrorMessage = "refused" });
+
+        var provider = CreateProvider(intents.Object);
+
+        // Act
+        var result = await provider.BeginAsync(CreateContext(DelegatedData()), TestContext.Current.CancellationToken);
+
+        // Assert: only a decline ends the attempt; anything else keeps it, and its key, for a retry Stripe replays.
+        Assert.False(result.Succeeded);
+        Assert.Equal(expectedDecline, result.Declined);
+        Assert.Equal("attempt-1-key", captured.IdempotencyKey);
+    }
+
+    [Fact]
+    public async Task BeginAsync_DelegatedCredential_Accepted_IsCharged_WithTheAttemptsKey()
+    {
+        // Arrange
+        ChargeDelegatedCredentialRequest captured = null;
+        var intents = new Mock<IStripePaymentIntentService>();
+        intents
+            .Setup(service => service.ChargeDelegatedAsync(It.IsAny<ChargeDelegatedCredentialRequest>()))
+            .Callback<ChargeDelegatedCredentialRequest>(request => captured = request)
+            .ReturnsAsync(new ChargeDelegatedCredentialResponse { Succeeded = true, PaymentIntentId = "pi_agent", Status = "succeeded" });
+
+        var provider = CreateProvider(intents.Object);
+
+        // Act
+        var result = await provider.BeginAsync(CreateContext(DelegatedData()), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal("pi_agent", result.ProviderReference);
+        Assert.Equal("attempt-1-key", captured.IdempotencyKey);
+        Assert.Equal("spt_test", captured.Credential);
+        Assert.Equal(50m, captured.Amount);
+    }
+
+    [Fact]
+    public async Task CancelAsync_AnAttemptWhoseBeginWasUnanswered_CancelsThePaymentIntentStripeMade()
+    {
+        // Arrange
+        CancelPaymentIntentRequest canceled = null;
+
+        var intents = new Mock<IStripePaymentIntentService>();
+        intents.Setup(service => service.FindByCheckoutAttemptAsync("attempt1")).ReturnsAsync("pi_unanswered");
+        intents
+            .Setup(service => service.RetrieveAsync(It.Is<RetrievePaymentIntentRequest>(request => request.PaymentIntentId == "pi_unanswered")))
+            .ReturnsAsync(new PaymentIntentDetails { Id = "pi_unanswered", Status = "requires_action" });
+        intents
+            .Setup(service => service.CancelAsync(It.IsAny<CancelPaymentIntentRequest>()))
+            .ReturnsAsync((CancelPaymentIntentRequest request) =>
+            {
+                canceled = request;
+
+                return new PaymentIntentDetails { Id = request.PaymentIntentId, Status = "canceled" };
+            });
+
+        var provider = CreateProvider(intents.Object);
+        var attempt = new PaymentAttempt { ItemId = "attempt1", SessionId = "session-1", Currency = "USD" };
+
+        // Act
+        var result = await provider.CancelAsync(new CancelPaymentContext { Session = new CheckoutSession { SessionId = "session-1" }, Attempt = attempt }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal("pi_unanswered", canceled?.PaymentIntentId);
+        Assert.Equal("pi_unanswered", attempt.ProviderReference);
+    }
+
+    [Fact]
+    public async Task VerifyAsync_AnAttemptWhoseBeginWasUnanswered_ReportsThePaymentStripeTook()
+    {
+        // Arrange
+        var intents = new Mock<IStripePaymentIntentService>();
+        intents.Setup(service => service.FindByCheckoutAttemptAsync("attempt1")).ReturnsAsync("pi_unanswered");
+        intents
+            .Setup(service => service.RetrieveAsync(It.Is<RetrievePaymentIntentRequest>(request => request.PaymentIntentId == "pi_unanswered")))
+            .ReturnsAsync(new PaymentIntentDetails { Id = "pi_unanswered", Status = "succeeded", Amount = 5000, AmountReceived = 5000, Currency = "usd", LatestChargeId = "ch_1" });
+
+        var provider = CreateProvider(intents.Object);
+        var attempt = new PaymentAttempt { ItemId = "attempt1", SessionId = "session-1", Currency = "USD", ExpectedAmount = 50m };
+
+        // Act
+        var result = await provider.VerifyAsync(new VerifyPaymentContext { Session = new CheckoutSession { SessionId = "session-1" }, Attempt = attempt }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(PaymentStatus.Succeeded, result.Status);
+        Assert.Equal("pi_unanswered", attempt.ProviderReference);
+    }
+
+    [Fact]
+    public async Task CancelAsync_AnAttemptStripeHasNothingFor_CancelsNothing()
+    {
+        // Arrange
+        var intents = new Mock<IStripePaymentIntentService>();
+        var provider = CreateProvider(intents.Object);
+
+        // Act
+        var result = await provider.CancelAsync(new CancelPaymentContext { Session = new CheckoutSession { SessionId = "session-1" }, Attempt = new PaymentAttempt { ItemId = "attempt1" } }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        intents.Verify(service => service.CancelAsync(It.IsAny<CancelPaymentIntentRequest>()), Times.Never);
+    }
+
+    private static Dictionary<string, string> DelegatedData()
+        => new()
+        {
+            [CheckoutPaymentDataKeys.DelegatedCredential] = "spt_test",
+            [CheckoutPaymentDataKeys.DelegatedCredentialType] = DelegatedCredentialTypes.StripeSharedPaymentToken,
+        };
 
     private static Dictionary<string, string> OffSessionData()
         => CheckoutPaymentDataKeys.ForOffSessionCharge(new SavedPaymentMethod

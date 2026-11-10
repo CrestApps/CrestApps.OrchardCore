@@ -23,4 +23,14 @@ public sealed class ProductFeedSettings
     /// Gets or sets a key the feed's address has to carry, or none for a public feed.
     /// </summary>
     public string Key { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether AI agents may show products to buyers when a product doesn't say.
+    /// </summary>
+    public bool ShowToAgentsByDefault { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets whether AI agents may check products out for buyers when a product doesn't say.
+    /// </summary>
+    public bool AgentCheckoutByDefault { get; set; }
 }

@@ -76,6 +76,7 @@ public sealed class SalesSummaryPartDisplayDriver : ContentPartDisplayDriver<Sal
                 new SelectListItem(S["Online orders"], OrderChannels.Online),
                 new SelectListItem(S["Point of sale"], OrderChannels.PointOfSale),
                 new SelectListItem(S["Orders made by staff"], OrderChannels.Draft),
+                new SelectListItem(S["Orders placed by AI agents"], OrderChannels.Agent),
             ];
         });
 
@@ -98,7 +99,7 @@ public sealed class SalesSummaryPartDisplayDriver : ContentPartDisplayDriver<Sal
         part.ShortDays = Math.Clamp(model.ShortDays, 1, 365);
         part.LongDays = Math.Clamp(model.LongDays, 1, 365);
         part.CacheMinutes = Math.Clamp(model.CacheMinutes, 0, 24 * 60);
-        part.Channel = model.Channel is OrderChannels.Online or OrderChannels.PointOfSale or OrderChannels.Draft ? model.Channel : null;
+        part.Channel = model.Channel is OrderChannels.Online or OrderChannels.PointOfSale or OrderChannels.Draft or OrderChannels.Agent ? model.Channel : null;
 
         return await EditAsync(part, context);
     }

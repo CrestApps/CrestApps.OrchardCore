@@ -55,6 +55,54 @@ task, calls `services.AddWebhookSender()` and sends through `IWebhookSender`, so
 The body, the headers and how a receiver checks the signature are described on the
 [Commerce Webhooks](commerce-webhooks.md#receiving) page; they are the same for every event.
 
+### Direct deliveries
+
+Some receivers aren't subscriptions: an AI agent platform that asked for a protocol's order updates, for example, gets them at an address its own protocol names, signed the way that protocol asks. A feature sends such a webhook with `IWebhookOutbox` (registered by `AddWebhooks`, with the Webhooks feature) and signs it with an `IWebhookDeliveryFormatter`.
+
+| Piece | Contract | What it does |
+| --- | --- | --- |
+| Queue | `IWebhookOutbox.EnqueueAsync(WebhookDirectDelivery)` | Keeps a `WebhookDelivery` for the receiver and sends it in a deferred task, after the work that raised it is saved. |
+| Sign | `IWebhookDeliveryFormatter` (`Name`, `FormatAsync`) | At every attempt, returns the headers to send (`WebhookFormattedRequest.Headers`), or an error that fails the delivery (`WebhookFormattedRequest.Fail`). |
+| Retry | the delivery outbox | The same `WebhookDispatcher`, backoff, background task and 30-day retention as subscription deliveries. |
+
+`WebhookDirectDelivery` has the receiver's `Url`, the `EventName`, the JSON `Body` (sent exactly as it is), an optional `EventId` (`evt_` and a new id when empty), the `FormatterName`, an `OwnerId` the deliveries are kept under (such as the platform's id), and `Data` for the formatter. `Data` holds ids only, never a secret: the formatter reads secrets itself when it sends, so a rotated secret is used by the next retry. `WebhookFormatContext` gives the formatter the `Url`, `EventId`, `EventName`, `Body`, `Data` and the attempt's Unix `Timestamp`.
+
+A direct delivery is posted through the egress-guarded `IWebhookSender` with the formatter's headers and without the subscription signature. It fails without being sent when no formatter of its name is registered (the feature that queued it is off), or when the formatter returns an error.
+
+```csharp
+public sealed class ContosoOrderWebhookFormatter : IWebhookDeliveryFormatter
+{
+    public string Name
+        => "contoso-order";
+
+    public Task<WebhookFormattedRequest> FormatAsync(WebhookFormatContext context, CancellationToken cancellationToken = default)
+    {
+        var formatted = new WebhookFormattedRequest();
+
+        formatted.Headers["Webhook-Id"] = context.EventId;
+        formatted.Headers["Webhook-Timestamp"] = context.Timestamp.ToString(CultureInfo.InvariantCulture);
+
+        return Task.FromResult(formatted);
+    }
+}
+```
+
+```csharp
+services.AddScoped<IWebhookDeliveryFormatter, ContosoOrderWebhookFormatter>();
+
+// Elsewhere, with IWebhookOutbox injected:
+await _outbox.EnqueueAsync(new WebhookDirectDelivery
+{
+    OwnerId = platformId,
+    Url = "https://agents.contoso.com/orders",
+    EventName = "order.updated",
+    Body = body,
+    FormatterName = "contoso-order",
+}, cancellationToken);
+```
+
+[Agentic Commerce](agentic-commerce.md#order-updates) sends its UCP order webhooks (RFC 9421 signatures with the store's keys) and its ACP order webhooks (`Merchant-Signature`) this way.
+
 ### Recipes and deployment
 
 Subscriptions travel with the **Webhook subscriptions** deployment step and the `WebhookSubscriptions` recipe step. A

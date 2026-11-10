@@ -1,0 +1,8 @@
+[
+  {
+    "action": "vite",
+    "name": "embedded-checkout.js",
+    "source": "Assets/js/embedded-checkout.js",
+    "dest": "wwwroot/Scripts/embedded-checkout.js"
+  }
+]

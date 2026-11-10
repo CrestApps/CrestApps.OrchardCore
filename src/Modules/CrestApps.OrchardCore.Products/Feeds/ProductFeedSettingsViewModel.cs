@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Products.Core.Feeds;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.Products.Feeds;
@@ -11,6 +12,10 @@ public class ProductFeedSettingsViewModel
     public string DefaultGoogleProductCategory { get; set; }
 
     public bool IncludeOutOfStock { get; set; } = true;
+
+    public bool ShowToAgentsByDefault { get; set; } = true;
+
+    public bool AgentCheckoutByDefault { get; set; }
 
     /// <summary>
     /// Gets or sets <c>new</c> to make a new key, <c>remove</c> to make the feed public, or none to keep it.

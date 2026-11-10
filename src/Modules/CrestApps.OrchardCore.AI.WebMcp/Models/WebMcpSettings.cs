@@ -34,4 +34,11 @@ public sealed class WebMcpSettings
     /// <see langword="true"/>.
     /// </summary>
     public bool EnablePageTools { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether front-end pages offer storefront tools to visitors who are not signed
+    /// in, and to signed-in users without the WebMCP permission: the selected tools that are marked safe for anonymous
+    /// callers, such as searching products and using the visitor's own cart. The default is <see langword="false"/>.
+    /// </summary>
+    public bool EnableStorefrontTools { get; set; }
 }

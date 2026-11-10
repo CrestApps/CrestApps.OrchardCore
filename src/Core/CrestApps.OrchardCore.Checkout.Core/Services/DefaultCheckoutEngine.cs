@@ -54,6 +54,10 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
     private readonly ILogger _logger;
     private readonly IPaymentIssueRecorder _paymentIssues;
 
+    // How long a begin that ended without the provider's answer holds off another payment method: long enough for the
+    // provider to find a payment it may have made anyway (Stripe's search lags up to a minute behind).
+    private static readonly TimeSpan _unansweredBeginWindow = TimeSpan.FromMinutes(2);
+
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultCheckoutEngine"/> class.
     /// </summary>
@@ -279,7 +283,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
             foreach (var obligationId in expectedObligations)
             {
-                var (step, providerError, declined, requiresAuthentication) = await BeginObligationAsync(
+                var (step, providerError, declined, requiresAuthentication, cardBrand) = await BeginObligationAsync(
                     session,
                     invoice,
                     provider,
@@ -287,6 +291,8 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                     existingAttempts,
                     options,
                     cancellationToken);
+
+                outcome.CardBrand ??= cardBrand;
 
                 if (step is null)
                 {
@@ -303,6 +309,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                     failure.ProviderErrorMessage = providerError;
                     failure.Declined = declined;
                     failure.RequiresAuthentication = requiresAuthentication;
+                    failure.CardBrand = cardBrand;
 
                     var failureOutcome = requiresAuthentication
                         ? CheckoutTelemetry.PaymentBeginRequiresAuthentication
@@ -770,7 +777,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
     // Begins (or resumes) one obligation. An obligation that already has a non-failed attempt is resumed
     // rather than re-created, which is what makes a refreshed payment page or a double submit safe.
-    private async Task<(PaymentBeginStep Step, string ProviderError, bool Declined, bool RequiresAuthentication)> BeginObligationAsync(
+    private async Task<(PaymentBeginStep Step, string ProviderError, bool Declined, bool RequiresAuthentication, string CardBrand)> BeginObligationAsync(
         CheckoutSession session,
         CheckoutInvoice invoice,
         ICheckoutPaymentProvider provider,
@@ -802,12 +809,21 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                 ObligationId = obligationId,
                 AttemptId = attempt.ItemId,
                 RequiresAction = false,
-            }, null, false, false);
+            }, null, false, false, null);
+        }
+
+        // One obligation is paid one way. A payment begun with another provider (an agent's card waiting on the bank,
+        // then the buyer paying with something else in the browser) is set aside first, and only when that provider
+        // confirms it's canceled; otherwise both could settle and the buyer would pay twice.
+        if (attempt is null && !await TryReleaseOtherProvidersAsync(session, provider.Key, obligationId, existingAttempts, cancellationToken))
+        {
+            return (null, "A payment for this checkout is already under way with another payment method. Finish it, or try again in a few minutes.", false, false, null);
         }
 
         if (attempt is null)
         {
             attempt = CreateAttempt(session, invoice, provider.Key, obligationId);
+            attempt.CreatedUtc = _clock.UtcNow;
 
             // A declined attempt is final, so a new one for the same obligation is a genuinely new charge. It
             // needs its own idempotency key: reusing the declined attempt's key would make the gateway replay the
@@ -858,7 +874,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         {
             _logger.LogError(exception, "Provider '{ProviderKey}' threw while beginning obligation '{ObligationId}' of checkout '{SessionId}'.", provider.Key, obligationId, session.SessionId);
 
-            return (null, null, false, false);
+            return (null, null, false, false, null);
         }
 
         if (!result.Succeeded)
@@ -881,7 +897,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                 await _attemptStore.UpdateAsync(attempt, cancellationToken);
             }
 
-            return (null, result.ErrorMessage, result.Declined, result.Declined && result.RequiresAuthentication);
+            return (null, result.ErrorMessage, result.Declined, result.Declined && result.RequiresAuthentication, result.CardBrand);
         }
 
         // Record the provider's reference immediately so the remote resource can always be found again,
@@ -898,7 +914,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             ClientSecret = result.ClientSecret,
             RedirectUrl = result.RedirectUrl,
             RequiresAction = result.RequiresAction || !string.IsNullOrEmpty(result.RedirectUrl),
-        }, null, false, false);
+        }, null, false, false, result.CardBrand);
     }
 
     // Establishes the recurring agreement for one interval. A provider whose capabilities claim recurring
@@ -986,6 +1002,87 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         }
 
         await SupersedeAsync(attempt, cancellationToken);
+
+        return true;
+    }
+
+    // Sets aside the live attempts other providers made for this obligation. Returns false, leaving everything as it
+    // is, when one of them was paid, can't be checked, or its provider won't confirm it's canceled.
+    private async Task<bool> TryReleaseOtherProvidersAsync(
+        CheckoutSession session,
+        string providerKey,
+        string obligationId,
+        List<PaymentAttempt> existingAttempts,
+        CancellationToken cancellationToken)
+    {
+        var others = existingAttempts
+            .Where(candidate =>
+                string.Equals(candidate.ObligationId, obligationId, StringComparison.Ordinal) &&
+                !string.Equals(candidate.ProviderKey, providerKey, StringComparison.OrdinalIgnoreCase) &&
+                !candidate.IsSuperseded &&
+                candidate.State is PaymentAttemptState.Created or PaymentAttemptState.Pending or PaymentAttemptState.Succeeded)
+            .ToList();
+
+        foreach (var other in others)
+        {
+            if (other.State == PaymentAttemptState.Succeeded || _providerResolver.GetProvider(other.ProviderKey) is not { } otherProvider)
+            {
+                return false;
+            }
+
+            // An attempt still Created, with no reference, is one whose begin may have ended without the provider's
+            // answer (a server error, a timeout): the provider may have charged it anyway. Until the provider can be
+            // expected to find it, nothing is set aside.
+            if (other.State == PaymentAttemptState.Created &&
+                string.IsNullOrEmpty(other.ProviderReference) &&
+                other.CreatedUtc != default &&
+                _clock.UtcNow - other.CreatedUtc < _unansweredBeginWindow)
+            {
+                return false;
+            }
+
+            try
+            {
+                if (other.State is PaymentAttemptState.Pending or PaymentAttemptState.Created)
+                {
+                    var verification = await otherProvider.VerifyAsync(new VerifyPaymentContext { Session = session, Attempt = other }, cancellationToken);
+
+                    if (verification.Status == PaymentStatus.Succeeded)
+                    {
+                        _logger.LogWarning("Attempt '{AttemptId}' of checkout '{SessionId}' was paid through '{ProviderKey}', so no payment is begun with '{NewProviderKey}'.", other.ItemId, session.SessionId, other.ProviderKey, providerKey);
+
+                        return false;
+                    }
+                }
+
+                var canceled = await otherProvider.CancelAsync(
+                    new CancelPaymentContext
+                    {
+                        Session = session,
+                        Attempt = other,
+                        Reason = "The buyer paid with another payment method.",
+                    },
+                    cancellationToken);
+
+                if (!canceled.Succeeded)
+                {
+                    return false;
+                }
+            }
+            catch (Exception exception)
+            {
+                _logger.LogWarning(exception, "Could not set aside attempt '{AttemptId}' of checkout '{SessionId}', so no payment is begun with '{ProviderKey}'.", other.ItemId, session.SessionId, providerKey);
+
+                return false;
+            }
+
+            other.State = PaymentAttemptState.Canceled;
+            other.IsSuperseded = true;
+            other.FailureReason = "The buyer paid with another payment method.";
+
+            await _attemptStore.UpdateAsync(other, cancellationToken);
+            existingAttempts.Remove(other);
+        }
 
         return true;
     }

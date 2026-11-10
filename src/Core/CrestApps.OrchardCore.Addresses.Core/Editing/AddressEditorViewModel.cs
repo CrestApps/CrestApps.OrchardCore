@@ -76,6 +76,28 @@ public class AddressEditorViewModel
     /// <summary>
     /// The address as entered, untidied.
     /// </summary>
+    /// <summary>
+    /// Returns an editor holding an address, or <see langword="null"/> when there is none.
+    /// </summary>
+    /// <param name="address">The address.</param>
+    public static AddressEditorViewModel From(Address address)
+        => address is null
+            ? null
+            : new AddressEditorViewModel
+            {
+                Name = address.Name,
+                Company = address.Company,
+                AddressLine1 = address.AddressLine1,
+                AddressLine2 = address.AddressLine2,
+                DependentLocality = address.DependentLocality,
+                City = address.City,
+                Region = address.Region,
+                PostalCode = address.PostalCode,
+                SortingCode = address.SortingCode,
+                Country = address.Country,
+                Phone = address.Phone,
+            };
+
     public Address ToAddress()
         => new()
         {

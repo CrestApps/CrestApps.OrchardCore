@@ -277,6 +277,16 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Shipping.Api` | Shipping API | [Shipping](./modules/shipping#api) |
 | `CrestApps.OrchardCore.Inventory.Api` | Inventory API | [Inventory](./modules/inventory#api) |
 | `CrestApps.OrchardCore.Commerce.Webhooks` | Commerce Webhooks | [Commerce Webhooks](./modules/commerce-webhooks) |
+| `CrestApps.OrchardCore.AgenticCommerce` | Agentic Commerce | [Agentic Commerce](./modules/agentic-commerce) |
+| `CrestApps.OrchardCore.AgenticCommerce.Ucp` | Universal Commerce Protocol | [Agentic Commerce](./modules/agentic-commerce#ucp-profile-and-negotiation) |
+| `CrestApps.OrchardCore.AgenticCommerce.Ucp.IdentityLinking` | UCP Account Linking | [Agentic Commerce](./modules/agentic-commerce#account-linking-ucp) |
+| `CrestApps.OrchardCore.AgenticCommerce.Ucp.Catalog` | UCP Catalog and Cart | [Agentic Commerce](./modules/agentic-commerce#catalog-and-cart-ucp) |
+| `CrestApps.OrchardCore.AgenticCommerce.Ucp.Mcp` | UCP over MCP | [Agentic Commerce](./modules/agentic-commerce#ucp-over-mcp) |
+| `CrestApps.OrchardCore.AgenticCommerce.Ucp.A2a` | UCP over A2A | [Agentic Commerce](./modules/agentic-commerce#ucp-over-a2a) |
+| `CrestApps.OrchardCore.AgenticCommerce.Acp` | Agentic Commerce Protocol | [Agentic Commerce](./modules/agentic-commerce#acp-discovery-and-versions) |
+| `CrestApps.OrchardCore.AgenticCommerce.Acp.Mcp` | ACP over MCP | [Agentic Commerce](./modules/agentic-commerce#acp-over-mcp) |
+| `CrestApps.OrchardCore.AgenticCommerce.Feeds` | Agent Product Feeds | [Agentic Commerce](./modules/agentic-commerce#agent-product-feeds) |
+| `CrestApps.OrchardCore.AgenticCommerce.Ap2` | Agent Payments Protocol (Preview) | [Agentic Commerce](./modules/agentic-commerce#ap2-mandates-preview) |
 | `CrestApps.OrchardCore.Webhooks` | Webhooks | [Webhooks](./modules/webhooks#outbound-webhooks) |
 | `CrestApps.OrchardCore.PointOfSale` | Point of Sale | [Point of Sale](./modules/point-of-sale) |
 | `CrestApps.OrchardCore.PayLater` | Pay Later | [Pay Later](./modules/pay-later) |

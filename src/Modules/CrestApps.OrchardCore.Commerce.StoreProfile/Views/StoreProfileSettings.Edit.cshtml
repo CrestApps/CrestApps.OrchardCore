@@ -55,6 +55,70 @@
 </div>
 
 <div class="card mb-3">
+    <div class="card-header">@T["Website and policies"]</div>
+    <div class="card-body">
+        <p class="text-body-secondary">@T["Checkouts, product feeds and AI agents link buyers to these pages. Enter a full address, or a path on this site such as /terms. Google and OpenAI ask for the terms of service and the privacy policy before agents can check out."]</p>
+        <div class="ocat-wrapper" asp-validation-class-for="Website">
+            <label asp-for="Website" class="ocat-label">@T["Website"]</label>
+            <div class="ocat-end">
+                <input asp-for="Website" class="form-control" maxlength="1000" placeholder="https://www.example.com" />
+                <span asp-validation-for="Website" class="text-danger"></span>
+                <span class="hint">@T["The store's own website, when it is not this site."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="TermsOfService">
+            <label asp-for="TermsOfService" class="ocat-label">@T["Terms of service"]</label>
+            <div class="ocat-end">
+                <input asp-for="TermsOfService" class="form-control" maxlength="1000" placeholder="/terms" />
+                <span asp-validation-for="TermsOfService" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="PrivacyPolicy">
+            <label asp-for="PrivacyPolicy" class="ocat-label">@T["Privacy policy"]</label>
+            <div class="ocat-end">
+                <input asp-for="PrivacyPolicy" class="form-control" maxlength="1000" placeholder="/privacy" />
+                <span asp-validation-for="PrivacyPolicy" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="ReturnPolicy">
+            <label asp-for="ReturnPolicy" class="ocat-label">@T["Return policy"]</label>
+            <div class="ocat-end">
+                <input asp-for="ReturnPolicy" class="form-control" maxlength="1000" placeholder="/returns" />
+                <span asp-validation-for="ReturnPolicy" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="ShippingPolicy">
+            <label asp-for="ShippingPolicy" class="ocat-label">@T["Shipping policy"]</label>
+            <div class="ocat-end">
+                <input asp-for="ShippingPolicy" class="form-control" maxlength="1000" placeholder="/shipping" />
+                <span asp-validation-for="ShippingPolicy" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Faq">
+            <label asp-for="Faq" class="ocat-label">@T["Frequently asked questions"]</label>
+            <div class="ocat-end">
+                <input asp-for="Faq" class="form-control" maxlength="1000" placeholder="/faq" />
+                <span asp-validation-for="Faq" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Contact">
+            <label asp-for="Contact" class="ocat-label">@T["Contact page"]</label>
+            <div class="ocat-end">
+                <input asp-for="Contact" class="form-control" maxlength="1000" placeholder="/contact" />
+                <span asp-validation-for="Contact" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="About">
+            <label asp-for="About" class="ocat-label">@T["About page"]</label>
+            <div class="ocat-end">
+                <input asp-for="About" class="form-control" maxlength="1000" placeholder="/about" />
+                <span asp-validation-for="About" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
     <div class="card-header">@T["Address"]</div>
     <div class="card-body">
         @await DisplayAsync(Model.AddressEditor)

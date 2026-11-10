@@ -1,0 +1,201 @@
+@model AgentPlatformViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["The platform"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="Name">
+            <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+            <div class="ocat-end">
+                <input asp-for="Name" class="form-control" maxlength="255" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+                <span class="hint">@T["The business whose AI agents buy from the store, such as Google or OpenAI."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Description">
+            <label asp-for="Description" class="ocat-label">@T["Notes"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Protocols">
+            <label class="ocat-label ocat-label-required">@T["Protocols"]</label>
+            <div class="ocat-end">
+                @foreach (var option in Model.ProtocolOptions)
+                {
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="@Html.NameFor(m => m.Protocols)" value="@option.Value" id="protocol-@option.Value" checked="@option.Selected" />
+                        <label class="form-check-label" for="protocol-@option.Value">@option.Text</label>
+                    </div>
+                }
+                <span asp-validation-for="Protocols" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Enabled">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="Enabled" class="form-check-input" />
+                    <label asp-for="Enabled" class="form-check-label">@T["Its agents may buy"]</label>
+                    <span class="hint dashed">@T["Turn it off to stop the platform's agents at once. Their open checkouts can't be completed."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="TestMode">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="TestMode" class="form-check-input" />
+                    <label asp-for="TestMode" class="form-check-label">@T["Test mode"]</label>
+                    <span class="hint dashed">@T["Its agents may only pay with test credentials, which are never charged. Use it while the platform certifies the store."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["How it signs in"]</div>
+    <div class="card-body">
+        @if (!Model.IsNew)
+        {
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["API key"]</label>
+                <div class="ocat-end">
+                    @if (string.IsNullOrEmpty(Model.ApiKeyHint))
+                    {
+                        <span class="text-body-secondary">@T["No API key yet."]</span>
+                    }
+                    else
+                    {
+                        <code>agk_…@Model.ApiKeyHint</code>
+                    }
+                    <button type="submit" class="btn btn-sm btn-secondary ms-2" formaction="@Url.Action("ApiKey", "AgentPlatforms", new { area = "CrestApps.OrchardCore.AgenticCommerce", id = Model.ItemId })" data-title="@T["New API key"]" data-message="@T["The old key stops working at once. Continue?"]" data-url-af="UnsafeUrl">@T["New API key"]</button>
+                    <span class="hint">@T["The platform sends it as a bearer token. ACP platforms sign in this way."]</span>
+                </div>
+            </div>
+        }
+        <div class="ocat-wrapper" asp-validation-class-for="OAuthClientId">
+            <label asp-for="OAuthClientId" class="ocat-label">@T["OAuth client ID"]</label>
+            <div class="ocat-end">
+                <input asp-for="OAuthClientId" class="form-control" maxlength="255" />
+                <span asp-validation-for="OAuthClientId" class="text-danger"></span>
+                <span class="hint">@T["The client ID of an application in Security › OpenID Connect › Applications that the platform signs in with, for its bearer tokens and for linking buyers' accounts."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="ProfileUrl">
+            <label asp-for="ProfileUrl" class="ocat-label">@T["UCP profile"]</label>
+            <div class="ocat-end">
+                <input asp-for="ProfileUrl" class="form-control" maxlength="1000" placeholder="https://platform.example/.well-known/ucp" />
+                <span asp-validation-for="ProfileUrl" class="text-danger"></span>
+                <span class="hint">@T["The address of the platform's UCP profile. The keys in it verify the platform's signed requests."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="AllowedIpRanges">
+            <label asp-for="AllowedIpRanges" class="ocat-label">@T["Allowed IP addresses"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="AllowedIpRanges" class="form-control" rows="3"></textarea>
+                <span asp-validation-for="AllowedIpRanges" class="text-danger"></span>
+                <span class="hint">@T["One address or range (such as 203.0.113.0/24) per line. Empty allows any. OpenAI asks stores to allow only its published ranges."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["ACP request signatures"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="AcpRequireSignedRequests">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="AcpRequireSignedRequests" class="form-check-input" />
+                    <label asp-for="AcpRequireSignedRequests" class="form-check-label">@T["Require signed requests"]</label>
+                    <span class="hint dashed">@T["Refuse ACP requests that don't carry a valid Signature and Timestamp. Even when it's off, a signed request is checked when a public key is set, and refused if it doesn't match."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="AcpSignatureAlgorithm">
+            <label asp-for="AcpSignatureAlgorithm" class="ocat-label">@T["Algorithm"]</label>
+            <div class="ocat-end">
+                <select asp-for="AcpSignatureAlgorithm" asp-items="Model.SignatureAlgorithmOptions" class="form-select"></select>
+                <span asp-validation-for="AcpSignatureAlgorithm" class="text-danger"></span>
+                <span class="hint">@T["ES256 is ECDSA on the P-256 curve with SHA-256. The platform signs the RFC 8785 canonical JSON of the request body."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="AcpSignaturePublicKey">
+            <label asp-for="AcpSignaturePublicKey" class="ocat-label">@T["Platform's public key"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="AcpSignaturePublicKey" class="form-control font-monospace" rows="4" placeholder='{"kty":"EC","crv":"P-256","x":"…","y":"…"}'></textarea>
+                <span asp-validation-for="AcpSignaturePublicKey" class="text-danger"></span>
+                <span class="hint">@T["A JSON Web Key or a PEM public key (-----BEGIN PUBLIC KEY-----) on P-256, from the platform. It isn't a secret: it's exported with the platform."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="AcpSignatureClockSkewSeconds">
+            <label asp-for="AcpSignatureClockSkewSeconds" class="ocat-label">@T["Allowed clock skew"]</label>
+            <div class="ocat-end">
+                <div class="input-group">
+                    <input asp-for="AcpSignatureClockSkewSeconds" type="number" min="1" max="3600" step="1" class="form-control" placeholder="300" />
+                    <span class="input-group-text">@T["seconds"]</span>
+                </div>
+                <span asp-validation-for="AcpSignatureClockSkewSeconds" class="text-danger"></span>
+                <span class="hint">@T["How far a request's Timestamp may be from the store's clock. Empty means 5 minutes."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Embedded checkout"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="EmbeddedCheckoutOrigins">
+            <label asp-for="EmbeddedCheckoutOrigins" class="ocat-label">@T["Embedding origins"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="EmbeddedCheckoutOrigins" class="form-control" rows="2" placeholder="https://agent.example"></textarea>
+                <span asp-validation-for="EmbeddedCheckoutOrigins" class="text-danger"></span>
+                <span class="hint">@T["The addresses (https:// and a host, no path) of the platform's pages that may show the store's checkout inside them, one per line. Only this platform's checkouts can be shown there, and only when Allow embedded checkout is on in Settings › Agentic commerce. Empty keeps the checkout out of frames. UCP only."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Payments and order updates"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="AllowedPaymentHandlers">
+            <label asp-for="AllowedPaymentHandlers" class="ocat-label">@T["Payment handlers"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="AllowedPaymentHandlers" class="form-control" rows="2" placeholder="com.stripe.payments"></textarea>
+                <span class="hint">@T["The payment handlers its agents may pay through, one per line, such as com.stripe.payments, com.google.pay or dev.acp.tokenized.card. Empty allows every handler the store offers."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="WebhookUrl">
+            <label asp-for="WebhookUrl" class="ocat-label">@T["Order updates address"]</label>
+            <div class="ocat-end">
+                <input asp-for="WebhookUrl" class="form-control" maxlength="1000" placeholder="https://platform.example/webhooks/orders" />
+                <span asp-validation-for="WebhookUrl" class="text-danger"></span>
+                <span class="hint">@T["Where the store sends order updates for the platform's orders. UCP platforms give it in their profile, so it's only needed for ACP."]</span>
+            </div>
+        </div>
+        @if (!Model.IsNew)
+        {
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["Signing secret"]</label>
+                <div class="ocat-end">
+                    <span class="text-body-secondary">@(Model.HasWebhookSecret ? T["Set."] : T["Not set yet."])</span>
+                    <button type="submit" class="btn btn-sm btn-secondary ms-2" formaction="@Url.Action("WebhookSecret", "AgentPlatforms", new { area = "CrestApps.OrchardCore.AgenticCommerce", id = Model.ItemId })">@T["New secret"]</button>
+                    <span class="hint">@T["ACP order updates are signed with it (Merchant-Signature). UCP order updates are signed with the store's own keys instead."]</span>
+                </div>
+            </div>
+        }
+        <div class="ocat-wrapper" asp-validation-class-for="AcpOrderCreatedEvent">
+            <label asp-for="AcpOrderCreatedEvent" class="ocat-label">@T["ACP new order event"]</label>
+            <div class="ocat-end">
+                <input asp-for="AcpOrderCreatedEvent" class="form-control" maxlength="100" placeholder="order_create" />
+                <span class="hint">@T["The event name a new order sends. The ACP specification says order_create; some platforms expect order_created."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="AcpOrderUpdatedEvent">
+            <label asp-for="AcpOrderUpdatedEvent" class="ocat-label">@T["ACP changed order event"]</label>
+            <div class="ocat-end">
+                <input asp-for="AcpOrderUpdatedEvent" class="form-control" maxlength="100" placeholder="order_update" />
+            </div>
+        </div>
+    </div>
+</div>

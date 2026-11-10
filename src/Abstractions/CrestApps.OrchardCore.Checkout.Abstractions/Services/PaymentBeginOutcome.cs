@@ -48,6 +48,12 @@ public sealed class PaymentBeginOutcome
     public bool InvoiceChanged { get; set; }
 
     /// <summary>
+    /// Gets or sets the brand of the card the provider charged or tried to charge
+    /// (<see cref="PaymentBeginResult.CardBrand"/>), when it said.
+    /// </summary>
+    public string CardBrand { get; set; }
+
+    /// <summary>
     /// Gets the per-obligation steps the client must complete.
     /// </summary>
     public IList<PaymentBeginStep> Steps { get; init; } = [];

@@ -25,7 +25,8 @@ public sealed class WebMcpSettingsSchema : SiteSettingsSchemaBase
                     .Description("The names of the tools and tool instances given to browser agents when ExposeAllTools is false.")),
                 (nameof(WebMcpSettings.EnableOnAdminPages), Flag("Whether admin pages offer WebMCP tools.", true)),
                 (nameof(WebMcpSettings.EnableOnFrontEndPages), Flag("Whether front-end pages offer WebMCP tools.", false)),
-                (nameof(WebMcpSettings.EnablePageTools), Flag("Whether the pages that get WebMCP also get the page tools, which read the page, list its links, open another page of the site, and read and fill its forms.", true)))
+                (nameof(WebMcpSettings.EnablePageTools), Flag("Whether the pages that get WebMCP also get the page tools, which read the page, list its links, open another page of the site, and read and fill its forms.", true)),
+                (nameof(WebMcpSettings.EnableStorefrontTools), Flag("Whether front-end pages offer visitors who are not signed in, and signed-in users without the WebMCP permission, the selected tools that are marked safe for anonymous callers.", false)))
             .AdditionalProperties(true);
 
     private static JsonSchemaBuilder Flag(string description, bool defaultValue)

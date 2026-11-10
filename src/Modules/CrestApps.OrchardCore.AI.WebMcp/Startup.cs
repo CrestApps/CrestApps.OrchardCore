@@ -25,6 +25,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.RateLimits;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.WebMcp;
@@ -32,7 +33,7 @@ namespace CrestApps.OrchardCore.AI.WebMcp;
 /// <summary>
 /// Registers the services of the WebMCP feature: CrestApps.Core's WebMCP tool service and endpoints, with the tool
 /// selection from the site settings and the <see cref="WebMcpPermissionsProvider.UseWebMcpTools"/> permission, the
-/// script filter, and the page tools.
+/// storefront tool endpoints, the script filter, and the page tools.
 /// </summary>
 public sealed class Startup : StartupBase
 {
@@ -48,6 +49,7 @@ public sealed class Startup : StartupBase
             .AddTransient<IConfigureOptions<WebMcpOptions>, WebMcpOptionsConfiguration>()
             .AddTransient<IConfigureOptions<WebMcpPageOptions>, WebMcpOptionsConfiguration>()
             .AddScoped<WebMcpToolSelectionService>()
+            .AddScoped<StorefrontWebMcpToolService>()
             .AddScoped<IWebMcpClientConfigurationHandler, WebMcpPageToolsClientConfigurationHandler>()
             .AddResourceConfiguration<ResourceManagementOptionsConfiguration>();
 
@@ -65,6 +67,25 @@ public sealed class Startup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes.MapWebMcpTools();
+        routes.MapStorefrontWebMcpTools();
+    }
+}
+
+/// <summary>
+/// Holds each visitor to <see cref="WebMcpConstants.StorefrontRequestsPerMinute"/> calls a minute to the storefront
+/// tool endpoints, which anyone may call, when Orchard Core's Rate Limits feature is enabled.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.RateLimits)]
+public sealed class RateLimitsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.Configure<RateLimitsOptions>(options => options.AddGroupRateLimit(
+            WebMcpConstants.StorefrontRateLimitGroup,
+            RateLimitPartitionHelpers.CreateFixedWindowPerIpPolicy(
+                policyName: WebMcpConstants.StorefrontRateLimitGroup,
+                permitLimit: WebMcpConstants.StorefrontRequestsPerMinute,
+                window: TimeSpan.FromMinutes(1))));
     }
 }
 

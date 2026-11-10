@@ -1,0 +1,46 @@
+{
+  "name": "AgenticCommerceAccountLinking",
+  "displayName": "Agentic commerce: UCP account linking",
+  "description": "Turns on UCP account linking and the OpenID server, and adds the OAuth scopes UCP agents ask buyers for: checking out as them and reading their orders. Add an OpenID application for each agent platform, with authorization code and PKCE, and put its client ID on the platform.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "commerce"
+  ],
+  "tags": [
+    "commerce",
+    "agentic",
+    "ucp",
+    "openid"
+  ],
+  "steps": [
+    {
+      "name": "feature",
+      "enable": [
+        "OrchardCore.OpenId.Server",
+        "OrchardCore.OpenId.Validation",
+        "CrestApps.OrchardCore.AgenticCommerce.Ucp.IdentityLinking"
+      ]
+    },
+    {
+      "name": "OpenIdScope",
+      "ScopeName": "dev.ucp.shopping.checkout:manage",
+      "DisplayName": "Check out as you",
+      "Description": "Lets an AI agent check out as you, with your saved addresses."
+    },
+    {
+      "name": "OpenIdScope",
+      "ScopeName": "dev.ucp.shopping.order:read",
+      "DisplayName": "See your orders",
+      "Description": "Lets an AI agent see your orders."
+    },
+    {
+      "name": "OpenIdScope",
+      "ScopeName": "dev.ucp.shopping.order:manage",
+      "DisplayName": "Manage your orders",
+      "Description": "Lets an AI agent change your orders."
+    }
+  ]
+}

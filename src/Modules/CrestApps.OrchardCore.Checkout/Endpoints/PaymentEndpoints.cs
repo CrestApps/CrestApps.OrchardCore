@@ -188,10 +188,7 @@ public static class PaymentEndpoints
                 continue;
             }
 
-            if (pair.Key is CheckoutPaymentDataKeys.OffSession
-                or CheckoutPaymentDataKeys.SavedCustomerReference
-                or CheckoutPaymentDataKeys.SavedPaymentMethodReference
-                or CheckoutPaymentDataKeys.SavePaymentMethod)
+            if (CheckoutPaymentDataKeys.IsServerOnly(pair.Key))
             {
                 continue;
             }

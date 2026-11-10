@@ -161,6 +161,16 @@ public sealed class ListingStartup : StartupBase
 }
 
 /// <summary>
+/// Builds the product feeds again when stock changes, since they show each product's availability and units left.
+/// </summary>
+[RequireFeatures(ProductConstants.Feature.Feeds)]
+public sealed class ProductFeedsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddScoped<IStockLevelHandler, ProductFeedStockHandler>();
+}
+
+/// <summary>
 /// Notifies the chosen roles when a product runs low or sells out.
 /// </summary>
 [RequireFeatures(OrchardCoreFeatureIds.Notifications)]

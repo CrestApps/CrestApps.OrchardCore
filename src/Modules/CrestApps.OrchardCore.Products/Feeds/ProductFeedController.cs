@@ -1,5 +1,6 @@
 using System.Text;
 using CrestApps.OrchardCore.Products.Core;
+using CrestApps.OrchardCore.Products.Core.Feeds;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using OrchardCore.Modules;
@@ -14,11 +15,11 @@ namespace CrestApps.OrchardCore.Products.Feeds;
 [Feature(ProductConstants.Feature.Feeds)]
 public sealed class ProductFeedController : Controller
 {
-    private readonly ProductFeedService _feeds;
+    private readonly IProductFeedService _feeds;
     private readonly ISiteService _siteService;
 
     public ProductFeedController(
-        ProductFeedService feeds,
+        IProductFeedService feeds,
         ISiteService siteService)
     {
         _feeds = feeds;

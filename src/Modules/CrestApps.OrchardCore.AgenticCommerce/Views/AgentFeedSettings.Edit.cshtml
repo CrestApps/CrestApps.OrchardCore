@@ -1,0 +1,274 @@
+@model CrestApps.OrchardCore.AgenticCommerce.Feeds.AgentFeedSettingsViewModel
+
+@{
+    var feed = Model.Feed;
+    var leftOut = feed?.Problems.Where(problem => problem.LeftOut).ToList() ?? [];
+    var leftOutItems = leftOut.Select(problem => problem.ItemId).Distinct().Count();
+    var lastSftp = Model.Status?.LastSftpPush;
+    var pushes = Model.Status?.FeedApiPushes ?? new Dictionary<string, CrestApps.OrchardCore.AgenticCommerce.Feeds.AgentFeedPushResult>();
+    var createdFeeds = Model.Status?.FeedApiFeedIds ?? new Dictionary<string, string>();
+}
+
+@if (!Model.HasBaseUrl)
+{
+    <div class="alert alert-warning">@T["Set the site's base URL under Settings > General: a feed's links and photos need it, and items without them are left out."]</div>
+}
+
+<div class="card mb-3">
+    <div class="card-header">@T["OpenAI product feed"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <p class="mb-1">@T["JSON lines:"] <code>@Model.JsonLinesUrl</code></p>
+                <p class="mb-1">@T["CSV:"] <code>@Model.CsvUrl</code></p>
+                <span class="hint">@T["For ChatGPT, in OpenAI's product feed format. Add a currency, such as &amp;currency=EUR (or ?currency=EUR), for a feed in it. The feed is built with the product feed, every 15 minutes or after stock changes."]</span>
+            </div>
+        </div>
+
+        @if (feed is not null)
+        {
+            <div class="alert @(leftOutItems == 0 ? "alert-success" : "alert-warning")">
+                <div>@T["{0} items are in the feed. {1} are left out because OpenAI or Merchant Center would refuse them.", feed.Records.Count, leftOutItems]</div>
+                @if (leftOut.Count > 0)
+                {
+                    <ul class="mb-0 mt-2 small">
+                        @foreach (var problem in leftOut.Take(50))
+                        {
+                            <li><strong>@problem.Title</strong> (@problem.ItemId): @problem.Problem</li>
+                        }
+                    </ul>
+                }
+            </div>
+        }
+
+        <div class="ocat-wrapper" asp-validation-class-for="TargetCountries">
+            <label asp-for="TargetCountries" class="ocat-label">@T["Target countries"]</label>
+            <div class="ocat-end">
+                <input asp-for="TargetCountries" class="form-control" placeholder="@Model.StoreCountry" />
+                <span asp-validation-for="TargetCountries" class="text-danger"></span>
+                <span class="hint">@T["The two-letter codes of the countries you sell to through AI agents, separated by commas, such as US, CA. Leave it empty for the store's own country."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Daily SFTP push"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="SftpEnabled" type="checkbox" class="form-check-input" />
+                    <label asp-for="SftpEnabled" class="form-check-label">@T["Push the full feed over SFTP every day"]</label>
+                </div>
+                <span class="hint dashed">@T["OpenAI reads the feed from the SFTP server it gives approved stores. Each push overwrites the same files, up to 500,000 products each."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="SftpHost">
+            <label asp-for="SftpHost" class="ocat-label">@T["Host"]</label>
+            <div class="ocat-end">
+                <input asp-for="SftpHost" class="form-control" />
+                <span asp-validation-for="SftpHost" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="ocat-limited-wrapper">
+            <label asp-for="SftpPort" class="ocat-label">@T["Port"]</label>
+            <div class="ocat-limited">
+                <input asp-for="SftpPort" type="number" min="1" max="65535" class="form-control" />
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="SftpUsername" class="ocat-label">@T["User name"]</label>
+            <div class="ocat-end">
+                <input asp-for="SftpUsername" class="form-control" autocomplete="off" />
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="SftpPassword" class="ocat-label">@T["Password"]</label>
+            <div class="ocat-end">
+                <input asp-for="SftpPassword" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" placeholder="@(Model.HasSftpPassword ? T["A password is saved; enter a new one to replace it"] : T["None"])" />
+                @if (Model.HasSftpPassword)
+                {
+                    <div class="form-check mt-1">
+                        <input asp-for="RemoveSftpPassword" type="checkbox" class="form-check-input" />
+                        <label asp-for="RemoveSftpPassword" class="form-check-label">@T["Remove the saved password"]</label>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="SftpPrivateKey" class="ocat-label">@T["Private key"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="SftpPrivateKey" class="form-control font-monospace" rows="4" autocomplete="off" placeholder="@(Model.HasSftpPrivateKey ? T["A key is saved; paste a new one to replace it"] : T["None"])"></textarea>
+                @if (Model.HasSftpPrivateKey)
+                {
+                    <div class="form-check mt-1">
+                        <input asp-for="RemoveSftpPrivateKey" type="checkbox" class="form-check-input" />
+                        <label asp-for="RemoveSftpPrivateKey" class="form-check-label">@T["Remove the saved key"]</label>
+                    </div>
+                }
+                <span class="hint">@T["Use a password, a private key in OpenSSH or PEM form, or both."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="SftpPrivateKeyPassphrase" class="ocat-label">@T["Key passphrase"]</label>
+            <div class="ocat-end">
+                <input asp-for="SftpPrivateKeyPassphrase" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" placeholder="@(Model.HasSftpPrivateKeyPassphrase ? T["A passphrase is saved"] : T["None"])" />
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="SftpHostKeyFingerprint" class="ocat-label">@T["Host key fingerprint"]</label>
+            <div class="ocat-end">
+                <input asp-for="SftpHostKeyFingerprint" class="form-control font-monospace" placeholder="SHA256:..." />
+                <span class="hint">@T["Optional. The server's SHA-256 fingerprint: the push stops when the server shows another key."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="SftpRemoteFolder" class="ocat-label">@T["Folder"]</label>
+            <div class="ocat-end">
+                <input asp-for="SftpRemoteFolder" class="form-control" />
+            </div>
+        </div>
+
+        <div class="ocat-limited-wrapper">
+            <label asp-for="SftpFormat" class="ocat-label">@T["File format"]</label>
+            <div class="ocat-limited">
+                <select asp-for="SftpFormat" class="form-select">
+                    <option value="jsonl.gz">@T["JSON lines, gzipped"]</option>
+                    <option value="csv.gz">@T["CSV, gzipped"]</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="ocat-limited-wrapper">
+            <label asp-for="SftpCurrency" class="ocat-label">@T["Currency"]</label>
+            <div class="ocat-limited">
+                <input asp-for="SftpCurrency" class="form-control" maxlength="3" placeholder="USD" />
+                <span class="hint">@T["Optional. Each product's own currency when empty."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                @if (lastSftp is null)
+                {
+                    <span class="text-body-secondary">@T["Not pushed yet."]</span>
+                }
+                else
+                {
+                    <span class="badge ta-badge fw-normal @(lastSftp.Succeeded ? "text-success" : "text-danger")">@(lastSftp.Succeeded ? T["Pushed"] : T["Failed"])</span>
+                    <span>@await DisplayAsync(await New.DateTime(Utc: lastSftp.FinishedUtc, Format: "g"))</span>
+                    <span class="d-block small">@lastSftp.Message</span>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["ACP feed APIs"]</div>
+    <div class="card-body">
+        <p class="hint">@T["Agent platforms that host an Agentic Commerce Protocol feed API. The store creates its feed there, pushes every product once a day, and pushes a product again after it is published or its stock changes."]</p>
+
+        @for (var i = 0; i < Model.FeedApiTargets.Count; i++)
+        {
+            var target = Model.FeedApiTargets[i];
+            var isNew = string.IsNullOrEmpty(target.Id);
+            var push = isNew ? null : pushes.GetValueOrDefault(target.Id);
+            var createdFeed = isNew ? null : createdFeeds.GetValueOrDefault(target.Id);
+
+            <fieldset class="border rounded p-3 mb-3">
+                <legend class="h6 float-none w-auto px-1">@(isNew ? T["Add a feed API"] : (string.IsNullOrEmpty(target.Name) ? target.BaseUrl : target.Name))</legend>
+                <input type="hidden" asp-for="FeedApiTargets[i].Id" />
+
+                <div class="ocat-wrapper">
+                    <label asp-for="FeedApiTargets[i].Name" class="ocat-label">@T["Name"]</label>
+                    <div class="ocat-end">
+                        <input asp-for="FeedApiTargets[i].Name" class="form-control" />
+                    </div>
+                </div>
+
+                <div class="ocat-wrapper" asp-validation-class-for="FeedApiTargets[i].BaseUrl">
+                    <label asp-for="FeedApiTargets[i].BaseUrl" class="ocat-label">@T["Address"]</label>
+                    <div class="ocat-end">
+                        <input asp-for="FeedApiTargets[i].BaseUrl" type="url" class="form-control" placeholder="https://api.example.com/acp" />
+                        <span asp-validation-for="FeedApiTargets[i].BaseUrl" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="ocat-wrapper" asp-validation-class-for="FeedApiTargets[i].BearerToken">
+                    <label asp-for="FeedApiTargets[i].BearerToken" class="ocat-label">@T["API key"]</label>
+                    <div class="ocat-end">
+                        <input asp-for="FeedApiTargets[i].BearerToken" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" placeholder="@(target.HasBearerToken ? T["A key is saved; enter a new one to replace it"] : T["The platform's key"])" />
+                        <span asp-validation-for="FeedApiTargets[i].BearerToken" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="ocat-wrapper">
+                    <label asp-for="FeedApiTargets[i].FeedId" class="ocat-label">@T["Feed ID"]</label>
+                    <div class="ocat-end">
+                        <input asp-for="FeedApiTargets[i].FeedId" class="form-control" placeholder="@createdFeed" />
+                        <span class="hint">@T["Optional. Leave it empty to have the store create a feed on the first push."]</span>
+                    </div>
+                </div>
+
+                <div class="ocat-limited-wrapper" asp-validation-class-for="FeedApiTargets[i].TargetCountry">
+                    <label asp-for="FeedApiTargets[i].TargetCountry" class="ocat-label">@T["Target country"]</label>
+                    <div class="ocat-limited">
+                        <input asp-for="FeedApiTargets[i].TargetCountry" class="form-control" maxlength="2" placeholder="US" />
+                        <span asp-validation-for="FeedApiTargets[i].TargetCountry" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="ocat-limited-wrapper">
+                    <label asp-for="FeedApiTargets[i].Currency" class="ocat-label">@T["Currency"]</label>
+                    <div class="ocat-limited">
+                        <input asp-for="FeedApiTargets[i].Currency" class="form-control" maxlength="3" placeholder="USD" />
+                    </div>
+                </div>
+
+                <div class="ocat-wrapper">
+                    <div class="ocat-end-offset">
+                        <div class="form-check">
+                            <input asp-for="FeedApiTargets[i].Enabled" type="checkbox" class="form-check-input" />
+                            <label asp-for="FeedApiTargets[i].Enabled" class="form-check-label">@T["Push products to this platform"]</label>
+                        </div>
+                        @if (!isNew)
+                        {
+                            <div class="form-check">
+                                <input asp-for="FeedApiTargets[i].Remove" type="checkbox" class="form-check-input" />
+                                <label asp-for="FeedApiTargets[i].Remove" class="form-check-label">@T["Remove this feed API"]</label>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                @if (push is not null)
+                {
+                    <div class="ocat-wrapper">
+                        <div class="ocat-end-offset">
+                            <span class="badge ta-badge fw-normal @(push.Succeeded ? "text-success" : "text-danger")">@(push.Succeeded ? T["Pushed"] : T["Failed"])</span>
+                            <span>@await DisplayAsync(await New.DateTime(Utc: push.FinishedUtc, Format: "g"))</span>
+                            <span class="d-block small">@push.Message</span>
+                        </div>
+                    </div>
+                }
+            </fieldset>
+        }
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <button type="submit" class="btn btn-secondary" formaction="@Url.Action("Push", "AgentFeedsAdmin", new { area = "CrestApps.OrchardCore.AgenticCommerce" })">@T["Push now"]</button>
+        <span class="hint d-block">@T["Pushes the products with the saved settings now: save your changes first."]</span>
+    </div>
+</div>

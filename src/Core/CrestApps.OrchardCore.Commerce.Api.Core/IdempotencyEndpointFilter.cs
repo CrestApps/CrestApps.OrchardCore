@@ -27,24 +27,34 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
     public async ValueTask<object> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
         var httpContext = context.HttpContext;
-        var key = httpContext.Request.Headers[CommerceApi.IdempotencyKeyHeader].ToString();
+        var policy = httpContext.GetEndpoint()?.Metadata.GetMetadata<IdempotencyPolicy>();
+        var keyHeader = policy?.KeyHeader ?? CommerceApi.IdempotencyKeyHeader;
+        var key = httpContext.Request.Headers[keyHeader].ToString();
 
         if (string.IsNullOrWhiteSpace(key))
         {
-            return await next(context);
+            return policy?.MissingKey?.Invoke(httpContext) ?? await next(context);
         }
 
-        if (key.Length > MaxKeyLength)
+        var maxKeyLength = policy?.MaxKeyLength ?? MaxKeyLength;
+
+        if (key.Length > maxKeyLength)
         {
-            return ApiProblems.Validation(CommerceApi.IdempotencyKeyHeader, $"An idempotency key is at most {MaxKeyLength} characters.");
+            return policy?.InvalidKey?.Invoke(httpContext) ?? ApiProblems.Validation(keyHeader, $"An idempotency key is at most {maxKeyLength} characters.");
+        }
+
+        if (policy?.EchoKey == true)
+        {
+            httpContext.Response.Headers[keyHeader] = key;
         }
 
         var cache = httpContext.RequestServices.GetRequiredService<IDistributedCache>();
-        var cacheKey = GetCacheKey(httpContext, key);
+        var cacheKey = GetCacheKey(httpContext, key, policy);
+        var fingerprint = policy?.Fingerprint?.Invoke(httpContext);
 
         if (await cache.GetStringAsync(cacheKey, httpContext.RequestAborted) is { } stored)
         {
-            return Replay(stored, httpContext);
+            return Replay(stored, httpContext, policy, fingerprint);
         }
 
         var (locker, locked) = await httpContext.RequestServices.GetRequiredService<IDistributedLock>()
@@ -53,7 +63,7 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
         if (!locked)
         {
             // The first request with this key is still running; answering it twice is what the key prevents.
-            return ApiProblems.Conflict(ApiProblems.Codes.IdempotencyInProgress, "A request with this idempotency key is still being processed. Try again in a moment.");
+            return policy?.InFlight?.Invoke(httpContext) ?? ApiProblems.Conflict(ApiProblems.Codes.IdempotencyInProgress, "A request with this idempotency key is still being processed. Try again in a moment.");
         }
 
         var lockHeldByResult = false;
@@ -62,7 +72,7 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
         {
             if (await cache.GetStringAsync(cacheKey, httpContext.RequestAborted) is { } storedMeanwhile)
             {
-                return Replay(storedMeanwhile, httpContext);
+                return Replay(storedMeanwhile, httpContext, policy, fingerprint);
             }
 
             var result = await next(context);
@@ -73,10 +83,10 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
             {
                 lockHeldByResult = true;
 
-                return new KeepAfterExecutionResult(created, cache, cacheKey, locker);
+                return new KeepAfterExecutionResult(created, cache, cacheKey, locker, policy, fingerprint);
             }
 
-            await KeepAsync(cache, cacheKey, result, httpContext);
+            await KeepAsync(cache, cacheKey, result, httpContext, policy, fingerprint);
 
             return result;
         }
@@ -91,11 +101,15 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
 
     // Only a final answer is kept. A server error, a "too many requests", and a conflict that clears by itself (someone
     // else changing the same thing) are worth sending again with the same key.
-    private static async Task KeepAsync(IDistributedCache cache, string cacheKey, object result, HttpContext httpContext)
+    private static async Task KeepAsync(IDistributedCache cache, string cacheKey, object result, HttpContext httpContext, IdempotencyPolicy policy = null, string fingerprint = null)
     {
         if (Capture(result, httpContext.Response.Headers) is { } response && IsFinal(response))
         {
-            await cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(response), new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = _lifetime }, httpContext.RequestAborted);
+            await cache.SetStringAsync(
+                cacheKey,
+                JsonSerializer.Serialize(response with { Fingerprint = fingerprint }),
+                new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = policy?.Lifetime ?? _lifetime },
+                httpContext.RequestAborted);
         }
     }
 
@@ -110,11 +124,12 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
         return result;
     }
 
-    internal static string GetCacheKey(HttpContext httpContext, string key)
+    internal static string GetCacheKey(HttpContext httpContext, string key, IdempotencyPolicy policy = null)
     {
         // A guest is known by their cart's token, or their checkout's when they have no cart. Never both: the answer to
         // starting a checkout hands out the checkout token, so a retry of it carries one the first request didn't.
-        var caller = httpContext.User?.FindFirstValue(ClaimTypes.NameIdentifier) ??
+        var caller = policy?.Caller?.Invoke(httpContext) ??
+            httpContext.User?.FindFirstValue(ClaimTypes.NameIdentifier) ??
             httpContext.User?.FindFirstValue("sub") ??
             FirstNonEmpty(httpContext.Request.Headers[CommerceApi.CartTokenHeader].ToString(), httpContext.Request.Headers[CommerceApi.CheckoutTokenHeader].ToString());
 
@@ -164,9 +179,20 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
                 (body.Contains($"\"code\":\"{ApiProblems.Codes.Concurrency}\"", StringComparison.Ordinal) ||
                  body.Contains($"\"code\":\"{ApiProblems.Codes.IdempotencyInProgress}\"", StringComparison.Ordinal)));
 
-    private static IResult Replay(string stored, HttpContext httpContext)
+    private static IResult Replay(string stored, HttpContext httpContext, IdempotencyPolicy policy = null, string fingerprint = null)
     {
         var response = JsonSerializer.Deserialize<StoredResponse>(stored);
+
+        // The same key with another request is a mistake the caller must fix, not a retry.
+        if (policy?.Fingerprint is not null && !string.Equals(response.Fingerprint, fingerprint, StringComparison.Ordinal))
+        {
+            return policy.Conflict?.Invoke(httpContext) ?? ApiProblems.Conflict(ApiProblems.Codes.IdempotencyInProgress, "This idempotency key was used for another request.");
+        }
+
+        if (!string.IsNullOrEmpty(policy?.ReplayedHeader))
+        {
+            httpContext.Response.Headers[policy.ReplayedHeader] = "true";
+        }
 
         foreach (var (name, value) in response.Headers ?? new Dictionary<string, string>())
         {
@@ -178,7 +204,7 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
             : Results.Content(response.Body, response.ContentType ?? "application/json", statusCode: response.StatusCode);
     }
 
-    internal sealed record StoredResponse(int StatusCode, string Body, string ContentType = null, IReadOnlyDictionary<string, string> Headers = null);
+    internal sealed record StoredResponse(int StatusCode, string Body, string ContentType = null, IReadOnlyDictionary<string, string> Headers = null, string Fingerprint = null);
 
     // Runs a created answer, then keeps it with the headers it wrote, and only then lets a retry with the same key in.
     private sealed class KeepAfterExecutionResult : IResult, INestedHttpResult, IStatusCodeHttpResult
@@ -186,17 +212,23 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
         private readonly IDistributedCache _cache;
         private readonly string _cacheKey;
         private readonly ILocker _locker;
+        private readonly IdempotencyPolicy _policy;
+        private readonly string _fingerprint;
 
         public KeepAfterExecutionResult(
             IResult result,
             IDistributedCache cache,
             string cacheKey,
-            ILocker locker)
+            ILocker locker,
+            IdempotencyPolicy policy,
+            string fingerprint)
         {
             Result = result;
             _cache = cache;
             _cacheKey = cacheKey;
             _locker = locker;
+            _policy = policy;
+            _fingerprint = fingerprint;
         }
 
         public IResult Result { get; }
@@ -209,7 +241,7 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
             await using (_locker)
             {
                 await Result.ExecuteAsync(httpContext);
-                await KeepAsync(_cache, _cacheKey, Result, httpContext);
+                await KeepAsync(_cache, _cacheKey, Result, httpContext, _policy, _fingerprint);
             }
         }
     }
@@ -222,4 +254,16 @@ public static class IdempotencyEndpointExtensions
     /// </summary>
     public static RouteHandlerBuilder WithIdempotency(this RouteHandlerBuilder builder)
         => builder.AddEndpointFilter<IdempotencyEndpointFilter>();
+
+    /// <summary>
+    /// Makes an endpoint idempotent with a protocol's own rules.
+    /// </summary>
+    /// <param name="builder">The endpoint.</param>
+    /// <param name="policy">The protocol's rules.</param>
+    public static RouteHandlerBuilder WithIdempotency(this RouteHandlerBuilder builder, IdempotencyPolicy policy)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+
+        return builder.WithMetadata(policy).AddEndpointFilter<IdempotencyEndpointFilter>();
+    }
 }

@@ -38,6 +38,19 @@ public interface IStripePaymentIntentService
     Task<ChargeOffSessionResponse> ChargeOffSessionAsync(ChargeOffSessionRequest model);
 
     /// <summary>
+    /// Creates and confirms a PaymentIntent with a payment credential an AI agent brought, on the server.
+    /// </summary>
+    /// <param name="model">What to charge and the credential.</param>
+    Task<ChargeDelegatedCredentialResponse> ChargeDelegatedAsync(ChargeDelegatedCredentialRequest model);
+
+    /// <summary>
+    /// Confirms again a PaymentIntent made from a credential an AI agent brought, with the result of a 3-D Secure
+    /// authentication the agent ran, so the same payment goes ahead without Stripe asking the buyer again.
+    /// </summary>
+    /// <param name="model">The PaymentIntent and the 3-D Secure result.</param>
+    Task<ChargeDelegatedCredentialResponse> ConfirmDelegatedAsync(ConfirmDelegatedCredentialRequest model);
+
+    /// <summary>
     /// Retrieves the authoritative state of a Stripe payment intent so a checkout can verify what really
     /// happened at the gateway rather than trusting a cached notification.
     /// </summary>
@@ -52,4 +65,14 @@ public interface IStripePaymentIntentService
     /// <param name="model">The cancel request identifying the payment intent.</param>
     /// <returns>The authoritative payment intent details after cancellation.</returns>
     Task<PaymentIntentDetails> CancelAsync(CancelPaymentIntentRequest model);
+
+    /// <summary>
+    /// Finds the PaymentIntent made for a checkout attempt, from its <c>checkout_attempt_id</c> metadata. A charge whose
+    /// answer never arrived (a Stripe server error, a timeout) may still have been made, and this is how the store finds
+    /// it. Stripe's search can lag up to a minute behind a new PaymentIntent.
+    /// </summary>
+    /// <param name="checkoutAttemptId">The checkout attempt's id.</param>
+    /// <returns>The PaymentIntent's id, or <see langword="null"/> when none is found.</returns>
+    Task<string> FindByCheckoutAttemptAsync(string checkoutAttemptId)
+        => Task.FromResult<string>(null);
 }

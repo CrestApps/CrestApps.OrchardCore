@@ -10,6 +10,7 @@ using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Products.Core;
+using CrestApps.OrchardCore.Products.Core.Feeds;
 using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Search;
@@ -94,6 +95,9 @@ public sealed class Startup : StartupBase
 
         // Every product SKU, its own and its variants', so a product can be found by any of them.
         services.AddIndexProvider<ProductSkuIndexProvider>();
+
+        // Reads the item ids feeds give products and variants back, for checkouts that name items by them.
+        services.AddScoped<IProductItemIdResolver, DefaultProductItemIdResolver>();
         services.AddDataMigration<ProductSkuMigrations>();
         services.AddDataMigration<CurrencyMigrations>();
     }

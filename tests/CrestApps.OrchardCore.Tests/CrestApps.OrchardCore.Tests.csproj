@@ -61,6 +61,8 @@
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.ContactCenter.Core/CrestApps.OrchardCore.ContactCenter.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.ContentTransfer.Core/CrestApps.OrchardCore.ContentTransfer.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Checkout.Core/CrestApps.OrchardCore.Checkout.Core.csproj" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.AgenticCommerce.Core/CrestApps.OrchardCore.AgenticCommerce.Core.csproj" />
+    <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.AgenticCommerce.Abstractions/CrestApps.OrchardCore.AgenticCommerce.Abstractions.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Commerce.Api.Core/CrestApps.OrchardCore.Commerce.Api.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Commerce.Core/CrestApps.OrchardCore.Commerce.Core.csproj" />
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Commerce.Abstractions/CrestApps.OrchardCore.Commerce.Abstractions.csproj" />
@@ -153,6 +155,7 @@
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Subscriptions\CrestApps.OrchardCore.Subscriptions.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Stripe\CrestApps.OrchardCore.Stripe.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Carts\CrestApps.OrchardCore.Carts.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.AgenticCommerce\CrestApps.OrchardCore.AgenticCommerce.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Commerce.StoreProfile\CrestApps.OrchardCore.Commerce.StoreProfile.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Commerce.Webhooks\CrestApps.OrchardCore.Commerce.Webhooks.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Webhooks\CrestApps.OrchardCore.Webhooks.csproj" />

@@ -33,6 +33,7 @@ public sealed class WebhookDispatcher
     private readonly IWebhookSender _sender;
     private readonly IWebhookDeliveryStore _deliveries;
     private readonly IWebhookSubscriptionStore _subscriptions;
+    private readonly IEnumerable<IWebhookDeliveryFormatter> _formatters;
     private readonly IDataProtector _protector;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -50,6 +51,7 @@ public sealed class WebhookDispatcher
         IWebhookSender sender,
         IWebhookDeliveryStore deliveries,
         IWebhookSubscriptionStore subscriptions,
+        IEnumerable<IWebhookDeliveryFormatter> formatters,
         IDataProtectionProvider dataProtectionProvider,
         IClock clock,
         ILogger<WebhookDispatcher> logger)
@@ -57,6 +59,7 @@ public sealed class WebhookDispatcher
         _sender = sender;
         _deliveries = deliveries;
         _subscriptions = subscriptions;
+        _formatters = formatters;
         _protector = dataProtectionProvider.CreateProtector(WebhookStorage.SecretProtectionPurpose);
         _clock = clock;
         _logger = logger;
@@ -126,6 +129,15 @@ public sealed class WebhookDispatcher
         }
 
         var now = _clock.UtcNow;
+
+        if (delivery.IsDirect)
+        {
+            await SendDirectAsync(delivery, now, cancellationToken);
+            await _deliveries.UpdateAsync(delivery, cancellationToken);
+
+            return;
+        }
+
         var subscription = await _subscriptions.FindByIdAsync(delivery.SubscriptionId, cancellationToken);
 
         delivery.Attempts++;
@@ -209,6 +221,51 @@ public sealed class WebhookDispatcher
     /// <param name="delivery">The delivery.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task that completes when the attempt is recorded.</returns>
+    private async Task SendDirectAsync(WebhookDelivery delivery, DateTime now, CancellationToken cancellationToken)
+    {
+        delivery.Attempts++;
+        delivery.LastAttemptUtc = now;
+
+        var formatter = _formatters.FirstOrDefault(entry => string.Equals(entry.Name, delivery.FormatterName, StringComparison.Ordinal));
+
+        if (formatter is null)
+        {
+            // The feature that queued it is off; nothing knows how to sign it.
+            Fail(delivery, statusCode: null, $"Nothing can send '{delivery.FormatterName}' webhooks now; the feature that sends them is off.");
+
+            return;
+        }
+
+        var formatted = await formatter.FormatAsync(new WebhookFormatContext
+        {
+            Url = delivery.Url,
+            EventId = delivery.EventId,
+            EventName = delivery.EventName,
+            Body = delivery.Payload ?? "{}",
+            Timestamp = new DateTimeOffset(now).ToUnixTimeSeconds(),
+            Data = delivery.FormatterData ?? [],
+        }, cancellationToken);
+
+        if (formatted.Error is not null)
+        {
+            Fail(delivery, statusCode: null, formatted.Error);
+
+            return;
+        }
+
+        var result = await _sender.SendAsync(new WebhookSendRequest
+        {
+            Url = delivery.Url,
+            EventId = delivery.EventId,
+            EventName = delivery.EventName,
+            Body = delivery.Payload ?? "{}",
+            Headers = formatted.Headers,
+            Sign = false,
+        }, cancellationToken);
+
+        Record(delivery, result, now);
+    }
+
     public async Task ResendAsync(WebhookDelivery delivery, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(delivery);

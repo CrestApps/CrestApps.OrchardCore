@@ -187,6 +187,88 @@ public sealed class WebMcpScriptFilterTests
     }
 
     [Fact]
+    public async Task OnResultExecutionAsync_GivesAnonymousVisitorsOfAFrontEndPageTheStorefrontToolsWhenTurnedOn()
+    {
+        // Arrange
+        var handler = new Mock<IWebMcpClientConfigurationHandler>();
+        var harness = new FilterHarness(new WebMcpPageOptions
+        {
+            EnableStorefrontTools = true,
+            PageToolOrigins = ["https://partner.example"],
+        }, handlers: [handler.Object]);
+        var context = FilterHarness.CreateContext(isAdmin: false, authenticated: false);
+
+        // Act
+        await harness.Filter.OnResultExecutionAsync(context, harness.Next);
+
+        // Assert
+        Assert.True(harness.NextCalled);
+        Assert.Equal([WebMcpConstants.ResourceNames.Script], harness.Scripts);
+
+        var configuration = harness.ReadConfiguration();
+
+        Assert.Equal("/tenant/api/ai/webmcp/storefront/tools", configuration.GetProperty("toolsUrl").GetString());
+        Assert.Equal("/tenant/api/ai/webmcp/storefront/tools/{name}/invoke", configuration.GetProperty("invokeUrlTemplate").GetString());
+        Assert.Equal("request-token", configuration.GetProperty("antiforgeryToken").GetString());
+        Assert.False(configuration.TryGetProperty("pageToolOrigins", out _));
+
+        // The page tools and the scripts other features add are for users with the permission only.
+        handler.Verify(h => h.ConfigureAsync(It.IsAny<WebMcpClientConfigurationContext>()), Times.Never());
+    }
+
+    [Fact]
+    public async Task OnResultExecutionAsync_NeverGivesAnonymousVisitorsOfAnAdminPageTheStorefrontTools()
+    {
+        // Arrange
+        var harness = new FilterHarness(new WebMcpPageOptions { EnableStorefrontTools = true });
+        var context = FilterHarness.CreateContext(isAdmin: true, authenticated: false);
+
+        // Act
+        await harness.Filter.OnResultExecutionAsync(context, harness.Next);
+
+        // Assert
+        Assert.True(harness.NextCalled);
+        Assert.Empty(harness.Scripts);
+        Assert.Empty(harness.HeadScripts);
+    }
+
+    [Fact]
+    public async Task OnResultExecutionAsync_GivesSignedInUsersWithoutThePermissionTheStorefrontTools()
+    {
+        // Arrange
+        var harness = new FilterHarness(new WebMcpPageOptions
+        {
+            EnableOnFrontEndPages = true,
+            EnableStorefrontTools = true,
+        }, allowed: false);
+        var context = FilterHarness.CreateContext(isAdmin: false);
+
+        // Act
+        await harness.Filter.OnResultExecutionAsync(context, harness.Next);
+
+        // Assert
+        Assert.Equal("/tenant/api/ai/webmcp/storefront/tools", harness.ReadConfiguration().GetProperty("toolsUrl").GetString());
+    }
+
+    [Fact]
+    public async Task OnResultExecutionAsync_GivesUsersWithThePermissionTheSiteToolsOverTheStorefrontTools()
+    {
+        // Arrange
+        var harness = new FilterHarness(new WebMcpPageOptions
+        {
+            EnableOnFrontEndPages = true,
+            EnableStorefrontTools = true,
+        });
+        var context = FilterHarness.CreateContext(isAdmin: false);
+
+        // Act
+        await harness.Filter.OnResultExecutionAsync(context, harness.Next);
+
+        // Assert
+        Assert.Equal("/tenant/api/ai/webmcp/tools", harness.ReadConfiguration().GetProperty("toolsUrl").GetString());
+    }
+
+    [Fact]
     public void BuildConfigurationElement_WritesAJsonBlockThePageCannotRun()
     {
         // Arrange
@@ -297,7 +379,7 @@ public sealed class WebMcpScriptFilterTests
             var start = element.IndexOf('>', StringComparison.Ordinal) + 1;
             var end = element.LastIndexOf("</script>", StringComparison.Ordinal);
 
-            return JsonDocument.Parse(element.Substring(start, end - start)).RootElement;
+            return JsonElement.Parse(element.AsSpan(start, end - start));
         }
     }
 }
