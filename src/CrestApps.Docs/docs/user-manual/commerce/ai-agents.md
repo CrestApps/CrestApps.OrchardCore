@@ -100,7 +100,7 @@ Some ACP platforms sign each request with their own private key, so your store c
 | --- | --- |
 | **Require signed requests** | Refuse every ACP request that isn't signed with the platform's key. Leave it unticked if the platform doesn't sign. Even when it's unticked, a signed request is checked when a public key is set, and refused if the signature is wrong. |
 | **Algorithm** | How the platform signs. **ES256** is the only choice. |
-| **Platform's public key** | The public key the platform gives you, as a JSON Web Key (it starts with *{"kty":"EC"*) or a PEM block (it starts with *-----BEGIN PUBLIC KEY-----*). It must be a P-256 key. Never paste a private key: the store refuses it. The public key isn't secret, so it is copied when you export the platform. |
+| **Platform's public key** | The public key the platform gives you, as a JSON Web Key (it starts with `{"kty":"EC"`) or a PEM block (it starts with `-----BEGIN PUBLIC KEY-----`). It must be a P-256 key. Never paste a private key: the store refuses it. The public key isn't secret, so it is copied when you export the platform. |
 | **Allowed clock skew** | How many seconds the time on a signed request may differ from your store's clock. Leave it empty for 5 minutes. |
 
 ### Embedded checkout

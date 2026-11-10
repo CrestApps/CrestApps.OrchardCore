@@ -379,7 +379,7 @@ public sealed class WebMcpScriptFilterTests
             var start = element.IndexOf('>', StringComparison.Ordinal) + 1;
             var end = element.LastIndexOf("</script>", StringComparison.Ordinal);
 
-            return JsonDocument.Parse(element.Substring(start, end - start)).RootElement;
+            return JsonElement.Parse(element.AsSpan(start, end - start));
         }
     }
 }

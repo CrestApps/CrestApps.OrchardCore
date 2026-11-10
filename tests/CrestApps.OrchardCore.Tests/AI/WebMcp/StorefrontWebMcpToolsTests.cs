@@ -296,7 +296,7 @@ public sealed class StorefrontWebMcpToolsTests
 
     private abstract class EchoTool : AIFunction
     {
-        public override JsonElement JsonSchema { get; } = JsonDocument.Parse("""{ "type": "object" }""").RootElement.Clone();
+        public override JsonElement JsonSchema { get; } = JsonElement.Parse("""{ "type": "object" }""");
 
         protected override ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
         {
