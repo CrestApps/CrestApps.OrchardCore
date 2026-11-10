@@ -140,10 +140,14 @@ public sealed class Ap2CheckoutExtension : IUcpCheckoutExtension
             new DateTimeOffset(_clock.UtcNow, TimeSpan.Zero),
             await _keys.GetSigningKeyAsync());
 
-        context.Checkout.SetProperty(MandateProperty, AgentJson.String(context.Json?["ap2"], "checkout_mandate"));
-        context.Checkout.SetProperty(ReceiptProperty, receipt);
+        // The checkout was committed when it completed, which detaches the copy in the context; saving that copy would
+        // insert a second row. The evidence goes onto the stored checkout instead.
+        var checkout = await _checkouts.FindByIdAsync(context.Checkout.ItemId) ?? context.Checkout;
 
-        await _checkouts.UpdateAsync(context.Checkout);
+        checkout.SetProperty(MandateProperty, AgentJson.String(context.Json?["ap2"], "checkout_mandate"));
+        checkout.SetProperty(ReceiptProperty, receipt);
+
+        await _checkouts.UpdateAsync(checkout);
     }
 
     private static bool Matches(JsonObject approved, AgentCheckoutView view)

@@ -435,13 +435,14 @@ Found and fixed while testing against Stripe test mode, each with a unit or inte
   - ACP over MCP paid with a shared payment token, replay with the same key, refusal with a new key.
   - Stripe webhooks arriving after the agent's completion don't record the payment twice.
 - **The UCP conformance suite** (`Universal-Commerce-Protocol/conformance`), run locally against the test host with two local changes to the suite: an `Authorization` header with a test platform's key, and a default buyer (email and name) on its checkouts, because the store needs a contact email and a recipient name to place an order. Results are in the PR.
+- **AP2 with the official AP2 Python SDK** (`google-agentic-commerce/AP2`): an open checkout mandate signed with a key from the platform's profile, then a closed one signed by the agent's key over the store's merchant authorization, completes the checkout. A tampered mandate is refused (`mandate_invalid`), and so is a mandate for a checkout changed after the buyer approved it (`mandate_scope_mismatch`).
 - **The commerce integration suite** has agentic tests: a purchase, parallel completes with different keys and with the same key, a decline then a success, and one platform refused another's checkout. Each checks there is exactly one succeeded payment attempt and that it equals the order total.
 - UCP over A2A, the embedded checkout (in a frame from another origin), WebMCP storefront tools and RFC 8414 metadata were each run on a live host.
 - Unit tests for every piece, the RFC vectors, and the UCP and ACP mappers.
 
 ### Not done
 
-- **The AP2 sample shopping agent** runs on Google's ADK with Gemini and needs a Google API key, so it wasn't run.
+- **The AP2 sample shopping agent** runs on Google's ADK with Gemini and needs a Google API key, so it wasn't run; its SDK was (see Verified).
 - **Live Stripe** was run in test mode only. The shared payment token call uses the preview API version `2026-09-30.preview`.
 - **UCP conformance differences** the store keeps on purpose: it refuses the suite's `mock_payment_handler` and raw card numbers (a business must refuse handlers it didn't advertise), retries failed webhooks on a backoff of seconds to minutes rather than within the suite's 5 seconds, and has no `/testing/simulate-shipping` endpoint.
 - **Embedded checkout** accepts no delegations. **ACP over MCP** describes `payload` as a plain object in `tools/list`.
