@@ -19,6 +19,12 @@ public sealed class ConfirmDelegatedCredentialRequest : StripeWriteRequest
     public string CredentialType { get; set; }
 
     /// <summary>
+    /// Gets or sets the credential the PaymentIntent was made with. Stripe asks for the same shared payment token again
+    /// when a PaymentIntent made from one is confirmed.
+    /// </summary>
+    public string Credential { get; set; }
+
+    /// <summary>
     /// Gets or sets the 3-D Secure result Stripe imports.
     /// </summary>
     public StripeThreeDSecureImport ThreeDSecure { get; set; }

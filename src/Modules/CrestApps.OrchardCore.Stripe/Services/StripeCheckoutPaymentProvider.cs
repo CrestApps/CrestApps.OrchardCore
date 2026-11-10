@@ -537,6 +537,7 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
                 {
                     PaymentIntentId = attempt.ProviderReference,
                     CredentialType = credentialType,
+                    Credential = CheckoutPaymentDataKeys.GetValue(context.ProviderData, CheckoutPaymentDataKeys.DelegatedCredential),
                     ThreeDSecure = ToImport(authentication),
                     IdempotencyKey = GetAuthenticationIdempotencyKey(attempt, authentication),
                 })

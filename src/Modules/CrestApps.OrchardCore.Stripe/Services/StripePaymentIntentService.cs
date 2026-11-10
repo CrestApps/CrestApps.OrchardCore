@@ -276,12 +276,21 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
         ArgumentException.ThrowIfNullOrEmpty(model.PaymentIntentId);
         ArgumentNullException.ThrowIfNull(model.ThreeDSecure);
 
+        var sharedPaymentToken = string.Equals(model.CredentialType, DelegatedCredentialTypes.StripeSharedPaymentToken, StringComparison.Ordinal);
+        var fields = GetThreeDSecureFields(model.ThreeDSecure);
+
+        // Stripe refuses to confirm a PaymentIntent made from a shared payment token unless the same token is named again.
+        if (sharedPaymentToken && !string.IsNullOrEmpty(model.Credential))
+        {
+            fields.Insert(0, new("payment_method_data[shared_payment_granted_token]", model.Credential));
+        }
+
         // A PaymentIntent made from a shared payment token is only reachable with the preview version it was made with.
         return PostAsync(
             $"/v1/payment_intents/{Uri.EscapeDataString(model.PaymentIntentId)}/confirm",
-            GetThreeDSecureFields(model.ThreeDSecure),
+            fields,
             model.IdempotencyKey,
-            preview: string.Equals(model.CredentialType, DelegatedCredentialTypes.StripeSharedPaymentToken, StringComparison.Ordinal),
+            preview: sharedPaymentToken,
             paymentIntentId: model.PaymentIntentId);
     }
 
