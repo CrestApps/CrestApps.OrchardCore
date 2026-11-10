@@ -43,6 +43,27 @@ public sealed class WebhookDelivery : CatalogItem
     public string Payload { get; set; }
 
     /// <summary>
+    /// Gets or sets the receiver's address, for a direct delivery that isn't for a subscription.
+    /// </summary>
+    public string Url { get; set; }
+
+    /// <summary>
+    /// Gets or sets the formatter that adds a direct delivery's headers and signature.
+    /// </summary>
+    public string FormatterName { get; set; }
+
+    /// <summary>
+    /// Gets or sets what a direct delivery's formatter needs.
+    /// </summary>
+    public Dictionary<string, string> FormatterData { get; set; }
+
+    /// <summary>
+    /// Returns whether the delivery is for one receiver rather than a subscription.
+    /// </summary>
+    public bool IsDirect
+        => !string.IsNullOrEmpty(Url) && !string.IsNullOrEmpty(FormatterName);
+
+    /// <summary>
     /// Gets or sets where the delivery stands.
     /// </summary>
     public WebhookDeliveryStatus Status { get; set; }
