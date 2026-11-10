@@ -688,7 +688,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         // confirms it's canceled; otherwise both could settle and the buyer would pay twice.
         if (attempt is null && !await TryReleaseOtherProvidersAsync(session, provider.Key, obligationId, existingAttempts, cancellationToken))
         {
-            return (null, "A payment for this checkout is already under way with another payment method. Finish it, or try again in a few minutes.", false, false);
+            return (null, "A payment for this checkout is already under way with another payment method. Finish it, or try again in a few minutes.", false, false, null);
         }
 
         if (attempt is null)

@@ -192,7 +192,7 @@ public sealed class StripeDelegatedAuthenticationTests
         // Arrange
         _intents
             .Setup(service => service.ChargeDelegatedAsync(It.IsAny<ChargeDelegatedCredentialRequest>()))
-            .ReturnsAsync(new ChargeDelegatedCredentialResponse { RequiresAuthentication = true, PaymentIntentId = "pi_new", CardBrand = "mastercard", ErrorMessage = "Authentication required." });
+            .ReturnsAsync(new ChargeDelegatedCredentialResponse { RequiresAuthentication = true, Declined = true, PaymentIntentId = "pi_new", CardBrand = "mastercard", ErrorMessage = "Authentication required." });
 
         // Act
         var result = await Provider().BeginAsync(Context(providerReference: null, authentication: null), TestContext.Current.CancellationToken);

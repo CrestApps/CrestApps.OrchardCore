@@ -144,22 +144,40 @@ public static class EgressNetwork
         var addresses = IPAddress.TryParse(host, out var literal)
             ? [literal]
             : await Dns.GetHostAddressesAsync(host, cancellationToken);
-        var address = addresses.FirstOrDefault(candidate => !IsInternal(candidate) || (allowLoopback && IPAddress.IsLoopback(candidate)))
-            ?? throw new HttpRequestException($"The host '{context.DnsEndPoint.Host}' {RefusedMessage}.");
+        var allowed = addresses.Where(candidate => !IsInternal(candidate) || (allowLoopback && IPAddress.IsLoopback(candidate))).ToList();
 
-        var socket = new Socket(SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
-
-        try
+        if (allowed.Count == 0)
         {
-            await socket.ConnectAsync(new IPEndPoint(address, context.DnsEndPoint.Port), cancellationToken);
-
-            return new NetworkStream(socket, ownsSocket: true);
+            throw new HttpRequestException($"The host '{context.DnsEndPoint.Host}' {RefusedMessage}.");
         }
-        catch
+
+        // Every allowed address is tried in turn, as the default handler does: a host with both an IPv6 and an IPv4
+        // address may only answer on one of them. Each address was checked above, so none of them is internal.
+        Exception lastError = null;
+
+        foreach (var address in allowed)
         {
-            socket.Dispose();
+            var socket = new Socket(address.AddressFamily, SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
 
-            throw;
+            try
+            {
+                await socket.ConnectAsync(new IPEndPoint(address, context.DnsEndPoint.Port), cancellationToken);
+
+                return new NetworkStream(socket, ownsSocket: true);
+            }
+            catch (SocketException exception)
+            {
+                socket.Dispose();
+                lastError = exception;
+            }
+            catch
+            {
+                socket.Dispose();
+
+                throw;
+            }
         }
+
+        throw lastError;
     }
 }
