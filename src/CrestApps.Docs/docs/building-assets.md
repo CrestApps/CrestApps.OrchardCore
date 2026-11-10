@@ -96,6 +96,7 @@ Each module lists its assets in an `Assets.json` file next to its `.csproj`. The
 | `dest` | For `vite`, the readable output file. For `copy`, a folder ending in `/`, or a single file path to copy one source to under another name. |
 | `tags` | Optional. Extra tags for `-t`, in addition to the module's short name. |
 | `global` | Optional, for a `vite` script built from one package. Exposes the package's exports as `window[global]`. |
+| `minify` | Optional, for a `copy` group of `.js` files. When `true`, the build also writes a minified `.min.js` copy beside each copied file. |
 
 A `vite` group writes two files: the readable `dest` file and a minified sibling, for example `telephony-client.js` and `telephony-client.min.js`. Register both with the resource manager. By default, Orchard Core serves the minified file in production and the readable one in development:
 
@@ -164,6 +165,19 @@ Then choose how the module ships it.
     "node_modules/flatpickr/dist/flatpickr.min.js"
   ],
   "dest": "wwwroot/vendors/flatpickr/js/",
+  "tags": ["vendor"]
+}
+```
+
+**Copy a readable build and minify it.** Use this when the package has a browser-ready script but no minified copy of it. Add `"minify": true` to the `copy` group: the build copies the file unchanged and writes a minified copy beside it, here `global.js` and `global.min.js`, which you register as the production and debug pair. The file is minified as a classic script, so the globals it sets stay on `window`, and its license comment stays at the top. Only `.js` files can be minified this way:
+
+```json
+{
+  "action": "copy",
+  "name": "fullcalendar",
+  "source": "node_modules/fullcalendar/all/global.js",
+  "dest": "wwwroot/vendors/fullcalendar/global.js",
+  "minify": true,
   "tags": ["vendor"]
 }
 ```

@@ -1,6 +1,6 @@
 import path from "node:path";
 import { build } from "vite";
-import { toPosix } from "./groups.mjs";
+import { toLf, toMinifiedPath, toPosix } from "./groups.mjs";
 
 const virtualEntryId = "\0crestapps-assets-entry";
 const scriptExtensions = new Set([".js", ".mjs", ".ts"]);
@@ -143,18 +143,6 @@ function entryPlugin(group) {
     };
 }
 
-function toMinifiedPath(destPath) {
-    const extension = path.extname(destPath);
-
-    return `${destPath.substring(0, destPath.length - extension.length)}.min${extension}`;
-}
-
 function asString(source) {
     return typeof source === "string" ? source : Buffer.from(source).toString("utf8");
-}
-
-function toLf(text) {
-    const normalized = text.replace(/\r\n/g, "\n");
-
-    return normalized.endsWith("\n") ? normalized : `${normalized}\n`;
 }
