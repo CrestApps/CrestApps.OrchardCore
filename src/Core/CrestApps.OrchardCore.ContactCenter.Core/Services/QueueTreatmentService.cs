@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -107,6 +108,8 @@ public sealed class QueueTreatmentService : IQueueTreatmentService
                 {
                     continue;
                 }
+
+                ContactCenterDiagnostics.RecordTreatmentPlayed(step.Kind.ToString());
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {

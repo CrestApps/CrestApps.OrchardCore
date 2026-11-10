@@ -219,7 +219,7 @@ public sealed class AsteriskRealtimeIngestionWriterTests
                 InstrumentPublished = (instrument, listener) =>
                 {
                     if (instrument.Meter.Name == AsteriskDiagnostics.MeterName &&
-                        instrument.Name == "asterisk.realtime.ingestion.saturated")
+                        instrument.Name == "crestapps.asterisk.realtime.ingestion.saturated")
                     {
                         listener.EnableMeasurementEvents(instrument);
                     }

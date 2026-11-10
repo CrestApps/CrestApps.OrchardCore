@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Telemetry;
 
 namespace CrestApps.OrchardCore.AI.Core.Conversations;
 
@@ -71,7 +72,19 @@ public sealed class AIAlertRuleEvaluator
             previous = await _metrics.MeasureAsync(rule.Metric, profileId, nowUtc - window - window, nowUtc - window, cancellationToken);
         }
 
-        return Apply(rule, current, previous, nowUtc);
+        var change = Apply(rule, current, previous, nowUtc);
+
+        // The metric is a bounded enum; the rule's id and name never become tags.
+        if (change == AIAlertChange.Triggered)
+        {
+            AIModuleTelemetry.RecordAlert(AIModuleTelemetry.AlertsRaised, rule.Metric.ToString());
+        }
+        else if (change == AIAlertChange.Resolved)
+        {
+            AIModuleTelemetry.RecordAlert(AIModuleTelemetry.AlertsResolved, rule.Metric.ToString());
+        }
+
+        return change;
     }
 
     /// <summary>

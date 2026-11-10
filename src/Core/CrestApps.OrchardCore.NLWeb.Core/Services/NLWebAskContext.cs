@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Security.Claims;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.NLWeb.Models;
@@ -9,6 +10,8 @@ namespace CrestApps.OrchardCore.NLWeb.Services;
 /// </summary>
 public sealed class NLWebAskContext
 {
+    private readonly long _startTimestamp = Stopwatch.GetTimestamp();
+
     /// <summary>
     /// Initializes a new instance of the <see cref="NLWebAskContext"/> class.
     /// </summary>
@@ -32,6 +35,11 @@ public sealed class NLWebAskContext
     /// Gets the request.
     /// </summary>
     public NLWebAskRequest Request { get; }
+
+    /// <summary>
+    /// Gets the time elapsed since the pipeline started answering the question.
+    /// </summary>
+    public TimeSpan Elapsed => Stopwatch.GetElapsedTime(_startTimestamp);
 
     /// <summary>
     /// Gets the caller. An anonymous caller has an unauthenticated identity.

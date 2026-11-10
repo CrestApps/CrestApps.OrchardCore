@@ -1,5 +1,7 @@
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Workflows.Activities;
+using OrchardCore.Workflows.Models;
 
 namespace CrestApps.OrchardCore.Reports.Designer.Workflows.Activities;
 
@@ -24,6 +26,26 @@ public abstract class ReportTaskActivity<TActivity> : TaskActivity<TActivity>, I
     /// Gets the string localizer.
     /// </summary>
     protected IStringLocalizer S { get; }
+
+    /// <summary>
+    /// Gets the name of the task in the telemetry: <c>run</c>, <c>export</c>, <c>email</c> or <c>share_link</c>.
+    /// </summary>
+    protected abstract string TelemetryName { get; }
+
+    /// <summary>
+    /// Ends the task with an outcome, and counts the run in <see cref="ReportTelemetry.WorkflowTasks"/>.
+    /// </summary>
+    /// <param name="outcome">The name of the outcome, such as <c>Done</c> or <c>Failed</c>.</param>
+    /// <returns>The result of the task.</returns>
+    protected ActivityExecutionResult Finish(string outcome)
+    {
+        ReportTelemetry.Count(
+            ReportTelemetry.WorkflowTasks,
+            (ReportTelemetry.WorkflowTaskTag, TelemetryName),
+            (CrestAppsOrchardCoreTelemetry.OutcomeTag, outcome == "Failed" ? CrestAppsOrchardCoreTelemetry.OutcomeError : CrestAppsOrchardCoreTelemetry.OutcomeOk));
+
+        return Outcome(outcome);
+    }
 
     /// <inheritdoc/>
     public override LocalizedString Category => S["Reports"];

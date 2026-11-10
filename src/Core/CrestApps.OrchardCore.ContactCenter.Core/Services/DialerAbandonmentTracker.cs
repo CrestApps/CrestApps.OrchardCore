@@ -1,6 +1,7 @@
 using System.Globalization;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Telephony;
@@ -99,6 +100,9 @@ public sealed class DialerAbandonmentTracker : IDialerAbandonmentTracker
         {
             return false;
         }
+
+        // The answer-to-agent time of every connected dialer call, late or not.
+        ContactCenterDiagnostics.RecordPredictiveConnect(connectedUtc - answeredUtc.Value);
 
         if (connectedUtc - answeredUtc.Value <= DialerAbandonment.ConnectThreshold)
         {
@@ -350,6 +354,9 @@ public sealed class DialerAbandonmentTracker : IDialerAbandonmentTracker
         {
             return changed;
         }
+
+        // Marked once per call, so a retried or redelivered path never counts it twice.
+        ContactCenterDiagnostics.RecordDialerAbandoned(reason);
 
         var data = ContactCenterCallAudit.ForInteraction(interaction);
         data.Reason = reason;

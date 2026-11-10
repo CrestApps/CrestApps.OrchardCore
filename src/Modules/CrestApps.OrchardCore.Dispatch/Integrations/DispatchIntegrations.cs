@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Assets;
 using CrestApps.OrchardCore.Assets.Core.Indexes;
 using CrestApps.OrchardCore.Assets.Core.Services;
 using CrestApps.OrchardCore.Assets.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Dispatch.Core.Services;
 using CrestApps.OrchardCore.Dispatch.Services;
 using Microsoft.AspNetCore.Http;
@@ -134,7 +135,7 @@ public sealed class VisitRiskBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-        => serviceProvider.GetRequiredService<VisitRiskMonitor>().RunAsync(cancellationToken);
+        => this.RunAsync(async run => run.AddItems(await serviceProvider.GetRequiredService<VisitRiskMonitor>().RunAsync(cancellationToken), "at_risk"));
 }
 
 /// <summary>
@@ -145,5 +146,5 @@ public sealed class VisitReminderBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-        => serviceProvider.GetRequiredService<VisitNoticeService>().SendRemindersAsync(cancellationToken);
+        => this.RunAsync(async run => run.AddItems(await serviceProvider.GetRequiredService<VisitNoticeService>().SendRemindersAsync(cancellationToken), "sent"));
 }

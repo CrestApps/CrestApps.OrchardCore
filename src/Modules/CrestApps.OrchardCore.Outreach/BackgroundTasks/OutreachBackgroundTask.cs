@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Outreach.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
@@ -21,5 +22,18 @@ public sealed class OutreachBackgroundTask : IBackgroundTask
 
     /// <inheritdoc/>
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-        => serviceProvider.GetRequiredService<OutreachBatchProcessor>().ProcessDueAsync(BatchesPerRun, cancellationToken);
+    {
+        return this.RunAsync(async run =>
+        {
+            var batches = await serviceProvider.GetRequiredService<OutreachBatchProcessor>().ProcessDueAsync(BatchesPerRun, cancellationToken);
+
+            run.AddItems(batches, "batches");
+
+            if (batches >= BatchesPerRun)
+            {
+                // More may be due; the next run, a minute away, takes them.
+                run.BudgetExceeded();
+            }
+        });
+    }
 }

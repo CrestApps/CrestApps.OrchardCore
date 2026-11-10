@@ -78,6 +78,8 @@ public sealed class SharedReportsController : Controller
 
         if (design is null || !design.AllowExport)
         {
+            ReportTelemetry.RecordExport(ReportRunSources.Shared, null, design is null ? ReportTelemetry.OutcomeNotFound : ReportTelemetry.OutcomeForbidden);
+
             return NotFoundOrChallenge();
         }
 

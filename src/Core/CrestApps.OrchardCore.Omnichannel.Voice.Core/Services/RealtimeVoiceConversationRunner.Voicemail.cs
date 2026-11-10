@@ -1,5 +1,7 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Omnichannel.Voice.Telemetry;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
@@ -163,6 +165,8 @@ public sealed partial class RealtimeVoiceConversationRunner
             return;
         }
 
+        TelemetryScope voicemail = null;
+
         try
         {
             using var answered = CancellationTokenSource.CreateLinkedTokenSource(context.AnsweredByMachine, callToken);
@@ -186,6 +190,10 @@ public sealed partial class RealtimeVoiceConversationRunner
                 return;
             }
 
+            // From here to the message being asked for, the call is a recording being left a message: its own span.
+            // The detection itself is counted where the provider's report reaches the loop, for both engines.
+            voicemail = VoiceTelemetry.StartSpan("crestapps.voice.ai.voicemail", context.Activity?.ItemId);
+
             await StopTalkingToTheMachineAsync(media, live, context, callToken);
 
             // Keys pressed while the greeting plays make it a phone menu after all, so no message is left on it.
@@ -197,23 +205,31 @@ public sealed partial class RealtimeVoiceConversationRunner
             }
             catch (OperationCanceledException) when (context.PhoneMenuReached.IsCancellationRequested && !callToken.IsCancellationRequested)
             {
+                voicemail.SetOutcome("phone_menu");
                 await CarryOnPastThePhoneMenuAsync(live, context, callToken);
 
                 return;
             }
 
             await RequestTheVoicemailMessageAsync(live, context, callToken);
+            voicemail.Succeed();
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
             // The call ended, which is the ordinary way this stops.
+            voicemail?.Fail(ex);
         }
         catch (Exception ex)
         {
+            voicemail?.Fail(ex);
             _logger.LogWarning(
                 ex,
                 "Could not leave a voicemail message on the machine that answered activity '{ActivityId}'.",
                 context.Activity?.ItemId.SanitizeLogValue());
+        }
+        finally
+        {
+            voicemail?.Dispose();
         }
     }
 

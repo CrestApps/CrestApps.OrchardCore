@@ -1,5 +1,6 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.Logging;
@@ -235,6 +236,9 @@ public sealed class PredictiveOverDialPacer : IPredictiveOverDialPacer
         if (decision.Mode == PredictivePacingDecisionMode.OverDial && decision.DialCount > 0)
         {
             dialed = await DialAsync(profile, queueId, decision.DialCount, available, now, cancellationToken);
+
+            // The calls placed beyond the agents free to take them: the bet over-dialing makes on the answer rate.
+            ContactCenterDiagnostics.RecordPredictiveOverdial(Math.Max(0, dialed - input.AvailableAgents));
         }
 
         await RecordAsync(profile, queueId, input, decision, dialed, now, cancellationToken);

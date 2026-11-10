@@ -3,8 +3,10 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 using YesSql;
@@ -20,6 +22,7 @@ public sealed class LeadFunnelReportProvider : OmnichannelReportBase, IReportFil
 {
     private readonly ISession _session;
     private readonly INamedCatalog<LeadStatus> _statuses;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LeadFunnelReportProvider"/> class.
@@ -27,14 +30,17 @@ public sealed class LeadFunnelReportProvider : OmnichannelReportBase, IReportFil
     /// <param name="session">The YesSql session.</param>
     /// <param name="statuses">The lead status catalog.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="logger">The logger, which warns when the report reads more index rows than it should hold in memory.</param>
     public LeadFunnelReportProvider(
         ISession session,
         INamedCatalog<LeadStatus> statuses,
-        IStringLocalizer<LeadFunnelReportProvider> stringLocalizer)
+        IStringLocalizer<LeadFunnelReportProvider> stringLocalizer,
+        ILogger<LeadFunnelReportProvider> logger = null)
         : base(stringLocalizer)
     {
         _session = session;
         _statuses = statuses;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -69,6 +75,8 @@ public sealed class LeadFunnelReportProvider : OmnichannelReportBase, IReportFil
                 index.CreatedUtc <= to)
             .ListAsync(cancellationToken))
             .ToList();
+
+        ReportTelemetry.RecordCodedIndexRows(Name, leads.Count, _logger);
 
         var statuses = (await _statuses.GetAllAsync(cancellationToken)).ToDictionary(status => status.ItemId, StringComparer.Ordinal);
         var total = leads.Count;

@@ -3,8 +3,10 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using ISession = YesSql.ISession;
 using Microsoft.Extensions.Options;
 using OrchardCore.Localization;
@@ -21,6 +23,7 @@ public sealed class CampaignPerformanceReportProvider : OmnichannelReportBase, I
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
     private readonly ActivitySourceOptions _activitySourceOptions;
     private readonly ICatalogManager<OmnichannelCampaignGroup> _campaignGroupManager;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CampaignPerformanceReportProvider"/> class.
@@ -30,18 +33,21 @@ public sealed class CampaignPerformanceReportProvider : OmnichannelReportBase, I
     /// <param name="campaignGroupManager">The campaign group manager used to aggregate campaigns.</param>
     /// <param name="activitySourceOptions">The activity sources registered by the enabled features.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="logger">The logger, which warns when the report reads more index rows than it should hold in memory.</param>
     public CampaignPerformanceReportProvider(
         ISession session,
         ICatalogManager<OmnichannelCampaign> campaignManager,
         ICatalogManager<OmnichannelCampaignGroup> campaignGroupManager,
         IOptions<ActivitySourceOptions> activitySourceOptions,
-        IStringLocalizer<CampaignPerformanceReportProvider> stringLocalizer)
+        IStringLocalizer<CampaignPerformanceReportProvider> stringLocalizer,
+        ILogger<CampaignPerformanceReportProvider> logger = null)
         : base(stringLocalizer)
     {
         _session = session;
         _campaignManager = campaignManager;
         _activitySourceOptions = activitySourceOptions.Value;
         _campaignGroupManager = campaignGroupManager;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -69,6 +75,9 @@ public sealed class CampaignPerformanceReportProvider : OmnichannelReportBase, I
             range.ToUtc.GetValueOrDefault(),
             await OmnichannelReportFilter.GetCriteriaAsync(context.Filter, _campaignManager, _activitySourceOptions, cancellationToken),
             cancellationToken);
+
+        ReportTelemetry.RecordCodedIndexRows(Name, activities.Count, _logger);
+
         var data = OmnichannelReportAggregator.BuildCampaignPerformance(activities);
         var campaigns = await _campaignManager.GetAllAsync(cancellationToken);
         var campaignGroups = await _campaignGroupManager.GetAllAsync(cancellationToken);

@@ -1,4 +1,5 @@
 using CrestApps.Core.AI.WebCrawlers;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -22,12 +23,17 @@ public sealed class WebCrawlerReindexBackgroundTask : IBackgroundTask
     /// </summary>
     /// <param name="serviceProvider">The tenant service provider.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => DoWorkCoreAsync(run, serviceProvider, cancellationToken));
+
+    private static async Task DoWorkCoreAsync(MeasuredTaskRun run, IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         var reindexService = serviceProvider.GetService<IWebCrawlerReindexService>();
 
         if (reindexService is null)
         {
+            run.Skip();
+
             return;
         }
 
@@ -40,6 +46,8 @@ public sealed class WebCrawlerReindexBackgroundTask : IBackgroundTask
         catch (Exception ex)
         {
             logger.LogError(ex, "An error occurred while re-indexing due web crawlers.");
+
+            run.ReportError(ex);
         }
     }
 }

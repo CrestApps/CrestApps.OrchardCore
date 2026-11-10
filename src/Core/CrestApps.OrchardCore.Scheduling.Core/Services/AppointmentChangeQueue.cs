@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Scheduling.Core.Telemetry;
 using CrestApps.OrchardCore.Scheduling.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -36,7 +38,7 @@ public sealed class AppointmentChangeQueue
 
         _scheduled = true;
 
-        ShellScope.AddDeferredTask(async scope =>
+        DeferredWork.Add(SchedulingTelemetry.AppointmentChangesWork, async scope =>
         {
             var changes = _pending.ToList();
 
@@ -56,6 +58,7 @@ public sealed class AppointmentChangeQueue
                     }
                     catch (Exception ex)
                     {
+                        SchedulingTelemetry.RecordObserverFailure(observer.GetType(), change.Kind.ToString());
                         logger.LogError(ex, "An appointment observer ({Observer}) failed to handle a {Kind} change.", observer.GetType().Name, change.Kind);
                     }
                 }

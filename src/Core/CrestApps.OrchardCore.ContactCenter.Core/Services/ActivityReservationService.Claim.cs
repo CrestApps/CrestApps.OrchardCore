@@ -1,5 +1,6 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -163,7 +164,10 @@ public sealed partial class ActivityReservationService
 
         await PublishAsync(ContactCenterConstants.Events.QueueItemAssigned, reservation, agent, ContactCenterActor.System, now, cancellationToken);
 
-        await CommitTransitionAsync(current.ActivityItemId, agent.ItemId, cancellationToken);
+        await CommitTransitionAsync(current.ActivityItemId, agent.ItemId, "reservation.claim", cancellationToken);
+
+        // The over-dialed caller was never offered: an agent was claimed for them, so their wait ends as assigned.
+        ContactCenterDiagnostics.RecordQueueExit(current, ContactCenterDiagnostics.QueueExitAssigned, interaction.Channel, now);
 
         if (_logger.IsEnabled(LogLevel.Information))
         {

@@ -2837,6 +2837,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string ReservationId { get; set; }
         public System.DateTime? SentUtc { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommandStatus Status { get; set; }
+        public string TraceParent { get; set; }
     }
     public sealed class ProviderCommandClaim
     {

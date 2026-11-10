@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Transactions.Core;
 using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
@@ -30,7 +31,10 @@ public sealed class TransactionReminderBackgroundTask : IBackgroundTask
     /// </summary>
     /// <param name="serviceProvider">The service provider for resolving dependencies.</param>
     /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => SweepAsync(serviceProvider, run, cancellationToken));
+
+    private static async Task SweepAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var siteService = serviceProvider.GetRequiredService<ISiteService>();
         var settings = await siteService.GetSettingsAsync<TransactionReminderSettings>();
@@ -44,7 +48,7 @@ public sealed class TransactionReminderBackgroundTask : IBackgroundTask
 
         // Overdue is reported even when scheduled reminders are turned off: a module that keeps its own state in step
         // with a transaction needs to know, whether or not the owner is chased for it.
-        await RaiseOverdueAsync(serviceProvider, manager, candidates, utcNow, logger, cancellationToken);
+        run.AddItems(await RaiseOverdueAsync(serviceProvider, manager, candidates, utcNow, logger, cancellationToken), "became_overdue");
 
         if (!settings.Enabled)
         {
@@ -70,10 +74,12 @@ public sealed class TransactionReminderBackgroundTask : IBackgroundTask
                 if (await reminderService.SendReminderAsync(transaction, cancellationToken))
                 {
                     await manager.UpdateAsync(transaction, data: null, cancellationToken);
+                    run.AddItems(1, "reminded");
                 }
             }
             catch (Exception ex)
             {
+                run.AddItems(1, CrestAppsOrchardCoreTelemetry.OutcomeError);
                 logger.LogError(ex, "Failed to send a payment reminder for transaction '{TransactionId}'.", transaction.ItemId);
             }
         }
@@ -102,18 +108,21 @@ public sealed class TransactionReminderBackgroundTask : IBackgroundTask
                 if (await reminderService.SendUpcomingReminderAsync(transaction, cancellationToken))
                 {
                     await manager.UpdateAsync(transaction, data: null, cancellationToken);
+                    run.AddItems(1, "reminded_upcoming");
                 }
             }
             catch (Exception ex)
             {
+                run.AddItems(1, CrestAppsOrchardCoreTelemetry.OutcomeError);
                 logger.LogError(ex, "Failed to send an upcoming payment reminder for transaction '{TransactionId}'.", transaction.ItemId);
             }
         }
     }
 
     // Marks each transaction that has just become overdue, saves that, and only then raises the event, so it is raised
-    // once per transaction: a save that fails leaves the mark off and the next sweep tries again.
-    internal static async Task RaiseOverdueAsync(
+    // once per transaction: a save that fails leaves the mark off and the next sweep tries again. Returns how many
+    // became overdue.
+    internal static async Task<int> RaiseOverdueAsync(
         IServiceProvider serviceProvider,
         ITransactionManager manager,
         IEnumerable<Transaction> candidates,
@@ -122,6 +131,7 @@ public sealed class TransactionReminderBackgroundTask : IBackgroundTask
         CancellationToken cancellationToken)
     {
         IEnumerable<ITransactionEventHandler> eventHandlers = null;
+        var overdue = 0;
 
         foreach (var transaction in candidates)
         {
@@ -152,7 +162,10 @@ public sealed class TransactionReminderBackgroundTask : IBackgroundTask
             eventHandlers ??= serviceProvider.GetServices<ITransactionEventHandler>();
 
             await eventHandlers.BecameOverdueAsync(transaction, logger, cancellationToken);
+            overdue++;
         }
+
+        return overdue;
     }
 
     // Overdue once the day it was due has passed with money still owed, the same way a payment due today is not

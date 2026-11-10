@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -577,15 +578,20 @@ public sealed class ActivityBatchesController : Controller
         await _manager.UpdateAsync(model);
         var batchId = model.ItemId;
 
+        // The load runs after the request, in a trace of its own that links back to the request that started it.
+        var traceParent = TraceContextPropagation.Capture();
+
         ShellScope.AddDeferredTask(async s =>
         {
             // Resolve the loader that matches the batch source and let it query the contacts,
             // apply the source-specific filters, and create the activities in the background.
-            await HttpBackgroundJob.ExecuteAfterEndOfRequestAsync("load-activity-batch", loaderId, loaderUserName, batchId, async (scope, userId, userName, id) =>
+            await HttpBackgroundJob.ExecuteAfterEndOfRequestAsync("load-activity-batch", loaderId, loaderUserName, batchId, traceParent, static async (scope, userId, userName, id, parent) =>
             {
-                var coordinator = scope.ServiceProvider.GetRequiredService<IActivityBatchLoadCoordinator>();
-
-                await coordinator.LoadAsync(id, userId, userName);
+                await DeferredWork.RunAsync(
+                    "omnichannel_batch_load",
+                    parent,
+                    scope,
+                    jobScope => jobScope.ServiceProvider.GetRequiredService<IActivityBatchLoadCoordinator>().LoadAsync(id, userId, userName));
             });
         });
 

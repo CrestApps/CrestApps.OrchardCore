@@ -1,5 +1,6 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
@@ -47,6 +48,7 @@ public sealed class AgentStateTransitionService : IAgentStateTransitionService
         context ??= new AgentStateChangeContext();
 
         var previousState = profile.PresenceStatus;
+        var previousChangedUtc = profile.PresenceChangedUtc;
         var changedUtc = ResolveChangedUtc(context.ChangedUtc, profile.PresenceChangedUtc);
 
         profile.PresenceStatus = state;
@@ -88,6 +90,12 @@ public sealed class AgentStateTransitionService : IAgentStateTransitionService
             }
 
             return null;
+        }
+
+        // How long the agent spent in the state they leave: the one place every agent state change goes through.
+        if (previousState != state && previousChangedUtc is { } enteredUtc)
+        {
+            ContactCenterDiagnostics.RecordAgentStateDuration(previousState.ToString(), changedUtc - enteredUtc);
         }
 
         var change = new AgentStateChangedEventData

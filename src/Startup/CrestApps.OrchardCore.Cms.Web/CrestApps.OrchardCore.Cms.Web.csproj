@@ -23,6 +23,7 @@
   <ItemGroup>
     <PackageReference Include="OrchardCore.Application.Cms.Core.Targets" />
     <PackageReference Include="OrchardCore.Logging.NLog" />
+    <PackageReference Include="OrchardCore.OpenTelemetry" />
     <PackageReference Include="TheTheme" />
     <PackageReference Include="SafeMode" />
     <PackageReference Include="TheAgencyTheme" />

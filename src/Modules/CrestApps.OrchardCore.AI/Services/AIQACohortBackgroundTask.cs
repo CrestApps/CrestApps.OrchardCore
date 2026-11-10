@@ -2,6 +2,7 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Workflows.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -22,7 +23,10 @@ namespace CrestApps.OrchardCore.AI.Services;
 public sealed class AIQACohortBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => DoWorkCoreAsync(run, serviceProvider, cancellationToken));
+
+    private static async Task DoWorkCoreAsync(MeasuredTaskRun run, IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         var store = serviceProvider.GetRequiredService<IAIQACohortStore>();
         var evaluator = serviceProvider.GetRequiredService<AIQACohortEvaluator>();
@@ -47,11 +51,22 @@ public sealed class AIQACohortBackgroundTask : IBackgroundTask
                 {
                     await AIConversationEvaluatedEvent.TriggerAsync(serviceProvider, evaluation, logger);
                 }
+
+                run.AddItems(evaluations.Count, "evaluated");
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 logger.LogError(ex, "QA cohort '{CohortId}' could not be scored.", cohort.ItemId.SanitizeLogValue());
+
+                run.AddItems(1, "cohort_failed");
+                run.ReportError(ex);
             }
+        }
+
+        if (run.Items.Count == 0)
+        {
+            // No cohort had a closed conversation to score.
+            run.Skip();
         }
     }
 }

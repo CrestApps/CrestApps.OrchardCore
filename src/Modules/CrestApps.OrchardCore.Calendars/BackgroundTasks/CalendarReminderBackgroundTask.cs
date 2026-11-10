@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Calendars.Core.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Modules;
@@ -17,9 +18,12 @@ namespace CrestApps.OrchardCore.Calendars.BackgroundTasks;
 public sealed class CalendarReminderBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc />
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        // Old reminder records are removed by the platform retention task (CalendarReminderLogRetentionPolicy).
-        await serviceProvider.GetRequiredService<CalendarReminderService>().RunAsync(cancellationToken);
+        return this.RunAsync(async run =>
+        {
+            // Old reminder records are removed by the platform retention task (CalendarReminderLogRetentionPolicy).
+            run.AddItems(await serviceProvider.GetRequiredService<CalendarReminderService>().RunAsync(cancellationToken), "raised");
+        });
     }
 }

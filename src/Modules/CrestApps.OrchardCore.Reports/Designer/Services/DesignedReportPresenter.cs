@@ -73,6 +73,11 @@ public sealed class DesignedReportPresenter
 
         options.Source = source?.ToString();
 
+        using var activity = ReportTelemetry.Start("report.present");
+
+        activity?.SetTag(ReportTelemetry.ReportIdTag, design.ItemId);
+        activity?.SetTag(ReportTelemetry.RunSourceTag, ReportRunSources.Normalize(options.Source));
+
         var run = await _runner.RunAsync(design, filterValues, period: null, options, cancellationToken);
 
         if (run.Document is not null)
@@ -82,14 +87,14 @@ public sealed class DesignedReportPresenter
             // Refreshing the visuals a click filters is the same run of the report, not another one.
             if (source.HasValue && options.VisualIds is null)
             {
-                await _eventHandlers.InvokeAsync((handler, context) => handler.RanAsync(context), new ReportEventContext
+                await RaiseAsync((handler, context) => handler.RanAsync(context), "ran", new ReportEventContext
                 {
                     Design = design,
                     UserName = userName,
                     Source = source.Value,
                     RowCount = run.RowCount,
                     FilterValues = filterValues,
-                }, _logger);
+                });
             }
         }
 
@@ -133,7 +138,7 @@ public sealed class DesignedReportPresenter
 
         if (file is not null && source.HasValue)
         {
-            await _eventHandlers.InvokeAsync((handler, context) => handler.ExportedAsync(context), new ReportEventContext
+            await RaiseAsync((handler, context) => handler.ExportedAsync(context), "exported", new ReportEventContext
             {
                 Design = design,
                 UserName = userName,
@@ -141,10 +146,22 @@ public sealed class DesignedReportPresenter
                 Format = file.Format,
                 RowCount = file.RowCount,
                 FilterValues = filterValues,
-            }, _logger);
+            });
         }
 
         return file;
+    }
+
+    // Tells the event handlers, such as the workflow events, about a run or an export, in a report.events span that
+    // shows how long the fan-out takes.
+    private async Task RaiseAsync(Func<IReportEventHandler, ReportEventContext, Task> raise, string eventName, ReportEventContext context)
+    {
+        using var activity = ReportTelemetry.Start("report.events");
+
+        activity?.SetTag(ReportTelemetry.ReportIdTag, context.Design?.ItemId);
+        activity?.SetTag("crestapps.report.event", eventName);
+
+        await _eventHandlers.InvokeAsync(raise, context, _logger);
     }
 
     /// <summary>
@@ -174,12 +191,16 @@ public sealed class DesignedReportPresenter
     {
         ArgumentNullException.ThrowIfNull(design);
 
+        var source = options?.Source ?? ReportRunSources.Workflow;
+
         if (_exportManager.GetDescriptor(string.IsNullOrEmpty(format) ? ReportsConstants.CsvExportFormat : format) is null)
         {
+            ReportTelemetry.RecordExport(source, null, ReportTelemetry.OutcomeNotFound);
+
             return null;
         }
 
-        var run = await _runner.RunAsync(design, filterValues, period: null, options, cancellationToken);
+        var run = await _runner.RunAsync(design, filterValues, period: null, options ?? new ReportRunOptions { Source = source }, cancellationToken);
 
         if (run.Document is null)
         {
@@ -188,7 +209,7 @@ public sealed class DesignedReportPresenter
 
         await _displayValueResolver.ResolveAsync(run.Document);
 
-        return Export(design, run, format);
+        return Export(design, run, format, source);
     }
 
     /// <summary>
@@ -197,8 +218,10 @@ public sealed class DesignedReportPresenter
     /// <param name="design">The report.</param>
     /// <param name="run">The result of its run.</param>
     /// <param name="format">The export format, such as <c>csv</c>; CSV when empty.</param>
+    /// <param name="source">What the export is for, one of the values of <see cref="ReportRunSources"/>; a workflow when
+    /// <see langword="null"/>.</param>
     /// <returns>The file, or <see langword="null"/> when the format is unknown or the run has no document.</returns>
-    public ReportExportFile Export(ReportDesign design, ReportRunResult run, string format)
+    public ReportExportFile Export(ReportDesign design, ReportRunResult run, string format, string source = null)
     {
         ArgumentNullException.ThrowIfNull(design);
         ArgumentNullException.ThrowIfNull(run);
@@ -207,11 +230,16 @@ public sealed class DesignedReportPresenter
 
         if (descriptor is null || run.Document is null)
         {
+            if (descriptor is null)
+            {
+                ReportTelemetry.RecordExport(source ?? ReportRunSources.Workflow, null, ReportTelemetry.OutcomeNotFound);
+            }
+
             return null;
         }
 
         return new ReportExportFile(
-            _exportManager.GetFormat(descriptor.Name).Serialize(run.Document),
+            ReportTelemetry.Serialize(_exportManager.GetFormat(descriptor.Name), descriptor, run.Document, source ?? ReportRunSources.Workflow),
             descriptor.ContentType,
             $"{FileName(design.DisplayText)}-{_clock.UtcNow.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}{descriptor.Extension}")
         {

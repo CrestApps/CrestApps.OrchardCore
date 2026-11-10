@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
@@ -18,6 +19,6 @@ public sealed class OpenShiftAwardBackgroundTask : IBackgroundTask
     /// <inheritdoc />
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        return serviceProvider.GetRequiredService<IOpenShiftService>().AwardDueAsync(cancellationToken);
+        return this.RunAsync(async run => run.AddItems(await serviceProvider.GetRequiredService<IOpenShiftService>().AwardDueAsync(cancellationToken), "awarded"));
     }
 }

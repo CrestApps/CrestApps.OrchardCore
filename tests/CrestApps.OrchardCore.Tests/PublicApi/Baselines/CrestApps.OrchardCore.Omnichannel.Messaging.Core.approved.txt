@@ -881,6 +881,193 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.Routing
         public System.Threading.Tasks.Task<string> SelectAgentAsync(string queueId, string excludeAgentId = null, System.Threading.CancellationToken cancellationToken = default) { }
     }
 }
+namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry
+{
+    public sealed class MessagingMeasurement : System.IDisposable
+    {
+        public System.Diagnostics.Activity Activity { get; }
+        public System.TimeSpan Elapsed { get; }
+        public bool IsCompleted { get; }
+        public string Result { get; }
+        public void AddTag(string key, string value) { }
+        public void Complete(string result, string outcome = "ok") { }
+        public void Dispose() { }
+        public void Fail(System.Exception exception) { }
+        public void SetSpanTag(string key, object value) { }
+    }
+    public static class MessagingTelemetry
+    {
+        public const string AISessionIdSpanTag = "crestapps.messaging.ai.session.id";
+        public const string ActionTag = "action";
+        public const string ActivityIdSpanTag = "crestapps.messaging.activity.id";
+        public const string ChannelSms = "sms";
+        public const string ConversationIdSpanTag = "crestapps.messaging.conversation.id";
+        public const string DecisionTag = "decision";
+        public const string ProviderMessageIdSpanTag = "crestapps.messaging.provider_message.id";
+        public const string ResultCancelled = "cancelled";
+        public const string ResultError = "error";
+        public const string ResultSpanTag = "crestapps.messaging.result";
+        public const string RouterTag = "router";
+        public const string SlaTag = "sla";
+        public const string SourceName = "CrestApps.OrchardCore.Messaging";
+        public const string SourceTag = "source";
+        public const string StatusTag = "status";
+        public static System.Diagnostics.Metrics.Counter<long> AIHandoff { get; }
+        public static System.Diagnostics.Metrics.Counter<long> AIRespondDecision { get; }
+        public static System.Diagnostics.Metrics.Histogram<double> AITurnDuration { get; }
+        public static System.Diagnostics.ActivitySource ActivitySource { get; }
+        public static System.Diagnostics.Metrics.Counter<long> ActivityStart { get; }
+        public static System.Diagnostics.Metrics.Counter<long> Assignment { get; }
+        public static System.Diagnostics.Metrics.Counter<long> Broadcast { get; }
+        public static System.Diagnostics.Metrics.Counter<long> BroadcastRecipient { get; }
+        public static System.Diagnostics.Metrics.Counter<long> Delivery { get; }
+        public static System.Diagnostics.Metrics.Histogram<double> DeliveryLatency { get; }
+        public static System.Diagnostics.Metrics.Histogram<double> FirstResponseDuration { get; }
+        public static System.Diagnostics.Metrics.Histogram<double> InboundDuration { get; }
+        public static System.Diagnostics.Metrics.Histogram<double> InboundLag { get; }
+        public static System.Diagnostics.Metrics.Meter Meter { get; }
+        public static System.Diagnostics.Metrics.Counter<long> OptOut { get; }
+        public static System.Diagnostics.Metrics.Counter<long> OutboxRetry { get; }
+        public static System.Diagnostics.Metrics.Counter<long> Reassigned { get; }
+        public static System.Diagnostics.Metrics.Counter<long> Route { get; }
+        public static System.Diagnostics.Metrics.Histogram<double> SendDuration { get; }
+        public static System.Diagnostics.Metrics.Counter<long> SlaBreached { get; }
+        public static void CompleteSend(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry.MessagingMeasurement measurement, CrestApps.OrchardCore.Omnichannel.Messaging.Services.MessageDispatchResult dispatch) { }
+        public static string GetAssignmentStatusTag(CrestApps.OrchardCore.Omnichannel.Messaging.Models.ConversationAssignmentStatus status) { }
+        public static string GetChannelTag(string channel) { }
+        public static string GetDeliveryStatusTag(CrestApps.OrchardCore.Omnichannel.Messaging.Models.MessageDeliveryStatus status) { }
+        public static string GetOutboxFailureReason(int attempts) { }
+        public static string GetProviderTag(string provider) { }
+        public static string GetRouterTag(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingInboundRouter router) { }
+        public static string GetSendResult(CrestApps.OrchardCore.Omnichannel.Messaging.Services.MessageDispatchResult dispatch) { }
+        public static string GetTriggerTag(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingRoutingTrigger trigger) { }
+        public static void RecordAIHandoff(string channel, string result) { }
+        public static void RecordActivityStart(string channel, string trigger, string result) { }
+        public static void RecordAssignment(string channel, string trigger, CrestApps.OrchardCore.Omnichannel.Messaging.Models.ConversationAssignmentStatus status) { }
+        public static void RecordBroadcast(string channel, string result) { }
+        public static void RecordBroadcastRecipient(string channel, bool succeeded) { }
+        public static void RecordDelivery(string channel, CrestApps.OrchardCore.Omnichannel.Messaging.Models.MessageDeliveryStatus status, string result, System.TimeSpan? latency = default) { }
+        public static void RecordFirstResponse(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation conversation, System.DateTime respondedUtc) { }
+        public static void RecordInboundLag(string channel, System.TimeSpan lag) { }
+        public static void RecordOptOut(string channel, string source, bool optedOut) { }
+        public static void RecordOutboxRetry(string channel, string result) { }
+        public static void RecordReassigned(string channel, CrestApps.OrchardCore.Omnichannel.Messaging.Models.ConversationAssignmentStatus status) { }
+        public static void RecordRespondDecision(string channel, string decision) { }
+        public static void RecordRoute(string channel, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingRoutingTrigger trigger, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingInboundRouter router) { }
+        public static void RecordSlaBreached(string channel) { }
+        public static void SetProvider(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry.MessagingMeasurement measurement, string provider) { }
+        public static CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry.MessagingMeasurement StartAITurn(string channel) { }
+        public static CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry.MessagingMeasurement StartInbound(string channel) { }
+        public static CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry.MessagingMeasurement StartSend(string channel) { }
+        public static class AITurnResults
+        {
+            public const string CompletionFailed = "completion_failed";
+            public const string EmptyReply = "empty_reply";
+            public const string LockTimeout = "lock_timeout";
+            public const string NoReply = "no_reply";
+            public const string NotOwed = "not_owed";
+            public const string Replied = "replied";
+            public const string SendFailed = "send_failed";
+            public const string Superseded = "superseded";
+        }
+        public static class ActivityStartResults
+        {
+            public const string AlreadyActive = "already_active";
+            public const string Declined = "declined";
+            public const string HumanConversation = "human_conversation";
+            public const string OptedOut = "opted_out";
+            public const string ProfileMissing = "profile_missing";
+            public const string QuietPeriod = "quiet_period";
+            public const string SendFailed = "send_failed";
+            public const string Started = "started";
+            public const string TriggerAutomated = "automated";
+            public const string TriggerEntryPoint = "entry_point";
+        }
+        public static class AssignmentTriggers
+        {
+            public const string Assign = "assign";
+            public const string Claim = "claim";
+            public const string Reply = "reply";
+            public const string Transfer = "transfer";
+        }
+        public static class BroadcastResults
+        {
+            public const string Completed = "completed";
+            public const string Failed = "failed";
+            public const string Rejected = "rejected";
+            public const string Sent = "sent";
+            public const string Started = "started";
+        }
+        public static class DeliveryResults
+        {
+            public const string Applied = "applied";
+            public const string Unmatched = "unmatched";
+        }
+        public static class HandoffResults
+        {
+            public const string Failed = "failed";
+            public const string HandedOff = "handed_off";
+        }
+        public static class InboundResults
+        {
+            public const string AIStarted = "ai_started";
+            public const string Automated = "automated";
+            public const string Duplicate = "duplicate";
+            public const string LockTimeout = "lock_timeout";
+            public const string MissingAddress = "missing_address";
+            public const string NoEndpoint = "no_endpoint";
+            public const string Routed = "routed";
+            public const string UnknownChannel = "unknown_channel";
+        }
+        public static class OptOutSources
+        {
+            public const string AutomatedConversation = "automated_conversation";
+            public const string Keyword = "keyword";
+            public const string ProviderRefusal = "provider_refusal";
+        }
+        public static class OutboxResults
+        {
+            public const string Failed = "failed";
+            public const string NotRetryable = "not_retryable";
+            public const string Rescheduled = "rescheduled";
+            public const string RetriesExhausted = "retries_exhausted";
+            public const string Sent = "sent";
+        }
+        public static class OwedReplyResults
+        {
+            public const string Redriven = "redriven";
+        }
+        public static class ReEngagementResults
+        {
+            public const string Busy = "busy";
+            public const string NoContent = "no_content";
+            public const string OptedOut = "opted_out";
+            public const string OutsideHours = "outside_hours";
+            public const string SendFailed = "send_failed";
+            public const string Sent = "sent";
+        }
+        public static class ReassignmentResults
+        {
+            public const string Pooled = "pooled";
+            public const string Rerouted = "rerouted";
+            public const string Unassigned = "unassigned";
+        }
+        public static class RespondDecisions
+        {
+            public const string Fallback = "fallback";
+            public const string Respond = "respond";
+            public const string Skip = "skip";
+        }
+        public static class SendResults
+        {
+            public const string Failed = "failed";
+            public const string MediaNotSupported = "media_not_supported";
+            public const string NoProvider = "no_provider";
+            public const string OptedOut = "opted_out";
+            public const string Sent = "sent";
+        }
+    }
+}
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Services
 {
     public sealed class LocalEncryptedMessagingAttachmentStore : CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.IMessagingAttachmentStore

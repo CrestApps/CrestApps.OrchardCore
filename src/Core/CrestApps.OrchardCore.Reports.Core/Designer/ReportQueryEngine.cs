@@ -1,6 +1,10 @@
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using System.Runtime.CompilerServices;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using OrchardCore.DataSources;
 using OrchardCore.DataSources.Expressions;
 using OrchardCore.DataSources.Operations;
@@ -19,6 +23,7 @@ public sealed partial class ReportQueryEngine
     private readonly ReportQueryPlanner _planner;
     private readonly ReportValueFormatter _formatter;
     private readonly ReportQueryGate _gate;
+    private readonly ILogger _logger;
     private readonly IStringLocalizer S;
 
     /// <summary>
@@ -28,15 +33,18 @@ public sealed partial class ReportQueryEngine
     /// <param name="formatter">The value formatter used for filter options.</param>
     /// <param name="gate">The gate that bounds how many runs the tenant runs at once.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="logger">The logger, or <see langword="null"/> to log nothing.</param>
     public ReportQueryEngine(
         ReportQueryPlanner planner,
         ReportValueFormatter formatter,
         ReportQueryGate gate,
-        IStringLocalizer<ReportQueryEngine> stringLocalizer)
+        IStringLocalizer<ReportQueryEngine> stringLocalizer,
+        ILogger<ReportQueryEngine> logger = null)
     {
         _planner = planner;
         _formatter = formatter;
         _gate = gate;
+        _logger = logger ?? NullLogger<ReportQueryEngine>.Instance;
         S = stringLocalizer;
     }
 
@@ -89,12 +97,13 @@ public sealed partial class ReportQueryEngine
 
         using var activity = ReportTelemetry.Start("report.query", context);
         var started = Stopwatch.GetTimestamp();
+        var outcome = CrestAppsOrchardCoreTelemetry.OutcomeError;
         ReportQueryResult result;
 
         try
         {
             await using var lease = await _gate.EnterAsync(context, cancellationToken);
-            using var run = new QueryRun(plan, context, groupings: true);
+            using var run = new QueryRun(plan, context, groupings: true, _logger);
 
             run.Activity = activity;
             activity?.SetTag("crestapps.report.gate_wait_ms", Stopwatch.GetElapsedTime(started).TotalMilliseconds);
@@ -111,7 +120,10 @@ public sealed partial class ReportQueryEngine
             {
                 run.Warnings.Add(S["The result has more than {0} rows, so only the first {0} are shown.", maxResultRows]);
                 kept.RemoveRange(maxResultRows, kept.Count - maxResultRows);
+                ReportTelemetry.RecordLimitHit(context, ReportTelemetry.LimitResultRows);
             }
+
+            RecordCalculationErrors(run);
 
             using (ReportTelemetry.Start("report.result", context))
             {
@@ -151,24 +163,20 @@ public sealed partial class ReportQueryEngine
             {
                 ReportTelemetry.RowsReturned.Add(result.Rows.Count, ReportTelemetry.Tags(context));
             }
+
+            outcome = CrestAppsOrchardCoreTelemetry.OutcomeOk;
         }
         catch (Exception exception)
         {
+            outcome = ReportTelemetry.GetOutcome(exception);
             ReportTelemetry.Fail(activity, exception);
-
-            if (exception is not OperationCanceledException && ReportTelemetry.Failures.Enabled)
-            {
-                ReportTelemetry.Failures.Add(1, ReportTelemetry.Tags(context));
-            }
+            RecordQueryFailure(context, exception);
 
             throw;
         }
         finally
         {
-            if (ReportTelemetry.QueryDuration.Enabled)
-            {
-                ReportTelemetry.QueryDuration.Record(Stopwatch.GetElapsedTime(started).TotalSeconds, ReportTelemetry.Tags(context));
-            }
+            RecordDuration(ReportTelemetry.QueryDuration, context, started, outcome);
         }
 
         return result;
@@ -199,22 +207,57 @@ public sealed partial class ReportQueryEngine
             throw new ReportQueryException([.. plan.Errors]);
         }
 
+        using var activity = ReportTelemetry.Start("report.stream", context);
+        var started = Stopwatch.GetTimestamp();
+
+        // A reader that stops early ends the read normally; only an exception makes it fail.
+        var outcome = CrestAppsOrchardCoreTelemetry.OutcomeOk;
+
         await using var lease = await _gate.EnterAsync(context, cancellationToken);
-        using var run = new QueryRun(plan, context, groupings: false);
+        using var run = new QueryRun(plan, context, groupings: false, _logger);
+        IAsyncEnumerator<object[]> rows = null;
+        var read = 0;
+
+        run.Activity = activity;
 
         try
         {
-            var grouped = await TryAggregateAsync(run, cancellationToken);
-            var rows = grouped is null ? ReadFilteredRowsAsync(run, cancellationToken) : ToAsync(grouped, cancellationToken);
-            var read = 0;
-
-            run.Weighted = grouped is not null;
-
-            await foreach (var row in ReadResultRowsAsync(run, rows, cancellationToken).WithCancellation(cancellationToken))
+            while (true)
             {
+                object[] row;
+
+                // A row is read inside a try that records a failure, and returned outside it: an iterator can't return a
+                // value from a try that has a catch.
+                try
+                {
+                    if (rows is null)
+                    {
+                        var grouped = await TryAggregateAsync(run, cancellationToken);
+                        var source = grouped is null ? ReadFilteredRowsAsync(run, cancellationToken) : ToAsync(grouped, cancellationToken);
+
+                        run.Weighted = grouped is not null;
+                        rows = ReadResultRowsAsync(run, source, cancellationToken).GetAsyncEnumerator(cancellationToken);
+                    }
+
+                    if (!await rows.MoveNextAsync())
+                    {
+                        break;
+                    }
+
+                    row = rows.Current;
+                }
+                catch (Exception exception)
+                {
+                    outcome = ReportTelemetry.GetOutcome(exception);
+                    ReportTelemetry.Fail(activity, exception);
+                    RecordQueryFailure(context, exception);
+
+                    throw;
+                }
+
                 if (read++ >= maxRows)
                 {
-                    yield break;
+                    break;
                 }
 
                 yield return row;
@@ -222,10 +265,21 @@ public sealed partial class ReportQueryEngine
         }
         finally
         {
+            if (rows is not null)
+            {
+                await rows.DisposeAsync();
+            }
+
             foreach (var warning in run.Warnings.Distinct(StringComparer.Ordinal))
             {
                 warnings?.Add(warning);
             }
+
+            activity?.SetTag("crestapps.report.rows.source", run.SourceRows);
+            activity?.SetTag("crestapps.report.rows.returned", Math.Min(read, maxRows));
+            activity?.SetTag(CrestAppsOrchardCoreTelemetry.OutcomeTag, outcome);
+            RecordCalculationErrors(run);
+            RecordDuration(ReportTelemetry.StreamDuration, context, started, outcome);
         }
     }
 
@@ -291,7 +345,7 @@ public sealed partial class ReportQueryEngine
 
                 foreach (var calculation in plan.RowCalculations)
                 {
-                    row[calculation.Slot] = SafeEvaluate(calculation.Expression, expressionContext);
+                    row[calculation.Slot] = SafeEvaluate(calculation.Expression, expressionContext, run);
                 }
 
                 if (started != 0)
@@ -408,12 +462,12 @@ public sealed partial class ReportQueryEngine
             activity?.SetTag("crestapps.report.read_shared", shared);
             activity?.SetTag("crestapps.report.truncated", truncated);
 
+            // The data set is a span tag only: its name is free text, so it never tags a metric.
             if (ReportTelemetry.RowsRead.Enabled && !shared)
             {
                 var tags = ReportTelemetry.Tags(run.Context);
 
                 tags.Add(ReportTelemetry.DataSourceTag, dataSet.Reference.Source);
-                tags.Add(ReportTelemetry.DataSetTag, dataSet.Reference.DataSet);
                 ReportTelemetry.RowsRead.Add(read, tags);
             }
 
@@ -422,7 +476,6 @@ public sealed partial class ReportQueryEngine
                 var tags = ReportTelemetry.Tags(run.Context);
 
                 tags.Add(ReportTelemetry.DataSourceTag, dataSet.Reference.Source);
-                tags.Add(ReportTelemetry.DataSetTag, dataSet.Reference.DataSet);
                 ReportTelemetry.SharedReads.Add(1, tags);
             }
 
@@ -431,6 +484,7 @@ public sealed partial class ReportQueryEngine
                 var label = dataSet.Reference.DisplayName ?? dataSet.Schema.DataSet?.DisplayName ?? dataSet.Reference.DataSet;
 
                 run.Warnings.Add(S["Only the first {0} rows of '{1}' were read. Add filters to narrow the data.", maxRows, label]);
+                ReportTelemetry.RecordLimitHit(run.Context, ReportTelemetry.LimitRowsPerDataSet);
             }
         }
     }
@@ -554,6 +608,7 @@ public sealed partial class ReportQueryEngine
                 if (keys.Count > maxJoinKeys)
                 {
                     keys = null;
+                    ReportTelemetry.RecordLimitHit(run.Context, ReportTelemetry.LimitJoinKeys);
                 }
             }
         }
@@ -589,6 +644,7 @@ public sealed partial class ReportQueryEngine
             {
                 run.Warnings.Add(S["The joins produced more than {0} rows, so the result is incomplete. Add filters or change the joins.", maxRows]);
                 activity?.SetTag("crestapps.report.truncated", true);
+                ReportTelemetry.RecordLimitHit(run.Context, ReportTelemetry.LimitJoinedRows);
 
                 yield break;
             }
@@ -721,6 +777,65 @@ public sealed partial class ReportQueryEngine
         }
     }
 
+    // A row calculation that fails leaves its value empty, like SafeEvaluate, and is counted, so the run records how
+    // many values its formulas could not compute, once, rather than one measurement per row.
+    private static object SafeEvaluate(CompiledExpression expression, ExpressionContext context, QueryRun run)
+    {
+        try
+        {
+            return expression.Evaluate(context);
+        }
+        catch (Exception exception) when (exception is ArithmeticException or FormatException or ArgumentException or InvalidCastException)
+        {
+            run.CalculationErrors++;
+
+            return null;
+        }
+    }
+
+    // Records, once per query, the formula values that could not be computed.
+    private static void RecordCalculationErrors(QueryRun run)
+    {
+        if (run.CalculationErrors == 0)
+        {
+            return;
+        }
+
+        run.Activity?.SetTag("crestapps.report.calc_errors", run.CalculationErrors);
+
+        if (ReportTelemetry.CalculationErrors.Enabled)
+        {
+            ReportTelemetry.CalculationErrors.Add(run.CalculationErrors, ReportTelemetry.Tags(run.Context));
+        }
+    }
+
+    // A query that failed counts once at the query level; a cancellation is not a failure.
+    private static void RecordQueryFailure(ReportQueryExecutionContext context, Exception exception)
+    {
+        if (exception is OperationCanceledException || !ReportTelemetry.Failures.Enabled)
+        {
+            return;
+        }
+
+        var tags = ReportTelemetry.Tags(context);
+
+        tags.Add(ReportTelemetry.LevelTag, ReportTelemetry.LevelQuery);
+        ReportTelemetry.Failures.Add(1, tags);
+    }
+
+    private static void RecordDuration(Histogram<double> histogram, ReportQueryExecutionContext context, long started, string outcome)
+    {
+        if (!histogram.Enabled)
+        {
+            return;
+        }
+
+        var tags = ReportTelemetry.Tags(context);
+
+        tags.Add(CrestAppsOrchardCoreTelemetry.OutcomeTag, outcome);
+        histogram.Record(Stopwatch.GetElapsedTime(started).TotalSeconds, tags);
+    }
+
     private static async Task<List<object[]>> TakeAsync(IAsyncEnumerable<object[]> rows, int count, bool drain, CancellationToken cancellationToken)
     {
         var taken = new List<object[]>();
@@ -790,10 +905,16 @@ public sealed partial class ReportQueryEngine
         private readonly long _memoryLimit;
         private readonly List<(string FilterId, int Slot, SortedSet<object> Values)> _optionFilters = [];
         private readonly int _maxOptions;
+        private readonly ILogger _logger;
         private int _spills;
 
-        public QueryRun(ReportQueryPlan plan, ReportQueryExecutionContext context, bool groupings)
+        public QueryRun(
+            ReportQueryPlan plan,
+            ReportQueryExecutionContext context,
+            bool groupings,
+            ILogger logger)
         {
+            _logger = logger;
             Plan = plan;
             Context = context;
             Today = context.ToLocal(context.UtcNow);
@@ -853,6 +974,9 @@ public sealed partial class ReportQueryEngine
         // The time spent on row calculations, in stopwatch ticks, measured only while a span records it.
         public long CalculationTicks { get; set; }
 
+        // The row calculation values that failed to compute and were left empty.
+        public long CalculationErrors { get; set; }
+
         // The spellings of the text the run groups, so its regroupings show the same ones.
         public TextSpellings Spellings { get; } = new();
 
@@ -911,13 +1035,15 @@ public sealed partial class ReportQueryEngine
                     Directory.Delete(_directory, recursive: true);
                 }
             }
-            catch (IOException)
+            catch (IOException exception)
             {
                 // A file still open is deleted with the temporary directory of the system.
+                ReportsLog.SpillCleanupFailed(_logger, exception, _directory);
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException exception)
             {
                 // A file the process may not delete is left to the system's temporary directory clean-up too.
+                ReportsLog.SpillCleanupFailed(_logger, exception, _directory);
             }
         }
     }

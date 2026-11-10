@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Handlers;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell.Scope;
@@ -68,7 +69,7 @@ public sealed class AIChatSessionDocumentCleanupHandler : AIChatSessionHandlerBa
 
         if (chunkIds.Count > 0)
         {
-            ShellScope.AddDeferredTask(scope => RemoveDocumentChunksAsync(scope, chunkIds));
+            DeferredWork.Add("ai_document_chunk_removal", scope => RemoveDocumentChunksAsync(scope, chunkIds));
         }
     }
 

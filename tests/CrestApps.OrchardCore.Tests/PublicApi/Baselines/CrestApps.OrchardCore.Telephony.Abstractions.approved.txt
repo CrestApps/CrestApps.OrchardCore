@@ -134,6 +134,7 @@ namespace CrestApps.OrchardCore.Telephony
     public interface ITelephonyCommandExecutor
     {
         System.Threading.Tasks.Task<TResult> ExecuteAsync<TResult>(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<TResult>> operation);
+        System.Threading.Tasks.Task<TResult> ExecuteAsync<TResult>(string providerName, string command, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<TResult>> operation);
     }
     public interface ITelephonyConferenceProvider
     {

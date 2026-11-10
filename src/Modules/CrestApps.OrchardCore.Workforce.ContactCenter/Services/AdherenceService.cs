@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Indexes;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Models;
+using CrestApps.OrchardCore.Workforce.Core.Telemetry;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using OrchardCore;
@@ -276,6 +277,7 @@ public sealed class AdherenceService
                 ["Minutes"] = (int)(_clock.UtcNow - row.OutSinceUtc.Value).TotalMinutes,
             }, row.WorkerId, cancellationToken);
 
+            WorkforceTelemetry.RecordAdherenceAlert(row.Scheduled.Kind.ToString(), row.Status.ToString());
             raised++;
         }
 

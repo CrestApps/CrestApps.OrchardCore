@@ -1,4 +1,7 @@
+using System.Diagnostics;
 using System.Text;
+using CrestApps.OrchardCore.ContentTransfer.Telemetry;
+using CrestApps.OrchardCore.Diagnostics;
 
 namespace CrestApps.OrchardCore.ContentTransfer.FileFormats;
 
@@ -16,6 +19,15 @@ public sealed class CsvContentTransferFileFormatProvider : IContentTransferFileF
 
     public IContentTransferFileWriter CreateWriter(Stream stream, string sheetName)
         => new CsvFileWriter(stream);
+
+    private static void RecordOperation(string operation, long startTimestamp)
+    {
+        ContentTransferDiagnostics.Record(ContentTransferDiagnostics.FileOperationDuration, Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds, new TagList
+        {
+            { CrestAppsOrchardCoreTelemetry.FormatTag, "csv" },
+            { CrestAppsOrchardCoreTelemetry.OperationTag, operation },
+        });
+    }
 
     /// <summary>
     /// Reads the rows of a CSV file as they are needed. The rows used to be read into memory when the reader was
@@ -55,9 +67,14 @@ public sealed class CsvContentTransferFileFormatProvider : IContentTransferFileF
                 return rowCount;
             }
 
+            // Counting reads the whole file before the first row is imported.
+            var startTimestamp = Stopwatch.GetTimestamp();
+
             if (!_stream.CanSeek)
             {
                 _rowCount = GetBufferedRows().Count;
+
+                RecordOperation("count_rows", startTimestamp);
 
                 return _rowCount.Value;
             }
@@ -73,6 +90,7 @@ public sealed class CsvContentTransferFileFormatProvider : IContentTransferFileF
             }
 
             _rowCount = count;
+            RecordOperation("count_rows", startTimestamp);
 
             return count;
         }
@@ -307,7 +325,10 @@ public sealed class CsvContentTransferFileFormatProvider : IContentTransferFileF
 
         public void Flush()
         {
+            var startTimestamp = Stopwatch.GetTimestamp();
+
             _writer.Flush();
+            RecordOperation("flush", startTimestamp);
         }
 
         public void Dispose()

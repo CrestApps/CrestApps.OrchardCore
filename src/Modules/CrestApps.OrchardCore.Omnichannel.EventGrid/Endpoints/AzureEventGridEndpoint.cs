@@ -1,4 +1,5 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
+using System.Diagnostics;
 using System.Text.Json;
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
@@ -64,8 +65,25 @@ internal static class AzureEventGridEndpoint
         ShellSettings shellSettings,
         ILogger<Startup> logger)
     {
+        var (result, requestResult) = await HandleCoreAsync(context, handlers, session, clock, options.Value, shellHost, shellSettings, logger);
+
+        // What became of the delivery goes on the server span ASP.NET Core records around it.
+        Activity.Current?.SetTag("crestapps.eventgrid.result", requestResult);
+
+        return result;
+    }
+
+    private static async Task<(IResult Result, string RequestResult)> HandleCoreAsync(
+        HttpContext context,
+        IEnumerable<IOmnichannelEventHandler> handlers,
+        YesSqlSession session,
+        IClock clock,
+        EventGridOptions eventGridOptions,
+        IShellHost shellHost,
+        ShellSettings shellSettings,
+        ILogger logger)
+    {
         var isAuthorized = false;
-        var eventGridOptions = options.Value;
 
         // Check SAS key
         if (!string.IsNullOrEmpty(eventGridOptions.EventGridSasKey) &&
@@ -105,7 +123,7 @@ internal static class AzureEventGridEndpoint
         {
             logger.LogWarning("Unauthorized Event Grid request.");
 
-            return TypedResults.Unauthorized();
+            return (TypedResults.Unauthorized(), EventGridTelemetry.RequestResults.Unauthorized);
         }
 
         // A chunked request declares no length, so the ceiling has to be enforced against what actually arrives
@@ -116,7 +134,7 @@ internal static class AzureEventGridEndpoint
         {
             logger.LogWarning("Event Grid payload exceeded the maximum supported size of {MaxBytes} bytes.", _maximumRequestBodySizeBytes);
 
-            return TypedResults.StatusCode(StatusCodes.Status413PayloadTooLarge);
+            return (TypedResults.StatusCode(StatusCodes.Status413PayloadTooLarge), EventGridTelemetry.RequestResults.TooLarge);
         }
 
         var body = read.Body;
@@ -129,11 +147,18 @@ internal static class AzureEventGridEndpoint
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to parse Event Grid payload.");
-            return TypedResults.BadRequest();
+            return (TypedResults.BadRequest(), EventGridTelemetry.RequestResults.ParseError);
         }
 
         foreach (var e in events)
         {
+            // The subject is never in the scope: for Azure Communication Services events it is the customer's phone number.
+            using var eventScope = logger.BeginScope(new Dictionary<string, object>
+            {
+                ["EventGridEventId"] = e.Id.SanitizeLogValue(),
+                ["EventType"] = e.EventType.SanitizeLogValue(),
+            });
+
             // Event Grid sends this handshake before it delivers anything to a new webhook subscription, and only
             // activates the subscription once the validation code is echoed back in this exact JSON shape.
             if (string.Equals(e.EventType, EventGridEventTypes.SubscriptionValidation, StringComparison.OrdinalIgnoreCase))
@@ -142,40 +167,48 @@ internal static class AzureEventGridEndpoint
 
                 if (string.IsNullOrEmpty(validation?.ValidationCode))
                 {
-                    logger.LogWarning("Rejected an Event Grid subscription validation event {EventId} that carried no validation code.", e.Id.SanitizeLogValue());
+                    logger.SubscriptionValidationWithoutCode(e.Id.SanitizeLogValue());
+                    EventGridTelemetry.RecordEvent(e.EventType, EventGridTelemetry.EventResults.Invalid);
 
-                    return TypedResults.BadRequest();
+                    return (TypedResults.BadRequest(), EventGridTelemetry.RequestResults.Invalid);
                 }
 
                 if (logger.IsEnabled(LogLevel.Information))
                 {
-                    logger.LogInformation("Event Grid subscription validation received for event {EventId}; answering with the validation code.", e.Id.SanitizeLogValue());
+                    logger.SubscriptionValidationReceived(e.Id.SanitizeLogValue());
                 }
 
-                return TypedResults.Json(new
+                EventGridTelemetry.RecordEvent(e.EventType, EventGridTelemetry.EventResults.Validated);
+
+                return (TypedResults.Json(new
                 {
                     validationResponse = validation.ValidationCode,
-                });
+                }), EventGridTelemetry.RequestResults.Validated);
             }
 
             // The subject is not logged: for Azure Communication Services events it is the customer's phone number.
             if (logger.IsEnabled(LogLevel.Information))
             {
-                logger.LogInformation("Event Grid event received. EventType: {EventType}, EventId: {EventId}.", e.EventType.SanitizeLogValue(), e.Id.SanitizeLogValue());
+                logger.EventReceived(e.EventType.SanitizeLogValue(), e.Id.SanitizeLogValue());
             }
 
             var dataJson = e.Data?.ToString();
 
             var mapping = EventGridEventMapper.Map(e.EventType, dataJson);
+            var eventResult = EventGridTelemetry.EventResults.Stored;
 
             switch (mapping.Kind)
             {
                 case EventGridEventMappingKind.SmsReceived:
-                    if (!await AcceptInboundSmsAsync(context, e, mapping, handlers, session, clock, shellHost, shellSettings, logger))
+                    var accepted = await AcceptInboundSmsAsync(context, e, mapping, handlers, session, clock, shellHost, shellSettings, logger);
+
+                    EventGridTelemetry.RecordEvent(e.EventType, accepted);
+
+                    if (accepted is EventGridTelemetry.EventResults.Busy or EventGridTelemetry.EventResults.Failed)
                     {
                         // The text was not stored, so Event Grid has to deliver the batch again. The texts of this
                         // batch that were stored are recognised as duplicates then.
-                        return TypedResults.StatusCode(StatusCodes.Status503ServiceUnavailable);
+                        return (TypedResults.StatusCode(StatusCodes.Status503ServiceUnavailable), EventGridTelemetry.RequestResults.Retry);
                     }
 
                     continue;
@@ -186,8 +219,7 @@ internal static class AzureEventGridEndpoint
                     // The report is therefore stored and passed to the handlers unchanged, exactly as before.
                     if (logger.IsEnabled(LogLevel.Information))
                     {
-                        logger.LogInformation(
-                            "Event Grid event {EventId} is an SMS delivery report for message {ProviderMessageId} with status '{DeliveryStatus}' ('{DeliveryStatusDetails}'). Delivery reports are stored but not routed; the sent message's delivery status is not updated.",
+                        logger.DeliveryReportStored(
                             e.Id.SanitizeLogValue(),
                             mapping.ProviderMessageId.SanitizeLogValue(),
                             mapping.DeliveryStatus.SanitizeLogValue(),
@@ -197,19 +229,18 @@ internal static class AzureEventGridEndpoint
                     break;
 
                 case EventGridEventMappingKind.Malformed:
-                    logger.LogWarning(
-                        "Event Grid event {EventId} of type {EventType} could not be mapped because {Reason}. It is stored with its raw event type and not routed to a channel.",
+                    logger.EventMalformed(
                         e.Id.SanitizeLogValue(),
                         e.EventType.SanitizeLogValue(),
                         mapping.Reason);
+                    eventResult = EventGridTelemetry.EventResults.Malformed;
 
                     break;
 
                 default:
                     if (logger.IsEnabled(LogLevel.Debug))
                     {
-                        logger.LogDebug(
-                            "Event Grid event {EventId} of type {EventType} has no Omnichannel mapping. It is stored with its raw event type and passed to the handlers unchanged.",
+                        logger.EventUnmapped(
                             e.Id.SanitizeLogValue(),
                             e.EventType.SanitizeLogValue());
                     }
@@ -264,9 +295,11 @@ internal static class AzureEventGridEndpoint
             };
 
             await handlers.InvokeAsync((handler, evt) => handler.HandleAsync(evt), omnichannelEvent, logger);
+
+            EventGridTelemetry.RecordEvent(e.EventType, eventResult);
         }
 
-        return TypedResults.Ok();
+        return (TypedResults.Ok(), EventGridTelemetry.RequestResults.Ok);
     }
 
     /// <summary>
@@ -281,10 +314,11 @@ internal static class AzureEventGridEndpoint
     /// retried from storage instead of being lost with a discarded background task.
     /// </remarks>
     /// <returns>
-    /// <see langword="true"/> when the text is stored (or was already stored); <see langword="false"/> when it was not,
+    /// What became of the text, one of <see cref="EventGridTelemetry.EventResults"/>: <c>accepted</c>, <c>duplicate</c>
+    /// or <c>stored</c> when the text is stored (or was already stored); <c>busy</c> or <c>failed</c> when it was not,
     /// so Event Grid has to deliver it again.
     /// </returns>
-    internal static async Task<bool> AcceptInboundSmsAsync(
+    internal static async Task<string> AcceptInboundSmsAsync(
         HttpContext context,
         EventGridEvent e,
         EventGridEventMapping mapping,
@@ -322,8 +356,7 @@ internal static class AzureEventGridEndpoint
 
         if (logger.IsEnabled(LogLevel.Information))
         {
-            logger.LogInformation(
-                "Mapped Event Grid event {EventId} of type {EventType} to channel {Channel} and event {OmnichannelEvent}. ProviderMessageId: {ProviderMessageId}, Length: {Length}.",
+            logger.EventMapped(
                 e.Id.SanitizeLogValue(),
                 e.EventType.SanitizeLogValue(),
                 mapping.Channel,
@@ -351,7 +384,7 @@ internal static class AzureEventGridEndpoint
                 Message = message,
             }, logger);
 
-            return true;
+            return EventGridTelemetry.EventResults.Stored;
         }
 
         ProviderWebhookInboxAcceptanceResult acceptance;
@@ -373,7 +406,7 @@ internal static class AzureEventGridEndpoint
             // Nothing was stored, so nothing picks this up later: this is the one case where Event Grid must redeliver.
             logger.LogError(exception, "The inbound Event Grid SMS {ProviderMessageId} could not be stored in the provider webhook inbox.", providerMessageId.SanitizeLogValue());
 
-            return false;
+            return EventGridTelemetry.EventResults.Failed;
         }
 
         if (acceptance.Status == ProviderWebhookInboxAcceptanceStatus.Duplicate)
@@ -383,13 +416,13 @@ internal static class AzureEventGridEndpoint
                 logger.LogInformation("Ignoring a duplicate Event Grid SMS delivery for ProviderMessageId {ProviderMessageId}.", providerMessageId.SanitizeLogValue());
             }
 
-            return true;
+            return EventGridTelemetry.EventResults.Duplicate;
         }
 
         if (acceptance.Status != ProviderWebhookInboxAcceptanceStatus.Accepted)
         {
             // Busy: the delivery was not stored.
-            return false;
+            return EventGridTelemetry.EventResults.Busy;
         }
 
         var messageId = acceptance.MessageId;
@@ -401,7 +434,7 @@ internal static class AzureEventGridEndpoint
             scope => DispatchAsync(scope, messageId),
             logger);
 
-        return true;
+        return EventGridTelemetry.EventResults.Accepted;
     }
 
     private static async Task DispatchAsync(ShellScope scope, string messageId)

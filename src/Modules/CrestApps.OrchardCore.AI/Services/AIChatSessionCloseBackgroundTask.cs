@@ -7,6 +7,7 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.AI.Core.Webhooks;
 using CrestApps.OrchardCore.AI.Workflows.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -38,7 +39,10 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
     /// </summary>
     /// <param name="serviceProvider">The service provider for resolving dependencies.</param>
     /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => DoWorkCoreAsync(run, serviceProvider, cancellationToken));
+
+    private static async Task DoWorkCoreAsync(MeasuredTaskRun run, IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         var clock = serviceProvider.GetRequiredService<IClock>();
         var sessionStore = serviceProvider.GetRequiredService<IAIChatSessionStore>();
@@ -59,14 +63,21 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
                 break;
             }
 
-            await CloseInactiveSessionsAsync(closer, sessionStore, promptStore, profile, utcNow, logger, cancellationToken);
-            await RetryPendingProcessingAsync(serviceProvider, sessionStore, promptStore, postCloseProcessor, profile, utcNow, logger, cancellationToken);
+            await CloseInactiveSessionsAsync(run, closer, sessionStore, promptStore, profile, utcNow, logger, cancellationToken);
+            await RetryPendingProcessingAsync(run, serviceProvider, sessionStore, promptStore, postCloseProcessor, profile, utcNow, logger, cancellationToken);
         }
 
         await storeCommitter.CommitAsync(cancellationToken);
+
+        if (run.Items.Count == 0)
+        {
+            // No session was inactive and no post-close processing was due.
+            run.Skip();
+        }
     }
 
     private static async Task CloseInactiveSessionsAsync(
+        MeasuredTaskRun run,
         AIChatSessionCloser closer,
         IAIChatSessionStore sessionStore,
         IAIChatSessionPromptStore promptStore,
@@ -87,6 +98,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
 
             var prompts = await promptStore.GetPromptsAsync(chatSession.SessionId);
             await closer.CloseAsync(profile, chatSession, prompts, cancellationToken);
+            run.AddItems(1, "closed");
 
             if (logger.IsEnabled(LogLevel.Debug))
             {
@@ -100,6 +112,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
     }
 
     private static async Task RetryPendingProcessingAsync(
+        MeasuredTaskRun run,
         IServiceProvider serviceProvider,
         IAIChatSessionStore sessionStore,
         IAIChatSessionPromptStore promptStore,
@@ -126,6 +139,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
             {
                 chatSession.PostSessionProcessingStatus = PostSessionProcessingStatus.Failed;
                 await sessionStore.SaveAsync(chatSession, cancellationToken);
+                run.AddItems(1, "post_processing_gave_up");
 
                 logger.LogWarning(
                     "Post-close processing for session '{SessionId}' exceeded the maximum number of attempts ({MaxAttempts}).",
@@ -144,6 +158,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
             var prompts = await promptStore.GetPromptsAsync(chatSession.SessionId);
             await postCloseProcessor.ProcessAsync(profile, chatSession, prompts, cancellationToken);
             await sessionStore.SaveAsync(chatSession, cancellationToken);
+            run.AddItems(1, "post_processing_retried");
 
             if (chatSession.PostSessionProcessingStatus == PostSessionProcessingStatus.Completed)
             {

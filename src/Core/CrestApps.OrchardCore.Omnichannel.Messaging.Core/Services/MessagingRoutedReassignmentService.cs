@@ -1,5 +1,7 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.Routing;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Notifications;
 using Microsoft.Extensions.Logging;
@@ -102,6 +104,13 @@ public sealed class MessagingRoutedReassignmentService : IMessagingRoutedReassig
             // Light the inbox the thread just landed in: the newly-assigned agent, or the queue when it was
             // returned to the shared pool.
             await NotifyAsync(conversation, conversation.AssignedAgentId, queueId, now, cancellationToken);
+
+            MessagingTelemetry.RecordReassigned(conversation.Channel, conversation.AssignmentStatus);
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.ConversationReassigned(conversation.ItemId.SanitizeLogValue(), MessagingTelemetry.GetAssignmentStatusTag(conversation.AssignmentStatus));
+            }
 
             moved++;
         }

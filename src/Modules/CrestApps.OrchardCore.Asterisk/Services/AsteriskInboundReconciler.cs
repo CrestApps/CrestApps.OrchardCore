@@ -2,6 +2,7 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Telemetry;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
@@ -142,6 +143,9 @@ internal sealed class AsteriskInboundReconciler : IAsteriskProviderStateReconcil
                 }
 
                 await ResolveClaimedBindingAsync(claim.Binding, cancellationToken);
+
+                // A leg whose end the platform never heard about, cleaned up by the sweep.
+                TelephonyTelemetry.RecordReconcileCorrections(AsteriskConstants.ProviderTechnicalName, TelephonyTelemetry.ReconcileOrphanEnded);
             }
             catch (Exception ex)
             {

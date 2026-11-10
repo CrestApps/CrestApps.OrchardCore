@@ -1,7 +1,10 @@
+using System.Diagnostics;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Core.Http;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Stripe.Core;
+using CrestApps.OrchardCore.Stripe.Core.Telemetry;
 using CrestApps.OrchardCore.Stripe.Indexes;
 using CrestApps.OrchardCore.Stripe.Models;
 using CrestApps.OrchardCore.Stripe.Services;
@@ -83,14 +86,14 @@ public static class CreateWebhookEndpoint
         if (!request.Headers.TryGetValue("Stripe-Signature", out var signature) ||
             string.IsNullOrEmpty(signature))
         {
-            return TypedResults.BadRequest();
+            return Respond(TypedResults.BadRequest(), eventType: null, StripeTelemetry.WebhookInvalidSignature);
         }
 
         var webhookSecret = stripeOptions.CurrentValue.WebhookSecret;
 
         if (string.IsNullOrEmpty(webhookSecret))
         {
-            return TypedResults.Problem("Stripe is not configured.", instance: null, statusCode: 500);
+            return Respond(TypedResults.Problem("Stripe is not configured.", instance: null, statusCode: 500), eventType: null, StripeTelemetry.WebhookNotConfigured);
         }
 
         Event stripeEvent;
@@ -107,13 +110,25 @@ public static class CreateWebhookEndpoint
         {
             logger.LogError(ex, "Unable to verify or deserialize the Stripe webhook payload.");
 
-            return TypedResults.BadRequest();
+            return Respond(TypedResults.BadRequest(), eventType: null, StripeTelemetry.WebhookInvalidSignature);
         }
 
         if (stripeEvent == null || string.IsNullOrEmpty(stripeEvent.Id))
         {
-            return TypedResults.BadRequest();
+            return Respond(TypedResults.BadRequest(), eventType: null, StripeTelemetry.WebhookInvalidSignature);
         }
+
+        var eventType = GetEventTypeTag(stripeEvent.Type);
+
+        // The request's span carries the event, so a delivery can be found by the id Stripe shows for it.
+        Activity.Current?.SetTag(StripeTelemetry.EventIdTag, stripeEvent.Id);
+        Activity.Current?.SetTag(StripeTelemetry.EventTypeTag, eventType);
+
+        using var logScope = logger.BeginScope(new Dictionary<string, object>
+        {
+            ["StripeEventId"] = stripeEvent.Id,
+            ["StripeEventType"] = eventType,
+        });
 
         var httpContext = httpContextAccessor.HttpContext;
 
@@ -136,7 +151,7 @@ public static class CreateWebhookEndpoint
         {
             // Another delivery of this same event is currently being processed. Ask Stripe to retry
             // rather than risk a concurrent double-process.
-            return TypedResults.StatusCode(StatusCodes.Status409Conflict);
+            return Respond(TypedResults.StatusCode(StatusCodes.Status409Conflict), eventType, StripeTelemetry.WebhookBusy);
         }
 
         await using (locker)
@@ -149,7 +164,7 @@ public static class CreateWebhookEndpoint
             {
                 // Duplicate delivery of an event we have already processed successfully. Acknowledge
                 // so Stripe stops retrying, but do not run the handlers again.
-                return TypedResults.Ok();
+                return Respond(TypedResults.Ok(), eventType, StripeTelemetry.WebhookDuplicate);
             }
 
             try
@@ -182,11 +197,37 @@ public static class CreateWebhookEndpoint
                 // Discard any partial writes the handlers may have made so the retry starts clean.
                 await session.CancelAsync();
 
-                return TypedResults.Problem("Failed to process the Stripe webhook event.", instance: null, statusCode: 500);
+                return Respond(TypedResults.Problem("Failed to process the Stripe webhook event.", instance: null, statusCode: 500), eventType, StripeTelemetry.WebhookError);
             }
 
-            return TypedResults.Ok();
+            return Respond(TypedResults.Ok(), eventType, StripeTelemetry.WebhookOk);
         }
+    }
+
+    /// <summary>
+    /// Gets the bounded <see cref="StripeTelemetry.EventTypeTag"/> of a Stripe event type: the type when the webhook
+    /// handles it, otherwise <c>other</c>.
+    /// </summary>
+    /// <param name="eventType">The type of the Stripe event.</param>
+    /// <returns>The type, <c>other</c> for a type the webhook does not handle, or <c>unknown</c> when there is none.</returns>
+    internal static string GetEventTypeTag(string eventType)
+    {
+        if (string.IsNullOrEmpty(eventType))
+        {
+            return CrestAppsOrchardCoreTelemetry.Unknown;
+        }
+
+        return SupportedEvents.Contains(eventType, StringComparer.Ordinal)
+            ? eventType
+            : CrestAppsOrchardCoreTelemetry.Other;
+    }
+
+    // Records how a delivery was received, and returns the response to it.
+    private static IResult Respond(IResult result, string eventType, string outcome)
+    {
+        StripeTelemetry.RecordWebhookEvent(eventType ?? CrestAppsOrchardCoreTelemetry.Unknown, outcome);
+
+        return result;
     }
 
     // The provider webhook inbox is used when the Provider Webhook Inbox feature is on and the Stripe handler is
@@ -209,6 +250,8 @@ public static class CreateWebhookEndpoint
         global::YesSql.ISession session,
         ILogger logger)
     {
+        var eventType = GetEventTypeTag(stripeEvent.Type);
+
         // An event processed inline before the inbox was used is acknowledged without storing it again.
         var alreadyProcessed = await session
             .Query<ProcessedStripeWebhookEvent, ProcessedStripeWebhookEventIndex>(x => x.EventId == stripeEvent.Id)
@@ -216,7 +259,7 @@ public static class CreateWebhookEndpoint
 
         if (alreadyProcessed != null)
         {
-            return TypedResults.Ok();
+            return Respond(TypedResults.Ok(), eventType, StripeTelemetry.WebhookDuplicate);
         }
 
         ProviderWebhookInboxAcceptanceResult acceptance;
@@ -238,18 +281,18 @@ public static class CreateWebhookEndpoint
             // Nothing was stored, so nothing picks this up later: this is the one case where Stripe must redeliver.
             logger.LogError(exception, "The Stripe event '{EventId}' could not be stored in the provider webhook inbox.", stripeEvent.Id.SanitizeLogValue());
 
-            return TypedResults.StatusCode(StatusCodes.Status503ServiceUnavailable);
+            return Respond(TypedResults.StatusCode(StatusCodes.Status503ServiceUnavailable), eventType, StripeTelemetry.WebhookInboxError);
         }
 
         if (acceptance.Status == ProviderWebhookInboxAcceptanceStatus.Duplicate)
         {
-            return TypedResults.Ok();
+            return Respond(TypedResults.Ok(), eventType, StripeTelemetry.WebhookDuplicate);
         }
 
         if (acceptance.Status != ProviderWebhookInboxAcceptanceStatus.Accepted)
         {
             // Busy: another delivery of the same event holds the acceptance lock. Ask Stripe to retry.
-            return TypedResults.StatusCode(StatusCodes.Status409Conflict);
+            return Respond(TypedResults.StatusCode(StatusCodes.Status409Conflict), eventType, StripeTelemetry.WebhookBusy);
         }
 
         var messageId = acceptance.MessageId;
@@ -261,7 +304,7 @@ public static class CreateWebhookEndpoint
             scope => DispatchFromInboxAsync(scope, messageId),
             logger);
 
-        return TypedResults.Ok();
+        return Respond(TypedResults.Ok(), eventType, StripeTelemetry.WebhookQueued);
     }
 
     private static async Task DispatchFromInboxAsync(ShellScope scope, string messageId)
@@ -277,8 +320,27 @@ public static class CreateWebhookEndpoint
     }
 
     // Dispatches the event to every payment handler directly (rather than the swallow-and-log
-    // InvokeAsync helper) so that a handler failure surfaces to the caller and triggers a Stripe retry.
+    // InvokeAsync helper) so that a handler failure surfaces to the caller and triggers a Stripe retry. It is the
+    // one path of both the inline webhook and the inbox, so the handlers' time is measured here.
     internal static async Task DispatchAsync(Event stripeEvent, IEnumerable<IPaymentEvent> paymentEvents, CancellationToken cancellationToken = default)
+    {
+        using var telemetry = StripeTelemetry.StartWebhookDispatch(GetEventTypeTag(stripeEvent.Type), stripeEvent.Id);
+
+        try
+        {
+            await DispatchCoreAsync(stripeEvent, paymentEvents, cancellationToken);
+
+            telemetry.Succeed();
+        }
+        catch (Exception exception)
+        {
+            telemetry.Fail(exception);
+
+            throw;
+        }
+    }
+
+    private static async Task DispatchCoreAsync(Event stripeEvent, IEnumerable<IPaymentEvent> paymentEvents, CancellationToken cancellationToken)
     {
         switch (stripeEvent.Type)
         {

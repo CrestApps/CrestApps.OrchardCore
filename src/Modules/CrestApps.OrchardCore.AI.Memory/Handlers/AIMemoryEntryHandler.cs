@@ -2,6 +2,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Memory.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Shell.Scope;
 
@@ -64,7 +65,7 @@ internal sealed class AIMemoryEntryHandler : CatalogEntryHandlerBase<AIMemoryEnt
         var memories = _memories;
         var removedMemoryIds = _removedMemoryIds;
 
-        ShellScope.AddDeferredTask(scope => IndexAsync(scope, memories.Values, removedMemoryIds));
+        DeferredWork.Add("ai_memory_indexing", scope => IndexAsync(scope, memories.Values, removedMemoryIds));
     }
 
     private static async Task IndexAsync(ShellScope scope, IEnumerable<AIMemoryEntry> memories, IEnumerable<string> removedMemoryIds)

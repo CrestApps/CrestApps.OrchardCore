@@ -24,4 +24,12 @@ public sealed class ProviderWebhookInboxDelivery
     /// Gets or sets the normalized serialized payload.
     /// </summary>
     public string Payload { get; set; }
+
+    /// <summary>
+    /// Gets or sets the W3C <c>traceparent</c> of the request that delivered the payload, captured with
+    /// <c>TraceContextPropagation.Capture()</c> when the payload was received, or <see langword="null"/> to have the
+    /// inbox capture the trace current when the delivery is accepted. The dispatch that handles the delivery, inline or
+    /// on the retry pass, links back to it.
+    /// </summary>
+    public string TraceParent { get; set; }
 }

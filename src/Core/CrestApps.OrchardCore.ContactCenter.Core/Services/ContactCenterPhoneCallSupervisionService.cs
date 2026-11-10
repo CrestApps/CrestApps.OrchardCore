@@ -273,7 +273,7 @@ public sealed partial class ContactCenterPhoneCallSupervisionService : IContactC
 
         try
         {
-            result = await _commandExecutor.ExecuteAsync(commandCancellationToken =>
+            result = await _commandExecutor.ExecuteAsync(engagement.ProviderName, "MonitorEngage", commandCancellationToken =>
                 monitoring.EngageAsync(Request(engagement, mode), commandCancellationToken));
         }
         catch (TimeoutException)
@@ -350,7 +350,7 @@ public sealed partial class ContactCenterPhoneCallSupervisionService : IContactC
 
         try
         {
-            result = await _commandExecutor.ExecuteAsync(commandCancellationToken =>
+            result = await _commandExecutor.ExecuteAsync(engagement.ProviderName, "MonitorSwitchMode", commandCancellationToken =>
                 interventions.SwitchModeAsync(Request(engagement, mode), commandCancellationToken));
         }
         catch (TimeoutException)
@@ -405,7 +405,7 @@ public sealed partial class ContactCenterPhoneCallSupervisionService : IContactC
 
         try
         {
-            result = await _commandExecutor.ExecuteAsync(commandCancellationToken =>
+            result = await _commandExecutor.ExecuteAsync(engagement.ProviderName, "MonitorStop", commandCancellationToken =>
                 monitoring.StopAsync(Request(engagement, engagement.Mode), commandCancellationToken));
         }
         catch (TimeoutException)
@@ -479,7 +479,7 @@ public sealed partial class ContactCenterPhoneCallSupervisionService : IContactC
 
         try
         {
-            result = await _commandExecutor.ExecuteAsync(commandCancellationToken =>
+            result = await _commandExecutor.ExecuteAsync(engagement.ProviderName, "TakeOver", commandCancellationToken =>
                 phoneCalls.TakeOverPhoneCallAsync(Request(engagement, MonitorMode.Barge), commandCancellationToken));
         }
         catch (TimeoutException)

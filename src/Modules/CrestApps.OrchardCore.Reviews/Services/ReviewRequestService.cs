@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Customers.Core.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Reviews.Models;
@@ -174,5 +175,12 @@ public sealed class ReviewRequestService
 public sealed class ReviewRequestBackgroundTask : IBackgroundTask
 {
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-        => serviceProvider.GetRequiredService<ReviewRequestService>().SendDueAsync(cancellationToken);
+    {
+        return this.RunAsync(async run =>
+        {
+            var sent = await serviceProvider.GetRequiredService<ReviewRequestService>().SendDueAsync(cancellationToken);
+
+            run.AddItems(sent, "sent");
+        });
+    }
 }

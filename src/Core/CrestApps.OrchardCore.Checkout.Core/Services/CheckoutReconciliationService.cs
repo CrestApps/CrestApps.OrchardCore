@@ -1,5 +1,7 @@
+using CrestApps.OrchardCore.Checkout.Core.Telemetry;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Payments;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
@@ -60,20 +62,33 @@ public sealed class CheckoutReconciliationService : ICheckoutReconciliationServi
 
             if (provider == null)
             {
+                CheckoutTelemetry.RecordReconcileAttempt(CrestAppsOrchardCoreTelemetry.Unknown, CheckoutTelemetry.ReconcileNoProvider);
                 _logger.LogWarning("No checkout payment provider registered for key '{ProviderKey}'; attempt '{AttemptId}' cannot be verified and its obligation stays outstanding.", attempt.ProviderKey, attempt.ItemId);
 
                 continue;
             }
 
-            var verification = await provider.VerifyAsync(
-                new VerifyPaymentContext
-                {
-                    Session = session,
-                    Attempt = attempt,
-                },
-                cancellationToken);
+            var providerTag = CheckoutTelemetry.GetProviderTag(provider);
+            PaymentVerificationResult verification;
 
-            await ApplyVerificationAsync(attempt, verification, cancellationToken);
+            try
+            {
+                verification = await provider.VerifyAsync(
+                    new VerifyPaymentContext
+                    {
+                        Session = session,
+                        Attempt = attempt,
+                    },
+                    cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                CheckoutTelemetry.RecordReconcileAttempt(providerTag, CrestAppsOrchardCoreTelemetry.GetOutcome(exception));
+
+                throw;
+            }
+
+            CheckoutTelemetry.RecordReconcileAttempt(providerTag, await ApplyVerificationAsync(attempt, verification, cancellationToken));
         }
 
         RebuildPaymentsMetadata(session, attempts);
@@ -125,7 +140,8 @@ public sealed class CheckoutReconciliationService : ICheckoutReconciliationServi
         return result;
     }
 
-    private async Task ApplyVerificationAsync(
+    // Applies what the provider said to the attempt, and returns the reconciliation result for the telemetry.
+    private async Task<string> ApplyVerificationAsync(
         PaymentAttempt attempt,
         PaymentVerificationResult verification,
         CancellationToken cancellationToken)
@@ -143,7 +159,7 @@ public sealed class CheckoutReconciliationService : ICheckoutReconciliationServi
 
                     _logger.LogError("Provider '{ProviderKey}' reported attempt '{AttemptId}' as succeeded but the confirmation was rejected: {Reason}. The obligation stays outstanding.", attempt.ProviderKey, attempt.ItemId, rejection);
 
-                    break;
+                    return CheckoutTelemetry.ReconcileRejected;
                 }
 
                 attempt.State = PaymentAttemptState.Succeeded;
@@ -157,18 +173,18 @@ public sealed class CheckoutReconciliationService : ICheckoutReconciliationServi
                 attempt.FailureReason = null;
                 await _attemptStore.UpdateAsync(attempt, cancellationToken);
 
-                break;
+                return CheckoutTelemetry.ReconcileSettled;
 
             case PaymentStatus.Failed:
                 attempt.State = PaymentAttemptState.Failed;
                 await _attemptStore.UpdateAsync(attempt, cancellationToken);
 
-                break;
+                return CheckoutTelemetry.ReconcileFailed;
 
             default:
                 // The provider does not yet have an authoritative answer; leave the attempt pending so a
                 // later reconciliation (or webhook) can settle it. The obligation stays outstanding.
-                break;
+                return CheckoutTelemetry.ReconcileStillPending;
         }
     }
 

@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell.Scope;
@@ -73,7 +74,7 @@ public sealed class ChatInteractionHandler : CatalogEntryHandlerBase<ChatInterac
         var interactions = _interactions;
         var removedTranscripts = _removedInteractions;
 
-        ShellScope.AddDeferredTask(scope => IndexAsync(scope, interactions.Values, removedTranscripts.Values));
+        DeferredWork.Add("ai_interaction_document_indexing", scope => IndexAsync(scope, interactions.Values, removedTranscripts.Values));
     }
 
     private static async Task IndexAsync(ShellScope scope, IEnumerable<ChatInteraction> interactions, IEnumerable<ChatInteraction> removedInteractions)

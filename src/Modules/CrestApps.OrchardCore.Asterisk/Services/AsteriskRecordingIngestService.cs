@@ -1,8 +1,10 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Telemetry;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 
@@ -66,15 +68,24 @@ internal sealed class AsteriskRecordingIngestService : IAsteriskRecordingIngestS
         {
             cancellationToken.ThrowIfCancellationRequested();
 
+            using var telemetry = TelephonyTelemetry.StartRecordingIngest(AsteriskConstants.ProviderTechnicalName);
+
+            telemetry.SetSpanTag("crestapps.telephony.recording.id", job.RecordingName);
+
             try
             {
                 if (await TryIngestAsync(job, nowUtc, cancellationToken))
                 {
                     ingested++;
+                    TelephonyTelemetry.RecordRecordingIngestLag(AsteriskConstants.ProviderTechnicalName, job.CreatedUtc, _clock.UtcNow);
                 }
+
+                CompleteIngestTelemetry(telemetry, job.Status);
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
             {
+                telemetry.Fail(ex);
+
                 throw;
             }
             catch (Exception ex)
@@ -84,11 +95,46 @@ internal sealed class AsteriskRecordingIngestService : IAsteriskRecordingIngestS
                     "An unexpected error occurred while ingesting recording {RecordingName}.",
                     job.RecordingName.SanitizeLogValue());
 
+                telemetry.Fail(ex);
+
                 await RecordFailureAsync(job, nowUtc, "An unexpected error occurred during ingestion.", cancellationToken);
+
+                telemetry.AddMetricTag(
+                    CrestAppsOrchardCoreTelemetry.ResultTag,
+                    job.Status == RecordingIngestJobStatus.DeadLettered ? TelephonyTelemetry.IngestDeadLettered : CrestAppsOrchardCoreTelemetry.OutcomeError);
             }
         }
 
+        // The age of the oldest job found due: read from the jobs this run loaded, never a query of its own.
+        TelephonyTelemetry.RecordRecordingIngestBacklog(
+            AsteriskConstants.ProviderTechnicalName,
+            dueJobs.Count > 0 ? dueJobs.Min(job => job.CreatedUtc) : null,
+            nowUtc);
+
         return ingested;
+    }
+
+    // What became of one attempt, read from the job it left: stored, cancelled, dead-lettered, or due again later.
+    private static void CompleteIngestTelemetry(TelemetryScope telemetry, RecordingIngestJobStatus status)
+    {
+        var result = status switch
+        {
+            RecordingIngestJobStatus.Completed => TelephonyTelemetry.IngestStored,
+            RecordingIngestJobStatus.Cancelled => TelephonyTelemetry.IngestCancelled,
+            RecordingIngestJobStatus.DeadLettered => TelephonyTelemetry.IngestDeadLettered,
+            _ => TelephonyTelemetry.IngestRetry,
+        };
+
+        telemetry.AddMetricTag(CrestAppsOrchardCoreTelemetry.ResultTag, result);
+
+        if (result == TelephonyTelemetry.IngestDeadLettered)
+        {
+            telemetry.Fail();
+
+            return;
+        }
+
+        telemetry.Succeed();
     }
 
     private async Task<bool> TryIngestAsync(AsteriskRecordingIngestJob job, DateTime nowUtc, CancellationToken cancellationToken)

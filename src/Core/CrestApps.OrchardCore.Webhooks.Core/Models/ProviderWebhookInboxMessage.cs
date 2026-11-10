@@ -46,6 +46,12 @@ public sealed class ProviderWebhookInboxMessage : CatalogItem, IModifiedUtcAware
     public string Payload { get; set; }
 
     /// <summary>
+    /// Gets or sets the W3C <c>traceparent</c> of the request that delivered the payload, so the dispatch that runs it
+    /// later, inline or on the retry pass, links back to that request's trace.
+    /// </summary>
+    public string TraceParent { get; set; }
+
+    /// <summary>
     /// Gets or sets the durable processing status.
     /// </summary>
     public ProviderWebhookInboxStatus Status { get; set; }

@@ -1,4 +1,6 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Marketplace.Models;
+using CrestApps.OrchardCore.Marketplace.Telemetry;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Payments;
@@ -292,7 +294,21 @@ public sealed class MarketplaceService
             // failed is answered with the same transfer instead of paying the vendor twice.
             payout.IdempotencyKey = MarketplaceLedger.GetPayoutKey(vendor.ItemId, group.Key.OrderId, payout.EarningIds, group.Max(earning => earning.RefusedPayouts));
 
-            var (transferId, failure) = await provider.PayAsync(vendor, order, amount, group.Key.Currency, payout.IdempotencyKey, cancellationToken);
+            string transferId;
+            string failure;
+
+            try
+            {
+                (transferId, failure) = await provider.PayAsync(vendor, order, amount, group.Key.Currency, payout.IdempotencyKey, cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                MarketplaceTelemetry.RecordPayout(provider.Name, CrestAppsOrchardCoreTelemetry.GetOutcome(exception));
+
+                throw;
+            }
+
+            MarketplaceTelemetry.RecordPayout(provider.Name, failure is null ? MarketplaceTelemetry.OutcomePaid : MarketplaceTelemetry.OutcomeFailed);
 
             payout.TransferId = transferId;
             payout.Failure = failure;

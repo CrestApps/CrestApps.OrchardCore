@@ -9,6 +9,8 @@ using CrestApps.OrchardCore.Reports.Designer.ViewModels;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using OrchardCore.Modules;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
@@ -40,6 +42,7 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
     private readonly UserManager<IUser> _userManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IClock _clock;
+    private readonly ILogger _logger;
     private readonly IStringLocalizer S;
 
     /// <summary>
@@ -55,6 +58,7 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
     /// that name no owner.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="logger">The logger, or <see langword="null"/> to log nothing.</param>
     public ReportDesignsRecipeStep(
         ICatalog<ReportDesign> designs,
         ICatalog<ReportView> views,
@@ -63,7 +67,8 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
         UserManager<IUser> userManager,
         IHttpContextAccessor httpContextAccessor,
         IClock clock,
-        IStringLocalizer<ReportDesignsRecipeStep> stringLocalizer)
+        IStringLocalizer<ReportDesignsRecipeStep> stringLocalizer,
+        ILogger<ReportDesignsRecipeStep> logger = null)
         : base(Name)
     {
         _designs = designs;
@@ -74,12 +79,15 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
         _httpContextAccessor = httpContextAccessor;
         _clock = clock;
         S = stringLocalizer;
+        _logger = logger ?? NullLogger<ReportDesignsRecipeStep>.Instance;
     }
 
     /// <inheritdoc/>
     protected override async Task HandleAsync(RecipeExecutionContext context)
     {
-        await ImportGroupsAsync(context);
+        var groupCount = await ImportGroupsAsync(context);
+        var viewCount = 0;
+        var designCount = 0;
 
         foreach (var node in context.Step["Views"]?.AsArray() ?? [])
         {
@@ -101,6 +109,8 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
             {
                 continue;
             }
+
+            viewCount++;
 
             // A replaced view's stored result is dropped when it would no longer match, as saving it in the builder does.
             if (existing is not null &&
@@ -127,11 +137,17 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
             design.SharedRoles ??= [];
             design.OwnerId = await ResolveOwnerAsync(node, design.OwnerId);
             design.GroupId = await ResolveGroupAsync(node, design);
-            await SaveAsync(_designs, design, design.DisplayText, context);
+
+            if (await SaveAsync(_designs, design, design.DisplayText, context))
+            {
+                designCount++;
+            }
         }
+
+        ReportsModuleLog.RecipeStepImported(_logger, designCount, viewCount, groupCount);
     }
 
-    private async Task ImportGroupsAsync(RecipeExecutionContext context)
+    private async Task<int> ImportGroupsAsync(RecipeExecutionContext context)
     {
         var imported = new List<ReportGroup>();
 
@@ -160,7 +176,7 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
 
         if (imported.Count == 0)
         {
-            return;
+            return 0;
         }
 
         // A parent can come later in the step, so parents are checked once every group is in. A group whose parent is
@@ -175,6 +191,8 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
                 await _groupService.ImportAsync(group);
             }
         }
+
+        return imported.Count;
     }
 
     // The report's group: the one its GroupId names when it exists, otherwise the group its Group path (or the Category

@@ -55,6 +55,9 @@ public sealed class EmailReportTask : ReportTaskActivity<EmailReportTask>
     /// <inheritdoc/>
     public override LocalizedString DisplayText => S["Email Report"];
 
+    /// <inheritdoc/>
+    protected override string TelemetryName => "email";
+
     /// <summary>
     /// Gets or sets the recipients, separated by commas, with Liquid.
     /// </summary>
@@ -134,7 +137,7 @@ public sealed class EmailReportTask : ReportTaskActivity<EmailReportTask>
         {
             _logger.LogWarning("The Email Report task of workflow '{WorkflowId}' needs a report and at least one recipient.", workflowContext.WorkflowId);
 
-            return Outcome("Failed");
+            return Finish("Failed");
         }
 
         var run = await _reports.RunAsync(design, await _reports.GetFilterValuesAsync(Filters, workflowContext));
@@ -143,7 +146,7 @@ public sealed class EmailReportTask : ReportTaskActivity<EmailReportTask>
         {
             _logger.LogWarning("The Email Report task of workflow '{WorkflowId}' could not run report '{ReportId}'.", workflowContext.WorkflowId, design.ItemId);
 
-            return Outcome("Failed");
+            return Finish("Failed");
         }
 
         var body = string.IsNullOrWhiteSpace(Body)
@@ -176,7 +179,7 @@ public sealed class EmailReportTask : ReportTaskActivity<EmailReportTask>
                 {
                     _logger.LogWarning("The Email Report task of workflow '{WorkflowId}' has an unknown attachment format.", workflowContext.WorkflowId);
 
-                    return Outcome("Failed");
+                    return Finish("Failed");
                 }
 
                 attachment = new MemoryStream(file.Content);
@@ -197,7 +200,7 @@ public sealed class EmailReportTask : ReportTaskActivity<EmailReportTask>
                     design.ItemId,
                     string.Join("; ", result.Errors.Select(error => error.Message)));
 
-                return Outcome("Failed");
+                return Finish("Failed");
             }
         }
         finally
@@ -207,6 +210,6 @@ public sealed class EmailReportTask : ReportTaskActivity<EmailReportTask>
 
         workflowContext.LastResult = design.ItemId;
 
-        return Outcome("Done");
+        return Finish("Done");
     }
 }

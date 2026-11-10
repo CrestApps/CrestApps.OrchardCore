@@ -55,6 +55,8 @@ public static class ReportIndexAggregator
 
         if (statement is null)
         {
+            ReportTelemetry.RecordIndexAggregate(typeof(TIndex), "unbuildable");
+
             return null;
         }
 
@@ -82,11 +84,15 @@ public static class ReportIndexAggregator
         {
             if (rows.Count >= Math.Max(1, query.MaxGroups))
             {
+                ReportTelemetry.RecordIndexAggregate(typeof(TIndex), "too_many_groups");
+
                 return null;
             }
 
             rows.Add(ReadRow(reader, statement));
         }
+
+        ReportTelemetry.RecordIndexAggregate(typeof(TIndex), "built");
 
         return rows;
     }

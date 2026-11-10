@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Telemetry;
 
 namespace CrestApps.OrchardCore.Asterisk.Services;
 
@@ -17,5 +18,8 @@ internal sealed class AsteriskSoftPhoneCredentialRevoker : ISoftPhoneCredentialR
         string userId,
         string reason,
         CancellationToken cancellationToken = default)
-        => _credentialIssuer.RevokeUserAsync(userId, reason, cancellationToken);
+        => TelephonyTelemetry.MeasureSoftPhoneCredentialAsync(
+            ProviderName,
+            TelephonyTelemetry.CredentialRevoke,
+            () => _credentialIssuer.RevokeUserAsync(userId, reason, cancellationToken));
 }

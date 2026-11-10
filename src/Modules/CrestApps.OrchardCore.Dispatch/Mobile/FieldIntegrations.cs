@@ -2,6 +2,7 @@ using System.Security.Claims;
 using CrestApps.OrchardCore.Assets;
 using CrestApps.OrchardCore.Assets.Core.Services;
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Dispatch.Controllers;
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
@@ -196,5 +197,5 @@ internal sealed class AssetsFieldAssetSource : IFieldAssetSource
 internal sealed class FieldRetentionBackgroundTask : IBackgroundTask
 {
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-        => serviceProvider.GetRequiredService<IWorkerLocationService>().PruneAsync(cancellationToken);
+        => this.RunAsync(async run => run.AddItems(await serviceProvider.GetRequiredService<IWorkerLocationService>().PruneAsync(cancellationToken), "removed"));
 }

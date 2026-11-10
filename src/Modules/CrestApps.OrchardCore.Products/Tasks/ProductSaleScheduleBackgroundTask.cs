@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Products.Indexes;
 using CrestApps.OrchardCore.Products.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,7 +28,10 @@ public sealed class ProductSaleScheduleBackgroundTask : IBackgroundTask
 {
     private DateTime? _checkedUntilUtc;
 
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => UpdateListingsAsync(serviceProvider, run, cancellationToken));
+
+    private async Task UpdateListingsAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var now = serviceProvider.GetRequiredService<IClock>().UtcNow;
         var from = _checkedUntilUtc ?? now.AddDays(-1);
@@ -56,6 +60,8 @@ public sealed class ProductSaleScheduleBackgroundTask : IBackgroundTask
             {
                 logger.LogInformation("Updated the listings of {Count} products whose sale started or ended.", ids.Count);
             }
+
+            run.AddItems(ids.Count, "indexed");
         }
 
         _checkedUntilUtc = now;

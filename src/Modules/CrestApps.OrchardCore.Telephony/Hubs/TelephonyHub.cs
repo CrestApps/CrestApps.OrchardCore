@@ -783,7 +783,7 @@ public sealed partial class TelephonyHub : Hub<ITelephonyClient>
 
             try
             {
-                result = await commandExecutor.ExecuteAsync(
+                result = await commandExecutor.ExecuteAsync(providerName: null, command: actionName,
                     commandCancellationToken => operation(service, commandCancellationToken));
 
                 if (result?.Call is not null)

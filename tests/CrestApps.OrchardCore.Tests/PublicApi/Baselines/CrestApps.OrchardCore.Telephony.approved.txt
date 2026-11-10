@@ -370,6 +370,7 @@ namespace CrestApps.OrchardCore.Telephony.Services
     {
         public DefaultTelephonyCommandExecutor(Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Telephony.TelephonyCommandOptions> options, Microsoft.Extensions.Hosting.IHostApplicationLifetime hostApplicationLifetime) { }
         public System.Threading.Tasks.Task<TResult> ExecuteAsync<TResult>(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<TResult>> operation) { }
+        public System.Threading.Tasks.Task<TResult> ExecuteAsync<TResult>(string providerName, string command, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<TResult>> operation) { }
     }
     public sealed class DefaultTelephonyInteractionStore : CrestApps.OrchardCore.Telephony.ITelephonyInteractionStore
     {

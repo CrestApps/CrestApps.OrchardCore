@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
 using CrestApps.OrchardCore.Core.Http;
+using CrestApps.OrchardCore.DataConnectors.Telemetry;
+using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.DataConnectors.Http;
 
@@ -38,7 +40,17 @@ internal static class DataConnectorNetwork
     /// Resolves a host and returns the addresses a connector may connect to.
     /// </summary>
     /// <exception cref="DataConnectorException">Every address of the host is on the site's own network.</exception>
-    public static async Task<IPAddress[]> ResolveAllowedAsync(string host, DataConnectorNetworkOptions options, CancellationToken cancellationToken)
+    public static Task<IPAddress[]> ResolveAllowedAsync(string host, DataConnectorNetworkOptions options, CancellationToken cancellationToken)
+    {
+        return ResolveAllowedAsync(host, options, logger: null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Resolves a host and returns the addresses a connector may connect to. A refused host is counted on
+    /// <c>crestapps.dataconnector.network.blocked</c> and logged as a warning, without the host.
+    /// </summary>
+    /// <exception cref="DataConnectorException">Every address of the host is on the site's own network.</exception>
+    public static async Task<IPAddress[]> ResolveAllowedAsync(string host, DataConnectorNetworkOptions options, ILogger logger, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrEmpty(host);
 
@@ -65,6 +77,10 @@ internal static class DataConnectorNetwork
 
         if (allowed.Length == 0)
         {
+            // A connection that tries to reach the site's own network can be an attempt to probe internal services.
+            DataConnectorsTelemetry.Add(DataConnectorsTelemetry.NetworkBlocked);
+            logger?.NetworkBlocked();
+
             throw new DataConnectorException($"The host '{trimmed}' is on the site's own network. To reach it, add it to CrestApps:DataConnectors:Network:AllowedHosts or set AllowPrivateNetworks in the site's configuration.");
         }
 
@@ -75,22 +91,26 @@ internal static class DataConnectorNetwork
     /// Returns the handler HTTP-based connectors send requests through: no automatic redirects, and no connections to
     /// the site's own network unless the configuration allows them.
     /// </summary>
-    public static SocketsHttpHandler CreateHandler(DataConnectorNetworkOptions options)
+    public static SocketsHttpHandler CreateHandler(DataConnectorNetworkOptions options, ILogger logger = null)
         => new()
         {
             AllowAutoRedirect = false,
             AutomaticDecompression = DecompressionMethods.All,
             PooledConnectionLifetime = TimeSpan.FromMinutes(5),
-            ConnectCallback = (context, cancellationToken) => ConnectAsync(context, options, cancellationToken),
+            ConnectCallback = (context, cancellationToken) => ConnectAsync(context, options, logger, cancellationToken),
         };
 
-    private static async ValueTask<Stream> ConnectAsync(SocketsHttpConnectionContext context, DataConnectorNetworkOptions options, CancellationToken cancellationToken)
+    private static async ValueTask<Stream> ConnectAsync(
+        SocketsHttpConnectionContext context,
+        DataConnectorNetworkOptions options,
+        ILogger logger,
+        CancellationToken cancellationToken)
     {
         IPAddress[] addresses;
 
         try
         {
-            addresses = await ResolveAllowedAsync(context.DnsEndPoint.Host, options, cancellationToken);
+            addresses = await ResolveAllowedAsync(context.DnsEndPoint.Host, options, logger, cancellationToken);
         }
         catch (DataConnectorException exception)
         {

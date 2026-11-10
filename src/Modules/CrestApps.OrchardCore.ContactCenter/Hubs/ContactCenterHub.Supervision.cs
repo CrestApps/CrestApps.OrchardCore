@@ -1,7 +1,9 @@
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.SignalR.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -32,6 +34,8 @@ public sealed partial class ContactCenterHub
                     ? await services.PhoneCalls.SwitchModeAsync(interactionId, userId, Context.User, mode, HubConnectionWork.MustComplete)
                     : await services.MonitoringService.SwitchModeAsync(interactionId, userId, Context.User, mode, HubConnectionWork.MustComplete));
         });
+
+        ContactCenterDiagnostics.RecordSupervision(mode.ToString(), GetSupervisionResult(result));
 
         return result;
     }
@@ -73,8 +77,19 @@ public sealed partial class ContactCenterHub
                 : await services.MonitoringService.StopEngagementAsync(interactionId, userId, Context.User, engagement.Mode, HubConnectionWork.MustComplete);
         });
 
+        ContactCenterDiagnostics.RecordSupervision("stop", GetSupervisionResult(result));
+
         return result;
     }
+
+    private static string GetSupervisionResult(SupervisorEngagementResult result)
+        => result is null
+            ? CrestAppsOrchardCoreTelemetry.Unknown
+            : result.Succeeded
+                ? CrestAppsOrchardCoreTelemetry.OutcomeOk
+                : result.OutcomeUnknown
+                    ? CrestAppsOrchardCoreTelemetry.Unknown
+                    : CrestAppsOrchardCoreTelemetry.OutcomeError;
 
     // Null when the caller may act on their engagement on this interaction; otherwise the refusal.
     private async Task<SupervisorEngagementResult> EnsureSupervisedAsync(ContactCenterSupervisionHubScopeContext services, string interactionId)

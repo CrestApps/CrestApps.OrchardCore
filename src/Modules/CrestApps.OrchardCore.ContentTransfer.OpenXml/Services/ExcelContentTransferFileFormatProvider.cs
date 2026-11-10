@@ -1,3 +1,6 @@
+using System.Diagnostics;
+using CrestApps.OrchardCore.ContentTransfer.Telemetry;
+using CrestApps.OrchardCore.Diagnostics;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
@@ -19,6 +22,15 @@ public sealed class ExcelContentTransferFileFormatProvider : IContentTransferFil
     public IContentTransferFileWriter CreateWriter(Stream stream, string sheetName)
         => new ExcelFileWriter(stream, sheetName);
 
+    private static void RecordOperation(string operation, long startTimestamp)
+    {
+        ContentTransferDiagnostics.Record(ContentTransferDiagnostics.FileOperationDuration, Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds, new TagList
+        {
+            { CrestAppsOrchardCoreTelemetry.FormatTag, "xlsx" },
+            { CrestAppsOrchardCoreTelemetry.OperationTag, operation },
+        });
+    }
+
     /// <summary>
     /// Reads the first worksheet with <see cref="OpenXmlReader"/> so only one row is held in memory at a time. The row
     /// count is taken in one pass when the reader opens and every <see cref="ReadRows"/> call streams the sheet again.
@@ -35,6 +47,9 @@ public sealed class ExcelContentTransferFileFormatProvider : IContentTransferFil
 
         public ExcelFileReader(Stream stream)
         {
+            // Opening reads the shared strings and counts the rows of the sheet before the first row is imported.
+            var startTimestamp = Stopwatch.GetTimestamp();
+
             _document = SpreadsheetDocument.Open(stream, false);
             var workbookPart = _document.WorkbookPart
                 ?? throw new InvalidOperationException("Unable to read the uploaded file.");
@@ -73,6 +88,7 @@ public sealed class ExcelContentTransferFileFormatProvider : IContentTransferFil
 
             _columnNames = columnNames;
             _rowCount = Math.Max(CountRows(_worksheetPart) - 1, 0);
+            RecordOperation("open", startTimestamp);
         }
 
         public IReadOnlyList<string> GetColumnNames() => _columnNames;
@@ -304,12 +320,19 @@ public sealed class ExcelContentTransferFileFormatProvider : IContentTransferFil
 
         public void Flush()
         {
+            var startTimestamp = Stopwatch.GetTimestamp();
+
             _workbookPart.Workbook.Save();
+            RecordOperation("flush", startTimestamp);
         }
 
         public void Dispose()
         {
+            // The workbook is written to the stream when the document closes.
+            var startTimestamp = Stopwatch.GetTimestamp();
+
             _document.Dispose();
+            RecordOperation("close", startTimestamp);
         }
 
         private static string GetCellReference(uint columnIndex, uint rowIndex)

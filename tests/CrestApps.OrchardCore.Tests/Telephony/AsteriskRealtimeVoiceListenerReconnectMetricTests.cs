@@ -75,7 +75,7 @@ public sealed class AsteriskRealtimeVoiceListenerReconnectMetricTests
                 InstrumentPublished = (instrument, listener) =>
                 {
                     if (instrument.Meter.Name == AsteriskDiagnostics.MeterName &&
-                        instrument.Name == "asterisk.realtime.reconnect_attempted")
+                        instrument.Name == "crestapps.asterisk.realtime.reconnect_attempts")
                     {
                         listener.EnableMeasurementEvents(instrument);
                     }

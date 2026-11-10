@@ -381,6 +381,7 @@ html[data-manual='technical'] .navbar__link--active {
     margin-left: auto;
 }
 
+.sidebar-icon--activity { --sidebar-icon: url('/img/icons/activity.svg'); }
 .sidebar-icon--book-a { --sidebar-icon: url('/img/icons/book-a.svg'); }
 .sidebar-icon--calendar-days { --sidebar-icon: url('/img/icons/calendar-days.svg'); }
 .sidebar-icon--boxes { --sidebar-icon: url('/img/icons/boxes.svg'); }

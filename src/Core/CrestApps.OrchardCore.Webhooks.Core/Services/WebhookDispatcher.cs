@@ -1,5 +1,7 @@
 using System.Security.Cryptography;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Webhooks.Core.Models;
+using CrestApps.OrchardCore.Webhooks.Core.Telemetry;
 using CrestApps.OrchardCore.Webhooks.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
@@ -135,15 +137,18 @@ public sealed class WebhookDispatcher
         {
             // The webhook was deleted; nothing is sent to where it pointed.
             Fail(delivery, statusCode: null, "The webhook was deleted.");
+            RecordRefused("deleted");
         }
         else if (!subscription.IsEnabled)
         {
             Fail(delivery, statusCode: null, "The webhook was turned off.");
+            RecordRefused("disabled");
         }
         else if (secret is null)
         {
             // Unsigned, a receiver can't trust it; signed with the wrong key, it would refuse it anyway.
             Fail(delivery, statusCode: null, "The webhook's signing secret can't be read. Give it a new secret, then send it again.");
+            RecordRefused("no_secret");
         }
         else
         {
@@ -157,10 +162,46 @@ public sealed class WebhookDispatcher
             }, cancellationToken);
 
             Record(delivery, result, now);
+            RecordAttempt(delivery, result);
         }
 
         await _deliveries.UpdateAsync(delivery, cancellationToken);
     }
+
+    // Each attempt is counted once, by what it came to; one that failed for good is also logged.
+    private void RecordAttempt(WebhookDelivery delivery, WebhookSendResult result)
+    {
+        if (result.Succeeded)
+        {
+            WebhookTelemetry.RecordDelivery(WebhookTelemetry.DeliveryOk, "none", result.StatusCode);
+
+            return;
+        }
+
+        var reason = GetFailureReason(result);
+
+        if (delivery.Status == WebhookDeliveryStatus.Failed)
+        {
+            var finalReason = result.EgressRefused ? "egress_refused" : "exhausted";
+
+            WebhookTelemetry.RecordDelivery(WebhookTelemetry.DeliveryError, finalReason, result.StatusCode);
+            WebhookLog.DeliveryFailed(_logger, delivery.ItemId, delivery.EventName, delivery.Attempts, finalReason);
+
+            return;
+        }
+
+        WebhookTelemetry.RecordDelivery(WebhookTelemetry.DeliveryRetry, reason, result.StatusCode);
+    }
+
+    private static string GetFailureReason(WebhookSendResult result)
+        => result.EgressRefused
+            ? "egress_refused"
+            : result.StatusCode is null
+                ? "network"
+                : "status_" + ExternalCallTelemetry.GetStatusClass(result.StatusCode);
+
+    private static void RecordRefused(string reason)
+        => WebhookTelemetry.RecordDelivery(WebhookTelemetry.DeliveryError, reason, statusCode: null);
 
     /// <summary>
     /// Sends a delivery again from the start, as the administrator asked.

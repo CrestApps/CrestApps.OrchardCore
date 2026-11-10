@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Models;
 using Microsoft.Extensions.Options;
@@ -97,6 +98,7 @@ public sealed class SmsKeywordInboundHandler : IMessagingInboundHandler
             case SmsKeyword.Stop:
                 conversation.Status = ConversationStatus.Closed;
                 await SetOptedOutAsync(conversation, true, cancellationToken);
+                MessagingTelemetry.RecordOptOut(OmnichannelConstants.Channels.Sms, MessagingTelemetry.OptOutSources.Keyword, optedOut: true);
 
                 break;
 
@@ -117,6 +119,7 @@ public sealed class SmsKeywordInboundHandler : IMessagingInboundHandler
                 // the thread closed would mean their next message arrives with no history attached.
                 conversation.Status = ConversationStatus.Open;
                 await SetOptedOutAsync(conversation, false, cancellationToken);
+                MessagingTelemetry.RecordOptOut(OmnichannelConstants.Channels.Sms, MessagingTelemetry.OptOutSources.Keyword, optedOut: false);
 
                 break;
         }

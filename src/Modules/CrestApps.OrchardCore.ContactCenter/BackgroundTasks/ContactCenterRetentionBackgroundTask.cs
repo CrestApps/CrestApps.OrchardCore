@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -18,7 +19,10 @@ namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 public sealed class ContactCenterRetentionBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => DoWorkAsync(serviceProvider, run, cancellationToken));
+
+    private static async Task DoWorkAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var retentionService = serviceProvider.GetRequiredService<IContactCenterRetentionService>();
         var logger = serviceProvider.GetRequiredService<ILogger<ContactCenterRetentionBackgroundTask>>();
@@ -27,8 +31,12 @@ public sealed class ContactCenterRetentionBackgroundTask : IBackgroundTask
         {
             var report = await retentionService.PurgeAsync(cancellationToken);
 
+            run.AddItems(report.TotalPurged, "purged");
+
             if (report.WorkRemains)
             {
+                run.BudgetExceeded();
+
                 // Without this the cycle would look successful while the database kept growing, which is the
                 // failure mode a silently truncating batch cap produces.
                 var starvedEntities = string.Join(
@@ -43,6 +51,7 @@ public sealed class ContactCenterRetentionBackgroundTask : IBackgroundTask
         }
         catch (Exception ex)
         {
+            run.ReportError(ex);
             logger.LogError(ex, "An error occurred while purging expired Contact Center records.");
         }
     }

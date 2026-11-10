@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Customers.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -24,7 +25,10 @@ public sealed class CustomerRetentionBackgroundTask : IBackgroundTask
 {
     internal const int BatchSize = 500;
 
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => ApplyRetentionAsync(serviceProvider, run, cancellationToken));
+
+    private static async Task ApplyRetentionAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var logger = serviceProvider.GetRequiredService<ILogger<CustomerRetentionBackgroundTask>>();
 
@@ -42,6 +46,9 @@ public sealed class CustomerRetentionBackgroundTask : IBackgroundTask
 
             var orders = await AnonymizeGuestRecordsAsync(settings, now, serviceProvider.GetServices<IGuestRetentionHandler>(), cancellationToken);
 
+            run.AddItems(guests, "guests_erased");
+            run.AddItems(orders, "orders_anonymized");
+
             if ((guests > 0 || orders > 0) && logger.IsEnabled(LogLevel.Information))
             {
                 logger.LogInformation("Customer data retention erased {GuestCount} inactive guests and anonymized {OrderCount} guest orders.", guests, orders);
@@ -49,6 +56,7 @@ public sealed class CustomerRetentionBackgroundTask : IBackgroundTask
         }
         catch (Exception ex)
         {
+            run.ReportError(ex);
             logger.LogError(ex, "An error occurred while applying the customer data retention windows.");
         }
     }

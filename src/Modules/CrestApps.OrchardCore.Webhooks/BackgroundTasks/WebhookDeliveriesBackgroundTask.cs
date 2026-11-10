@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Webhooks.Core;
 using CrestApps.OrchardCore.Webhooks.Core.Models;
 using CrestApps.OrchardCore.Webhooks.Core.Services;
@@ -23,13 +24,17 @@ public sealed class WebhookDeliveriesBackgroundTask : IBackgroundTask
     private const int BatchSize = 20;
 
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => SendDueAsync(serviceProvider, run, cancellationToken));
+
+    private static async Task SendDueAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var now = serviceProvider.GetRequiredService<IClock>().UtcNow;
         var store = serviceProvider.GetRequiredService<IWebhookDeliveryStore>();
         var dispatcher = serviceProvider.GetRequiredService<WebhookDispatcher>();
         var session = serviceProvider.GetRequiredService<global::YesSql.ISession>();
         var due = (await store.ListDueAsync(now, BatchSize, cancellationToken)).Select(delivery => delivery.ItemId).ToArray();
+        var deleted = 0;
 
         // Each is saved as soon as it's sent, so a run that stops half way, or the next one, never sends it again.
         // A save detaches what was loaded before it, so each is loaded afresh.
@@ -48,7 +53,14 @@ public sealed class WebhookDeliveriesBackgroundTask : IBackgroundTask
 
         if (retention.DeliveryRetention > TimeSpan.Zero)
         {
-            await store.DeleteOlderThanAsync(now - retention.DeliveryRetention, BatchSize, [.. retention.KeptEventNames], cancellationToken);
+            deleted = await store.DeleteOlderThanAsync(now - retention.DeliveryRetention, BatchSize, [.. retention.KeptEventNames], cancellationToken);
+
+            run.AddItems(deleted, "purged");
+        }
+
+        if (due.Length == 0 && deleted == 0)
+        {
+            run.Skip();
         }
     }
 }

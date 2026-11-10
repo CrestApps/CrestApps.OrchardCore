@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using OrchardCore.Modules;
@@ -146,7 +148,7 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
 
         try
         {
-            providerResult = await _commandExecutor.ExecuteAsync(commandCancellationToken =>
+            providerResult = await _commandExecutor.ExecuteAsync(interaction.ProviderName, "SetRecordingState", commandCancellationToken =>
                 recordingProvider.SetRecordingStateAsync(new ContactCenterVoiceRecordingRequest
                 {
                     InteractionId = interaction.ItemId,
@@ -158,16 +160,28 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
         catch (TelephonyCommandNotAdmittedException)
         {
             // Refused before the provider was contacted: the recording state is definitely unchanged.
+            ContactCenterDiagnostics.RecordRecording(state.ToString(), "refused");
+
             return RecordingCommandResult.Failure("The recording command was refused because the application is stopping.");
         }
         catch (TimeoutException)
         {
+            ContactCenterDiagnostics.RecordRecording(state.ToString(), CrestAppsOrchardCoreTelemetry.Unknown);
+
             return RecordingCommandResult.Unknown("The recording command exceeded the server-owned timeout; its provider outcome is unknown.");
         }
         catch (OperationCanceledException)
         {
+            ContactCenterDiagnostics.RecordRecording(state.ToString(), CrestAppsOrchardCoreTelemetry.Unknown);
+
             return RecordingCommandResult.Unknown("The recording command was interrupted after dispatch; its provider outcome is unknown.");
         }
+
+        ContactCenterDiagnostics.RecordRecording(
+            state.ToString(),
+            providerResult is null || (!providerResult.Succeeded && !providerResult.OutcomeUnknown)
+                ? CrestAppsOrchardCoreTelemetry.OutcomeError
+                : providerResult.OutcomeUnknown ? CrestAppsOrchardCoreTelemetry.Unknown : CrestAppsOrchardCoreTelemetry.OutcomeOk);
 
         if (providerResult is null || (!providerResult.Succeeded && !providerResult.OutcomeUnknown))
         {

@@ -1,8 +1,10 @@
+using System.Diagnostics;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Consent;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.DncRegistry;
 using CrestApps.OrchardCore.Omnichannel.Core;
@@ -84,6 +86,16 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(context.Profile);
         ArgumentNullException.ThrowIfNull(context.Activity);
+
+        var result = await EvaluateCoreAsync(context, cancellationToken);
+
+        ContactCenterDiagnostics.RecordDialerEligibility(result.IsEligible, result.IsEligible ? null : result.Reason.ToString());
+
+        return result;
+    }
+
+    private async Task<DialerEligibilityResult> EvaluateCoreAsync(DialerEligibilityContext context, CancellationToken cancellationToken)
+    {
 
         var profile = context.Profile;
         var activity = context.Activity;
@@ -299,17 +311,36 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
 
         var numbers = new[] { destination };
 
-        foreach (var registry in _doNotCallRegistries)
+        // The registries can call out over HTTP, inside the pacing cycle's lock: how long that takes is on the dial path.
+        var started = Stopwatch.GetTimestamp();
+        var result = "clear";
+
+        try
         {
-            var registered = await registry.GetRegisteredNumbersAsync(numbers, cancellationToken);
-
-            if (registered is not null && registered.Count > 0)
+            foreach (var registry in _doNotCallRegistries)
             {
-                return true;
-            }
-        }
+                var registered = await registry.GetRegisteredNumbersAsync(numbers, cancellationToken);
 
-        return false;
+                if (registered is not null && registered.Count > 0)
+                {
+                    result = "listed";
+
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        catch
+        {
+            result = "error";
+
+            throw;
+        }
+        finally
+        {
+            ContactCenterDiagnostics.RecordDncLookup(Stopwatch.GetElapsedTime(started), result);
+        }
     }
 
     /// <summary>

@@ -1,5 +1,10 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.DataConnectors.Models;
+using CrestApps.OrchardCore.DataConnectors.Telemetry;
+using CrestApps.OrchardCore.Diagnostics;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.DataSources;
 
@@ -15,6 +20,7 @@ public sealed class ConnectedDataReader
     private readonly IDataConnectorManager _connectorManager;
     private readonly IDataConnectionSecretManager _secretManager;
     private readonly DataConnectorsOptions _options;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectedDataReader"/> class.
@@ -23,16 +29,19 @@ public sealed class ConnectedDataReader
     /// <param name="connectorManager">The registered connectors.</param>
     /// <param name="secretManager">The secrets of connections.</param>
     /// <param name="options">The limits of reads.</param>
+    /// <param name="logger">The logger.</param>
     public ConnectedDataReader(
         IDataConnectionStore connectionStore,
         IDataConnectorManager connectorManager,
         IDataConnectionSecretManager secretManager,
-        IOptions<DataConnectorsOptions> options)
+        IOptions<DataConnectorsOptions> options,
+        ILogger<ConnectedDataReader> logger)
     {
         _connectionStore = connectionStore;
         _connectorManager = connectorManager;
         _secretManager = secretManager;
         _options = options.Value;
+        _logger = logger;
     }
 
     /// <summary>
@@ -87,11 +96,33 @@ public sealed class ConnectedDataReader
     /// <returns>Whether the system answered.</returns>
     public async Task<DataConnectorTestResult> TestAsync(DataConnection connection, CancellationToken cancellationToken = default)
     {
-        var source = Resolve(connection);
+        var connector = CrestAppsOrchardCoreTelemetry.Unknown;
+        var outcome = CrestAppsOrchardCoreTelemetry.OutcomeError;
 
-        using var timeout = CreateTimeout(cancellationToken);
+        try
+        {
+            var source = Resolve(connection);
+            connector = source.Descriptor.Name;
 
-        return await source.Connector.TestAsync(new DataConnectorContext(connection, source.Secrets), timeout.Token);
+            using var timeout = CreateTimeout(cancellationToken);
+
+            var result = await source.Connector.TestAsync(new DataConnectorContext(connection, source.Secrets), timeout.Token);
+
+            if (result?.Succeeded == true)
+            {
+                outcome = CrestAppsOrchardCoreTelemetry.OutcomeOk;
+            }
+
+            return result;
+        }
+        finally
+        {
+            DataConnectorsTelemetry.Add(DataConnectorsTelemetry.ConnectionTests, new TagList
+            {
+                { DataConnectorsTelemetry.ConnectorTag, connector },
+                { CrestAppsOrchardCoreTelemetry.OutcomeTag, outcome },
+            });
+        }
     }
 
     /// <summary>
@@ -168,7 +199,22 @@ public sealed class ConnectedDataReader
         ArgumentNullException.ThrowIfNull(dataSet);
         ArgumentNullException.ThrowIfNull(query);
 
-        var source = await ResolveAsync(dataSet, cancellationToken);
+        using var measurement = DataSetReadMeasurement.Start(dataSet, purpose);
+        ConnectedSource source;
+
+        try
+        {
+            source = await ResolveAsync(dataSet, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            measurement.Fail(exception, timedOut: false);
+
+            throw;
+        }
+
+        measurement.SetConnector(source.Descriptor.Name);
+
         var mapper = ConnectedDataSetMapper.Create(dataSet, query.Fields);
         var batchSize = query.BatchSize > 0 ? query.BatchSize : DataSourceQuery.DefaultBatchSize;
         var context = new DataConnectorReadContext(source.Connection, source.Secrets, dataSet)
@@ -197,9 +243,39 @@ public sealed class ConnectedDataReader
         }
 
         using var timeout = CreateTimeout(cancellationToken);
+        await using var batches = mapper.MapAsync(source.Connector.ReadAsync(context, timeout.Token), batchSize, query.MaxRows, timeout.Token).GetAsyncEnumerator(timeout.Token);
 
-        await foreach (var batch in mapper.MapAsync(source.Connector.ReadAsync(context, timeout.Token), batchSize, query.MaxRows, timeout.Token))
+        // The batches are pulled by hand, because a failure is measured in a catch and an iterator can't yield there.
+        while (true)
         {
+            DataBatch batch;
+
+            try
+            {
+                if (!await batches.MoveNextAsync())
+                {
+                    break;
+                }
+
+                batch = batches.Current;
+            }
+            catch (Exception exception)
+            {
+                // Whatever the source threw, it was stopped by the timeout when that fired and the caller didn't cancel.
+                var timedOut = timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested;
+
+                measurement.Fail(exception, timedOut);
+
+                if (timedOut)
+                {
+                    _logger.ReadTimedOut(dataSet.ItemId.SanitizeLogValue(), _options.LiveReadTimeout);
+                }
+
+                throw;
+            }
+
+            measurement.AddRows(batch.Count);
+
             yield return batch;
         }
     }

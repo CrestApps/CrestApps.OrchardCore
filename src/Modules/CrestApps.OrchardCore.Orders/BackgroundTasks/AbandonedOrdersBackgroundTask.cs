@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
@@ -16,5 +17,12 @@ namespace CrestApps.OrchardCore.Orders.BackgroundTasks;
 public sealed class AbandonedOrdersBackgroundTask : IBackgroundTask
 {
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-        => serviceProvider.GetRequiredService<AbandonedOrderSweeper>().SweepAsync(cancellationToken);
+    {
+        return this.RunAsync(async run =>
+        {
+            var canceled = await serviceProvider.GetRequiredService<AbandonedOrderSweeper>().SweepAsync(cancellationToken);
+
+            run.AddItems(canceled, "cancelled");
+        });
+    }
 }

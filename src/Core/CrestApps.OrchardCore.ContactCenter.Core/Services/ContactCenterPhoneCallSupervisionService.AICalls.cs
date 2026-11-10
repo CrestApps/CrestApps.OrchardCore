@@ -68,7 +68,7 @@ public sealed partial class ContactCenterPhoneCallSupervisionService
 
         try
         {
-            result = await _commandExecutor.ExecuteAsync(commandCancellationToken =>
+            result = await _commandExecutor.ExecuteAsync(engagement.ProviderName, "MonitorEngage", commandCancellationToken =>
                 monitoring.EngageAsync(Request(engagement, MonitorMode.Monitor), commandCancellationToken));
         }
         catch (TimeoutException)

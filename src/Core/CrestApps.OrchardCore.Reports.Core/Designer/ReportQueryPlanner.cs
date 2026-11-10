@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using System.Text.RegularExpressions;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DataSources;
 using OrchardCore.DataSources.Expressions;
@@ -56,6 +58,43 @@ public sealed partial class ReportQueryPlanner
         ArgumentNullException.ThrowIfNull(query);
         ArgumentNullException.ThrowIfNull(context);
 
+        var started = Stopwatch.GetTimestamp();
+        var outcome = CrestAppsOrchardCoreTelemetry.OutcomeError;
+
+        try
+        {
+            var plan = await PlanCoreAsync(query, context, cancellationToken);
+
+            outcome = plan.IsValid ? CrestAppsOrchardCoreTelemetry.OutcomeOk : "invalid";
+
+            return plan;
+        }
+        catch (Exception exception)
+        {
+            outcome = CrestAppsOrchardCoreTelemetry.GetOutcome(exception);
+
+            throw;
+        }
+        finally
+        {
+            if (ReportTelemetry.PlanDuration.Enabled)
+            {
+                var tags = new TagList
+                {
+                    { CrestAppsOrchardCoreTelemetry.OutcomeTag, outcome },
+                };
+
+                CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
+                ReportTelemetry.PlanDuration.Record(Stopwatch.GetElapsedTime(started).TotalSeconds, tags);
+            }
+        }
+    }
+
+    private async Task<ReportQueryPlan> PlanCoreAsync(
+        ReportQueryDefinition query,
+        DataSourceContext context,
+        CancellationToken cancellationToken)
+    {
         var plan = new ReportQueryPlan();
 
         await PlanDataSetsAsync(query, context, plan, cancellationToken);
@@ -83,6 +122,45 @@ public sealed partial class ReportQueryPlanner
         plan.Width = scope.Width;
 
         return plan;
+    }
+
+    // Reads the schema of a data set, the I/O of a plan: a report.schema span and the schema duration by data source.
+    private static async Task<DataSetSchema> GetSchemaAsync(
+        IDataSource source,
+        ReportDataSetReference reference,
+        DataSourceContext context,
+        CancellationToken cancellationToken)
+    {
+        var tags = new TagList
+        {
+            { ReportTelemetry.DataSourceTag, reference.Source },
+        };
+
+        using var telemetry = TelemetryScope.Start(ReportTelemetry.ActivitySource, "report.schema", ReportTelemetry.SchemaDuration, tags);
+
+        telemetry.SetSpanTag(ReportTelemetry.DataSetTag, reference.DataSet);
+
+        try
+        {
+            var schema = await source.GetSchemaAsync(reference.DataSet, context, cancellationToken);
+
+            if (schema is null)
+            {
+                telemetry.SetOutcome("not_found");
+            }
+            else
+            {
+                telemetry.Succeed();
+            }
+
+            return schema;
+        }
+        catch (Exception exception)
+        {
+            telemetry.Fail(exception);
+
+            throw;
+        }
     }
 
     private async Task PlanDataSetsAsync(
@@ -125,7 +203,7 @@ public sealed partial class ReportQueryPlanner
                 continue;
             }
 
-            var schema = await source.GetSchemaAsync(reference.DataSet, context, cancellationToken);
+            var schema = await GetSchemaAsync(source, reference, context, cancellationToken);
 
             if (schema is null)
             {

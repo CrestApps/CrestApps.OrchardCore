@@ -3,8 +3,10 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using ISession = YesSql.ISession;
 using Microsoft.Extensions.Options;
 using OrchardCore.Localization;
@@ -21,6 +23,7 @@ public sealed class DispositionBreakdownReportProvider : OmnichannelReportBase, 
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
     private readonly ActivitySourceOptions _activitySourceOptions;
     private readonly INamedCatalogManager<OmnichannelDisposition> _dispositionManager;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DispositionBreakdownReportProvider"/> class.
@@ -30,18 +33,21 @@ public sealed class DispositionBreakdownReportProvider : OmnichannelReportBase, 
     /// <param name="dispositionManager">The disposition manager used to resolve disposition names.</param>
     /// <param name="activitySourceOptions">The activity sources registered by the enabled features.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="logger">The logger, which warns when the report reads more index rows than it should hold in memory.</param>
     public DispositionBreakdownReportProvider(
         ISession session,
         ICatalogManager<OmnichannelCampaign> campaignManager,
         INamedCatalogManager<OmnichannelDisposition> dispositionManager,
         IOptions<ActivitySourceOptions> activitySourceOptions,
-        IStringLocalizer<DispositionBreakdownReportProvider> stringLocalizer)
+        IStringLocalizer<DispositionBreakdownReportProvider> stringLocalizer,
+        ILogger<DispositionBreakdownReportProvider> logger = null)
         : base(stringLocalizer)
     {
         _session = session;
         _campaignManager = campaignManager;
         _activitySourceOptions = activitySourceOptions.Value;
         _dispositionManager = dispositionManager;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -69,6 +75,9 @@ public sealed class DispositionBreakdownReportProvider : OmnichannelReportBase, 
             range.ToUtc.GetValueOrDefault(),
             await OmnichannelReportFilter.GetCriteriaAsync(context.Filter, _campaignManager, _activitySourceOptions, cancellationToken),
             cancellationToken);
+
+        ReportTelemetry.RecordCodedIndexRows(Name, completed.Count, _logger);
+
         var counts = OmnichannelReportAggregator.CountByDisposition(completed);
         var dispositions = await _dispositionManager.GetAllAsync(cancellationToken);
         var names = CatalogReportDisplayNames.ForDispositions(dispositions);

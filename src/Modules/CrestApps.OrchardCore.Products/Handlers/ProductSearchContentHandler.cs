@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Indexes;
@@ -6,7 +7,6 @@ using CrestApps.OrchardCore.Products.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Handlers;
-using OrchardCore.Environment.Shell.Scope;
 using YesSql;
 using YesSql.Services;
 
@@ -72,7 +72,7 @@ public sealed class ProductSearchContentHandler : ContentHandlerBase
         var products = _products = new HashSet<string>(StringComparer.Ordinal);
         var taxonomies = _taxonomies = new HashSet<string>(StringComparer.Ordinal);
 
-        ShellScope.AddDeferredTask(scope => RefreshAsync(scope.ServiceProvider, products, taxonomies));
+        DeferredWork.Add("product_search_refresh", scope => RefreshAsync(scope.ServiceProvider, products, taxonomies));
     }
 
     private static async Task RefreshAsync(IServiceProvider services, HashSet<string> contentItemIds, HashSet<string> taxonomyIds)

@@ -1,5 +1,7 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
@@ -42,17 +44,57 @@ public sealed class MessagingConversationRouter : IMessagingConversationRouter
 
         context.Channel ??= _channelResolver.Get(context.Conversation.Channel);
 
-        // Read once for the whole chain, so every router sees the same entry point and the same open or closed answer.
-        context.Routing ??= await _routingResolver.ResolveAsync(context.Endpoint, context.Conversation.Channel, cancellationToken);
+        using var telemetry = TelemetryScope.Start(MessagingTelemetry.ActivitySource, "crestapps.messaging.route", duration: null);
+        telemetry.SetSpanTag(CrestAppsOrchardCoreTelemetry.TriggerTag, MessagingTelemetry.GetTriggerTag(context.Trigger));
+        telemetry.SetSpanTag(MessagingTelemetry.ConversationIdSpanTag, context.Conversation.ItemId);
 
-        foreach (var router in _routers)
+        var previousAgentId = context.Conversation.AssignedAgentId;
+        var previousStatus = context.Conversation.AssignmentStatus;
+
+        try
         {
-            if (await router.TryRouteAsync(context, cancellationToken))
-            {
-                context.ClaimedBy = router;
+            // Read once for the whole chain, so every router sees the same entry point and the same open or closed answer.
+            context.Routing ??= await _routingResolver.ResolveAsync(context.Endpoint, context.Conversation.Channel, cancellationToken);
 
-                break;
+            foreach (var router in _routers)
+            {
+                if (await router.TryRouteAsync(context, cancellationToken))
+                {
+                    context.ClaimedBy = router;
+
+                    break;
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            // The type only, never the message: a routing error can quote the contact's address.
+            telemetry.SetSpanTag(CrestAppsOrchardCoreTelemetry.ErrorTypeTag, ex.GetType().FullName);
+
+            if (CrestAppsOrchardCoreTelemetry.GetOutcome(ex) == CrestAppsOrchardCoreTelemetry.OutcomeError)
+            {
+                telemetry.Fail();
+            }
+            else
+            {
+                telemetry.SetOutcome(CrestAppsOrchardCoreTelemetry.GetOutcome(ex));
+            }
+
+            throw;
+        }
+
+        var channel = context.Channel?.Name ?? context.Conversation.Channel;
+
+        telemetry.SetSpanTag(MessagingTelemetry.RouterTag, MessagingTelemetry.GetRouterTag(context.ClaimedBy));
+        telemetry.Succeed();
+        MessagingTelemetry.RecordRoute(channel, context.Trigger, context.ClaimedBy);
+
+        // A new thread is always placed somewhere, even when that is nowhere; an existing one counts only when it moved.
+        if (context.IsNewConversation ||
+            previousStatus != context.Conversation.AssignmentStatus ||
+            !string.Equals(previousAgentId, context.Conversation.AssignedAgentId, StringComparison.Ordinal))
+        {
+            MessagingTelemetry.RecordAssignment(channel, MessagingTelemetry.GetTriggerTag(context.Trigger), context.Conversation.AssignmentStatus);
         }
 
         if (context.ClaimedBy is null && _logger.IsEnabled(LogLevel.Debug))

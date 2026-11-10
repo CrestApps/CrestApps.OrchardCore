@@ -1,5 +1,8 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using CrestApps.Core;
+using CrestApps.OrchardCore.DataConnectors.Telemetry;
+using CrestApps.OrchardCore.Diagnostics;
 using OrchardCore.DataSources;
 using OrchardCore.DataSources.Files;
 using OrchardCore.FileStorage;
@@ -135,9 +138,9 @@ internal sealed class MediaFilesDataConnector : IDataConnector
         ArgumentNullException.ThrowIfNull(context);
 
         var path = GetFilePath(context);
-        var format = _fileFormatManager.GetDescriptorByFileName(path) is { } descriptor
-            ? _fileFormatManager.GetFormat(descriptor.Name)
-            : throw new DataConnectorException($"No file format reads '{Path.GetFileName(path)}'.");
+        var descriptor = _fileFormatManager.GetDescriptorByFileName(path)
+            ?? throw new DataConnectorException($"No file format reads '{Path.GetFileName(path)}'.");
+        var format = _fileFormatManager.GetFormat(descriptor.Name);
 
         if (await _mediaFileStore.GetFileInfoAsync(path) is null)
         {
@@ -154,10 +157,48 @@ internal sealed class MediaFilesDataConnector : IDataConnector
         };
 
         await using var stream = await _mediaFileStore.GetFileStreamAsync(path);
+        await using var batches = format.ReadAsync(stream, options, cancellationToken).GetAsyncEnumerator(cancellationToken);
 
-        await foreach (var batch in format.ReadAsync(stream, options, cancellationToken))
+        // Only the time the format spends producing rows is counted, not the time the consumer spends between batches.
+        var parsing = TimeSpan.Zero;
+        var outcome = CrestAppsOrchardCoreTelemetry.OutcomeOk;
+
+        try
         {
-            yield return batch;
+            while (true)
+            {
+                var startTimestamp = Stopwatch.GetTimestamp();
+                bool hasBatch;
+
+                try
+                {
+                    hasBatch = await batches.MoveNextAsync();
+                }
+                catch (Exception exception)
+                {
+                    outcome = CrestAppsOrchardCoreTelemetry.GetOutcome(exception);
+
+                    throw;
+                }
+                finally
+                {
+                    parsing += Stopwatch.GetElapsedTime(startTimestamp);
+                }
+
+                if (!hasBatch)
+                {
+                    break;
+                }
+
+                yield return batches.Current;
+            }
+        }
+        finally
+        {
+            DataConnectorsTelemetry.RecordDuration(DataConnectorsTelemetry.FileParseDuration, parsing, outcome, new TagList
+            {
+                { CrestAppsOrchardCoreTelemetry.FormatTag, descriptor.Name },
+            });
         }
     }
 
