@@ -559,7 +559,22 @@ An AI agent pays with a credential its platform got from the buyer for this one 
 
 A provider that charges such a credential on the server sets `PaymentProviderCapabilities.AcceptsDelegatedCredentials` and, in `BeginAsync`, charges it when the key is present. Stripe charges shared payment tokens and Google Pay tokens (see [Payments](payments.md#payments-ai-agents-bring)), and the test provider charges the [test credentials](agentic-commerce.md#test-payments) `tok_test_success`, `tok_test_decline` and `tok_test_3ds`. A bank that asks the buyer to approve the payment is reported as `PaymentBeginOutcome.RequiresAuthentication` or `RequiresAction`, and the caller sends the buyer to the checkout.
 
-Only server code sets these keys. The public payment endpoints and the commerce API drop them, with the off-session keys, from anything a browser or an app sends (`PaymentEndpoints.SanitizeProviderData`). [Agentic Commerce](agentic-commerce.md#payment-handlers) is the caller today.
+Only server code sets these keys. The public payment endpoints and the commerce API drop them, with the off-session keys, from anything a browser or an app sends (`PaymentEndpoints.SanitizeProviderData`, which uses `CheckoutPaymentDataKeys.IsServerOnly`). [Agentic Commerce](agentic-commerce.md#payment-handlers) is the caller today.
+
+### A 3-D Secure result from outside the provider
+
+When the payer was authenticated with 3-D Secure outside the payment provider, such as by an AI agent, server code passes the result with the credential, as a `ThreeDSecureResult` written into the provider data with `CopyTo`:
+
+| Key | Value |
+| --- | --- |
+| `ThreeDSecureOutcome` (`threeDSecureOutcome`) | The outcome, from `ThreeDSecureOutcomes`. Only `authenticated`, `attempt_acknowledged` and `informational` let the payment go ahead (`ThreeDSecureResult.AllowsPayment`). |
+| `ThreeDSecureCryptogram` (`threeDSecureCryptogram`) | The authentication value: 28 base64 characters that decode to 20 bytes. |
+| `ThreeDSecureElectronicCommerceIndicator` (`threeDSecureEci`) | The ECI: `01`, `02`, `05`, `06` or `07`. |
+| `ThreeDSecureTransactionId` (`threeDSecureTransactionId`) | The directory server's transaction id. |
+| `ThreeDSecureVersion` (`threeDSecureVersion`) | The version that ran, such as `2.2.0`. |
+| `ThreeDSecureTransactionStatus` (`threeDSecureTransStatus`) | Optional: the ARes `transStatus`. |
+
+`ThreeDSecureResult.GetInvalidMember()` names the first member that isn't valid. A provider that takes the result sets `PaymentProviderCapabilities.AcceptsExternalAuthentication`, reads it with `ThreeDSecureResult.From`, and charges with it instead of authenticating the payer itself. When the engine resumes an attempt that already has a `ProviderReference`, because the bank asked for authentication on the first try, the provider finishes that payment with the result rather than starting another. A provider sets `PaymentBeginResult.CardBrand` when it knows the card's brand; the engine passes it on as `PaymentBeginOutcome.CardBrand`, so the caller can pick the card network's directory server. These keys are server-only too.
 
 ## Filling steps from code
 

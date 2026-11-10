@@ -46,4 +46,36 @@ public sealed class AgenticCommerceSettings
     /// Gets or sets a value indicating whether Google Pay runs in its test environment.
     /// </summary>
     public bool GooglePayTestEnvironment { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether an agent that can run 3-D Secure itself is asked to, when the buyer's
+    /// bank wants to approve a payment, instead of handing the buyer to the store's checkout. It needs the acquirer
+    /// details below and a payment provider that accepts an outside 3-D Secure result.
+    /// </summary>
+    public bool EnableDelegatedAuthentication { get; set; }
+
+    /// <summary>
+    /// Gets or sets the acquirer's BIN (up to 11 characters), from the payment provider.
+    /// </summary>
+    public string AcquirerBin { get; set; }
+
+    /// <summary>
+    /// Gets or sets the acquirer's country, as an ISO 3166-1 alpha-2 code.
+    /// </summary>
+    public string AcquirerCountry { get; set; }
+
+    /// <summary>
+    /// Gets or sets the store's merchant ID at the acquirer (up to 35 characters).
+    /// </summary>
+    public string AcquirerMerchantId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the merchant name the buyer's bank shows during 3-D Secure (up to 40 characters).
+    /// </summary>
+    public string AuthenticationMerchantName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the 3-D Secure requestor ID (up to 35 characters), when the store has one.
+    /// </summary>
+    public string ThreeDSecureRequestorId { get; set; }
 }

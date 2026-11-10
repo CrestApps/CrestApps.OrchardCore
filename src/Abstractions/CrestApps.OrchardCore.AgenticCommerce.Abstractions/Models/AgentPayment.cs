@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Addresses.Models;
+using CrestApps.OrchardCore.Checkout.Services;
 
 namespace CrestApps.OrchardCore.AgenticCommerce.Models;
 
@@ -41,4 +42,10 @@ public sealed class AgentPayment
     /// Gets or sets the billing address.
     /// </summary>
     public Address BillingAddress { get; set; }
+
+    /// <summary>
+    /// Gets or sets the result of the 3-D Secure authentication the agent ran with the buyer, when the checkout asked
+    /// for one (<see cref="AgentCheckoutStatus.AuthenticationRequired"/>). It is never stored or logged.
+    /// </summary>
+    public ThreeDSecureResult Authentication { get; set; }
 }

@@ -29,4 +29,9 @@ public enum AgentCheckoutFailure
     /// The platform has too many open checkouts.
     /// </summary>
     TooMany,
+
+    /// <summary>
+    /// The checkout waits for the result of the buyer's 3-D Secure authentication, which the request didn't carry.
+    /// </summary>
+    AuthenticationRequired,
 }

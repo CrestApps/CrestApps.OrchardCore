@@ -39,4 +39,10 @@ public enum AgentCheckoutStatus
     /// Not completed in time.
     /// </summary>
     Expired,
+
+    /// <summary>
+    /// The buyer's bank asks for 3-D Secure, which the agent runs itself with the
+    /// <see cref="AgentCheckoutView.AuthenticationMetadata"/>, then completes the checkout again with the result.
+    /// </summary>
+    AuthenticationRequired,
 }

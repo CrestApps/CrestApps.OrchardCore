@@ -49,6 +49,7 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
     private readonly IEnumerable<ICheckoutContactStep> _contactSteps;
     private readonly IEnumerable<ICheckoutFulfillmentStep> _fulfillmentSteps;
     private readonly IEnumerable<IAgentPaymentHandler> _paymentHandlers;
+    private readonly ICheckoutPaymentProviderResolver _providers;
     private readonly IAgentItemResolver _items;
     private readonly ISiteService _siteService;
     private readonly AgentSiteUrls _urls;
@@ -73,6 +74,7 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
     /// <param name="contactSteps">The Contact step, when a module offers one.</param>
     /// <param name="fulfillmentSteps">The Shipping step, when a module offers one.</param>
     /// <param name="paymentHandlers">The payment handlers.</param>
+    /// <param name="providers">The checkout payment providers, for what they can do.</param>
     /// <param name="items">The item id resolver.</param>
     /// <param name="siteService">The site service.</param>
     /// <param name="urls">The agent addresses.</param>
@@ -93,6 +95,7 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
         IEnumerable<ICheckoutContactStep> contactSteps,
         IEnumerable<ICheckoutFulfillmentStep> fulfillmentSteps,
         IEnumerable<IAgentPaymentHandler> paymentHandlers,
+        ICheckoutPaymentProviderResolver providers,
         IAgentItemResolver items,
         ISiteService siteService,
         AgentSiteUrls urls,
@@ -113,6 +116,7 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
         _contactSteps = contactSteps;
         _fulfillmentSteps = fulfillmentSteps;
         _paymentHandlers = paymentHandlers;
+        _providers = providers;
         _items = items;
         _siteService = siteService;
         _urls = urls;
@@ -169,6 +173,11 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
         foreach (var (name, value) in context.Properties ?? new Dictionary<string, string>())
         {
             checkout.SetProperty(name, value);
+        }
+
+        if (context.RunsThreeDSecure)
+        {
+            checkout.SetProperty(DelegatedAuthentication.AgentRunsThreeDSecureProperty, "true");
         }
 
         var view = await SyncAsync(checkout, context, cancellationToken);
@@ -243,6 +252,13 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
                     await SyncAsync(checkout, context, cancellationToken));
             }
 
+            // The bank asked the buyer to approve the payment and the agent ran 3-D Secure: this request finishes that
+            // payment with the result, and changes nothing else.
+            if (checkout.Authentication is not null)
+            {
+                return await ContinueAuthenticationAsync(checkout, context, payment, cancellationToken);
+            }
+
             if (update is not null && !await IsBeingPaidAsync(checkout, cancellationToken))
             {
                 Apply(checkout, update);
@@ -272,6 +288,64 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
                 View = await SyncAsync(checkout, context, cancellationToken),
             };
         }, cancellationToken);
+
+    // Finishes a payment the bank asked the buyer to approve, with the result of the 3-D Secure the agent ran. The same
+    // payment attempt is resumed, so the provider confirms the payment it began rather than making a second one.
+    private async Task<AgentCheckoutResult> ContinueAuthenticationAsync(AgentCheckout checkout, AgentCheckoutContext context, AgentPayment payment, CancellationToken cancellationToken)
+    {
+        var result = payment.Authentication;
+
+        switch (DelegatedAuthentication.Classify(checkout.Authentication, result))
+        {
+            case DelegatedAuthenticationStep.Missing:
+                return AgentCheckoutResult.Fail(
+                    AgentCheckoutFailure.AuthenticationRequired,
+                    S["The buyer's bank asks for 3-D Secure. Authenticate the buyer, then complete the checkout with the result."],
+                    checkout,
+                    await SyncAsync(checkout, context, cancellationToken));
+
+            case DelegatedAuthenticationStep.Invalid:
+                return AgentCheckoutResult.Fail(
+                    AgentCheckoutFailure.Invalid,
+                    S["The 3-D Secure result isn't complete or valid: check its {0}.", result.GetInvalidMember()],
+                    checkout,
+                    await SyncAsync(checkout, context, cancellationToken));
+
+            case DelegatedAuthenticationStep.NotAuthenticated:
+                // The payment can't go ahead. Its store checkout is canceled, which voids what the provider began, and
+                // the next request starts a new one the agent may pay another way.
+                if (!string.IsNullOrEmpty(checkout.CheckoutSessionId))
+                {
+                    await _engine.CancelAsync(checkout.CheckoutSessionId, "The buyer's bank didn't authenticate them.", cancellationToken);
+                }
+
+                checkout.Authentication = null;
+                checkout.PaymentMessage = null;
+                checkout.ModifiedUtc = _clock.UtcNow;
+
+                var view = await SyncAsync(checkout, context, cancellationToken);
+
+                checkout.PaymentMessage = AgentCheckoutMessage.Error(
+                    AgentMessageCodes.PaymentDeclined,
+                    AgentCheckoutFields.Payment,
+                    S["The buyer's bank didn't authenticate them ({0}), so the payment wasn't taken. Pay another way, or try again.", result.Outcome]);
+                view.Messages.Add(checkout.PaymentMessage);
+
+                return new AgentCheckoutResult
+                {
+                    Checkout = checkout,
+                    View = view,
+                };
+        }
+
+        await PayAsync(checkout, context, await SyncAsync(checkout, context, cancellationToken), payment, cancellationToken);
+
+        return new AgentCheckoutResult
+        {
+            Checkout = checkout,
+            View = await SyncAsync(checkout, context, cancellationToken),
+        };
+    }
 
     /// <inheritdoc />
     public Task<AgentCheckoutResult> CancelAsync(AgentCheckoutContext context, string id, JsonObject intentTrace, CancellationToken cancellationToken = default)
@@ -472,6 +546,7 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
             {
                 checkout.PaymentMessage = AgentCheckoutMessage.Error(AgentMessageCodes.PaymentFailed, AgentCheckoutFields.Payment, completion.ErrorMessage ?? S["The payment failed."]);
                 checkout.EscalationUrl = null;
+                checkout.Authentication = null;
             }
 
             return;
@@ -557,6 +632,7 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
         // A new try starts clean: what went wrong with the last payment is about the old checkout.
         checkout.PaymentMessage = null;
         checkout.EscalationUrl = null;
+        checkout.Authentication = null;
         checkout.ModifiedUtc = _clock.UtcNow;
     }
 
@@ -605,11 +681,37 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
             return;
         }
 
+        var pending = checkout.Authentication;
+
+        // The result finishes the payment the provider began; paying through another provider would begin a second one.
+        if (pending is not null && !string.Equals(pending.ProviderKey, preparation.ProviderKey, StringComparison.OrdinalIgnoreCase))
+        {
+            checkout.PaymentMessage = AgentCheckoutMessage.Error(AgentMessageCodes.PaymentFailed, AgentCheckoutFields.Payment, S["Complete the checkout with the payment handler the buyer authenticated."]);
+
+            return;
+        }
+
+        var settings = await _siteService.GetSettingsAsync<AgenticCommerceSettings>();
+        var provider = _providers.GetProvider(preparation.ProviderKey);
+        var delegable = DelegatedAuthentication.IsConfigured(settings) &&
+            DelegatedAuthentication.AgentRunsThreeDSecure(checkout) &&
+            provider?.Capabilities?.AcceptsExternalAuthentication == true;
+
+        var providerData = new Dictionary<string, string>(preparation.ProviderData ?? new Dictionary<string, string>());
+        var sendsResult = DelegatedAuthentication.SendsResult(payment.Authentication, pending, delegable);
+
+        if (sendsResult)
+        {
+            payment.Authentication.CopyTo(providerData);
+        }
+
+        checkout.Authentication = null;
+
         var handoffUrl = await _urls.GetHandoffUrlAsync(checkout);
         var outcome = await _engine.BeginPaymentAsync(checkout.CheckoutSessionId, new BeginPaymentOptions
         {
             ProviderKey = preparation.ProviderKey,
-            ProviderData = new Dictionary<string, string>(preparation.ProviderData ?? new Dictionary<string, string>()),
+            ProviderData = providerData,
             ReturnUrl = handoffUrl,
             CancelUrl = handoffUrl,
         }, cancellationToken);
@@ -618,6 +720,23 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
 
         if (!outcome.Succeeded)
         {
+            if (pending is not null && !outcome.Declined && !outcome.InvoiceChanged)
+            {
+                // Nothing was decided, such as a provider that couldn't be reached: the agent may send the same result
+                // again, which resumes the same attempt and replays at the provider.
+                checkout.Authentication = pending;
+                checkout.PaymentMessage = AgentCheckoutMessage.Error(AgentMessageCodes.PaymentFailed, AgentCheckoutFields.Payment, outcome.ErrorMessage ?? S["The payment couldn't be finished. Complete the checkout again with the same result."]);
+
+                return;
+            }
+
+            if (pending is not null && !outcome.RequiresAuthentication && !string.IsNullOrEmpty(checkout.CheckoutSessionId))
+            {
+                // The payment the buyer authenticated can't go ahead: its store checkout is closed, which voids what the
+                // provider began, and the next request starts a new one.
+                await _engine.CancelAsync(checkout.CheckoutSessionId, "The payment didn't go ahead after 3-D Secure.", cancellationToken);
+            }
+
             if (outcome.InvoiceChanged)
             {
                 checkout.PaymentMessage = AgentCheckoutMessage.Error(AgentMessageCodes.PriceChanged, null, S["The total changed. Review the checkout and complete it again."], AgentMessageSeverity.RequiresBuyerReview);
@@ -627,6 +746,13 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
 
             if (outcome.RequiresAuthentication)
             {
+                // An agent that runs 3-D Secure itself is asked to, once; a result that didn't satisfy the bank sends the
+                // buyer to the store's checkout instead of asking again.
+                if (!sendsResult && delegable && RequestAuthentication(checkout, preparation.ProviderKey, payment.Brand ?? outcome.CardBrand))
+                {
+                    return;
+                }
+
                 checkout.EscalationUrl = handoffUrl;
                 checkout.PaymentMessage = AgentCheckoutMessage.Error(AgentMessageCodes.Requires3ds, AgentCheckoutFields.Payment, S["The buyer's bank asks them to approve the payment, in the store's checkout."], AgentMessageSeverity.RequiresBuyerInput);
 
@@ -643,6 +769,13 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
 
         if (outcome.RequiresAction)
         {
+            // An agent that runs 3-D Secure itself authenticates the buyer and completes again with the result, which
+            // the provider imports into this same payment.
+            if (!sendsResult && delegable && RequestAuthentication(checkout, preparation.ProviderKey, payment.Brand ?? outcome.CardBrand))
+            {
+                return;
+            }
+
             // The buyer's bank asks them to approve the payment: the agent hands the buyer the page it is on.
             checkout.EscalationUrl = outcome.Steps.FirstOrDefault(step => step.RequiresAction && !string.IsNullOrEmpty(step.RedirectUrl))?.RedirectUrl ?? handoffUrl;
             checkout.PaymentMessage = AgentCheckoutMessage.Error(AgentMessageCodes.Requires3ds, AgentCheckoutFields.Payment, S["The buyer's bank asks them to approve the payment."], AgentMessageSeverity.RequiresBuyerInput);
@@ -670,6 +803,32 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
         }
     }
 
+    // Asks the agent to run 3-D Secure with the card network's directory server; false when the card's brand has none.
+    private bool RequestAuthentication(AgentCheckout checkout, string providerKey, string cardBrand)
+    {
+        var directoryServer = AgentDirectoryServers.FromBrand(cardBrand);
+
+        if (directoryServer is null)
+        {
+            return false;
+        }
+
+        checkout.Authentication = new AgentPendingAuthentication
+        {
+            ProviderKey = providerKey,
+            DirectoryServer = directoryServer,
+            RequestedUtc = _clock.UtcNow,
+        };
+        checkout.EscalationUrl = null;
+        checkout.PaymentMessage = AgentCheckoutMessage.Error(
+            AgentMessageCodes.Requires3ds,
+            AgentCheckoutFields.Payment,
+            S["The buyer's bank asks them to approve the payment with 3-D Secure. Authenticate the buyer, then complete the checkout with the result."],
+            AgentMessageSeverity.RequiresBuyerInput);
+
+        return true;
+    }
+
     private void MarkCompleted(AgentCheckout checkout)
     {
         checkout.Status = AgentCheckoutStatus.Completed;
@@ -677,6 +836,7 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
         checkout.ModifiedUtc = _clock.UtcNow;
         checkout.PaymentMessage = null;
         checkout.EscalationUrl = null;
+        checkout.Authentication = null;
 
         // What the agent observed about the buyer was for the risk check; it isn't kept after the payment settles.
         checkout.Signals = [];
@@ -1147,6 +1307,15 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
 
         view.Status = ComputeStatus(checkout, session, messages, view);
 
+        var settings = await _siteService.GetSettingsAsync<AgenticCommerceSettings>();
+
+        view.AcceptsAuthenticationResult = !checkout.IsTerminal && DelegatedAuthentication.IsConfigured(settings) && DelegatedAuthentication.AgentRunsThreeDSecure(checkout);
+
+        if (view.Status == AgentCheckoutStatus.AuthenticationRequired)
+        {
+            view.AuthenticationMetadata = DelegatedAuthentication.BuildMetadata(settings, checkout.Authentication.DirectoryServer);
+        }
+
         foreach (var message in messages)
         {
             view.Messages.Add(message);
@@ -1189,6 +1358,12 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
         if (session is null)
         {
             return AgentCheckoutStatus.Incomplete;
+        }
+
+        // The agent runs 3-D Secure with the buyer, then completes again with the result.
+        if (checkout.Authentication is not null)
+        {
+            return AgentCheckoutStatus.AuthenticationRequired;
         }
 
         if (session.Status is CheckoutSessionStatus.AwaitingProvider or CheckoutSessionStatus.PaymentPending)

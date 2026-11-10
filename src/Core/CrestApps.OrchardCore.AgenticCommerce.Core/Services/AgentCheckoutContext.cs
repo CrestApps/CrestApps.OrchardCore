@@ -41,6 +41,12 @@ public sealed class AgentCheckoutContext
     public string ClientAddress { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the agent said, when making a checkout, that it can run 3-D Secure with
+    /// the buyer itself and send back the result (ACP's <c>3ds</c> intervention). It is kept with the new checkout.
+    /// </summary>
+    public bool RunsThreeDSecure { get; set; }
+
+    /// <summary>
     /// Gets or sets protocol data kept with a new checkout, such as where a UCP platform's order updates go.
     /// </summary>
     public IDictionary<string, string> Properties { get; set; } = new Dictionary<string, string>();

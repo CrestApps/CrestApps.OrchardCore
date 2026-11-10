@@ -44,6 +44,13 @@ public interface IStripePaymentIntentService
     Task<ChargeDelegatedCredentialResponse> ChargeDelegatedAsync(ChargeDelegatedCredentialRequest model);
 
     /// <summary>
+    /// Confirms again a PaymentIntent made from a credential an AI agent brought, with the result of a 3-D Secure
+    /// authentication the agent ran, so the same payment goes ahead without Stripe asking the buyer again.
+    /// </summary>
+    /// <param name="model">The PaymentIntent and the 3-D Secure result.</param>
+    Task<ChargeDelegatedCredentialResponse> ConfirmDelegatedAsync(ConfirmDelegatedCredentialRequest model);
+
+    /// <summary>
     /// Retrieves the authoritative state of a Stripe payment intent so a checkout can verify what really
     /// happened at the gateway rather than trusting a cached notification.
     /// </summary>

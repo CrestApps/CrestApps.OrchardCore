@@ -309,7 +309,15 @@ The provider sets `AcceptsDelegatedCredentials`, so it charges on the server a p
 - **Stripe shared payment tokens** (`stripe_shared_payment_token`, `spt_...`), which the agent's platform issued to the store's Stripe account. The PaymentIntent is created and confirmed with `payment_method_data[shared_payment_granted_token]`. Shared payment tokens are a preview of Stripe's API, so this call is made with the preview API version `2026-09-30.preview` (`StripePaymentIntentService.SharedPaymentTokenApiVersion`).
 - **Google Pay tokens** (`google_pay_token`) whose gateway is Stripe: the Google Pay payment data, or the `tok_...` card token in it. The PaymentIntent is created and confirmed with that card token. A token Stripe didn't issue is refused.
 
-Each charge carries the attempt's idempotency key and the metadata `checkout_attempt_id`, `checkout_session_id` and `delegated`, and is verified against Stripe like any other payment. A credential pays for one purchase only: a charge that asks to keep the card, or that isn't a one-time payment, is refused. When the bank asks the buyer to approve the payment, the begin result requires an action with Stripe's redirect page, which the agent hands to the buyer.
+Each charge carries the attempt's idempotency key and the metadata `checkout_attempt_id`, `checkout_session_id` and `delegated`, and is verified against Stripe like any other payment. A credential pays for one purchase only: a charge that asks to keep the card, or that isn't a one-time payment, is refused. When the bank asks the buyer to approve the payment, the begin result requires an action with Stripe's redirect page, which the agent hands to the buyer, and carries the card's brand (`CardBrand`, read from the PaymentIntent's expanded payment method).
+
+The provider also sets `AcceptsExternalAuthentication`: a 3-D Secure result the agent got (see [Checkout](checkout.md#a-3-d-secure-result-from-outside-the-provider)) is imported with Stripe's [Import 3D Secure results](https://docs.stripe.com/payments/payment-intents/three-d-secure-import), as `payment_method_options[card][three_d_secure][cryptogram]`, `[electronic_commerce_indicator]`, `[transaction_id]`, `[version]` and, when known, `[ares_trans_status]`, with `error_on_requires_action=true` so Stripe fails the payment rather than challenging the buyer again.
+
+- When the attempt already made a PaymentIntent that is waiting for the buyer's approval, that PaymentIntent is confirmed (`POST /v1/payment_intents/{id}/confirm`) with the result. Its idempotency key is the attempt's key plus a hash of the result, so a retry of the same result replays and no second PaymentIntent is made. A confirm Stripe refuses cancels that PaymentIntent, so nothing can confirm it later.
+- A new attempt creates its PaymentIntent with the result, under the attempt's own key.
+- A result that doesn't let the payment go ahead never reaches Stripe: the payment is declined.
+
+3D Secure import is a Stripe feature that must be available to the account; without it Stripe refuses the parameters and the payment fails.
 
 ### Stripe Terminal readers
 

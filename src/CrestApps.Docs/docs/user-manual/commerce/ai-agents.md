@@ -161,6 +161,21 @@ Open **Settings > Commerce > Agentic commerce**, change what you need, and click
 | **Google Pay merchant name** | The name Google Pay shows the buyer. Leave it empty to use your store's name. |
 | **Use Google Pay's test environment** | Google Pay test payments are never charged. On at first. Turn it off only when Stripe uses your live keys. |
 
+### 3-D Secure by agents
+
+Some banks ask the buyer to approve a payment with 3-D Secure. Normally the agent then gives the buyer a link to your checkout, where they approve it. Some agents that use ACP can run 3-D Secure with the buyer themselves and send your store the result, so the buyer never leaves the chat. Your payment provider uses that result for the same payment, so the buyer is charged once.
+
+| Field | What it does |
+| --- | --- |
+| **Let agents run 3-D Secure** | Asks agents that say they can run 3-D Secure to do it, instead of sending the buyer to your checkout. Off at first. It needs the four details below, and a payment provider that takes an outside 3-D Secure result. With Stripe, ask Stripe to turn on 3D Secure import for your account. |
+| **Acquirer BIN** | Your acquirer's BIN, up to 11 characters. Your payment provider gives it to you. |
+| **Acquirer country** | Your acquirer's two-letter country code, such as *US*. |
+| **Acquirer merchant ID** | Your merchant ID at the acquirer, up to 35 characters. |
+| **Merchant name** | The name the buyer's bank shows while it checks the buyer, up to 40 characters. |
+| **3-D Secure requestor ID** | Optional. Leave it empty when your acquirer gave you none. |
+
+Agents that can't run 3-D Secure, and agents that use UCP, such as Google's, still send the buyer to your checkout. If the bank doesn't approve the buyer, the payment isn't taken and the agent can pay another way.
+
 ## Test a platform
 
 Platforms check a store before they send it real buyers. While they do, tick **Test mode** on the platform: its agents may then only pay with test credentials, and nothing is charged.
@@ -171,7 +186,7 @@ Test credentials need the **Test payments** feature, which your administrator tu
 | --- | --- |
 | **tok_test_success** | The payment succeeds and the order is paid. |
 | **tok_test_decline** | The payment is declined. The agent can try again. |
-| **tok_test_3ds** | The buyer's bank asks them to approve the payment. The agent gets a link that opens your checkout, where the buyer finishes it. |
+| **tok_test_3ds** | The buyer's bank asks them to approve the payment. The agent gets a link that opens your checkout, where the buyer finishes it. With **Let agents run 3-D Secure** on, an agent that can run 3-D Secure is asked to instead, and the payment succeeds when it sends an approved result. |
 
 When the platform has finished checking your store, untick **Test mode** and click **Save**.
 

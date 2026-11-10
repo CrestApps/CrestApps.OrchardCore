@@ -86,4 +86,16 @@ public sealed class AgentCheckoutView
     /// Gets or sets the order it placed, once completed.
     /// </summary>
     public AgentOrderReference Order { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the agent may run 3-D Secure with the buyer itself when the buyer's bank
+    /// asks for it, and complete the checkout with the result.
+    /// </summary>
+    public bool AcceptsAuthenticationResult { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the agent needs to run 3-D Secure, while the status is
+    /// <see cref="AgentCheckoutStatus.AuthenticationRequired"/>.
+    /// </summary>
+    public AgentAuthenticationMetadata AuthenticationMetadata { get; set; }
 }
