@@ -32,6 +32,7 @@ internal sealed class FundraisingCampaignPartDisplayDriver : ContentPartDisplayD
     private readonly DonationService _donations;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IClock _clock;
+    private readonly ILocalClock _localClock;
     private readonly IShopperCurrency _shopperCurrency;
 
     internal readonly IStringLocalizer S;
@@ -41,11 +42,13 @@ internal sealed class FundraisingCampaignPartDisplayDriver : ContentPartDisplayD
         IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<FundraisingCampaignPartDisplayDriver> stringLocalizer,
         IClock clock,
+        ILocalClock localClock,
         IShopperCurrency shopperCurrency)
     {
         _donations = donations;
         _httpContextAccessor = httpContextAccessor;
         _clock = clock;
+        _localClock = localClock;
         _shopperCurrency = shopperCurrency;
         S = stringLocalizer;
     }
@@ -75,10 +78,12 @@ internal sealed class FundraisingCampaignPartDisplayDriver : ContentPartDisplayD
     }
 
     public override IDisplayResult Edit(FundraisingCampaignPart part, BuildPartEditorContext context)
-        => Initialize<FundraisingCampaignPartViewModel>(GetEditorShapeType(context), model =>
+        => Initialize<FundraisingCampaignPartViewModel>(GetEditorShapeType(context), async model =>
         {
             model.Goal = part.Goal == 0m ? null : part.Goal.ToString(CultureInfo.InvariantCulture);
-            model.EndsUtc = part.EndsUtc;
+            model.Ends = part.EndsUtc is { } endsUtc
+                ? (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(endsUtc, DateTimeKind.Utc))).DateTime
+                : null;
             model.SuggestedAmounts = string.Join(", ", (part.SuggestedAmounts ?? []).Select(amount => amount.ToString(CultureInfo.InvariantCulture)));
             model.MinimumAmount = part.MinimumAmount.ToString(CultureInfo.InvariantCulture);
             model.TaxDeductible = part.TaxDeductible;
@@ -117,7 +122,8 @@ internal sealed class FundraisingCampaignPartDisplayDriver : ContentPartDisplayD
         part.Goal = goal;
         part.MinimumAmount = Math.Max(0.01m, minimum == 0m ? 1m : minimum);
         part.SuggestedAmounts = [.. amounts.Distinct().Order().Take(6)];
-        part.EndsUtc = model.EndsUtc is { } ends ? DateTime.SpecifyKind(ends, DateTimeKind.Utc) : null;
+        // Entered in the site's time zone.
+        part.EndsUtc = model.Ends is { } ends ? await _localClock.ConvertToUtcAsync(ends) : null;
         part.TaxDeductible = model.TaxDeductible;
 
         return Edit(part, context);

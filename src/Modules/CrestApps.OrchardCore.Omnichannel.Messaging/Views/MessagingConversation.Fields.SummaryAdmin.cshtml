@@ -28,7 +28,7 @@
             <span class="messaging-row-name text-truncate">@name</span>
             @if (conversation.LastMessageUtc.HasValue)
             {
-                <span class="text-muted text-nowrap" style="font-size: .72rem;">@conversation.LastMessageUtc.Value.ToLocalTime().ToString("g")</span>
+                <span class="text-muted text-nowrap" style="font-size: .72rem;">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(conversation.LastMessageUtc.Value, DateTimeKind.Utc), Format: "g"))</span>
             }
         </div>
         <div class="messaging-row-preview small text-muted text-truncate">

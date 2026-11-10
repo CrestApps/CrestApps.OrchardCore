@@ -23,33 +23,33 @@ public sealed class HierarchyAuditTextTests
     [InlineData(DelegatedSessionRules.GrantRemoved, "The user's access was removed")]
     [InlineData(DelegatedSessionRules.IdleTimeout, "Ended after a period without activity")]
     [InlineData("SomethingNew", "SomethingNew")]
-    public void DescribeDetails_OfAnEndedSession_PutsTheReasonInWords(string reason, string expected)
+    public async Task DescribeDetails_OfAnEndedSession_PutsTheReasonInWords(string reason, string expected)
     {
         // Arrange
         var data = new HierarchyAuditEvent { Name = HierarchyAuditEventNames.SessionEnded, Details = reason };
 
         // Act
-        var text = HierarchyAuditText.DescribeDetails(_localizer, data, _labels);
+        var text = await HierarchyAuditText.DescribeDetailsAsync(_localizer, null, data, _labels);
 
         // Assert
         Assert.Equal(expected, text);
     }
 
     [Fact]
-    public void DescribeDetails_OfAnEntry_NamesTheRoles()
+    public async Task DescribeDetails_OfAnEntry_NamesTheRoles()
     {
         // Arrange
         var data = new HierarchyAuditEvent { Name = HierarchyAuditEventNames.Entered, Details = "Administrator, Editor" };
 
         // Act
-        var text = HierarchyAuditText.DescribeDetails(_localizer, data, _labels);
+        var text = await HierarchyAuditText.DescribeDetailsAsync(_localizer, null, data, _labels);
 
         // Assert
         Assert.Equal("Roles: Administrator, Editor", text);
     }
 
     [Fact]
-    public void DescribeDetails_OfAScheduledRemoval_ShowsTheDateUntilWhichItCanBeRestored()
+    public async Task DescribeDetails_OfAScheduledRemoval_ShowsTheDateUntilWhichItCanBeRestored()
     {
         // Arrange
         var data = new HierarchyAuditEvent { Name = HierarchyAuditEventNames.RemovalScheduled, Details = "2026-10-16 17:06:24Z" };
@@ -59,7 +59,7 @@ public sealed class HierarchyAuditTextTests
         try
         {
             // Act
-            var text = HierarchyAuditText.DescribeDetails(_localizer, data, _labels);
+            var text = await HierarchyAuditText.DescribeDetailsAsync(_localizer, null, data, _labels);
 
             // Assert
             Assert.Equal("Can be restored until 10/16/2026", text);
@@ -71,13 +71,13 @@ public sealed class HierarchyAuditTextTests
     }
 
     [Fact]
-    public void DescribeDetails_OfAnotherEvent_KeepsTheDetails()
+    public async Task DescribeDetails_OfAnotherEvent_KeepsTheDetails()
     {
         // Arrange
         var data = new HierarchyAuditEvent { Name = HierarchyAuditEventNames.FeatureEnabled, Details = "OrchardCore.Apis.GraphQL" };
 
         // Act
-        var text = HierarchyAuditText.DescribeDetails(_localizer, data, _labels);
+        var text = await HierarchyAuditText.DescribeDetailsAsync(_localizer, null, data, _labels);
 
         // Assert
         Assert.Equal("OrchardCore.Apis.GraphQL", text);

@@ -1,4 +1,11 @@
 @model CrestApps.OrchardCore.ContentFields.ViewModels.DisplayPhoneFieldViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    // Stored times are UTC; people read them in the site time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 @using System.Globalization
 @using System.Text.Json.Nodes
 @using CrestApps.OrchardCore.PhoneNumbers
@@ -19,9 +26,9 @@
     };
     var verificationTitle = verificationStatus switch
     {
-        "Verified" when verification.LastVerifiedUtc.HasValue => T.GetString("Phone number verified on {0}.", verification.LastVerifiedUtc.Value.ToString("g")).Value,
+        "Verified" when verification.LastVerifiedUtc.HasValue => T.GetString("Phone number verified on {0}.", (await LocalAsync(verification.LastVerifiedUtc.Value)).ToString("g")).Value,
         "Verified" => T["Phone number is verified."].Value,
-        "Invalid" when verification.LastVerifiedUtc.HasValue => T.GetString("Phone number is invalid. Last checked on {0}.", verification.LastVerifiedUtc.Value.ToString("g")).Value,
+        "Invalid" when verification.LastVerifiedUtc.HasValue => T.GetString("Phone number is invalid. Last checked on {0}.", (await LocalAsync(verification.LastVerifiedUtc.Value)).ToString("g")).Value,
         "Invalid" => T["Phone number is invalid."].Value,
         "Failed" => T["Phone number verification failed."].Value,
         _ => T["Phone number has not been verified."].Value,

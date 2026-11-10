@@ -7,6 +7,7 @@ using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Modules;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Security.Services;
 
@@ -19,6 +20,7 @@ public sealed class AIApiKeyDisplayDriver : DisplayDriver<AIApiKey>
 {
     private readonly IRoleService _roleService;
     private readonly IAIProfileManager _profileManager;
+    private readonly ILocalClock _localClock;
 
     internal readonly IStringLocalizer S;
 
@@ -27,11 +29,17 @@ public sealed class AIApiKeyDisplayDriver : DisplayDriver<AIApiKey>
     /// </summary>
     /// <param name="roleService">Lists the roles a server key may act with.</param>
     /// <param name="profileManager">Lists the profiles a browser key may chat with.</param>
+    /// <param name="localClock">Shows and reads the expiry in the site's time zone.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public AIApiKeyDisplayDriver(IRoleService roleService, IAIProfileManager profileManager, IStringLocalizer<AIApiKeyDisplayDriver> stringLocalizer)
+    public AIApiKeyDisplayDriver(
+        IRoleService roleService,
+        IAIProfileManager profileManager,
+        ILocalClock localClock,
+        IStringLocalizer<AIApiKeyDisplayDriver> stringLocalizer)
     {
         _roleService = roleService;
         _profileManager = profileManager;
+        _localClock = localClock;
         S = stringLocalizer;
     }
 
@@ -74,7 +82,9 @@ public sealed class AIApiKeyDisplayDriver : DisplayDriver<AIApiKey>
             model.Roles = key.Roles?.ToArray() ?? [];
             model.AllowedOrigins = string.Join(Environment.NewLine, key.AllowedOrigins ?? []);
             model.AllowedProfileIds = key.AllowedProfileIds?.ToArray() ?? [];
-            model.ExpiresUtc = key.ExpiresUtc;
+            model.Expires = key.ExpiresUtc is { } expiresUtc
+                ? (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(expiresUtc, DateTimeKind.Utc))).DateTime
+                : null;
             model.Enabled = key.Enabled;
             model.PublicKey = key.PublicKey;
             model.AvailableRoles = (await _roleService.GetRoleNamesAsync())
@@ -108,7 +118,7 @@ public sealed class AIApiKeyDisplayDriver : DisplayDriver<AIApiKey>
 
         key.Name = model.Name?.Trim();
         key.Enabled = model.Enabled;
-        key.ExpiresUtc = model.ExpiresUtc is { } expires ? DateTime.SpecifyKind(expires, DateTimeKind.Utc) : null;
+        key.ExpiresUtc = model.Expires is { } expires ? await _localClock.ConvertToUtcAsync(expires) : null;
 
         if (key.Kind == AIApiKeyKind.Browser)
         {

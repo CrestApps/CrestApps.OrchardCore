@@ -453,8 +453,18 @@ public sealed class AdminController : Controller, IUpdateModel
         string owners = null,
         bool publishedOnly = true,
         bool latestOnly = false,
-        bool allVersions = false)
+        bool allVersions = false,
+        [FromServices] ILocalClock localClock = null)
     {
+        // The dates are days in the site's time zone; the index keeps UTC.
+        if (localClock is not null)
+        {
+            createdFrom = await ToUtcAsync(createdFrom, localClock);
+            createdTo = await ToUtcAsync(createdTo, localClock);
+            modifiedFrom = await ToUtcAsync(modifiedFrom, localClock);
+            modifiedTo = await ToUtcAsync(modifiedTo, localClock);
+        }
+
         var contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentTypeId);
 
         if (contentTypeDefinition == null)
@@ -1064,6 +1074,9 @@ public sealed class AdminController : Controller, IUpdateModel
             Pager = pagerShape,
         };
     }
+
+    private static async Task<DateTime?> ToUtcAsync(DateTime? localDay, ILocalClock localClock)
+        => localDay is { } value ? await localClock.ConvertToUtcAsync(value.Date) : null;
 
     private async Task<ContentExporterViewModel> BuildContentExporterViewModelAsync(
         IList<SelectListItem> exportableTypes,

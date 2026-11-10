@@ -110,7 +110,7 @@
                 }
             </span>
             <span class="text-nowrap">
-                @message.CreatedUtc.ToLocalTime().ToString("t")
+                @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(message.CreatedUtc, DateTimeKind.Utc), Format: "t"))
                 @if (outbound && !string.IsNullOrEmpty(message.DeliveryStatus))
                 {
                     <text>&middot; @message.DeliveryStatus</text>

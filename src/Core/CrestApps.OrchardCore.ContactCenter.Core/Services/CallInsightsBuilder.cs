@@ -17,12 +17,14 @@ internal static class CallInsightsBuilder
     /// <param name="toUtc">The end of the period.</param>
     /// <param name="interactions">The period's interactions.</param>
     /// <param name="outcomes">The classifier that decides each interaction's outcome.</param>
+    /// <param name="toLocalDay">Returns the local day of an interaction's creation time, or <see langword="null"/> for UTC days.</param>
     /// <returns>The report.</returns>
     public static CallInsightsReport Build(
         DateTime fromUtc,
         DateTime toUtc,
         IReadOnlyList<Interaction> interactions,
-        InteractionOutcomeClassifier outcomes)
+        InteractionOutcomeClassifier outcomes,
+        Func<DateTime, DateOnly> toLocalDay = null)
     {
         var report = new CallInsightsReport
         {
@@ -90,7 +92,7 @@ internal static class CallInsightsBuilder
             statusCounts[interaction.Status] = statusCounts.GetValueOrDefault(interaction.Status) + 1;
             outcomeCounts[outcome] = outcomeCounts.GetValueOrDefault(outcome) + 1;
 
-            var day = DateOnly.FromDateTime(interaction.CreatedUtc);
+            var day = toLocalDay is null ? DateOnly.FromDateTime(interaction.CreatedUtc) : toLocalDay(interaction.CreatedUtc);
 
             if (!dailyPoints.TryGetValue(day, out var point))
             {

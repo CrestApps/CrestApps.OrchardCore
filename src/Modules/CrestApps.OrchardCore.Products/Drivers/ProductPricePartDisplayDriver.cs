@@ -7,6 +7,7 @@ using OrchardCore;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Modules;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.Products.Drivers;
@@ -22,6 +23,7 @@ namespace CrestApps.OrchardCore.Products.Drivers;
 public sealed class ProductPricePartDisplayDriver : ContentPartDisplayDriver<ProductPricePart>
 {
     private readonly IProductCurrencyProvider _currencyProvider;
+    private readonly ILocalClock _localClock;
 
     internal readonly IStringLocalizer S;
 
@@ -29,12 +31,15 @@ public sealed class ProductPricePartDisplayDriver : ContentPartDisplayDriver<Pro
     /// Initializes a new instance of the <see cref="ProductPricePartDisplayDriver"/> class.
     /// </summary>
     /// <param name="currencyProvider">The currency catalog.</param>
+    /// <param name="localClock">Shows and reads the offer dates in the site's time zone.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ProductPricePartDisplayDriver(
         IProductCurrencyProvider currencyProvider,
+        ILocalClock localClock,
         IStringLocalizer<ProductPricePartDisplayDriver> stringLocalizer)
     {
         _currencyProvider = currencyProvider;
+        _localClock = localClock;
         S = stringLocalizer;
     }
 
@@ -43,7 +48,12 @@ public sealed class ProductPricePartDisplayDriver : ContentPartDisplayDriver<Pro
     {
         return Initialize<ProductPricePartViewModel>(GetEditorShapeType(context), async model =>
         {
-            model.Prices = [.. (part.Prices ?? []).Select(ToViewModel)];
+            model.Prices = [];
+
+            foreach (var price in part.Prices ?? [])
+            {
+                model.Prices.Add(await ToViewModelAsync(price));
+            }
 
             // A product with no prices still needs one row to fill in, or there is nothing on the page to
             // type into and nothing for the browser to copy when adding a second.
@@ -93,12 +103,14 @@ public sealed class ProductPricePartDisplayDriver : ContentPartDisplayDriver<Pro
                 continue;
             }
 
-            var price = ToPrice(entry);
+            var price = await ToPriceAsync(entry);
             var errors = ProductPriceEditor.Validate(price);
 
             foreach (var error in errors)
             {
-                context.Updater.ModelState.AddModelError(Prefix, $"Prices[{index}].{error.Field}", Describe(error.Kind));
+                var field = error.Field == nameof(ProductPrice.EffectiveToUtc) ? nameof(ProductPriceViewModel.EffectiveTo) : error.Field;
+
+                context.Updater.ModelState.AddModelError(Prefix, $"Prices[{index}].{field}", Describe(error.Kind));
             }
 
             if (errors.Count == 0)
@@ -132,7 +144,7 @@ public sealed class ProductPricePartDisplayDriver : ContentPartDisplayDriver<Pro
             _ => S["That price cannot be saved."],
         };
 
-    private static ProductPrice ToPrice(ProductPriceViewModel entry)
+    private async Task<ProductPrice> ToPriceAsync(ProductPriceViewModel entry)
         => new()
         {
             // A blank id means the editor added the row; anything else keeps the id it already had, because
@@ -156,11 +168,12 @@ public sealed class ProductPricePartDisplayDriver : ContentPartDisplayDriver<Pro
             MaximumQuantity = entry.AllowQuantity ? entry.MaximumQuantity : null,
             IsDefault = entry.IsDefault,
             IsActive = entry.IsActive,
-            EffectiveFromUtc = entry.EffectiveFromUtc,
-            EffectiveToUtc = entry.EffectiveToUtc,
+            // The editor shows and takes the dates in the site's time zone.
+            EffectiveFromUtc = entry.EffectiveFrom is { } from ? await _localClock.ConvertToUtcAsync(from) : null,
+            EffectiveToUtc = entry.EffectiveTo is { } to ? await _localClock.ConvertToUtcAsync(to) : null,
         };
 
-    private static ProductPriceViewModel ToViewModel(ProductPrice price)
+    private async Task<ProductPriceViewModel> ToViewModelAsync(ProductPrice price)
         => new()
         {
             PriceId = price.PriceId,
@@ -182,9 +195,12 @@ public sealed class ProductPricePartDisplayDriver : ContentPartDisplayDriver<Pro
             MaximumQuantity = price.MaximumQuantity,
             IsDefault = price.IsDefault,
             IsActive = price.IsActive,
-            EffectiveFromUtc = price.EffectiveFromUtc,
-            EffectiveToUtc = price.EffectiveToUtc,
+            EffectiveFrom = await ToLocalAsync(price.EffectiveFromUtc),
+            EffectiveTo = await ToLocalAsync(price.EffectiveToUtc),
         };
+
+    private async Task<DateTime?> ToLocalAsync(DateTime? utc)
+        => utc is { } value ? (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(value, DateTimeKind.Utc))).DateTime : null;
 
     private async Task<IEnumerable<SelectListItem>> BuildCurrencyOptionsAsync()
     {

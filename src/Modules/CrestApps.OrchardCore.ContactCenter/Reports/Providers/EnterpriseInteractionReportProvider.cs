@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OrchardCore.Modules;
 using YesSql;
 using static CrestApps.OrchardCore.ContactCenter.Reports.Services.InteractionMetricsCalculator;
 
@@ -33,11 +34,13 @@ internal sealed partial class EnterpriseInteractionReportProvider : IReportRunne
     private readonly EnterpriseInteractionReportKind _kind;
     private readonly IContactCenterReportCapabilityGuard _capabilityGuard;
     private readonly IStringLocalizer _stringLocalizer;
+    private readonly ILocalClock _localClock;
     private readonly TimeSpan _maximumReportRange;
     private Dictionary<string, string> _agentUserNames = [];
     private Dictionary<string, ActivityQueue> _queues = [];
     private HashSet<string> _absentFeatureIds = [];
     private InteractionOutcomeClassifier _outcomes = InteractionOutcomeClassifier.WithoutEvents;
+    private ReportTimeZone _timeZone = ReportTimeZone.Utc;
 
     private static readonly string[] _executiveMetricRequirements =
         [null, null, null, null, null, null, null, null, null, ContactCenterConstants.Feature.Voice, ContactCenterConstants.Feature.Recording];
@@ -76,6 +79,7 @@ internal sealed partial class EnterpriseInteractionReportProvider : IReportRunne
         IAgentProfileManager agentManager,
         EnterpriseInteractionReportKind kind,
         IContactCenterReportCapabilityGuard capabilityGuard,
+        ILocalClock localClock,
         IStringLocalizer<EnterpriseInteractionReportProvider> stringLocalizer,
         IOptions<ContactCenterReportingOptions> reportingOptions)
     {
@@ -86,6 +90,7 @@ internal sealed partial class EnterpriseInteractionReportProvider : IReportRunne
         _kind = kind;
         _capabilityGuard = capabilityGuard;
         _stringLocalizer = stringLocalizer;
+        _localClock = localClock;
         _maximumReportRange = reportingOptions.Value.MaximumReportRange;
     }
 
@@ -108,6 +113,9 @@ internal sealed partial class EnterpriseInteractionReportProvider : IReportRunne
         _absentFeatureIds = [.. await _capabilityGuard.GetMissingFeaturesAsync(
             [ContactCenterConstants.Feature.Voice, ContactCenterConstants.Feature.Recording],
             cancellationToken)];
+
+        // Hours, weekdays and days are read in the tenant's zone, the one the period was chosen in.
+        _timeZone = await ReportTimeZone.ResolveAsync(_localClock);
 
         var range = context.Filter.GetDateRange();
         var fromUtc = range.FromUtc.GetValueOrDefault();
@@ -154,8 +162,8 @@ internal sealed partial class EnterpriseInteractionReportProvider : IReportRunne
             EnterpriseInteractionReportKind.QueueAbandonment => QueueAbandonmentReport.Build(inboundQueueInteractions, _outcomes, queueId => ResolveQueueName(queueId, queues), S),
             EnterpriseInteractionReportKind.AgentHandleTime => BuildAgentHandleTime(filteredInteractions),
             EnterpriseInteractionReportKind.WrapUpPerformance => BuildWrapUpPerformance(filteredInteractions),
-            EnterpriseInteractionReportKind.HourOfDayPerformance => BuildTimeDimensionPerformance(filteredInteractions, S["Hour (UTC)"].Value, interaction => interaction.CreatedUtc.Hour.ToString("00", CultureInfo.InvariantCulture)),
-            EnterpriseInteractionReportKind.DayOfWeekPerformance => BuildTimeDimensionPerformance(filteredInteractions, S["Day of week"].Value, interaction => interaction.CreatedUtc.DayOfWeek.ToString()),
+            EnterpriseInteractionReportKind.HourOfDayPerformance => BuildTimeDimensionPerformance(filteredInteractions, S["Hour ({0})", _timeZone.Name].Value, interaction => _timeZone.ToLocal(interaction.CreatedUtc).Hour.ToString("00", CultureInfo.InvariantCulture)),
+            EnterpriseInteractionReportKind.DayOfWeekPerformance => BuildTimeDimensionPerformance(filteredInteractions, S["Day of week"].Value, interaction => _timeZone.ToLocal(interaction.CreatedUtc).DayOfWeek.ToString()),
             EnterpriseInteractionReportKind.QueuePerformance => BuildNamedDimensionPerformance(inboundQueueInteractions, queues, queueDimension: true),
             EnterpriseInteractionReportKind.QueueWaitTime => BuildQueueDurationPerformance(inboundQueueInteractions, queues, queueWait: true),
             EnterpriseInteractionReportKind.QueueHandleTime => BuildQueueDurationPerformance(inboundQueueInteractions, queues, queueWait: false),
@@ -170,7 +178,7 @@ internal sealed partial class EnterpriseInteractionReportProvider : IReportRunne
             EnterpriseInteractionReportKind.AgentUsageBilling => BuildUsageReport(filteredInteractions, S["Agent"].Value, interaction => ResolveAgentName(interaction.AgentId)),
             EnterpriseInteractionReportKind.ProviderUsageBilling => BuildUsageReport(filteredInteractions, S["Provider"].Value, interaction => DisplayOrUnknown(interaction.ProviderName)),
             EnterpriseInteractionReportKind.ChannelUsageBilling => BuildUsageReport(filteredInteractions, S["Channel"].Value, interaction => interaction.Channel.ToString()),
-            EnterpriseInteractionReportKind.DailyUsageBilling => BuildUsageReport(filteredInteractions, S["Date (UTC)"].Value, interaction => interaction.CreatedUtc.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
+            EnterpriseInteractionReportKind.DailyUsageBilling => BuildUsageReport(filteredInteractions, S["Date ({0})", _timeZone.Name].Value, interaction => _timeZone.DateOf(interaction.CreatedUtc).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
             EnterpriseInteractionReportKind.LongInteractionDetail => BuildExceptionDetail(filteredInteractions.Where(interaction => _outcomes.GetTalkSeconds(interaction) >= 900d), S["Long interactions (15+ minutes)"].Value),
             EnterpriseInteractionReportKind.FailedInteractionDetail => BuildExceptionDetail(filteredInteractions.Where(_outcomes.IsFailed), S["Failed interactions"].Value),
             EnterpriseInteractionReportKind.AbandonedInteractionDetail => BuildExceptionDetail(filteredInteractions.Where(_outcomes.IsAbandoned), S["Abandoned interactions"].Value),
@@ -219,7 +227,7 @@ internal sealed partial class EnterpriseInteractionReportProvider : IReportRunne
     private ReportSection BuildDailyTrendChart(IReadOnlyList<Interaction> interactions)
     {
         var daily = interactions
-            .GroupBy(interaction => DateOnly.FromDateTime(interaction.CreatedUtc))
+            .GroupBy(interaction => _timeZone.DateOf(interaction.CreatedUtc))
             .OrderBy(group => group.Key)
             .Select(group => new
             {
@@ -343,7 +351,7 @@ internal sealed partial class EnterpriseInteractionReportProvider : IReportRunne
         ReportColumn[] columns = volumeOnly
             ?
             [
-                new ReportColumn(S["Date (UTC)"].Value),
+                new ReportColumn(S["Date ({0})", _timeZone.Name].Value),
                 new ReportColumn(S["Interactions"].Value, ReportColumnAlign.End),
                 new ReportColumn(S["Answered"].Value, ReportColumnAlign.End),
                 new ReportColumn(S["Abandoned"].Value, ReportColumnAlign.End),
@@ -351,7 +359,7 @@ internal sealed partial class EnterpriseInteractionReportProvider : IReportRunne
             ]
             :
             [
-                new ReportColumn(S["Date (UTC)"].Value),
+                new ReportColumn(S["Date ({0})", _timeZone.Name].Value),
                 new ReportColumn(S["Interactions"].Value, ReportColumnAlign.End),
                 new ReportColumn(S["Answered"].Value, ReportColumnAlign.End),
                 new ReportColumn(S["Abandoned"].Value, ReportColumnAlign.End),
@@ -364,7 +372,7 @@ internal sealed partial class EnterpriseInteractionReportProvider : IReportRunne
         var rows = new List<ReportRow>();
 
         foreach (var group in interactions
-            .GroupBy(interaction => DateOnly.FromDateTime(interaction.CreatedUtc))
+            .GroupBy(interaction => _timeZone.DateOf(interaction.CreatedUtc))
             .OrderBy(group => group.Key))
         {
             var metrics = Aggregate(group, _outcomes);
@@ -486,7 +494,7 @@ internal sealed partial class EnterpriseInteractionReportProvider : IReportRunne
     {
         var columns = new[]
         {
-            new ReportColumn(S["Started (UTC)"].Value),
+            new ReportColumn(S["Started ({0})", _timeZone.Name].Value),
             new ReportColumn(S["Interaction"].Value),
             new ReportColumn(S["Channel"].Value),
             new ReportColumn(S["Direction"].Value),
@@ -504,7 +512,7 @@ internal sealed partial class EnterpriseInteractionReportProvider : IReportRunne
             .OrderByDescending(interaction => interaction.CreatedUtc)
             .Select(interaction => SelectAvailableRow(
             [
-                interaction.CreatedUtc.ToString("u", CultureInfo.InvariantCulture),
+                _timeZone.ToLocal(interaction.CreatedUtc).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
                 interaction.ItemId,
                 interaction.Channel.ToString(),
                 interaction.Direction.ToString(),

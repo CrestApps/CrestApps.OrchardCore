@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Localization;
+using OrchardCore.Modules;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Chat.Reports;
@@ -17,6 +18,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Reports;
 public sealed class AIChatExtractedDataReport : IReport, IReportFilterMetadata
 {
     private readonly IAIChatSessionExtractedDataStore _store;
+    private readonly ILocalClock _localClock;
 
     internal readonly IStringLocalizer S;
 
@@ -24,10 +26,15 @@ public sealed class AIChatExtractedDataReport : IReport, IReportFilterMetadata
     /// Initializes a new instance of the <see cref="AIChatExtractedDataReport"/> class.
     /// </summary>
     /// <param name="store">The extracted data store.</param>
+    /// <param name="localClock">Converts times to the site time zone.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public AIChatExtractedDataReport(IAIChatSessionExtractedDataStore store, IStringLocalizer<AIChatExtractedDataReport> stringLocalizer)
+    public AIChatExtractedDataReport(
+        IAIChatSessionExtractedDataStore store,
+        ILocalClock localClock,
+        IStringLocalizer<AIChatExtractedDataReport> stringLocalizer)
     {
         _store = store;
+        _localClock = localClock;
         S = stringLocalizer;
     }
 
@@ -96,15 +103,8 @@ public sealed class AIChatExtractedDataReport : IReport, IReportFilterMetadata
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
             .ToList();
-        var tableRows = rows.Select(row => new ReportRow(
-        [
-            row.SessionStartedUtc.ToString("o", CultureInfo.InvariantCulture),
-            row.SessionId,
-            .. fields.Select(field => row.Values.GetValueOrDefault(field)),
-        ]));
-
         // An export is one flat table, with the invariant columns of the extracted data page's CSV and a column per
-        // field, as scripts read it, even when it has no rows.
+        // field, as scripts read it, even when it has no rows. Its start time stays UTC for those scripts.
         if (context.Mode == ReportRunMode.Export)
         {
             return new ReportDocument().Add(ReportSection.ForTable("ExtractedData",
@@ -113,12 +113,31 @@ public sealed class AIChatExtractedDataReport : IReport, IReportFilterMetadata
                 new ReportColumn("SessionId"),
                 .. fields.Select(field => new ReportColumn(field)),
             ],
-            tableRows));
+            rows.Select(row => new ReportRow(
+            [
+                row.SessionStartedUtc.ToString("o", CultureInfo.InvariantCulture),
+                row.SessionId,
+                .. fields.Select(field => row.Values.GetValueOrDefault(field)),
+            ]))));
         }
 
         if (rows.Count == 0)
         {
             return new ReportDocument();
+        }
+
+        var tableRows = new List<ReportRow>(rows.Count);
+
+        foreach (var row in rows)
+        {
+            var started = await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(row.SessionStartedUtc, DateTimeKind.Utc));
+
+            tableRows.Add(new ReportRow(
+            [
+                started.DateTime.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture),
+                row.SessionId,
+                .. fields.Select(field => row.Values.GetValueOrDefault(field)),
+            ]));
         }
 
         return new ReportDocument()
@@ -129,7 +148,7 @@ public sealed class AIChatExtractedDataReport : IReport, IReportFilterMetadata
             ]))
             .Add(ReportSection.ForTable(S["Extracted data"].Value,
             [
-                new ReportColumn(S["Session started (UTC)"].Value),
+                new ReportColumn(S["Session started"].Value),
                 new ReportColumn(S["Session"].Value),
                 .. fields.Select(field => new ReportColumn(field)),
             ],

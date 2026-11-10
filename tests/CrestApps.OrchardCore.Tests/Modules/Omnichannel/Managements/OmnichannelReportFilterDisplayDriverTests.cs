@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using Moq;
+using OrchardCore.Modules;
 using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements;
@@ -178,6 +179,7 @@ public sealed class OmnichannelReportFilterDisplayDriverTests
             Mock.Of<ICatalogManager<OmnichannelCampaign>>(),
             Mock.Of<INamedCatalogManager<OmnichannelDisposition>>(),
             Options.Create(new ActivitySourceOptions()),
+            Mock.Of<ILocalClock>(),
             new PassThroughStringLocalizer<DialerCallDetailReportProvider>());
     }
 

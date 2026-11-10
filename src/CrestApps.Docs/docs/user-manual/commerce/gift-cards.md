@@ -69,7 +69,7 @@ A gift card is sold like any product, and your [tax setup](taxes.md) applies to 
 | **Code** | Optional. Leave it blank to have a 16-character code made up, which nobody can guess. Or type your own, 8 to 32 letters and digits, such as a code printed on a physical card. Two cards can't share a code. |
 | **Recipient's name** | Who the card is for. Used to greet them in the email. |
 | **Recipient's email** | Where the card is sent. Required when **Email the card** is ticked. |
-| **Expires (UTC)** | Optional date and time, in UTC, after which the card can't be used. Leave blank for a card that never expires; some places require that. |
+| **Expires** | Optional date and time, in the site's time zone, after which the card can't be used. Leave blank for a card that never expires; some places require that. |
 | **Message** | Optional. Shown in the email with the card, such as *Happy birthday!* |
 | **Note** | Optional. For the store only, such as why the card was given. The recipient never sees it. |
 | **Email the card** | Sends the code to the recipient's email, with how to use it. |
@@ -103,7 +103,7 @@ When nothing matches, the list shows *Nothing here! There are no gift cards that
 
 A card's page shows its whole **Code**, its **Balance** (*of* what it started with), when it was **Issued**, and for a card that was bought, a link to the order: *Bought with order …*.
 
-You can change the **Recipient's name**, **Recipient's email**, **Expires (UTC)** and **Note**, and clear **Enabled** to stop the card paying for anything without changing its balance. Click **Save**: *The gift card was updated.* The amount on the card is changed separately, below.
+You can change the **Recipient's name**, **Recipient's email**, **Expires** and **Note**, and clear **Enabled** to stop the card paying for anything without changing its balance. Click **Save**: *The gift card was updated.* The amount on the card is changed separately, below.
 
 ### Change the balance
 

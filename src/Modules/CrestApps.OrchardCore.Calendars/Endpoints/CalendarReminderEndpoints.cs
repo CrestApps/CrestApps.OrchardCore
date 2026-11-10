@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Claims;
 using CrestApps.OrchardCore.Calendars.Core.Services;
 using Microsoft.AspNetCore.Antiforgery;
@@ -35,7 +36,8 @@ internal static class CalendarReminderEndpoints
         HttpContext httpContext,
         IAuthorizationService authorizationService,
         CalendarUserReminderStore store,
-        IClock clock)
+        IClock clock,
+        ILocalClock localClock)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, CalendarPermissions.AccessCalendars))
         {
@@ -45,18 +47,30 @@ internal static class CalendarReminderEndpoints
         var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
         var reminders = await store.ListShownAsync(userId, clock.UtcNow - _shownFor, 20, httpContext.RequestAborted);
 
-        return Results.Ok(reminders.Select(reminder => new
+        var items = new List<object>(reminders.Count);
+
+        foreach (var reminder in reminders)
         {
-            id = reminder.ItemId,
-            eventId = reminder.EventId,
-            title = reminder.Title,
-            location = reminder.Location,
-            calendar = reminder.CalendarName,
-            start = CalendarAdminEndpoints.FormatInstant(reminder.StartUtc),
-            end = CalendarAdminEndpoints.FormatInstant(reminder.EndUtc),
-            allDay = reminder.AllDay,
-            minutesBefore = reminder.MinutesBefore,
-        }));
+            // The start is written in the site time zone here, so an all-day event keeps its own date in a browser
+            // that sits in another zone.
+            var localStart = await localClock.ConvertToLocalAsync(DateTime.SpecifyKind(reminder.StartUtc, DateTimeKind.Utc));
+
+            items.Add(new
+            {
+                id = reminder.ItemId,
+                eventId = reminder.EventId,
+                title = reminder.Title,
+                location = reminder.Location,
+                calendar = reminder.CalendarName,
+                start = CalendarAdminEndpoints.FormatInstant(reminder.StartUtc),
+                end = CalendarAdminEndpoints.FormatInstant(reminder.EndUtc),
+                allDay = reminder.AllDay,
+                startText = localStart.ToString(reminder.AllDay ? "D" : "g", CultureInfo.CurrentCulture),
+                minutesBefore = reminder.MinutesBefore,
+            });
+        }
+
+        return Results.Ok(items);
     }
 
     private static async Task<IResult> DismissAsync(

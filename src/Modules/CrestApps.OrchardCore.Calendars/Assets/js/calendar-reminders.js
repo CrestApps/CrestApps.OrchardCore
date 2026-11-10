@@ -144,7 +144,8 @@
         title.textContent = reminder.title || '';
         details.className = 'small text-body-secondary';
         details.textContent = [
-            reminder.allDay ? start.toLocaleDateString() : start.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }),
+            // The server writes the start in the site time zone; the browser's zone is only a fallback.
+            reminder.startText || (reminder.allDay ? start.toLocaleDateString() : start.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })),
             reminder.location,
             reminder.calendar,
         ].filter(Boolean).join(' · ');

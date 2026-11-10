@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Localization;
 using Moq;
+using OrchardCore.Modules;
 using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter.Reports;
@@ -175,6 +176,7 @@ public sealed class CallQualityReportConversationTests
             eventStore.Object,
             profiles.Object,
             userManager.Object,
+            Mock.Of<ILocalClock>(),
             localizer.Object);
 
         var filter = new ReportFilter();

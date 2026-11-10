@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.Extensions.Options;
+using OrchardCore.Modules;
 using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -27,6 +28,7 @@ public sealed partial class ContactCenterReportingService : IContactCenterReport
     private readonly IInteractionEventStore _eventStore;
     private readonly ActivitySourceOptions _activitySourceOptions;
     private readonly TimeSpan _maximumReportRange;
+    private readonly ILocalClock _localClock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterReportingService"/> class.
@@ -41,6 +43,7 @@ public sealed partial class ContactCenterReportingService : IContactCenterReport
     /// <param name="reportingOptions">The reporting options that bound the requested range.</param>
     /// <param name="eventStore">The event log whose abandons and voicemails decide each interaction's outcome.</param>
     /// <param name="activitySourceOptions">The activity sources whose stored values a source filter matches.</param>
+    /// <param name="localClock">The local clock, whose time zone the reports' days are in; UTC days without it.</param>
     public ContactCenterReportingService(
         ISession session,
         IActivityQueueGroupManager queueGroupManager,
@@ -51,7 +54,8 @@ public sealed partial class ContactCenterReportingService : IContactCenterReport
         ICatalogManager<OmnichannelCampaignGroup> campaignGroupManager,
         IOptions<ContactCenterReportingOptions> reportingOptions,
         IInteractionEventStore eventStore,
-        IOptions<ActivitySourceOptions> activitySourceOptions)
+        IOptions<ActivitySourceOptions> activitySourceOptions,
+        ILocalClock localClock = null)
     {
         _activitySourceOptions = activitySourceOptions.Value;
         _session = session;
@@ -63,6 +67,7 @@ public sealed partial class ContactCenterReportingService : IContactCenterReport
         _campaignGroupManager = campaignGroupManager;
         _eventStore = eventStore;
         _maximumReportRange = reportingOptions.Value.MaximumReportRange;
+        _localClock = localClock;
     }
 
     /// <inheritdoc/>
@@ -85,7 +90,25 @@ public sealed partial class ContactCenterReportingService : IContactCenterReport
         await ApplyCurrentQueueGroupCriteriaAsync(criteria, cancellationToken);
         var filtered = FilterInteractions(interactions, criteria);
 
-        return BuildCallInsights(fromUtc, toUtc, filtered, await InteractionOutcomeClassifier.LoadAsync(_eventStore, filtered, cancellationToken));
+        // The daily points are the site's days, not UTC ones.
+        Func<DateTime, DateOnly> toLocalDay = null;
+
+        if (_localClock is not null)
+        {
+            var localDays = new Dictionary<DateTime, DateOnly>();
+
+            foreach (var interaction in filtered)
+            {
+                if (!localDays.ContainsKey(interaction.CreatedUtc))
+                {
+                    localDays[interaction.CreatedUtc] = DateOnly.FromDateTime((await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(interaction.CreatedUtc, DateTimeKind.Utc))).DateTime);
+                }
+            }
+
+            toLocalDay = createdUtc => localDays[createdUtc];
+        }
+
+        return BuildCallInsights(fromUtc, toUtc, filtered, await InteractionOutcomeClassifier.LoadAsync(_eventStore, filtered, cancellationToken), toLocalDay);
     }
 
     /// <inheritdoc/>
@@ -350,8 +373,9 @@ public sealed partial class ContactCenterReportingService : IContactCenterReport
         DateTime fromUtc,
         DateTime toUtc,
         IReadOnlyList<Interaction> interactions,
-        InteractionOutcomeClassifier outcomes = null)
-        => CallInsightsBuilder.Build(fromUtc, toUtc, interactions, outcomes ?? InteractionOutcomeClassifier.WithoutEvents);
+        InteractionOutcomeClassifier outcomes = null,
+        Func<DateTime, DateOnly> toLocalDay = null)
+        => CallInsightsBuilder.Build(fromUtc, toUtc, interactions, outcomes ?? InteractionOutcomeClassifier.WithoutEvents, toLocalDay);
 
     internal static AgentProductivityReport BuildAgentProductivity(
         DateTime fromUtc,

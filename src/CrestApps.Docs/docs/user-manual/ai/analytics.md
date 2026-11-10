@@ -111,7 +111,7 @@ Lists the details an assistant collected with data extraction, such as names, em
 
 1. Open **Reports > Artificial Intelligence Reports > AI Chat Extracted Data**.
 2. Pick the **AI Profile** (required), and optionally a **Date range**.
-3. Click **Show**. The table has **Session started (UTC)**, **Session** and one column per extracted detail. The report starts on **All Time**.
+3. Click **Show**. The table has **Session started**, **Session** and one column per extracted detail. The report starts on **All Time**.
 4. Click **Export** to download it, for example to import leads into another system. It needs the **Export AI Chat Analytics** permission. The file has the columns `SessionStartedUtc`, `SessionId` and one per extracted detail.
 
 ## AI Chat Conversion Goals
@@ -122,7 +122,7 @@ Shows how each finished chat scored against the profile's conversion goals.
 
 1. Open **Reports > Artificial Intelligence Reports > AI Chat Conversion Goals**.
 2. Pick the **AI Profile** (required), and optionally a **Date range**.
-3. Click **Show**. The table has **Session started (UTC)**, **Session**, **Total points** and one column per goal. The report starts on **All Time**.
+3. Click **Show**. The table has **Session started**, **Session**, **Total points** and one column per goal. The report starts on **All Time**.
 4. Click **Export** to download it. It needs the **Export AI Chat Analytics** permission. The file has the columns `SessionStartedUtc`, `SessionId`, `TotalPoints` and one per goal.
 
 ## AI Usage Analytics

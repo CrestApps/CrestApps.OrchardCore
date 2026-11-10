@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Receipts;
 using CrestApps.OrchardCore.Receipts.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.PointOfSale.Services;
 
@@ -50,13 +51,20 @@ internal static class PosReceipts
         }
 
         var S = services.GetRequiredService<IStringLocalizerFactory>().Create(typeof(PosReceipts));
+        var issuedUtc = DateTime.SpecifyKind(order.PaidUtc ?? order.CreatedUtc, DateTimeKind.Utc);
+
+        // The receipt prints the time of sale as the store reads it, in the site time zone.
+        var issuedAt = services.GetService<ILocalClock>() is { } localClock
+            ? (await localClock.ConvertToLocalAsync(issuedUtc)).DateTime
+            : issuedUtc;
+
         var document = await receipts.BuildAsync(new ReceiptRequest
         {
             BilledToName = order.CustomerName,
             BilledToEmail = order.CustomerEmail,
             Reference = order.OrderNumber,
             SourceLabel = S["Point of sale"],
-            IssuedAt = order.PaidUtc ?? order.CreatedUtc,
+            IssuedAt = issuedAt,
             Currency = order.Currency,
             LineItems = [.. order.Lines.Select(line => new ReceiptLineItem
             {

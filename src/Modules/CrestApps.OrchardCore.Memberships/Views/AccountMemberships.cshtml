@@ -1,4 +1,11 @@
 @model AccountMembershipsViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    // Stored times are UTC; people read them in the site time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 
 @* The signed-in customer's memberships: what each opens, and until when. *@
 
@@ -18,10 +25,10 @@ else
                         @switch (membership.Status)
                         {
                             case MembershipStatus.Active:
-                                @(membership.EndsUtc is { } ends ? T["Until {0:D}", ends] : T["No end date"])
+                                @(membership.EndsUtc is { } ends ? T["Until {0:D}", await LocalAsync(ends)] : T["No end date"])
                                 break;
                             case MembershipStatus.Expired:
-                                @T["Ended {0:D}", membership.EndsUtc]
+                                @T["Ended {0:D}", membership.EndsUtc is { } endedUtc ? await LocalAsync(endedUtc) : null]
                                 break;
                             default:
                                 @T["Ended early"]

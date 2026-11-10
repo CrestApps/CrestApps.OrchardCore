@@ -147,7 +147,7 @@ internal sealed class AgentWorkforceReportProvider : IReportRunner, IReportFilte
             AgentWorkforceReportKind.Utilization => BuildUtilization(intervals, agents, occupancy: false),
             AgentWorkforceReportKind.Occupancy => BuildUtilization(intervals, agents, occupancy: true),
             AgentWorkforceReportKind.ReasonBreakdown => BuildReasonBreakdown(intervals),
-            AgentWorkforceReportKind.PresenceAudit => BuildPresenceAudit(timelines, agents, fromUtc, toUtc, limitRows: context.Mode != ReportRunMode.Export),
+            AgentWorkforceReportKind.PresenceAudit => BuildPresenceAudit(timelines, agents, fromUtc, toUtc, timeZone, limitRows: context.Mode != ReportRunMode.Export),
             AgentWorkforceReportKind.QueueMembershipHours => BuildMembershipHours(intervals, queueMembership: true),
             AgentWorkforceReportKind.CampaignMembershipHours => BuildMembershipHours(intervals, queueMembership: false, campaignNames),
             AgentWorkforceReportKind.PayrollTimecard => BuildPayrollTimecard(intervals, agents),
@@ -594,11 +594,14 @@ internal sealed class AgentWorkforceReportProvider : IReportRunner, IReportFilte
         Dictionary<string, AgentProfile> agents,
         DateTime fromUtc,
         DateTime toUtc,
+        ReportTimeZone timeZone = null,
         bool limitRows = false)
     {
+        timeZone ??= ReportTimeZone.Utc;
+
         var columns = new[]
         {
-            new ReportColumn(S["Changed (UTC)"].Value),
+            new ReportColumn(S["Changed ({0})", timeZone.Name].Value),
             new ReportColumn(S["Agent"].Value),
             new ReportColumn(S["Previous"].Value),
             new ReportColumn(S["Current"].Value),
@@ -620,7 +623,7 @@ internal sealed class AgentWorkforceReportProvider : IReportRunner, IReportFilte
         var rows = (limitRows ? transitions.Take(PresenceAuditEntryLimit) : transitions)
             .Select(transition => new ReportRow(
             [
-                AuditReportFormat.Timestamp(transition.ChangedUtc),
+                AuditReportFormat.Timestamp(transition.ChangedUtc, timeZone),
                 ResolveAgentName(transition.AgentId, agents),
                 transition.PreviousState.ToString(),
                 transition.CurrentState.ToString(),

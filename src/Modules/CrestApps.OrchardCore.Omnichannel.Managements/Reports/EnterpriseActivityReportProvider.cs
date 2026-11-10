@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement.Records;
+using OrchardCore.Modules;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
 using YesSql;
@@ -29,6 +30,7 @@ internal sealed class EnterpriseActivityReportProvider : IReportRunner
     private readonly ICatalogManager<OmnichannelCampaignGroup> _campaignGroupManager;
     private readonly INamedCatalogManager<OmnichannelDisposition> _dispositionManager;
     private readonly IOmnichannelChannelEndpointStore _addressStore;
+    private readonly ILocalClock _localClock;
     private readonly EnterpriseActivityReportKind _kind;
     private readonly IStringLocalizer _stringLocalizer;
 
@@ -39,6 +41,7 @@ internal sealed class EnterpriseActivityReportProvider : IReportRunner
         INamedCatalogManager<OmnichannelDisposition> dispositionManager,
         IOptions<ActivitySourceOptions> activitySourceOptions,
         IOmnichannelChannelEndpointStore addressStore,
+        ILocalClock localClock,
         EnterpriseActivityReportKind kind,
         IStringLocalizer<EnterpriseActivityReportProvider> stringLocalizer)
     {
@@ -48,6 +51,7 @@ internal sealed class EnterpriseActivityReportProvider : IReportRunner
         _campaignGroupManager = campaignGroupManager;
         _dispositionManager = dispositionManager;
         _addressStore = addressStore;
+        _localClock = localClock;
         _kind = kind;
         _stringLocalizer = stringLocalizer;
     }
@@ -128,7 +132,7 @@ internal sealed class EnterpriseActivityReportProvider : IReportRunner
                 S["Assigned user"].Value,
                 activity => activity.AssignedToId,
                 activity => ResolveUser(activity.AssignedToId, userNames)),
-            EnterpriseActivityReportKind.UserDailyProductivity => BuildDailyUserProductivity(filteredActivities, userNames),
+            EnterpriseActivityReportKind.UserDailyProductivity => await BuildDailyUserProductivityAsync(filteredActivities, userNames),
             EnterpriseActivityReportKind.CampaignSourceMix => BuildCampaignDimension(
                 filteredActivities,
                 campaignNames,
@@ -392,14 +396,24 @@ internal sealed class EnterpriseActivityReportProvider : IReportRunner
             .Add(ReportSection.ForTable(S["Activity completion time"].Value, columns, rows));
     }
 
-    private ReportDocument BuildDailyUserProductivity(
+    private async Task<ReportDocument> BuildDailyUserProductivityAsync(
         IReadOnlyList<OmnichannelActivityIndex> activities,
         IReadOnlyDictionary<string, string> userNames)
     {
-        var completed = activities.Where(activity => activity.CompletedUtc.HasValue && !string.IsNullOrEmpty(activity.AssignedToId));
+        var completed = activities.Where(activity => activity.CompletedUtc.HasValue && !string.IsNullOrEmpty(activity.AssignedToId)).ToList();
+
+        // Each activity counts toward the day it was completed in the site time zone.
+        var localDates = new Dictionary<OmnichannelActivityIndex, DateOnly>(completed.Count, ReferenceEqualityComparer.Instance);
+
+        foreach (var activity in completed)
+        {
+            var local = await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(activity.CompletedUtc.Value, DateTimeKind.Utc));
+            localDates[activity] = DateOnly.FromDateTime(local.DateTime);
+        }
+
         var columns = new[]
         {
-            new ReportColumn(S["Date (UTC)"].Value),
+            new ReportColumn(S["Date"].Value),
             new ReportColumn(S["Assigned user"].Value),
             new ReportColumn(S["Completed"].Value, ReportColumnAlign.End),
             new ReportColumn(S["Average cycle time"].Value, ReportColumnAlign.End),
@@ -408,7 +422,7 @@ internal sealed class EnterpriseActivityReportProvider : IReportRunner
         var rows = completed
             .GroupBy(activity => new
             {
-                Date = DateOnly.FromDateTime(activity.CompletedUtc.Value),
+                Date = localDates[activity],
                 activity.AssignedToId,
             })
             .OrderBy(group => group.Key.Date)

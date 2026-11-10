@@ -1,7 +1,14 @@
 @using CrestApps.OrchardCore.Checkout.Models
 
 @model ShapeViewModel<Coupon>
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    // Stored times are UTC; people read them in the site time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 
 <span class="badge ta-badge fw-normal @(Model.Value.EndsUtc.HasValue ? string.Empty : "bg-warning-subtle")" data-bs-toggle="tooltip" title="@T["Valid until"]">
-    <i class="fa-regular fa-calendar text-secondary me-1" aria-hidden="true"></i>@(Model.Value.EndsUtc.HasValue ? Model.Value.EndsUtc.Value.ToString("d") : T["No end date"].Value)
+    <i class="fa-regular fa-calendar text-secondary me-1" aria-hidden="true"></i>@(Model.Value.EndsUtc.HasValue ? (await LocalAsync(Model.Value.EndsUtc.Value)).ToString("d") : T["No end date"].Value)
 </span>

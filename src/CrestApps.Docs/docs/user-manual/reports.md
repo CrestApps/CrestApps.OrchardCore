@@ -448,7 +448,7 @@ The *Workforce & Payroll* reports, such as **Agent time summary**, count an agen
 | **Campaign** | The campaign the call was made for. |
 | **Last disposition** | The disposition the attempt ended with. A disposition that has since been deleted shows as *(Unknown disposition)*; an attempt that has not ended yet shows *(No disposition)*. |
 | **Attempts** | How many times this contact had been tried, counting this attempt. |
-| **Completed (UTC)** | When the attempt ended. Empty while the attempt is still scheduled or being dialed. |
+| **Completed** | When the attempt ended, in the site time zone. Empty while the attempt is still scheduled or being dialed. |
 | **Agent** | The user the attempt was handed to, or *(Unassigned)*. |
 | **Status** | The status of the attempt, such as *Completed*, *Scheduled* or *Dialing*. |
 
@@ -629,7 +629,7 @@ The omnichannel reports read your CRM activities (the calls to make, texts to se
 
 The activity reports offer **Date range**, **Campaign group**, **Campaign**, **Channel** (Phone or SMS), **Source** (Automatic, Callback, Dialer, Inbound or Manual), **Status** and **Disposition**, and you can tick several dispositions at once. **Dialer call detail** opens on the **Dialer** source and adds a page picker. **Lead funnel**, **Lead conversion by source and list** and **Opportunity pipeline** use the **Date range** only.
 
-An activity belongs to the period in which it was **created**, except where a report says otherwise: **Disposition breakdown** and **AI handoff & containment** place an activity by when it was **completed**, and **Dialer call detail** by its completion time, or by its scheduled time while it is open. **Activity backlog** and **Activity aging** ignore the start of the range and list all work still open that was created by its end. **Daily user productivity** groups by the UTC day an activity was completed. A row of **Not set** means the activity has no value for the grouping, such as no assigned user or no recorded creator.
+An activity belongs to the period in which it was **created**, except where a report says otherwise: **Disposition breakdown** and **AI handoff & containment** place an activity by when it was **completed**, and **Dialer call detail** by its completion time, or by its scheduled time while it is open. **Activity backlog** and **Activity aging** ignore the start of the range and list all work still open that was created by its end. **Daily user productivity** groups by the day an activity was completed in the site time zone. A row of **Not set** means the activity has no value for the grouping, such as no assigned user or no recorded creator.
 
 The rows show the source as stored, so a dialer activity appears as *PreviewDial*, *PowerDial*, *ProgressiveDial* or *PredictiveDial* while the **Source** filter offers *Dialer* for all four.
 

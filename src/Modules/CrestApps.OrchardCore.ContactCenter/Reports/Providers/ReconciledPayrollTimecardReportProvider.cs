@@ -185,11 +185,11 @@ public sealed class ReconciledPayrollTimecardReportProvider : ContactCenterRepor
             [
                 day.Date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
                 agentName(day.AgentId),
-                day.FirstInUtc.HasValue ? AuditReportFormat.TimeOfDay(timeZone.ToLocal(day.FirstInUtc.Value)) : "—",
+                day.FirstInUtc.HasValue ? AuditReportFormat.TimeOfDay(day.FirstInUtc.Value, timeZone) : "—",
                 day.LastOutUtc.HasValue
                     ? day.EndsSignedOff
-                        ? AuditReportFormat.TimeOfDay(timeZone.ToLocal(day.LastOutUtc.Value))
-                        : S["Signed in at {0}", AuditReportFormat.TimeOfDay(timeZone.ToLocal(day.LastOutUtc.Value))].Value
+                        ? AuditReportFormat.TimeOfDay(day.LastOutUtc.Value, timeZone)
+                        : S["Signed in at {0}", AuditReportFormat.TimeOfDay(day.LastOutUtc.Value, timeZone)].Value
                     : "—",
                 AuditReportFormat.Clock(day.SignedInSeconds),
                 .. parts.Select(AuditReportFormat.Clock),

@@ -5,6 +5,13 @@
 @using CrestApps.OrchardCore.Transactions.Models
 @using OrchardCore.DisplayManagement.Html
 @model TransactionDetailViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    // Stored times are UTC; people read them in the site time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 
 @{
     var transaction = Model.Transaction;
@@ -53,7 +60,7 @@
             @if (transaction.DueUtc.HasValue)
             {
                 <dt class="col-sm-4">@T["Due"]</dt>
-                <dd class="col-sm-8">@transaction.DueUtc.Value.ToString("d")</dd>
+                <dd class="col-sm-8">@((await LocalAsync(transaction.DueUtc.Value)).ToString("d"))</dd>
             }
 
             @if (!string.IsNullOrEmpty(transaction.InvoiceNumber))

@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Reports;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
+using CrestApps.OrchardCore.Tests.Modules.AI.Chat.Reports;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -82,7 +83,7 @@ public sealed class AIQualityReportTests
         Assert.Equal("2", summary["Scored"]);
         Assert.Equal("65", summary["Average score"]);
         Assert.Equal(AIConversationIssueKinds.Hallucination, Assert.Single(document.Sections.Single(section => section.Title == "Issues found").Bars).Label);
-        Assert.Equal(["Score", "Passed", "Evaluated (UTC)", "Session", "AI profile", "Summary"], LowestScores(document).Columns.Select(column => column.Label));
+        Assert.Equal(["Score", "Passed", "Evaluated", "Session", "AI profile", "Summary"], LowestScores(document).Columns.Select(column => column.Label));
     }
 
     [Fact]
@@ -99,6 +100,9 @@ public sealed class AIQualityReportTests
         Assert.Equal("b", text);
         Assert.Equal("/Admin/ai/chat/session/profile-1/b", url);
         Assert.Equal("Support assistant", worst.Cells[4]);
+
+        // The evaluated time is shown in the site time zone.
+        Assert.Equal("2026-11-01 21:00", worst.Cells[2]);
 
         // A session without a profile can't be opened, so it is plain text, and its profile is left empty.
         var orphan = LowestScores(document).Rows[1];
@@ -177,6 +181,7 @@ public sealed class AIQualityReportTests
             _profileStore.Object,
             _linkGenerator.Object,
             _httpContextAccessor.Object,
+            ReportTestClocks.LocalClock(TimeSpan.FromHours(-5)),
             new PassThroughStringLocalizer<AIQualityReport>())
             .RunAsync(new ReportContext(filter, mode), TestContext.Current.CancellationToken);
 

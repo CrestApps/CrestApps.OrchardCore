@@ -70,6 +70,7 @@ internal static class AgentActivityTimeline
     /// <param name="callEvents">The call events, of any agent: the calls the timelines' agents worked are shown.</param>
     /// <param name="fromUtc">The start of the period.</param>
     /// <param name="toUtc">The end of the period: a state still held then ends at it.</param>
+    /// <param name="timeZone">The zone the times in the detail text are in; UTC when none is given.</param>
     /// <returns>The entries, in the order they started.</returns>
     public static IReadOnlyList<AgentActivityEntry> Build(
         IReadOnlyList<AgentStateTimeline> timelines,
@@ -77,8 +78,9 @@ internal static class AgentActivityTimeline
         IEnumerable<InteractionEvent> offerEvents,
         IEnumerable<InteractionEvent> callEvents,
         DateTime fromUtc,
-        DateTime toUtc)
-        => SelectFirst(timelines, sessionEvents, offerEvents, callEvents, fromUtc, toUtc, int.MaxValue).Entries;
+        DateTime toUtc,
+        ReportTimeZone timeZone = null)
+        => SelectFirst(timelines, sessionEvents, offerEvents, callEvents, fromUtc, toUtc, int.MaxValue, timeZone).Entries;
 
     /// <summary>
     /// Builds the first entries of a period, oldest first, and counts every entry of it.
@@ -90,6 +92,7 @@ internal static class AgentActivityTimeline
     /// <param name="fromUtc">The start of the period.</param>
     /// <param name="toUtc">The end of the period: a state still held then ends at it.</param>
     /// <param name="limit">The most entries to build.</param>
+    /// <param name="timeZone">The zone the times in the detail text are in; UTC when none is given.</param>
     /// <returns>
     /// The first <paramref name="limit"/> entries in the order they started, exactly the ones building every entry and
     /// keeping the first would give, and the counts of every entry.
@@ -106,17 +109,20 @@ internal static class AgentActivityTimeline
         IEnumerable<InteractionEvent> callEvents,
         DateTime fromUtc,
         DateTime toUtc,
-        int limit)
+        int limit,
+        ReportTimeZone timeZone = null)
     {
         ArgumentNullException.ThrowIfNull(timelines);
         ArgumentOutOfRangeException.ThrowIfNegative(limit);
+
+        timeZone ??= ReportTimeZone.Utc;
 
         var agentIds = timelines.Select(timeline => timeline.AgentId).ToHashSet(StringComparer.Ordinal);
         var selector = new EntrySelector(limit);
 
         foreach (var timeline in timelines)
         {
-            AddStates(selector, timeline, fromUtc, toUtc);
+            AddStates(selector, timeline, fromUtc, toUtc, timeZone);
         }
 
         foreach (var sessionEvent in sessionEvents ?? [])
@@ -134,7 +140,7 @@ internal static class AgentActivityTimeline
 
                 if (data.LastHeartbeatUtc.HasValue)
                 {
-                    detail.Add("last heard from " + AuditReportFormat.Timestamp(data.LastHeartbeatUtc.Value));
+                    detail.Add("last heard from " + AuditReportFormat.Timestamp(data.LastHeartbeatUtc.Value, timeZone));
                 }
 
                 if (!string.IsNullOrEmpty(data.Reason))
@@ -240,7 +246,7 @@ internal static class AgentActivityTimeline
         return selector.Complete();
     }
 
-    private static void AddStates(EntrySelector selector, AgentStateTimeline timeline, DateTime fromUtc, DateTime toUtc)
+    private static void AddStates(EntrySelector selector, AgentStateTimeline timeline, DateTime fromUtc, DateTime toUtc, ReportTimeZone timeZone)
     {
         var effective = timeline.Effective;
 
@@ -263,7 +269,7 @@ internal static class AgentActivityTimeline
 
                 if (transition.ChangedUtc < fromUtc)
                 {
-                    detail.Add("in this state since " + AuditReportFormat.Timestamp(transition.ChangedUtc));
+                    detail.Add("in this state since " + AuditReportFormat.Timestamp(transition.ChangedUtc, timeZone));
                 }
 
                 if (transition.BreaksChain)

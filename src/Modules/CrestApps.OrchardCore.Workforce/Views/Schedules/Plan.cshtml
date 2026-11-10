@@ -1,4 +1,11 @@
 @model ScheduleBoardViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    // Stored times are UTC; people read them in the site time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 @{
     var period = Model.Period;
 }
@@ -39,7 +46,7 @@
                 }
                 @if (Model.LastRun is not null)
                 {
-                    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Last auto-schedule: {0} shifts added by {1} on {2}", Model.LastRun.ShiftsAdded, Model.LastRun.RunBy, Model.LastRun.RunUtc.ToString("g")]"><i class="fa-solid fa-wand-magic-sparkles text-secondary me-1" aria-hidden="true"></i>@T["{0:P0} of target", Model.LastRun.CoverageScore]</span>
+                    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Last auto-schedule: {0} shifts added by {1} on {2}", Model.LastRun.ShiftsAdded, Model.LastRun.RunBy, (await LocalAsync(Model.LastRun.RunUtc)).ToString("g")]"><i class="fa-solid fa-wand-magic-sparkles text-secondary me-1" aria-hidden="true"></i>@T["{0:P0} of target", Model.LastRun.CoverageScore]</span>
                 }
             </div>
             <div class="col-auto d-flex flex-wrap gap-2">

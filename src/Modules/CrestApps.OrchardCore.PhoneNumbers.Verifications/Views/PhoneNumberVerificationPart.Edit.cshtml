@@ -1,4 +1,11 @@
 @model PhoneNumberVerificationPartViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    // Stored times are UTC; people read them in the site time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 
 @{
     var statusClass = Model.VerificationStatus switch
@@ -74,7 +81,7 @@
         {
             <div class="ocat-wrapper">
                 <label class="ocat-label">@T["Last verified"]</label>
-                <div class="ocat-end">@Model.LastVerifiedUtc.Value.ToString("g")</div>
+                <div class="ocat-end">@((await LocalAsync(Model.LastVerifiedUtc.Value)).ToString("g"))</div>
             </div>
         }
 
@@ -82,7 +89,7 @@
         {
             <div class="ocat-wrapper">
                 <label class="ocat-label">@T["Next verification due"]</label>
-                <div class="ocat-end">@Model.NextVerificationDueUtc.Value.ToString("g")</div>
+                <div class="ocat-end">@((await LocalAsync(Model.NextVerificationDueUtc.Value)).ToString("g"))</div>
             </div>
         }
 
@@ -95,7 +102,7 @@
         {
             <div class="ocat-wrapper">
                 <label class="ocat-label">@T["Last attempt"]</label>
-                <div class="ocat-end">@Model.LastAttemptUtc.Value.ToString("g")</div>
+                <div class="ocat-end">@((await LocalAsync(Model.LastAttemptUtc.Value)).ToString("g"))</div>
             </div>
         }
 

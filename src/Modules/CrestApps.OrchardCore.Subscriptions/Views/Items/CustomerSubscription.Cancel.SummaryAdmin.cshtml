@@ -1,6 +1,13 @@
 @using CrestApps.OrchardCore.Subscriptions.Models
 
 @model ShapeViewModel<CustomerSubscription>
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    // Stored times are UTC; people read them in the site time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 
 @{
     var subscription = Model.Value.Subscription;
@@ -12,7 +19,7 @@
     <button type="submit" class="btn btn-outline-danger btn-sm"
             data-url-af="RemoveUrl"
             data-title="@T["Cancel the subscription"]"
-            data-message="@T["Cancel {0}? The next payment will not be taken, and you keep access until {1:d}.", subscription.Title, subscription.CurrentPeriodEndUtc]"
+            data-message="@T["Cancel {0}? The next payment will not be taken, and you keep access until {1:d}.", subscription.Title, subscription.CurrentPeriodEndUtc is { } periodEndUtc ? await LocalAsync(periodEndUtc) : null]"
             data-ok-text="@T["Cancel the subscription"]"
             data-cancel-text="@T["Keep it"]">
         @T["Cancel"]

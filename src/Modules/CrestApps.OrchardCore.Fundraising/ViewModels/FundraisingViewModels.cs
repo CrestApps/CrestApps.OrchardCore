@@ -11,7 +11,8 @@ public class FundraisingCampaignPartViewModel
 {
     public string Goal { get; set; }
 
-    public DateTime? EndsUtc { get; set; }
+    // In the site's time zone; the part keeps it in UTC.
+    public DateTime? Ends { get; set; }
 
     public string SuggestedAmounts { get; set; }
 
