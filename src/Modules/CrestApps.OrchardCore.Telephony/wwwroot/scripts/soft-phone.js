@@ -1675,8 +1675,23 @@
 	function isUnacceptedOfferCall(unaccepted, callId, now) {
 		return !!unaccepted && !!callId && typeof unaccepted[callId] === "number" && now - unaccepted[callId] <= 36e5;
 	}
-	function planOfferCallReport(report, offer, accepted, unaccepted, now) {
-		if (!report || !report.callId || !isLiveStateName(report.stateName)) return "apply";
+	function rememberAnsweredElsewhereCall(answeredElsewhere, callId, now) {
+		if (!answeredElsewhere || !callId) return;
+		Object.keys(answeredElsewhere).forEach(function(id) {
+			if (now - answeredElsewhere[id] > 12e4) delete answeredElsewhere[id];
+		});
+		answeredElsewhere[callId] = now;
+	}
+	function forgetAnsweredElsewhereCall(answeredElsewhere, callId) {
+		if (answeredElsewhere && callId) delete answeredElsewhere[callId];
+	}
+	function isAnsweredElsewhereCall(answeredElsewhere, callId, now) {
+		return !!answeredElsewhere && !!callId && typeof answeredElsewhere[callId] === "number" && now - answeredElsewhere[callId] <= 12e4;
+	}
+	function planOfferCallReport(report, offer, accepted, unaccepted, now, answeredElsewhere) {
+		if (!report || !report.callId) return "apply";
+		if (report.stateName === "Ringing" && isAnsweredElsewhereCall(answeredElsewhere, report.callId, now)) return "ignore";
+		if (!isLiveStateName(report.stateName)) return "apply";
 		if (offer && offer.callId === report.callId) return offer.accepting || isAccepted(accepted, offer.reservationId, now) ? "apply" : "keep-ringing";
 		return isUnacceptedOfferCall(unaccepted, report.callId, now) ? "ignore" : "apply";
 	}
@@ -4581,6 +4596,20 @@
 		return computeOfferRingStopDelayMs(properties.expiresUtc, properties[OFFSET_KEY], nowMs);
 	}
 	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/ring-policy.js
+	var INBOUND_RING_ACTIONS = {
+		ring: "ring",
+		decline: "decline"
+	};
+	function inboundRingAction(state) {
+		state = state || {};
+		if (state.onCall) return INBOUND_RING_ACTIONS.decline;
+		return state.ringing && !state.answering ? INBOUND_RING_ACTIONS.decline : INBOUND_RING_ACTIONS.ring;
+	}
+	function offerDeclinesRing(ringCallId, offerCallId) {
+		return !!ringCallId && ringCallId !== offerCallId;
+	}
+	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/voicemail-delete.js
 	var DEFAULT_TEXT = {
 		refused: "The server refused the request. Reload the page and try again.",
@@ -6303,6 +6332,7 @@
 			var offerCallIds = {};
 			var unacceptedOfferCalls = {};
 			var heldBackOfferReports = {};
+			var answeredElsewhereCalls = {};
 			var agentHolds = {};
 			var agentMutes = {};
 			var extensionDirectory = createExtensionDirectory();
@@ -8320,7 +8350,7 @@
 				var plan = planOfferCallReport({
 					callId: call.callId,
 					stateName: normalizeState(call.state)
-				}, ringingOfferForReports(), acceptedOfferIds, unacceptedOfferCalls, Date.now());
+				}, ringingOfferForReports(), acceptedOfferIds, unacceptedOfferCalls, Date.now(), answeredElsewhereCalls);
 				if (plan === "keep-ringing") {
 					if (!heldBackOfferReports[call.callId]) reportDiagnostic("warning", "offer-call-live-before-accept", "The server reported the call of a ringing offer as " + normalizeState(call.state) + " before anyone accepted it; the offer keeps ringing.", call.callId);
 					heldBackOfferReports[call.callId] = call;
@@ -8341,19 +8371,26 @@
 			}
 			function handleOfferAnswered(callId, reservationId) {
 				var answeredHeldLeg = settleOfferLeg(reservationId, true);
-				if (!!!(currentCall && isRingingInbound() && (!callId || currentCall.callId === callId)) || incomingAcceptPending || incomingHandled) return;
+				var ringing = !!(currentCall && isRingingInbound() && (!callId || currentCall.callId === callId));
+				if (!(ringing && (incomingAcceptPending || incomingHandled)) && callId) rememberAnsweredElsewhereCall(answeredElsewhereCalls, callId, Date.now());
+				if (!ringing || incomingAcceptPending || incomingHandled) return;
 				if (!answeredHeldLeg) armInboundAutoAnswer(reservationId);
 				clearIncomingOffer();
 			}
 			function handleBrowserInboundRing(controller) {
 				if (!controller) return;
-				if (hasBlockingActiveCall()) {
+				if (inboundRingAction({
+					onCall: hasBlockingActiveCall(),
+					ringing: isRingingInbound(),
+					answering: incomingAcceptPending || incomingHandled
+				}) === INBOUND_RING_ACTIONS.decline) {
+					reportDiagnostic("info", "inbound-leg-declined-busy", "Declined an incoming leg because another call is ringing or on the line.", controller.platformCallId || "");
 					try {
 						controller.decline();
 					} catch (e) {}
 					return;
 				}
-				if (browserInboundRing && browserInboundRing.callId !== null) removeActiveCall(browserInboundRing.callId);
+				if (browserInboundRing) clearBrowserInboundRing({ decline: true });
 				var platform = !!controller.platformCallId;
 				var callId = platform ? controller.platformCallId : "browser-in-" + Date.now();
 				browserInboundRing = {
@@ -10137,6 +10174,10 @@
 					callId: call.callId,
 					reservationId: getIncomingReservationId(context)
 				}, Date.now()) || isFinite(expiresUtc) && expiresUtc <= Date.now()) return;
+				if (offerDeclinesRing(browserInboundRing ? browserInboundRing.callId : "", call.callId)) {
+					reportDiagnostic("info", "inbound-leg-declined-for-offer", "Declined a ringing incoming leg because a Contact Center offer arrived.", call.callId || "");
+					clearBrowserInboundRing({ decline: true });
+				}
 				var sameOffer = isSameIncomingOffer(call, context);
 				upsertActiveCall(call, true);
 				incomingContext = context || null;
@@ -10145,6 +10186,7 @@
 				if (offeredReservationId) {
 					offerCallIds[offeredReservationId] = call.callId;
 					forgetUnacceptedOfferCall(unacceptedOfferCalls, call.callId);
+					forgetAnsweredElsewhereCall(answeredElsewhereCalls, call.callId);
 					disarmOtherOffers(inboundAutoAnswer, offerKey(offeredReservationId));
 				}
 				if (!sameOffer) {
@@ -10581,6 +10623,7 @@
 						if (call && call.callId && typeof rememberSettledOffer === "function") rememberSettledOffer(settledOffers, { callId: call.callId }, Date.now());
 						if (call && call.callId) {
 							forgetUnacceptedOfferCall(unacceptedOfferCalls, call.callId);
+							forgetAnsweredElsewhereCall(answeredElsewhereCalls, call.callId);
 							delete heldBackOfferReports[call.callId];
 							forgetRemoteParty(remoteParties, call.callId);
 						}
