@@ -13,13 +13,18 @@ public static class AgentPrincipal
     public const string AuthenticationType = "AgentPlatform";
 
     /// <summary>
+    /// What a platform principal's name starts with.
+    /// </summary>
+    public const string OwnerPrefix = "agent-platform:";
+
+    /// <summary>
     /// Returns the principal of a platform.
     /// </summary>
     /// <param name="platformId">The platform's id.</param>
     public static ClaimsPrincipal Create(string platformId)
         => new(new ClaimsIdentity(
             [
-                new Claim(ClaimTypes.NameIdentifier, "agent-platform:" + platformId),
+                new Claim(ClaimTypes.NameIdentifier, OwnerPrefix + platformId),
             ],
             AuthenticationType));
 }

@@ -817,6 +817,15 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
             OwnerId = checkout.UserId,
         }, cancellationToken);
 
+        // The request runs as the agent platform, which the store checkout would otherwise take as its owner: it
+        // belongs to the linked buyer, or to nobody until the hand-off link gives it to the buyer's browser.
+        if (!string.Equals(session.OwnerId, checkout.UserId, StringComparison.Ordinal))
+        {
+            session.OwnerId = checkout.UserId;
+            session.GuestTokenHash = null;
+            await _sessions.SaveAsync(session, cancellationToken);
+        }
+
         checkout.CheckoutSessionId = session.SessionId;
         checkout.OrderId = created.Order.ItemId;
         checkout.AppliedContact = null;

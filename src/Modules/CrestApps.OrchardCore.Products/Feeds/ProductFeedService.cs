@@ -58,6 +58,13 @@ public sealed class ProductFeedService : IProductFeedService
     }
 
     /// <inheritdoc/>
+    public Task<ProductFeed> BuildAsync(IEnumerable<string> contentItemIds, string currency, bool validate, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(contentItemIds);
+
+        return _builder.BuildAsync(currency, contentItemIds.ToArray(), cancellationToken, validate);
+    }
+
     public Task<ProductFeed> BuildAsync(IEnumerable<string> contentItemIds, string currency, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(contentItemIds);

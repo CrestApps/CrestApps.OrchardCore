@@ -23,6 +23,17 @@ public interface IProductFeedService
     Task<ProductFeed> BuildAsync(IEnumerable<string> contentItemIds, string currency, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Builds the items of some products, optionally without Merchant Center's rules, for a reader that shows products
+    /// the way the store sells them, such as an AI agent's catalog search: an item with no photo or a relative link
+    /// stays in.
+    /// </summary>
+    /// <param name="contentItemIds">The products' content item ids.</param>
+    /// <param name="currency">The currency, or <see langword="null"/> for the store's.</param>
+    /// <param name="validate">Whether items Merchant Center would refuse are left out.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    Task<ProductFeed> BuildAsync(IEnumerable<string> contentItemIds, string currency, bool validate, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns whether a request may read the feed: the feed is public, or the request carries its key.
     /// </summary>
     /// <param name="key">The key the request carries, or <see langword="null"/>.</param>

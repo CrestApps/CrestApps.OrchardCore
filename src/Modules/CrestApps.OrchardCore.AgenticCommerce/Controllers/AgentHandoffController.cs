@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AgenticCommerce.Core.Services;
+using CrestApps.OrchardCore.AgenticCommerce.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Core.Services;
@@ -60,8 +61,9 @@ public sealed class AgentHandoffController : Controller
 
         // A guest's checkout belongs to whoever holds its token: the browser the agent sends the buyer to gets one. A
         // signed-in buyer's checkout stays theirs.
-        if (string.IsNullOrEmpty(session.OwnerId))
+        if (string.IsNullOrEmpty(session.OwnerId) || session.OwnerId.StartsWith(AgentPrincipal.OwnerPrefix, StringComparison.Ordinal))
         {
+            session.OwnerId = null;
             session.GuestTokenHash = _guestTokens.Issue(CheckoutSessionStore.GuestTokenScope, session.SessionId);
 
             await _sessions.SaveAsync(session, HttpContext.RequestAborted);

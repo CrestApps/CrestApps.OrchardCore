@@ -70,7 +70,7 @@ public sealed class UcpCatalog
             return products;
         }
 
-        var feed = await _feeds.BuildAsync(ids, currency, cancellationToken);
+        var feed = await _feeds.BuildAsync(ids, currency, validate: false, cancellationToken);
 
         foreach (var group in feed.Items.Where(item => item.ShowToAgents).GroupBy(item => item.ContentItemId).OrderBy(group => ids.IndexOf(group.Key)))
         {
