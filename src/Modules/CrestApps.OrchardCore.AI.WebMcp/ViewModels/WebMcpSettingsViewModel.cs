@@ -24,4 +24,9 @@ public class WebMcpSettingsViewModel
     /// Gets or sets a value indicating whether the pages that get the WebMCP scripts also get the page tools.
     /// </summary>
     public bool EnablePageTools { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether front-end pages offer storefront tools to visitors.
+    /// </summary>
+    public bool EnableStorefrontTools { get; set; }
 }

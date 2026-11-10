@@ -66,6 +66,7 @@ internal sealed class WebMcpSettingsDisplayDriver : SiteDisplayDriver<WebMcpSett
                 model.EnableOnAdminPages = settings.EnableOnAdminPages;
                 model.EnableOnFrontEndPages = settings.EnableOnFrontEndPages;
                 model.EnablePageTools = settings.EnablePageTools;
+                model.EnableStorefrontTools = settings.EnableStorefrontTools;
             }).Location("Content:15%WebMCP;1")
             .OnGroup(SettingsGroupId),
         };
@@ -122,6 +123,7 @@ internal sealed class WebMcpSettingsDisplayDriver : SiteDisplayDriver<WebMcpSett
             settings.EnableOnAdminPages != model.EnableOnAdminPages ||
             settings.EnableOnFrontEndPages != model.EnableOnFrontEndPages ||
             settings.EnablePageTools != model.EnablePageTools ||
+            settings.EnableStorefrontTools != model.EnableStorefrontTools ||
             !(settings.Tools ?? []).OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
                 .SequenceEqual(tools.OrderBy(name => name, StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase);
 
@@ -129,6 +131,7 @@ internal sealed class WebMcpSettingsDisplayDriver : SiteDisplayDriver<WebMcpSett
         settings.EnableOnAdminPages = model.EnableOnAdminPages;
         settings.EnableOnFrontEndPages = model.EnableOnFrontEndPages;
         settings.EnablePageTools = model.EnablePageTools;
+        settings.EnableStorefrontTools = model.EnableStorefrontTools;
         settings.Tools = tools;
 
         if (changed && context.Updater.ModelState.IsValid)

@@ -14,6 +14,11 @@ public abstract class AgentCommerceToolBase : AIFunction
     public const string AssistantPlatformId = "site-assistant";
 
     /// <summary>
+    /// The answer of the cart tools when they run outside a visitor's request, so there is no cart to use.
+    /// </summary>
+    protected const string NoVisitorMessage = "The cart can only be used by a visitor of the store's pages.";
+
+    /// <summary>
     /// The JSON options the tools answer with.
     /// </summary>
     protected static readonly JsonSerializerOptions JsonOptions = JsonSerializerOptions.Web;

@@ -221,7 +221,9 @@ AI agents also read your products from feeds. **Settings > Commerce > Agent feed
 
 Some agents use the Model Context Protocol (MCP) instead of plain web requests. Your administrator turns on **UCP over MCP** or **ACP over MCP** for them. Nothing changes on the platform: it signs in with the same key.
 
-Your own AI assistant can sell too. When the AI features are on, your administrator can pick the **Search store products**, **Get store product** and **Start store checkout** tools on an AI profile. The assistant then finds products for a visitor and gives them a link to your checkout. It never pays for them. See [Tools, Agents and Connections](../ai/tools-and-agents.md).
+Your own AI assistant can sell too. When the AI features are on, your administrator can pick the **Search store products**, **Get store product**, **Add to store cart**, **Get store cart** and **Start store checkout** tools on an AI profile. The assistant then finds products for a visitor, fills the visitor's own cart, and gives them a link to your checkout. It never pays for them. See [Tools, Agents and Connections](../ai/tools-and-agents.md).
+
+A shopper's own browser assistant can use the same tools on your store's pages, even when the shopper isn't signed in. Turn on **Offer storefront tools to visitors** on the **WebMCP** card and tick the tools. See [WebMCP](../ai/webmcp.md#let-shoppers-assistants-use-your-store).
 
 ## Stop or remove a platform
 

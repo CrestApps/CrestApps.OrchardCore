@@ -25,6 +25,7 @@ Use only the standard WebMCP API (`document.modelContext`). Never add a CrestApp
 | You want to... | Use |
 | --- | --- |
 | Let browser agents call an existing server AI tool on every page | Nothing new: register the tool with `AddCoreAITool<T>().Selectable()` and let the operator select it on the **WebMCP** card. Never bypass the allow-list. |
+| Let anonymous storefront visitors' agents call a server AI tool | Mark it with `services.MarkAIToolAnonymousSafe(name)` (`CrestApps.OrchardCore.AI.Core.Extensions`) only when anyone may run it: it reads public data or acts on the caller's own data, never shows another person's data, and never pays. The operator still selects it and turns on **Offer storefront tools to visitors**; the storefront endpoints (`api/ai/webmcp/storefront/...`) serve only marked tools. Never list tool names in WebMCP. |
 | Expose a server AI tool on one content item's page | Nothing new: attach the **WebMCP tools** part (`WebMcpPart`) to the content type and pick the tool on the item. Its endpoints (`api/ai/webmcp/content-items/{id}/...`) also check that the user may view the item. |
 | Add a tool that works on the page (DOM, client state) | `document.modelContext.registerTool(...)` from a script resource that depends on `CrestAppsWebMcpPolyfill` |
 | Add that script, or a setting it needs, to every page that gets the WebMCP scripts | `IWebMcpClientConfigurationHandler` |
