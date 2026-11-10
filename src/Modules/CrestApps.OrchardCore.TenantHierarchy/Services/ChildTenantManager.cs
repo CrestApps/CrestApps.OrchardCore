@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.TenantHierarchy.Core;
 using CrestApps.OrchardCore.TenantHierarchy.Core.Provisioning;
 using CrestApps.OrchardCore.TenantHierarchy.Core.Services;
@@ -201,11 +200,10 @@ public sealed class ChildTenantManager
         var policy = GetPolicy();
         var slug = request.Slug.Trim().ToLowerInvariant();
 
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             $"TenantHierarchy:Create:{_shellSettings.TenantId}",
             _quotaLockTimeout,
-            _quotaLockExpiration,
-            "tenanthierarchy.create");
+            _quotaLockExpiration);
 
         if (!locked)
         {

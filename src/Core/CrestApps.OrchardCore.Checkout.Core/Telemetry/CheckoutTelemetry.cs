@@ -23,11 +23,6 @@ public static class CheckoutTelemetry
     public const string SessionIdTag = "crestapps.checkout.session.id";
 
     /// <summary>
-    /// The span tag that carries the id of a payment attempt. It is never a metric tag.
-    /// </summary>
-    public const string AttemptIdTag = "crestapps.checkout.attempt.id";
-
-    /// <summary>
     /// The <see cref="CrestAppsOrchardCoreTelemetry.OperationTag"/> of starting a checkout.
     /// </summary>
     public const string OperationStart = "start";
@@ -144,7 +139,7 @@ public static class CheckoutTelemetry
 
     /// <summary>
     /// The duration of each call of the checkout engine, tagged with the <c>operation</c>, the <c>outcome</c> and the
-    /// <c>result</c> the engine returned.
+    /// <c>result</c> the engine returned. The begin of a payment is counted on <see cref="PaymentBegins"/> instead.
     /// </summary>
     public static Histogram<double> Duration { get; } = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
         Meter,
@@ -152,16 +147,9 @@ public static class CheckoutTelemetry
         "The duration of a call of the checkout engine.");
 
     /// <summary>
-    /// The number of checkouts that reached an end, tagged with the <c>outcome</c>: <see cref="SessionCompleted"/>,
-    /// <see cref="SessionFailed"/>, <see cref="SessionCancelled"/> or <see cref="SessionExpired"/>.
-    /// </summary>
-    public static Counter<long> Sessions { get; } = Meter.CreateCounter<long>(
-        "crestapps.checkout.sessions",
-        "{session}",
-        "The number of checkouts that were completed, failed, canceled or expired.");
-
-    /// <summary>
-    /// The time from a checkout's start to its end, tagged with the <c>outcome</c> of <see cref="Sessions"/>.
+    /// The time from a checkout's start to its end, tagged with the <c>outcome</c>: <see cref="SessionCompleted"/>,
+    /// <see cref="SessionFailed"/>, <see cref="SessionCancelled"/> or <see cref="SessionExpired"/>. Its count is the number
+    /// of checkouts that ended.
     /// </summary>
     public static Histogram<double> SessionDuration { get; } = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
         Meter,
@@ -227,13 +215,15 @@ public static class CheckoutTelemetry
     /// </summary>
     /// <param name="operation">The operation, such as <see cref="OperationComplete"/>.</param>
     /// <param name="sessionId">The id of the checkout session, set on the span only, or <see langword="null"/>.</param>
+    /// <param name="recordDuration">Whether the call is recorded on <see cref="Duration"/>; <see langword="false"/> for
+    /// a call another instrument already counts, such as the begin of a payment.</param>
     /// <returns>The scope, which records the <see cref="Duration"/> when disposed.</returns>
-    public static TelemetryScope StartOperation(string operation, string sessionId)
+    public static TelemetryScope StartOperation(string operation, string sessionId, bool recordDuration = true)
     {
         var scope = TelemetryScope.Start(
             ActivitySource,
             "crestapps.checkout." + operation,
-            Duration,
+            recordDuration ? Duration : null,
             new TagList
             {
                 { CrestAppsOrchardCoreTelemetry.OperationTag, operation },
@@ -301,7 +291,7 @@ public static class CheckoutTelemetry
     /// <param name="elapsed">The time since the checkout started.</param>
     public static void RecordSessionEnded(string outcome, TimeSpan elapsed)
     {
-        if (!Sessions.Enabled && !SessionDuration.Enabled)
+        if (!SessionDuration.Enabled)
         {
             return;
         }
@@ -313,12 +303,8 @@ public static class CheckoutTelemetry
 
         CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
 
-        Sessions.Add(1, tags);
-
-        if (elapsed >= TimeSpan.Zero)
-        {
-            SessionDuration.Record(elapsed.TotalSeconds, tags);
-        }
+        // Its count is the number of checkouts that ended, so a clock that went backwards still counts one.
+        SessionDuration.Record(Math.Max(0, elapsed.TotalSeconds), tags);
     }
 
     /// <summary>

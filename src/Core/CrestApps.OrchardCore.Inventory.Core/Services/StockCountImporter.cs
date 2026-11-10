@@ -1,8 +1,6 @@
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Inventory.Core.Models;
 using CrestApps.OrchardCore.Inventory.Core.Telemetry;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CrestApps.OrchardCore.Inventory.Core.Services;
 
@@ -13,28 +11,22 @@ namespace CrestApps.OrchardCore.Inventory.Core.Services;
 /// </summary>
 /// <remarks>
 /// Each import is measured on <see cref="InventoryTelemetry"/>: a span, its duration and its rows by what became of
-/// them, and it is logged with the numbers, since it runs in the request (or the recipe) that sent the file.
+/// them.
 /// </remarks>
 public sealed class StockCountImporter
 {
     private readonly IStockItemStore _items;
     private readonly IInventoryService _inventory;
-    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="StockCountImporter"/> class.
     /// </summary>
     /// <param name="items">The store of the stock items.</param>
     /// <param name="inventory">The inventory service the counts are set through.</param>
-    /// <param name="logger">The logger, or <see langword="null"/> to log nothing.</param>
-    public StockCountImporter(
-        IStockItemStore items,
-        IInventoryService inventory,
-        ILogger<StockCountImporter> logger = null)
+    public StockCountImporter(IStockItemStore items, IInventoryService inventory)
     {
         _items = items;
         _inventory = inventory;
-        _logger = logger ?? NullLogger<StockCountImporter>.Instance;
     }
 
     /// <summary>
@@ -81,20 +73,13 @@ public sealed class StockCountImporter
             throw;
         }
 
-        var notApplied = Record(result, rejected, telemetry);
-
-        if (truncatedAtLine > 0)
-        {
-            InventoryLog.StockCountTruncated(_logger, truncatedAtLine);
-        }
-
-        InventoryLog.StockCountApplied(_logger, result.Counted, result.Unchanged, notApplied, telemetry.Elapsed.TotalMilliseconds);
+        Record(result, rejected, telemetry);
 
         return result;
     }
 
-    // Records the rows by what became of them, and returns how many were not applied.
-    private static int Record(StockCountImportResult result, int rejected, TelemetryScope telemetry)
+    // Records the rows by what became of them.
+    private static void Record(StockCountImportResult result, int rejected, TelemetryScope telemetry)
     {
         var notFound = 0;
         var invalidCount = 0;
@@ -133,8 +118,6 @@ public sealed class StockCountImporter
         telemetry.SetSpanTag("crestapps.inventory.rows.counted", result.Counted);
         telemetry.SetSpanTag("crestapps.inventory.rows.unchanged", result.Unchanged);
         telemetry.SetSpanTag("crestapps.inventory.rows.not_applied", notApplied);
-
-        return notApplied;
     }
 
     private async Task<(StockCountImportResult Result, int Rejected, int TruncatedAtLine)> ApplyAsync(IEnumerable<StockCountRow> rows, string reason, StockActor actor, CancellationToken cancellationToken)

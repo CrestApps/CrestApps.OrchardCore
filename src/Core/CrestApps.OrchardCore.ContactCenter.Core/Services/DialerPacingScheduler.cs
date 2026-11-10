@@ -246,8 +246,7 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
 
         (var locker, var locked) = await services.GetRequiredService<IDistributedLock>().TryAcquireLockWithoutWaitingAsync(
             GetPacingLockKey(queueId),
-            _options.LockExpiration,
-            area: "contactcenter.dialer.pacing");
+            _options.LockExpiration);
 
         if (!locked)
         {
@@ -395,6 +394,14 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
 
             ContactCenterDiagnostics.RecordDialerPacingCycle(completed.Outcome, profile.Mode, cycleElapsed, started);
             await recorder.RecordAsync(completed);
+        }
+        else
+        {
+            // Counted without a recorder too, from what the cycle saw, so the outcome mix does not depend on whether the
+            // scope records cycles.
+            var (outcome, _) = DialerPacingCycleClassifier.Classify(started, observation, null, false);
+
+            ContactCenterDiagnostics.RecordDialerPacingCycle(outcome, profile.Mode, cycleElapsed, started);
         }
 
         return started > 0 ? _clock.UtcNow.Add(_options.Debounce) : null;

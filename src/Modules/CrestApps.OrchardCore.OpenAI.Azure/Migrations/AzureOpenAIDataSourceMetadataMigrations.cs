@@ -11,7 +11,6 @@ using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.Infrastructure;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundJobs;
@@ -57,7 +56,7 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
             return 3;
         }
 
-        MigrationTelemetry.Defer(nameof(AzureOpenAIDataSourceMetadataMigrations), async scope =>
+        ShellScope.AddDeferredTask(async scope =>
         {
             var dataSourceStore = scope.ServiceProvider.GetRequiredService<IAIDataSourceStore>();
             var profileStore = scope.ServiceProvider.GetRequiredService<IAIProfileStore>();
@@ -209,7 +208,7 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
             return 2;
         }
 
-        MigrationTelemetry.Defer(nameof(AzureOpenAIDataSourceMetadataMigrations), async scope =>
+        ShellScope.AddDeferredTask(async scope =>
         {
             var dataSourceStore = scope.ServiceProvider.GetRequiredService<IAIDataSourceStore>();
             var indexProfileStore = scope.ServiceProvider.GetRequiredService<IIndexProfileStore>();

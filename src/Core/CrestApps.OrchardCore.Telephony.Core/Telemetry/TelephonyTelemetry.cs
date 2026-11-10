@@ -35,7 +35,7 @@ public static class TelephonyTelemetry
     public const string ScreeningStageTag = "stage";
 
     /// <summary>
-    /// The tag that records what a reconciler corrected: <see cref="ReconcileOrphanEnded"/> or <see cref="ReconcileDriftCorrected"/>.
+    /// The tag that records what a reconciler corrected: <see cref="ReconcileOrphanEnded"/>.
     /// </summary>
     public const string ReconcileActionTag = "action";
 
@@ -58,11 +58,6 @@ public static class TelephonyTelemetry
     /// A call the provider no longer has was ended on the platform.
     /// </summary>
     public const string ReconcileOrphanEnded = "orphan_ended";
-
-    /// <summary>
-    /// A call whose state on the platform had drifted from the provider's was corrected.
-    /// </summary>
-    public const string ReconcileDriftCorrected = "drift_corrected";
 
     /// <summary>
     /// The browser credential operation that issues a credential.
@@ -272,7 +267,7 @@ public static class TelephonyTelemetry
     /// Records calls a reconciler corrected.
     /// </summary>
     /// <param name="provider">The provider's technical name.</param>
-    /// <param name="action"><see cref="ReconcileOrphanEnded"/> or <see cref="ReconcileDriftCorrected"/>.</param>
+    /// <param name="action"><see cref="ReconcileOrphanEnded"/>.</param>
     /// <param name="count">How many calls. Zero and negative counts are ignored.</param>
     public static void RecordReconcileCorrections(string provider, string action, long count = 1)
     {

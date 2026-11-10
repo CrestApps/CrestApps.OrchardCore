@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.Bookings.Models;
-using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -116,7 +115,7 @@ public sealed class BookingCapacityService
         ArgumentNullException.ThrowIfNull(booking);
         ArgumentNullException.ThrowIfNull(part);
 
-        var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync(GetLockKey(booking.ContentItemId), _lockTimeout, _lockExpiration, "bookings.capacity");
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(GetLockKey(booking.ContentItemId), _lockTimeout, _lockExpiration);
 
         if (!locked)
         {
@@ -241,7 +240,7 @@ public sealed class BookingCapacityService
     {
         ArgumentNullException.ThrowIfNull(booking);
 
-        var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync(GetLockKey(booking.ContentItemId), _lockTimeout, _lockExpiration, "bookings.capacity");
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(GetLockKey(booking.ContentItemId), _lockTimeout, _lockExpiration);
 
         if (!locked)
         {

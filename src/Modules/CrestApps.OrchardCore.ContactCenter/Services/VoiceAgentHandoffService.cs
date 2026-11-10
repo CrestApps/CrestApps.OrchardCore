@@ -4,7 +4,6 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -126,11 +125,10 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService, IOmni
         // call cannot interleave either.
         var lockKey = $"ContactCenterInboundVoice:{request.ProviderName}:{request.ProviderCallId}";
 
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             lockKey,
             _coordinationOptions.InboundLockTimeout,
-            _coordinationOptions.InboundLockExpiration,
-            "contactcenter.ai_handoff");
+            _coordinationOptions.InboundLockExpiration);
 
         if (!locked)
         {

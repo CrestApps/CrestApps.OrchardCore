@@ -47,18 +47,6 @@ public sealed class ReportsHub : Hub
     }
 
     /// <summary>
-    /// Counts the open connection.
-    /// </summary>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    public override Task OnConnectedAsync()
-    {
-        ReportTelemetry.HubConnections.Add(1);
-        ReportsModuleLog.HubConnected(_logger);
-
-        return base.OnConnectedAsync();
-    }
-
-    /// <summary>
     /// Subscribes to the changes of a report the user may edit, and tells the others there that the user arrived.
     /// </summary>
     /// <param name="designId">The report identifier.</param>
@@ -130,9 +118,6 @@ public sealed class ReportsHub : Hub
     /// <inheritdoc/>
     public override async Task OnDisconnectedAsync(Exception exception)
     {
-        ReportTelemetry.HubConnections.Add(-1);
-        ReportsModuleLog.HubDisconnected(_logger, exception, Subscriptions.Count);
-
         foreach (var designId in Subscriptions)
         {
             await Clients.Group(Group(_tenantName, designId)).SendAsync("PresenceLeft", Context.ConnectionId);

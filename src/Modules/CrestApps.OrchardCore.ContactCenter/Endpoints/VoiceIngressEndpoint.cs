@@ -1,7 +1,6 @@
 using System.Globalization;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Webhooks;
 using Microsoft.AspNetCore.Authorization;
@@ -31,15 +30,11 @@ internal static class VoiceIngressEndpoint
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.ManageInteractions))
         {
-            ContactCenterDiagnostics.RecordIngressRejected("forbidden");
-
             return TypedResults.Forbid();
         }
 
         if (inboundEvent is null)
         {
-            ContactCenterDiagnostics.RecordIngressRejected("bad_request");
-
             return TypedResults.BadRequest();
         }
 
@@ -47,8 +42,6 @@ internal static class VoiceIngressEndpoint
 
         if (workLease is null)
         {
-            ContactCenterDiagnostics.RecordIngressRejected("feature_unavailable");
-
             return TypedResults.StatusCode(StatusCodes.Status503ServiceUnavailable);
         }
 
@@ -61,7 +54,6 @@ internal static class VoiceIngressEndpoint
 
         if (!concurrencyLease.IsAcquired)
         {
-            ContactCenterDiagnostics.RecordIngressRejected("concurrency_limit");
             SetRetryAfter(httpContext, concurrencyLease.RetryAfter);
 
             return TypedResults.StatusCode(StatusCodes.Status429TooManyRequests);

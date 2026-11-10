@@ -73,13 +73,6 @@ public static partial class ReportTelemetry
     public const string SelectionTag = "crestapps.report.click_filtered";
 
     /// <summary>
-    /// The legacy tag that holds the outcome of a run: <c>success</c>, <c>failure</c>, or <c>canceled</c>. It is kept for
-    /// one release next to <see cref="CrestAppsOrchardCoreTelemetry.OutcomeTag"/> (<c>ok</c>, <c>error</c>,
-    /// <c>cancelled</c>), which replaces it.
-    /// </summary>
-    public const string OutcomeTag = "crestapps.report.outcome";
-
-    /// <summary>
     /// The tag of <see cref="Failures"/> that tells a failed run (<see cref="LevelRun"/>) from a failed query
     /// (<see cref="LevelQuery"/>).
     /// </summary>
@@ -282,39 +275,9 @@ public static partial class ReportTelemetry
         "The duration of report queries whose rows are streamed to another report.");
 
     /// <summary>
-    /// Gets the histogram of the duration of the index pages report data sources read, tagged with the
-    /// <see cref="IndexTag"/> and the <see cref="PhaseTag"/>.
-    /// </summary>
-    public static Histogram<double> IndexPageDuration { get; } = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
-        Meter,
-        "crestapps.report.index.page.duration",
-        "The duration of the index pages report data sources read.");
-
-    /// <summary>
-    /// Gets the counter of the index pages report data sources read, tagged with the <see cref="IndexTag"/> and the
-    /// <see cref="PhaseTag"/>.
-    /// </summary>
-    public static Counter<long> IndexPages { get; } = Meter.CreateCounter<long>("crestapps.report.index.pages", "{page}", "The index pages report data sources read.");
-
-    /// <summary>
     /// The tag that holds the type name of the index a data source reads, such as <c>OmnichannelActivityIndex</c>.
     /// </summary>
     public const string IndexTag = "crestapps.report.index";
-
-    /// <summary>
-    /// The tag of the index page instruments: <see cref="PhaseIndex"/> or <see cref="PhaseRecords"/>.
-    /// </summary>
-    public const string PhaseTag = "crestapps.report.phase";
-
-    /// <summary>
-    /// The <see cref="PhaseTag"/> value of the read of the index rows of a page.
-    /// </summary>
-    public const string PhaseIndex = "index";
-
-    /// <summary>
-    /// The <see cref="PhaseTag"/> value of the read of the records of a page.
-    /// </summary>
-    public const string PhaseRecords = "records";
 
     /// <summary>
     /// Starts a span, or returns <see langword="null"/> when no listener records it.
@@ -351,9 +314,6 @@ public static partial class ReportTelemetry
             return;
         }
 
-        var canceled = exception is OperationCanceledException;
-
-        activity.SetTag(OutcomeTag, canceled ? "canceled" : "failure");
         CrestAppsOrchardCoreTelemetry.RecordException(activity, exception);
     }
 

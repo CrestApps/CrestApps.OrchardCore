@@ -2,7 +2,6 @@ using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -128,8 +127,6 @@ public sealed class ActivityDialerProfileIndexBackfillBackgroundTask : IBackgrou
         }
 
         run.AddItems(reindexed, "reindexed");
-        OmnichannelTelemetry.RecordBackfill("activity_dialer_profile", "reindexed", reindexed);
-
         if (reindexed > 0)
         {
             var logger = serviceProvider.GetRequiredService<ILogger<ActivityDialerProfileIndexBackfillBackgroundTask>>();

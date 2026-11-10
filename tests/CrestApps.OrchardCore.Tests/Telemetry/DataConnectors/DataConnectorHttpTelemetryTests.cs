@@ -9,8 +9,8 @@ using CrestApps.OrchardCore.Tests.DataConnectors;
 namespace CrestApps.OrchardCore.Tests.Telemetry.DataConnectors;
 
 /// <summary>
-/// The HTTP client of data connectors counts its retries and the requests of each call, the authenticator counts the
-/// tokens it serves, and the network guard counts the connections it refuses, with bounded tags only. The instruments
+/// The HTTP client of data connectors counts its retries, the authenticator counts the tokens it serves, and the
+/// network guard counts the connections it refuses, with bounded tags only. The instruments
 /// are process-wide and other tests send requests at the same time, so these tests check that the measurements they
 /// cause are there, not how many there are.
 /// </summary>
@@ -19,7 +19,7 @@ public sealed class DataConnectorHttpTelemetryTests
     private const string TokenResponse = """{ "access_token": "token-1", "token_type": "Bearer", "expires_in": 3600 }""";
 
     [Fact]
-    public async Task SendAsync_ThatRetriesAThrottledRequest_CountsTheRetryAndTheRequestsOfTheCall()
+    public async Task SendAsync_ThatRetriesAThrottledRequest_CountsTheRetry()
     {
         // Arrange
         using var capture = new TelemetryCapture();
@@ -39,11 +39,6 @@ public sealed class DataConnectorHttpTelemetryTests
             Equals(measurement.Tags[CrestAppsOrchardCoreTelemetry.AreaTag], DataConnectorsTelemetry.RetryArea) &&
             Equals(measurement.Tags[CrestAppsOrchardCoreTelemetry.ReasonTag], DataConnectorsTelemetry.RetryStatus429) &&
             Equals(measurement.Tags["attempt"], 2));
-        Assert.Contains(capture.Measurements, measurement =>
-            measurement.Instrument == "crestapps.dataconnector.http.attempts" &&
-            measurement.Value == 2 &&
-            Equals(measurement.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag], CrestAppsOrchardCoreTelemetry.OutcomeOk) &&
-            Equals(measurement.Tags[CrestAppsOrchardCoreTelemetry.StatusClassTag], "2xx"));
         Assert.Empty(FindBannedTagKeys(capture));
     }
 
@@ -71,11 +66,6 @@ public sealed class DataConnectorHttpTelemetryTests
         // Assert
         Assert.Contains(capture.Measurements, measurement => IsTokenRequest(measurement, "acquired"));
         Assert.Contains(capture.Measurements, measurement => IsTokenRequest(measurement, "cache_hit"));
-        Assert.Contains(capture.Measurements, measurement =>
-            measurement.Instrument == "crestapps.dataconnector.token.duration" &&
-            Equals(measurement.Tags[DataConnectorsTelemetry.AuthTag], "oauth2") &&
-            Equals(measurement.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag], CrestAppsOrchardCoreTelemetry.OutcomeOk));
-        Assert.Contains(capture.Spans, span => span.OperationName == "crestapps.dataconnector.token.request");
         Assert.Empty(FindBannedTagKeys(capture));
     }
 

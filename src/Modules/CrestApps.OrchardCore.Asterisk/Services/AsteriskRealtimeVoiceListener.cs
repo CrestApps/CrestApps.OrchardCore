@@ -319,8 +319,6 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceList
                 }
                 catch (Exception ex)
                 {
-                    AsteriskDiagnostics.RecordRealtimeEvent(settings.ProviderName, eventType: null, AsteriskDiagnostics.EventFailed);
-
                     _logger.LogError(
                         ex,
                         "Failed to dispatch an Asterisk real-time payload for provider {ProviderName}; the listener will continue processing subsequent events.",
@@ -398,40 +396,57 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceList
             return;
         }
 
-        if (!AsteriskRealtimeVoiceEventMapper.TryMap(providerName, payload, out var voiceEvent))
+        string eventType = null;
+
+        try
         {
-            AsteriskDiagnostics.RecordRealtimeEvent(providerName, voiceEvent?.EventType, AsteriskDiagnostics.EventIgnored);
+            if (!AsteriskRealtimeVoiceEventMapper.TryMap(providerName, payload, out var voiceEvent, out eventType))
+            {
+                AsteriskDiagnostics.RecordRealtimeEvent(providerName, eventType, AsteriskDiagnostics.EventIgnored);
+
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug(
+                        "Ignored an Asterisk real-time payload for provider {ProviderName} because it did not map to a voice-state update.",
+                        providerName);
+                }
+
+                return;
+            }
 
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 _logger.LogDebug(
-                    "Ignored an Asterisk real-time payload for provider {ProviderName} because it did not map to a voice-state update.",
-                    providerName);
+                    "Received Asterisk real-time event {EventType} for provider {ProviderName} call {CallId}; mapped to state {State}.",
+                    voiceEvent.EventType.SanitizeLogValue(),
+                    voiceEvent.ProviderName,
+                    voiceEvent.CallId.SanitizeLogValue(),
+                    voiceEvent.State);
             }
 
-            return;
+            AsteriskDiagnostics.RecordRealtimeEventLag(providerName, voiceEvent.OccurredUtc, _timeProvider.GetUtcNow().UtcDateTime);
+
+            await ExecuteInTenantScopeAsync(async serviceProvider =>
+            {
+                var dispatcher = serviceProvider.GetRequiredService<AsteriskRealtimeVoiceEventDispatcher>();
+                await dispatcher.HandleAsync(voiceEvent, cancellationToken);
+            });
+
+            // Counted once dispatched: a dispatch that throws is counted as failed below.
+            AsteriskDiagnostics.RecordRealtimeEvent(providerName, voiceEvent.EventType, AsteriskDiagnostics.EventApplied);
         }
-
-        if (_logger.IsEnabled(LogLevel.Debug))
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            _logger.LogDebug(
-                "Received Asterisk real-time event {EventType} for provider {ProviderName} call {CallId}; mapped to state {State}.",
-                voiceEvent.EventType.SanitizeLogValue(),
-                voiceEvent.ProviderName,
-                voiceEvent.CallId.SanitizeLogValue(),
-                voiceEvent.State);
+            throw;
         }
-
-        AsteriskDiagnostics.RecordRealtimeEventLag(providerName, voiceEvent.OccurredUtc, _timeProvider.GetUtcNow().UtcDateTime);
-
-        await ExecuteInTenantScopeAsync(async serviceProvider =>
+        catch
         {
-            var dispatcher = serviceProvider.GetRequiredService<AsteriskRealtimeVoiceEventDispatcher>();
-            await dispatcher.HandleAsync(voiceEvent, cancellationToken);
-        });
+            // Counted here, with the event's type when it was read, so a payload that fails to parse or dispatch is
+            // still counted.
+            AsteriskDiagnostics.RecordRealtimeEvent(providerName, eventType, AsteriskDiagnostics.EventFailed);
 
-        // Counted once dispatched: a dispatch that throws is counted as failed by the worker instead.
-        AsteriskDiagnostics.RecordRealtimeEvent(providerName, voiceEvent.EventType, AsteriskDiagnostics.EventApplied);
+            throw;
+        }
     }
 
     private async Task ExecuteInTenantScopeAsync(Func<IServiceProvider, Task> action)

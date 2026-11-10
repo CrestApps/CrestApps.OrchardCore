@@ -7,7 +7,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Asterisk.Models;
-using CrestApps.OrchardCore.Asterisk.Telemetry;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
@@ -714,10 +713,6 @@ internal sealed class AsteriskAriClient : IAsteriskAriClient
         CancellationToken cancellationToken,
         HttpCompletionOption completionOption = HttpCompletionOption.ResponseContentRead)
     {
-        // The operation is the client method's name, a bounded value; the path, which names channels and bridges, is
-        // never recorded.
-        using var telemetry = AsteriskDiagnostics.StartAriRequest(settings?.ProviderName, operation);
-
         try
         {
             var client = CreateClient(settings);
@@ -729,25 +724,10 @@ internal sealed class AsteriskAriClient : IAsteriskAriClient
                 Content = content,
             };
 
-            var response = await client.SendAsync(request, completionOption, cancellationToken);
-
-            // Asking whether a channel is still up, or whether a recording is ready, is answered "no" with a 404.
-            AsteriskDiagnostics.CompleteAriRequest(
-                telemetry,
-                response.StatusCode,
-                notFoundIsAnAnswer: operation is nameof(ChannelExistsAsync) or nameof(DownloadStoredRecordingAsync));
-
-            return response;
-        }
-        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
-        {
-            AsteriskDiagnostics.CompleteAriRequest(telemetry, null, ex);
-
-            throw;
+            return await client.SendAsync(request, completionOption, cancellationToken);
         }
         catch (TimeoutRejectedException ex)
         {
-            AsteriskDiagnostics.CompleteAriRequest(telemetry, null, ex);
             _logger.LogError(ex, "Asterisk ARI operation {Operation} timed out before a response was observed.", operation);
 
             // The resilience pipeline exhausted its attempt or total-request timeout without a response, so the
@@ -757,7 +737,6 @@ internal sealed class AsteriskAriClient : IAsteriskAriClient
         }
         catch (HttpRequestException ex)
         {
-            AsteriskDiagnostics.CompleteAriRequest(telemetry, null, ex);
             _logger.LogError(ex, "Asterisk ARI operation {Operation} could not reach Asterisk.", operation);
 
             throw new AsteriskAriException(operation, null, "Asterisk ARI could not reach Asterisk.", ex);

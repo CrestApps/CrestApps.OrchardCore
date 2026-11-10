@@ -67,7 +67,7 @@ public sealed class DefaultGeoService : IGeoService
             return new GeocodeResponse();
         }
 
-        var candidates = await GeoTelemetry.MeasureProviderCallAsync(provider.Name, GeoTelemetry.OperationGeocode, () => provider.GeocodeAsync(query, cancellationToken));
+        var candidates = await provider.GeocodeAsync(query, cancellationToken);
 
         return new GeocodeResponse { Provider = provider.Name, Candidates = [.. candidates.Where(candidate => candidate.Point.IsValid).OrderByDescending(candidate => candidate.Confidence)] };
     }
@@ -82,7 +82,7 @@ public sealed class DefaultGeoService : IGeoService
             return new GeocodeResponse();
         }
 
-        return new GeocodeResponse { Provider = provider.Name, Candidates = await GeoTelemetry.MeasureProviderCallAsync(provider.Name, GeoTelemetry.OperationReverseGeocode, () => provider.ReverseGeocodeAsync(point, cancellationToken)) };
+        return new GeocodeResponse { Provider = provider.Name, Candidates = await provider.ReverseGeocodeAsync(point, cancellationToken) };
     }
 
     /// <inheritdoc/>
@@ -128,7 +128,7 @@ public sealed class DefaultGeoService : IGeoService
 
         try
         {
-            var matrix = await GeoTelemetry.MeasureProviderCallAsync(provider.Name, GeoTelemetry.OperationMatrix, () => provider.GetMatrixAsync(origins, destinations, departureUtc, options, cancellationToken));
+            var matrix = await provider.GetMatrixAsync(origins, destinations, departureUtc, options, cancellationToken);
 
             if (keep > TimeSpan.Zero)
             {
@@ -163,7 +163,7 @@ public sealed class DefaultGeoService : IGeoService
 
         try
         {
-            return await GeoTelemetry.MeasureProviderCallAsync(provider.Name, GeoTelemetry.OperationRoute, () => provider.GetRouteAsync(points, cancellationToken));
+            return await provider.GetRouteAsync(points, cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

@@ -55,10 +55,9 @@ public sealed class QueueTreatmentBackgroundTask : IBackgroundTask
         {
             await scopeExecutor.ExecuteAsync(scoped => SweepAsync(scoped, run, logger, cancellationToken));
         }
-        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             // The tenant is shutting down; the next scheduled run picks the sweep back up.
-            run.ReportError(ex);
         }
     }
 

@@ -21,8 +21,8 @@ namespace CrestApps.OrchardCore.DataConnectors.Http;
 /// </summary>
 /// <remarks>
 /// Each retry is counted on <c>crestapps.dataconnector.http.retries</c> and <c>crestapps.retry.attempts</c> and
-/// logged as a warning with its attempt number, never with the URL. The URL, without its query string, is logged at
-/// Debug only, because an API key can be in the query string.
+/// logged at Debug with its attempt number, never with the URL. The URL, without its query string, is logged at Debug
+/// only, because an API key can be in the query string.
 /// </remarks>
 internal sealed class DataConnectorHttpClient
 {
@@ -136,32 +136,7 @@ internal sealed class DataConnectorHttpClient
         ArgumentNullException.ThrowIfNull(method);
         ArgumentNullException.ThrowIfNull(uri);
 
-        var call = new HttpCall();
-        var outcome = CrestAppsOrchardCoreTelemetry.OutcomeError;
-
-        try
-        {
-            var response = await SendWithRetriesAsync(settings, secrets, cacheKey, method, uri, createContent, call, ensureSuccess, cancellationToken);
-
-            if (response.IsSuccessStatusCode)
-            {
-                outcome = CrestAppsOrchardCoreTelemetry.OutcomeOk;
-            }
-
-            return response;
-        }
-        catch (Exception exception)
-        {
-            outcome = call.TimedOut
-                ? CrestAppsOrchardCoreTelemetry.OutcomeTimeout
-                : CrestAppsOrchardCoreTelemetry.GetOutcome(exception);
-
-            throw;
-        }
-        finally
-        {
-            DataConnectorsTelemetry.RecordHttpAttempts(call.Requests, outcome, call.StatusCode);
-        }
+        return await SendWithRetriesAsync(settings, secrets, cacheKey, method, uri, createContent, new HttpCall(), ensureSuccess, cancellationToken);
     }
 
     private async Task<HttpResponseMessage> SendWithRetriesAsync(
@@ -239,13 +214,10 @@ internal sealed class DataConnectorHttpClient
                     continue;
                 }
 
-                call.TimedOut = true;
-
                 throw new DataConnectorException($"{Describe(current)} didn't answer within {timeoutSeconds} seconds.", exception) { IsTransient = true };
             }
 
             var status = (int)response.StatusCode;
-            call.StatusCode = status;
 
             if (_logger.IsEnabled(LogLevel.Debug))
             {
@@ -439,10 +411,6 @@ internal sealed class DataConnectorHttpClient
     private sealed class HttpCall
     {
         public int Requests { get; set; }
-
-        public int? StatusCode { get; set; }
-
-        public bool TimedOut { get; set; }
     }
 
     private sealed class LimitedStream : Stream

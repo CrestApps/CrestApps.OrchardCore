@@ -28,8 +28,6 @@ public sealed class GeneralAISettingsSchema : SiteSettingsSchemaBase
                 ("OverrideEnableDistributedCaching", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to override the distributed caching setting.")),
                 ("EnableDistributedCaching", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to enable distributed caching for AI responses.")),
                 ("OverrideEnableOpenTelemetry", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to override the OpenTelemetry setting.")),
-                ("EnableOpenTelemetry", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the AI clients emit the OpenTelemetry generative AI (gen_ai) spans and metrics.")),
-                ("OverrideEnableSensitiveData", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to override the setting that includes prompts and responses in telemetry.")),
-                ("EnableSensitiveData", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the gen_ai spans include prompts, responses and tool arguments, which can contain personal data.")))
+                ("EnableOpenTelemetry", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to enable OpenTelemetry tracing for AI operations.")))
             .AdditionalProperties(false);
 }

@@ -53,42 +53,23 @@ internal static class TelnyxSmsWebhookEndpoint
         IClock clock,
         ILogger<TelnyxSmsProvider> logger)
     {
+        // What became of the delivery is counted by result, and tagged on the server span ASP.NET Core records around it.
         var receipt = new WebhookReceipt();
-
-        using var telemetry = TelemetryScope.Start(
-            TelnyxTelemetry.ActivitySource,
-            "crestapps.telnyx.webhook.receive",
-            duration: null,
-            new TagList
-            {
-                { TelnyxTelemetry.WebhookKindTag, TelnyxTelemetry.WebhookKindSms },
-            });
 
         try
         {
-            var result = await HandleCoreAsync(httpContext, optionsMonitor, handlers, session, clock, logger, receipt);
-
-            telemetry.SetOutcome(receipt.Result switch
-            {
-                TelnyxTelemetry.WebhookAccepted or TelnyxTelemetry.WebhookDuplicate => CrestAppsOrchardCoreTelemetry.OutcomeOk,
-                TelnyxTelemetry.WebhookDisabled => CrestAppsOrchardCoreTelemetry.OutcomeSkipped,
-                TelnyxTelemetry.WebhookParseError => CrestAppsOrchardCoreTelemetry.OutcomeError,
-                _ => CrestAppsOrchardCoreTelemetry.OutcomeBlocked,
-            });
-
-            return result;
+            return await HandleCoreAsync(httpContext, optionsMonitor, handlers, session, clock, logger, receipt);
         }
-        catch (Exception ex)
+        catch
         {
             receipt.Result = CrestAppsOrchardCoreTelemetry.OutcomeError;
-            telemetry.Fail(ex);
 
             throw;
         }
         finally
         {
-            telemetry.SetSpanTag(TelnyxTelemetry.WebhookTypeTag, receipt.Type);
-            telemetry.SetSpanTag(CrestAppsOrchardCoreTelemetry.ResultTag, receipt.Result);
+            Activity.Current?.SetTag("crestapps.telnyx.webhook.type", receipt.Type);
+            Activity.Current?.SetTag("crestapps.telnyx.webhook.result", receipt.Result);
             TelnyxTelemetry.RecordWebhook(TelnyxTelemetry.WebhookKindSms, receipt.Type, receipt.Result ?? CrestAppsOrchardCoreTelemetry.OutcomeError);
         }
     }

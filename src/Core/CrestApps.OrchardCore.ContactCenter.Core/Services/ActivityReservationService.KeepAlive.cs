@@ -1,7 +1,6 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -32,11 +31,10 @@ public sealed partial class ActivityReservationService
             }
 
             // The same lock the expiry takes, so an offer is either extended or expired, never both.
-            (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+            (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
                 GetReservationLockKey(candidate.ItemId),
                 _coordinationOptions.ReservationLockTimeout,
-                _coordinationOptions.ReservationLockExpiration,
-                "contactcenter.reservation");
+                _coordinationOptions.ReservationLockExpiration);
 
             if (!locked)
             {

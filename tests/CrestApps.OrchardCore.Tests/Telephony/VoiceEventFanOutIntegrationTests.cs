@@ -472,8 +472,7 @@ public sealed class VoiceEventFanOutIntegrationTests
                 ingressGate,
                 clock,
                 NullLogger<ProviderVoiceEventService>.Instance,
-                Mock.Of<IDialerAbandonmentTracker>(),
-                RedactorProviderFactory.Create());
+                Mock.Of<IDialerAbandonmentTracker>());
         }
     }
 }

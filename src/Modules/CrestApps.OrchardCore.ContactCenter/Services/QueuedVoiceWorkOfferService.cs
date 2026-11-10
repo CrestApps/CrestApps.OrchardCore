@@ -109,8 +109,7 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
         {
             var (locker, locked) = await _distributedLock.TryAcquireLockWithoutWaitingAsync(
                 $"ContactCenterQueuedWorkSync:{agent.ItemId}",
-                _coordinationOptions.QueuedWorkSyncLease,
-                area: "contactcenter.queued_work_sync");
+                _coordinationOptions.QueuedWorkSyncLease);
 
             if (!locked)
             {

@@ -1,10 +1,7 @@
 using System.Data;
 using System.Data.Common;
-using System.Diagnostics;
 using System.Text;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.DataConnectors.Telemetry;
-using CrestApps.OrchardCore.Diagnostics;
 using OrchardCore.Data;
 using YesSql;
 
@@ -67,28 +64,6 @@ internal sealed class SqlDataSetRowStore : IDataSetRowStore
             return;
         }
 
-        var startTimestamp = Stopwatch.GetTimestamp();
-        var outcome = CrestAppsOrchardCoreTelemetry.OutcomeError;
-
-        try
-        {
-            await WriteBatchAsync(dataSetId, version, rows, cancellationToken);
-            outcome = CrestAppsOrchardCoreTelemetry.OutcomeOk;
-        }
-        catch (OperationCanceledException)
-        {
-            outcome = CrestAppsOrchardCoreTelemetry.OutcomeCancelled;
-
-            throw;
-        }
-        finally
-        {
-            DataConnectorsTelemetry.RecordDuration(DataConnectorsTelemetry.RowStoreWriteDuration, Stopwatch.GetElapsedTime(startTimestamp), outcome);
-        }
-    }
-
-    private async Task WriteBatchAsync(string dataSetId, string version, IReadOnlyList<DataSetRow> rows, CancellationToken cancellationToken)
-    {
         await using var connection = await OpenAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 

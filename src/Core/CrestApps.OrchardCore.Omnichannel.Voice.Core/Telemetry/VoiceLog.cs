@@ -27,10 +27,4 @@ internal static partial class VoiceLog
         Level = LogLevel.Information,
         Message = "AI voice activity '{ActivityId}' found '{PhoneNumber}' not in service ({Detail}); completing it without the assistant.")]
     public static partial void NotInService(ILogger logger, string activityId, string phoneNumber, string detail);
-
-    [LoggerMessage(
-        EventId = CrestAppsEventIds.Messaging + 510,
-        Level = LogLevel.Information,
-        Message = "Stranded automated voice call recovery looked at {Candidates} open call(s) and concluded {Concluded}; {Failed} could not be recovered.")]
-    public static partial void StrandedRecoveryRun(ILogger logger, int candidates, int concluded, int failed);
 }

@@ -106,21 +106,19 @@ public sealed class ContentTransferChunkFileUploadService : IContentTransferChun
             : await chunkAsync(uploadId, formFile, range);
     }
 
-    public int PurgeTempDirectory()
+    public void PurgeTempDirectory()
     {
         var tempFolderPath = GetTempFolderPath();
         var lifetime = _options.Value.TemporaryFileLifetime;
 
         if (lifetime <= TimeSpan.Zero || !Directory.Exists(tempFolderPath))
         {
-            return 0;
+            return;
         }
 
         var staleFiles = Directory.GetFiles(tempFolderPath, _tempFileNamePrefix + "*")
             .Select(filePath => new FileInfo(filePath))
             .Where(fileInfo => fileInfo.LastWriteTimeUtc + lifetime < _clock.UtcNow);
-
-        var deleted = 0;
 
         foreach (var fileInfo in staleFiles)
         {
@@ -128,11 +126,7 @@ public sealed class ContentTransferChunkFileUploadService : IContentTransferChun
             {
                 break;
             }
-
-            deleted++;
         }
-
-        return deleted;
     }
 
     private async Task<IActionResult> CompleteUploadAsync(

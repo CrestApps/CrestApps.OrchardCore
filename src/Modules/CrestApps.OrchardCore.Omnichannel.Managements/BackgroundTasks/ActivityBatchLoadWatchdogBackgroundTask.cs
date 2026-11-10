@@ -152,7 +152,6 @@ public sealed class ActivityBatchLoadWatchdogBackgroundTask : IBackgroundTask
     private static void RecordAction(MeasuredTaskRun run, string action)
     {
         run.AddItems(1, action);
-        OmnichannelTelemetry.Add(OmnichannelTelemetry.BatchLoadWatchdogActions, 1, OmnichannelTelemetry.ActionTag, action);
     }
 
     /// <summary>

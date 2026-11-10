@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Checkout.Models;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.PointOfSale.Models;
@@ -89,7 +88,7 @@ public sealed class PosShiftService
 
         // One shift at a time: the check and the save happen under the register's lock, so two tills opening it at
         // once can't both succeed.
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync($"POS_SHIFT_OPEN_{register.ItemId}", _lockTimeout, _lockExpiration, "pos.shift");
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync($"POS_SHIFT_OPEN_{register.ItemId}", _lockTimeout, _lockExpiration);
 
         if (!locked)
         {

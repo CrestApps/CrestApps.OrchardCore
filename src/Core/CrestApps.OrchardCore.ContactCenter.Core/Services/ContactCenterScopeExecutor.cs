@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Scope;
@@ -71,20 +70,8 @@ public sealed class ContactCenterScopeExecutor : IContactCenterScopeExecutor
             return false;
         }
 
-        ShellScope.AddDeferredTask(async scope =>
-        {
-            try
-            {
-                await operation(scope.ServiceProvider.GetRequiredService<TContext>());
-            }
-            catch (Exception ex)
-            {
-                // Rethrown so Orchard still logs it, and counted, since it runs after the response that scheduled it.
-                ContactCenterDiagnostics.RecordAfterCommitFailed(typeof(TContext).Name, ex);
-
-                throw;
-            }
-        });
+        ShellScope.AddDeferredTask(scope =>
+            operation(scope.ServiceProvider.GetRequiredService<TContext>()));
 
         return true;
     }
@@ -99,19 +86,7 @@ public sealed class ContactCenterScopeExecutor : IContactCenterScopeExecutor
             return false;
         }
 
-        ShellScope.AddDeferredTask(async _ =>
-        {
-            try
-            {
-                await operation();
-            }
-            catch (Exception ex)
-            {
-                ContactCenterDiagnostics.RecordAfterCommitFailed("callback", ex);
-
-                throw;
-            }
-        });
+        ShellScope.AddDeferredTask(_ => operation());
 
         return true;
     }

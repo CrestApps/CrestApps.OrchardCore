@@ -1,25 +1,18 @@
-using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using CrestApps.OrchardCore.Diagnostics;
 
 namespace CrestApps.OrchardCore.OrTools.Telemetry;
 
 /// <summary>
-/// The meter and activity source of the optimization solvers, <c>CrestApps.OrchardCore.Solver</c>: how long a solve
-/// takes, how it ended and how big the problem was. The problem's ids, workers and visits go nowhere; its size is
-/// recorded as a power-of-ten class.
+/// The meter of the optimization solvers, <c>CrestApps.OrchardCore.Solver</c>: how a solve ended and how big the
+/// problem was. The problem's ids, workers and visits go nowhere; its size is recorded as a power-of-ten class.
 /// </summary>
 public static class SolverTelemetry
 {
     /// <summary>
-    /// The name of the solvers' meter and activity source.
+    /// The name of the solvers' meter.
     /// </summary>
     public const string SourceName = CrestAppsOrchardCoreTelemetry.SourceNamePrefix + ".Solver";
-
-    /// <summary>
-    /// The name of the span of one solve.
-    /// </summary>
-    public const string SolveSpanName = "crestapps.solver.solve";
 
     /// <summary>
     /// The tag that records which solver ran: <see cref="ShiftScheduleSolver"/> or <see cref="DispatchSolver"/>.
@@ -95,23 +88,8 @@ public static class SolverTelemetry
     public static Meter Meter { get; } = CrestAppsOrchardCoreTelemetry.CreateMeter("Solver");
 
     /// <summary>
-    /// The activity source of the solvers.
-    /// </summary>
-    public static ActivitySource ActivitySource { get; } = CrestAppsOrchardCoreTelemetry.CreateActivitySource("Solver");
-
-    /// <summary>
-    /// The duration of a solve, the built-in starting answer included, tagged with <see cref="SolverTag"/>,
-    /// <see cref="StatusTag"/>, <see cref="SizeTag"/>, the <see cref="CrestAppsOrchardCoreTelemetry.ResultTag"/> and
-    /// the <see cref="CrestAppsOrchardCoreTelemetry.OutcomeTag"/>.
-    /// </summary>
-    public static Histogram<double> Duration { get; } = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
-        Meter,
-        "crestapps.solver.duration",
-        "The duration of an optimization solve.",
-        CrestAppsOrchardCoreTelemetry.LongDurationBucketBoundaries);
-
-    /// <summary>
-    /// The number of solves, tagged as <see cref="Duration"/> is.
+    /// The number of solves, tagged with the <see cref="SolverTag"/>, the <see cref="SizeTag"/>, the
+    /// <see cref="StatusTag"/>, the <c>result</c> and the <c>outcome</c>.
     /// </summary>
     public static Counter<long> Runs { get; } = Meter.CreateCounter<long>(
         "crestapps.solver.runs",

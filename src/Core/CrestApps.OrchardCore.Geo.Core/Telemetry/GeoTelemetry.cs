@@ -5,26 +5,15 @@ using CrestApps.OrchardCore.Diagnostics;
 namespace CrestApps.OrchardCore.Geo.Core.Telemetry;
 
 /// <summary>
-/// The meter and activity source of geo services, <c>CrestApps.OrchardCore.Geo</c>: the calls to the geocoding,
-/// travel-time and route providers, the travel-time cache, the fallbacks to the built-in estimate and the background
-/// geocoding queue. Addresses, coordinates and record ids never go on a metric.
+/// The meter of geo services, <c>CrestApps.OrchardCore.Geo</c>: the travel-time cache, the fallbacks to the built-in
+/// estimate and the background geocoding queue. Addresses, coordinates and record ids never go on a metric.
 /// </summary>
 public static class GeoTelemetry
 {
     /// <summary>
-    /// The name of the geo meter and activity source.
+    /// The name of the geo meter.
     /// </summary>
     public const string SourceName = CrestAppsOrchardCoreTelemetry.SourceNamePrefix + ".Geo";
-
-    /// <summary>
-    /// The <see cref="CrestAppsOrchardCoreTelemetry.OperationTag"/> of finding the places that match an address.
-    /// </summary>
-    public const string OperationGeocode = "geocode";
-
-    /// <summary>
-    /// The <see cref="CrestAppsOrchardCoreTelemetry.OperationTag"/> of finding the address of a point.
-    /// </summary>
-    public const string OperationReverseGeocode = "reverse_geocode";
 
     /// <summary>
     /// The <see cref="CrestAppsOrchardCoreTelemetry.OperationTag"/> of a travel-time matrix.
@@ -77,20 +66,6 @@ public static class GeoTelemetry
     public static Meter Meter { get; } = CrestAppsOrchardCoreTelemetry.CreateMeter("Geo");
 
     /// <summary>
-    /// The activity source of geo services.
-    /// </summary>
-    public static ActivitySource ActivitySource { get; } = CrestAppsOrchardCoreTelemetry.CreateActivitySource("Geo");
-
-    /// <summary>
-    /// The duration of a call to a geo provider, tagged with the <see cref="CrestAppsOrchardCoreTelemetry.ProviderTag"/>,
-    /// the <see cref="CrestAppsOrchardCoreTelemetry.OperationTag"/> and the <see cref="CrestAppsOrchardCoreTelemetry.OutcomeTag"/>.
-    /// </summary>
-    public static Histogram<double> ProviderDuration { get; } = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
-        Meter,
-        "crestapps.geo.provider.duration",
-        "The duration of a call to a geocoding, travel-time or route provider.");
-
-    /// <summary>
     /// The number of failed provider calls answered with the built-in straight-line estimate instead, tagged with the
     /// <see cref="CrestAppsOrchardCoreTelemetry.ProviderTag"/> and the <see cref="CrestAppsOrchardCoreTelemetry.OperationTag"/>.
     /// </summary>
@@ -118,55 +93,6 @@ public static class GeoTelemetry
         "crestapps.geo.geocode.requests",
         "{request}",
         "The number of geocoding requests the background queue processed, by what became of them.");
-
-    /// <summary>
-    /// The number of geocoding requests waiting in the queue, read once per run of the queue. Without the tenant tag,
-    /// the tenants of a node report into the same series, so the last tenant to run wins.
-    /// </summary>
-    public static Gauge<long> GeocodeQueueDepth { get; } = Meter.CreateGauge<long>(
-        "crestapps.geo.geocode.queue.depth",
-        "{request}",
-        "The number of geocoding requests waiting in the queue.");
-
-    /// <summary>
-    /// Starts measuring a call to a geo provider.
-    /// </summary>
-    /// <param name="provider">The provider's name.</param>
-    /// <param name="operation">The operation, such as <see cref="OperationGeocode"/>.</param>
-    /// <returns>The scope of the call.</returns>
-    public static TelemetryScope StartProviderCall(string provider, string operation)
-    {
-        return ExternalCallTelemetry.Start(ActivitySource, "crestapps.geo." + operation, ProviderDuration, provider, operation);
-    }
-
-    /// <summary>
-    /// Calls a geo provider and measures the call.
-    /// </summary>
-    /// <typeparam name="T">The type of the provider's answer.</typeparam>
-    /// <param name="provider">The provider's name.</param>
-    /// <param name="operation">The operation, such as <see cref="OperationGeocode"/>.</param>
-    /// <param name="call">The call.</param>
-    /// <returns>The provider's answer. Exceptions are recorded and rethrown.</returns>
-    public static async Task<T> MeasureProviderCallAsync<T>(string provider, string operation, Func<Task<T>> call)
-    {
-        ArgumentNullException.ThrowIfNull(call);
-
-        using var telemetry = StartProviderCall(provider, operation);
-
-        try
-        {
-            var result = await call();
-            telemetry.Succeed();
-
-            return result;
-        }
-        catch (Exception ex)
-        {
-            telemetry.Fail(ex);
-
-            throw;
-        }
-    }
 
     /// <summary>
     /// Records a failed provider call answered with the built-in estimate.
@@ -206,18 +132,6 @@ public static class GeoTelemetry
 
         CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
         GeocodeRequests.Add(1, tags);
-    }
-
-    /// <summary>
-    /// Records the number of geocoding requests waiting in the queue.
-    /// </summary>
-    /// <param name="depth">The number of requests.</param>
-    public static void RecordGeocodeQueueDepth(long depth)
-    {
-        var tags = new TagList();
-
-        CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
-        GeocodeQueueDepth.Record(depth, tags);
     }
 
     private static void Add(Counter<long> counter, long value, string firstKey, string firstValue, string secondKey, string secondValue)

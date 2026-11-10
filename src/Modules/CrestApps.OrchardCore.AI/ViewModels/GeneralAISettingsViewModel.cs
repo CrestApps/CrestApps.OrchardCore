@@ -26,12 +26,7 @@ public class GeneralAISettingsViewModel
     public bool EnableDistributedCaching { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether the AI clients emit the OpenTelemetry generative AI (gen_ai) spans and metrics.
+    /// Gets or sets a value indicating whether enable open telemetry.
     /// </summary>
     public bool EnableOpenTelemetry { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether the gen_ai spans include prompts, responses and tool arguments.
-    /// </summary>
-    public bool EnableSensitiveData { get; set; }
 }

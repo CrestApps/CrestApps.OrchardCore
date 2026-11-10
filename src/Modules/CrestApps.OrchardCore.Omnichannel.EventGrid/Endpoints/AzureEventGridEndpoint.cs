@@ -1,4 +1,5 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
+using System.Diagnostics;
 using System.Text.Json;
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
@@ -64,22 +65,12 @@ internal static class AzureEventGridEndpoint
         ShellSettings shellSettings,
         ILogger<Startup> logger)
     {
-        using var telemetry = EventGridTelemetry.StartRequest();
+        var (result, requestResult) = await HandleCoreAsync(context, handlers, session, clock, options.Value, shellHost, shellSettings, logger);
 
-        try
-        {
-            var (result, requestResult) = await HandleCoreAsync(context, handlers, session, clock, options.Value, shellHost, shellSettings, logger);
+        // What became of the delivery goes on the server span ASP.NET Core records around it.
+        Activity.Current?.SetTag("crestapps.eventgrid.result", requestResult);
 
-            EventGridTelemetry.CompleteRequest(telemetry, requestResult);
-
-            return result;
-        }
-        catch (Exception ex)
-        {
-            EventGridTelemetry.FailRequest(telemetry, ex);
-
-            throw;
-        }
+        return result;
     }
 
     private static async Task<(IResult Result, string RequestResult)> HandleCoreAsync(

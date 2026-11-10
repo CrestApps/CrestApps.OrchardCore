@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Reflection;
 using System.Text;
 using CrestApps.OrchardCore.Diagnostics;
@@ -18,9 +19,9 @@ using YesSqlSession = YesSql.ISession;
 namespace CrestApps.OrchardCore.Tests.Telemetry.Messaging;
 
 /// <summary>
-/// The Azure Event Grid webhook counts its deliveries and the events they carry under
-/// <c>CrestApps.OrchardCore.EventGrid</c>, with the event type mapped to a bounded set: the type is chosen by whoever
-/// publishes to the topic.
+/// The Azure Event Grid webhook counts the events its deliveries carry under <c>CrestApps.OrchardCore.EventGrid</c>,
+/// with the event type mapped to a bounded set (the type is chosen by whoever publishes to the topic), and tags what
+/// became of each delivery on the ASP.NET Core server span.
 /// </summary>
 public sealed class EventGridTelemetryTests
 {
@@ -62,10 +63,11 @@ public sealed class EventGridTelemetryTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenTheRequestIsNotAuthorized_RecordsAnUnauthorizedRequest()
+    public async Task HandleAsync_WhenTheRequestIsNotAuthorized_TagsTheServerSpanUnauthorized()
     {
         // Arrange
-        using var capture = new TelemetryCapture();
+        // Stands in for the server span ASP.NET Core starts around the request.
+        using var serverSpan = new Activity("server").Start();
         var context = new DefaultHttpContext
         {
             RequestServices = new ServiceCollection().AddLogging().BuildServiceProvider(),
@@ -79,14 +81,7 @@ public sealed class EventGridTelemetryTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Contains(capture.Measurements, measurement =>
-            measurement.Instrument == "crestapps.eventgrid.request" &&
-            Equals(measurement.Tags[CrestAppsOrchardCoreTelemetry.ResultTag], EventGridTelemetry.RequestResults.Unauthorized));
-        Assert.Contains(capture.Measurements, measurement =>
-            measurement.Instrument == "crestapps.eventgrid.request.duration" &&
-            Equals(measurement.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag], CrestAppsOrchardCoreTelemetry.OutcomeBlocked));
-        Assert.Contains(capture.Spans, span => span.OperationName == "crestapps.eventgrid.request");
-        Assert.Empty(capture.FindBannedTagKeys());
+        Assert.Equal(EventGridTelemetry.RequestResults.Unauthorized, serverSpan.GetTagItem("crestapps.eventgrid.result"));
     }
 
     private static Task<IResult> InvokeHandleAsync(HttpContext context)

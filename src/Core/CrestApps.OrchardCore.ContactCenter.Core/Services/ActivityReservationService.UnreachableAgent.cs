@@ -2,7 +2,6 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -20,11 +19,10 @@ public sealed partial class ActivityReservationService
 
         using var activity = ContactCenterDiagnostics.StartOffer("release_unreachable");
 
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             GetReservationLockKey(reservationId),
             _coordinationOptions.ReservationLockTimeout,
-            _coordinationOptions.ReservationLockExpiration,
-            "contactcenter.reservation");
+            _coordinationOptions.ReservationLockExpiration);
 
         if (!locked)
         {
@@ -74,11 +72,10 @@ public sealed partial class ActivityReservationService
 
         using var activity = ContactCenterDiagnostics.StartOffer("release_unreachable");
 
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             GetReservationLockKey(reservationId),
             _coordinationOptions.ReservationLockTimeout,
-            _coordinationOptions.ReservationLockExpiration,
-            "contactcenter.reservation");
+            _coordinationOptions.ReservationLockExpiration);
 
         if (!locked)
         {

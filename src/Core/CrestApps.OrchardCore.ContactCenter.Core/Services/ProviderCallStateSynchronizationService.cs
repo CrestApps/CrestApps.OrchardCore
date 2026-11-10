@@ -1,7 +1,6 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
@@ -183,11 +182,10 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
 
     private async Task<int> ReconcileAsync(string providerName, CancellationToken cancellationToken)
     {
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             ReconciliationLockKey,
             _lockTimeout,
-            _lockExpiration,
-            "contactcenter.provider_call_reconciliation");
+            _lockExpiration);
 
         if (!locked)
         {

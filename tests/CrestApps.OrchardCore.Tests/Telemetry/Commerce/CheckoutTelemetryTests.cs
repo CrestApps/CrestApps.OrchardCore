@@ -53,7 +53,6 @@ public sealed class CheckoutTelemetryTests
         var reconciled = Assert.Single(capture.Find("crestapps.checkout.reconcile.attempts", CrestAppsOrchardCoreTelemetry.ProviderTag, providerKey));
         Assert.Equal(CheckoutTelemetry.ReconcileSettled, reconciled.Tags[CrestAppsOrchardCoreTelemetry.ResultTag]);
 
-        Assert.NotEmpty(capture.Find("crestapps.checkout.sessions", CrestAppsOrchardCoreTelemetry.OutcomeTag, CheckoutTelemetry.SessionCompleted));
         Assert.NotEmpty(capture.Find("crestapps.checkout.session.duration", CrestAppsOrchardCoreTelemetry.OutcomeTag, CheckoutTelemetry.SessionCompleted));
         Assert.Contains(
             capture.Find("crestapps.checkout.duration", CrestAppsOrchardCoreTelemetry.OperationTag, CheckoutTelemetry.OperationComplete),
@@ -61,9 +60,12 @@ public sealed class CheckoutTelemetryTests
 
         // The session id is on the spans, never on a metric.
         Assert.Contains(capture.Spans, span => span.OperationName == "crestapps.checkout.complete" && Equals(span.GetTagItem(CheckoutTelemetry.SessionIdTag), sessionId));
-        Assert.Contains(capture.Spans, span => span.OperationName == "crestapps.checkout.provider.begin" && Equals(span.GetTagItem(CrestAppsOrchardCoreTelemetry.ProviderTag), providerKey));
+        Assert.Contains(capture.Spans, span => span.OperationName == "crestapps.checkout.begin_payment" && Equals(span.GetTagItem(CheckoutTelemetry.SessionIdTag), sessionId));
+
+        // The begin is counted on crestapps.checkout.payment.begin, not on the engine's duration.
+        Assert.Empty(capture.Find("crestapps.checkout.duration", CrestAppsOrchardCoreTelemetry.OperationTag, CheckoutTelemetry.OperationBeginPayment));
         Assert.DoesNotContain(capture.Measurements, measurement => measurement.Tags.Values.Any(value => Equals(value, sessionId)));
-        AssertNoBannedTags(capture);
+        Assert.Empty(capture.FindBannedTagKeys());
     }
 
     [Fact]
@@ -89,8 +91,8 @@ public sealed class CheckoutTelemetryTests
 
         Assert.Equal(2, cancels.Count);
         Assert.All(cancels, span => Assert.Equal("cancelled", span.GetTagItem(CrestAppsOrchardCoreTelemetry.ResultTag)));
-        Assert.NotEmpty(capture.Find("crestapps.checkout.sessions", CrestAppsOrchardCoreTelemetry.OutcomeTag, CheckoutTelemetry.SessionCancelled));
-        AssertNoBannedTags(capture);
+        Assert.NotEmpty(capture.Find("crestapps.checkout.session.duration", CrestAppsOrchardCoreTelemetry.OutcomeTag, CheckoutTelemetry.SessionCancelled));
+        Assert.Empty(capture.FindBannedTagKeys());
     }
 
     [Theory]
@@ -116,17 +118,6 @@ public sealed class CheckoutTelemetryTests
         // Act and Assert
         Assert.Equal(CrestAppsOrchardCoreTelemetry.Unknown, CheckoutTelemetry.GetProviderTag(null));
         Assert.Equal("stripe", CheckoutTelemetry.GetProviderTag(new ConfirmingProvider("stripe")));
-    }
-
-    private static void AssertNoBannedTags(TelemetryCapture capture)
-    {
-        var banned = capture.Measurements
-            .Where(measurement => measurement.Meter == CheckoutTelemetry.SourceName)
-            .SelectMany(measurement => measurement.Tags.Keys)
-            .Where(CrestAppsOrchardCoreTelemetry.BannedMetricTagKeys.Contains)
-            .ToList();
-
-        Assert.Empty(banned);
     }
 
     private static CheckoutSession CreateSession(string sessionId, DateTime createdUtc)

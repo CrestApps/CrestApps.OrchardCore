@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
 
@@ -30,41 +29,15 @@ public static class DistributedLockExtensions
     /// <param name="distributedLock">The lock service.</param>
     /// <param name="key">The name of the lock.</param>
     /// <param name="expiration">When the lock is released on its own, or <see langword="null"/> for never.</param>
-    /// <param name="area">The area that takes the lock, from a bounded set such as <c>contactcenter.reservation</c>,
-    /// recorded on <see cref="LockTelemetry"/>. Never the key, which holds record ids.</param>
     /// <returns>The locker, and whether the lock was acquired.</returns>
     public static Task<(ILocker locker, bool locked)> TryAcquireLockWithoutWaitingAsync(
         this IDistributedLock distributedLock,
         string key,
-        TimeSpan? expiration = null,
-        string area = null)
+        TimeSpan? expiration = null)
     {
         ArgumentNullException.ThrowIfNull(distributedLock);
 
-        return AcquireAndRecordAsync(distributedLock, key, NoWaitTimeout, expiration, area, LockTelemetry.KindNoWait);
-    }
-
-    /// <summary>
-    /// Tries to acquire a named lock, waiting up to <paramref name="timeout"/> for a holder to release it, and records
-    /// the attempt on <see cref="LockTelemetry"/>.
-    /// </summary>
-    /// <param name="distributedLock">The lock service.</param>
-    /// <param name="key">The name of the lock.</param>
-    /// <param name="timeout">How long to wait for the lock.</param>
-    /// <param name="expiration">When the lock is released on its own, or <see langword="null"/> for never.</param>
-    /// <param name="area">The area that takes the lock, from a bounded set such as <c>contactcenter.reservation</c>.
-    /// Never the key, which holds record ids.</param>
-    /// <returns>The locker, and whether the lock was acquired.</returns>
-    public static Task<(ILocker locker, bool locked)> TryAcquireMeasuredLockAsync(
-        this IDistributedLock distributedLock,
-        string key,
-        TimeSpan timeout,
-        TimeSpan? expiration,
-        string area)
-    {
-        ArgumentNullException.ThrowIfNull(distributedLock);
-
-        return AcquireAndRecordAsync(distributedLock, key, timeout, expiration, area, LockTelemetry.KindWait);
+        return distributedLock.TryAcquireLockAsync(key, NoWaitTimeout, expiration);
     }
 
     /// <summary>
@@ -80,19 +53,16 @@ public static class DistributedLockExtensions
     /// <param name="keys">The names of the locks.</param>
     /// <param name="timeout">How long to wait for each lock.</param>
     /// <param name="expiration">When each lock is released on its own, or <see langword="null"/> for never.</param>
-    /// <param name="area">The area that takes the locks, from a bounded set, recorded on <see cref="LockTelemetry"/>.</param>
     /// <returns>A locker that holds every lock, or <see langword="null"/> when one couldn't be acquired.</returns>
     public static async Task<ILocker> LockAllAsync(
         this IDistributedLock distributedLock,
         IEnumerable<string> keys,
         TimeSpan timeout,
-        TimeSpan? expiration = null,
-        string area = null)
+        TimeSpan? expiration = null)
     {
         ArgumentNullException.ThrowIfNull(distributedLock);
         ArgumentNullException.ThrowIfNull(keys);
 
-        var startTimestamp = Stopwatch.GetTimestamp();
         var lockers = new List<ILocker>();
 
         try
@@ -104,7 +74,6 @@ public static class DistributedLockExtensions
                 if (!locked)
                 {
                     await MultiKeyLocker.ReleaseAsync(lockers);
-                    LockTelemetry.Record(area, LockTelemetry.KindMulti, LockTelemetry.ResultTimeout, startTimestamp);
 
                     return null;
                 }
@@ -115,47 +84,10 @@ public static class DistributedLockExtensions
         catch
         {
             await MultiKeyLocker.ReleaseAsync(lockers);
-            LockTelemetry.Record(area, LockTelemetry.KindMulti, LockTelemetry.ResultError, startTimestamp);
 
             throw;
         }
-
-        LockTelemetry.Record(area, LockTelemetry.KindMulti, LockTelemetry.ResultAcquired, startTimestamp);
 
         return new MultiKeyLocker(lockers);
-    }
-
-    private static async Task<(ILocker locker, bool locked)> AcquireAndRecordAsync(
-        IDistributedLock distributedLock,
-        string key,
-        TimeSpan timeout,
-        TimeSpan? expiration,
-        string area,
-        string kind)
-    {
-        var startTimestamp = Stopwatch.GetTimestamp();
-
-        try
-        {
-            var result = await distributedLock.TryAcquireLockAsync(key, timeout, expiration);
-
-            LockTelemetry.Record(
-                area,
-                kind,
-                result.locked
-                    ? LockTelemetry.ResultAcquired
-                    : kind == LockTelemetry.KindNoWait
-                        ? LockTelemetry.ResultContended
-                        : LockTelemetry.ResultTimeout,
-                startTimestamp);
-
-            return result;
-        }
-        catch
-        {
-            LockTelemetry.Record(area, kind, LockTelemetry.ResultError, startTimestamp);
-
-            throw;
-        }
     }
 }

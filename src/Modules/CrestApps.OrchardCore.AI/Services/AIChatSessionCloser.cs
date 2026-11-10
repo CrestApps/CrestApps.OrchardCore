@@ -123,12 +123,6 @@ public sealed class AIChatSessionCloser : IAIChatSessionCloser
 
         await _sessionStore.SaveAsync(chatSession, cancellationToken);
 
-        // Orchard Core closes sessions here rather than in the framework's close cycle, so the framework's counter is
-        // recorded here, with the same bounded reason, once the close is saved and cannot be counted twice.
-        AITelemetry.ChatSessionsClosed.Add(
-            1,
-            new KeyValuePair<string, object>(AITelemetry.ReasonTag, chatSession.Status == ChatSessionStatus.Abandoned ? "abandoned" : "closed"));
-
         await RememberAsync(profile, chatSession, prompts, cancellationToken);
 
         await NotifyClosedAsync(profile, chatSession, cancellationToken);

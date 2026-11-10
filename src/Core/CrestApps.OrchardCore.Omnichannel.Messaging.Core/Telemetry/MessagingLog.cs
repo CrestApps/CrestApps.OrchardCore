@@ -21,12 +21,6 @@ internal static partial class MessagingLog
     public static partial void OutboxMessageRescheduled(this ILogger logger, string channel, string messageId, int attempts);
 
     [LoggerMessage(
-        EventId = CrestAppsEventIds.Messaging + 2,
-        Level = LogLevel.Warning,
-        Message = "The inbound {Channel} message {ProviderMessageId} could not acquire its conversation lock; the delivery will be retried.")]
-    public static partial void InboundLockTimeout(this ILogger logger, string channel, string providerMessageId);
-
-    [LoggerMessage(
         EventId = CrestAppsEventIds.Messaging + 3,
         Level = LogLevel.Debug,
         Message = "A {Channel} delivery receipt for provider message {ProviderMessageId} with status {Status} matched no {Missing}; it was ignored.")]

@@ -2,11 +2,11 @@ using CrestApps.Core.Data.YesSql;
 using CrestApps.OrchardCore.AI.Core.Webhooks;
 using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.Core.Security;
-using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Data.Migration;
+using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.AI.Migrations;
 
@@ -67,7 +67,7 @@ internal sealed class AIWebhookIndexMigrations : DataMigration
     public static int UpdateFrom2()
     {
         // The roles are documents; they are written once this step's own transaction has committed.
-        MigrationTelemetry.Defer(nameof(AIWebhookIndexMigrations), scope => RolePermissionMigrations.GrantAsync(
+        ShellScope.AddDeferredTask(scope => RolePermissionMigrations.GrantAsync(
             scope.ServiceProvider,
             _permissionCarryOver,
             scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger<AIWebhookIndexMigrations>()));

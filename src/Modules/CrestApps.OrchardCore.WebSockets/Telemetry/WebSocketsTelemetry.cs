@@ -69,20 +69,8 @@ public static class WebSocketsTelemetry
         "crestapps.websockets.rendezvous.wait.duration",
         "The time from a WebSocket rendezvous being registered to the provider's socket arriving for it.");
 
-    // Kept whether or not anything listens, so the gauge reads the true number from the moment a listener attaches.
-    private static long _pending;
-
     /// <summary>
-    /// The number of rendezvous waiting for their socket in this process, across tenants.
-    /// </summary>
-    public static ObservableUpDownCounter<long> RendezvousPending { get; } = Meter.CreateObservableUpDownCounter(
-        "crestapps.websockets.rendezvous.pending",
-        () => Interlocked.Read(ref _pending),
-        "{rendezvous}",
-        "The number of WebSocket rendezvous waiting for their socket in this process.");
-
-    /// <summary>
-    /// Records a rendezvous operation, and keeps <see cref="RendezvousPending"/> in step with it.
+    /// Records a rendezvous operation.
     /// </summary>
     /// <param name="result">What happened, such as <see cref="ResultClaimed"/>.</param>
     /// <param name="registeredTimestamp">The <see cref="Stopwatch"/> timestamp the rendezvous was registered at, for a
@@ -97,18 +85,6 @@ public static class WebSocketsTelemetry
             var resultTags = tags;
             resultTags.Add(CrestAppsOrchardCoreTelemetry.ResultTag, result);
             Rendezvous.Add(1, resultTags);
-        }
-
-        var pendingDelta = result switch
-        {
-            ResultRegistered => 1,
-            ResultClaimed or ResultRemoved => -1,
-            _ => 0,
-        };
-
-        if (pendingDelta != 0)
-        {
-            Interlocked.Add(ref _pending, pendingDelta);
         }
 
         if (result == ResultClaimed && registeredTimestamp != 0 && RendezvousWaitDuration.Enabled)

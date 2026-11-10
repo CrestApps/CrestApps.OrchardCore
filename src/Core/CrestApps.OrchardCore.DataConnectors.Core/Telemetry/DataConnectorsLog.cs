@@ -25,18 +25,6 @@ internal static partial class DataConnectorsLog
     }
 
     [LoggerMessage(
-        EventId = CrestAppsEventIds.DataConnectors,
-        Level = LogLevel.Information,
-        Message = "Refreshing the data set '{DataSet}' ({Trigger}, {Mode}).")]
-    public static partial void RefreshStarted(this ILogger logger, string dataSet, string trigger, string mode);
-
-    [LoggerMessage(
-        EventId = CrestAppsEventIds.DataConnectors + 1,
-        Level = LogLevel.Information,
-        Message = "Refreshed the data set '{DataSet}' in {ElapsedMilliseconds} ms ({Mode}): {RowsRead} rows read, {RowCount} rows published.")]
-    public static partial void RefreshSucceeded(this ILogger logger, string dataSet, long elapsedMilliseconds, string mode, long rowsRead, long rowCount);
-
-    [LoggerMessage(
         EventId = CrestAppsEventIds.DataConnectors + 2,
         Level = LogLevel.Information,
         Message = "The fields of the data set '{DataSet}' changed at the source: {Changes}.")]
@@ -49,26 +37,8 @@ internal static partial class DataConnectorsLog
     public static partial void RefreshDowngradedToFull(this ILogger logger, string dataSet, string reason);
 
     [LoggerMessage(
-        EventId = CrestAppsEventIds.DataConnectors + 4,
-        Level = LogLevel.Error,
-        Message = "The refresh of the data set '{DataSetId}' failed before it could record how it ended. The data sets still due are refreshed on the next run.")]
-    public static partial void RefreshAborted(this ILogger logger, Exception exception, string dataSetId);
-
-    [LoggerMessage(
-        EventId = CrestAppsEventIds.DataConnectors + 5,
-        Level = LogLevel.Information,
-        Message = "Imported data sets due: {Due}. Refreshed: {Succeeded}. Failed: {Failed}. Skipped because another refresh of the data set was running: {Skipped}. Left for the next run: {Deferred}.")]
-    public static partial void RefreshSweepCompleted(this ILogger logger, int due, int succeeded, int failed, int skipped, int deferred);
-
-    [LoggerMessage(
-        EventId = CrestAppsEventIds.DataConnectors + 6,
-        Level = LogLevel.Warning,
-        Message = "The last successful refresh of the scheduled imported data sets couldn't be read for the refresh age metric.")]
-    public static partial void LastSuccessSnapshotFailed(this ILogger logger, Exception exception);
-
-    [LoggerMessage(
         EventId = CrestAppsEventIds.DataConnectors + 10,
-        Level = LogLevel.Warning,
+        Level = LogLevel.Debug,
         Message = "A data connector request is sent again after {Reason} (status {StatusCode}): attempt {Attempt} of {MaxAttempts}, in {DelayMilliseconds} ms.")]
     public static partial void HttpRetrying(this ILogger logger, string reason, int? statusCode, int attempt, int maxAttempts, long delayMilliseconds);
 

@@ -105,17 +105,8 @@ public static partial class MessagingTelemetry
     public static ActivitySource ActivitySource { get; } = CrestAppsOrchardCoreTelemetry.CreateActivitySource("Messaging");
 
     /// <summary>
-    /// The number of outbound messages handed to a provider, tagged with the channel, the <see cref="CrestAppsOrchardCoreTelemetry.ProviderTag"/>
-    /// and the result: <see cref="SendResults.Sent"/>, <see cref="SendResults.Failed"/>, <see cref="SendResults.OptedOut"/>,
-    /// <see cref="SendResults.MediaNotSupported"/>, <see cref="SendResults.NoProvider"/> or <see cref="ResultError"/>.
-    /// </summary>
-    public static Counter<long> Send { get; } = Meter.CreateCounter<long>(
-        "crestapps.messaging.send",
-        "{message}",
-        "The number of outbound messages handed to a provider, by result.");
-
-    /// <summary>
-    /// The time a provider took to accept or refuse an outbound message, tagged with the channel, the provider and the outcome.
+    /// The time a provider took to accept or refuse an outbound message, tagged with the channel, the provider, the outcome
+    /// and the result (see <see cref="SendResults"/>).
     /// </summary>
     public static Histogram<double> SendDuration { get; } = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
         Meter,
@@ -130,15 +121,6 @@ public static partial class MessagingTelemetry
         "crestapps.messaging.outbox.retry",
         "{attempt}",
         "The number of times the outbox tried a queued outbound message again, by result.");
-
-    /// <summary>
-    /// The number of outbound messages given up on, tagged with the channel and the <see cref="CrestAppsOrchardCoreTelemetry.ReasonTag"/>:
-    /// <see cref="OutboxResults.RetriesExhausted"/> or <see cref="OutboxResults.NotRetryable"/>.
-    /// </summary>
-    public static Counter<long> OutboxFailed { get; } = Meter.CreateCounter<long>(
-        "crestapps.messaging.outbox.failed",
-        "{message}",
-        "The number of outbound messages given up on and marked failed, by reason.");
 
     /// <summary>
     /// The number of opt-outs and opt-ins recorded, tagged with the channel, the <see cref="SourceTag"/> and the <see cref="ActionTag"/>.
@@ -168,16 +150,8 @@ public static partial class MessagingTelemetry
         CrestAppsOrchardCoreTelemetry.LongDurationBucketBoundaries);
 
     /// <summary>
-    /// The number of inbound messages the workspace pipeline processed, tagged with the channel and the result (see
-    /// <see cref="InboundResults"/>).
-    /// </summary>
-    public static Counter<long> Inbound { get; } = Meter.CreateCounter<long>(
-        "crestapps.messaging.inbound",
-        "{message}",
-        "The number of inbound messages the messaging workspace processed, by result.");
-
-    /// <summary>
-    /// The time the workspace pipeline took to process an inbound message, tagged with the channel and the outcome.
+    /// The time the workspace pipeline took to process an inbound message, tagged with the channel, the outcome and the
+    /// result (see <see cref="InboundResults"/>).
     /// </summary>
     public static Histogram<double> InboundDuration { get; } = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
         Meter,
@@ -196,16 +170,9 @@ public static partial class MessagingTelemetry
         CrestAppsOrchardCoreTelemetry.LongDurationBucketBoundaries);
 
     /// <summary>
-    /// The number of automated (AI) conversation turns, tagged with the channel and the result (see <see cref="AITurnResults"/>).
-    /// </summary>
-    public static Counter<long> AITurn { get; } = Meter.CreateCounter<long>(
-        "crestapps.messaging.ai.turn",
-        "{turn}",
-        "The number of automated conversation turns, by result.");
-
-    /// <summary>
     /// The time an automated (AI) conversation turn took, from the customer's message to the reply leaving, including the
-    /// humanized reading and typing pauses, tagged with the channel and the outcome.
+    /// humanized reading and typing pauses, tagged with the channel, the outcome and the result (see
+    /// <see cref="AITurnResults"/>).
     /// </summary>
     public static Histogram<double> AITurnDuration { get; } = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
         Meter,
@@ -280,24 +247,6 @@ public static partial class MessagingTelemetry
         CrestAppsOrchardCoreTelemetry.LongDurationBucketBoundaries);
 
     /// <summary>
-    /// The number of re-engagement nudges considered for automated conversations that went quiet, tagged with the channel
-    /// and the result (see <see cref="ReEngagementResults"/>).
-    /// </summary>
-    public static Counter<long> ReEngagement { get; } = Meter.CreateCounter<long>(
-        "crestapps.messaging.reengagement",
-        "{attempt}",
-        "The number of re-engagement nudges considered for quiet automated conversations, by result.");
-
-    /// <summary>
-    /// The number of automated conversations whose owed reply was re-driven after it was lost, tagged with the channel
-    /// and the result: <see cref="OwedReplyResults.Redriven"/> or <see cref="ResultError"/>.
-    /// </summary>
-    public static Counter<long> OwedReplyRecovery { get; } = Meter.CreateCounter<long>(
-        "crestapps.messaging.owed_reply.recovery",
-        "{conversation}",
-        "The number of automated conversations whose lost reply was re-driven, by result.");
-
-    /// <summary>
     /// The number of broadcasts started and finished, tagged with the channel and the result (see <see cref="BroadcastResults"/>).
     /// </summary>
     public static Counter<long> Broadcast { get; } = Meter.CreateCounter<long>(
@@ -360,7 +309,6 @@ public static partial class MessagingTelemetry
     private static MessagingMeasurement Start(
         string spanName,
         Histogram<double> duration,
-        Counter<long> counter,
         string channel,
         ActivityKind kind)
     {
@@ -369,7 +317,7 @@ public static partial class MessagingTelemetry
             { CrestAppsOrchardCoreTelemetry.ChannelTag, GetChannelTag(channel) },
         };
 
-        return new MessagingMeasurement(TelemetryScope.Start(ActivitySource, spanName, duration, tags, kind), counter, tags);
+        return new MessagingMeasurement(TelemetryScope.Start(ActivitySource, spanName, duration, tags, kind));
     }
 
     private static void Add(Counter<long> counter, TagList tags)

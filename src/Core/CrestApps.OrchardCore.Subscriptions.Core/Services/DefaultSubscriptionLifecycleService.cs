@@ -1,6 +1,5 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Diagnostics;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Telemetry;
@@ -342,7 +341,7 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
 
         using var activity = SubscriptionsTelemetry.StartTransition(operation, subscriptionId);
 
-        var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync(LockPrefix + subscriptionId, _lockTimeout, _lockExpiration, "subscriptions.subscription");
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(LockPrefix + subscriptionId, _lockTimeout, _lockExpiration);
 
         if (!locked)
         {
@@ -381,7 +380,8 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
 
         await _subscriptionManager.UpdateAsync(subscription, cancellationToken: cancellationToken);
 
-        // Counted once the change is saved, so a transition that failed to save is not counted.
+        // Counted once the change is handed to the session, before the scope commits: a transition whose commit later
+        // fails or is rolled back is still counted.
         SubscriptionsTelemetry.RecordTransition(operation, SubscriptionsTelemetry.ResultChanged, before, subscription.Status);
         activity?.SetTag(CrestAppsOrchardCoreTelemetry.ResultTag, SubscriptionsTelemetry.ResultChanged);
 

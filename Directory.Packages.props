@@ -85,9 +85,6 @@
     <PackageVersion Include="OrchardCore.Media.Azure" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Mvc.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.OpenTelemetry" Version="$(OrchardCoreVersion)" />
-    <!-- OrchardCore.OpenTelemetry brings the OTLP exporter 1.19 and CrestApps.Core.OpenTelemetry the SDK 1.20. The
-         exporter reads SDK internals, so a mismatch drops every metric export (MissingFieldException): keep them equal. -->
-    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.20.1" />
     <PackageVersion Include="OrchardCore.Navigation.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Notifications.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Notifications.Core" Version="$(OrchardCoreVersion)" />
@@ -170,7 +167,6 @@
     <PackageVersion Include="CrestApps.Core.Azure.AISearch" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.Elasticsearch" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.Infrastructure" Version="$(CrestAppsCoreVersion)" />
-    <PackageVersion Include="CrestApps.Core.OpenTelemetry" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.Support" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.Templates" Version="$(CrestAppsCoreVersion)" />
   </ItemGroup>

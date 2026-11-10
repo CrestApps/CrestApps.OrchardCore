@@ -2,7 +2,6 @@ using System.Diagnostics;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Core.Http;
 using CrestApps.OrchardCore.Diagnostics;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Core.Telemetry;
@@ -143,11 +142,10 @@ public static class CreateWebhookEndpoint
         // deliveries (possibly on different instances) cannot process the same event at once, and
         // persist a processed-event marker so a later duplicate delivery is ignored. Together this
         // gives exactly-once processing semantics across a multi-instance deployment.
-        var (locker, locked) = await distributedLock.TryAcquireMeasuredLockAsync(
+        var (locker, locked) = await distributedLock.TryAcquireLockAsync(
             $"STRIPE_WEBHOOK_{stripeEvent.Id}",
             TimeSpan.FromSeconds(10),
-            TimeSpan.FromMinutes(5),
-            "stripe.webhook");
+            TimeSpan.FromMinutes(5));
 
         if (!locked)
         {

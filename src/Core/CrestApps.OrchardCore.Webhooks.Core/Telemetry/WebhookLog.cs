@@ -15,18 +15,6 @@ internal static partial class WebhookLog
     private const int Inbox = CrestAppsEventIds.ContactCenter + 950;
 
     [LoggerMessage(
-        EventId = Outbound,
-        Level = LogLevel.Warning,
-        Message = "Webhook delivery '{DeliveryId}' of event '{EventName}' failed on attempt {Attempt} ({StatusCode}); it is tried again in {RetryDelay}.")]
-    public static partial void DeliveryRetryScheduled(
-        ILogger logger,
-        string deliveryId,
-        string eventName,
-        int attempt,
-        int? statusCode,
-        TimeSpan? retryDelay);
-
-    [LoggerMessage(
         EventId = Outbound + 1,
         Level = LogLevel.Warning,
         Message = "Webhook delivery '{DeliveryId}' of event '{EventName}' failed for good after {Attempt} attempt(s): {Reason}.")]
@@ -43,10 +31,4 @@ internal static partial class WebhookLog
         string handlerName,
         int attempts,
         string error);
-
-    [LoggerMessage(
-        EventId = Inbox + 1,
-        Level = LogLevel.Warning,
-        Message = "Provider webhook inbox message '{MessageId}' for handler '{HandlerName}' failed on attempt {Attempt}; it is retried with back-off.")]
-    public static partial void InboxRetryScheduled(ILogger logger, string messageId, string handlerName, int attempt);
 }

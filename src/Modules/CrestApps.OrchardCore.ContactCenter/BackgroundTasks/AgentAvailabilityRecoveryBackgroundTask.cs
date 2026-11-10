@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -56,9 +55,6 @@ public sealed class AgentAvailabilityRecoveryBackgroundTask : IBackgroundTask
             var recovered = await recoveryService.RecoverAsync(runToken);
 
             run.AddItems(recovered, "recovered");
-
-            // Every agent this pass had to put right is a state the routing transitions left wrong.
-            ContactCenterDiagnostics.RecordRecoveryHealed("agent_availability", recovered);
 
             if (recovered > 0 && logger.IsEnabled(LogLevel.Debug))
             {

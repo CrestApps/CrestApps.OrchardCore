@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Locking.Distributed;
@@ -85,7 +84,7 @@ internal sealed class MessagingFirstResponseSlaSweep
     /// <returns>When the next pass is due.</returns>
     public async Task<DateTime> RunAsync(CancellationToken cancellationToken = default)
     {
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(LockKey, _lockTimeout, _lockExpiration, "messaging.sla_sweep");
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(LockKey, _lockTimeout, _lockExpiration);
 
         if (!locked)
         {

@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Diagnostics;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Reports.Designer.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
@@ -199,7 +198,7 @@ public sealed class ReportViewSnapshotRefresher
             return new ReportViewRefreshResult { Status = ReportViewRefreshStatus.NotScheduled };
         }
 
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(LockKey(view.ItemId), _lockTimeout, _lockExpiration, "reports.view_snapshot");
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(LockKey(view.ItemId), _lockTimeout, _lockExpiration);
 
         if (!locked)
         {

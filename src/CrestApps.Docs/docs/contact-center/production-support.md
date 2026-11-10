@@ -95,15 +95,9 @@ The Contact Center module exposes a stable OpenTelemetry contract and operationa
 
 ### Telemetry contract
 
-`ContactCenterDiagnostics` publishes a single `Meter` and a single `ActivitySource`, both named `CrestApps.OrchardCore.ContactCenter`. The provider webhook inbox and the outbound webhook deliveries publish theirs as `CrestApps.OrchardCore.Webhooks`. These names are a public integration surface and change only through a documented migration. Both match the `CrestApps.OrchardCore.*` wildcard, so the host's OpenTelemetry wiring picks them up; with the plain OpenTelemetry SDK, register them by name:
+`ContactCenterDiagnostics` publishes a single `Meter` and a single `ActivitySource`, both named `CrestApps.OrchardCore.ContactCenter`; the provider webhook inbox and the outbound webhook deliveries publish theirs as `CrestApps.OrchardCore.Webhooks`. These names are a public integration surface and change only through a documented migration. Both match the `CrestApps.OrchardCore.*` wildcard the host collects; see [Observability](../observability.md) for turning it on and the rules every instrument follows.
 
-```csharp
-builder.Services.AddOpenTelemetry()
-    .WithMetrics(metrics => metrics.AddMeter("CrestApps.OrchardCore.ContactCenter", "CrestApps.OrchardCore.Webhooks"))
-    .WithTracing(tracing => tracing.AddSource("CrestApps.OrchardCore.ContactCenter", "CrestApps.OrchardCore.Webhooks"));
-```
-
-Every instrument is recorded where the state changes (an event applied to a call, an offer settled, a caller leaving a queue), never in an outbox or projection handler, so a redelivered domain event is never counted twice. Metrics carry bounded tags only: no call, interaction, reservation, activity or queue id, no phone number, address or SIP URI, no tenant name unless `OrchardCore:CrestApps:OpenTelemetry:Metrics:IncludeTenantName` is on. Spans carry ids (`crestapps.contactcenter.interaction.id`, `crestapps.contactcenter.reservation.id`...) but never a phone number. Durations are in seconds.
+Every instrument is recorded where the state changes (an event applied to a call, an offer settled, a caller leaving a queue), never in an outbox or projection handler, so a redelivered domain event is never counted twice. Metrics carry bounded tags only: no call, interaction, reservation, activity or queue id, no phone number, address or SIP URI, no tenant name unless tenant tags are on. Spans carry ids (`crestapps.contactcenter.interaction.id`, `crestapps.contactcenter.reservation.id`...) but never a phone number. Durations are in seconds.
 
 #### Calls (every provider feeds the same funnel)
 
@@ -136,7 +130,6 @@ Every instrument is recorded where the state changes (an event applied to a call
 | `crestapps.contactcenter.inbound.routed` | Counter | `result` (`offered`, `queued`, `not_routed`, `duplicate`), `reason` | Inbound calls routed; `reason` is the routing reason code (`ai_agent`, `ivr_menu`, `entry_point_welcome`, `queue_full_voicemail`...). A redelivered inbound webhook for a call already tracked counts as `duplicate`. |
 | `crestapps.contactcenter.inbound.route.duration` | Histogram (s) | `provider`, `result`, `reason`, `outcome` | Time spent routing an inbound call. |
 | `crestapps.contactcenter.inbound.ai_answer.duration` | Histogram (s) | `provider` | From the provider receiving a call to routing handing it to the entry point's AI voice agent. |
-| `crestapps.contactcenter.ingress.rejected` | Counter | `reason` | Voice routing requests refused before routing: `forbidden`, `bad_request`, `feature_unavailable`, `concurrency_limit`. |
 
 #### Event outbox
 
@@ -145,9 +138,8 @@ Every instrument is recorded where the state changes (an event applied to a call
 | `crestapps.contactcenter.outbox.dispatches` | Counter | `delivery` (`first`, `retry`), `result` (`completed`, `retry`) | Dispatches of domain events to their handlers. |
 | `crestapps.contactcenter.outbox.lag` | Histogram (s) | `delivery` | From the event being recorded to a dispatch of it starting. |
 | `crestapps.contactcenter.outbox.handler.duration` | Histogram (s) | `handler`, `result` | One handler handling one event. |
-| `crestapps.contactcenter.outbox.redelivered` | Counter | | Events redelivered by the retry pass. Replaces `contactcenter.outbox.redelivered`. |
-| `crestapps.contactcenter.outbox.dead_lettered` | Counter | `reason` | Events dead-lettered. Replaces `contactcenter.outbox.dead_lettered`. |
-| `contactcenter.outbox.redelivered`, `contactcenter.outbox.dead_lettered` | Counter | as above | **Deprecated.** Still emitted for one release beside their `crestapps.contactcenter.outbox.*` replacements, then removed. Move dashboards and alerts to the new names. |
+| `crestapps.contactcenter.outbox.redelivered` | Counter | | Events redelivered by the retry pass. |
+| `crestapps.contactcenter.outbox.dead_lettered` | Counter | `reason` | Events dead-lettered. |
 
 These measure the delivery mechanism, so a redelivered event is a second dispatch; the domain counts above never are.
 
@@ -169,7 +161,6 @@ These measure the delivery mechanism, so a redelivered event is a second dispatc
 | `crestapps.contactcenter.dialer.overdial` | Counter | | Calls predictive pacing placed beyond the agents free to take them. |
 | `crestapps.contactcenter.dialer.eligibility` | Counter | `result`, `reason` | Eligibility checks; `reason` is the `DialerSuppressionReason`. |
 | `crestapps.contactcenter.dialer.dnc.lookup.duration` | Histogram (s) | `result` (`listed`, `clear`, `error`) | National do-not-call lookups on the dial path. |
-| `crestapps.contactcenter.predial.bridge.duration` | Histogram (s) | `provider`, `operation`, `outcome` | The provider joining a pre-dialed agent leg to the caller. |
 
 #### Agents, recovery and deadlines
 
@@ -178,15 +169,12 @@ These measure the delivery mechanism, so a redelivered event is a second dispatc
 | `crestapps.contactcenter.agent.state.duration` | Histogram (s) | `state` | Time an agent spent in a presence state before leaving it. |
 | `crestapps.contactcenter.recovery.healed` | Counter | `kind` | Agent or work states a healing pass put right. Any steady rate is a state-machine leak: alert on it. |
 | `crestapps.contactcenter.recovery.orphan_recovered` | Counter | `kind` (`activity`, `reservation`) | Orphaned work recovered. Alert on a steady rate. |
-| `crestapps.contactcenter.hub.connections` | UpDownCounter | | Connections open on this node's Contact Center hub. |
 | `crestapps.contactcenter.hub.rejected` | Counter | `reason` | Hub connections refused. |
-| `crestapps.contactcenter.hub.heartbeat.lost` | Counter | | Agent sessions expired because their heartbeat stopped. |
 | `crestapps.contactcenter.realtime.broadcast.duration` | Histogram (s) | `event.type` | From a change to its broadcast to agent and supervisor screens: how long an offer takes to reach the agent. |
 | `crestapps.contactcenter.realtime.notify.failures` | Counter | `event.type` | Broadcasts that failed. |
 | `crestapps.contactcenter.deadline.fire.lag` | Histogram (s) | `kind` | From a deadline being due to its work starting. |
 | `crestapps.contactcenter.deadline.conflict_retry` | Counter | `kind` | Deadlines run again after losing a write race. |
 | `crestapps.contactcenter.deadline.failed` | Counter | `kind`, `reason` | Deadlines left to the background sweep. |
-| `crestapps.contactcenter.after_commit.failed` | Counter | `task`, `outcome` | Work scheduled to run after a commit that failed. |
 | `crestapps.contactcenter.shutdown.drain.duration` | Histogram (s) | `outcome` | The drain a node runs before shutting down. |
 
 #### Features
@@ -195,11 +183,11 @@ These measure the delivery mechanism, so a redelivered event is a second dispatc
 | --- | --- | --- | --- |
 | `crestapps.contactcenter.treatment.played` | Counter | `kind` | Queue treatment steps a waiting caller heard. |
 | `crestapps.contactcenter.hold_music.stop_failed` | Counter | `error.type` | Failed hold-music stops (swallowed so the caller still moves on). |
-| `crestapps.contactcenter.handoff.requested` / `.duration` | Counter / Histogram (s) | `result` (`offered`, `queued`, `callback`, `refused`, `duplicate`) | Hand-offs from an AI voice agent to a person; a redelivered escalation of a call already handed off is a `duplicate`. |
 | `crestapps.contactcenter.transfer` | Counter | `kind` (`blind_external`), `result` (`ok`, `error`, `unknown`) | Transfers of a call out of the contact center. |
 | `crestapps.contactcenter.recording` | Counter | `action` (the requested `RecordingState`), `result` (`ok`, `error`, `unknown`, `refused`) | Recording state changes asked of the provider. |
 | `crestapps.contactcenter.callback` | Counter | `operation` (`scheduled`, `promoted`) | Callbacks. |
 | `crestapps.contactcenter.supervision` | Counter | `action`, `result` | Supervisor monitor-mode changes and stops. |
+| `crestapps.contactcenter.handoff.duration` | Histogram (s) | `result` (`offered`, `queued`, `callback`, `refused`, `duplicate`) | Hand-offs from an AI voice agent to a person; its count is the number of hand-offs. A redelivered escalation of a call already handed off is a `duplicate`. |
 
 #### Gauges
 
@@ -223,12 +211,9 @@ A gauge callback cannot query a tenant's store, so these report what the Contact
 | `crestapps.webhook.inbox.lag` | Histogram (s) | `delivery` | From acceptance to a dispatch starting. |
 | `crestapps.webhook.inbox.dead_lettered` | Counter | `provider`, `handler` | Deliveries dead-lettered after their retries; also logged as an error (event id 17950). |
 | `crestapps.webhook.inbox.pending.age` | Gauge (s) | | Age of the oldest delivery due at the last inbox pass. |
-| `crestapps.webhook.ingress.limited` | Counter | `limit` (`concurrency`, `rate`) | Provider webhook requests the ingress limiter refused. |
 | `crestapps.webhook.deliveries` | Counter | `outcome` (`ok`, `retry`, `error`), `reason`, `status_class` | Outbound delivery attempts. |
-| `crestapps.webhook.delivery.duration` | Histogram (s) | `provider`, `operation`, `status_class`, `outcome`, `reason` (failures only) | Sending one outbound attempt. |
-| `crestapps.webhook.deliveries.pending` | Gauge | | Outbound deliveries waiting for an attempt, as the delivery task last counted them. |
 
-Distributed locks taken by the Contact Center and the inbox carry a `lock.area` on the shared `crestapps.lock.acquisitions` and `crestapps.lock.wait.duration` instruments (`contactcenter.reservation`, `contactcenter.reservation.agent`, `contactcenter.reservation.activity`, `contactcenter.assignment.queue`, `contactcenter.agent.presence`, `contactcenter.agent.session`, `contactcenter.dialer.pacing`, `contactcenter.inbound.route`, `contactcenter.ai_handoff`, `webhook.inbox.accept`, `webhook.inbox.dispatch`...), every background task reports on `crestapps.background_task.runs` (a failure a task logs and swallows is reported as `error`), and outbound webhook retries count on `crestapps.retry.attempts` with `area=webhooks`.
+Every background task reports on `crestapps.background_task.outcomes` (a failure a task logs and swallows is reported as `error`).
 
 #### Spans
 
@@ -240,24 +225,22 @@ Distributed locks taken by the Contact Center and the inbox carry a `lock.area` 
 | `crestapps.contactcenter.outbox.dispatch` | The trace that published the event (its `traceparent` is stored with the event). |
 | `crestapps.contactcenter.provider_command.dispatch` | The trace that registered the command, such as a dialer attempt. |
 | `crestapps.contactcenter.dialer.attempt` | |
-| `crestapps.contactcenter.predial.bridge` | |
 | `crestapps.contactcenter.shutdown.drain` | |
 | `crestapps.webhook.inbox.dispatch` | The request that delivered the payload. |
-| `crestapps.webhook.delivery.send` | |
 
 Work that crosses a queue (the outbox, the provider command recovery pass, the webhook inbox retry pass) starts a span of its own that links to the trace that queued it, rather than joining a request that ended long ago.
 
 #### Log event ids
 
-New Contact Center log messages carry event ids in `17000`–`17899` (core services `17000`–`17599`, the module `17600`–`17899`); webhooks use `17900`–`17999`. Phone numbers and SIP addresses in them go through the address redactor the Telephony feature registers. Among them: `17000` a provider event that matched no interaction, `17001` a provider event retried after a write race (Warning), `17002` a dialed number not in service, `17100` a provider command settled, `17600` a callback that could not be scheduled, `17601` the outbox retry pass failed, `17900`/`17901` an outbound delivery scheduled for retry or failed for good, `17950` an inbox delivery dead-lettered, `17951` an inbox delivery scheduled for retry.
+New Contact Center log messages carry event ids in `17000`–`17899` (core services `17000`–`17599`, the module `17600`–`17899`); webhooks use `17900`–`17999`. Among them: `17100` a provider command settled, `17901` an outbound delivery failed for good, `17950` an inbox delivery dead-lettered.
 
 On tenants that enable Voice, the Asterisk provider publishes a second `Meter` named `CrestApps.OrchardCore.Asterisk`, whose instruments are all tagged by `provider`. The `provider` tag is the provider technology name (a compile-time constant), not a per-tenant or per-shell dimension, so on a node that hosts more than one Asterisk tenant these counters aggregate per node/process and cannot be split by tenant.
 
 | Instrument | Kind | Meaning |
 | --- | --- | --- |
-| `asterisk.realtime.ingestion.saturated` | Counter | Real-time ingestion buffer saturation episodes on the listener (see [Ingestion backpressure and its limits](#ingestion-backpressure-and-its-limits)). |
-| `asterisk.realtime.connected` | Counter | Successful ARI event-stream connections. Counts both the first connection and every reconnection, so it is the connectivity signal for the listener. |
-| `asterisk.realtime.reconnect_attempted` | Counter | Times the listener re-entered its loop to re-establish the ARI event-stream connection after a connection ended or a connect attempt failed. A sustained non-zero rate means connection churn — the listener is repeatedly losing and reacquiring the stream — and each reconnection triggers a reconciliation sweep. Because the stream is not lossless across a reconnect, a rising rate here is an early warning that events may be being missed between sweeps. |
+| `crestapps.asterisk.realtime.ingestion.saturated` | Counter | Real-time ingestion buffer saturation episodes on the listener (see [Ingestion backpressure and its limits](#ingestion-backpressure-and-its-limits)). |
+| `crestapps.asterisk.realtime.connections` | Counter | Successful ARI event-stream connections. Counts both the first connection and every reconnection, so it is the connectivity signal for the listener. |
+| `crestapps.asterisk.realtime.reconnect_attempts` | Counter | Times the listener re-entered its loop to re-establish the ARI event-stream connection after a connection ended or a connect attempt failed. A sustained non-zero rate means connection churn — the listener is repeatedly losing and reacquiring the stream — and each reconnection triggers a reconciliation sweep. Because the stream is not lossless across a reconnect, a rising rate here is an early warning that events may be being missed between sweeps. |
 
 ### Health checks
 
@@ -892,7 +875,7 @@ Teardown remains independent of the call-control pipeline: a terminal event stil
 
 ### Ingestion backpressure and its limits
 
-The listener buffers received events in a bounded in-memory channel between the WebSocket receive loop and the dispatcher, sized by `CrestApps:Asterisk:Coordination:RealtimeEventBufferCapacity` (default 1000, validated to be greater than zero and no larger than 100000 so a saturated buffer cannot exhaust process memory). When the buffer fills — the dispatcher stays slower than the provider long enough to exhaust it — the receive loop stops reading the socket and awaits a bounded window for space instead of dropping the event or the connection on the first full write. While it is not reading, TCP flow control pushes back on the provider, but only for as long as the provider tolerates a stalled reader. Asterisk's ARI WebSocket enforces its own `websocket_write_timeout` (100 ms by default): once its send queue cannot drain within that window it closes the connection and discards the events it had queued. Backpressure therefore only reaches the provider as genuine flow control when `websocket_write_timeout` is set to exceed `RealtimeEventBackpressureTimeout` (as the bundled `ari.conf` does); with the stock 100 ms timeout the provider tears the socket down first and the listener degrades to the reconnect-and-reconcile path below, with the loss moving to Asterisk's discarded send queue rather than being held at the OS socket buffer. The first wait of each saturation episode increments the `asterisk.realtime.ingestion.saturated` counter on the `CrestApps.OrchardCore.Asterisk` meter (tagged by provider), so an operator sees sustained pressure as it happens rather than only its aftermath; the episode ends only once the buffer has fully drained, so a buffer oscillating near full is counted as one episode rather than many. Only if the buffer stays full for the whole `RealtimeEventBackpressureTimeout` (default 5 seconds, validated greater than zero) does the listener give up, reconnect, and reconcile; repeated saturation timeouts are treated as failures and back off exponentially rather than hot-looping the reconnect.
+The listener buffers received events in a bounded in-memory channel between the WebSocket receive loop and the dispatcher, sized by `CrestApps:Asterisk:Coordination:RealtimeEventBufferCapacity` (default 1000, validated to be greater than zero and no larger than 100000 so a saturated buffer cannot exhaust process memory). When the buffer fills — the dispatcher stays slower than the provider long enough to exhaust it — the receive loop stops reading the socket and awaits a bounded window for space instead of dropping the event or the connection on the first full write. While it is not reading, TCP flow control pushes back on the provider, but only for as long as the provider tolerates a stalled reader. Asterisk's ARI WebSocket enforces its own `websocket_write_timeout` (100 ms by default): once its send queue cannot drain within that window it closes the connection and discards the events it had queued. Backpressure therefore only reaches the provider as genuine flow control when `websocket_write_timeout` is set to exceed `RealtimeEventBackpressureTimeout` (as the bundled `ari.conf` does); with the stock 100 ms timeout the provider tears the socket down first and the listener degrades to the reconnect-and-reconcile path below, with the loss moving to Asterisk's discarded send queue rather than being held at the OS socket buffer. The first wait of each saturation episode increments the `crestapps.asterisk.realtime.ingestion.saturated` counter on the `CrestApps.OrchardCore.Asterisk` meter (tagged by provider), so an operator sees sustained pressure as it happens rather than only its aftermath; the episode ends only once the buffer has fully drained, so a buffer oscillating near full is counted as one episode rather than many. Only if the buffer stays full for the whole `RealtimeEventBackpressureTimeout` (default 5 seconds, validated greater than zero) does the listener give up, reconnect, and reconcile; repeated saturation timeouts are treated as failures and back off exponentially rather than hot-looping the reconnect.
 
 That reconciliation is pointer-driven and best-effort, not a lossless replay. It reconciles calls the tenant already knows about, at most 200 per invocation, and it is coalesced behind a distributed lock so an overlapping sweep no-ops rather than double-processing. It therefore restores each known call's current state but does not reconstruct every intermediate hold or resume transition that may have been skipped while the buffer was saturated, and a call the tenant never learned about — because the event that would have opened it was the one dropped — is not recovered. The state it does restore is read from live ARI — the provider's own channel lookup, not any local projection. On reconnect the post-disconnect drain of any events still buffered is bounded by both drain progress and an overall budget: a dispatcher that keeps clearing the buffer is allowed to finish, up to a 30-second budget, while one that stalls has its cancellation requested and is left behind so the listener can reconnect, with the abandoned events falling to the same reconciliation. A dispatch already wedged inside non-cancellable work (such as acquiring a tenant scope) can still delay the reconnect until it returns, but it can no longer discard the whole buffer. Sizing the buffer higher absorbs longer dispatch stalls and forces backpressure onto the provider sooner; it does not make the event stream lossless, and no configuration makes it so.
 

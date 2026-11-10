@@ -1,11 +1,11 @@
 using CrestApps.Core.Data.YesSql;
-using CrestApps.OrchardCore.Diagnostics;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Environment.Shell.Scope;
 using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Migrations;
@@ -30,7 +30,7 @@ internal sealed class AILegacyDocumentTypeNameMigrations : DataMigration
     /// </summary>
     public static int Create()
     {
-        MigrationTelemetry.Defer(nameof(AILegacyDocumentTypeNameMigrations), scope => RewriteLegacyTypeNamesAsync(scope.ServiceProvider));
+        ShellScope.AddDeferredTask(scope => RewriteLegacyTypeNamesAsync(scope.ServiceProvider));
 
         return 3;
     }
@@ -40,7 +40,7 @@ internal sealed class AILegacyDocumentTypeNameMigrations : DataMigration
     /// </summary>
     public static int UpdateFrom1()
     {
-        MigrationTelemetry.Defer(nameof(AILegacyDocumentTypeNameMigrations), scope => RewriteLegacyTypeNamesAsync(scope.ServiceProvider));
+        ShellScope.AddDeferredTask(scope => RewriteLegacyTypeNamesAsync(scope.ServiceProvider));
 
         return 3;
     }
@@ -50,7 +50,7 @@ internal sealed class AILegacyDocumentTypeNameMigrations : DataMigration
     /// </summary>
     public static int UpdateFrom2()
     {
-        MigrationTelemetry.Defer(nameof(AILegacyDocumentTypeNameMigrations), scope => RewriteLegacyTypeNamesAsync(scope.ServiceProvider));
+        ShellScope.AddDeferredTask(scope => RewriteLegacyTypeNamesAsync(scope.ServiceProvider));
 
         return 3;
     }

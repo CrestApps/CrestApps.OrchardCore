@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Telemetry;
 using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -44,8 +43,6 @@ public sealed class OutboxDispatchBackgroundTask : IBackgroundTask
         {
             var redelivered = await outbox.DispatchDueAsync(cancellationToken);
 
-            run.AddItems(redelivered, "redelivered");
-
             if (redelivered > 0 && logger.IsEnabled(LogLevel.Debug))
             {
                 logger.LogDebug("Redelivered {Count} Contact Center event(s) from the outbox.", redelivered);
@@ -59,7 +56,7 @@ public sealed class OutboxDispatchBackgroundTask : IBackgroundTask
         {
             // Swallowed so the next pass runs, but no longer invisible: the run is reported as failed.
             run.ReportError(ex);
-            ContactCenterModuleLog.OutboxRedeliveryFailed(logger, ex);
+            logger.LogError(ex, "An error occurred while dispatching the Contact Center event outbox.");
         }
     }
 }

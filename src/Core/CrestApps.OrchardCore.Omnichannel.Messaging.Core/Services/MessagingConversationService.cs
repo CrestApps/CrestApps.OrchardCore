@@ -649,8 +649,6 @@ public sealed class MessagingConversationService : IMessagingConversationService
             state.NextAttemptUtc = null;
 
             message.DeliveryStatus = MessageDeliveryStatus.Failed.ToString();
-
-            MessagingTelemetry.RecordOutboxFailed(message.Channel, state.Attempts);
         }
 
         message.ErrorCode = state.LastError;

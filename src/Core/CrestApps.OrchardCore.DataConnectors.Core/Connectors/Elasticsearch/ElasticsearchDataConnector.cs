@@ -162,7 +162,6 @@ internal sealed class ElasticsearchDataConnector : IDataConnector
             using var first = await PostJsonAsync(context, $"{index}/_search?scroll={scroll}", body, cancellationToken);
             var page = ReadHits(first.RootElement, names, ref remaining);
             scrollId = JsonRecords.SelectText(first.RootElement, "_scroll_id");
-            DataConnectorsTelemetry.Add(DataConnectorsTelemetry.ElasticsearchScrollPages);
 
             while (page.Count > 0)
             {
@@ -180,7 +179,6 @@ internal sealed class ElasticsearchDataConnector : IDataConnector
                 using var document = await PostJsonAsync(context, "_search/scroll", next, cancellationToken);
                 page = ReadHits(document.RootElement, names, ref remaining);
                 scrollId = JsonRecords.SelectText(document.RootElement, "_scroll_id") ?? scrollId;
-                DataConnectorsTelemetry.Add(DataConnectorsTelemetry.ElasticsearchScrollPages);
             }
         }
         finally

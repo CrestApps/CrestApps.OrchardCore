@@ -138,21 +138,19 @@ public sealed class AIConversationEvaluationService
             if (evaluation is null)
             {
                 telemetry.SetOutcome(CrestAppsOrchardCoreTelemetry.OutcomeSkipped);
-                AIModuleTelemetry.RecordEvaluation(AIModuleTelemetry.KindJudge, CrestAppsOrchardCoreTelemetry.OutcomeSkipped);
 
                 return null;
             }
 
+            telemetry.AddMetricTag(CrestAppsOrchardCoreTelemetry.ResultTag, evaluation.Passed ? AIModuleTelemetry.ResultPassed : AIModuleTelemetry.ResultFailed);
             telemetry.Succeed();
             telemetry.SetSpanTag("crestapps.ai.eval.score", evaluation.Score);
-            AIModuleTelemetry.RecordEvaluation(AIModuleTelemetry.KindJudge, evaluation.Passed ? AIModuleTelemetry.ResultPassed : AIModuleTelemetry.ResultFailed);
 
             return evaluation;
         }
         catch (Exception ex)
         {
             telemetry.Fail(ex);
-            AIModuleTelemetry.RecordEvaluation(AIModuleTelemetry.KindJudge, CrestAppsOrchardCoreTelemetry.GetOutcome(ex));
 
             throw;
         }

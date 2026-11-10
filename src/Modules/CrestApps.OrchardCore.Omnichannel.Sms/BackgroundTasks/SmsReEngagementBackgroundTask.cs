@@ -109,9 +109,6 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
 
         long documentId = 0;
         var processedCount = 0;
-        var sentCount = 0;
-        var failedCount = 0;
-        var heldBackCount = 0;
 
         while (processedCount < _maxConversationsPerInvocation && clock.UtcNow < deadline)
         {
@@ -168,35 +165,15 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
                         cancellationToken);
 
                     // Conversations that are not due are not counted: every quiet conversation is checked every run.
-                    if (result is null)
+                    if (result is not null)
                     {
-                        continue;
-                    }
-
-                    MessagingTelemetry.RecordReEngagement(OmnichannelConstants.Channels.Sms, result);
-                    run.AddItems(1, result);
-
-                    switch (result)
-                    {
-                        case MessagingTelemetry.ReEngagementResults.Sent:
-                            sentCount++;
-                            break;
-
-                        case MessagingTelemetry.ReEngagementResults.SendFailed:
-                            failedCount++;
-                            break;
-
-                        default:
-                            heldBackCount++;
-                            break;
+                        run.AddItems(1, result);
                     }
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     logger.LogError(ex, "Failed to re-engage the automated SMS contact for Activity {ActivityId}.", activity.ItemId.SanitizeLogValue());
-                    MessagingTelemetry.RecordReEngagement(OmnichannelConstants.Channels.Sms, MessagingTelemetry.ResultError);
                     run.AddItems(1, MessagingTelemetry.ResultError);
-                    failedCount++;
                 }
             }
         }
@@ -204,11 +181,6 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
         if (processedCount >= _maxConversationsPerInvocation)
         {
             run.BudgetExceeded();
-        }
-
-        if (sentCount + failedCount + heldBackCount > 0)
-        {
-            logger.ReEngagementPassCompleted(processedCount, sentCount, failedCount, heldBackCount);
         }
     }
 

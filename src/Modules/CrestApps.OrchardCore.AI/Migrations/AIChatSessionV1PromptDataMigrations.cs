@@ -5,7 +5,6 @@ using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.OrchardCore.Core.Migrations;
-using CrestApps.OrchardCore.Diagnostics;
 using Dapper;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
 using YesSql;
 using YesSql.Sql;
@@ -34,7 +34,7 @@ internal sealed class AIChatSessionV1PromptDataMigrations : DataMigration
     /// </summary>
     public static int Create()
     {
-        MigrationTelemetry.Defer(nameof(AIChatSessionV1PromptDataMigrations), scope => MigrateV1SessionsAsync(scope.ServiceProvider));
+        ShellScope.AddDeferredTask(scope => MigrateV1SessionsAsync(scope.ServiceProvider));
 
         return 1;
     }

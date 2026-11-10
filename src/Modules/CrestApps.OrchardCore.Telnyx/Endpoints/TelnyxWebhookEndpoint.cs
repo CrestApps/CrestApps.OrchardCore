@@ -45,44 +45,23 @@ internal static class TelnyxWebhookEndpoint
         ILogger<Startup> logger,
         HttpContext httpContext)
     {
-        // One span per delivery, as the parent of everything the delivery does here, and the trace the inbox links
-        // its later processing back to. ASP.NET Core already records the server span around it.
+        // What became of the delivery is counted by result, and tagged on the server span ASP.NET Core records around it.
         var receipt = new WebhookReceipt();
-
-        using var telemetry = TelemetryScope.Start(
-            TelnyxTelemetry.ActivitySource,
-            "crestapps.telnyx.webhook.receive",
-            duration: null,
-            new TagList
-            {
-                { TelnyxTelemetry.WebhookKindTag, TelnyxTelemetry.WebhookKindCall },
-            });
 
         try
         {
-            var result = await HandleCoreAsync(siteService, dataProtectionProvider, webhookService, clock, logger, httpContext, receipt);
-
-            telemetry.SetOutcome(receipt.Result switch
-            {
-                TelnyxTelemetry.WebhookAccepted or TelnyxTelemetry.WebhookDuplicate => CrestAppsOrchardCoreTelemetry.OutcomeOk,
-                TelnyxTelemetry.WebhookDisabled => CrestAppsOrchardCoreTelemetry.OutcomeSkipped,
-                TelnyxTelemetry.WebhookParseError or TelnyxTelemetry.WebhookStoreFailed => CrestAppsOrchardCoreTelemetry.OutcomeError,
-                _ => CrestAppsOrchardCoreTelemetry.OutcomeBlocked,
-            });
-
-            return result;
+            return await HandleCoreAsync(siteService, dataProtectionProvider, webhookService, clock, logger, httpContext, receipt);
         }
-        catch (Exception ex)
+        catch
         {
             receipt.Result = CrestAppsOrchardCoreTelemetry.OutcomeError;
-            telemetry.Fail(ex);
 
             throw;
         }
         finally
         {
-            telemetry.SetSpanTag(TelnyxTelemetry.WebhookTypeTag, receipt.Type);
-            telemetry.SetSpanTag(CrestAppsOrchardCoreTelemetry.ResultTag, receipt.Result);
+            Activity.Current?.SetTag("crestapps.telnyx.webhook.type", receipt.Type);
+            Activity.Current?.SetTag("crestapps.telnyx.webhook.result", receipt.Result);
             TelnyxTelemetry.RecordWebhook(TelnyxTelemetry.WebhookKindCall, receipt.Type, receipt.Result ?? CrestAppsOrchardCoreTelemetry.OutcomeError);
         }
     }
@@ -257,7 +236,7 @@ internal static class TelnyxWebhookEndpoint
 
                 if (inbox is null)
                 {
-                    var result = await TelnyxTelemetry.ProcessWebhookAsync(webhookService, callEvent, CancellationToken.None);
+                    var result = await webhookService.ProcessAsync(callEvent, CancellationToken.None);
 
                     healthMetrics?.RecordWebhookProcessed(true);
                     receipt.Result = TelnyxTelemetry.WebhookAccepted;
@@ -270,10 +249,6 @@ internal static class TelnyxWebhookEndpoint
                 }
 
                 ProviderWebhookInboxAcceptanceResult acceptance;
-
-                // The delivery's span travels with the stored event, so the inbox's processing of it, now or on a
-                // later sweep, is linked back to this delivery rather than starting a trace of its own.
-                callEvent.TraceParent = TraceContextPropagation.Capture();
 
                 try
                 {

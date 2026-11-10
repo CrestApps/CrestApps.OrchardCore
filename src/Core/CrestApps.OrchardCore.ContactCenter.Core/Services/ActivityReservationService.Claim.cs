@@ -2,7 +2,6 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.Extensions.Logging;
 
@@ -28,11 +27,10 @@ public sealed partial class ActivityReservationService
 
         // The same two locks an inbound offer takes, in the same order, held only briefly: the person on the line is
         // waiting, and an agent another call is claiming is better skipped than waited for.
-        (var activityLocker, var activityLocked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var activityLocker, var activityLocked) = await _distributedLock.TryAcquireLockAsync(
             GetActivityReservationLockKey(queueItem.ActivityItemId),
             lockWait,
-            _coordinationOptions.ReservationLockExpiration,
-            "contactcenter.reservation.activity");
+            _coordinationOptions.ReservationLockExpiration);
 
         if (!activityLocked)
         {
@@ -41,11 +39,10 @@ public sealed partial class ActivityReservationService
 
         await using var acquiredActivityLock = activityLocker;
 
-        (var agentLocker, var agentLocked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var agentLocker, var agentLocked) = await _distributedLock.TryAcquireLockAsync(
             GetAgentReservationLockKey(agent.ItemId),
             lockWait,
-            _coordinationOptions.ReservationLockExpiration,
-            "contactcenter.reservation.agent");
+            _coordinationOptions.ReservationLockExpiration);
 
         if (!agentLocked)
         {

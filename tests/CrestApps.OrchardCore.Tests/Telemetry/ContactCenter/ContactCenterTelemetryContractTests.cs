@@ -152,7 +152,7 @@ public sealed class ContactCenterTelemetryContractTests
     }
 
     [Fact]
-    public void Outbox_DeadLetter_IsCountedOnTheDeprecatedAndTheNewInstrument()
+    public void Outbox_DeadLetter_IsCountedOnTheCrestAppsInstrumentOnly()
     {
         // Arrange
         using var capture = new TraceScopedTelemetryCapture();
@@ -162,7 +162,7 @@ public sealed class ContactCenterTelemetryContractTests
         ContactCenterDiagnostics.RecordOutboxHandler("ContactCenter/RealTimeProjection/v1", TimeSpan.FromMilliseconds(15), new InvalidOperationException());
 
         // Assert
-        Assert.Equal("retry_exhausted", Assert.Single(capture.Find("contactcenter.outbox.dead_lettered")).Tags[CrestAppsOrchardCoreTelemetry.ReasonTag]);
+        Assert.Empty(capture.Find("contactcenter.outbox.dead_lettered"));
         Assert.Equal("retry_exhausted", Assert.Single(capture.Find("crestapps.contactcenter.outbox.dead_lettered")).Tags[CrestAppsOrchardCoreTelemetry.ReasonTag]);
 
         var handler = Assert.Single(capture.Find("crestapps.contactcenter.outbox.handler.duration"));

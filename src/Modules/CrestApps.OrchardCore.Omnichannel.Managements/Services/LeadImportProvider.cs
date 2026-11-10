@@ -1,11 +1,9 @@
 using System.Globalization;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.ContentTransfer.Indexes;
-using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Omnichannel.Core.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Managements.BackgroundTasks;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using Dapper;
@@ -176,31 +174,6 @@ public sealed class LeadImportProvider
     }
 
     private async Task<IReadOnlyList<LeadImportSummary>> ReadImportsAsync()
-    {
-        // The count reads the whole lead import index, so how long it takes is what the editor waits on a cache miss.
-        using var telemetry = TelemetryScope.Start(
-            OmnichannelTelemetry.ActivitySource,
-            "crestapps.omnichannel.lead_imports.read",
-            OmnichannelTelemetry.LeadImportsQueryDuration);
-
-        try
-        {
-            var imports = await ReadImportsCoreAsync();
-
-            telemetry.SetSpanTag("crestapps.omnichannel.lead_imports", imports.Count);
-            telemetry.Succeed();
-
-            return imports;
-        }
-        catch (Exception ex)
-        {
-            telemetry.Fail(ex);
-
-            throw;
-        }
-    }
-
-    private async Task<IReadOnlyList<LeadImportSummary>> ReadImportsCoreAsync()
     {
         var configuration = _session.Store.Configuration;
         var dialect = configuration.SqlDialect;

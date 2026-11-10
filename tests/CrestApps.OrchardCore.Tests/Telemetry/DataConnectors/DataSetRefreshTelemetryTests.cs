@@ -16,9 +16,8 @@ using YesSql;
 namespace CrestApps.OrchardCore.Tests.Telemetry.DataConnectors;
 
 /// <summary>
-/// Refreshes and live reads of connected data sets emit the spans and metrics the observability docs list, and the
-/// refresh sweep goes on past a refresh that throws. The names are a public contract that dashboards and alerts depend
-/// on. Metrics never carry a data set id, so a test finds its own refresh by the id on the span and only checks that
+/// Refreshes and live reads of connected data sets emit the spans and metrics the observability docs list. The names
+/// are a public contract that dashboards and alerts depend on. Metrics never carry a data set id, so a test finds its own refresh by the id on the span and only checks that
 /// the metrics it expects were recorded with the expected bounded tags.
 /// </summary>
 public sealed class DataSetRefreshTelemetryTests
@@ -54,12 +53,10 @@ public sealed class DataSetRefreshTelemetryTests
         Assert.Contains("crestapps.dataconnector.refresh.batches", phases);
         Assert.Contains("crestapps.dataconnector.refresh.count", phases);
 
-        Assert.Contains(capture.Measurements, measurement => measurement.Instrument == "crestapps.dataconnector.refreshes" && HasRefreshTags(measurement, CrestAppsOrchardCoreTelemetry.OutcomeOk));
         Assert.Contains(capture.Measurements, measurement => measurement.Instrument == "crestapps.dataconnector.refresh.duration" && HasRefreshTags(measurement, CrestAppsOrchardCoreTelemetry.OutcomeOk));
         Assert.Contains(capture.Measurements, measurement => measurement.Instrument == "crestapps.dataconnector.refresh.rows" && measurement.Value == 2 && Equals(measurement.Tags[DataConnectorsTelemetry.ConnectorTag], TestDataConnector.Name));
         Assert.Contains(capture.Measurements, measurement => measurement.Instrument == "crestapps.dataconnector.refresh.active" && measurement.Value == 1);
         Assert.Contains(capture.Measurements, measurement => measurement.Instrument == "crestapps.dataconnector.refresh.active" && measurement.Value == -1);
-        Assert.Contains(capture.Measurements, measurement => measurement.Instrument == "crestapps.dataconnector.rowstore.write.duration");
         Assert.Empty(FindBannedTagKeys(capture));
     }
 
@@ -103,7 +100,7 @@ public sealed class DataSetRefreshTelemetryTests
     }
 
     [Fact]
-    public async Task RefreshDueAsync_GoesOnAfterAFailedRefresh_ButStopsWithoutThrowingWhenARefreshCannotRecordItsEnd()
+    public async Task RefreshDueAsync_RecordsEachRefresh_AndARefreshThatCannotRecordItsEndStopsTheSweep()
     {
         // Arrange
         using var capture = new TelemetryCapture();
@@ -124,9 +121,6 @@ public sealed class DataSetRefreshTelemetryTests
         dataSetStore
             .Setup(store => store.ListDueAsync(It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<ConnectedDataSet> { failing, broken, later });
-        dataSetStore
-            .Setup(store => store.ListAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ConnectedDataSet>());
 
         var runStore = new Mock<IDataSetRefreshRunStore>();
         runStore
@@ -136,10 +130,9 @@ public sealed class DataSetRefreshTelemetryTests
         var service = CreateService(dataSetStore, runStore, new InMemoryDistributedLock());
 
         // Act
-        var count = await service.RefreshDueAsync(TestContext.Current.CancellationToken);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.RefreshDueAsync(TestContext.Current.CancellationToken));
 
         // Assert
-        Assert.Equal(2, count);
         runStore.Verify(store => store.CreateAsync(It.Is<DataSetRefreshRun>(run => run.DataSetId == failing.ItemId), It.IsAny<CancellationToken>()), Times.Once());
         runStore.Verify(store => store.CreateAsync(It.Is<DataSetRefreshRun>(run => run.DataSetId == later.ItemId), It.IsAny<CancellationToken>()), Times.Never());
 
@@ -153,7 +146,7 @@ public sealed class DataSetRefreshTelemetryTests
     }
 
     [Fact]
-    public async Task RefreshDueAsync_DoesNotCountARefreshSkippedBecauseItsDataSetIsLocked_AndRecordsItAsSkipped()
+    public async Task RefreshDueAsync_RecordsARefreshSkippedBecauseItsDataSetIsLocked_AsSkipped()
     {
         // Arrange
         using var capture = new TelemetryCapture();
@@ -164,9 +157,6 @@ public sealed class DataSetRefreshTelemetryTests
         dataSetStore
             .Setup(store => store.ListDueAsync(It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<ConnectedDataSet> { locked });
-        dataSetStore
-            .Setup(store => store.ListAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ConnectedDataSet>());
 
         var runStore = new Mock<IDataSetRefreshRunStore>();
         var distributedLock = new InMemoryDistributedLock();
@@ -174,21 +164,16 @@ public sealed class DataSetRefreshTelemetryTests
         var service = CreateService(dataSetStore, runStore, distributedLock);
 
         // Act
-        var count = await service.RefreshDueAsync(TestContext.Current.CancellationToken);
+        await service.RefreshDueAsync(TestContext.Current.CancellationToken);
         await locker.DisposeAsync();
 
         // Assert
         Assert.True(acquired);
-        Assert.Equal(0, count);
         runStore.Verify(store => store.CreateAsync(It.IsAny<DataSetRefreshRun>(), It.IsAny<CancellationToken>()), Times.Never());
 
         var span = Assert.Single(FindRefreshSpans(capture, locked.ItemId));
         Assert.Equal(CrestAppsOrchardCoreTelemetry.OutcomeSkipped, span.GetTagItem(CrestAppsOrchardCoreTelemetry.OutcomeTag));
-        Assert.Contains(capture.Measurements, measurement => measurement.Instrument == "crestapps.dataconnector.refreshes" && Equals(measurement.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag], CrestAppsOrchardCoreTelemetry.OutcomeSkipped));
-        Assert.Contains(capture.Measurements, measurement =>
-            measurement.Instrument == "crestapps.lock.acquisitions" &&
-            Equals(measurement.Tags.GetValueOrDefault("lock.area"), "dataconnectors.refresh") &&
-            Equals(measurement.Tags[CrestAppsOrchardCoreTelemetry.ResultTag], "contended"));
+        Assert.Contains(capture.Measurements, measurement => measurement.Instrument == "crestapps.dataconnector.refresh.duration" && Equals(measurement.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag], CrestAppsOrchardCoreTelemetry.OutcomeSkipped));
     }
 
     private static DataSetRefreshService CreateService(

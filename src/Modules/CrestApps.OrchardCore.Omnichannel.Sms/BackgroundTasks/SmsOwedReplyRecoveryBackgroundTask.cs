@@ -134,7 +134,6 @@ public sealed class SmsOwedReplyRecoveryBackgroundTask : IBackgroundTask
                 {
                     if (await TryRecoverAsync(activity, chatSessionManager, promptStore, endpointCatalog, handler, conversationGate, owedReplyCutoff, logger, cancellationToken))
                     {
-                        MessagingTelemetry.RecordOwedReplyRecovery(OmnichannelConstants.Channels.Sms, MessagingTelemetry.OwedReplyResults.Redriven);
                         run.AddItems(1, MessagingTelemetry.OwedReplyResults.Redriven);
                         redrivenCount++;
                     }
@@ -142,7 +141,6 @@ public sealed class SmsOwedReplyRecoveryBackgroundTask : IBackgroundTask
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     logger.LogError(ex, "Failed to recover the owed automated SMS reply for Activity {ActivityId}.", activity.ItemId.SanitizeLogValue());
-                    MessagingTelemetry.RecordOwedReplyRecovery(OmnichannelConstants.Channels.Sms, MessagingTelemetry.ResultError);
                     run.AddItems(1, MessagingTelemetry.ResultError);
                     failedCount++;
                 }

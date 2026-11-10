@@ -3,7 +3,6 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -110,11 +109,10 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
 
         using var activity = ContactCenterDiagnostics.StartOffer("reserve", queueItem.QueueId);
 
-        (var activityLocker, var activityLocked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var activityLocker, var activityLocked) = await _distributedLock.TryAcquireLockAsync(
             GetActivityReservationLockKey(queueItem.ActivityItemId),
             _coordinationOptions.ReservationLockTimeout,
-            _coordinationOptions.ReservationLockExpiration,
-            "contactcenter.reservation.activity");
+            _coordinationOptions.ReservationLockExpiration);
 
         if (!activityLocked)
         {
@@ -125,11 +123,10 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
 
         await using var acquiredActivityLock = activityLocker;
 
-        (var agentLocker, var agentLocked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var agentLocker, var agentLocked) = await _distributedLock.TryAcquireLockAsync(
             GetAgentReservationLockKey(agent.ItemId),
             _coordinationOptions.ReservationLockTimeout,
-            _coordinationOptions.ReservationLockExpiration,
-            "contactcenter.reservation.agent");
+            _coordinationOptions.ReservationLockExpiration);
 
         if (!agentLocked)
         {
@@ -330,11 +327,10 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
 
         using var activity = ContactCenterDiagnostics.StartOffer(holdForDial ? "accept_for_dial" : "accept");
 
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             GetReservationLockKey(reservationId),
             _coordinationOptions.ReservationLockTimeout,
-            _coordinationOptions.ReservationLockExpiration,
-            "contactcenter.reservation");
+            _coordinationOptions.ReservationLockExpiration);
 
         if (!locked)
         {
@@ -350,11 +346,10 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
             return null;
         }
 
-        (var agentLocker, var agentLocked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var agentLocker, var agentLocked) = await _distributedLock.TryAcquireLockAsync(
             GetAgentReservationLockKey(reservation.AgentId),
             _coordinationOptions.ReservationLockTimeout,
-            _coordinationOptions.ReservationLockExpiration,
-            "contactcenter.reservation.agent");
+            _coordinationOptions.ReservationLockExpiration);
 
         if (!agentLocked)
         {
@@ -463,11 +458,10 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
 
         using var activity = ContactCenterDiagnostics.StartOffer(sendToVoicemail ? "reject_to_voicemail" : "reject");
 
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             GetReservationLockKey(reservationId),
             _coordinationOptions.ReservationLockTimeout,
-            _coordinationOptions.ReservationLockExpiration,
-            "contactcenter.reservation");
+            _coordinationOptions.ReservationLockExpiration);
 
         if (!locked)
         {
@@ -507,11 +501,10 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
 
         using var activity = ContactCenterDiagnostics.StartOffer("cancel");
 
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             GetReservationLockKey(reservationId),
             _coordinationOptions.ReservationLockTimeout,
-            _coordinationOptions.ReservationLockExpiration,
-            "contactcenter.reservation");
+            _coordinationOptions.ReservationLockExpiration);
 
         if (!locked)
         {
@@ -550,11 +543,10 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
 
         using var activity = ContactCenterDiagnostics.StartOffer("compensate");
 
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             GetReservationLockKey(reservationId),
             _coordinationOptions.ReservationLockTimeout,
-            _coordinationOptions.ReservationLockExpiration,
-            "contactcenter.reservation");
+            _coordinationOptions.ReservationLockExpiration);
 
         if (!locked)
         {
@@ -571,11 +563,10 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
             return null;
         }
 
-        (var agentLocker, var agentLocked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var agentLocker, var agentLocked) = await _distributedLock.TryAcquireLockAsync(
             GetAgentReservationLockKey(reservation.AgentId),
             _coordinationOptions.ReservationLockTimeout,
-            _coordinationOptions.ReservationLockExpiration,
-            "contactcenter.reservation.agent");
+            _coordinationOptions.ReservationLockExpiration);
 
         if (!agentLocked)
         {

@@ -4,13 +4,13 @@ using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AI;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Migrations;
-using CrestApps.OrchardCore.Diagnostics;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Environment.Shell.Scope;
 using YesSql;
 using YesSql.Sql;
 
@@ -45,7 +45,7 @@ public sealed class AIProviderConnectionIndexMigrations : DataMigration
     {
         await SchemaBuilder.CreateAIProviderConnectionIndexSchemaAsync(_option);
 
-        MigrationTelemetry.Defer(nameof(AIProviderConnectionIndexMigrations), scope => ImportLegacyProviderConnectionsAsync(scope.ServiceProvider));
+        ShellScope.AddDeferredTask(scope => ImportLegacyProviderConnectionsAsync(scope.ServiceProvider));
 
         return 3;
     }
@@ -55,7 +55,7 @@ public sealed class AIProviderConnectionIndexMigrations : DataMigration
     /// </summary>
     public static int UpdateFrom1()
     {
-        MigrationTelemetry.Defer(nameof(AIProviderConnectionIndexMigrations), scope => ImportLegacyProviderConnectionsAsync(scope.ServiceProvider));
+        ShellScope.AddDeferredTask(scope => ImportLegacyProviderConnectionsAsync(scope.ServiceProvider));
 
         return 2;
     }
@@ -65,7 +65,7 @@ public sealed class AIProviderConnectionIndexMigrations : DataMigration
     /// </summary>
     public static int UpdateFrom2()
     {
-        MigrationTelemetry.Defer(nameof(AIProviderConnectionIndexMigrations), scope => ImportLegacyProviderConnectionsAsync(scope.ServiceProvider));
+        ShellScope.AddDeferredTask(scope => ImportLegacyProviderConnectionsAsync(scope.ServiceProvider));
 
         return 3;
     }

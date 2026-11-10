@@ -3,7 +3,6 @@ using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Customers.Indexes;
 using CrestApps.OrchardCore.Customers.Models;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using OrchardCore;
 using OrchardCore.Locking.Distributed;
@@ -105,7 +104,7 @@ public sealed class StoreCreditService
             }
 
             // A first credit makes the account, under the customer's lock, so two credits at once make one account.
-            var (creating, created) = await _distributedLock.TryAcquireMeasuredLockAsync(CheckoutTenderLocks.GetKey(TenderKey, "new-" + customerId), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30), "customers.store_credit");
+            var (creating, created) = await _distributedLock.TryAcquireLockAsync(CheckoutTenderLocks.GetKey(TenderKey, "new-" + customerId), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30));
 
             if (!created)
             {
@@ -135,7 +134,7 @@ public sealed class StoreCreditService
             }
         }
 
-        var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync(CheckoutTenderLocks.GetKey(TenderKey, account.ItemId), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30), "customers.store_credit");
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(CheckoutTenderLocks.GetKey(TenderKey, account.ItemId), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30));
 
         if (!locked)
         {

@@ -689,7 +689,7 @@ public sealed class DefaultDispatchService : IDispatchService
 
     private Task<ILocker> LockAsync(IEnumerable<string> keys)
     {
-        return _distributedLock.LockAllAsync(keys, _lockTimeout, _lockExpiration, area: "dispatch.visit");
+        return _distributedLock.LockAllAsync(keys, _lockTimeout, _lockExpiration);
     }
 
     private static async Task ReleaseAsync(ILocker locker)

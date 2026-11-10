@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.TenantHierarchy.Models;
-using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.TenantHierarchy.Core.Telemetry;
 
@@ -92,17 +91,15 @@ public static class TenantHierarchyTelemetry
 
     /// <summary>
     /// Runs an operation on a child tenant and measures it: a <c>crestapps.tenanthierarchy.child.&lt;operation&gt;</c>
-    /// span and <see cref="ChildOperationDuration"/>. An operation that returns a failure is logged.
+    /// span and <see cref="ChildOperationDuration"/>. An operation that returns a failure is recorded as failed.
     /// </summary>
     /// <param name="operation">The operation, such as <see cref="OperationSetup"/>.</param>
     /// <param name="entryId">The registry entry id of the child tenant.</param>
-    /// <param name="logger">The logger the failure is written to.</param>
     /// <param name="work">The operation.</param>
     /// <returns>The result of the operation. Exceptions are recorded and rethrown.</returns>
     public static async Task<TenantHierarchyResult> MeasureChildOperationAsync(
         string operation,
         string entryId,
-        ILogger logger,
         Func<Task<TenantHierarchyResult>> work)
     {
         ArgumentException.ThrowIfNullOrEmpty(operation);
@@ -131,11 +128,6 @@ public static class TenantHierarchyTelemetry
             {
                 telemetry.SetOutcome(OutcomeFailed);
                 telemetry.Activity?.SetStatus(ActivityStatusCode.Error, result.Error);
-
-                if (logger is not null)
-                {
-                    TenantHierarchyLog.ChildOperationFailed(logger, operation, result.Error);
-                }
             }
 
             return result;

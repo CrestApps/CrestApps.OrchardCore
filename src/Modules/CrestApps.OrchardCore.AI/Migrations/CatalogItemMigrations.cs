@@ -1,11 +1,11 @@
 ﻿using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.Diagnostics;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Environment.Shell.Scope;
 using YesSql;
 using YesSql.Sql;
 
@@ -19,7 +19,7 @@ internal sealed class CatalogItemMigrations : DataMigration
     /// </summary>
     public static int Create()
     {
-        MigrationTelemetry.Defer(nameof(CatalogItemMigrations), async scope =>
+        ShellScope.AddDeferredTask(async scope =>
         {
             var store = scope.ServiceProvider.GetRequiredService<IStore>();
             var storeCollectionOptions = scope.ServiceProvider.GetRequiredService<IOptions<StoreCollectionOptions>>();

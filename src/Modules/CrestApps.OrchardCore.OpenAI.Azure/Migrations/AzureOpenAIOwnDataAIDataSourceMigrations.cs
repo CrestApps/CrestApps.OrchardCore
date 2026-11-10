@@ -1,9 +1,9 @@
 ﻿using System.Text.Json;
 using CrestApps.Core.AI.DataSources;
-using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell;
+using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Migrations;
 
@@ -30,7 +30,7 @@ internal sealed class AzureOpenAIOwnDataAIDataSourceMigrations : DataMigration
             return 5;
         }
 
-        MigrationTelemetry.Defer(nameof(AzureOpenAIOwnDataAIDataSourceMigrations), async scope =>
+        ShellScope.AddDeferredTask(async scope =>
         {
             // Previously, 'Azure' provider was different than 'AzureOpenAIOwnData', the two were merged into one.
             // Migrate legacy AzureAIDataSourceIndexMetadata to first-class properties.

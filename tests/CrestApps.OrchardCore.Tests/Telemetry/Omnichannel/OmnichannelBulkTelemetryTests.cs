@@ -11,7 +11,7 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Tests.Telemetry.Omnichannel;
 
 /// <summary>
-/// Activity loads and bulk actions emit the <c>crestapps.omnichannel.*</c> instruments and spans the observability docs
+/// Activity loads emit the <c>crestapps.omnichannel.*</c> instruments and spans the observability docs
 /// list, tagged with bounded values only. The names are a public contract that dashboards and alerts depend on.
 /// </summary>
 public sealed class OmnichannelBulkTelemetryTests
@@ -39,14 +39,13 @@ public sealed class OmnichannelBulkTelemetryTests
         Assert.Equal(OmnichannelTelemetry.OutcomeCompleted, span.GetTagItem(CrestAppsOrchardCoreTelemetry.OutcomeTag));
         Assert.Equal(OmnichannelTelemetry.TriggerStart, span.GetTagItem(CrestAppsOrchardCoreTelemetry.TriggerTag));
 
-        Assert.NotEmpty(capture.Find("crestapps.omnichannel.batch.loads", CrestAppsOrchardCoreTelemetry.OutcomeTag, OmnichannelTelemetry.OutcomeCompleted));
         Assert.NotEmpty(capture.Find("crestapps.omnichannel.batch.load.duration", CrestAppsOrchardCoreTelemetry.OutcomeTag, OmnichannelTelemetry.OutcomeCompleted));
         Assert.DoesNotContain(capture.Measurements, measurement => measurement.Tags.ContainsValue(batch.ItemId));
         Assert.Empty(capture.FindBannedTagKeys());
     }
 
     [Fact]
-    public async Task LoadAsync_ALoadThatStopsWithAReason_IsCountedAsStopped()
+    public async Task LoadAsync_ALoadThatStopsWithAReason_IsRecordedAsStopped()
     {
         // Arrange
         var batch = NewStartedBatch();
@@ -61,11 +60,11 @@ public sealed class OmnichannelBulkTelemetryTests
         var span = Assert.Single(capture.Spans, activity => Equals(activity.GetTagItem(OmnichannelTelemetry.BatchIdSpanTag), batch.ItemId));
 
         Assert.Equal(OmnichannelTelemetry.OutcomeStopped, span.GetTagItem(CrestAppsOrchardCoreTelemetry.OutcomeTag));
-        Assert.NotEmpty(capture.Find("crestapps.omnichannel.batch.loads", CrestAppsOrchardCoreTelemetry.OutcomeTag, OmnichannelTelemetry.OutcomeStopped));
+        Assert.NotEmpty(capture.Find("crestapps.omnichannel.batch.load.duration", CrestAppsOrchardCoreTelemetry.OutcomeTag, OmnichannelTelemetry.OutcomeStopped));
     }
 
     [Fact]
-    public async Task LoadAsync_ALoadThisProcessIsAlreadyRunning_IsCountedAsSkippedWithoutASpan()
+    public async Task LoadAsync_ALoadThisProcessIsAlreadyRunning_IsNotRunAndHasNoSpan()
     {
         // Arrange
         var batch = NewStartedBatch();
@@ -83,7 +82,6 @@ public sealed class OmnichannelBulkTelemetryTests
         // Assert
         Assert.Equal(0, loader.Calls);
         Assert.DoesNotContain(capture.Spans, activity => Equals(activity.GetTagItem(OmnichannelTelemetry.BatchIdSpanTag), batch.ItemId));
-        Assert.NotEmpty(capture.Find("crestapps.omnichannel.batch.loads", CrestAppsOrchardCoreTelemetry.OutcomeTag, CrestAppsOrchardCoreTelemetry.OutcomeSkipped));
     }
 
     [Fact]
@@ -128,20 +126,6 @@ public sealed class OmnichannelBulkTelemetryTests
         Assert.Equal(5L, counts.OptedOut);
         Assert.Equal(5L, counts.LeadOrContact);
         Assert.Equal(6L, counts.OverLimit);
-    }
-
-    [Fact]
-    public void GetBulkActionTag_MapsEveryActionToASnakeCaseValue()
-    {
-        foreach (var action in Enum.GetValues<BulkActivityAction>().Where(action => action != BulkActivityAction.None))
-        {
-            var tag = OmnichannelTelemetry.GetBulkActionTag(action);
-
-            Assert.NotEqual(CrestAppsOrchardCoreTelemetry.Other, tag);
-            Assert.Matches("^[a-z_]+$", tag);
-        }
-
-        Assert.Equal(CrestAppsOrchardCoreTelemetry.Other, OmnichannelTelemetry.GetBulkActionTag(BulkActivityAction.None));
     }
 
     private static OmnichannelActivityBatch NewStartedBatch()

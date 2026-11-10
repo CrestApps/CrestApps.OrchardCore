@@ -2,7 +2,6 @@ using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Webhooks.Core;
 using CrestApps.OrchardCore.Webhooks.Core.Models;
 using CrestApps.OrchardCore.Webhooks.Core.Services;
-using CrestApps.OrchardCore.Webhooks.Core.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
@@ -45,18 +44,8 @@ public sealed class WebhookDeliveriesBackgroundTask : IBackgroundTask
             {
                 await dispatcher.SendAsync(delivery, cancellationToken);
                 await session.SaveChangesAsync(cancellationToken);
-
-                run.AddItems(1, delivery.Status switch
-                {
-                    WebhookDeliveryStatus.Delivered => "delivered",
-                    WebhookDeliveryStatus.Failed => "failed",
-                    _ => "retry_scheduled",
-                });
             }
         }
-
-        // How many are still waiting for an attempt: the backlog a subscriber that stopped answering builds up.
-        WebhookTelemetry.RecordPendingDeliveries(await store.CountPendingAsync(cancellationToken));
 
         // The log is kept for a month by default; one batch a minute keeps up with any store. The deliveries of the
         // events a feature keeps (AI Webhooks keeps every AI event) are never purged.

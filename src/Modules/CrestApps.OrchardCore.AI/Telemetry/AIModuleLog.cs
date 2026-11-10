@@ -11,6 +11,6 @@ internal static partial class AIModuleLog
     /// <summary>
     /// A signed webhook delivery failed and is tried again.
     /// </summary>
-    [LoggerMessage(EventId = CrestAppsEventIds.AI + 100, Level = LogLevel.Warning, Message = "The signed webhook '{DeliveryId}' failed with status code {StatusCode} and is tried again (attempt {Attempt}/{MaxAttempts}).")]
+    [LoggerMessage(EventId = CrestAppsEventIds.AI + 100, Level = LogLevel.Debug, Message = "The signed webhook '{DeliveryId}' failed with status code {StatusCode} and is tried again (attempt {Attempt}/{MaxAttempts}).")]
     public static partial void SignedWebhookRetrying(ILogger logger, string deliveryId, int? statusCode, int attempt, int maxAttempts);
 }

@@ -2,7 +2,6 @@ using System.Linq;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Currencies;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
@@ -99,11 +98,10 @@ public sealed class DefaultCheckoutRefundService : ICheckoutRefundService
 
         // Only one refund of the same payment may run at a time across all instances so two nodes can
         // never read each other's partial state and over-refund the charge.
-        var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(
             RefundLockPrefix + context.OriginalTransactionId,
             TimeSpan.FromSeconds(10),
-            TimeSpan.FromMinutes(2),
-            "checkout.refund");
+            TimeSpan.FromMinutes(2));
 
         if (!locked)
         {

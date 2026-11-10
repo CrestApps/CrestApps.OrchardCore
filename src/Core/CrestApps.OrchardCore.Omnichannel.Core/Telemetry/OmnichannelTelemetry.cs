@@ -7,8 +7,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Telemetry;
 
 /// <summary>
 /// The OpenTelemetry contract of the Omnichannel bulk work: the <c>CrestApps.OrchardCore.Omnichannel</c> meter and
-/// activity source, and the instruments of activity loads, bulk actions on activities, the automated activities
-/// processor and the one-time backfills. The names are a public integration surface.
+/// activity source, and the instruments of activity loads. The names are a public integration surface.
 /// </summary>
 /// <remarks>
 /// No instrument carries a batch, activity, contact or user id, or a phone number; ids go on spans and in logs only.
@@ -20,16 +19,6 @@ public static class OmnichannelTelemetry
     /// The name of the meter and the activity source.
     /// </summary>
     public const string SourceName = CrestAppsOrchardCoreTelemetry.SourceNamePrefix + ".Omnichannel";
-
-    /// <summary>
-    /// The tag that records the bulk action, such as <c>purge</c> or <c>assign</c>.
-    /// </summary>
-    public const string ActionTag = "action";
-
-    /// <summary>
-    /// The tag that records the one-time backfill, such as <c>contact_phone_numbers</c>.
-    /// </summary>
-    public const string BackfillTag = "backfill";
 
     /// <summary>
     /// The span tag that records the id of the activity load. Never a metric tag.
@@ -122,16 +111,6 @@ public static class OmnichannelTelemetry
     public static ActivitySource ActivitySource { get; } = CrestAppsOrchardCoreTelemetry.CreateActivitySource("Omnichannel");
 
     /// <summary>
-    /// Gets the number of activity load runs, tagged with the <c>outcome</c> (<see cref="OutcomeCompleted"/>,
-    /// <see cref="OutcomeStopped"/>, <c>error</c>, <c>cancelled</c> or <c>skipped</c> when this process was already
-    /// running the load) and the <c>trigger</c> (<see cref="TriggerStart"/> or <see cref="TriggerResume"/>).
-    /// </summary>
-    public static Counter<long> BatchLoads { get; } = Meter.CreateCounter<long>(
-        "crestapps.omnichannel.batch.loads",
-        "{load}",
-        "The number of activity load runs, by how they ended.");
-
-    /// <summary>
     /// Gets the duration of activity load runs, tagged with the <c>outcome</c> and the <c>trigger</c>.
     /// </summary>
     public static Histogram<double> BatchLoadDuration { get; } = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
@@ -160,15 +139,6 @@ public static class OmnichannelTelemetry
         "The number of records activity loads went through, by what became of them.");
 
     /// <summary>
-    /// Gets the number of stalled loads the watchdog acted on, tagged with the <see cref="ActionTag"/>:
-    /// <see cref="WatchdogResumed"/>, <see cref="WatchdogGaveUp"/> or <see cref="WatchdogReset"/>.
-    /// </summary>
-    public static Counter<long> BatchLoadWatchdogActions { get; } = Meter.CreateCounter<long>(
-        "crestapps.omnichannel.batch.load.watchdog",
-        "{load}",
-        "The number of stalled activity loads the watchdog resumed, gave up on or reset.");
-
-    /// <summary>
     /// Gets the number of activity loads that stopped recording progress, as the watchdog last found them.
     /// </summary>
     public static Gauge<long> BatchLoadsStalled { get; } = Meter.CreateGauge<long>(
@@ -183,69 +153,6 @@ public static class OmnichannelTelemetry
         Meter,
         "crestapps.omnichannel.batch.load.preview.duration",
         "The duration of counting the records an activity load would load, in the request that asked.");
-
-    /// <summary>
-    /// Gets the number of records a counted load matched.
-    /// </summary>
-    public static Histogram<long> BatchLoadPreviewMatched { get; } = CrestAppsOrchardCoreTelemetry.CreateCountHistogram(
-        Meter,
-        "crestapps.omnichannel.batch.load.preview.matched",
-        "{record}",
-        "The number of records a counted activity load matched.");
-
-    /// <summary>
-    /// Gets the number of activities bulk actions went through, tagged with the <see cref="ActionTag"/> and the
-    /// <c>result</c>: <c>processed</c>, <c>unchanged</c> or <c>in_flight</c> for dialer work left alone.
-    /// </summary>
-    public static Counter<long> BulkActionActivities { get; } = Meter.CreateCounter<long>(
-        "crestapps.omnichannel.bulk_action.activities",
-        "{activity}",
-        "The number of activities bulk actions went through, by result.");
-
-    /// <summary>
-    /// Gets the duration of bulk actions on activities, tagged with the <see cref="ActionTag"/> and the <c>outcome</c>.
-    /// </summary>
-    public static Histogram<double> BulkActionDuration { get; } = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
-        Meter,
-        "crestapps.omnichannel.bulk_action.duration",
-        "The duration of one bulk action on activities, run in the request that asked for it.",
-        CrestAppsOrchardCoreTelemetry.LongDurationBucketBoundaries);
-
-    /// <summary>
-    /// Gets the number of activities one bulk action was applied to, tagged with the <see cref="ActionTag"/>.
-    /// </summary>
-    public static Histogram<long> BulkActionSize { get; } = CrestAppsOrchardCoreTelemetry.CreateCountHistogram(
-        Meter,
-        "crestapps.omnichannel.bulk_action.size",
-        "{activity}",
-        "The number of activities one bulk action was applied to.");
-
-    /// <summary>
-    /// Gets the number of due automated activities the processor went through, tagged with the <c>result</c>:
-    /// <c>started</c>, <c>not_in_service</c>, <c>refused</c>, <c>declined</c>, <c>retry_scheduled</c>, <c>failed</c>,
-    /// <c>deferred</c> (left due while the tenant is at its call limit) or <c>expired</c> (no response in time).
-    /// </summary>
-    public static Counter<long> AutomatedActivities { get; } = Meter.CreateCounter<long>(
-        "crestapps.omnichannel.automated.activities",
-        "{activity}",
-        "The number of automated activities the processor went through, by result.");
-
-    /// <summary>
-    /// Gets the number of records one-time backfills went through, tagged with the <see cref="BackfillTag"/> and the
-    /// <c>result</c>.
-    /// </summary>
-    public static Counter<long> BackfillRecords { get; } = Meter.CreateCounter<long>(
-        "crestapps.backfill.records",
-        "{record}",
-        "The number of records one-time backfills wrote again.");
-
-    /// <summary>
-    /// Gets the duration of reading the file imports leads arrived in, tagged with the <c>outcome</c>.
-    /// </summary>
-    public static Histogram<double> LeadImportsQueryDuration { get; } = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
-        Meter,
-        "crestapps.omnichannel.lead_imports.query.duration",
-        "The duration of counting the leads of every file import.");
 
     /// <summary>
     /// Adds to a counter with one tag, and the tenant tag when it is enabled.
@@ -289,25 +196,6 @@ public static class OmnichannelTelemetry
 
         CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
         counter.Add(value, tags);
-    }
-
-    /// <summary>
-    /// Records a value on a histogram with the given tags, and the tenant tag when it is enabled.
-    /// </summary>
-    /// <param name="histogram">The histogram.</param>
-    /// <param name="value">The value to record.</param>
-    /// <param name="tags">The bounded tags.</param>
-    public static void Record(Histogram<long> histogram, long value, TagList tags = default)
-    {
-        ArgumentNullException.ThrowIfNull(histogram);
-
-        if (!histogram.Enabled)
-        {
-            return;
-        }
-
-        CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
-        histogram.Record(value, tags);
     }
 
     /// <summary>
@@ -369,44 +257,6 @@ public static class OmnichannelTelemetry
         AddRecords(RecordNotInService, current.NotInService - previous.NotInService);
         AddRecords(RecordLeadOrContact, current.LeadOrContact - previous.LeadOrContact);
         AddRecords(RecordOverLimit, current.OverLimit - previous.OverLimit);
-    }
-
-    /// <summary>
-    /// Gets the bounded <see cref="ActionTag"/> value of a bulk action on activities.
-    /// </summary>
-    /// <param name="action">The bulk action.</param>
-    /// <returns>The action in snake_case, such as <c>purge</c> or <c>change_campaign</c>, or <c>other</c>.</returns>
-    public static string GetBulkActionTag(BulkActivityAction action)
-    {
-        return action switch
-        {
-            BulkActivityAction.Assign => "assign",
-            BulkActivityAction.Reschedule => "reschedule",
-            BulkActivityAction.Purge => "purge",
-            BulkActivityAction.SetInstructions => "set_instructions",
-            BulkActivityAction.SetUrgencyLevel => "set_urgency_level",
-            BulkActivityAction.ChangeSubject => "change_subject",
-            BulkActivityAction.ClearAssignment => "clear_assignment",
-            BulkActivityAction.ChangeSource => "change_source",
-            BulkActivityAction.ChangeDialerProfile => "change_dialer_profile",
-            BulkActivityAction.ChangeCampaign => "change_campaign",
-            _ => CrestAppsOrchardCoreTelemetry.Other,
-        };
-    }
-
-    /// <summary>
-    /// Records what became of records a one-time backfill went through, on <see cref="BackfillRecords"/>.
-    /// </summary>
-    /// <param name="backfill">The backfill, from a bounded set such as <c>contact_phone_numbers</c>.</param>
-    /// <param name="result">What became of the records, such as <c>reindexed</c> or <c>recorded</c>.</param>
-    /// <param name="count">The number of records.</param>
-    public static void RecordBackfill(string backfill, string result, long count)
-    {
-        Add(BackfillRecords, count, new TagList
-        {
-            { BackfillTag, backfill },
-            { CrestAppsOrchardCoreTelemetry.ResultTag, result },
-        });
     }
 
     private static void AddRecords(string result, long count)

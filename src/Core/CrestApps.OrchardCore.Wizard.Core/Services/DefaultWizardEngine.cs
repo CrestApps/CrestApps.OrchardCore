@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Wizard.Handlers;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Locking.Distributed;
@@ -64,11 +63,10 @@ public sealed class DefaultWizardEngine : IWizardEngine
 
         var sessionId = flow.Session.SessionId;
 
-        var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(
             CompletionLockPrefix + sessionId,
             _lockTimeout,
-            _lockExpiration,
-            "wizard.completion");
+            _lockExpiration);
 
         if (!locked)
         {

@@ -5,13 +5,13 @@ using CrestApps.OrchardCore.Diagnostics;
 namespace CrestApps.OrchardCore.WorkOrders.Core.Telemetry;
 
 /// <summary>
-/// The meter and activity source of work orders, <c>CrestApps.OrchardCore.WorkOrders</c>: the service level warnings
-/// and breaches raised. Work order, account and agreement ids go on spans and logs only.
+/// The meter of work orders, <c>CrestApps.OrchardCore.WorkOrders</c>: the service level warnings and breaches
+/// raised. Work order, account and agreement ids go on logs only.
 /// </summary>
 public static class WorkOrdersTelemetry
 {
     /// <summary>
-    /// The name of the work orders meter and activity source.
+    /// The name of the work orders meter.
     /// </summary>
     public const string SourceName = CrestAppsOrchardCoreTelemetry.SourceNamePrefix + ".WorkOrders";
 
@@ -39,11 +39,6 @@ public static class WorkOrdersTelemetry
     /// The meter of work orders.
     /// </summary>
     public static Meter Meter { get; } = CrestAppsOrchardCoreTelemetry.CreateMeter("WorkOrders");
-
-    /// <summary>
-    /// The activity source of work orders.
-    /// </summary>
-    public static ActivitySource ActivitySource { get; } = CrestAppsOrchardCoreTelemetry.CreateActivitySource("WorkOrders");
 
     /// <summary>
     /// The number of service level warnings and breaches raised, tagged with <see cref="EventTag"/> and

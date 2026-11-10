@@ -1,12 +1,11 @@
 using System.Diagnostics;
-using System.Diagnostics.Metrics;
 using CrestApps.OrchardCore.Diagnostics;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
 
 /// <summary>
 /// Measures one messaging operation that ends with a bounded result, such as a send, an inbound message or an
-/// automated turn: a span, a duration histogram tagged with the outcome, and a counter tagged with the result, all
+/// automated turn: a span and a duration histogram tagged with the outcome and the result, both
 /// recorded when the measurement is disposed. Start it with one of the <c>Start</c> methods of
 /// <see cref="MessagingTelemetry"/> in a <c>using</c> declaration.
 /// </summary>
@@ -18,16 +17,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
 public sealed class MessagingMeasurement : IDisposable
 {
     private readonly TelemetryScope _scope;
-    private readonly Counter<long> _counter;
-    private TagList _tags;
     private string _result;
     private bool _disposed;
 
-    internal MessagingMeasurement(TelemetryScope scope, Counter<long> counter, TagList tags)
+    internal MessagingMeasurement(TelemetryScope scope)
     {
         _scope = scope;
-        _counter = counter;
-        _tags = tags;
     }
 
     /// <summary>
@@ -53,7 +48,7 @@ public sealed class MessagingMeasurement : IDisposable
     public TimeSpan Elapsed => _scope.Elapsed;
 
     /// <summary>
-    /// Adds a bounded tag to the counter, the duration histogram and the span, such as the provider that sent a
+    /// Adds a bounded tag to the duration histogram and the span, such as the provider that sent a
     /// message once it is known.
     /// </summary>
     /// <param name="key">The tag key, never one of <see cref="CrestAppsOrchardCoreTelemetry.BannedMetricTagKeys"/>.</param>
@@ -62,7 +57,6 @@ public sealed class MessagingMeasurement : IDisposable
     {
         ArgumentException.ThrowIfNullOrEmpty(key);
 
-        _tags.Add(key, value);
         _scope.AddMetricTag(key, value);
     }
 
@@ -83,7 +77,7 @@ public sealed class MessagingMeasurement : IDisposable
     /// <param name="outcome">The outcome of the duration histogram: <see cref="CrestAppsOrchardCoreTelemetry.OutcomeOk"/>,
     /// <see cref="CrestAppsOrchardCoreTelemetry.OutcomeSkipped"/>, <see cref="CrestAppsOrchardCoreTelemetry.OutcomeCancelled"/>,
     /// <see cref="CrestAppsOrchardCoreTelemetry.OutcomeTimeout"/> or <see cref="CrestAppsOrchardCoreTelemetry.OutcomeError"/>.
-    /// An error also marks the span as failed and tags the histogram with the result as its reason.</param>
+    /// An error also marks the span as failed.</param>
     public void Complete(string result, string outcome = CrestAppsOrchardCoreTelemetry.OutcomeOk)
     {
         ArgumentException.ThrowIfNullOrEmpty(result);
@@ -94,7 +88,7 @@ public sealed class MessagingMeasurement : IDisposable
 
         if (outcome == CrestAppsOrchardCoreTelemetry.OutcomeError)
         {
-            _scope.Fail(result);
+            _scope.Fail();
 
             return;
         }
@@ -136,7 +130,7 @@ public sealed class MessagingMeasurement : IDisposable
     }
 
     /// <summary>
-    /// Records the counter, the duration and the outcome, and ends the span.
+    /// Records the duration, the outcome and the result, and ends the span.
     /// </summary>
     public void Dispose()
     {
@@ -147,13 +141,7 @@ public sealed class MessagingMeasurement : IDisposable
 
         _disposed = true;
 
-        if (_counter.Enabled)
-        {
-            var tags = _tags;
-            tags.Add(CrestAppsOrchardCoreTelemetry.ResultTag, Result);
-            CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
-            _counter.Add(1, tags);
-        }
+        _scope.AddMetricTag(CrestAppsOrchardCoreTelemetry.ResultTag, Result);
 
         _scope.Dispose();
     }

@@ -1,11 +1,9 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using CrestApps.OrchardCore.DataConnectors.Telemetry;
-using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Caching.Memory;
 using OrchardCore.Environment.Shell;
 
@@ -133,35 +131,23 @@ internal sealed class HttpRequestAuthenticator
         }
     }
 
-    // Measures every request to a token endpoint, discovery included; the endpoint itself is never a tag or logged.
+    // Counts every token the cache couldn't serve by whether it was acquired; the endpoint is never a tag or logged.
     private async Task<(string Token, int ExpiresIn)> RequestTokenCoreAsync(HttpAuthenticationSettings settings, IDataConnectorSecrets secrets, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(settings);
 
         var auth = DataConnectorsTelemetry.ToTag(settings.Type);
 
-        using var telemetry = TelemetryScope.Start(
-            DataConnectorsTelemetry.ActivitySource,
-            "crestapps.dataconnector.token.request",
-            DataConnectorsTelemetry.TokenDuration,
-            new TagList
-            {
-                { DataConnectorsTelemetry.AuthTag, auth },
-            },
-            ActivityKind.Client);
-
         try
         {
             var token = await FetchTokenAsync(settings, secrets, cancellationToken);
 
-            telemetry.Succeed();
             DataConnectorsTelemetry.RecordTokenRequest(auth, "acquired");
 
             return token;
         }
-        catch (Exception exception)
+        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
-            DataConnectorsTelemetry.Fail(telemetry, exception);
             DataConnectorsTelemetry.RecordTokenRequest(auth, "failed");
 
             throw;

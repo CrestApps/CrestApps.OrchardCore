@@ -5,7 +5,6 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Models;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +14,7 @@ using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Documents;
 using OrchardCore.Entities;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Settings;
 using YesSql;
 using YesSql.Sql;
@@ -28,7 +28,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
     /// </summary>
     public static int Create()
     {
-        MigrationTelemetry.Defer(nameof(AIDeploymentTypeMigrations), async scope =>
+        ShellScope.AddDeferredTask(async scope =>
         {
             var connectionDocManager = scope.ServiceProvider.GetRequiredService<IDocumentManager<DictionaryDocument<AIProviderConnection>>>();
             var deploymentDocManager = scope.ServiceProvider.GetRequiredService<IDocumentManager<DictionaryDocument<AIDeployment>>>();
@@ -68,7 +68,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
     /// </summary>
     public static int UpdateFrom1()
     {
-        MigrationTelemetry.Defer(nameof(AIDeploymentTypeMigrations), async scope =>
+        ShellScope.AddDeferredTask(async scope =>
         {
             var profileCatalog = scope.ServiceProvider.GetRequiredService<IAIProfileStore>();
             var deploymentManager = scope.ServiceProvider.GetRequiredService<IAIDeploymentManager>();
@@ -125,7 +125,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
     /// </summary>
     public static int UpdateFrom2()
     {
-        MigrationTelemetry.Defer(nameof(AIDeploymentTypeMigrations), async scope =>
+        ShellScope.AddDeferredTask(async scope =>
         {
             var connectionDocManager = scope.ServiceProvider.GetRequiredService<IDocumentManager<DictionaryDocument<AIProviderConnection>>>();
             var deploymentDocManager = scope.ServiceProvider.GetRequiredService<IDocumentManager<DictionaryDocument<AIDeployment>>>();
@@ -150,7 +150,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
     /// </summary>
     public static int UpdateFrom3()
     {
-        MigrationTelemetry.Defer(nameof(AIDeploymentTypeMigrations), async scope =>
+        ShellScope.AddDeferredTask(async scope =>
         {
             var deploymentDocManager = scope.ServiceProvider.GetRequiredService<IDocumentManager<DictionaryDocument<AIDeployment>>>();
             var deploymentManager = scope.ServiceProvider.GetRequiredService<IAIDeploymentManager>();
@@ -193,7 +193,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
     /// </summary>
     public static int UpdateFrom4()
     {
-        MigrationTelemetry.Defer(nameof(AIDeploymentTypeMigrations), async scope =>
+        ShellScope.AddDeferredTask(async scope =>
         {
             var deploymentManager = scope.ServiceProvider.GetRequiredService<IAIDeploymentManager>();
 
@@ -215,7 +215,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
     /// </summary>
     public static int UpdateFrom5()
     {
-        MigrationTelemetry.Defer(nameof(AIDeploymentTypeMigrations), async scope =>
+        ShellScope.AddDeferredTask(async scope =>
         {
             var connectionDocManager = scope.ServiceProvider.GetRequiredService<IDocumentManager<DictionaryDocument<AIProviderConnection>>>();
             var deploymentDocManager = scope.ServiceProvider.GetRequiredService<IDocumentManager<DictionaryDocument<AIDeployment>>>();
@@ -296,7 +296,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
     /// </remarks>
     public static int UpdateFrom7()
     {
-        MigrationTelemetry.Defer(nameof(AIDeploymentTypeMigrations), async scope =>
+        ShellScope.AddDeferredTask(async scope =>
         {
             var deploymentDocManager = scope.ServiceProvider.GetRequiredService<IDocumentManager<DictionaryDocument<AIDeployment>>>();
             var deploymentDoc = await deploymentDocManager.GetOrCreateMutableAsync();

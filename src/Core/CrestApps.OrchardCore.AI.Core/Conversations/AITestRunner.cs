@@ -152,17 +152,15 @@ public sealed class AITestRunner
             }
             else
             {
+                telemetry.AddMetricTag(CrestAppsOrchardCoreTelemetry.ResultTag, result);
                 telemetry.Succeed();
             }
-
-            AIModuleTelemetry.RecordEvaluation(AIModuleTelemetry.KindTestRun, result);
 
             return finished;
         }
         catch (Exception ex)
         {
             telemetry.Fail(ex);
-            AIModuleTelemetry.RecordEvaluation(AIModuleTelemetry.KindTestRun, CrestAppsOrchardCoreTelemetry.GetOutcome(ex));
 
             throw;
         }

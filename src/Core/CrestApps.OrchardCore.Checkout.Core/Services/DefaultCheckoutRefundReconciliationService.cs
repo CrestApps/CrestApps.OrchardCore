@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Currencies;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
@@ -59,11 +58,10 @@ public sealed class DefaultCheckoutRefundReconciliationService : ICheckoutRefund
         ArgumentNullException.ThrowIfNull(context);
         ArgumentException.ThrowIfNullOrEmpty(context.OriginalTransactionId);
 
-        var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(
             RefundLockPrefix + context.OriginalTransactionId,
             TimeSpan.FromSeconds(10),
-            TimeSpan.FromMinutes(2),
-            "checkout.refund");
+            TimeSpan.FromMinutes(2));
 
         if (!locked)
         {

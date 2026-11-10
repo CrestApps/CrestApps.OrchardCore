@@ -914,7 +914,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry
         public const string StatusTag = "status";
         public static System.Diagnostics.Metrics.Counter<long> AIHandoff { get; }
         public static System.Diagnostics.Metrics.Counter<long> AIRespondDecision { get; }
-        public static System.Diagnostics.Metrics.Counter<long> AITurn { get; }
         public static System.Diagnostics.Metrics.Histogram<double> AITurnDuration { get; }
         public static System.Diagnostics.ActivitySource ActivitySource { get; }
         public static System.Diagnostics.Metrics.Counter<long> ActivityStart { get; }
@@ -924,19 +923,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry
         public static System.Diagnostics.Metrics.Counter<long> Delivery { get; }
         public static System.Diagnostics.Metrics.Histogram<double> DeliveryLatency { get; }
         public static System.Diagnostics.Metrics.Histogram<double> FirstResponseDuration { get; }
-        public static System.Diagnostics.Metrics.Counter<long> Inbound { get; }
         public static System.Diagnostics.Metrics.Histogram<double> InboundDuration { get; }
         public static System.Diagnostics.Metrics.Histogram<double> InboundLag { get; }
-        public static bool IsSendObserved { get; }
         public static System.Diagnostics.Metrics.Meter Meter { get; }
         public static System.Diagnostics.Metrics.Counter<long> OptOut { get; }
-        public static System.Diagnostics.Metrics.Counter<long> OutboxFailed { get; }
         public static System.Diagnostics.Metrics.Counter<long> OutboxRetry { get; }
-        public static System.Diagnostics.Metrics.Counter<long> OwedReplyRecovery { get; }
-        public static System.Diagnostics.Metrics.Counter<long> ReEngagement { get; }
         public static System.Diagnostics.Metrics.Counter<long> Reassigned { get; }
         public static System.Diagnostics.Metrics.Counter<long> Route { get; }
-        public static System.Diagnostics.Metrics.Counter<long> Send { get; }
         public static System.Diagnostics.Metrics.Histogram<double> SendDuration { get; }
         public static System.Diagnostics.Metrics.Counter<long> SlaBreached { get; }
         public static void CompleteSend(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry.MessagingMeasurement measurement, CrestApps.OrchardCore.Omnichannel.Messaging.Services.MessageDispatchResult dispatch) { }
@@ -957,10 +950,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry
         public static void RecordFirstResponse(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation conversation, System.DateTime respondedUtc) { }
         public static void RecordInboundLag(string channel, System.TimeSpan lag) { }
         public static void RecordOptOut(string channel, string source, bool optedOut) { }
-        public static void RecordOutboxFailed(string channel, int attempts) { }
         public static void RecordOutboxRetry(string channel, string result) { }
-        public static void RecordOwedReplyRecovery(string channel, string result) { }
-        public static void RecordReEngagement(string channel, string result) { }
         public static void RecordReassigned(string channel, CrestApps.OrchardCore.Omnichannel.Messaging.Models.ConversationAssignmentStatus status) { }
         public static void RecordRespondDecision(string channel, string decision) { }
         public static void RecordRoute(string channel, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingRoutingTrigger trigger, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingInboundRouter router) { }

@@ -1,7 +1,6 @@
 using CrestApps.Core;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Diagnostics;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -157,15 +156,13 @@ public sealed class MessagingInboundProcessor : IMessagingInboundProcessor
 
         // Find-or-create and the thread roll-up are serialized per address pair. Without this, two messages arriving
         // in the same second from a new contact each see "no conversation" and each create one.
-        var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(
             $"MessagingConversation:{channel.Name}:{serviceAddress}:{contactAddress}",
             _options.ConversationLockTimeout,
-            _options.ConversationLockExpiration,
-            "messaging.conversation");
+            _options.ConversationLockExpiration);
 
         if (!locked)
         {
-            _logger.InboundLockTimeout(channel.Name, message.ProviderMessageId.SanitizeLogValue());
             telemetry.Complete(MessagingTelemetry.InboundResults.LockTimeout, CrestAppsOrchardCoreTelemetry.OutcomeTimeout);
 
             // Dropping the message would lose it silently. Failing lets the durable provider inbox redeliver it.

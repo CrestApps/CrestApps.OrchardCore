@@ -5,9 +5,9 @@ using CrestApps.OrchardCore.Diagnostics;
 namespace CrestApps.OrchardCore.DataConnectors.Telemetry;
 
 /// <summary>
-/// Measures one refresh of an imported data set: the <c>crestapps.dataconnector.refresh</c> span, its duration, the
-/// refreshes counter, the rows it read and the refreshes running now. The tags are recorded when it is disposed, so the
-/// mode is the one the refresh ended with, after an incremental refresh fell back to a full one.
+/// Measures one refresh of an imported data set: the <c>crestapps.dataconnector.refresh</c> span, its duration by
+/// outcome, the rows it read and the refreshes running now. The tags are recorded when it is disposed, so the mode is
+/// the one the refresh ended with, after an incremental refresh fell back to a full one.
 /// </summary>
 internal sealed class DataSetRefreshMeasurement : IDisposable
 {
@@ -129,20 +129,15 @@ internal sealed class DataSetRefreshMeasurement : IDisposable
         _scope.AddMetricTag(DataConnectorsTelemetry.ConnectorTag, _connector);
         _scope.SetSpanTag(DataConnectorsTelemetry.RowsSpanTag, _run.RowsRead);
 
-        var tags = new TagList
-        {
-            { CrestAppsOrchardCoreTelemetry.TriggerTag, DataConnectorsTelemetry.ToTag(_run.Trigger) },
-            { DataConnectorsTelemetry.ModeTag, mode },
-            { DataConnectorsTelemetry.ConnectorTag, _connector },
-        };
-
         if (outcome == CrestAppsOrchardCoreTelemetry.OutcomeOk)
         {
-            DataConnectorsTelemetry.Record(DataConnectorsTelemetry.RefreshRows, _run.RowsRead, tags);
+            DataConnectorsTelemetry.Record(DataConnectorsTelemetry.RefreshRows, _run.RowsRead, new TagList
+            {
+                { CrestAppsOrchardCoreTelemetry.TriggerTag, DataConnectorsTelemetry.ToTag(_run.Trigger) },
+                { DataConnectorsTelemetry.ModeTag, mode },
+                { DataConnectorsTelemetry.ConnectorTag, _connector },
+            });
         }
-
-        tags.Add(CrestAppsOrchardCoreTelemetry.OutcomeTag, outcome);
-        DataConnectorsTelemetry.Add(DataConnectorsTelemetry.Refreshes, tags);
 
         _scope.Dispose();
 

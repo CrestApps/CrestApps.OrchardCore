@@ -47,11 +47,9 @@ public sealed class AsteriskInboundReconciliationBackgroundTask : IBackgroundTas
             try
             {
                 await reconciler.ReconcileAsync(AsteriskConstants.ProviderTechnicalName, cancellationToken);
-                run.AddItems(1);
             }
             catch (Exception ex)
             {
-                run.AddItems(1, "failed");
                 run.ReportError(ex);
                 logger.LogError(
                     ex,

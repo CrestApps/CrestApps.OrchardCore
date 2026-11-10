@@ -20,15 +20,10 @@ public static partial class ContactCenterDiagnostics
         "{call}",
         "The number of times stopping a caller's hold music failed; the failure is swallowed so the caller still moves on.");
 
-    private static readonly Counter<long> _handoffsRequested = Meter.CreateCounter<long>(
-        "crestapps.contactcenter.handoff.requested",
-        "{handoff}",
-        "The number of hand-offs an AI voice agent asked for, by what became of the caller.");
-
     private static readonly Histogram<double> _handoffDuration = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
         Meter,
         "crestapps.contactcenter.handoff.duration",
-        "The time it took to hand a caller from an AI voice agent to the queue or an agent, by result.");
+        "The time it took to hand a caller from an AI voice agent to the queue or an agent, by result. Its count is the number of hand-offs.");
 
     private static readonly Counter<long> _callbacks = Meter.CreateCounter<long>(
         "crestapps.contactcenter.callback",
@@ -109,11 +104,6 @@ public static partial class ContactCenterDiagnostics
     /// <param name="elapsed">The time the hand-off took.</param>
     internal static void RecordHandoff(string result, TimeSpan elapsed)
     {
-        if (_handoffsRequested.Enabled)
-        {
-            Add(_handoffsRequested, new TagList { { CrestAppsOrchardCoreTelemetry.ResultTag, result } });
-        }
-
         if (_handoffDuration.Enabled)
         {
             Record(_handoffDuration, elapsed.TotalSeconds, new TagList { { CrestAppsOrchardCoreTelemetry.ResultTag, result } });

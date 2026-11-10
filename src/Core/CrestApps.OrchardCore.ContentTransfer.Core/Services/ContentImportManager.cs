@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.ContentTransfer.Telemetry;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
@@ -38,9 +37,7 @@ public sealed class ContentImportManager : IContentImportManager
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        await _contentExportBatchHandlers.InvokeAsync(
-            handler => ContentTransferDiagnostics.MeasureHandlerAsync(handler, ContentTransferDiagnostics.PhasePrepareExport, () => handler.PrepareExportBatchAsync(context)),
-            _logger);
+        await _contentExportBatchHandlers.InvokeAsync(handler => handler.PrepareExportBatchAsync(context), _logger);
     }
 
     public async Task<IReadOnlyCollection<ImportColumn>> GetColumnsAsync(ImportContentContext context)
@@ -121,9 +118,7 @@ public sealed class ContentImportManager : IContentImportManager
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        await _contentImportHandlers.InvokeAsync(
-            handler => ContentTransferDiagnostics.MeasureHandlerAsync(handler, ContentTransferDiagnostics.PhaseImport, () => handler.ImportAsync(context)),
-            _logger);
+        await _contentImportHandlers.InvokeAsync(handler => handler.ImportAsync(context), _logger);
 
         foreach (var typePartDefinition in context.ContentTypeDefinition.Parts)
         {
@@ -140,9 +135,7 @@ public sealed class ContentImportManager : IContentImportManager
             };
 
             var partHandlers = _contentImportHandlerResolver.GetPartHandlers(partName);
-            await partHandlers.InvokeAsync(
-                (handler) => ContentTransferDiagnostics.MeasureHandlerAsync(handler, ContentTransferDiagnostics.PhaseImport, () => handler.ImportAsync(partContext)),
-                _logger);
+            await partHandlers.InvokeAsync((handler) => handler.ImportAsync(partContext), _logger);
 
             if (typePartDefinition.PartDefinition?.Fields == null)
             {
@@ -183,9 +176,7 @@ public sealed class ContentImportManager : IContentImportManager
 
                 var fieldHandlers = _contentImportHandlerResolver.GetFieldHandlers(fieldName);
 
-                await fieldHandlers.InvokeAsync(
-                    (handler) => ContentTransferDiagnostics.MeasureHandlerAsync(handler, ContentTransferDiagnostics.PhaseImport, () => handler.ImportAsync(fieldContext)),
-                    _logger);
+                await fieldHandlers.InvokeAsync((handler) => handler.ImportAsync(fieldContext), _logger);
             }
         }
     }
@@ -194,9 +185,7 @@ public sealed class ContentImportManager : IContentImportManager
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        await _contentImportHandlers.InvokeAsync(
-            handler => ContentTransferDiagnostics.MeasureHandlerAsync(handler, ContentTransferDiagnostics.PhaseExport, () => handler.ExportAsync(context)),
-            _logger);
+        await _contentImportHandlers.InvokeAsync(handler => handler.ExportAsync(context), _logger);
 
         foreach (var typePartDefinition in context.ContentTypeDefinition.Parts)
         {
@@ -219,9 +208,7 @@ public sealed class ContentImportManager : IContentImportManager
                 Row = context.Row,
             };
 
-            await partHandlers.InvokeAsync(
-                (handler) => ContentTransferDiagnostics.MeasureHandlerAsync(handler, ContentTransferDiagnostics.PhaseExport, () => handler.ExportAsync(partContext)),
-                _logger);
+            await partHandlers.InvokeAsync((handler) => handler.ExportAsync(partContext), _logger);
 
             if (typePartDefinition.PartDefinition?.Fields == null)
             {
@@ -254,9 +241,7 @@ public sealed class ContentImportManager : IContentImportManager
 
                 var fieldHandlers = _contentImportHandlerResolver.GetFieldHandlers(fieldName);
 
-                await fieldHandlers.InvokeAsync(
-                    (handler) => ContentTransferDiagnostics.MeasureHandlerAsync(handler, ContentTransferDiagnostics.PhaseExport, () => handler.ExportAsync(fieldContext)),
-                    _logger);
+                await fieldHandlers.InvokeAsync((handler) => handler.ExportAsync(fieldContext), _logger);
             }
         }
     }

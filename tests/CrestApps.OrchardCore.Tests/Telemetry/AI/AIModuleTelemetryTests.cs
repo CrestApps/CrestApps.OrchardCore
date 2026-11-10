@@ -115,11 +115,9 @@ public sealed class AIModuleTelemetryTests
         Assert.Equal("crestapps.ai.eval.judge", span.OperationName);
         Assert.Equal(CrestAppsOrchardCoreTelemetry.OutcomeOk, span.GetTagItem(CrestAppsOrchardCoreTelemetry.OutcomeTag));
 
-        Assert.Contains(capture.Find("crestapps.ai.eval.runs", AIModuleTelemetry.KindTag, AIModuleTelemetry.KindJudge), measurement =>
-            Equals(measurement.Tags[CrestAppsOrchardCoreTelemetry.ResultTag], AIModuleTelemetry.ResultPassed));
-
         Assert.Contains(capture.Find("crestapps.ai.eval.duration", AIModuleTelemetry.KindTag, AIModuleTelemetry.KindJudge), measurement =>
-            Equals(measurement.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag], CrestAppsOrchardCoreTelemetry.OutcomeOk));
+            Equals(measurement.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag], CrestAppsOrchardCoreTelemetry.OutcomeOk) &&
+            Equals(measurement.Tags[CrestAppsOrchardCoreTelemetry.ResultTag], AIModuleTelemetry.ResultPassed));
 
         // The label and the criteria are free text, so they never reach a metric.
         Assert.DoesNotContain(capture.Measurements, measurement => measurement.Tags.ContainsValue("Checkout review"));

@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
 using CrestApps.OrchardCore.Diagnostics;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Reports.Designer.Indexes;
 using CrestApps.OrchardCore.Reports.Designer.Models;
 using CrestApps.OrchardCore.Reports.Designer.ViewModels;
@@ -182,7 +181,7 @@ public sealed class ReportDesignHistoryService
         ArgumentException.ThrowIfNullOrEmpty(designId);
         ArgumentNullException.ThrowIfNull(user);
 
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(LockKey(designId), _lockTimeout, _lockExpiration, "reports.design");
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(LockKey(designId), _lockTimeout, _lockExpiration);
 
         if (!locked)
         {
@@ -351,7 +350,7 @@ public sealed class ReportDesignHistoryService
 
         var designId = existing?.ItemId ?? incoming.ItemId;
 
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(LockKey(designId), _lockTimeout, _lockExpiration, "reports.design");
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(LockKey(designId), _lockTimeout, _lockExpiration);
 
         if (!locked)
         {
@@ -466,7 +465,7 @@ public sealed class ReportDesignHistoryService
 
     private async Task<ReportHistoryResult> ChangeDraftAsync(string designId, long revision, bool force, ReportDesignChangeKind kind, ClaimsPrincipal user, Func<ReportDesignDraft, Task<int?>> change)
     {
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(LockKey(designId), _lockTimeout, _lockExpiration, "reports.design");
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(LockKey(designId), _lockTimeout, _lockExpiration);
 
         if (!locked)
         {

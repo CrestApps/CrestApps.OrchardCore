@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Omnichannel.Core.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -37,7 +36,6 @@ public sealed class ContactPhoneNumberIndexBackfillBackgroundTask : IBackgroundT
     internal const int PageSize = 200;
 
     private const int PagesPerRun = 10;
-    private const string TelemetryBackfillName = "contact_phone_numbers";
     private const string ResultReindexed = "reindexed";
 
     private bool _completed;
@@ -244,9 +242,6 @@ public sealed class ContactPhoneNumberIndexBackfillBackgroundTask : IBackgroundT
 
     private static void Log(ILogger logger, int reindexed)
     {
-        // Counted here, after the pages were committed, so a page rolled back by a concurrent save is not counted.
-        OmnichannelTelemetry.RecordBackfill(TelemetryBackfillName, ResultReindexed, reindexed);
-
         if (reindexed > 0 && logger.IsEnabled(LogLevel.Information))
         {
             logger.LogInformation("Indexed every phone number of {RecordCount} contacts and leads saved before each number was indexed.", reindexed);

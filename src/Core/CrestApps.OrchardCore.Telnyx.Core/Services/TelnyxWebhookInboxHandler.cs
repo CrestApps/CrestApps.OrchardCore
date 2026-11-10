@@ -1,6 +1,5 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter;
-using CrestApps.OrchardCore.Telnyx.Telemetry;
 using CrestApps.OrchardCore.Webhooks;
 
 namespace CrestApps.OrchardCore.Telnyx.Services;
@@ -40,7 +39,6 @@ public sealed class TelnyxWebhookInboxHandler : IProviderWebhookInboxHandler
         var callEvent = JsonSerializer.Deserialize<TelnyxCallEvent>(payload, TelnyxJsonSerializerOptions.Default)
             ?? throw new InvalidDataException("The Telnyx call-event payload could not be deserialized.");
 
-        // Linked to the span that received the delivery: its traceparent travels in the stored payload.
-        await TelnyxTelemetry.ProcessWebhookAsync(_webhookService, callEvent, cancellationToken);
+        await _webhookService.ProcessAsync(callEvent, cancellationToken);
     }
 }

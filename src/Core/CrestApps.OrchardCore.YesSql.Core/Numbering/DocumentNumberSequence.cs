@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Numbering;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Locking;
@@ -70,7 +69,7 @@ internal sealed class DocumentNumberSequence : INumberSequence, IAsyncDisposable
             return;
         }
 
-        var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync(LockKeyPrefix + series, _lockTimeout, _lockExpiration, "yessql.number_sequence");
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(LockKeyPrefix + series, _lockTimeout, _lockExpiration);
 
         if (!locked)
         {

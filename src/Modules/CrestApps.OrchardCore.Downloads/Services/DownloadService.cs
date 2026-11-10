@@ -2,7 +2,6 @@ using System.Security.Cryptography;
 using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Downloads.Indexes;
 using CrestApps.OrchardCore.Downloads.Models;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using Microsoft.AspNetCore.DataProtection;
 using OrchardCore;
@@ -208,7 +207,7 @@ public sealed class DownloadService
         ArgumentNullException.ThrowIfNull(entitlement);
 
         // Two downloads at once must not both take the last one.
-        var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync("DOWNLOAD_" + entitlement.ItemId, _lockTimeout, _lockExpiration, "downloads.entitlement");
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync("DOWNLOAD_" + entitlement.ItemId, _lockTimeout, _lockExpiration);
 
         if (!locked)
         {

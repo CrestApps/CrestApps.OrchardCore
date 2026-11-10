@@ -7,20 +7,11 @@ namespace CrestApps.OrchardCore.Diagnostics;
 /// <summary>
 /// Queues work to run after the current shell scope ends, as <see cref="ShellScope.AddDeferredTask(Func{ShellScope, Task})"/>
 /// does, and measures it: a <c>crestapps.deferred.&lt;name&gt;</c> span linked to the request that queued it, and
-/// <c>crestapps.deferred_task.runs</c> and <c>crestapps.deferred_task.duration</c> by outcome. A deferred task runs
-/// after the response is sent, so without them its failure is only a log line.
+/// <c>crestapps.deferred_task.duration</c> by outcome (its count is the number of runs). A deferred task runs after the
+/// response is sent, so without it its failure is only a log line.
 /// </summary>
 public static class DeferredWork
 {
-    /// <summary>
-    /// The number of deferred task runs, tagged with the <see cref="CrestAppsOrchardCoreTelemetry.TaskTag"/> and the
-    /// <see cref="CrestAppsOrchardCoreTelemetry.OutcomeTag"/>.
-    /// </summary>
-    public static Counter<long> Runs { get; } = CrestAppsOrchardCoreTelemetry.PlatformMeter.CreateCounter<long>(
-        "crestapps.deferred_task.runs",
-        "{run}",
-        "The number of deferred tasks run after a shell scope ended, by how they ended.");
-
     /// <summary>
     /// The duration of deferred task runs, tagged with the <see cref="CrestAppsOrchardCoreTelemetry.TaskTag"/> and the
     /// <see cref="CrestAppsOrchardCoreTelemetry.OutcomeTag"/>.
@@ -83,26 +74,5 @@ public static class DeferredWork
 
             throw;
         }
-        finally
-        {
-            RecordRun(name, telemetry);
-        }
-    }
-
-    private static void RecordRun(string name, TelemetryScope telemetry)
-    {
-        if (!Runs.Enabled)
-        {
-            return;
-        }
-
-        var tags = new TagList
-        {
-            { CrestAppsOrchardCoreTelemetry.TaskTag, name },
-            { CrestAppsOrchardCoreTelemetry.OutcomeTag, telemetry.Outcome },
-        };
-
-        CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
-        Runs.Add(1, tags);
     }
 }

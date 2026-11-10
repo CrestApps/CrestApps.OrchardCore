@@ -5,13 +5,13 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.Core.Migrations;
-using CrestApps.OrchardCore.Diagnostics;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Entities;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Settings;
 using YesSql;
 using YesSql.Sql;
@@ -33,7 +33,7 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
     /// </summary>
     public static int Create()
     {
-        MigrationTelemetry.Defer(nameof(AIDeploymentV1DocumentMigrations), scope => ImportAndBackfillAsync(scope.ServiceProvider));
+        ShellScope.AddDeferredTask(scope => ImportAndBackfillAsync(scope.ServiceProvider));
 
         return 1;
     }

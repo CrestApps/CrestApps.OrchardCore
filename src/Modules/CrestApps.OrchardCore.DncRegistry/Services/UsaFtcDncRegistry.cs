@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
 using CrestApps.OrchardCore.Diagnostics;
@@ -130,16 +129,11 @@ public sealed class UsaFtcDncRegistry : INationalDoNotCallRegistry
             apiKey ??= UnprotectApiKey(settings.ProtectedApiKey);
             checkedCount++;
 
-            var requestStarted = Stopwatch.GetTimestamp();
-            int? statusCode = null;
-            string requestOutcome = null;
-
             try
             {
                 var requestUrl = $"{baseUrl}Check?PhoneNumber={apiNumber}&OrganizationId={settings.OrganizationId}&api_key={apiKey}";
 
                 var response = await client.GetAsync(requestUrl, cancellationToken);
-                statusCode = (int)response.StatusCode;
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -156,16 +150,8 @@ public sealed class UsaFtcDncRegistry : INationalDoNotCallRegistry
                 {
                     dncNumbers.Add(phoneNumber);
                 }
-
-                requestOutcome = CrestAppsOrchardCoreTelemetry.OutcomeOk;
             }
-            catch (OperationCanceledException ex)
-            {
-                requestOutcome = CrestAppsOrchardCoreTelemetry.GetOutcome(ex);
-
-                throw;
-            }
-            catch (Exception ex) when (ex is not DoNotCallScreeningException)
+            catch (Exception ex) when (ex is not DoNotCallScreeningException && ex is not OperationCanceledException)
             {
                 _logger.LogError(
                     ex,
@@ -175,10 +161,6 @@ public sealed class UsaFtcDncRegistry : INationalDoNotCallRegistry
                     Key,
                     "The United States FTC do-not-call registry could not be reached, so it could not report whether the number is listed.",
                     ex);
-            }
-            finally
-            {
-                DncRegistryTelemetry.RecordRegistryRequest(DncRegistryTelemetry.RegistryUsaFtc, requestOutcome, statusCode, requestStarted);
             }
         }
 

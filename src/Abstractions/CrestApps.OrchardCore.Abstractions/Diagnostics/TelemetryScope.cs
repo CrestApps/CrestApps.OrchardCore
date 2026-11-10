@@ -13,8 +13,10 @@ namespace CrestApps.OrchardCore.Diagnostics;
 /// The duration histogram carries the tags given to <see cref="Start(ActivitySource, string, Histogram{double}, TagList, ActivityKind)"/>,
 /// the tags added with <see cref="AddMetricTag(string, object)"/>, and the <see cref="CrestAppsOrchardCoreTelemetry.OutcomeTag"/>.
 /// Those tags must be bounded; ids go on the span only, with <see cref="SetSpanTag(string, object)"/>. A scope that
-/// is disposed before <see cref="Succeed"/> or <see cref="Fail(Exception)"/> is called records the
-/// <see cref="CrestAppsOrchardCoreTelemetry.OutcomeError"/> outcome, since the operation did not say it succeeded.
+/// is disposed before <see cref="Succeed"/>, <see cref="SetOutcome(string)"/> or <see cref="Fail(Exception)"/> is
+/// called, such as on an early <c>return</c>, records the <see cref="CrestAppsOrchardCoreTelemetry.Unknown"/> outcome
+/// and leaves the span status unset: the operation said neither that it succeeded nor that it failed, so the metric and
+/// the span agree and an early return is not counted as a failure. Set an outcome on every path.
 /// </remarks>
 public sealed class TelemetryScope : IDisposable
 {
@@ -43,10 +45,10 @@ public sealed class TelemetryScope : IDisposable
     public TimeSpan Elapsed => Stopwatch.GetElapsedTime(_startTimestamp);
 
     /// <summary>
-    /// Gets how the operation ended so far: <see cref="CrestAppsOrchardCoreTelemetry.OutcomeError"/> until
+    /// Gets how the operation ended so far: <see cref="CrestAppsOrchardCoreTelemetry.Unknown"/> until
     /// <see cref="Succeed"/>, <see cref="SetOutcome(string)"/> or <see cref="Fail(Exception)"/> says otherwise.
     /// </summary>
-    public string Outcome => _outcome ?? CrestAppsOrchardCoreTelemetry.OutcomeError;
+    public string Outcome => _outcome ?? CrestAppsOrchardCoreTelemetry.Unknown;
 
     /// <summary>
     /// Starts measuring an operation.
@@ -55,7 +57,8 @@ public sealed class TelemetryScope : IDisposable
     /// <param name="spanName">The name of the span, such as <c>crestapps.contenttransfer.import.run</c>.</param>
     /// <param name="duration">The duration histogram, or <see langword="null"/> to record a span only.</param>
     /// <param name="tags">The bounded tags of the duration histogram, which are also set on the span.</param>
-    /// <param name="kind">The kind of the span; <see cref="ActivityKind.Client"/> for a call to another system.</param>
+    /// <param name="kind">The kind of the span, <see cref="ActivityKind.Internal"/> by default. A span of ours stays internal
+    /// even when the operation calls another system: HttpClient instrumentation starts the client span itself.</param>
     /// <returns>The scope.</returns>
     public static TelemetryScope Start(
         ActivitySource source,
@@ -182,7 +185,8 @@ public sealed class TelemetryScope : IDisposable
     /// Marks the operation as failed without an exception, such as a call that returned an error response or a
     /// failure that was logged and swallowed.
     /// </summary>
-    /// <param name="reason">A bounded reason, recorded on the span and the duration histogram.</param>
+    /// <param name="reason">A reason from a bounded set of constants (never free text such as an error message),
+    /// recorded on the span and the duration histogram.</param>
     public void Fail(string reason = null)
     {
         _outcome = CrestAppsOrchardCoreTelemetry.OutcomeError;
@@ -207,7 +211,7 @@ public sealed class TelemetryScope : IDisposable
 
         _disposed = true;
 
-        var outcome = _outcome ?? CrestAppsOrchardCoreTelemetry.OutcomeError;
+        var outcome = Outcome;
 
         if (_duration is not null && _duration.Enabled)
         {

@@ -197,7 +197,6 @@ namespace CrestApps.OrchardCore.Telephony.Telemetry
         public const string IngestRetry = "retry";
         public const string IngestStored = "stored";
         public const string ReconcileActionTag = "action";
-        public const string ReconcileDriftCorrected = "drift_corrected";
         public const string ReconcileOrphanEnded = "orphan_ended";
         public const string ResultNotAdmitted = "not_admitted";
         public const string ScreeningStageCompliance = "compliance";

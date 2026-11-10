@@ -22,46 +22,10 @@ internal static partial class ReportsModuleLog
     public static partial void SlowRun(ILogger logger, string reportId, string source, long durationMilliseconds, long thresholdMilliseconds, int rowCount, int warningCount);
 
     [LoggerMessage(
-        EventId = CrestAppsEventIds.Reports + 103,
-        Level = LogLevel.Information,
-        Message = "Report view refresh: {DueCount} views due, {RefreshedCount} refreshed, {FailedCount} failed, {SkippedCount} skipped because busy or no longer due.")]
-    public static partial void ViewSweepCompleted(ILogger logger, int dueCount, int refreshedCount, int failedCount, int skippedCount);
-
-    [LoggerMessage(
-        EventId = CrestAppsEventIds.Reports + 104,
-        Level = LogLevel.Information,
-        Message = "Report subscriptions: {DueCount} due, {SentCount} sent, {NotSentCount} not sent, {FailedCount} failed.")]
-    public static partial void SubscriptionSweepCompleted(ILogger logger, int dueCount, int sentCount, int notSentCount, int failedCount);
-
-    [LoggerMessage(
-        EventId = CrestAppsEventIds.Reports + 105,
-        Level = LogLevel.Error,
-        Message = "The report subscription '{SubscriptionId}' could not be processed; the other due subscriptions still run.")]
-    public static partial void SubscriptionFailed(ILogger logger, Exception exception, string subscriptionId);
-
-    [LoggerMessage(
-        EventId = CrestAppsEventIds.Reports + 106,
-        Level = LogLevel.Warning,
-        Message = "The report subscription '{SubscriptionId}' sent nothing ({Reason}).")]
-    public static partial void SubscriptionNotSent(ILogger logger, string subscriptionId, string reason);
-
-    [LoggerMessage(
         EventId = CrestAppsEventIds.Reports + 107,
         Level = LogLevel.Debug,
         Message = "The report presence hub refused '{Operation}' for the report '{ReportId}': the caller may not edit it.")]
     public static partial void HubCallDenied(ILogger logger, string operation, string reportId);
-
-    [LoggerMessage(
-        EventId = CrestAppsEventIds.Reports + 108,
-        Level = LogLevel.Debug,
-        Message = "A connection to the report presence hub opened.")]
-    public static partial void HubConnected(ILogger logger);
-
-    [LoggerMessage(
-        EventId = CrestAppsEventIds.Reports + 109,
-        Level = LogLevel.Debug,
-        Message = "A connection to the report presence hub closed after following {ReportCount} reports.")]
-    public static partial void HubDisconnected(ILogger logger, Exception exception, int reportCount);
 
     [LoggerMessage(
         EventId = CrestAppsEventIds.Reports + 110,

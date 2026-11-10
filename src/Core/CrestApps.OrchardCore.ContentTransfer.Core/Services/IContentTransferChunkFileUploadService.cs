@@ -32,6 +32,5 @@ public interface IContentTransferChunkFileUploadService
     /// <summary>
     /// Removes temporary chunk files for this tenant that are older than the configured lifetime.
     /// </summary>
-    /// <returns>The number of temporary files removed.</returns>
-    int PurgeTempDirectory();
+    void PurgeTempDirectory();
 }

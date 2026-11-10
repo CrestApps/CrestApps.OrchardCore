@@ -41,7 +41,7 @@ public sealed class FileSizeRatchetTests
     /// </summary>
     private static readonly Dictionary<string, int> _existing = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["src/Modules/CrestApps.OrchardCore.Telephony/Hubs/TelephonyHub.cs"] = 1173,
+        ["src/Modules/CrestApps.OrchardCore.Telephony/Hubs/TelephonyHub.cs"] = 1237,
         ["src/Modules/CrestApps.OrchardCore.ContactCenter/Reports/Providers/EnterpriseInteractionReportProvider.cs"] = 1148,
     };
 

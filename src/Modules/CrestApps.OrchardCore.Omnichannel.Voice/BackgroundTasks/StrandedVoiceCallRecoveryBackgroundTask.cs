@@ -7,7 +7,6 @@ using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Services;
-using CrestApps.OrchardCore.Omnichannel.Voice.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -117,11 +116,9 @@ public sealed class StrandedVoiceCallRecoveryBackgroundTask : IBackgroundTask
         run.AddItems(concluded, "concluded");
         run.AddItems(failed, "failed");
 
-        if ((concluded > 0 || failed > 0) && logger.IsEnabled(LogLevel.Information))
+        if (concluded > 0 && logger.IsEnabled(LogLevel.Information))
         {
-            var candidateCount = candidates.Count;
-
-            VoiceLog.StrandedRecoveryRun(logger, candidateCount, concluded, failed);
+            logger.LogInformation("Concluded {Count} automated voice call(s) whose end was never reported.", concluded);
         }
     }
 }

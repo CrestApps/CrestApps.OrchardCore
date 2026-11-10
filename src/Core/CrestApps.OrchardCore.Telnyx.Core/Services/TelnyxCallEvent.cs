@@ -158,10 +158,4 @@ public sealed class TelnyxCallEvent
     /// Gets or sets the custom SIP headers the call arrived with, as name and value, in the order Telnyx listed them.
     /// </summary>
     public IReadOnlyList<KeyValuePair<string, string>> CustomHeaders { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the W3C <c>traceparent</c> of the span that received the delivery, kept with the event while it
-    /// waits in the webhook inbox so its processing is linked back to the delivery. Never sent by Telnyx.
-    /// </summary>
-    public string TraceParent { get; set; }
 }

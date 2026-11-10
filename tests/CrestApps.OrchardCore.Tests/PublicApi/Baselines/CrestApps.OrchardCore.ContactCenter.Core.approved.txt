@@ -6597,7 +6597,6 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
                     OrchardCore.Modules.IClock clock,
                     Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.ProviderVoiceEventService> logger,
                     CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerAbandonmentTracker abandonmentTracker,
-                    Microsoft.Extensions.Compliance.Redaction.IRedactorProvider redactorProvider,
                     System.Lazy<CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentPreDialCoordinator> preDialCoordinator = null) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession> IngestAsync(CrestApps.OrchardCore.Telephony.Models.ProviderVoiceEvent providerEvent, System.Threading.CancellationToken cancellationToken = default) { }
     }

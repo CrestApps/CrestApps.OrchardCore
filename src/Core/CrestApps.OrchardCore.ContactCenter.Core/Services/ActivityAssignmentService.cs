@@ -1,7 +1,6 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Locking.Distributed;
@@ -100,11 +99,10 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
     {
         ArgumentException.ThrowIfNullOrEmpty(queueId);
 
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             GetQueueLockKey(queueId),
             _coordinationOptions.AssignmentLockTimeout,
-            _coordinationOptions.AssignmentLockExpiration,
-            "contactcenter.assignment.queue");
+            _coordinationOptions.AssignmentLockExpiration);
 
         if (!locked)
         {
@@ -133,11 +131,10 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
     {
         ArgumentException.ThrowIfNullOrEmpty(queueId);
 
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             GetQueueLockKey(queueId),
             _coordinationOptions.AssignmentLockTimeout,
-            _coordinationOptions.AssignmentLockExpiration,
-            "contactcenter.assignment.queue");
+            _coordinationOptions.AssignmentLockExpiration);
 
         if (!locked)
         {
@@ -176,11 +173,10 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         ArgumentException.ThrowIfNullOrEmpty(queueId);
         ArgumentException.ThrowIfNullOrEmpty(agentId);
 
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             GetQueueLockKey(queueId),
             _coordinationOptions.AssignmentLockTimeout,
-            _coordinationOptions.AssignmentLockExpiration,
-            "contactcenter.assignment.queue");
+            _coordinationOptions.AssignmentLockExpiration);
 
         if (!locked)
         {

@@ -229,8 +229,7 @@ public sealed partial class PredictiveAgentConnector : IPredictiveAgentConnector
     {
         (var locker, var locked) = await _distributedLock.TryAcquireLockWithoutWaitingAsync(
             GetConnectLockKey(interactionId),
-            _options.PacingLockExpiration,
-            area: "contactcenter.dialer.predictive_connect");
+            _options.PacingLockExpiration);
 
         if (!locked)
         {

@@ -31,7 +31,7 @@ namespace CrestApps.OrchardCore.Tests.Telemetry.Messaging;
 public sealed class MessagingTelemetryTests
 {
     [Fact]
-    public async Task SmsDispatcher_Send_RecordsTheSendCounterDurationAndSpanTaggedWithTheProvider()
+    public async Task SmsDispatcher_Send_RecordsTheSendDurationAndSpanTaggedWithTheProviderAndResult()
     {
         // Arrange
         using var capture = new TelemetryCapture();
@@ -48,12 +48,10 @@ public sealed class MessagingTelemetryTests
         // Assert
         Assert.True(result.Succeeded);
 
-        var send = Assert.Single(capture.Find("crestapps.messaging.send", CrestAppsOrchardCoreTelemetry.ProviderTag, providerName));
-        Assert.Equal(MessagingTelemetry.SourceName, send.Meter);
-        Assert.Equal(MessagingTelemetry.ChannelSms, send.Tags[CrestAppsOrchardCoreTelemetry.ChannelTag]);
-        Assert.Equal(MessagingTelemetry.SendResults.Sent, send.Tags[CrestAppsOrchardCoreTelemetry.ResultTag]);
-
         var duration = Assert.Single(capture.Find("crestapps.messaging.send.duration", CrestAppsOrchardCoreTelemetry.ProviderTag, providerName));
+        Assert.Equal(MessagingTelemetry.SourceName, duration.Meter);
+        Assert.Equal(MessagingTelemetry.ChannelSms, duration.Tags[CrestAppsOrchardCoreTelemetry.ChannelTag]);
+        Assert.Equal(MessagingTelemetry.SendResults.Sent, duration.Tags[CrestAppsOrchardCoreTelemetry.ResultTag]);
         Assert.Equal(CrestAppsOrchardCoreTelemetry.OutcomeOk, duration.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag]);
 
         Assert.Contains(capture.Spans, span => span.OperationName == "crestapps.messaging.send" && Equals(span.GetTagItem(CrestAppsOrchardCoreTelemetry.ProviderTag), providerName));
@@ -77,10 +75,8 @@ public sealed class MessagingTelemetryTests
         await dispatcher.SendAsync(new SmsMessage { From = "+15553334444", To = "+15551112222", Body = "hi" }, TestContext.Current.CancellationToken);
 
         // Assert
-        var send = Assert.Single(capture.Find("crestapps.messaging.send", CrestAppsOrchardCoreTelemetry.ProviderTag, providerName));
-        Assert.Equal(MessagingTelemetry.SendResults.OptedOut, send.Tags[CrestAppsOrchardCoreTelemetry.ResultTag]);
-
         var duration = Assert.Single(capture.Find("crestapps.messaging.send.duration", CrestAppsOrchardCoreTelemetry.ProviderTag, providerName));
+        Assert.Equal(MessagingTelemetry.SendResults.OptedOut, duration.Tags[CrestAppsOrchardCoreTelemetry.ResultTag]);
         Assert.Equal(CrestAppsOrchardCoreTelemetry.OutcomeError, duration.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag]);
 
         Assert.Contains(
@@ -138,7 +134,7 @@ public sealed class MessagingTelemetryTests
     }
 
     [Fact]
-    public void InboundMeasurement_RecordsTheResultOnTheCounterAndTheOutcomeOnTheDuration()
+    public void InboundMeasurement_RecordsTheResultAndTheOutcomeOnTheDuration()
     {
         // Arrange
         using var capture = new TelemetryCapture();
@@ -154,10 +150,8 @@ public sealed class MessagingTelemetryTests
         }
 
         // Assert
-        var inbound = Assert.Single(capture.Find("crestapps.messaging.inbound", CrestAppsOrchardCoreTelemetry.ChannelTag, channelTag));
-        Assert.Equal(MessagingTelemetry.InboundResults.LockTimeout, inbound.Tags[CrestAppsOrchardCoreTelemetry.ResultTag]);
-
         var duration = Assert.Single(capture.Find("crestapps.messaging.inbound.duration", CrestAppsOrchardCoreTelemetry.ChannelTag, channelTag));
+        Assert.Equal(MessagingTelemetry.InboundResults.LockTimeout, duration.Tags[CrestAppsOrchardCoreTelemetry.ResultTag]);
         Assert.Equal(CrestAppsOrchardCoreTelemetry.OutcomeTimeout, duration.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag]);
 
         Assert.Contains(capture.Spans, span => span.OperationName == "crestapps.messaging.inbound" && Equals(span.GetTagItem(MessagingTelemetry.ConversationIdSpanTag), conversationId));
@@ -179,10 +173,8 @@ public sealed class MessagingTelemetryTests
         }
 
         // Assert
-        var turn = Assert.Single(capture.Find("crestapps.messaging.ai.turn", CrestAppsOrchardCoreTelemetry.ChannelTag, channelTag));
-        Assert.Equal(MessagingTelemetry.ResultCancelled, turn.Tags[CrestAppsOrchardCoreTelemetry.ResultTag]);
-
         var duration = Assert.Single(capture.Find("crestapps.messaging.ai.turn.duration", CrestAppsOrchardCoreTelemetry.ChannelTag, channelTag));
+        Assert.Equal(MessagingTelemetry.ResultCancelled, duration.Tags[CrestAppsOrchardCoreTelemetry.ResultTag]);
         Assert.Equal(CrestAppsOrchardCoreTelemetry.OutcomeCancelled, duration.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag]);
     }
 

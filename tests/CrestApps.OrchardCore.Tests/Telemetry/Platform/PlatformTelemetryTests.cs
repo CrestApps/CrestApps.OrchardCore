@@ -1,10 +1,6 @@
 using System.Diagnostics;
 using CrestApps.OrchardCore.BackgroundWork;
 using CrestApps.OrchardCore.Diagnostics;
-using CrestApps.OrchardCore.Locking;
-using Moq;
-using OrchardCore.Locking;
-using OrchardCore.Locking.Distributed;
 
 namespace CrestApps.OrchardCore.Tests.Telemetry.Platform;
 
@@ -15,7 +11,7 @@ namespace CrestApps.OrchardCore.Tests.Telemetry.Platform;
 public sealed class PlatformTelemetryTests
 {
     [Fact]
-    public async Task BackgroundTaskRun_RecordsTheOutcomeItemsAndLastSuccess()
+    public async Task BackgroundTaskRun_RecordsItemsAndLastSuccess()
     {
         // Arrange
         using var capture = new TelemetryCapture();
@@ -31,9 +27,8 @@ public sealed class PlatformTelemetryTests
             return Task.CompletedTask;
         }, TimeSpan.FromMinutes(1));
 
-        // Assert
-        var runs = Assert.Single(capture.Find("crestapps.background_task.runs", CrestAppsOrchardCoreTelemetry.TaskTag, taskName));
-        Assert.Equal(CrestAppsOrchardCoreTelemetry.OutcomeOk, runs.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag]);
+        // Assert: an ok run is counted by Orchard Core's own background task metric, not again here.
+        Assert.Empty(capture.Find("crestapps.background_task.outcomes", CrestAppsOrchardCoreTelemetry.TaskTag, taskName));
 
         var items = capture.Find("crestapps.background_task.items", CrestAppsOrchardCoreTelemetry.TaskTag, taskName);
         Assert.Equal(5, items.Single(item => Equals(item.Tags[CrestAppsOrchardCoreTelemetry.ResultTag], "processed")).Value);
@@ -57,8 +52,8 @@ public sealed class PlatformTelemetryTests
             _ => throw new InvalidOperationException("boom")));
 
         // Assert
-        var runs = Assert.Single(capture.Find("crestapps.background_task.runs", CrestAppsOrchardCoreTelemetry.TaskTag, taskName));
-        Assert.Equal(CrestAppsOrchardCoreTelemetry.OutcomeError, runs.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag]);
+        var outcome = Assert.Single(capture.Find("crestapps.background_task.outcomes", CrestAppsOrchardCoreTelemetry.TaskTag, taskName));
+        Assert.Equal(CrestAppsOrchardCoreTelemetry.OutcomeError, outcome.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag]);
         Assert.Empty(capture.Find("crestapps.background_task.last_success", CrestAppsOrchardCoreTelemetry.TaskTag, taskName));
     }
 
@@ -96,8 +91,8 @@ public sealed class PlatformTelemetryTests
         });
 
         // Assert
-        var runs = Assert.Single(capture.Find("crestapps.background_task.runs", CrestAppsOrchardCoreTelemetry.TaskTag, taskName));
-        Assert.Equal(expectedOutcome, runs.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag]);
+        var outcome = Assert.Single(capture.Find("crestapps.background_task.outcomes", CrestAppsOrchardCoreTelemetry.TaskTag, taskName));
+        Assert.Equal(expectedOutcome, outcome.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag]);
 
         // An idle run is healthy, so it keeps the last success fresh; a lease skip or a failure does not.
         var lastSuccess = capture.Find("crestapps.background_task.last_success", CrestAppsOrchardCoreTelemetry.TaskTag, taskName);
@@ -169,7 +164,7 @@ public sealed class PlatformTelemetryTests
     }
 
     [Fact]
-    public void TelemetryScope_DisposedWithoutAnOutcome_RecordsAnError()
+    public void TelemetryScope_DisposedWithoutAnOutcome_RecordsUnknownAndLeavesTheSpanStatusUnset()
     {
         // Arrange
         using var capture = new TelemetryCapture();
@@ -179,7 +174,7 @@ public sealed class PlatformTelemetryTests
             "crestapps.tests.scope.duration",
             "A test duration.");
 
-        // Act
+        // Act: an early return leaves the scope without an outcome.
         TelemetryScope.Start(
             CrestAppsOrchardCoreTelemetry.PlatformActivitySource,
             "crestapps.tests.scope",
@@ -188,38 +183,24 @@ public sealed class PlatformTelemetryTests
 
         // Assert
         var duration = Assert.Single(capture.Find("crestapps.tests.scope.duration", CrestAppsOrchardCoreTelemetry.OperationTag, operation));
-        Assert.Equal(CrestAppsOrchardCoreTelemetry.OutcomeError, duration.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag]);
+        Assert.Equal(CrestAppsOrchardCoreTelemetry.Unknown, duration.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag]);
+
+        var span = Assert.Single(capture.Spans, span => Equals(span.GetTagItem(CrestAppsOrchardCoreTelemetry.OperationTag), operation));
+        Assert.Equal(ActivityStatusCode.Unset, span.Status);
     }
 
     [Theory]
-    [InlineData(200, "2xx", CrestAppsOrchardCoreTelemetry.OutcomeOk)]
-    [InlineData(429, "4xx", CrestAppsOrchardCoreTelemetry.OutcomeError)]
-    [InlineData(503, "5xx", CrestAppsOrchardCoreTelemetry.OutcomeError)]
-    public void ExternalCall_RecordsTheStatusClassAndOutcome(int statusCode, string expectedClass, string expectedOutcome)
+    [InlineData(200, "2xx")]
+    [InlineData(429, "4xx")]
+    [InlineData(503, "5xx")]
+    [InlineData(null, "none")]
+    public void GetStatusClass_ReturnsTheBoundedClass(int? statusCode, string expectedClass)
     {
-        // Arrange
-        using var capture = new TelemetryCapture();
-        var provider = "provider" + Guid.NewGuid().ToString("n");
-        var histogram = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
-            CrestAppsOrchardCoreTelemetry.PlatformMeter,
-            "crestapps.tests.call.duration",
-            "A test call duration.");
-
         // Act
-        using (var scope = ExternalCallTelemetry.Start(CrestAppsOrchardCoreTelemetry.PlatformActivitySource, "crestapps.tests.call", histogram, provider, "calls.answer"))
-        {
-            scope.SetStatusCode(statusCode);
-        }
+        var statusClass = ExternalCallTelemetry.GetStatusClass(statusCode);
 
         // Assert
-        var duration = Assert.Single(capture.Find("crestapps.tests.call.duration", CrestAppsOrchardCoreTelemetry.ProviderTag, provider));
-        Assert.Equal(expectedClass, duration.Tags[CrestAppsOrchardCoreTelemetry.StatusClassTag]);
-        Assert.Equal(expectedOutcome, duration.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag]);
-        Assert.Equal("calls.answer", duration.Tags[CrestAppsOrchardCoreTelemetry.OperationTag]);
-
-        var span = Assert.Single(capture.Spans, span => Equals(span.GetTagItem(CrestAppsOrchardCoreTelemetry.ProviderTag), provider));
-        Assert.Equal(ActivityKind.Client, span.Kind);
-        Assert.Equal(statusCode, span.GetTagItem("http.response.status_code"));
+        Assert.Equal(expectedClass, statusClass);
     }
 
     [Fact]
@@ -238,38 +219,6 @@ public sealed class PlatformTelemetryTests
         Assert.Equal(2, retries.Count);
         Assert.Contains(retries, retry => Equals(retry.Tags["attempt"], 2));
         Assert.Contains(retries, retry => Equals(retry.Tags["attempt"], RetryTelemetry.MaxAttemptTag));
-        Assert.Empty(capture.FindBannedTagKeys());
-    }
-
-    [Fact]
-    public async Task Locks_RecordTheResultWithTheAreaAndNeverTheKey()
-    {
-        // Arrange
-        using var capture = new TelemetryCapture();
-        var area = "tests." + Guid.NewGuid().ToString("n");
-        var locker = Mock.Of<ILocker>();
-        var distributedLock = new Mock<IDistributedLock>();
-
-        distributedLock
-            .Setup(service => service.TryAcquireLockAsync("free-key-123", It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
-            .ReturnsAsync((locker, true));
-        distributedLock
-            .Setup(service => service.TryAcquireLockAsync("held-key-456", It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
-            .ReturnsAsync(((ILocker)null, false));
-
-        // Act
-        await distributedLock.Object.TryAcquireLockWithoutWaitingAsync("free-key-123", area: area);
-        await distributedLock.Object.TryAcquireLockWithoutWaitingAsync("held-key-456", area: area);
-        await distributedLock.Object.TryAcquireMeasuredLockAsync("held-key-456", TimeSpan.FromSeconds(1), null, area);
-
-        // Assert
-        var acquisitions = capture.Find("crestapps.lock.acquisitions", LockTelemetry.AreaTag, area);
-        Assert.Equal(3, acquisitions.Count);
-        Assert.Contains(acquisitions, item => Equals(item.Tags[CrestAppsOrchardCoreTelemetry.ResultTag], LockTelemetry.ResultAcquired));
-        Assert.Contains(acquisitions, item => Equals(item.Tags[CrestAppsOrchardCoreTelemetry.ResultTag], LockTelemetry.ResultContended));
-        Assert.Contains(acquisitions, item => Equals(item.Tags[CrestAppsOrchardCoreTelemetry.ResultTag], LockTelemetry.ResultTimeout));
-        Assert.Equal(3, capture.Find("crestapps.lock.wait.duration", LockTelemetry.AreaTag, area).Count);
-        Assert.DoesNotContain(capture.Measurements, item => item.Tags.Values.Any(value => value is string text && text.Contains("-key-", StringComparison.Ordinal)));
         Assert.Empty(capture.FindBannedTagKeys());
     }
 

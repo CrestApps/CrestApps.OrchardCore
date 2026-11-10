@@ -25,7 +25,7 @@ internal sealed class WorkerLocks
     /// </summary>
     public Task<ILocker> LockAsync(IEnumerable<string> workerIds)
     {
-        return _distributedLock.LockAllAsync(workerIds.Where(id => !string.IsNullOrEmpty(id)).Select(id => "WORKFORCE_WORKER_" + id), _lockTimeout, _lockExpiration, area: "workforce.worker");
+        return _distributedLock.LockAllAsync(workerIds.Where(id => !string.IsNullOrEmpty(id)).Select(id => "WORKFORCE_WORKER_" + id), _lockTimeout, _lockExpiration);
     }
 
     public static async Task ReleaseAsync(ILocker locker)

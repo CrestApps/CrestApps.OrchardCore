@@ -33,15 +33,6 @@ public sealed class WebhookDeliveryStore : DocumentCatalog<WebhookDelivery, Webh
     }
 
     /// <inheritdoc/>
-    /// <inheritdoc/>
-    public Task<int> CountPendingAsync(CancellationToken cancellationToken = default)
-    {
-        var pending = WebhookDeliveryStatus.Pending;
-
-        return Session.QueryIndex<WebhookDeliveryIndex>(index => index.Status == pending, collection: CollectionName)
-            .CountAsync(cancellationToken);
-    }
-
     public async Task<(int Count, IReadOnlyList<WebhookDelivery> Deliveries)> PageAsync(string subscriptionId, WebhookDeliveryStatus? status, int skip, int take, CancellationToken cancellationToken = default)
     {
         var query = Session.Query<WebhookDelivery, WebhookDeliveryIndex>(index => index.SubscriptionId == subscriptionId, collection: CollectionName);

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Marketplace.Models;
 using CrestApps.OrchardCore.Marketplace.Telemetry;
 using CrestApps.OrchardCore.Orders.Core.Models;
@@ -296,25 +297,18 @@ public sealed class MarketplaceService
             string transferId;
             string failure;
 
-            using (var telemetry = MarketplaceTelemetry.StartPayout(provider.Name, vendor.ItemId))
+            try
             {
-                try
-                {
-                    (transferId, failure) = await provider.PayAsync(vendor, order, amount, group.Key.Currency, payout.IdempotencyKey, cancellationToken);
-
-                    telemetry.SetOutcome(failure is null ? MarketplaceTelemetry.OutcomePaid : MarketplaceTelemetry.OutcomeFailed);
-                }
-                catch (Exception exception)
-                {
-                    telemetry.Fail(exception);
-
-                    throw;
-                }
-                finally
-                {
-                    MarketplaceTelemetry.RecordPayout(provider.Name, telemetry.Outcome);
-                }
+                (transferId, failure) = await provider.PayAsync(vendor, order, amount, group.Key.Currency, payout.IdempotencyKey, cancellationToken);
             }
+            catch (Exception exception)
+            {
+                MarketplaceTelemetry.RecordPayout(provider.Name, CrestAppsOrchardCoreTelemetry.GetOutcome(exception));
+
+                throw;
+            }
+
+            MarketplaceTelemetry.RecordPayout(provider.Name, failure is null ? MarketplaceTelemetry.OutcomePaid : MarketplaceTelemetry.OutcomeFailed);
 
             payout.TransferId = transferId;
             payout.Failure = failure;

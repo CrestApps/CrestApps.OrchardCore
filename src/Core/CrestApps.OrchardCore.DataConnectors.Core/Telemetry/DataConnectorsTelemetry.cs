@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using CrestApps.OrchardCore.DataConnectors.Connectors.Http;
@@ -50,11 +49,6 @@ public static class DataConnectorsTelemetry
     /// The tag that holds why rows are read from a source: <c>live</c>, <c>import</c> or <c>preview</c>.
     /// </summary>
     public const string PurposeTag = "purpose";
-
-    /// <summary>
-    /// The tag that holds where a database error happened: <c>connect</c>, <c>query</c> or <c>read</c>.
-    /// </summary>
-    public const string StageTag = "stage";
 
     /// <summary>
     /// The tag that tells whether a failure may succeed when tried again: <c>true</c> or <c>false</c>.
@@ -131,9 +125,6 @@ public static class DataConnectorsTelemetry
     /// </summary>
     public const string RetryTokenRefresh = "token_refresh";
 
-    private static readonly ConcurrentDictionary<string, LastSuccessSnapshot> _lastSuccess = new(StringComparer.Ordinal);
-    private static readonly TimeSpan _lastSuccessSnapshotLifetime = TimeSpan.FromMinutes(5);
-
     /// <summary>
     /// Gets the meter of data connectors.
     /// </summary>
@@ -156,14 +147,6 @@ public static class DataConnectorsTelemetry
         CrestAppsOrchardCoreTelemetry.LongDurationBucketBoundaries);
 
     /// <summary>
-    /// Gets the counter of refreshes, tagged as <see cref="RefreshDuration"/> is.
-    /// </summary>
-    public static Counter<long> Refreshes { get; } = Meter.CreateCounter<long>(
-        "crestapps.dataconnector.refreshes",
-        "{refresh}",
-        "The number of refreshes of imported data sets, by how they ended.");
-
-    /// <summary>
     /// Gets the histogram of the rows a successful refresh read from its source, tagged with the
     /// <see cref="CrestAppsOrchardCoreTelemetry.TriggerTag"/>, <see cref="ModeTag"/> and <see cref="ConnectorTag"/>.
     /// </summary>
@@ -181,17 +164,6 @@ public static class DataConnectorsTelemetry
         "crestapps.dataconnector.refresh.active",
         "{refresh}",
         "The refreshes of imported data sets running now.");
-
-    /// <summary>
-    /// Gets the gauge of the seconds since the oldest last successful refresh among the enabled imported data sets that
-    /// refresh on a schedule. Each run of the refresh task takes the snapshot it reports, so the value stops being
-    /// reported a few minutes after the task stops running; <c>crestapps.background_task.last_success</c> covers that.
-    /// </summary>
-    public static ObservableGauge<double> LastSuccessAge { get; } = Meter.CreateObservableGauge(
-        "crestapps.dataconnector.refresh.last_success.age",
-        ObserveLastSuccessAge,
-        "s",
-        "The seconds since the oldest last successful refresh among the scheduled imported data sets.");
 
     /// <summary>
     /// Gets the histogram of the duration of reads of a data set from its source, tagged with the
@@ -251,25 +223,6 @@ public static class DataConnectorsTelemetry
         "The number of reads of imported data sets that returned no rows because the data set was never imported.");
 
     /// <summary>
-    /// Gets the histogram of the duration of reads of one page of rows from the row store, tagged with the
-    /// <see cref="CrestAppsOrchardCoreTelemetry.OperationTag"/> (<c>scan</c> or <c>keys</c>) and
-    /// <see cref="CrestAppsOrchardCoreTelemetry.OutcomeTag"/>.
-    /// </summary>
-    public static Histogram<double> RowStoreReadDuration { get; } = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
-        Meter,
-        "crestapps.dataconnector.rowstore.read.duration",
-        "The duration of reads of one page of rows of an imported data set from the row store.");
-
-    /// <summary>
-    /// Gets the histogram of the duration of writes of one batch of rows to the row store, tagged with the
-    /// <see cref="CrestAppsOrchardCoreTelemetry.OutcomeTag"/>.
-    /// </summary>
-    public static Histogram<double> RowStoreWriteDuration { get; } = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
-        Meter,
-        "crestapps.dataconnector.rowstore.write.duration",
-        "The duration of writes of one batch of rows of an imported data set to the row store.");
-
-    /// <summary>
     /// Gets the counter of requests the HTTP client sent again, tagged with the
     /// <see cref="CrestAppsOrchardCoreTelemetry.ReasonTag"/>: <see cref="RetryNetwork"/>, <see cref="RetryTimeout"/>,
     /// <see cref="RetryStatus429"/>, <see cref="RetryStatus5xx"/>, <see cref="RetryRedirect"/> or
@@ -281,18 +234,6 @@ public static class DataConnectorsTelemetry
         "The number of requests of HTTP-based connectors sent again, by why.");
 
     /// <summary>
-    /// Gets the histogram of the requests one call of the HTTP client sent, retries and redirects included, tagged
-    /// with the <see cref="CrestAppsOrchardCoreTelemetry.OutcomeTag"/> and
-    /// <see cref="CrestAppsOrchardCoreTelemetry.StatusClassTag"/> of the last response.
-    /// </summary>
-    public static Histogram<long> HttpAttempts { get; } = CrestAppsOrchardCoreTelemetry.CreateCountHistogram(
-        Meter,
-        "crestapps.dataconnector.http.attempts",
-        "{attempt}",
-        "The requests one call of an HTTP-based connector sent, retries and redirects included.",
-        [1, 2, 3, 4, 5, 8]);
-
-    /// <summary>
     /// Gets the counter of tokens HTTP-based connectors needed, tagged with the <see cref="AuthTag"/> and the
     /// <see cref="CrestAppsOrchardCoreTelemetry.ResultTag"/>: <c>cache_hit</c>, <c>acquired</c> or <c>failed</c>.
     /// </summary>
@@ -300,15 +241,6 @@ public static class DataConnectorsTelemetry
         "crestapps.dataconnector.token.requests",
         "{request}",
         "The number of tokens HTTP-based connectors needed, by whether the cache served them.");
-
-    /// <summary>
-    /// Gets the histogram of the duration of token requests to a token endpoint, discovery included, tagged with the
-    /// <see cref="AuthTag"/> and <see cref="CrestAppsOrchardCoreTelemetry.OutcomeTag"/>.
-    /// </summary>
-    public static Histogram<double> TokenDuration { get; } = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
-        Meter,
-        "crestapps.dataconnector.token.duration",
-        "The duration of requests HTTP-based connectors sent to a token endpoint.");
 
     /// <summary>
     /// Gets the counter of connections refused because every address of the host is on the site's own network.
@@ -336,14 +268,6 @@ public static class DataConnectorsTelemetry
         "The number of reads of data sets cut short by a limit.");
 
     /// <summary>
-    /// Gets the counter of pages of documents Elasticsearch data sets scrolled through.
-    /// </summary>
-    public static Counter<long> ElasticsearchScrollPages { get; } = Meter.CreateCounter<long>(
-        "crestapps.dataconnector.elasticsearch.scroll.pages",
-        "{page}",
-        "The number of pages of documents Elasticsearch data sets scrolled through.");
-
-    /// <summary>
     /// Gets the counter of Elasticsearch scrolls that couldn't be cleared after a read, and stay open until their
     /// keep-alive passes.
     /// </summary>
@@ -351,15 +275,6 @@ public static class DataConnectorsTelemetry
         "crestapps.dataconnector.elasticsearch.scroll.clear_failures",
         "{scroll}",
         "The number of Elasticsearch scrolls that couldn't be cleared after a read.");
-
-    /// <summary>
-    /// Gets the counter of errors relational databases answered, tagged with the <see cref="ConnectorTag"/>,
-    /// <see cref="StageTag"/> and <see cref="TransientTag"/>.
-    /// </summary>
-    public static Counter<long> DbErrors { get; } = Meter.CreateCounter<long>(
-        "crestapps.dataconnector.db.errors",
-        "{error}",
-        "The number of errors relational data connectors got from their databases.");
 
     /// <summary>
     /// Gets the histogram of the time spent parsing a media library file, tagged with the
@@ -540,21 +455,6 @@ public static class DataConnectorsTelemetry
     }
 
     /// <summary>
-    /// Records the requests one call of the HTTP client sent.
-    /// </summary>
-    /// <param name="attempts">The number of requests sent.</param>
-    /// <param name="outcome">How the call ended.</param>
-    /// <param name="statusCode">The status code of the last response, or <see langword="null"/> when none was received.</param>
-    internal static void RecordHttpAttempts(int attempts, string outcome, int? statusCode)
-    {
-        Record(HttpAttempts, attempts, new TagList
-        {
-            { CrestAppsOrchardCoreTelemetry.OutcomeTag, outcome },
-            { CrestAppsOrchardCoreTelemetry.StatusClassTag, ExternalCallTelemetry.GetStatusClass(statusCode) },
-        });
-    }
-
-    /// <summary>
     /// Counts a token an HTTP-based connector needed.
     /// </summary>
     /// <param name="auth">The <see cref="AuthTag"/> value.</param>
@@ -567,81 +467,4 @@ public static class DataConnectorsTelemetry
             { CrestAppsOrchardCoreTelemetry.ResultTag, result },
         });
     }
-
-    /// <summary>
-    /// Counts an error a relational database answered.
-    /// </summary>
-    /// <param name="connector">The name of the connector.</param>
-    /// <param name="stage"><c>connect</c>, <c>query</c> or <c>read</c>.</param>
-    /// <param name="transient">Whether the error may pass when tried again.</param>
-    internal static void RecordDbError(string connector, string stage, bool transient)
-    {
-        Add(DbErrors, new TagList
-        {
-            { ConnectorTag, connector ?? CrestAppsOrchardCoreTelemetry.Unknown },
-            { StageTag, stage },
-            { TransientTag, transient },
-        });
-    }
-
-    /// <summary>
-    /// Keeps the oldest last successful refresh among a tenant's scheduled imported data sets, for
-    /// <see cref="LastSuccessAge"/> to report.
-    /// </summary>
-    /// <param name="tenant">The name of the tenant.</param>
-    /// <param name="oldestSuccessUtc">The oldest last successful refresh, or <see langword="null"/> when the tenant
-    /// has no scheduled imported data set.</param>
-    /// <param name="utcNow">The current time, from the site clock.</param>
-    internal static void SetOldestLastSuccess(string tenant, DateTime? oldestSuccessUtc, DateTime utcNow)
-    {
-        tenant ??= string.Empty;
-
-        if (oldestSuccessUtc is not { } oldest)
-        {
-            _lastSuccess.TryRemove(tenant, out _);
-
-            return;
-        }
-
-        var age = Math.Max(0, (utcNow - oldest).TotalSeconds);
-
-        _lastSuccess[tenant] = new LastSuccessSnapshot(age, Stopwatch.GetTimestamp());
-    }
-
-    private static IEnumerable<Measurement<double>> ObserveLastSuccessAge()
-    {
-        var oldest = double.NaN;
-
-        foreach (var (tenant, snapshot) in _lastSuccess)
-        {
-            var sinceSnapshot = Stopwatch.GetElapsedTime(snapshot.Timestamp);
-
-            // A snapshot no run of the refresh task renewed belongs to a tenant that stopped or released its shell.
-            if (sinceSnapshot > _lastSuccessSnapshotLifetime)
-            {
-                continue;
-            }
-
-            var age = snapshot.AgeSeconds + sinceSnapshot.TotalSeconds;
-
-            if (CrestAppsOrchardCoreTelemetry.IncludeTenantName)
-            {
-                yield return new Measurement<double>(age, new KeyValuePair<string, object>(CrestAppsOrchardCoreTelemetry.TenantTag, tenant));
-
-                continue;
-            }
-
-            if (double.IsNaN(oldest) || age > oldest)
-            {
-                oldest = age;
-            }
-        }
-
-        if (!double.IsNaN(oldest))
-        {
-            yield return new Measurement<double>(oldest);
-        }
-    }
-
-    private readonly record struct LastSuccessSnapshot(double AgeSeconds, long Timestamp);
 }

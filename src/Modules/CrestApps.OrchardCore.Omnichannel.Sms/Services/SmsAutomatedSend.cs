@@ -10,7 +10,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Services;
 /// <summary>
 /// Sends the texts the automated SMS conversations write — the opening message, every reply and every re-engagement
 /// nudge — through the provider that owns the sending number, and measures each one as a send on
-/// <see cref="MessagingTelemetry.Send"/>, as the messaging workspace's own sends are.
+/// <see cref="MessagingTelemetry.SendDuration"/>, as the messaging workspace's own sends are.
 /// </summary>
 internal static class SmsAutomatedSend
 {
@@ -27,13 +27,6 @@ internal static class SmsAutomatedSend
 
         try
         {
-            // The router resolves the provider again when it sends; the lookup reads cached documents, and is only
-            // made when something records the send.
-            if (MessagingTelemetry.IsSendObserved)
-            {
-                MessagingTelemetry.SetProvider(telemetry, await router.ResolveProviderNameAsync(message.From, cancellationToken));
-            }
-
             var result = await router.SendAsync(message, cancellationToken);
 
             if (result.Succeeded)

@@ -189,14 +189,6 @@ public static class SubscriptionsTelemetry
         "The number of subscription transitions, by operation, result and statuses.");
 
     /// <summary>
-    /// The number of installment charges, tagged with the <c>provider</c>, the <c>trigger</c> and the <c>outcome</c>.
-    /// </summary>
-    public static Counter<long> InstallmentCharges { get; } = Meter.CreateCounter<long>(
-        "crestapps.subscriptions.installment.charges",
-        "{charge}",
-        "The number of installment plan charges, by provider, trigger and outcome.");
-
-    /// <summary>
     /// The duration of installment charges, tagged with the <c>provider</c>, the <c>trigger</c> and the <c>outcome</c>.
     /// </summary>
     public static Histogram<double> InstallmentChargeDuration { get; } = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
@@ -284,30 +276,6 @@ public static class SubscriptionsTelemetry
     }
 
     /// <summary>
-    /// Records an installment charge, with the outcome its scope ended with.
-    /// </summary>
-    /// <param name="providerKey">The key of the payment provider the plan pays with.</param>
-    /// <param name="manual">Whether an administrator asked for the charge.</param>
-    /// <param name="outcome">How the charge went, such as <see cref="ChargeDeclined"/>.</param>
-    public static void RecordInstallmentCharge(string providerKey, bool manual, string outcome)
-    {
-        if (!InstallmentCharges.Enabled)
-        {
-            return;
-        }
-
-        var tags = new TagList
-        {
-            { CrestAppsOrchardCoreTelemetry.ProviderTag, string.IsNullOrEmpty(providerKey) ? CrestAppsOrchardCoreTelemetry.Unknown : providerKey },
-            { CrestAppsOrchardCoreTelemetry.TriggerTag, manual ? TriggerManual : TriggerSchedule },
-            { CrestAppsOrchardCoreTelemetry.OutcomeTag, outcome },
-        };
-
-        CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
-        InstallmentCharges.Add(1, tags);
-    }
-
-    /// <summary>
     /// Starts measuring an attempt to provision a tenant.
     /// </summary>
     /// <param name="jobId">The id of the provisioning job, set on the span only.</param>
@@ -319,16 +287,6 @@ public static class SubscriptionsTelemetry
         scope.SetSpanTag(JobIdTag, jobId);
 
         return scope;
-    }
-
-    /// <summary>
-    /// Starts the child span of one step of provisioning a tenant, such as <c>setup</c>.
-    /// </summary>
-    /// <param name="step">The step, from a bounded set.</param>
-    /// <returns>The span, or <see langword="null"/> when nothing listens.</returns>
-    public static Activity StartProvisioningStep(string step)
-    {
-        return ActivitySource.StartActivity("crestapps.subscriptions.provisioning." + step);
     }
 
     /// <summary>

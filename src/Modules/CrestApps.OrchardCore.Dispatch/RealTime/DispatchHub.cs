@@ -45,22 +45,6 @@ public sealed class DispatchHub : Hub
         return true;
     }
 
-    /// <inheritdoc/>
-    public override Task OnConnectedAsync()
-    {
-        DispatchTelemetry.HubConnected();
-
-        return base.OnConnectedAsync();
-    }
-
-    /// <inheritdoc/>
-    public override Task OnDisconnectedAsync(Exception exception)
-    {
-        DispatchTelemetry.HubDisconnected();
-
-        return base.OnDisconnectedAsync(exception);
-    }
-
     /// <summary>
     /// Gives the tenant's board group.
     /// </summary>

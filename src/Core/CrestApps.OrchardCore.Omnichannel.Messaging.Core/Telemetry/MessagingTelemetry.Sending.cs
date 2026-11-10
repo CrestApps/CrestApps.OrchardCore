@@ -13,21 +13,15 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
 public static partial class MessagingTelemetry
 {
     /// <summary>
-    /// Starts measuring an outbound message handed to a provider: the <c>crestapps.messaging.send</c> client span,
-    /// <see cref="SendDuration"/> and <see cref="Send"/>. Add the provider with <see cref="SetProvider(MessagingMeasurement, string)"/>.
+    /// Starts measuring an outbound message handed to a provider: the <c>crestapps.messaging.send</c> span and
+    /// <see cref="SendDuration"/>, tagged with the result. Add the provider with <see cref="SetProvider(MessagingMeasurement, string)"/>.
     /// </summary>
     /// <param name="channel">The technical name of the channel, such as <see cref="OmnichannelConstants.Channels.Sms"/>.</param>
     /// <returns>The measurement.</returns>
     public static MessagingMeasurement StartSend(string channel)
     {
-        return Start("crestapps.messaging.send", SendDuration, Send, channel, ActivityKind.Client);
+        return Start("crestapps.messaging.send", SendDuration, channel, ActivityKind.Internal);
     }
-
-    /// <summary>
-    /// Gets a value indicating whether anything listens to the sends, so a caller only spends a lookup on the provider
-    /// name when it will be recorded.
-    /// </summary>
-    public static bool IsSendObserved => Send.Enabled || SendDuration.Enabled || ActivitySource.HasListeners();
 
     /// <summary>
     /// Adds the provider that sends a message to its measurement.
@@ -61,7 +55,7 @@ public static partial class MessagingTelemetry
     }
 
     /// <summary>
-    /// Gets the <see cref="Send"/> result of a provider's dispatch result.
+    /// Gets the <see cref="SendDuration"/> result of a provider's dispatch result.
     /// </summary>
     /// <param name="dispatch">The dispatch result.</param>
     /// <returns>The bounded result.</returns>
@@ -102,25 +96,6 @@ public static partial class MessagingTelemetry
     }
 
     /// <summary>
-    /// Records an outbound message given up on.
-    /// </summary>
-    /// <param name="channel">The technical name of the channel.</param>
-    /// <param name="attempts">The number of attempts made, which tells exhausted retries from a refusal that is never retried.</param>
-    public static void RecordOutboxFailed(string channel, int attempts)
-    {
-        if (!OutboxFailed.Enabled)
-        {
-            return;
-        }
-
-        Add(OutboxFailed, new TagList
-        {
-            { CrestAppsOrchardCoreTelemetry.ChannelTag, GetChannelTag(channel) },
-            { CrestAppsOrchardCoreTelemetry.ReasonTag, GetOutboxFailureReason(attempts) },
-        });
-    }
-
-    /// <summary>
     /// Gets why an outbound message was given up on.
     /// </summary>
     /// <param name="attempts">The number of attempts made.</param>
@@ -155,7 +130,7 @@ public static partial class MessagingTelemetry
     }
 
     /// <summary>
-    /// The results of <see cref="Send"/>.
+    /// The results of <see cref="SendDuration"/>.
     /// </summary>
     public static class SendResults
     {
@@ -186,7 +161,7 @@ public static partial class MessagingTelemetry
     }
 
     /// <summary>
-    /// The results of <see cref="OutboxRetry"/> and the reasons of <see cref="OutboxFailed"/>.
+    /// The results of <see cref="OutboxRetry"/> and the reasons logged when a message is given up on.
     /// </summary>
     public static class OutboxResults
     {

@@ -21,7 +21,7 @@ public sealed class WebhookTelemetryContractTests
     private static readonly DateTime _now = new(2026, 11, 10, 12, 0, 0, DateTimeKind.Utc);
 
     [Fact]
-    public async Task SendAsync_WhenTheSubscriberFails_CountsARetryItsSendAndTheRetryAttempt()
+    public async Task SendAsync_WhenTheSubscriberFails_CountsARetry()
     {
         // Arrange
         using var capture = new TraceScopedTelemetryCapture();
@@ -51,14 +51,8 @@ public sealed class WebhookTelemetryContractTests
         Assert.Equal("status_5xx", attempt.Tags[CrestAppsOrchardCoreTelemetry.ReasonTag]);
         Assert.Equal("5xx", attempt.Tags[CrestAppsOrchardCoreTelemetry.StatusClassTag]);
 
-        var send = Assert.Single(capture.Find("crestapps.webhook.delivery.duration"));
-        Assert.Equal(CrestAppsOrchardCoreTelemetry.OutcomeError, send.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag]);
-        Assert.Equal(WebhookTelemetry.OutboundProvider, send.Tags[CrestAppsOrchardCoreTelemetry.ProviderTag]);
-
-        var retry = Assert.Single(capture.Find("crestapps.retry.attempts"));
-        Assert.Equal("webhooks", retry.Tags[CrestAppsOrchardCoreTelemetry.AreaTag]);
-
-        Assert.Contains(capture.Spans, span => span.OperationName == "crestapps.webhook.delivery.send");
+        // The HTTP request itself is the HttpClient instrumentation's to measure, not the dispatcher's.
+        Assert.DoesNotContain(capture.Spans, span => span.OperationName == "crestapps.webhook.delivery.send");
         Assert.Empty(capture.FindBannedTagKeys());
     }
 
@@ -79,7 +73,6 @@ public sealed class WebhookTelemetryContractTests
         Assert.Equal(WebhookTelemetry.DeliveryError, attempt.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag]);
         Assert.Equal("deleted", attempt.Tags[CrestAppsOrchardCoreTelemetry.ReasonTag]);
         Assert.Equal("none", attempt.Tags[CrestAppsOrchardCoreTelemetry.StatusClassTag]);
-        Assert.Empty(capture.Find("crestapps.webhook.delivery.duration"));
     }
 
     [Fact]
@@ -93,7 +86,6 @@ public sealed class WebhookTelemetryContractTests
         WebhookTelemetry.RecordInboxDispatch(activity: null, "retry", "completed");
         WebhookTelemetry.RecordInboxHandler("ContactCenter.TelnyxVoice", TimeSpan.FromMilliseconds(20), exception: null);
         WebhookTelemetry.RecordInboxDeadLettered("Telnyx", "ContactCenter.TelnyxVoice");
-        WebhookTelemetry.RecordIngressLimited("rate");
 
         // Assert
         var accepted = Assert.Single(capture.Find("crestapps.webhook.inbox.accepted"));
@@ -106,7 +98,6 @@ public sealed class WebhookTelemetryContractTests
 
         Assert.Equal(CrestAppsOrchardCoreTelemetry.OutcomeOk, Assert.Single(capture.Find("crestapps.webhook.inbox.handler.duration")).Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag]);
         Assert.Equal("ContactCenter.TelnyxVoice", Assert.Single(capture.Find("crestapps.webhook.inbox.dead_lettered")).Tags["handler"]);
-        Assert.Equal("rate", Assert.Single(capture.Find("crestapps.webhook.ingress.limited")).Tags["limit"]);
         Assert.Empty(capture.FindBannedTagKeys());
     }
 

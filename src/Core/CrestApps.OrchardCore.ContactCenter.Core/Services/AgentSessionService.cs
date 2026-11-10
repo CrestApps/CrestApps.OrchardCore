@@ -1,7 +1,6 @@
 ﻿using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Locking.Distributed;
@@ -81,7 +80,7 @@ public sealed class AgentSessionService : IAgentSessionService
         ArgumentException.ThrowIfNullOrEmpty(userId);
         ArgumentException.ThrowIfNullOrEmpty(connectionId);
 
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(GetLockKey(userId), _lockTimeout, _lockExpiration, "contactcenter.agent.session");
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(GetLockKey(userId), _lockTimeout, _lockExpiration);
 
         if (!locked)
         {
@@ -445,7 +444,7 @@ public sealed class AgentSessionService : IAgentSessionService
                 continue;
             }
 
-            (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(GetLockKey(candidate.UserId), _lockTimeout, _lockExpiration, "contactcenter.agent.session");
+            (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(GetLockKey(candidate.UserId), _lockTimeout, _lockExpiration);
 
             if (!locked)
             {

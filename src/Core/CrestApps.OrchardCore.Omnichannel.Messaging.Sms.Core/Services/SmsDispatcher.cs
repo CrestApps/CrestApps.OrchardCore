@@ -6,7 +6,6 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
-using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Telemetry;
 using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -106,8 +105,6 @@ public sealed class SmsDispatcher : ISmsDispatcher
 
         if (string.IsNullOrEmpty(providerName))
         {
-            _logger.NoProviderResolved();
-
             return NoProvider(telemetry, "No SMS provider could be resolved for the sending number or the tenant default.");
         }
 

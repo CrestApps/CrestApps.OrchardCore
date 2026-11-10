@@ -6,7 +6,7 @@ namespace CrestApps.OrchardCore.Stripe.Core.Telemetry;
 
 /// <summary>
 /// The meter and activity source of the Stripe integration, <c>CrestApps.OrchardCore.Stripe</c>: the webhook events
-/// Stripe delivers and the calls made to Stripe's API. Event ids go on spans only; customer, payment and invoice ids,
+/// Stripe delivers. Event ids go on spans only; customer, payment and invoice ids,
 /// amounts and card data go nowhere.
 /// </summary>
 public static class StripeTelemetry
@@ -67,70 +67,8 @@ public static class StripeTelemetry
     /// </summary>
     public const string WebhookInboxError = "inbox_error";
 
-    /// <summary>
-    /// Stripe declined the card, answering 402.
-    /// </summary>
-    public const string ApiCardDeclined = "card_declined";
-
-    /// <summary>
-    /// Stripe limited the rate of requests, answering 429.
-    /// </summary>
-    public const string ApiRateLimited = "rate_limited";
-
-    /// <summary>
-    /// Stripe refused the API key, answering 401 or 403.
-    /// </summary>
-    public const string ApiAuthenticationError = "authentication_error";
-
-    /// <summary>
-    /// Stripe refused the request as invalid, answering another 4xx status.
-    /// </summary>
-    public const string ApiInvalidRequest = "invalid_request";
-
-    /// <summary>
-    /// Stripe failed, answering a 5xx status.
-    /// </summary>
-    public const string ApiError = "api_error";
-
-    /// <summary>
-    /// Stripe could not be reached.
-    /// </summary>
-    public const string ApiConnectivityError = "connectivity_error";
-
     // The API resources the integration calls, by the first segment of their path. Anything else is "other", so a
     // resource id or an unexpected path never becomes a tag value.
-    private static readonly HashSet<string> _apiResources = new(StringComparer.Ordinal)
-    {
-        "account_links",
-        "accounts",
-        "apple_pay",
-        "balance",
-        "billing_portal",
-        "charges",
-        "checkout",
-        "customers",
-        "disputes",
-        "ephemeral_keys",
-        "events",
-        "invoices",
-        "payment_intents",
-        "payment_method_domains",
-        "payment_methods",
-        "payouts",
-        "plans",
-        "prices",
-        "products",
-        "refunds",
-        "setup_intents",
-        "subscription_items",
-        "subscription_schedules",
-        "subscriptions",
-        "terminal",
-        "tokens",
-        "transfers",
-        "webhook_endpoints",
-    };
-
     /// <summary>
     /// The meter of the Stripe integration.
     /// </summary>
@@ -159,23 +97,6 @@ public static class StripeTelemetry
         Meter,
         "crestapps.stripe.webhook.handler.duration",
         "The time the payment handlers took to process a Stripe event.");
-
-    /// <summary>
-    /// The number of calls made to Stripe's API, tagged with the <c>operation</c> (the API resource), the
-    /// <c>outcome</c> and the <c>status_class</c>.
-    /// </summary>
-    public static Counter<long> ApiRequests { get; } = Meter.CreateCounter<long>(
-        "crestapps.stripe.api.requests",
-        "{request}",
-        "The number of calls made to Stripe's API, by resource and outcome.");
-
-    /// <summary>
-    /// The duration of calls made to Stripe's API, tagged with the <c>operation</c> and the <c>outcome</c>.
-    /// </summary>
-    public static Histogram<double> ApiDuration { get; } = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
-        Meter,
-        "crestapps.stripe.api.duration",
-        "The duration of calls made to Stripe's API.");
 
     /// <summary>
     /// Records a webhook delivery Stripe made.
@@ -222,77 +143,5 @@ public static class StripeTelemetry
         }
 
         return scope;
-    }
-
-    /// <summary>
-    /// Gets the bounded <c>operation</c> of a call to Stripe's API: the API resource from the first segment of the
-    /// path after the version, such as <c>payment_intents</c> for <c>/v1/payment_intents/pi_123/confirm</c>.
-    /// </summary>
-    /// <param name="requestUri">The URI of the call.</param>
-    /// <returns>The resource, or <c>other</c> when it is not one the integration calls.</returns>
-    public static string GetApiOperation(Uri requestUri)
-    {
-        if (requestUri is null || !requestUri.IsAbsoluteUri)
-        {
-            return CrestAppsOrchardCoreTelemetry.Other;
-        }
-
-        var segments = requestUri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-
-        // The first segment is the API version, such as "v1".
-        if (segments.Length < 2)
-        {
-            return CrestAppsOrchardCoreTelemetry.Other;
-        }
-
-        return _apiResources.Contains(segments[1])
-            ? segments[1]
-            : CrestAppsOrchardCoreTelemetry.Other;
-    }
-
-    /// <summary>
-    /// Gets the <c>outcome</c> of a call to Stripe's API from its HTTP status code.
-    /// </summary>
-    /// <param name="statusCode">The status code of the response.</param>
-    /// <returns><c>ok</c> for a success, otherwise the kind of failure, such as <see cref="ApiCardDeclined"/>.</returns>
-    public static string GetApiOutcome(int statusCode)
-    {
-        return statusCode switch
-        {
-            < 400 => CrestAppsOrchardCoreTelemetry.OutcomeOk,
-            402 => ApiCardDeclined,
-            429 => ApiRateLimited,
-            401 or 403 => ApiAuthenticationError,
-            < 500 => ApiInvalidRequest,
-            _ => ApiError,
-        };
-    }
-
-    /// <summary>
-    /// Records a call made to Stripe's API.
-    /// </summary>
-    /// <param name="operation">The bounded API resource, from <see cref="GetApiOperation(Uri)"/>.</param>
-    /// <param name="outcome">How the call went, such as <see cref="ApiRateLimited"/>.</param>
-    /// <param name="statusCode">The status code of the response, or <see langword="null"/> when there was none.</param>
-    /// <param name="elapsed">The duration of the call.</param>
-    public static void RecordApiRequest(string operation, string outcome, int? statusCode, TimeSpan elapsed)
-    {
-        if (!ApiRequests.Enabled && !ApiDuration.Enabled)
-        {
-            return;
-        }
-
-        var tags = new TagList
-        {
-            { CrestAppsOrchardCoreTelemetry.OperationTag, operation ?? CrestAppsOrchardCoreTelemetry.Other },
-            { CrestAppsOrchardCoreTelemetry.OutcomeTag, outcome },
-        };
-
-        CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
-
-        ApiDuration.Record(elapsed.TotalSeconds, tags);
-
-        tags.Add(CrestAppsOrchardCoreTelemetry.StatusClassTag, ExternalCallTelemetry.GetStatusClass(statusCode));
-        ApiRequests.Add(1, tags);
     }
 }

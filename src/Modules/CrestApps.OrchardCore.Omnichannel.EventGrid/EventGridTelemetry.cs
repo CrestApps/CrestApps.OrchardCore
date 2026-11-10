@@ -5,14 +5,14 @@ using CrestApps.OrchardCore.Diagnostics;
 namespace CrestApps.OrchardCore.Omnichannel.EventGrid;
 
 /// <summary>
-/// The OpenTelemetry instruments and spans of the Azure Event Grid webhook, under the meter and activity source
-/// <c>CrestApps.OrchardCore.EventGrid</c>: each delivery request and each event it carried. An event's id, subject and
+/// The OpenTelemetry instruments of the Azure Event Grid webhook, under the meter <c>CrestApps.OrchardCore.EventGrid</c>:
+/// each event a delivery carried. What became of the delivery itself is tagged on the ASP.NET Core server span. An event's id, subject and
 /// payload never go on a metric; the subject of an Azure Communication Services event is the customer's phone number.
 /// </summary>
 public static class EventGridTelemetry
 {
     /// <summary>
-    /// The name of the meter and the activity source.
+    /// The name of the meter.
     /// </summary>
     public const string SourceName = CrestAppsOrchardCoreTelemetry.SourceNamePrefix + ".EventGrid";
 
@@ -27,28 +27,6 @@ public static class EventGridTelemetry
     public static Meter Meter { get; } = CrestAppsOrchardCoreTelemetry.CreateMeter("EventGrid");
 
     /// <summary>
-    /// The activity source of the Event Grid spans.
-    /// </summary>
-    public static ActivitySource ActivitySource { get; } = CrestAppsOrchardCoreTelemetry.CreateActivitySource("EventGrid");
-
-    /// <summary>
-    /// The number of Event Grid delivery requests, tagged with the result (see <see cref="RequestResults"/>).
-    /// </summary>
-    public static Counter<long> Requests { get; } = Meter.CreateCounter<long>(
-        "crestapps.eventgrid.request",
-        "{request}",
-        "The number of Azure Event Grid delivery requests, by result.");
-
-    /// <summary>
-    /// The time the webhook took to answer an Event Grid delivery request, tagged with the result and the outcome.
-    /// Event Grid gives up on a delivery it waits more than 30 seconds for.
-    /// </summary>
-    public static Histogram<double> RequestDuration { get; } = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
-        Meter,
-        "crestapps.eventgrid.request.duration",
-        "The time the webhook took to answer an Azure Event Grid delivery request.");
-
-    /// <summary>
     /// The number of events the Event Grid deliveries carried, tagged with the <see cref="TypeTag"/> and the result
     /// (see <see cref="EventResults"/>).
     /// </summary>
@@ -56,76 +34,6 @@ public static class EventGridTelemetry
         "crestapps.eventgrid.event",
         "{event}",
         "The number of Azure Event Grid events received, by type and result.");
-
-    /// <summary>
-    /// Starts measuring a delivery request: the <c>crestapps.eventgrid.request</c> span and <see cref="RequestDuration"/>.
-    /// Complete it with <see cref="CompleteRequest(TelemetryScope, string)"/>.
-    /// </summary>
-    /// <returns>The scope.</returns>
-    public static TelemetryScope StartRequest()
-    {
-        return TelemetryScope.Start(ActivitySource, "crestapps.eventgrid.request", RequestDuration);
-    }
-
-    /// <summary>
-    /// Records how a delivery request ended.
-    /// </summary>
-    /// <param name="scope">The scope of the request.</param>
-    /// <param name="result">The result, one of <see cref="RequestResults"/>.</param>
-    public static void CompleteRequest(TelemetryScope scope, string result)
-    {
-        ArgumentNullException.ThrowIfNull(scope);
-        ArgumentException.ThrowIfNullOrEmpty(result);
-
-        scope.AddMetricTag(CrestAppsOrchardCoreTelemetry.ResultTag, result);
-
-        switch (result)
-        {
-            case RequestResults.Ok:
-            case RequestResults.Validated:
-                scope.Succeed();
-                break;
-
-            case RequestResults.Unauthorized:
-            case RequestResults.TooLarge:
-                scope.SetOutcome(CrestAppsOrchardCoreTelemetry.OutcomeBlocked);
-                break;
-
-            default:
-                scope.Fail();
-                break;
-        }
-
-        RecordRequest(result);
-    }
-
-    /// <summary>
-    /// Records a delivery request that threw. The exception type is recorded, but not its message: an error raised
-    /// while storing an inbound text can carry the phone numbers it was given.
-    /// </summary>
-    /// <param name="scope">The scope of the request.</param>
-    /// <param name="exception">The exception the request ended with.</param>
-    public static void FailRequest(TelemetryScope scope, Exception exception)
-    {
-        ArgumentNullException.ThrowIfNull(scope);
-        ArgumentNullException.ThrowIfNull(exception);
-
-        var outcome = CrestAppsOrchardCoreTelemetry.GetOutcome(exception);
-
-        scope.AddMetricTag(CrestAppsOrchardCoreTelemetry.ResultTag, RequestResults.Error);
-
-        if (outcome == CrestAppsOrchardCoreTelemetry.OutcomeError)
-        {
-            scope.AddMetricTag(CrestAppsOrchardCoreTelemetry.ErrorTypeTag, exception.GetType().FullName);
-            scope.Fail();
-        }
-        else
-        {
-            scope.SetOutcome(outcome);
-        }
-
-        RecordRequest(RequestResults.Error);
-    }
 
     /// <summary>
     /// Records one event a delivery carried.
@@ -147,22 +55,6 @@ public static class EventGridTelemetry
 
         CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
         Events.Add(1, tags);
-    }
-
-    private static void RecordRequest(string result)
-    {
-        if (!Requests.Enabled)
-        {
-            return;
-        }
-
-        var tags = new TagList
-        {
-            { CrestAppsOrchardCoreTelemetry.ResultTag, result },
-        };
-
-        CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
-        Requests.Add(1, tags);
     }
 
     /// <summary>
@@ -192,7 +84,7 @@ public static class EventGridTelemetry
     }
 
     /// <summary>
-    /// The results of <see cref="Requests"/>.
+    /// The results of a delivery, set as <c>crestapps.eventgrid.result</c> on the ASP.NET Core server span.
     /// </summary>
     public static class RequestResults
     {

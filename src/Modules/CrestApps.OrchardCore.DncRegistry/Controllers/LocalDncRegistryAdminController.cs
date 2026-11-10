@@ -1,17 +1,14 @@
 using System.Globalization;
 using System.Text;
-using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.DncRegistry.Models;
 using CrestApps.OrchardCore.DncRegistry.Services;
-using CrestApps.OrchardCore.DncRegistry.Telemetry;
 using CrestApps.OrchardCore.DncRegistry.ViewModels;
 using CrestApps.OrchardCore.Tabular;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.BackgroundJobs;
@@ -383,26 +380,15 @@ public sealed class LocalDncRegistryAdminController : Controller
     }
 
     /// <summary>
-    /// Runs a job queued after a request as measured deferred work, and logs its failure: the request that queued it
-    /// has ended, so nothing else would report it.
+    /// Runs a job queued after a request as measured deferred work, linked to the request that queued it.
     /// </summary>
-    private static async Task RunBackgroundJobAsync(
+    private static Task RunBackgroundJobAsync(
         ShellScope scope,
         string jobName,
         string listId,
         string traceParent,
         Func<ShellScope, string, Task> job)
-    {
-        try
-        {
-            await DeferredWork.RunAsync(jobName, traceParent, scope, jobScope => job(jobScope, listId));
-        }
-        catch (Exception ex)
-        {
-            var logger = scope.ServiceProvider.GetRequiredService<ILogger<LocalDncRegistryAdminController>>();
-            DncRegistryLog.BackgroundJobFailed(logger, ex, jobName, listId.SanitizeLogValue());
-        }
-    }
+        => DeferredWork.RunAsync(jobName, traceParent, scope, jobScope => job(jobScope, listId));
 
     private IActionResult RedirectToReturnUrlOrIndex(string returnUrl)
     {

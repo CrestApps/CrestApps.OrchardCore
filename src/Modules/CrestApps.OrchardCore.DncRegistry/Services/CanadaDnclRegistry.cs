@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
 using CrestApps.OrchardCore.Diagnostics;
@@ -130,10 +129,6 @@ public sealed class CanadaDnclRegistry : INationalDoNotCallRegistry
             apiKey ??= UnprotectApiKey(settings.ProtectedApiKey);
             checkedCount++;
 
-            var requestStarted = Stopwatch.GetTimestamp();
-            int? statusCode = null;
-            string requestOutcome = null;
-
             try
             {
                 var requestUrl = $"{baseUrl}DNCLNumbers/{apiNumber}?accountNumber={settings.AccountNumber}";
@@ -142,7 +137,6 @@ public sealed class CanadaDnclRegistry : INationalDoNotCallRegistry
                 request.Headers.Add("x-api-key", apiKey);
 
                 var response = await client.SendAsync(request, cancellationToken);
-                statusCode = (int)response.StatusCode;
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -159,16 +153,8 @@ public sealed class CanadaDnclRegistry : INationalDoNotCallRegistry
                 {
                     dncNumbers.Add(phoneNumber);
                 }
-
-                requestOutcome = CrestAppsOrchardCoreTelemetry.OutcomeOk;
             }
-            catch (OperationCanceledException ex)
-            {
-                requestOutcome = CrestAppsOrchardCoreTelemetry.GetOutcome(ex);
-
-                throw;
-            }
-            catch (Exception ex) when (ex is not DoNotCallScreeningException)
+            catch (Exception ex) when (ex is not DoNotCallScreeningException && ex is not OperationCanceledException)
             {
                 _logger.LogError(
                     ex,
@@ -178,10 +164,6 @@ public sealed class CanadaDnclRegistry : INationalDoNotCallRegistry
                     Key,
                     "The Canada LNNTE-DNCL registry could not be reached, so it could not report whether the number is listed.",
                     ex);
-            }
-            finally
-            {
-                DncRegistryTelemetry.RecordRegistryRequest(DncRegistryTelemetry.RegistryCanadaDncl, requestOutcome, statusCode, requestStarted);
             }
         }
 

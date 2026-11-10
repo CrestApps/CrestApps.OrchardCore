@@ -44,15 +44,6 @@ public static partial class ReportTelemetry
         "The duration of coded report runs.");
 
     /// <summary>
-    /// Gets the counter of coded report runs, tagged with the <see cref="ReportNameTag"/>, the <see cref="ModeTag"/> and
-    /// the outcome.
-    /// </summary>
-    public static Counter<long> CodedRuns { get; } = ReportTelemetrySource.Meter.CreateCounter<long>(
-        "crestapps.report.coded.runs",
-        "{run}",
-        "The coded report runs, by how they ended.");
-
-    /// <summary>
     /// Gets the histogram of the index rows a coded report read at once, tagged with the <see cref="ReportNameTag"/>.
     /// </summary>
     public static Histogram<long> CodedIndexRows { get; } = CrestAppsOrchardCoreTelemetry.CreateCountHistogram(
@@ -102,8 +93,8 @@ public static partial class ReportTelemetry
         "The report export requests, by how they ended.");
 
     /// <summary>
-    /// Runs a coded report and measures the run: a <c>report.coded.run</c> span, <see cref="CodedDuration"/> and
-    /// <see cref="CodedRuns"/>.
+    /// Runs a coded report and measures the run: a <c>report.coded.run</c> span and <see cref="CodedDuration"/>, tagged
+    /// with the outcome.
     /// </summary>
     /// <param name="runner">The report, from <see cref="Services.IReportManager.GetReport(string)"/>.</param>
     /// <param name="descriptor">The descriptor of the report in the registry, whose name tags the metrics.</param>
@@ -141,15 +132,6 @@ public static partial class ReportTelemetry
             telemetry.Fail(exception);
 
             throw;
-        }
-        finally
-        {
-            if (CodedRuns.Enabled)
-            {
-                tags.Add(CrestAppsOrchardCoreTelemetry.OutcomeTag, telemetry.Outcome);
-                CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
-                CodedRuns.Add(1, tags);
-            }
         }
     }
 

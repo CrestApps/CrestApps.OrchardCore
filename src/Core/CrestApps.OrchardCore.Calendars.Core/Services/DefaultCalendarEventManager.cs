@@ -567,7 +567,7 @@ public sealed class DefaultCalendarEventManager : ICalendarEventManager
                 // A caller that books from its own availability takes these locks with its own, before it reads it.
                 if (!options.CalendarLocksHeld)
                 {
-                    lockers = await _distributedLock.LockAllAsync(targets.Select(target => CalendarLockKeys.Calendar(target.ItemId)), _lockTimeout, _lockExpiration, area: "calendars.calendar");
+                    lockers = await _distributedLock.LockAllAsync(targets.Select(target => CalendarLockKeys.Calendar(target.ItemId)), _lockTimeout, _lockExpiration);
 
                     if (lockers is null)
                     {

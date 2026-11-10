@@ -174,7 +174,7 @@ internal sealed class DefaultTimeClockService : ITimeClockService
             return result;
         }
 
-        var lockers = await _locks.LockAsync([TimeOffLocks.TimeClock(worker.ItemId)], TimeOffLocks.TimeClockArea);
+        var lockers = await _locks.LockAsync([TimeOffLocks.TimeClock(worker.ItemId)]);
 
         if (lockers is null)
         {
@@ -529,7 +529,7 @@ internal sealed class DefaultTimeClockService : ITimeClockService
             return result;
         }
 
-        var lockers = await _locks.LockAsync([TimeOffLocks.TimeClock(original.WorkerId)], TimeOffLocks.TimeClockArea);
+        var lockers = await _locks.LockAsync([TimeOffLocks.TimeClock(original.WorkerId)]);
 
         if (lockers is null)
         {

@@ -15,14 +15,12 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
 using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -90,9 +88,6 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
-    // Optional: phone numbers that reach the log go through it, or are left out when no redactor is registered.
-    private readonly Redactor _addressRedactor;
-
     internal readonly IStringLocalizer S;
 
     public VoiceAgentConversationLoop(
@@ -129,8 +124,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         IClock clock,
         ILogger<VoiceAgentConversationLoop> logger,
         IStringLocalizer<VoiceAgentConversationLoop> stringLocalizer,
-        TimeProvider timeProvider = null,
-        IRedactorProvider redactorProvider = null)
+        TimeProvider timeProvider = null)
     {
         _activityStore = activityStore;
         _chatSessionManager = chatSessionManager;
@@ -165,15 +159,8 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         _clock = clock;
         _timeProvider = timeProvider ?? TimeProvider.System;
         _logger = logger;
-        _addressRedactor = redactorProvider?.GetRedactor(LogDataClassifications.AddressSet);
         S = stringLocalizer;
     }
-
-    // A phone number as the log may show it: through the address redactor, or left out entirely when there is none.
-    private string RedactAddress(string address)
-        => string.IsNullOrEmpty(address)
-            ? address
-            : _addressRedactor?.Redact(address) ?? string.Empty;
 
     /// <inheritdoc/>
     public async Task HandleAsync(VoiceAgentEvent voiceEvent, CancellationToken cancellationToken = default)

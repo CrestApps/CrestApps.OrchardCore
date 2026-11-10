@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using CrestApps.OrchardCore.Checkout.Core.Telemetry;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
@@ -72,34 +71,21 @@ public sealed class CheckoutReconciliationService : ICheckoutReconciliationServi
             var providerTag = CheckoutTelemetry.GetProviderTag(provider);
             PaymentVerificationResult verification;
 
-            using (var providerCall = TelemetryScope.Start(
-                CheckoutTelemetry.ActivitySource,
-                "crestapps.checkout.provider.verify",
-                duration: null,
-                new TagList { { CrestAppsOrchardCoreTelemetry.ProviderTag, providerTag } },
-                ActivityKind.Client))
+            try
             {
-                providerCall.SetSpanTag(CheckoutTelemetry.AttemptIdTag, attempt.ItemId);
+                verification = await provider.VerifyAsync(
+                    new VerifyPaymentContext
+                    {
+                        Session = session,
+                        Attempt = attempt,
+                    },
+                    cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                CheckoutTelemetry.RecordReconcileAttempt(providerTag, CrestAppsOrchardCoreTelemetry.GetOutcome(exception));
 
-                try
-                {
-                    verification = await provider.VerifyAsync(
-                        new VerifyPaymentContext
-                        {
-                            Session = session,
-                            Attempt = attempt,
-                        },
-                        cancellationToken);
-
-                    providerCall.Succeed();
-                }
-                catch (Exception exception)
-                {
-                    providerCall.Fail(exception);
-                    CheckoutTelemetry.RecordReconcileAttempt(providerTag, CrestAppsOrchardCoreTelemetry.GetOutcome(exception));
-
-                    throw;
-                }
+                throw;
             }
 
             CheckoutTelemetry.RecordReconcileAttempt(providerTag, await ApplyVerificationAsync(attempt, verification, cancellationToken));

@@ -11,13 +11,13 @@ public static partial class MessagingTelemetry
 {
     /// <summary>
     /// Starts measuring an inbound message the workspace pipeline processes: the <c>crestapps.messaging.inbound</c> span,
-    /// <see cref="InboundDuration"/> and <see cref="Inbound"/>.
+    /// <see cref="InboundDuration"/>, tagged with the result.
     /// </summary>
     /// <param name="channel">The technical name of the channel, or <see langword="null"/> when no enabled channel serves it.</param>
     /// <returns>The measurement.</returns>
     public static MessagingMeasurement StartInbound(string channel)
     {
-        return Start("crestapps.messaging.inbound", InboundDuration, Inbound, channel, ActivityKind.Internal);
+        return Start("crestapps.messaging.inbound", InboundDuration, channel, ActivityKind.Internal);
     }
 
     /// <summary>
@@ -108,7 +108,7 @@ public static partial class MessagingTelemetry
     }
 
     /// <summary>
-    /// The results of <see cref="Inbound"/>.
+    /// The results of <see cref="InboundDuration"/>.
     /// </summary>
     public static class InboundResults
     {

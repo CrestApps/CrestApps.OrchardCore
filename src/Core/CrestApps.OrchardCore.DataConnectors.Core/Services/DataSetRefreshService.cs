@@ -4,12 +4,10 @@ using CrestApps.OrchardCore.DataConnectors.Models;
 using CrestApps.OrchardCore.DataConnectors.Storage;
 using CrestApps.OrchardCore.DataConnectors.Telemetry;
 using CrestApps.OrchardCore.Diagnostics;
-using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.DataSources;
-using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
@@ -28,8 +26,6 @@ namespace CrestApps.OrchardCore.DataConnectors.Services;
 /// </remarks>
 internal sealed class DataSetRefreshService : IDataSetRefreshService
 {
-    private const string _lockArea = "dataconnectors.refresh";
-
     private readonly ISession _session;
     private readonly IConnectedDataSetStore _dataSetStore;
     private readonly IDataSetRefreshRunStore _runStore;
@@ -89,8 +85,7 @@ internal sealed class DataSetRefreshService : IDataSetRefreshService
         using var measurement = DataSetRefreshMeasurement.Start(dataSet, run);
         using var logScope = _logger.BeginRefreshScope(dataSet.ItemId.SanitizeLogValue(), run.ItemId);
 
-        // A zero timeout never acquires the Redis lock, so the lock is tried once without waiting instead.
-        var (locker, locked) = await _distributedLock.TryAcquireLockWithoutWaitingAsync($"CrestApps.DataConnectors.Refresh:{dataSet.ItemId}", lockExpiration, _lockArea);
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync($"CrestApps.DataConnectors.Refresh:{dataSet.ItemId}", TimeSpan.Zero, lockExpiration);
 
         if (!locked)
         {
@@ -111,17 +106,22 @@ internal sealed class DataSetRefreshService : IDataSetRefreshService
 
         await using (locker)
         {
-            if (_logger.IsEnabled(LogLevel.Information))
+            try
             {
-                _logger.RefreshStarted(dataSet.Name.SanitizeLogValue(), DataConnectorsTelemetry.ToTag(trigger), DataConnectorsTelemetry.ToTag(run.Mode));
+                await _runStore.CreateAsync(run, cancellationToken);
+
+                dataSet.Import ??= new DataSetImportState();
+                dataSet.Import.RefreshRequestedUtc = null;
+                await _dataSetStore.UpdateAsync(dataSet, cancellationToken);
+                await _session.SaveChangesAsync(cancellationToken);
             }
+            catch (Exception exception)
+            {
+                // The refresh could not record that it started; it ends as a failure, and the exception still escapes.
+                measurement.Fail(exception, timedOut: false);
 
-            await _runStore.CreateAsync(run, cancellationToken);
-
-            dataSet.Import ??= new DataSetImportState();
-            dataSet.Import.RefreshRequestedUtc = null;
-            await _dataSetStore.UpdateAsync(dataSet, cancellationToken);
-            await _session.SaveChangesAsync(cancellationToken);
+                throw;
+            }
 
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
@@ -135,11 +135,6 @@ internal sealed class DataSetRefreshService : IDataSetRefreshService
                 await ImportAsync(dataSet, run, measurement, timeout.Token);
                 await PublishAsync(dataSet, run, cancellationToken);
                 measurement.End(CrestAppsOrchardCoreTelemetry.OutcomeOk);
-
-                if (_logger.IsEnabled(LogLevel.Information))
-                {
-                    _logger.RefreshSucceeded(dataSet.Name.SanitizeLogValue(), (long)measurement.Elapsed.TotalMilliseconds, DataConnectorsTelemetry.ToTag(run.Mode), run.RowsRead, run.RowCount);
-                }
             }
             catch (Exception exception)
             {
@@ -170,102 +165,19 @@ internal sealed class DataSetRefreshService : IDataSetRefreshService
     public async Task<int> RefreshDueAsync(CancellationToken cancellationToken = default)
     {
         var due = await _dataSetStore.ListDueAsync(_clock.UtcNow, cancellationToken);
-        var limit = Math.Max(1, _options.MaxRefreshesPerRun);
-        var attempted = 0;
-        var succeeded = 0;
-        var failed = 0;
-        var skipped = 0;
+        var count = 0;
 
-        foreach (var dataSet in due.Take(limit))
+        foreach (var dataSet in due.Take(Math.Max(1, _options.MaxRefreshesPerRun)))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             var trigger = dataSet.Import?.RefreshRequestedUtc is null ? DataSetRefreshTrigger.Scheduled : DataSetRefreshTrigger.Manual;
 
-            attempted++;
-
-            try
-            {
-                var run = await RefreshAsync(dataSet, trigger, cancellationToken: cancellationToken);
-
-                switch (run.Status)
-                {
-                    case DataSetRefreshStatus.Succeeded:
-                        succeeded++;
-                        break;
-
-                    case DataSetRefreshStatus.Skipped:
-                        skipped++;
-                        break;
-
-                    default:
-                        failed++;
-                        break;
-                }
-            }
-            catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
-            {
-                // The refresh couldn't record how it ended, such as when the database refused to save it. The run's
-                // refreshes share one session, which YesSql cancels when a save fails, so the next refreshes couldn't
-                // record theirs either: the run stops here without failing the task, and the next run, with a new
-                // session, refreshes the data sets still due.
-                failed++;
-                _logger.RefreshAborted(exception, dataSet.ItemId.SanitizeLogValue());
-
-                break;
-            }
+            await RefreshAsync(dataSet, trigger, cancellationToken: cancellationToken);
+            count++;
         }
 
-        if (due.Count > 0 && _logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.RefreshSweepCompleted(due.Count, succeeded, failed, skipped, due.Count - attempted);
-        }
-
-        await SnapshotLastSuccessAsync(cancellationToken);
-
-        // A refresh skipped because another refresh of the data set was running didn't run.
-        return succeeded + failed;
-    }
-
-    private async Task SnapshotLastSuccessAsync(CancellationToken cancellationToken)
-    {
-        // The age gauge reads the snapshot, never the database, so it is taken here, once per run of the refresh task.
-        if (!DataConnectorsTelemetry.LastSuccessAge.Enabled)
-        {
-            return;
-        }
-
-        try
-        {
-            DateTime? oldest = null;
-
-            foreach (var dataSet in await _dataSetStore.ListAsync(cancellationToken))
-            {
-                if (!dataSet.IsEnabled || dataSet.AccessMode != DataSetAccessMode.Imported || dataSet.Refresh?.IntervalMinutes is not > 0)
-                {
-                    continue;
-                }
-
-                // A scheduled data set that never refreshed counts from when it was created.
-                var lastSuccess = dataSet.Import?.LastSuccessUtc;
-
-                if (lastSuccess is null && dataSet.CreatedUtc != default)
-                {
-                    lastSuccess = dataSet.CreatedUtc;
-                }
-
-                if (lastSuccess is { } value && (oldest is null || value < oldest))
-                {
-                    oldest = value;
-                }
-            }
-
-            DataConnectorsTelemetry.SetOldestLastSuccess(ShellScope.Context?.Settings?.Name, oldest, _clock.UtcNow);
-        }
-        catch (Exception exception) when (exception is not OperationCanceledException)
-        {
-            _logger.LastSuccessSnapshotFailed(exception);
-        }
+        return count;
     }
 
     private async Task ImportAsync(

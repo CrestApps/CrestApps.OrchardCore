@@ -159,7 +159,7 @@ public sealed class TenantHierarchyBroker : ITenantHierarchyBroker
 
     /// <inheritdoc/>
     public Task<TenantHierarchyResult> CreateChildSettingsAsync(string entryId, ChildDatabaseProvisioningResult database)
-        => TenantHierarchyTelemetry.MeasureChildOperationAsync(TenantHierarchyTelemetry.OperationCreate, entryId, _logger, () => CreateChildSettingsCoreAsync(entryId, database));
+        => TenantHierarchyTelemetry.MeasureChildOperationAsync(TenantHierarchyTelemetry.OperationCreate, entryId, () => CreateChildSettingsCoreAsync(entryId, database));
 
     private async Task<TenantHierarchyResult> CreateChildSettingsCoreAsync(string entryId, ChildDatabaseProvisioningResult database)
     {
@@ -231,7 +231,7 @@ public sealed class TenantHierarchyBroker : ITenantHierarchyBroker
 
     /// <inheritdoc/>
     public Task<TenantHierarchyResult> SetupChildAsync(string entryId)
-        => TenantHierarchyTelemetry.MeasureChildOperationAsync(TenantHierarchyTelemetry.OperationSetup, entryId, _logger, () => SetupChildCoreAsync(entryId));
+        => TenantHierarchyTelemetry.MeasureChildOperationAsync(TenantHierarchyTelemetry.OperationSetup, entryId, () => SetupChildCoreAsync(entryId));
 
     private async Task<TenantHierarchyResult> SetupChildCoreAsync(string entryId)
     {
@@ -345,7 +345,7 @@ public sealed class TenantHierarchyBroker : ITenantHierarchyBroker
 
     /// <inheritdoc/>
     public Task<TenantHierarchyResult> UpdateChildSettingsAsync(string entryId)
-        => TenantHierarchyTelemetry.MeasureChildOperationAsync(TenantHierarchyTelemetry.OperationUpdate, entryId, _logger, () => UpdateChildSettingsCoreAsync(entryId));
+        => TenantHierarchyTelemetry.MeasureChildOperationAsync(TenantHierarchyTelemetry.OperationUpdate, entryId, () => UpdateChildSettingsCoreAsync(entryId));
 
     private async Task<TenantHierarchyResult> UpdateChildSettingsCoreAsync(string entryId)
     {
@@ -370,7 +370,7 @@ public sealed class TenantHierarchyBroker : ITenantHierarchyBroker
 
     /// <inheritdoc/>
     public Task<TenantHierarchyResult> SuspendChildAsync(string entryId)
-        => TenantHierarchyTelemetry.MeasureChildOperationAsync(TenantHierarchyTelemetry.OperationSuspend, entryId, _logger, () => SuspendChildCoreAsync(entryId));
+        => TenantHierarchyTelemetry.MeasureChildOperationAsync(TenantHierarchyTelemetry.OperationSuspend, entryId, () => SuspendChildCoreAsync(entryId));
 
     private async Task<TenantHierarchyResult> SuspendChildCoreAsync(string entryId)
     {
@@ -395,7 +395,7 @@ public sealed class TenantHierarchyBroker : ITenantHierarchyBroker
 
     /// <inheritdoc/>
     public Task<TenantHierarchyResult> ResumeChildAsync(string entryId)
-        => TenantHierarchyTelemetry.MeasureChildOperationAsync(TenantHierarchyTelemetry.OperationResume, entryId, _logger, () => ResumeChildCoreAsync(entryId));
+        => TenantHierarchyTelemetry.MeasureChildOperationAsync(TenantHierarchyTelemetry.OperationResume, entryId, () => ResumeChildCoreAsync(entryId));
 
     private async Task<TenantHierarchyResult> ResumeChildCoreAsync(string entryId)
     {
@@ -420,7 +420,7 @@ public sealed class TenantHierarchyBroker : ITenantHierarchyBroker
 
     /// <inheritdoc/>
     public Task<TenantHierarchyResult> ReloadChildAsync(string entryId)
-        => TenantHierarchyTelemetry.MeasureChildOperationAsync(TenantHierarchyTelemetry.OperationReload, entryId, _logger, () => ReloadChildCoreAsync(entryId));
+        => TenantHierarchyTelemetry.MeasureChildOperationAsync(TenantHierarchyTelemetry.OperationReload, entryId, () => ReloadChildCoreAsync(entryId));
 
     private async Task<TenantHierarchyResult> ReloadChildCoreAsync(string entryId)
     {
@@ -440,7 +440,7 @@ public sealed class TenantHierarchyBroker : ITenantHierarchyBroker
 
     /// <inheritdoc/>
     public Task<TenantHierarchyResult> RemoveChildAsync(string entryId)
-        => TenantHierarchyTelemetry.MeasureChildOperationAsync(TenantHierarchyTelemetry.OperationRemove, entryId, _logger, () => RemoveChildCoreAsync(entryId));
+        => TenantHierarchyTelemetry.MeasureChildOperationAsync(TenantHierarchyTelemetry.OperationRemove, entryId, () => RemoveChildCoreAsync(entryId));
 
     private async Task<TenantHierarchyResult> RemoveChildCoreAsync(string entryId)
     {
@@ -516,7 +516,7 @@ public sealed class TenantHierarchyBroker : ITenantHierarchyBroker
 
     /// <inheritdoc/>
     public Task<TenantHierarchyResult> SetChildFeaturesAsync(string entryId, IEnumerable<string> featureIds, bool enable)
-        => TenantHierarchyTelemetry.MeasureChildOperationAsync(TenantHierarchyTelemetry.OperationSetFeatures, entryId, _logger, () => SetChildFeaturesCoreAsync(entryId, featureIds, enable));
+        => TenantHierarchyTelemetry.MeasureChildOperationAsync(TenantHierarchyTelemetry.OperationSetFeatures, entryId, () => SetChildFeaturesCoreAsync(entryId, featureIds, enable));
 
     private async Task<TenantHierarchyResult> SetChildFeaturesCoreAsync(string entryId, IEnumerable<string> featureIds, bool enable)
     {

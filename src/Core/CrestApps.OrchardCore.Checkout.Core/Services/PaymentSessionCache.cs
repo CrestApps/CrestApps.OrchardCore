@@ -1,5 +1,4 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell;
@@ -174,7 +173,7 @@ public sealed class PaymentSessionCache
     {
         var lockKey = $"PAYMENT_{key}_LOCK";
 
-        var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync(lockKey, _lockTimeout, _lockExpiration, "checkout.payment_session");
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(lockKey, _lockTimeout, _lockExpiration);
 
         if (!locked)
         {

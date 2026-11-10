@@ -4,7 +4,6 @@ using CrestApps.OrchardCore.ContentTransfer.Indexes;
 using CrestApps.OrchardCore.ContentTransfer.Models;
 using CrestApps.OrchardCore.ContentTransfer.Telemetry;
 using CrestApps.OrchardCore.Diagnostics;
-using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -84,11 +83,10 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
                 break;
             }
 
-            (var locker, var locked) = await distributedLock.TryAcquireMeasuredLockAsync(
+            (var locker, var locked) = await distributedLock.TryAcquireLockAsync(
                 GetExportLockKey(entry.EntryId),
                 _exportLockTimeout,
-                _exportLockExpiration,
-                "contenttransfer.export");
+                _exportLockExpiration);
 
             if (!locked)
             {
@@ -165,11 +163,6 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
 
         var progressPart = entry.GetOrCreate<ImportFileProcessStatsPart>();
         progressPart.Errors ??= [];
-
-        // An export always starts from its first page, including one a stopping host interrupted.
-        progressPart.CurrentRow = 0;
-        progressPart.TotalProcessed = 0;
-        progressPart.ImportedCount = 0;
 
         try
         {
@@ -352,10 +345,6 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
                 writer.Flush();
             }
 
-            // A stopping host used to end the page loop and the partial file was then stored as a completed export.
-            // The export is left as it is and starts over on the next run.
-            cancellationToken.ThrowIfCancellationRequested();
-
             var fileSize = tempStream.Length;
 
             // Save the completed file to the file store.
@@ -384,30 +373,8 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
                 ContentTransferLog.ExportFinished(logger, entry.EntryId, telemetry.Elapsed, progressPart.ImportedCount, progressPart.TotalProcessed, fileSize);
             }
 
-            // The file is stored and the export complete, so a notification that cannot be sent no longer marks the
-            // export as failed.
-            try
-            {
-                await TrySendExportNotificationAsync(serviceProvider, entry, contentTypeDefinition.DisplayName);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                RecordExportFailure("notification_failed");
-
-                if (logger.IsEnabled(LogLevel.Warning))
-                {
-                    ContentTransferLog.ExportNotificationFailed(logger, ex, entry.EntryId);
-                }
-            }
-        }
-        catch (Exception) when (cancellationToken.IsCancellationRequested)
-        {
-            telemetry.SetOutcome(CrestAppsOrchardCoreTelemetry.OutcomeCancelled);
-
-            if (logger.IsEnabled(LogLevel.Information))
-            {
-                ContentTransferLog.ExportStopped(logger, entry.EntryId);
-            }
+            // Send notification if the Notifications module is enabled.
+            await TrySendExportNotificationAsync(serviceProvider, entry, contentTypeDefinition.DisplayName);
         }
         catch (Exception ex)
         {

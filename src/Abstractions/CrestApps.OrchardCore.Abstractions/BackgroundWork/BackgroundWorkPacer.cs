@@ -43,14 +43,6 @@ public static class BackgroundWorkPacer
         CrestAppsOrchardCoreTelemetry.LongDurationBucketBoundaries);
 
     /// <summary>
-    /// The number of batches that gave up waiting for the gate after <see cref="GateWaitLimit"/> and ran without it.
-    /// </summary>
-    public static Counter<long> GateTimeouts { get; } = CrestAppsOrchardCoreTelemetry.PlatformMeter.CreateCounter<long>(
-        "crestapps.background.pacer.gate_timeouts",
-        "{batch}",
-        "The number of background batches that gave up waiting for the shared pacing gate and ran without it.");
-
-    /// <summary>
     /// The pause a batch earned and held the gate through, so bulk work keeps to its share of the database.
     /// </summary>
     public static Histogram<double> PauseDuration { get; } = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
@@ -159,11 +151,6 @@ public static class BackgroundWorkPacer
         if (GateWaitDuration.Enabled)
         {
             GateWaitDuration.Record(waited.TotalSeconds, tags);
-        }
-
-        if (!holdsGate && GateTimeouts.Enabled)
-        {
-            GateTimeouts.Add(1, tags);
         }
     }
 

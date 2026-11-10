@@ -8,14 +8,15 @@ namespace CrestApps.OrchardCore.Diagnostics;
 
 /// <summary>
 /// Records how each run of a background task ended, what it processed and how close it came to its lock expiration.
-/// Orchard Core already starts a span and records <c>orchardcore.background_task.duration</c> for every run, so this
-/// adds metrics only: <c>crestapps.background_task.runs</c>, <c>crestapps.background_task.items</c>,
+/// Orchard Core already starts a span and records <c>orchardcore.background_task.duration</c> for every run (its count
+/// is the number of runs), so this adds only what Orchard Core cannot see: <c>crestapps.background_task.outcomes</c>
+/// for the runs that did not end <c>ok</c>, <c>crestapps.background_task.items</c>,
 /// <c>crestapps.background_task.last_success</c> and <c>crestapps.background_task.lock.utilization</c>.
 /// </summary>
 /// <remarks>
 /// Wrap the body of <see cref="IBackgroundTask.DoWorkAsync(IServiceProvider, CancellationToken)"/> with
 /// <see cref="RunAsync(IBackgroundTask, Func{MeasuredTaskRun, Task})"/>. A task that logs and swallows a failure
-/// calls <see cref="MeasuredTaskRun.ReportError(Exception)"/>, so the failure shows on the runs metric although
+/// calls <see cref="MeasuredTaskRun.ReportError(Exception)"/>, so the failure shows on the outcomes metric although
 /// Orchard Core sees a successful run.
 /// </remarks>
 public static class BackgroundTaskTelemetry
@@ -33,14 +34,16 @@ public static class BackgroundTaskTelemetry
     private static readonly ConcurrentDictionary<Type, TimeSpan?> _lockExpirations = new();
 
     /// <summary>
-    /// The number of background task runs, tagged with the <see cref="CrestAppsOrchardCoreTelemetry.TaskTag"/> and the
-    /// <see cref="CrestAppsOrchardCoreTelemetry.OutcomeTag"/>: <c>ok</c>, <c>error</c>, <c>skipped</c>,
-    /// <see cref="OutcomeSkippedLease"/>, <c>cancelled</c> or <see cref="OutcomeBudgetExceeded"/>.
+    /// The number of background task runs that did not end <c>ok</c>, tagged with the
+    /// <see cref="CrestAppsOrchardCoreTelemetry.TaskTag"/> and the <see cref="CrestAppsOrchardCoreTelemetry.OutcomeTag"/>:
+    /// <c>error</c>, <c>skipped</c>, <see cref="OutcomeSkippedLease"/>, <c>cancelled</c>, <c>timeout</c> or
+    /// <see cref="OutcomeBudgetExceeded"/>. Every run, <c>ok</c> ones included, is counted by Orchard Core's
+    /// <c>orchardcore.background_task.duration</c>.
     /// </summary>
-    public static Counter<long> Runs { get; } = CrestAppsOrchardCoreTelemetry.PlatformMeter.CreateCounter<long>(
-        "crestapps.background_task.runs",
+    public static Counter<long> Outcomes { get; } = CrestAppsOrchardCoreTelemetry.PlatformMeter.CreateCounter<long>(
+        "crestapps.background_task.outcomes",
         "{run}",
-        "The number of background task runs, by how they ended.");
+        "The number of background task runs that did not end ok, by how they ended.");
 
     /// <summary>
     /// The number of items background task runs processed, tagged with the <see cref="CrestAppsOrchardCoreTelemetry.TaskTag"/>
@@ -129,11 +132,11 @@ public static class BackgroundTaskTelemetry
 
         CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
 
-        if (Runs.Enabled)
+        if (run.Outcome != CrestAppsOrchardCoreTelemetry.OutcomeOk && Outcomes.Enabled)
         {
-            var runTags = tags;
-            runTags.Add(CrestAppsOrchardCoreTelemetry.OutcomeTag, run.Outcome);
-            Runs.Add(1, runTags);
+            var outcomeTags = tags;
+            outcomeTags.Add(CrestAppsOrchardCoreTelemetry.OutcomeTag, run.Outcome);
+            Outcomes.Add(1, outcomeTags);
         }
 
         // A run that found nothing to do is healthy too; without it, an idle task would look stuck.

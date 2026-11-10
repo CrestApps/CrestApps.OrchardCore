@@ -1,5 +1,4 @@
 using System.Globalization;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.TimeTracker.Core.Indexes;
 using CrestApps.OrchardCore.TimeTracker.Models;
 using CrestApps.OrchardCore.TimeTracker.Services;
@@ -721,7 +720,7 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
 
     private async Task<Locker> LockAsync(string userId)
     {
-        var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync(TimeTrackerConstants.UserLockPrefix + userId, _lockTimeout, _lockExpiration, "timetracker.user");
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(TimeTrackerConstants.UserLockPrefix + userId, _lockTimeout, _lockExpiration);
 
         return locked ? new Locker(locker) : null;
     }

@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.Options;
@@ -162,11 +161,10 @@ public sealed class ContactCenterActivityDialerContributor : IActivityDialerCont
 
         // The old queue's assignment lock is the one routing holds while it picks and offers work, so the record
         // cannot be offered from the old campaign while it is being moved to the new one.
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             ActivityAssignmentService.GetQueueLockKey(existing.QueueId),
             _coordinationOptions.AssignmentLockTimeout,
-            _coordinationOptions.AssignmentLockExpiration,
-            "contactcenter.assignment.queue");
+            _coordinationOptions.AssignmentLockExpiration);
 
         if (!locked)
         {

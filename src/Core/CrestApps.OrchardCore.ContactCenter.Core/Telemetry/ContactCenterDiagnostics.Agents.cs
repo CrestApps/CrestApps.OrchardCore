@@ -26,20 +26,10 @@ public static partial class ContactCenterDiagnostics
         "The time an agent spent in a presence state before leaving it, by state.",
         CrestAppsOrchardCoreTelemetry.LongDurationBucketBoundaries);
 
-    private static readonly UpDownCounter<long> _hubConnections = Meter.CreateUpDownCounter<long>(
-        "crestapps.contactcenter.hub.connections",
-        "{connection}",
-        "The number of agent and supervisor connections open on this node's Contact Center hub.");
-
     private static readonly Counter<long> _hubRejected = Meter.CreateCounter<long>(
         "crestapps.contactcenter.hub.rejected",
         "{connection}",
         "The number of Contact Center hub connections or calls refused, by reason.");
-
-    private static readonly Counter<long> _hubHeartbeatsLost = Meter.CreateCounter<long>(
-        "crestapps.contactcenter.hub.heartbeat.lost",
-        "{session}",
-        "The number of agent sessions ended because their heartbeat stopped.");
 
     private static readonly Histogram<double> _realtimeBroadcastDuration = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
         Meter,
@@ -97,18 +87,6 @@ public static partial class ContactCenterDiagnostics
     }
 
     /// <summary>
-    /// Records that a hub connection opened or closed on this node.
-    /// </summary>
-    /// <param name="delta"><c>1</c> when it opened, <c>-1</c> when it closed.</param>
-    internal static void RecordHubConnection(int delta)
-    {
-        if (_hubConnections.Enabled)
-        {
-            Add(_hubConnections, default, delta);
-        }
-    }
-
-    /// <summary>
     /// Records that the hub refused a connection or a call.
     /// </summary>
     /// <param name="reason">Why, from a bounded set, such as <c>unauthorized</c> or <c>feature_unavailable</c>.</param>
@@ -117,18 +95,6 @@ public static partial class ContactCenterDiagnostics
         if (_hubRejected.Enabled)
         {
             Add(_hubRejected, new TagList { { CrestAppsOrchardCoreTelemetry.ReasonTag, reason } });
-        }
-    }
-
-    /// <summary>
-    /// Records agent sessions ended because their heartbeat stopped.
-    /// </summary>
-    /// <param name="count">How many.</param>
-    internal static void RecordHeartbeatLost(long count)
-    {
-        if (count > 0 && _hubHeartbeatsLost.Enabled)
-        {
-            Add(_hubHeartbeatsLost, default, count);
         }
     }
 

@@ -141,8 +141,7 @@ public sealed class PredictiveOverDialPacer : IPredictiveOverDialPacer
 
         (var locker, var locked) = await _distributedLock.TryAcquireLockWithoutWaitingAsync(
             GetPacingLockKey(queueId),
-            _options.PacingLockExpiration,
-            area: "contactcenter.dialer.predictive_pacing");
+            _options.PacingLockExpiration);
 
         if (!locked)
         {

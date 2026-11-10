@@ -703,11 +703,10 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
     {
         ArgumentException.ThrowIfNullOrEmpty(planId);
 
-        var lockKey = SubscriptionConstants.InstallmentPlans.LockPrefix + planId;
-
-        var (locker, locked) = waitForLock
-            ? await _distributedLock.TryAcquireMeasuredLockAsync(lockKey, _lockTimeout, _lockExpiration, "subscriptions.installment_plan")
-            : await _distributedLock.TryAcquireLockWithoutWaitingAsync(lockKey, _lockExpiration, "subscriptions.installment_plan");
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(
+            SubscriptionConstants.InstallmentPlans.LockPrefix + planId,
+            waitForLock ? _lockTimeout : DistributedLockExtensions.NoWaitTimeout,
+            _lockExpiration);
 
         if (!locked)
         {
@@ -1022,10 +1021,6 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
             telemetry.Fail(exception);
 
             throw;
-        }
-        finally
-        {
-            SubscriptionsTelemetry.RecordInstallmentCharge(providerKey, manual, telemetry.Outcome);
         }
     }
 

@@ -2004,8 +2004,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Telemetry
     }
     public static class OmnichannelTelemetry
     {
-        public const string ActionTag = "action";
-        public const string BackfillTag = "backfill";
         public const string BatchIdSpanTag = "crestapps.omnichannel.batch.id";
         public const string OutcomeCompleted = "completed";
         public const string OutcomeStopped = "stopped";
@@ -2024,28 +2022,16 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Telemetry
         public const string WatchdogReset = "reset";
         public const string WatchdogResumed = "resumed";
         public static System.Diagnostics.ActivitySource ActivitySource { get; }
-        public static System.Diagnostics.Metrics.Counter<long> AutomatedActivities { get; }
-        public static System.Diagnostics.Metrics.Counter<long> BackfillRecords { get; }
         public static System.Diagnostics.Metrics.Histogram<double> BatchLoadDuration { get; }
         public static System.Diagnostics.Metrics.Histogram<double> BatchLoadPageDuration { get; }
         public static System.Diagnostics.Metrics.Histogram<double> BatchLoadPreviewDuration { get; }
-        public static System.Diagnostics.Metrics.Histogram<long> BatchLoadPreviewMatched { get; }
         public static System.Diagnostics.Metrics.Counter<long> BatchLoadRecords { get; }
-        public static System.Diagnostics.Metrics.Counter<long> BatchLoadWatchdogActions { get; }
-        public static System.Diagnostics.Metrics.Counter<long> BatchLoads { get; }
         public static System.Diagnostics.Metrics.Gauge<long> BatchLoadsStalled { get; }
-        public static System.Diagnostics.Metrics.Counter<long> BulkActionActivities { get; }
-        public static System.Diagnostics.Metrics.Histogram<double> BulkActionDuration { get; }
-        public static System.Diagnostics.Metrics.Histogram<long> BulkActionSize { get; }
-        public static System.Diagnostics.Metrics.Histogram<double> LeadImportsQueryDuration { get; }
         public static System.Diagnostics.Metrics.Meter Meter { get; }
         public static void Add(System.Diagnostics.Metrics.Counter<long> counter, long value, System.Diagnostics.TagList tags) { }
         public static void Add(System.Diagnostics.Metrics.Counter<long> counter, long value, string key, object tagValue) { }
-        public static string GetBulkActionTag(CrestApps.OrchardCore.Omnichannel.Core.Models.BulkActivityAction action) { }
         public static void Record(System.Diagnostics.Metrics.Gauge<long> gauge, long value) { }
         public static void Record(System.Diagnostics.Metrics.Histogram<double> histogram, double value, System.Diagnostics.TagList tags = default) { }
-        public static void Record(System.Diagnostics.Metrics.Histogram<long> histogram, long value, System.Diagnostics.TagList tags = default) { }
-        public static void RecordBackfill(string backfill, string result, long count) { }
         public static void RecordLoadRecords(CrestApps.OrchardCore.Omnichannel.Core.Telemetry.ActivityBatchLoadCounts previous, CrestApps.OrchardCore.Omnichannel.Core.Telemetry.ActivityBatchLoadCounts current) { }
     }
 }

@@ -174,7 +174,6 @@ public sealed class MessagingOutbox : IMessagingOutbox
                     message.DeliveryStatus = MessageDeliveryStatus.Failed.ToString();
 
                     MessagingTelemetry.RecordOutboxRetry(channel.Name, MessagingTelemetry.OutboxResults.Failed);
-                    MessagingTelemetry.RecordOutboxFailed(channel.Name, state.Attempts);
                     _logger.OutboxMessageFailed(channel.Name, message.Id.SanitizeLogValue(), state.Attempts, MessagingTelemetry.GetOutboxFailureReason(state.Attempts));
                 }
 

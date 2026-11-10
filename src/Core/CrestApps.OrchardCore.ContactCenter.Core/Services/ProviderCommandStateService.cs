@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.Diagnostics;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.StateMachines;
 using OrchardCore;
 using OrchardCore.Locking.Distributed;
@@ -65,11 +64,10 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
         ArgumentException.ThrowIfNullOrEmpty(registration.CommandId);
         ArgumentException.ThrowIfNullOrEmpty(registration.ProviderName);
 
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             $"ContactCenterProviderCommand:Register:{registration.CommandId}",
             _registrationLockTimeout,
-            _registrationLockExpiration,
-            "contactcenter.provider_command.register");
+            _registrationLockExpiration);
 
         if (!locked)
         {

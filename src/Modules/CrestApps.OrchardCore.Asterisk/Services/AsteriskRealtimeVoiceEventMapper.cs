@@ -10,8 +10,14 @@ namespace CrestApps.OrchardCore.Asterisk.Services;
 internal static class AsteriskRealtimeVoiceEventMapper
 {
     public static bool TryMap(string providerName, string payload, out AsteriskRealtimeVoiceEvent voiceEvent)
+        => TryMap(providerName, payload, out voiceEvent, out _);
+
+    // The ARI event type is returned whether or not the payload maps to a voice event, so an ignored event can still
+    // be counted by its type.
+    public static bool TryMap(string providerName, string payload, out AsteriskRealtimeVoiceEvent voiceEvent, out string eventType)
     {
         voiceEvent = null;
+        eventType = null;
 
         if (string.IsNullOrWhiteSpace(providerName) || string.IsNullOrWhiteSpace(payload))
         {
@@ -20,7 +26,7 @@ internal static class AsteriskRealtimeVoiceEventMapper
 
         using var document = JsonDocument.Parse(payload);
         var root = document.RootElement;
-        var eventType = ReadString(root, "type");
+        eventType = ReadString(root, "type");
 
         if (string.IsNullOrWhiteSpace(eventType) ||
             !TryResolveChannel(root, out var channel))

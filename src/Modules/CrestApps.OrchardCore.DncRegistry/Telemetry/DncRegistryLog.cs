@@ -18,22 +18,4 @@ internal static partial class DncRegistryLog
         Level = LogLevel.Information,
         Message = "The import run of local DNC list '{ListId}' ended as {Outcome} after {ElapsedSeconds} s: {ImportedRows} rows saved and {RejectedRows} rows rejected in this run.")]
     public static partial void ImportRunEnded(ILogger logger, string listId, string outcome, double elapsedSeconds, long importedRows, long rejectedRows);
-
-    /// <summary>
-    /// Logs what one run of the local do-not-call background task did.
-    /// </summary>
-    [LoggerMessage(
-        EventId = FirstEventId + 1,
-        Level = LogLevel.Information,
-        Message = "The local DNC task worked on {ImportCount} imports and {DeletionCount} deletions: {FailedCount} failed and {ContendedCount} were held by another worker.")]
-    public static partial void TaskRunSummary(ILogger logger, int importCount, int deletionCount, int failedCount, int contendedCount);
-
-    /// <summary>
-    /// Logs a job that failed after the request that queued it ended.
-    /// </summary>
-    [LoggerMessage(
-        EventId = FirstEventId + 2,
-        Level = LogLevel.Error,
-        Message = "The {Job} job of local DNC list '{ListId}' failed after the request that queued it ended.")]
-    public static partial void BackgroundJobFailed(ILogger logger, Exception exception, string job, string listId);
 }

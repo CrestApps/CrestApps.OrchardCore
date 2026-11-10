@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Omnichannel.Core.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -80,8 +79,6 @@ public sealed class LeadImportBackfillBackgroundTask : IBackgroundTask
         state.Cursors[BackfillName] = step.Cursor;
 
         run.AddItems(step.Recorded, "recorded");
-        OmnichannelTelemetry.RecordBackfill("lead_imports", "recorded", step.Recorded);
-
         if (step.Completed)
         {
             state.Completed.Add(BackfillName);

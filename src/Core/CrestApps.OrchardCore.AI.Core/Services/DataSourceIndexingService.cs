@@ -14,7 +14,6 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Core.Telemetry;
 using CrestApps.OrchardCore.Diagnostics;
-using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Indexing;
@@ -120,11 +119,10 @@ public sealed class DataSourceIndexingService
         }
 
         // Acquire a lock scoped to this specific data source (not the entire index).
-        var (locker, isLocked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        var (locker, isLocked) = await _distributedLock.TryAcquireLockAsync(
             $"DataSourceIndexing-{dataSource.ItemId}",
             TimeSpan.FromSeconds(5),
-            TimeSpan.FromMinutes(60),
-            TelemetryArea);
+        TimeSpan.FromMinutes(60));
 
         if (!isLocked)
         {
@@ -801,11 +799,10 @@ public sealed class DataSourceIndexingService
         }
 
         // Acquire a distributed lock scoped to this data source to prevent concurrent indexing.
-        var (locker, isLocked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        var (locker, isLocked) = await _distributedLock.TryAcquireLockAsync(
             $"DataSourceIndexing-{dataSource.ItemId}",
             TimeSpan.FromSeconds(5),
-            TimeSpan.FromMinutes(60),
-            TelemetryArea);
+        TimeSpan.FromMinutes(60));
 
         if (!isLocked)
         {

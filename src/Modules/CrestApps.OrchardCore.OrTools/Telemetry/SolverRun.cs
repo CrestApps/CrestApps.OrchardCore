@@ -4,32 +4,23 @@ using CrestApps.OrchardCore.Diagnostics;
 namespace CrestApps.OrchardCore.OrTools.Telemetry;
 
 /// <summary>
-/// One solve measured by <see cref="SolverTelemetry"/>: a <c>crestapps.solver.solve</c> span, the
-/// <c>crestapps.solver.duration</c> histogram and the <c>crestapps.solver.runs</c> counter, recorded when it is disposed.
+/// One solve measured by <see cref="SolverTelemetry"/>: the <c>crestapps.solver.runs</c> counter, recorded when it is
+/// disposed. The solve's duration is not measured: a guided local search runs to its time limit, so it would only
+/// repeat the limit.
 /// </summary>
 public sealed class SolverRun : IDisposable
 {
-    private readonly TelemetryScope _scope;
     private readonly string _solver;
     private readonly string _size;
     private string _status;
     private string _result;
-    private bool _failed;
+    private string _failedOutcome;
     private bool _disposed;
 
     internal SolverRun(string solver, string size)
     {
         _solver = solver;
         _size = size;
-        _scope = TelemetryScope.Start(
-            SolverTelemetry.ActivitySource,
-            SolverTelemetry.SolveSpanName,
-            SolverTelemetry.Duration,
-            new TagList
-            {
-                { SolverTelemetry.SolverTag, solver },
-                { SolverTelemetry.SizeTag, size },
-            });
     }
 
     /// <summary>
@@ -59,15 +50,14 @@ public sealed class SolverRun : IDisposable
     {
         ArgumentNullException.ThrowIfNull(exception);
 
-        _failed = true;
-        _status ??= CrestAppsOrchardCoreTelemetry.GetOutcome(exception) == CrestAppsOrchardCoreTelemetry.OutcomeCancelled
+        _failedOutcome = CrestAppsOrchardCoreTelemetry.GetOutcome(exception);
+        _status ??= _failedOutcome == CrestAppsOrchardCoreTelemetry.OutcomeCancelled
             ? SolverTelemetry.StatusCancelled
             : CrestAppsOrchardCoreTelemetry.OutcomeError;
-        _scope.Fail(exception);
     }
 
     /// <summary>
-    /// Records the span, the duration and the run.
+    /// Records the run.
     /// </summary>
     public void Dispose()
     {
@@ -78,35 +68,31 @@ public sealed class SolverRun : IDisposable
 
         _disposed = true;
 
+        if (!SolverTelemetry.Runs.Enabled)
+        {
+            return;
+        }
+
         var status = _status ?? CrestAppsOrchardCoreTelemetry.OutcomeError;
-        var result = _result ?? SolverTelemetry.ResultBuiltIn;
 
-        _scope.AddMetricTag(SolverTelemetry.StatusTag, status);
-        _scope.AddMetricTag(CrestAppsOrchardCoreTelemetry.ResultTag, result);
+        // A search the caller stopped still returns the built-in answer, but it did not run its course.
+        var outcome = _failedOutcome
+            ?? (_status is null
+                ? CrestAppsOrchardCoreTelemetry.OutcomeError
+                : _status == SolverTelemetry.StatusCancelled
+                    ? CrestAppsOrchardCoreTelemetry.OutcomeCancelled
+                    : CrestAppsOrchardCoreTelemetry.OutcomeOk);
 
-        if (!_failed && _status is not null)
+        var tags = new TagList
         {
-            // A search the caller stopped still returns the built-in answer, but it did not run its course.
-            _scope.SetOutcome(_status == SolverTelemetry.StatusCancelled
-                ? CrestAppsOrchardCoreTelemetry.OutcomeCancelled
-                : CrestAppsOrchardCoreTelemetry.OutcomeOk);
-        }
+            { SolverTelemetry.SolverTag, _solver },
+            { SolverTelemetry.SizeTag, _size },
+            { SolverTelemetry.StatusTag, status },
+            { CrestAppsOrchardCoreTelemetry.ResultTag, _result ?? SolverTelemetry.ResultBuiltIn },
+            { CrestAppsOrchardCoreTelemetry.OutcomeTag, outcome },
+        };
 
-        if (SolverTelemetry.Runs.Enabled)
-        {
-            var tags = new TagList
-            {
-                { SolverTelemetry.SolverTag, _solver },
-                { SolverTelemetry.SizeTag, _size },
-                { SolverTelemetry.StatusTag, status },
-                { CrestAppsOrchardCoreTelemetry.ResultTag, result },
-                { CrestAppsOrchardCoreTelemetry.OutcomeTag, _scope.Outcome },
-            };
-
-            CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
-            SolverTelemetry.Runs.Add(1, tags);
-        }
-
-        _scope.Dispose();
+        CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
+        SolverTelemetry.Runs.Add(1, tags);
     }
 }

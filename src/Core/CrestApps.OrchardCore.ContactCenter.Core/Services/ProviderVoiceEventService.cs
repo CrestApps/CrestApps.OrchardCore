@@ -8,7 +8,6 @@ using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Core.Models;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
-using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Modules;
@@ -40,7 +39,6 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
     private readonly ILogger _logger;
     private readonly IDialerAbandonmentTracker _abandonmentTracker;
     private readonly Lazy<IAgentPreDialCoordinator> _preDialCoordinator;
-    private readonly Redactor _addressRedactor;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProviderVoiceEventService"/> class.
@@ -61,7 +59,6 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
     /// <param name="clock">The clock used to stamp times.</param>
     /// <param name="logger">The logger instance.</param>
     /// <param name="abandonmentTracker">The tracker that records when a person answers a dialer call and whether an agent reached them in time.</param>
-    /// <param name="redactorProvider">The redactors the telephony feature registers, used to keep phone numbers out of the logs.</param>
     /// <param name="preDialCoordinator">The coordinator holding the agent leg parked while a dialed customer rings, when there is one.</param>
     public ProviderVoiceEventService(
         IInteractionManager interactionManager,
@@ -80,7 +77,6 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
         IClock clock,
         ILogger<ProviderVoiceEventService> logger,
         IDialerAbandonmentTracker abandonmentTracker,
-        IRedactorProvider redactorProvider,
         Lazy<IAgentPreDialCoordinator> preDialCoordinator = null)
     {
         _interactionManager = interactionManager;
@@ -100,7 +96,6 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
         _logger = logger;
         _abandonmentTracker = abandonmentTracker;
         _preDialCoordinator = preDialCoordinator;
-        _addressRedactor = redactorProvider.GetRedactor(LogDataClassifications.AddressSet);
     }
 
     /// <inheritdoc/>
@@ -188,7 +183,17 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
             // agent leg of an answered outbound call -- reports that it failed: the leg is not registered against
             // the interaction, so its lifecycle lands here and is dropped. Record the state and hangup cause so a
             // leg that clears without ringing can be diagnosed from the log instead of only from its silence.
-            LogUnmatchedEvent(providerEvent);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Received a provider voice event for call '{ProviderCallId}' that does not match any interaction. State={State}, HangupCause={HangupCause}, From={FromAddress}, To={ToAddress}.",
+                    providerEvent.ProviderCallId.SanitizeLogValue(),
+                    providerEvent.State,
+                    providerEvent.HangupCause,
+                    providerEvent.FromAddress.SanitizeLogValue(),
+                    providerEvent.ToAddress.SanitizeLogValue());
+            }
+
             RecordIngest(activity, providerEvent, ContactCenterDiagnostics.ProviderEventUnmatched);
 
             return null;

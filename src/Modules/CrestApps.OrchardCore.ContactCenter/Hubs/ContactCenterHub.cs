@@ -26,9 +26,6 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
 {
     private const string WorkLeaseKey = "ContactCenterFeatureWorkLease";
 
-    // Set on a connection counted in crestapps.contactcenter.hub.connections, so only those are counted out again.
-    private const string CountedConnectionKey = "ContactCenterConnectionCounted";
-
     private readonly ILogger _logger;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IContactCenterFeatureWorkManager _workManager;
@@ -231,9 +228,6 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
             HubConnectionWork.MustComplete);
 
         await base.OnConnectedAsync();
-
-        Context.Items[CountedConnectionKey] = true;
-        ContactCenterDiagnostics.RecordHubConnection(1);
     }
 
     /// <inheritdoc/>
@@ -265,11 +259,6 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
         }
         finally
         {
-            if (Context.Items.Remove(CountedConnectionKey))
-            {
-                ContactCenterDiagnostics.RecordHubConnection(-1);
-            }
-
             _connectionRegistry.Unregister(Context.ConnectionId);
             ReleaseConnectionWork();
         }

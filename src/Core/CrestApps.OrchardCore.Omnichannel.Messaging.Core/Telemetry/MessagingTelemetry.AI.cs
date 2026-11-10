@@ -11,13 +11,13 @@ public static partial class MessagingTelemetry
 {
     /// <summary>
     /// Starts measuring an automated (AI) conversation turn: the <c>crestapps.messaging.ai.turn</c> span,
-    /// <see cref="AITurnDuration"/> and <see cref="AITurn"/>.
+    /// <see cref="AITurnDuration"/>, tagged with the result.
     /// </summary>
     /// <param name="channel">The technical name of the channel.</param>
     /// <returns>The measurement.</returns>
     public static MessagingMeasurement StartAITurn(string channel)
     {
-        return Start("crestapps.messaging.ai.turn", AITurnDuration, AITurn, channel, ActivityKind.Internal);
+        return Start("crestapps.messaging.ai.turn", AITurnDuration, channel, ActivityKind.Internal);
     }
 
     /// <summary>
@@ -59,26 +59,7 @@ public static partial class MessagingTelemetry
     }
 
     /// <summary>
-    /// Records an automated conversation whose lost reply was re-driven.
-    /// </summary>
-    /// <param name="channel">The technical name of the channel.</param>
-    /// <param name="result"><see cref="OwedReplyResults.Redriven"/> or <see cref="ResultError"/>.</param>
-    public static void RecordOwedReplyRecovery(string channel, string result)
-    {
-        if (!OwedReplyRecovery.Enabled)
-        {
-            return;
-        }
-
-        Add(OwedReplyRecovery, new TagList
-        {
-            { CrestAppsOrchardCoreTelemetry.ChannelTag, GetChannelTag(channel) },
-            { CrestAppsOrchardCoreTelemetry.ResultTag, result },
-        });
-    }
-
-    /// <summary>
-    /// The results of <see cref="AITurn"/>.
+    /// The results of <see cref="AITurnDuration"/>.
     /// </summary>
     public static class AITurnResults
     {
@@ -161,7 +142,7 @@ public static partial class MessagingTelemetry
     }
 
     /// <summary>
-    /// The results of <see cref="OwedReplyRecovery"/>.
+    /// The results of the SMS owed-reply recovery, counted as its background task's items.
     /// </summary>
     public static class OwedReplyResults
     {

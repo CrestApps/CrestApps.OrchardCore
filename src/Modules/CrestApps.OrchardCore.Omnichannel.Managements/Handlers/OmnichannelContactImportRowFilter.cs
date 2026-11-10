@@ -8,7 +8,6 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
-using CrestApps.OrchardCore.Omnichannel.Managements.Telemetry;
 using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
@@ -47,7 +46,7 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
     private Dictionary<string, string[]> _existingPhoneOwners = new(StringComparer.OrdinalIgnoreCase);
     private Func<Omnichannel.Core.Indexes.IOmnichannelContactMatch, bool>? _duplicateScope;
     private Dictionary<int, List<PhoneEntry>> _batchPhoneEntries = [];
-    private Dictionary<int, BatchSkip> _batchSkipReasons = [];
+    private Dictionary<int, string> _batchSkipReasons = [];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelContactImportRowFilter"/> class.
@@ -161,11 +160,9 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        if (_batchSkipReasons.TryGetValue(context.RowIndex, out var batchSkip))
+        if (_batchSkipReasons.TryGetValue(context.RowIndex, out var skipReason))
         {
-            context.SkipReason = batchSkip.Reason;
-            context.SkipCategory = batchSkip.Category;
-            context.SkipReasonCode = batchSkip.Code;
+            context.SkipReason = skipReason;
 
             return true;
         }
@@ -197,7 +194,13 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
                     context.SkipCategory = "Already in the database";
                     context.SkipReasonCode = SkipCodeDuplicate;
 
-                    LogSkipped(context);
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug(
+                            "Skipping row {RowIndex}: {Reason}",
+                            context.RowIndex,
+                            context.SkipReason);
+                    }
 
                     return true;
                 }
@@ -208,7 +211,13 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
                     context.SkipCategory = "Repeated in the import file";
                     context.SkipReasonCode = SkipCodeRepeatedInFile;
 
-                    LogSkipped(context);
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug(
+                            "Skipping row {RowIndex}: {Reason}",
+                            context.RowIndex,
+                            context.SkipReason);
+                    }
 
                     return true;
                 }
@@ -231,7 +240,11 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
                 context.SkipCategory = "Do-not-call check failed";
                 context.SkipReasonCode = SkipCodeDncCheckFailed;
 
-                OmnichannelLog.ImportRowScreeningFailed(_logger, ex, context.RowIndex, context.Entry?.EntryId, ex.RegistryKey);
+                _logger.LogError(
+                    ex,
+                    "Skipping row {RowIndex}: {Reason}",
+                    context.RowIndex,
+                    context.SkipReason);
 
                 return true;
             }
@@ -247,7 +260,13 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
                     context.SkipCategory = "Not a readable phone number";
                     context.SkipReasonCode = SkipCodeUnreadableNumber;
 
-                    LogSkipped(context);
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug(
+                            "Skipping row {RowIndex}: {Reason}",
+                            context.RowIndex,
+                            context.SkipReason);
+                    }
 
                     return true;
                 }
@@ -258,8 +277,14 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
                     // recognised if it comes back, while the flag keeps it out of every call.
                     _doNotCallFlags!.Mark(context.Row);
 
-                    // The number itself stays out of the log.
-                    OmnichannelLog.ImportRowMarkedDoNotCall(_logger, context.RowIndex, context.Entry?.EntryId, entry.Label);
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug(
+                            "Importing row {RowIndex} marked Do not call: {Label} '{RawValue}' is registered on a national do-not-call registry.",
+                            context.RowIndex,
+                            entry.Label,
+                            entry.RawValue);
+                    }
 
                     continue;
                 }
@@ -270,7 +295,13 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
                     context.SkipCategory = "On a national do-not-call registry";
                     context.SkipReasonCode = SkipCodeDncMatch;
 
-                    LogSkipped(context);
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug(
+                            "Skipping row {RowIndex}: {Reason}",
+                            context.RowIndex,
+                            context.SkipReason);
+                    }
 
                     return true;
                 }
@@ -321,18 +352,6 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
             ContactImportDuplicateScope.SameType => index => string.Equals(index.ContentType, contentType, StringComparison.Ordinal),
             _ => leadTypes.Count == 0 ? null : index => !IsLead(index),
         };
-    }
-
-    /// <summary>
-    /// Logs a skipped row by its index and reason code. The reason shown to the user names the phone number, so it
-    /// stays out of the log.
-    /// </summary>
-    private void LogSkipped(ContentImportRowFilterContext context)
-    {
-        if (_logger.IsEnabled(LogLevel.Debug))
-        {
-            OmnichannelLog.ImportRowSkipped(_logger, context.RowIndex, context.Entry?.EntryId, context.SkipReasonCode);
-        }
     }
 
     private async Task<Dictionary<string, string[]>> LoadExistingOwnersAsync(IEnumerable<PhoneEntry> phoneEntries, CancellationToken cancellationToken)
@@ -572,6 +591,4 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
     }
 
     private sealed record PhoneEntry(string NormalizedNumber, PhoneNumber Canonical, string RawValue, string Label, string[] ComparisonKeys);
-
-    private sealed record BatchSkip(string Reason, string Category, string Code);
 }

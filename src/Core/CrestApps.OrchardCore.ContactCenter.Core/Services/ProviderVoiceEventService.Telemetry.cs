@@ -43,8 +43,6 @@ public sealed partial class ProviderVoiceEventService
         {
             CallSession session = null;
 
-            ContactCenterLog.ProviderVoiceEventRetried(_logger, providerEvent.ProviderCallId.SanitizeLogValue(), attempt, MaxIngestionAttempts);
-
             try
             {
                 await _scopeExecutor.ExecuteAsync<IProviderVoiceEventService>(async service =>
@@ -122,26 +120,6 @@ public sealed partial class ProviderVoiceEventService
                 ReadMetadata(providerEvent, ContactCenterConstants.TelephonyMetadata.HangupSource));
         }
     }
-
-    /// <summary>
-    /// Logs an event that matched no interaction, with the caller's and the dialed addresses redacted.
-    /// </summary>
-    private void LogUnmatchedEvent(ProviderVoiceEvent providerEvent)
-    {
-        if (!_logger.IsEnabled(LogLevel.Information))
-        {
-            return;
-        }
-
-        var providerCallId = providerEvent.ProviderCallId.SanitizeLogValue();
-        var fromAddress = RedactAddress(providerEvent.FromAddress);
-        var toAddress = RedactAddress(providerEvent.ToAddress);
-
-        ContactCenterLog.UnmatchedProviderVoiceEvent(_logger, providerCallId, providerEvent.State, providerEvent.HangupCause, fromAddress, toAddress);
-    }
-
-    private string RedactAddress(string address)
-        => string.IsNullOrEmpty(address) ? address : _addressRedactor.Redact(address);
 
     private TimeSpan? GetLag(ProviderVoiceEvent providerEvent)
         => providerEvent.OccurredUtc is { } occurredUtc ? _clock.UtcNow - occurredUtc : null;

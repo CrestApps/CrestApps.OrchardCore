@@ -8,8 +8,6 @@ using CrestApps.OrchardCore.ContentTransfer.Telemetry;
 using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
-using OrchardCore.FileStorage;
 
 namespace CrestApps.OrchardCore.Tests.Telemetry.ContentTransfer;
 
@@ -139,58 +137,6 @@ public sealed class ContentTransferTelemetryTests
     }
 
     [Fact]
-    public async Task MeasureHandlerAsync_RecordsTheHandlerDuration_ByHandlerPhaseAndOutcome()
-    {
-        // Arrange
-        using var capture = new TelemetryCapture();
-        var handler = new TelemetryTestHandler();
-
-        // Act
-        await ContentTransferDiagnostics.MeasureHandlerAsync(handler, ContentTransferDiagnostics.PhaseImport, () => Task.CompletedTask);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => ContentTransferDiagnostics.MeasureHandlerAsync(
-            handler,
-            ContentTransferDiagnostics.PhaseExport,
-            () => throw new InvalidOperationException("The handler failed.")));
-
-        // Assert
-        var measurements = capture.Find("crestapps.contenttransfer.handler.duration", ContentTransferDiagnostics.HandlerTag, nameof(TelemetryTestHandler));
-        Assert.Equal(2, measurements.Count);
-        Assert.Contains(measurements, measurement =>
-            Equals(measurement.Tags[ContentTransferDiagnostics.PhaseTag], ContentTransferDiagnostics.PhaseImport)
-            && Equals(measurement.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag], CrestAppsOrchardCoreTelemetry.OutcomeOk));
-
-        Assert.Contains(measurements, measurement =>
-            Equals(measurement.Tags[ContentTransferDiagnostics.PhaseTag], ContentTransferDiagnostics.PhaseExport)
-            && Equals(measurement.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag], CrestAppsOrchardCoreTelemetry.OutcomeError));
-
-        Assert.Empty(capture.FindBannedTagKeys());
-    }
-
-    [Fact]
-    public async Task ContentTransferFileStore_RecordsTheStoreDuration_ByOperationAndBackend()
-    {
-        // Arrange
-        using var capture = new TelemetryCapture();
-        var fileStore = new Mock<IFileStore>();
-        fileStore
-            .Setup(store => store.GetFileInfoAsync(It.IsAny<string>()))
-            .ReturnsAsync((IFileStoreEntry)null);
-
-        var contentTransferFileStore = new ContentTransferFileStore(fileStore.Object);
-
-        // Act
-        await contentTransferFileStore.GetFileInfoAsync("import.csv");
-
-        // Assert
-        Assert.Contains(
-            capture.Find("crestapps.contenttransfer.store.duration", CrestAppsOrchardCoreTelemetry.OperationTag, "get_info"),
-            measurement => Equals(measurement.Tags[ContentTransferDiagnostics.BackendTag], CrestAppsOrchardCoreTelemetry.Other)
-                && Equals(measurement.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag], CrestAppsOrchardCoreTelemetry.OutcomeOk));
-
-        Assert.Empty(capture.FindBannedTagKeys());
-    }
-
-    [Fact]
     public void ExportPage_CountsThePageAndItsRows_ByMode()
     {
         // Arrange
@@ -230,8 +176,6 @@ public sealed class ContentTransferTelemetryTests
     {
         Assert.Equal(expected, ContentTransferDiagnostics.NormalizeCode(code));
     }
-
-    private sealed class TelemetryTestHandler;
 
     private sealed class SkipRowFilter(int skippedRowIndex, string reasonCode) : IContentImportRowFilter
     {

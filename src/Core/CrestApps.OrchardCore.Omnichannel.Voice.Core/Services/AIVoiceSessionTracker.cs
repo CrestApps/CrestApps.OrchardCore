@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using CrestApps.Core.Support;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
@@ -159,11 +158,10 @@ internal sealed class AIVoiceSessionTracker : IAIVoiceSessionTracker
             // few hundred milliseconds later. The writer keeps one summary per call by looking for an existing one
             // first, but each write runs in its own scope, so neither saw the other's uncommitted summary and the
             // call was reported twice. Held until the scope has committed, so the second writer sees the first.
-            (locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+            (locker, var locked) = await _distributedLock.TryAcquireLockAsync(
                 SummaryLockKeyPrefix + draft.ActivityId,
                 _summaryLockTimeout,
-                _summaryLockExpiration,
-                "voice.session_summary");
+                _summaryLockExpiration);
 
             if (!locked)
             {

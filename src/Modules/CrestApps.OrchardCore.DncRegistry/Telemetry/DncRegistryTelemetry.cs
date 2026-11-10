@@ -27,12 +27,6 @@ public static class DncRegistryTelemetry
     public const string RegistryTag = "registry";
 
     /// <summary>
-    /// The tag that records which kind of work took a local list lock: <see cref="OperationImport"/> or
-    /// <see cref="OperationDelete"/>.
-    /// </summary>
-    public const string OperationTag = CrestAppsOrchardCoreTelemetry.OperationTag;
-
-    /// <summary>
     /// The United States FTC National Do Not Call Registry.
     /// </summary>
     public const string RegistryUsaFtc = "usa_ftc";
@@ -46,16 +40,6 @@ public static class DncRegistryTelemetry
     /// The local do-not-call lists uploaded by administrators.
     /// </summary>
     public const string RegistryLocal = "local";
-
-    /// <summary>
-    /// The import of a local do-not-call list.
-    /// </summary>
-    public const string OperationImport = "import";
-
-    /// <summary>
-    /// The deletion of a local do-not-call list.
-    /// </summary>
-    public const string OperationDelete = "delete";
 
     /// <summary>
     /// The import run marked the list as completed.
@@ -168,33 +152,6 @@ public static class DncRegistryTelemetry
         "The number of screened phone numbers a do-not-call registry reported as listed.");
 
     /// <summary>
-    /// The number of requests sent to a remote registry's API, tagged with <see cref="RegistryTag"/>, the outcome
-    /// and the status class.
-    /// </summary>
-    public static Counter<long> RegistryRequests { get; } = Meter.CreateCounter<long>(
-        "crestapps.dnc.registry.requests",
-        "{request}",
-        "The number of requests sent to a national do-not-call registry's API.");
-
-    /// <summary>
-    /// The duration of one request to a remote registry's API, tagged as <see cref="RegistryRequests"/> is.
-    /// </summary>
-    public static Histogram<double> RegistryRequestDuration { get; } = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
-        Meter,
-        "crestapps.dnc.registry.request.duration",
-        "The duration of one request to a national do-not-call registry's API.");
-
-    /// <summary>
-    /// The number of runs of the import of a local list, tagged with the outcome
-    /// (<see cref="ImportOutcomeCompleted"/>, <see cref="ImportOutcomeInterrupted"/>, <see cref="ImportOutcomeFailed"/>,
-    /// <c>skipped</c> or <c>cancelled</c>) and, for a failure, the reason.
-    /// </summary>
-    public static Counter<long> ImportRuns { get; } = Meter.CreateCounter<long>(
-        "crestapps.dnc.import.runs",
-        "{run}",
-        "The number of runs of the import of a local do-not-call list, by how they ended.");
-
-    /// <summary>
     /// The duration of one run of the import of a local list, tagged with the outcome.
     /// </summary>
     public static Histogram<double> ImportDuration { get; } = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
@@ -212,23 +169,6 @@ public static class DncRegistryTelemetry
         "crestapps.dnc.import.rows",
         "{row}",
         "The number of rows of local do-not-call list files the imports read, by what became of them.");
-
-    /// <summary>
-    /// The duration of saving one batch of numbers of a local list, without the wait for the shared pacing gate.
-    /// </summary>
-    public static Histogram<double> ImportBatchDuration { get; } = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
-        Meter,
-        "crestapps.dnc.import.batch.duration",
-        "The duration of saving one batch of numbers of a local do-not-call list.");
-
-    /// <summary>
-    /// The number of times the import or the deletion of a local list found its lock held by another worker, tagged
-    /// with <see cref="OperationTag"/>.
-    /// </summary>
-    public static Counter<long> ImportLockContended { get; } = Meter.CreateCounter<long>(
-        "crestapps.dnc.import.lock_contended",
-        "{attempt}",
-        "The number of times the import or the deletion of a local do-not-call list found its lock held by another worker.");
 
     /// <summary>
     /// Starts measuring one screening call against one registry. The caller records the numbers it checked with
@@ -282,28 +222,6 @@ public static class DncRegistryTelemetry
     }
 
     /// <summary>
-    /// Records one request to a remote registry's API.
-    /// </summary>
-    /// <param name="registry">The registry.</param>
-    /// <param name="outcome">How the request ended.</param>
-    /// <param name="statusCode">The HTTP status code, or <see langword="null"/> when no response was received.</param>
-    /// <param name="startTimestamp">The <see cref="Stopwatch"/> timestamp taken before the request was sent.</param>
-    public static void RecordRegistryRequest(string registry, string outcome, int? statusCode, long startTimestamp)
-    {
-        if (!RegistryRequests.Enabled && !RegistryRequestDuration.Enabled)
-        {
-            return;
-        }
-
-        var tags = CreateRegistryTags(registry);
-        tags.Add(CrestAppsOrchardCoreTelemetry.OutcomeTag, outcome ?? CrestAppsOrchardCoreTelemetry.OutcomeError);
-        tags.Add(CrestAppsOrchardCoreTelemetry.StatusClassTag, ExternalCallTelemetry.GetStatusClass(statusCode));
-
-        RegistryRequests.Add(1, tags);
-        RegistryRequestDuration.Record(Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds, tags);
-    }
-
-    /// <summary>
     /// Starts measuring one run of the import of a local list.
     /// </summary>
     /// <param name="listId">The id of the list, recorded on the span only.</param>
@@ -314,73 +232,6 @@ public static class DncRegistryTelemetry
         scope.SetSpanTag(ListIdSpanTag, listId);
 
         return scope;
-    }
-
-    /// <summary>
-    /// Records how one run of the import of a local list ended.
-    /// </summary>
-    /// <param name="outcome">How the run ended.</param>
-    /// <param name="reason">Why a failed run failed, from a bounded set, or <see langword="null"/>.</param>
-    public static void RecordImportRun(string outcome, string reason = null)
-    {
-        if (!ImportRuns.Enabled)
-        {
-            return;
-        }
-
-        var tags = new TagList
-        {
-            { CrestAppsOrchardCoreTelemetry.OutcomeTag, outcome ?? CrestAppsOrchardCoreTelemetry.OutcomeError },
-        };
-
-        if (!string.IsNullOrEmpty(reason))
-        {
-            tags.Add(CrestAppsOrchardCoreTelemetry.ReasonTag, reason);
-        }
-
-        CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
-        ImportRuns.Add(1, tags);
-    }
-
-    /// <summary>
-    /// Records the duration of saving one batch of numbers of a local list.
-    /// </summary>
-    /// <param name="startTimestamp">The <see cref="Stopwatch"/> timestamp taken before the batch was saved.</param>
-    /// <param name="saved">Whether the batch was saved.</param>
-    public static void RecordImportBatch(long startTimestamp, bool saved)
-    {
-        if (!ImportBatchDuration.Enabled)
-        {
-            return;
-        }
-
-        var tags = new TagList
-        {
-            { CrestAppsOrchardCoreTelemetry.OutcomeTag, saved ? CrestAppsOrchardCoreTelemetry.OutcomeOk : CrestAppsOrchardCoreTelemetry.OutcomeError },
-        };
-
-        CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
-        ImportBatchDuration.Record(Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds, tags);
-    }
-
-    /// <summary>
-    /// Records that the import or the deletion of a local list found its lock held by another worker.
-    /// </summary>
-    /// <param name="operation"><see cref="OperationImport"/> or <see cref="OperationDelete"/>.</param>
-    public static void RecordLockContended(string operation)
-    {
-        if (!ImportLockContended.Enabled)
-        {
-            return;
-        }
-
-        var tags = new TagList
-        {
-            { OperationTag, operation ?? CrestAppsOrchardCoreTelemetry.Other },
-        };
-
-        CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
-        ImportLockContended.Add(1, tags);
     }
 
     private static TagList CreateRegistryTags(string registry)

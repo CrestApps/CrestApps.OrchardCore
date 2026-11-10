@@ -2,8 +2,6 @@ using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.DncRegistry.Indexes;
 using CrestApps.OrchardCore.DncRegistry.Models;
 using CrestApps.OrchardCore.DncRegistry.Services;
-using CrestApps.OrchardCore.DncRegistry.Telemetry;
-using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -146,8 +144,6 @@ public sealed class LocalDncImportBackgroundTask : IBackgroundTask
         run?.AddItems(deletions, "deleted");
         run?.AddItems(failed, "failed");
         run?.AddItems(contended, "skipped_lock");
-
-        DncRegistryLog.TaskRunSummary(logger, imports, deletions, failed, contended);
     }
 
     internal static string GetImportLockKey(string listId)
@@ -186,16 +182,13 @@ public sealed class LocalDncImportBackgroundTask : IBackgroundTask
         ILogger logger,
         CancellationToken cancellationToken)
     {
-        (var locker, var locked) = await distributedLock.TryAcquireMeasuredLockAsync(
+        (var locker, var locked) = await distributedLock.TryAcquireLockAsync(
             GetImportLockKey(list.ListId),
             _importLockTimeout,
-            _importLockExpiration,
-            "dnc.import");
+            _importLockExpiration);
 
         if (!locked)
         {
-            DncRegistryTelemetry.RecordLockContended(DncRegistryTelemetry.OperationImport);
-
             if (logger.IsEnabled(LogLevel.Debug))
             {
                 logger.LogDebug(

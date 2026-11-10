@@ -9,93 +9,20 @@ using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Inventory.Core.Models;
 using CrestApps.OrchardCore.Inventory.Core.Services;
 using CrestApps.OrchardCore.Inventory.Core.Telemetry;
-using CrestApps.OrchardCore.Recipes.Core.Services;
-using CrestApps.OrchardCore.Recipes.Core.Telemetry;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Moq;
-using OrchardCore.Deployment;
-using OrchardCore.FileStorage;
-using OrchardCore.Json;
 using OrchardCore.Recipes.Models;
 
 namespace CrestApps.OrchardCore.Tests.Telemetry.Recipes;
 
 /// <summary>
-/// Recipe executions, the recipe steps of named catalogs, stock count imports and stock changes emit the
+/// The recipe steps of named catalogs, stock count imports and stock changes emit the
 /// <c>crestapps.recipes.*</c> and <c>crestapps.inventory.*</c> instruments and spans the observability docs list, tagged
 /// with bounded values only. The names are a public contract that dashboards and alerts depend on.
 /// </summary>
 public sealed class RecipesAndInventoryTelemetryTests
 {
     private static readonly ActivitySource _testSource = new("CrestApps.OrchardCore.Tests.Recipes");
-
-    [Fact]
-    public async Task ExecuteRecipeAsync_EmitsTheExecutionSpanWithAChildPerHandler_AndTheExecutionMetrics()
-    {
-        // Arrange
-        using var capture = new TelemetryCapture();
-        var handler = new Mock<IDeploymentTargetHandler>();
-        handler.Setup(x => x.ImportFromFileAsync(It.IsAny<IFileProvider>())).Returns(Task.CompletedTask);
-        var service = CreateRecipeExecutionService(handler.Object);
-        var recipe = new JsonObject { ["steps"] = new JsonArray(new JsonObject { ["name"] = "Feature" }, new JsonObject { ["name"] = "Settings" }) };
-
-        // Act
-        bool executed;
-
-        using (var parent = _testSource.StartActivity("test"))
-        {
-            executed = await service.ExecuteRecipeAsync(recipe);
-        }
-
-        // Assert
-        Assert.True(executed);
-
-        var execute = Assert.Single(capture.Spans, span => span.OperationName == RecipesTelemetry.ExecuteSpanName && span.Parent?.Source == _testSource);
-        Assert.Equal(2, execute.GetTagItem(RecipesTelemetry.StepCountTag));
-        Assert.Equal(CrestAppsOrchardCoreTelemetry.OutcomeOk, execute.GetTagItem(CrestAppsOrchardCoreTelemetry.OutcomeTag));
-
-        var child = Assert.Single(capture.Spans, span => span.OperationName == RecipesTelemetry.DeploymentTargetSpanName && span.ParentSpanId == execute.SpanId);
-        Assert.NotNull(child.GetTagItem(RecipesTelemetry.HandlerTag));
-
-        Assert.Contains(capture.Measurements, measurement => measurement.Instrument == "crestapps.recipes.execution.duration"
-            && Equals(measurement.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag], CrestAppsOrchardCoreTelemetry.OutcomeOk));
-        Assert.Contains(capture.Measurements, measurement => measurement.Instrument == "crestapps.recipes.executions"
-            && Equals(measurement.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag], CrestAppsOrchardCoreTelemetry.OutcomeOk));
-        Assert.Empty(capture.FindBannedTagKeys());
-    }
-
-    [Fact]
-    public async Task ExecuteRecipeAsync_WhenAHandlerThrows_RecordsTheErrorOnBothSpansAndTheExecutions()
-    {
-        // Arrange
-        using var capture = new TelemetryCapture();
-        var handler = new Mock<IDeploymentTargetHandler>();
-        handler.Setup(x => x.ImportFromFileAsync(It.IsAny<IFileProvider>())).ThrowsAsync(new InvalidOperationException("boom"));
-        var service = CreateRecipeExecutionService(handler.Object);
-
-        // Act
-        bool executed;
-
-        using (var parent = _testSource.StartActivity("test"))
-        {
-            executed = await service.ExecuteRecipeAsync(new JsonObject { ["steps"] = new JsonArray() });
-        }
-
-        // Assert
-        Assert.False(executed);
-
-        var execute = Assert.Single(capture.Spans, span => span.OperationName == RecipesTelemetry.ExecuteSpanName && span.Parent?.Source == _testSource);
-        Assert.Equal(CrestAppsOrchardCoreTelemetry.OutcomeError, execute.GetTagItem(CrestAppsOrchardCoreTelemetry.OutcomeTag));
-        Assert.Equal(ActivityStatusCode.Error, execute.Status);
-
-        var child = Assert.Single(capture.Spans, span => span.OperationName == RecipesTelemetry.DeploymentTargetSpanName && span.ParentSpanId == execute.SpanId);
-        Assert.Equal(ActivityStatusCode.Error, child.Status);
-
-        Assert.Contains(capture.Measurements, measurement => measurement.Instrument == "crestapps.recipes.executions"
-            && Equals(measurement.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag], CrestAppsOrchardCoreTelemetry.OutcomeError));
-    }
 
     [Fact]
     public async Task NamedCatalogRecipeStep_CountsItsEntriesByWhatBecameOfThem()
@@ -154,9 +81,6 @@ public sealed class RecipesAndInventoryTelemetryTests
         Assert.Equal(1, entries.Single(entry => Equals(entry.Tags[CrestAppsOrchardCoreTelemetry.ResultTag], "invalid")).Value);
         Assert.Equal(1, entries.Single(entry => Equals(entry.Tags[CrestAppsOrchardCoreTelemetry.ResultTag], "skipped")).Value);
 
-        var stepSpan = Assert.Single(capture.Spans, span => span.OperationName == "crestapps.recipes.step" && Equals(span.GetTagItem("crestapps.recipes.step"), stepName));
-        Assert.Equal(4, stepSpan.GetTagItem("crestapps.recipes.entries"));
-        Assert.Equal(CrestAppsOrchardCoreTelemetry.OutcomeOk, stepSpan.GetTagItem(CrestAppsOrchardCoreTelemetry.OutcomeTag));
         Assert.Empty(capture.FindBannedTagKeys());
     }
 
@@ -176,7 +100,7 @@ public sealed class RecipesAndInventoryTelemetryTests
         inventory.Setup(x => x.SetCountAsync("counted", 3, It.IsAny<string>(), It.IsAny<StockActor>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(StockChangeResult.Success(counted));
 
-        var importer = new StockCountImporter(items.Object, inventory.Object, NullLogger<StockCountImporter>.Instance);
+        var importer = new StockCountImporter(items.Object, inventory.Object);
 
         // Act
         StockCountImportResult result;
@@ -242,20 +166,6 @@ public sealed class RecipesAndInventoryTelemetryTests
         Assert.Contains(capture.Measurements, measurement => measurement.Instrument == "crestapps.inventory.hold.refusals");
         Assert.Equal("other", InventoryTelemetry.GetMovementType((StockMovementKind)99));
         Assert.Empty(capture.FindBannedTagKeys());
-    }
-
-    private static RecipeExecutionService CreateRecipeExecutionService(IDeploymentTargetHandler handler)
-    {
-        var tempDirectoryProvider = new Mock<ITempDirectoryProvider>();
-        tempDirectoryProvider
-            .Setup(provider => provider.GetTempFileName(It.IsAny<string>()))
-            .Returns((string extension) => Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + (extension ?? string.Empty)));
-
-        return new RecipeExecutionService(
-            [handler],
-            Options.Create(new DocumentJsonSerializerOptions()),
-            tempDirectoryProvider.Object,
-            NullLogger<RecipeExecutionService>.Instance);
     }
 
     /// <summary>

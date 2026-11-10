@@ -114,19 +114,6 @@ public sealed class DefaultGeocodeQueue : IGeocodeQueue
             count++;
         }
 
-        if (GeoTelemetry.GeocodeQueueDepth.Enabled)
-        {
-            // Counted only while a collector listens, once per run of the queue. The metric never fails the run.
-            try
-            {
-                GeoTelemetry.RecordGeocodeQueueDepth(await _session.QueryIndex<GeocodeRequestIndex>(index => index.Status == pending, collection: GeoConstants.CollectionName).CountAsync(cancellationToken));
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                GeoLog.QueueDepthUnavailable(_logger, ex);
-            }
-        }
-
         return count;
     }
 

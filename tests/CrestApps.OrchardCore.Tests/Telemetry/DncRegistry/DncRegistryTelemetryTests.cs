@@ -29,7 +29,7 @@ public sealed class DncRegistryTelemetryTests
     private static readonly PhoneNumber _number = PhoneNumber.FromE164("+1" + NationalNumber);
 
     [Fact]
-    public async Task Screening_WithARemoteRegistry_EmitsTheScreeningSpanAndRequestMetrics()
+    public async Task Screening_WithARemoteRegistry_EmitsTheScreeningSpanAndMetrics()
     {
         // Arrange
         using var capture = new TelemetryCapture();
@@ -54,10 +54,6 @@ public sealed class DncRegistryTelemetryTests
         Assert.Contains(
             capture.Find("crestapps.dnc.screening.duration", DncRegistryTelemetry.RegistryTag, DncRegistryTelemetry.RegistryCanadaDncl),
             measurement => Equals(measurement.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag], CrestAppsOrchardCoreTelemetry.OutcomeOk));
-        Assert.Contains(
-            capture.Find("crestapps.dnc.registry.requests", DncRegistryTelemetry.RegistryTag, DncRegistryTelemetry.RegistryCanadaDncl),
-            measurement => Equals(measurement.Tags[CrestAppsOrchardCoreTelemetry.StatusClassTag], "2xx"));
-        Assert.NotEmpty(capture.Find("crestapps.dnc.registry.request.duration", DncRegistryTelemetry.RegistryTag, DncRegistryTelemetry.RegistryCanadaDncl));
         Assert.NotEmpty(capture.Find("crestapps.dnc.screening.size", DncRegistryTelemetry.RegistryTag, DncRegistryTelemetry.RegistryCanadaDncl));
         Assert.NotEmpty(capture.Find("crestapps.dnc.screening.listed", DncRegistryTelemetry.RegistryTag, DncRegistryTelemetry.RegistryCanadaDncl));
 
@@ -65,7 +61,7 @@ public sealed class DncRegistryTelemetryTests
     }
 
     [Fact]
-    public async Task Screening_WhenTheRegistryFails_RecordsAnErrorWithTheStatusClass()
+    public async Task Screening_WhenTheRegistryFails_RecordsAnError()
     {
         // Arrange
         using var capture = new TelemetryCapture();
@@ -86,9 +82,8 @@ public sealed class DncRegistryTelemetryTests
         Assert.Equal(ActivityStatusCode.Error, screening.Status);
 
         Assert.Contains(
-            capture.Find("crestapps.dnc.registry.requests", DncRegistryTelemetry.RegistryTag, DncRegistryTelemetry.RegistryCanadaDncl),
-            measurement => Equals(measurement.Tags[CrestAppsOrchardCoreTelemetry.StatusClassTag], "5xx")
-                && Equals(measurement.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag], CrestAppsOrchardCoreTelemetry.OutcomeError));
+            capture.Find("crestapps.dnc.screening.duration", DncRegistryTelemetry.RegistryTag, DncRegistryTelemetry.RegistryCanadaDncl),
+            measurement => Equals(measurement.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag], CrestAppsOrchardCoreTelemetry.OutcomeError));
 
         AssertNoUnsafeTags(capture);
     }
@@ -137,17 +132,12 @@ public sealed class DncRegistryTelemetryTests
             run.SetOutcome(DncRegistryTelemetry.ImportOutcomeCompleted);
         }
 
-        DncRegistryTelemetry.RecordImportRun(DncRegistryTelemetry.ImportOutcomeCompleted);
-        DncRegistryTelemetry.RecordLockContended(DncRegistryTelemetry.OperationImport);
-
         // Assert
         var span = Assert.Single(capture.Spans, span => Equals(span.GetTagItem(DncRegistryTelemetry.ListIdSpanTag), listId));
         Assert.Equal(DncRegistryTelemetry.ImportRunSpanName, span.OperationName);
         Assert.Equal(DncRegistryTelemetry.ImportOutcomeCompleted, span.GetTagItem(CrestAppsOrchardCoreTelemetry.OutcomeTag));
 
         Assert.NotEmpty(capture.Find("crestapps.dnc.import.duration", CrestAppsOrchardCoreTelemetry.OutcomeTag, DncRegistryTelemetry.ImportOutcomeCompleted));
-        Assert.NotEmpty(capture.Find("crestapps.dnc.import.runs", CrestAppsOrchardCoreTelemetry.OutcomeTag, DncRegistryTelemetry.ImportOutcomeCompleted));
-        Assert.NotEmpty(capture.Find("crestapps.dnc.import.lock_contended", CrestAppsOrchardCoreTelemetry.OperationTag, DncRegistryTelemetry.OperationImport));
 
         Assert.DoesNotContain(
             capture.Measurements,

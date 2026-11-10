@@ -108,10 +108,11 @@ public static class CrestAppsOrchardCoreTelemetry
     public const string AreaTag = "area";
 
     /// <summary>
-    /// The tag that records the name of the tenant. Metrics only carry it when <see cref="IncludeTenantName"/> is on;
-    /// spans and logs carry the tenant through <c>OrchardCore.OpenTelemetry</c> without it.
+    /// The tag that records the name of the tenant: the attribute <c>OrchardCore.OpenTelemetry</c> puts on its own
+    /// metrics, spans and logs, so the series join. Metrics only carry it when <see cref="IncludeTenantName"/> is on;
+    /// spans and logs carry it through <c>OrchardCore.OpenTelemetry</c> either way.
     /// </summary>
-    public const string TenantTag = "tenant";
+    public const string TenantTag = "orchardcore.tenant.name";
 
     /// <summary>
     /// The operation completed.
@@ -232,11 +233,11 @@ public static class CrestAppsOrchardCoreTelemetry
 
     /// <summary>
     /// Gets or sets a value indicating whether the instruments recorded through the shared helpers also carry the
-    /// <see cref="TenantTag"/>. It is off by default, because it multiplies the number of series a collector stores
-    /// by the number of tenants. The host sets it once at startup, from the
-    /// <c>OrchardCore:CrestApps:OpenTelemetry:Metrics:IncludeTenantName</c> configuration value.
+    /// <see cref="TenantTag"/>. It follows Orchard Core's own <c>OrchardCore:OpenTelemetry:Metrics:IncludeTenantName</c>
+    /// option and its default (on), so one setting decides whether every metric is tagged with the tenant; turn it off
+    /// to limit the number of series with many tenants. The host sets it once at startup, from that configuration value.
     /// </summary>
-    public static bool IncludeTenantName { get; set; }
+    public static bool IncludeTenantName { get; set; } = true;
 
     /// <summary>
     /// The meter of the shared platform instruments.

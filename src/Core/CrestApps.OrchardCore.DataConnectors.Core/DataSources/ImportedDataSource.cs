@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using CrestApps.Core.Support;
@@ -7,7 +6,6 @@ using CrestApps.OrchardCore.DataConnectors.Models;
 using CrestApps.OrchardCore.DataConnectors.Services;
 using CrestApps.OrchardCore.DataConnectors.Storage;
 using CrestApps.OrchardCore.DataConnectors.Telemetry;
-using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using OrchardCore.DataSources;
 using OrchardCore.Localization;
@@ -22,6 +20,9 @@ namespace CrestApps.OrchardCore.DataConnectors.DataSources;
 internal sealed class ImportedDataSource : IDataSource
 {
     private const int _keysPerRead = 500;
+
+    // The most data sets remembered as logged before the set is cleared, so it can't grow without bound across tenants.
+    private const int _maxLoggedNotImported = 1_000;
 
     // The data sets already logged as read before their first import, so a report that keeps reading one doesn't flood
     // the log.
@@ -117,6 +118,11 @@ internal sealed class ImportedDataSource : IDataSource
             // without saying so, so the read is counted and logged.
             DataConnectorsTelemetry.Add(DataConnectorsTelemetry.EmptyReads);
 
+            if (_loggedNotImported.Count >= _maxLoggedNotImported)
+            {
+                _loggedNotImported.Clear();
+            }
+
             if (_loggedNotImported.TryAdd(record.ItemId, true))
             {
                 _logger.ReadBeforeFirstImport(record.Name.SanitizeLogValue());
@@ -136,7 +142,7 @@ internal sealed class ImportedDataSource : IDataSource
             while (remaining > 0)
             {
                 var take = (int)Math.Min(batchSize, remaining);
-                var stored = await ReadPageAsync(record.ItemId, version, afterId, take, keys, cancellationToken);
+                var stored = await _rowStore.ReadAsync(record.ItemId, version, afterId, take, keys, cancellationToken);
 
                 if (stored.Count == 0)
                 {
@@ -173,39 +179,6 @@ internal sealed class ImportedDataSource : IDataSource
         if (!any)
         {
             yield return new DataBatch(fields, []);
-        }
-    }
-
-    private async Task<IReadOnlyList<StoredDataSetRow>> ReadPageAsync(
-        string dataSetId,
-        string version,
-        long afterId,
-        int take,
-        string[] keys,
-        CancellationToken cancellationToken)
-    {
-        var startTimestamp = Stopwatch.GetTimestamp();
-        var outcome = CrestAppsOrchardCoreTelemetry.OutcomeError;
-
-        try
-        {
-            var rows = await _rowStore.ReadAsync(dataSetId, version, afterId, take, keys, cancellationToken);
-            outcome = CrestAppsOrchardCoreTelemetry.OutcomeOk;
-
-            return rows;
-        }
-        catch (OperationCanceledException)
-        {
-            outcome = CrestAppsOrchardCoreTelemetry.OutcomeCancelled;
-
-            throw;
-        }
-        finally
-        {
-            DataConnectorsTelemetry.RecordDuration(DataConnectorsTelemetry.RowStoreReadDuration, Stopwatch.GetElapsedTime(startTimestamp), outcome, new TagList
-            {
-                { CrestAppsOrchardCoreTelemetry.OperationTag, keys is null ? "scan" : "keys" },
-            });
         }
     }
 

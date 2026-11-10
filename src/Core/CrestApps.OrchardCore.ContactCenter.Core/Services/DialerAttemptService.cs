@@ -4,7 +4,6 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -322,11 +321,10 @@ public sealed class DialerAttemptService : IDialerAttemptService
         ArgumentNullException.ThrowIfNull(queueItem);
 
         // The same lock routing takes to reserve the activity, so the dial and an agent offer can never both claim it.
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             ActivityReservationLockKeys.ForActivity(queueItem.ActivityItemId),
             _coordinationOptions.ReservationLockTimeout,
-            _coordinationOptions.ReservationLockExpiration,
-            "contactcenter.reservation.activity");
+            _coordinationOptions.ReservationLockExpiration);
 
         if (!locked)
         {

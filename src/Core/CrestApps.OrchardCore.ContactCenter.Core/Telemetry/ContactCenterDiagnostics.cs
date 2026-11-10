@@ -15,9 +15,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 /// The instruments are named <c>crestapps.contactcenter.&lt;thing&gt;</c> and are grouped by funnel in the partial
 /// files of this class: calls, offers, queues, inbound routing, the outbox, provider commands, the dialer, agents and
 /// recovery. Each is recorded at the state transition it describes, never in a replayable outbox or projection
-/// handler, so a redelivered event is not counted twice. The <c>contactcenter.outbox.*</c> instruments are the
-/// names this meter shipped first; they keep working for one release beside their <c>crestapps.contactcenter.outbox.*</c>
-/// replacements, then are retired.
+/// handler, so a redelivered event is not counted twice. The <c>contactcenter.outbox.*</c> names this meter shipped
+/// first are replaced by <c>crestapps.contactcenter.outbox.*</c>.
 /// </remarks>
 public static partial class ContactCenterDiagnostics
 {
@@ -57,17 +56,6 @@ public static partial class ContactCenterDiagnostics
 
     internal const string SuppressReasonTag = "suppress.reason";
 
-    // Retired after one release: dashboards move to crestapps.contactcenter.outbox.redelivered and .dead_lettered.
-    private static readonly Counter<long> _outboxRedelivered = Meter.CreateCounter<long>(
-        "contactcenter.outbox.redelivered",
-        unit: "{message}",
-        description: "Deprecated: use crestapps.contactcenter.outbox.redelivered. The number of Contact Center domain events successfully redelivered from the durable outbox.");
-
-    private static readonly Counter<long> _outboxDeadLettered = Meter.CreateCounter<long>(
-        "contactcenter.outbox.dead_lettered",
-        unit: "{message}",
-        description: "Deprecated: use crestapps.contactcenter.outbox.dead_lettered. The number of Contact Center domain events dead-lettered after exhausting their retry budget.");
-
     /// <summary>
     /// Gets the shared <see cref="System.Diagnostics.ActivitySource"/> used to start Contact Center trace spans.
     /// </summary>
@@ -93,8 +81,6 @@ public static partial class ContactCenterDiagnostics
             return;
         }
 
-        _outboxRedelivered.Add(count);
-
         if (_outboxRedeliveredNew.Enabled)
         {
             Add(_outboxRedeliveredNew, default, count);
@@ -108,8 +94,6 @@ public static partial class ContactCenterDiagnostics
     public static void RecordOutboxDeadLettered(string reason)
     {
         reason ??= "unspecified";
-
-        _outboxDeadLettered.Add(1, new KeyValuePair<string, object>(CrestAppsOrchardCoreTelemetry.ReasonTag, reason));
 
         if (_outboxDeadLetteredNew.Enabled)
         {
@@ -175,22 +159,10 @@ public static partial class ContactCenterDiagnostics
         counter.Add(value, tags);
     }
 
-    private static void Add(UpDownCounter<long> counter, TagList tags, long value)
-    {
-        CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
-        counter.Add(value, tags);
-    }
-
     private static void Record(Histogram<double> histogram, double value, TagList tags)
     {
         CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
         histogram.Record(value, tags);
-    }
-
-    private static void Record(Gauge<long> gauge, long value, TagList tags)
-    {
-        CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
-        gauge.Record(value, tags);
     }
 
     private static class MeterHolder

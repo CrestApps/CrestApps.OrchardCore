@@ -1,9 +1,6 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using CrestApps.OrchardCore.Diagnostics;
-using CrestApps.OrchardCore.Telnyx.Telemetry;
-using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -29,7 +26,6 @@ public sealed partial class TelnyxApiClient
     private readonly IOptionsMonitor<TelnyxOptions> _options;
     private readonly TelnyxApiRetryPolicy _retryPolicy;
     private readonly ILogger _logger;
-    private readonly Redactor _addressRedactor;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TelnyxApiClient"/> class.
@@ -38,20 +34,16 @@ public sealed partial class TelnyxApiClient
     /// <param name="options">The Telnyx settings, read again for every request.</param>
     /// <param name="retryPolicy">The policy that decides whether a failed command is repeated.</param>
     /// <param name="logger">The logger.</param>
-    /// <param name="redactorProvider">The redactors that keep phone numbers and SIP URIs out of the log; when there is
-    /// none, those values are left out of the log entirely.</param>
     public TelnyxApiClient(
         HttpClient httpClient,
         IOptionsMonitor<TelnyxOptions> options,
         TelnyxApiRetryPolicy retryPolicy,
-        ILogger<TelnyxApiClient> logger,
-        IRedactorProvider redactorProvider = null)
+        ILogger<TelnyxApiClient> logger)
     {
         _httpClient = httpClient;
         _options = options;
         _retryPolicy = retryPolicy;
         _logger = logger;
-        _addressRedactor = redactorProvider?.GetRedactor(LogDataClassifications.AddressSet);
     }
 
     // The settings as they are now. Saving the Telnyx settings does not restart the tenant, and this client used to
@@ -126,11 +118,11 @@ public sealed partial class TelnyxApiClient
         // browser-side observation (which carries the provider's leg ids) and the leg the platform created.
         if (result.Succeeded && _logger.IsEnabled(LogLevel.Information))
         {
-            // The numbers go through the address redactor: a dialled number is a customer's, and never reaches the log.
-            var to = RedactAddress(request.To);
-            var from = RedactAddress(request.From);
-
-            TelnyxLog.LegOriginated(_logger, to, from, callControlId);
+            _logger.LogInformation(
+                "Telnyx originated a leg to {To} from {From}: CallControlId={CallControlId}.",
+                request.To,
+                request.From,
+                callControlId);
         }
 
         return new TelnyxCallApiResult

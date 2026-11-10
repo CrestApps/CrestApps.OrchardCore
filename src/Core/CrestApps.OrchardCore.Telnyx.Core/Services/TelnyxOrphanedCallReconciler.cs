@@ -1,7 +1,6 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Telephony;
-using CrestApps.OrchardCore.Telephony.Telemetry;
 using CrestApps.OrchardCore.Telnyx.Models;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -130,7 +129,6 @@ public sealed class TelnyxOrphanedCallReconciler
                     await EndOrphanAsync(call.CallControlId, cancellationToken))
                 {
                     ended++;
-                    TelephonyTelemetry.RecordReconcileCorrections(TelnyxConstants.ProviderTechnicalName, TelephonyTelemetry.ReconcileOrphanEnded);
                 }
             }
 

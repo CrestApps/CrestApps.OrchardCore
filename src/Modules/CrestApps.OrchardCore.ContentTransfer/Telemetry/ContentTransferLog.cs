@@ -65,18 +65,6 @@ internal static partial class ContentTransferLog
     public static partial void ExportFailed(ILogger logger, Exception exception, string entryId);
 
     [LoggerMessage(
-        EventId = CrestAppsEventIds.ContentTransfer + 105,
-        Level = LogLevel.Warning,
-        Message = "The export of entry '{EntryId}' is complete, but the notification that it is ready could not be sent.")]
-    public static partial void ExportNotificationFailed(ILogger logger, Exception exception, string entryId);
-
-    [LoggerMessage(
-        EventId = CrestAppsEventIds.ContentTransfer + 106,
-        Level = LogLevel.Information,
-        Message = "The export of entry '{EntryId}' stopped because the host is stopping. It starts over on the next run.")]
-    public static partial void ExportStopped(ILogger logger, string entryId);
-
-    [LoggerMessage(
         EventId = CrestAppsEventIds.ContentTransfer + 107,
         Level = LogLevel.Error,
         Message = "The export of entry '{EntryId}' failed and was marked as failed ({Reason}).")]
@@ -93,16 +81,4 @@ internal static partial class ContentTransferLog
         Level = LogLevel.Information,
         Message = "An export of content type '{ContentType}' matches {TotalCount} content items, the queue threshold is {Threshold} and an export option requires the queue: {RequiresQueue}. The export runs {Mode}.")]
     public static partial void ExportQueueDecision(ILogger logger, string contentType, int totalCount, int threshold, bool requiresQueue, string mode);
-
-    [LoggerMessage(
-        EventId = CrestAppsEventIds.ContentTransfer + 202,
-        Level = LogLevel.Error,
-        Message = "The '{Job}' job of entry '{EntryId}', started after the request that queued it, failed.")]
-    public static partial void BackgroundJobFailed(ILogger logger, Exception exception, string job, string entryId);
-
-    [LoggerMessage(
-        EventId = CrestAppsEventIds.ContentTransfer + 210,
-        Level = LogLevel.Information,
-        Message = "Removed {Count} abandoned temporary files of chunked import uploads.")]
-    public static partial void UploadTempFilesPurged(ILogger logger, int count);
 }

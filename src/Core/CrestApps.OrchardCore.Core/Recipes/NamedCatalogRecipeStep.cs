@@ -2,7 +2,6 @@ using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell.Scope;
@@ -20,9 +19,9 @@ namespace CrestApps.OrchardCore.Core.Recipes;
 /// the store. The step reads the same JSON shape the matching
 /// <see cref="Deployments.NamedCatalogDeploymentSource{TStep, TEntry}"/> writes.
 /// <para>
-/// Every step is measured: a <c>crestapps.recipes.step</c> span, and its entries counted on
-/// <c>crestapps.recipes.step.entries</c> by what became of them (created, updated, invalid or skipped). Entries that
-/// fail validation are also logged as a warning, since their errors otherwise only reach the recipe result.
+/// Every step counts its entries on <c>crestapps.recipes.step.entries</c> by what became of them (created, updated,
+/// invalid or skipped); Orchard Core's recipe executor already traces the step itself. Entries that fail validation
+/// are also logged as a warning, since their errors otherwise only reach the recipe result.
 /// </para>
 /// </remarks>
 /// <typeparam name="TEntry">The catalog entry type.</typeparam>
@@ -80,24 +79,17 @@ public abstract class NamedCatalogRecipeStep<TEntry> : CatalogRecipeStep<TEntry>
         var tally = new StepTally();
         _tally.Value = tally;
 
-        using var telemetry = TelemetryScope.Start(RecipeStepTelemetry.ActivitySource, RecipeStepTelemetry.StepSpanName, duration: null);
-        telemetry.SetSpanTag(RecipeStepTelemetry.StepSpanTag, _stepName);
+        var succeeded = false;
 
         try
         {
             await base.HandleAsync(context);
-            telemetry.Succeed();
-        }
-        catch (Exception ex)
-        {
-            telemetry.Fail(ex);
-
-            throw;
+            succeeded = true;
         }
         finally
         {
             _tally.Value = null;
-            Record(tally, context, telemetry);
+            Record(tally, context, succeeded);
         }
     }
 
@@ -132,14 +124,14 @@ public abstract class NamedCatalogRecipeStep<TEntry> : CatalogRecipeStep<TEntry>
         }
     }
 
-    private void Record(StepTally tally, RecipeExecutionContext context, TelemetryScope telemetry)
+    private void Record(StepTally tally, RecipeExecutionContext context, bool succeeded)
     {
         var entryCount = CatalogRecipeSections.Section(context.Step, _entriesName).Count();
 
         // An entry that passed validation and was not created was an update. Entries that never reached validation
         // were left out; a step that failed part way did not reach the rest, so they are not counted as skipped.
         var updated = Math.Max(0, tally.Valid - tally.Created);
-        var skipped = telemetry.Outcome == CrestAppsOrchardCoreTelemetry.OutcomeOk
+        var skipped = succeeded
             ? Math.Max(0, entryCount - tally.Valid - tally.Invalid)
             : 0;
 
@@ -147,9 +139,6 @@ public abstract class NamedCatalogRecipeStep<TEntry> : CatalogRecipeStep<TEntry>
         RecipeStepTelemetry.RecordStepEntries(_stepName, RecipeStepTelemetry.ResultUpdated, updated);
         RecipeStepTelemetry.RecordStepEntries(_stepName, RecipeStepTelemetry.ResultInvalid, tally.Invalid);
         RecipeStepTelemetry.RecordStepEntries(_stepName, RecipeStepTelemetry.ResultSkipped, skipped);
-
-        telemetry.SetSpanTag("crestapps.recipes.entries", entryCount);
-        telemetry.SetSpanTag("crestapps.recipes.entries.invalid", tally.Invalid);
 
         var logger = ShellScope.Services?.GetService<ILoggerFactory>()?.CreateLogger(GetType());
 

@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -293,11 +292,10 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
         var user = await _userAccessor.GetCurrentUserAsync();
         var lockKey = $"Telephony:TokenRefresh:{providerName}:{user?.UserName ?? providerName}";
 
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             lockKey,
             _tokenRefreshLockTimeout,
-            _tokenRefreshLockExpiration,
-            "telephony.token_refresh");
+            _tokenRefreshLockExpiration);
 
         if (!locked)
         {

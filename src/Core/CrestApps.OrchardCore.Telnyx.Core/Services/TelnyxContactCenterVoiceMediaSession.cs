@@ -600,7 +600,6 @@ internal sealed class TelnyxContactCenterVoiceMediaSession : IContactCenterVoice
         }
 
         Volatile.Write(ref _lost, 1);
-        TelnyxTelemetry.RecordMediaStreamReconnect(TelnyxTelemetry.MediaStreamLost, brokenFor: null);
 
         _reconnect.Logger?.LogError(
             "The media stream for call {CallControlId} failed and did not come back within {Seconds} seconds; the call is handed on.",

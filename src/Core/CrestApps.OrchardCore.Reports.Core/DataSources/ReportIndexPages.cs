@@ -1,7 +1,5 @@
-using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
-using CrestApps.OrchardCore.Diagnostics;
 using YesSql;
 using YesSql.Indexes;
 using YesSql.Services;
@@ -181,10 +179,7 @@ public static class ReportIndexPages
                     rows = rows.Where(order.After(last, dated));
                 }
 
-                var started = Stopwatch.GetTimestamp();
                 var page = (await order.Sort(rows, dated).Take(PageSize).ListAsync(cancellationToken)).ToArray();
-
-                RecordPage<TIndex>(ReportTelemetry.PhaseIndex, started);
 
                 if (page.Length == 0)
                 {
@@ -192,13 +187,8 @@ public static class ReportIndexPages
                 }
 
                 var ids = page.Select(row => row.Id).ToArray();
-
-                started = Stopwatch.GetTimestamp();
-
                 var records = (await order.Sort(session.Query<TRecord, TIndex>(index => index.Id.IsIn(ids), collection), dated)
                     .ListAsync(cancellationToken)).ToArray();
-
-                RecordPage<TIndex>(ReportTelemetry.PhaseRecords, started);
 
                 if (records.Length > 0)
                 {
@@ -215,25 +205,6 @@ public static class ReportIndexPages
                 last = page[^1];
             }
         }
-    }
-
-    // Records the read of one page of index rows or of their records, by the index type, which is bounded.
-    private static void RecordPage<TIndex>(string phase, long started)
-    {
-        if (!ReportTelemetry.IndexPageDuration.Enabled && !ReportTelemetry.IndexPages.Enabled)
-        {
-            return;
-        }
-
-        var tags = new TagList
-        {
-            { ReportTelemetry.IndexTag, typeof(TIndex).Name },
-            { ReportTelemetry.PhaseTag, phase },
-        };
-
-        CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
-        ReportTelemetry.IndexPageDuration.Record(Stopwatch.GetElapsedTime(started).TotalSeconds, tags);
-        ReportTelemetry.IndexPages.Add(1, tags);
     }
 
     // The order of the pages: by a date column, newest first, then by the row identifier, newest first.

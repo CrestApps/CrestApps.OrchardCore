@@ -3,12 +3,10 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Omnichannel.Core.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using CrestApps.Core.Support;
 using OrchardCore.ContentManagement;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
-using CrestApps.OrchardCore.Omnichannel.Managements.Telemetry;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
@@ -175,13 +173,13 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
 
                         await session.SaveAsync(activity, false, collection: OmnichannelConstants.CollectionName, cancellationToken);
 
-                        // The number itself stays out of the log.
                         if (logger.IsEnabled(LogLevel.Information))
                         {
-                            var activityId = activity.ItemId.SanitizeLogValue();
-                            var channel = activity.Channel.SanitizeLogValue();
-
-                            OmnichannelLog.AutomatedActivityNotInService(logger, activityId, channel);
+                            logger.LogInformation(
+                                "Activity '{ActivityId}' was cancelled instead of started on '{Channel}' because '{PhoneNumber}' is known not to be in service.",
+                                activity.ItemId.SanitizeLogValue(),
+                                activity.Channel.SanitizeLogValue(),
+                                activity.PreferredDestination.SanitizeLogValue());
                         }
 
                         RecordResult(run, ResultNotInService);
@@ -316,7 +314,6 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
     private static void RecordResult(MeasuredTaskRun run, string result, long count = 1)
     {
         run.AddItems(count, result);
-        OmnichannelTelemetry.Add(OmnichannelTelemetry.AutomatedActivities, count, CrestAppsOrchardCoreTelemetry.ResultTag, result);
     }
 
     private static async Task<int> ExpireNoResponseActivitiesAsync(

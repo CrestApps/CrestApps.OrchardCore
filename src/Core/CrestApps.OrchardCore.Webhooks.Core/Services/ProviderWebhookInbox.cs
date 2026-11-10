@@ -3,7 +3,6 @@ using System.Security.Cryptography;
 using System.Text;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Diagnostics;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Webhooks.Core.Models;
 using CrestApps.OrchardCore.Webhooks.Core.Telemetry;
 using CrestApps.OrchardCore.Webhooks.Models;
@@ -171,11 +170,10 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         // provider aliases resolve to a single stable identity and share one durable uniqueness constraint.
         var providerName = _providerNameNormalizer.Normalize(delivery.ProviderName);
 
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             GetDeliveryLockKey(providerName, delivery.DeliveryId),
             _acceptanceLockTimeout,
-            _acceptanceLockExpiration,
-            "webhook.inbox.accept");
+            _acceptanceLockExpiration);
 
         if (!locked)
         {
@@ -239,11 +237,10 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
     {
         ArgumentException.ThrowIfNullOrEmpty(messageId);
 
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             GetDispatchLockKey(messageId),
             _dispatchLockTimeout,
-            _dispatchLockExpiration,
-            "webhook.inbox.dispatch");
+            _dispatchLockExpiration);
 
         if (!locked)
         {
@@ -304,7 +301,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
                 null,
                 cancellationToken);
 
-            WebhookTelemetry.RecordInboxDispatch(activity, delivery, "completed");
+            WebhookTelemetry.RecordInboxDispatch(activity, delivery, completed ? "completed" : "conflict");
 
             return completed;
         }
@@ -336,8 +333,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
                 exception.GetType().FullName,
                 cancellationToken);
 
-            WebhookTelemetry.RecordInboxDispatch(activity, delivery, "retry");
-
+            // The settlement records whether the failure was retried or dead-lettered.
             _logger.LogError(
                 exception,
                 "Provider webhook inbox handler '{HandlerName}' failed for message '{MessageId}'.",
@@ -540,18 +536,20 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
             throw new ConcurrencyException(new Document());
         }
 
-        var messageId = claim.ItemId.SanitizeLogValue();
+        // The attempt count already includes this attempt, so a first dispatch that failed has a count of one.
+        var delivery = (settled?.AttemptCount ?? 1) <= 1 ? "first" : "retry";
 
         if (status == LeasedWorkItemStatus.DeadLettered)
         {
             // A dead letter used to be silent: the delivery simply stopped being retried.
+            WebhookTelemetry.RecordInboxDispatch(Activity.Current, delivery, "dead_lettered");
             WebhookTelemetry.RecordInboxDeadLettered(settled?.ProviderName, settled?.HandlerName);
-            WebhookLog.InboxMessageDeadLettered(_logger, messageId, settled?.ProviderName, settled?.HandlerName, settled?.AttemptCount ?? MaxAttempts, errorType);
+            WebhookLog.InboxMessageDeadLettered(_logger, claim.ItemId.SanitizeLogValue(), settled?.ProviderName, settled?.HandlerName, settled?.AttemptCount ?? MaxAttempts, errorType);
 
             return;
         }
 
-        WebhookLog.InboxRetryScheduled(_logger, messageId, settled?.HandlerName, settled?.AttemptCount ?? 0);
+        WebhookTelemetry.RecordInboxDispatch(Activity.Current, delivery, "retry");
     }
 
     private static string GetDeliveryLockKey(string providerName, string deliveryId)

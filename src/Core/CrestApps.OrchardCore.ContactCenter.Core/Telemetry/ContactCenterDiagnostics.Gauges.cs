@@ -115,8 +115,16 @@ public static partial class ContactCenterDiagnostics
 
         foreach (var (key, observation) in _observations)
         {
-            if (!string.Equals(key.Name, name, StringComparison.Ordinal) ||
-                Stopwatch.GetElapsedTime(observation.Timestamp) > _gaugeStaleAfter)
+            if (Stopwatch.GetElapsedTime(observation.Timestamp) > _gaugeStaleAfter)
+            {
+                // A tenant that stopped reporting, such as one released or removed, is dropped rather than kept for
+                // the life of the process. Removed only when no newer value replaced it in the meantime.
+                _observations.TryRemove(KeyValuePair.Create(key, observation));
+
+                continue;
+            }
+
+            if (!string.Equals(key.Name, name, StringComparison.Ordinal))
             {
                 continue;
             }

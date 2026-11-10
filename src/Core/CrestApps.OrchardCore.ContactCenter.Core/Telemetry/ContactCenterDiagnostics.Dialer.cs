@@ -87,11 +87,6 @@ public static partial class ContactCenterDiagnostics
         "{command}",
         "The number of provider commands that reached a settled state, by provider, command type and outcome.");
 
-    private static readonly Histogram<double> _preDialBridgeDuration = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
-        Meter,
-        "crestapps.contactcenter.predial.bridge.duration",
-        "The time the provider took to join a pre-dialed agent leg to the caller, by provider and outcome.");
-
     private static readonly Counter<long> _providerCommandsRecovered = Meter.CreateCounter<long>(
         "crestapps.contactcenter.provider_command.recovered",
         "{command}",
@@ -340,19 +335,6 @@ public static partial class ContactCenterDiagnostics
             Add(_providerCommandOutcomes, tags);
         }
     }
-
-    /// <summary>
-    /// Starts measuring the provider joining a pre-dialed agent leg to the caller.
-    /// </summary>
-    /// <param name="providerName">The provider.</param>
-    /// <returns>The scope; mark it succeeded or failed and dispose it.</returns>
-    internal static TelemetryScope StartPreDialBridge(string providerName)
-        => ExternalCallTelemetry.Start(
-            ActivitySource,
-            "crestapps.contactcenter.predial.bridge",
-            _preDialBridgeDuration,
-            GetProvider(providerName),
-            "predial.bridge");
 
     /// <summary>
     /// Records provider commands the recovery pass picked up again.

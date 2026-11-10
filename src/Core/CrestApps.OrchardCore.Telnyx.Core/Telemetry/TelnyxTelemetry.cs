@@ -2,23 +2,20 @@ using System.Collections.Frozen;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using CrestApps.OrchardCore.Diagnostics;
-using CrestApps.OrchardCore.Telnyx.Services;
 
 namespace CrestApps.OrchardCore.Telnyx.Telemetry;
 
 /// <summary>
-/// The OpenTelemetry spans and metrics of the Telnyx provider: its REST API, its call and messaging webhooks, the
-/// voicemail fast path and the media stream. The meter and activity source are both named
-/// <see cref="SourceName"/>. Nothing is recorded, and next to nothing is spent, while no listener is attached.
+/// The OpenTelemetry metrics of the Telnyx provider: its call and messaging webhooks, the voicemail fast path and
+/// the media stream. The meter is named <see cref="SourceName"/>. Nothing is recorded, and next to nothing is spent, while no listener is attached.
 /// </summary>
 /// <remarks>
-/// Metrics carry bounded tags only. The call-control id, phone numbers and SIP URIs never go on a metric, and the
-/// API spans carry the status code but never the request path, which holds the call-control id.
+/// Metrics carry bounded tags only. The call-control id, phone numbers and SIP URIs never go on a metric.
 /// </remarks>
 public static class TelnyxTelemetry
 {
     /// <summary>
-    /// The name of the meter and of the activity source.
+    /// The name of the meter.
     /// </summary>
     public const string SourceName = CrestAppsOrchardCoreTelemetry.SourceNamePrefix + ".Telnyx";
 
@@ -26,11 +23,6 @@ public static class TelnyxTelemetry
     /// The value of the <see cref="CrestAppsOrchardCoreTelemetry.ProviderTag"/>.
     /// </summary>
     public const string ProviderName = TelnyxConstants.ProviderTechnicalName;
-
-    /// <summary>
-    /// The tag that records whether a REST request was retried before it ended.
-    /// </summary>
-    public const string RetriedTag = "retried";
 
     /// <summary>
     /// The tag that records the type of a webhook event, such as <c>call.answered</c>, or <c>other</c> for a type
@@ -104,11 +96,6 @@ public static class TelnyxTelemetry
     public const string MediaStreamReconnected = "reconnected";
 
     /// <summary>
-    /// A broken media stream did not come back in time, and the call was handed on.
-    /// </summary>
-    public const string MediaStreamLost = "lost";
-
-    /// <summary>
     /// The webhook event types recorded as themselves on the <see cref="WebhookTypeTag"/>; any other type is
     /// recorded as <c>other</c>.
     /// </summary>
@@ -150,35 +137,10 @@ public static class TelnyxTelemetry
         "message.finalized",
     }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
-    private static readonly Dictionary<string, string> _apiResources = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["calls"] = "calls",
-        ["conferences"] = "conferences",
-        ["telephony_credentials"] = "credentials",
-        ["available_phone_numbers"] = "available_numbers",
-        ["number_orders"] = "number_orders",
-        ["phone_numbers"] = "phone_numbers",
-    };
-
     /// <summary>
     /// Gets the meter of the Telnyx provider.
     /// </summary>
     public static Meter Meter { get; } = CrestAppsOrchardCoreTelemetry.CreateMeter("Telnyx");
-
-    /// <summary>
-    /// Gets the activity source of the Telnyx provider.
-    /// </summary>
-    public static ActivitySource ActivitySource { get; } = CrestAppsOrchardCoreTelemetry.CreateActivitySource("Telnyx");
-
-    /// <summary>
-    /// The duration of a Telnyx REST request, retries included, tagged with the <c>provider</c>, the
-    /// <c>operation</c> (see <see cref="GetApiOperation(HttpMethod, string)"/>), the <c>status_class</c>,
-    /// <see cref="RetriedTag"/> and the <c>outcome</c>. Its count is the number of requests.
-    /// </summary>
-    public static Histogram<double> ApiRequestDuration { get; } = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
-        Meter,
-        "crestapps.telnyx.api.request.duration",
-        "The duration of Telnyx REST API requests, retries included.");
 
     /// <summary>
     /// The number of webhook deliveries received, tagged with <see cref="WebhookKindTag"/>, <see cref="WebhookTypeTag"/>
@@ -199,15 +161,6 @@ public static class TelnyxTelemetry
         "The time from the event a Telnyx webhook reports to the delivery arriving.");
 
     /// <summary>
-    /// The duration of processing a call webhook delivery, inline or from the webhook inbox, tagged with
-    /// <see cref="WebhookTypeTag"/> and the <c>outcome</c>.
-    /// </summary>
-    public static Histogram<double> WebhookProcessDuration { get; } = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
-        Meter,
-        "crestapps.telnyx.webhook.process.duration",
-        "The duration of processing a Telnyx call webhook delivery.");
-
-    /// <summary>
     /// The time from a voicemail greeting ending to the recording being started, on the webhook's fast path, tagged
     /// with the <c>outcome</c>.
     /// </summary>
@@ -225,13 +178,13 @@ public static class TelnyxTelemetry
         "The number of times Telnyx reported a call's media stream failed.");
 
     /// <summary>
-    /// The number of broken media streams, tagged with the <c>result</c>: <see cref="MediaStreamReconnected"/> or
-    /// <see cref="MediaStreamLost"/>.
+    /// The number of broken media streams that came back, tagged with the <c>result</c> <see cref="MediaStreamReconnected"/>.
+    /// A stream that did not come back is counted on <c>crestapps.voice.media.stream.lost</c>.
     /// </summary>
     public static Counter<long> MediaStreamReconnects { get; } = Meter.CreateCounter<long>(
         "crestapps.telnyx.media.stream.reconnects",
         "{reconnect}",
-        "The number of broken Telnyx media streams, by whether they came back.");
+        "The number of broken Telnyx media streams that came back.");
 
     /// <summary>
     /// The time from a media stream breaking to the replacement socket taking over.
@@ -240,53 +193,6 @@ public static class TelnyxTelemetry
         Meter,
         "crestapps.telnyx.media.stream.reconnect.duration",
         "The time from a Telnyx media stream breaking to the replacement socket taking over.");
-
-    /// <summary>
-    /// Gets the bounded <c>operation</c> of a REST request from its method and path: the resource and the action, such
-    /// as <c>calls.answer</c>, <c>calls.create</c> or <c>conferences.join</c>. The ids in the path are dropped, and a
-    /// resource that is not known is <c>other</c>.
-    /// </summary>
-    /// <param name="method">The HTTP method.</param>
-    /// <param name="path">The request path, relative to the API base address, with any query string.</param>
-    /// <returns>The operation.</returns>
-    public static string GetApiOperation(HttpMethod method, string path)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return CrestAppsOrchardCoreTelemetry.Other;
-        }
-
-        var queryStart = path.IndexOf('?', StringComparison.Ordinal);
-        var segments = (queryStart >= 0 ? path[..queryStart] : path)
-            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-        if (segments.Length == 0 || !_apiResources.TryGetValue(segments[0], out var resource))
-        {
-            return CrestAppsOrchardCoreTelemetry.Other;
-        }
-
-        var verb = method?.Method?.ToUpperInvariant();
-
-        return segments.Length switch
-        {
-            1 => resource + "." + (verb switch
-            {
-                "POST" => "create",
-                "GET" => "list",
-                _ => CrestAppsOrchardCoreTelemetry.Other,
-            }),
-            2 => resource + "." + (verb switch
-            {
-                "GET" => "get",
-                "DELETE" => "delete",
-                "PATCH" or "PUT" => "update",
-                _ => CrestAppsOrchardCoreTelemetry.Other,
-            }),
-            3 => resource + "." + AsName(segments[2]),
-            4 when string.Equals(segments[2], "actions", StringComparison.OrdinalIgnoreCase) => resource + "." + AsName(segments[3]),
-            _ => resource + "." + CrestAppsOrchardCoreTelemetry.Other,
-        };
-    }
 
     /// <summary>
     /// Gets the bounded <see cref="WebhookTypeTag"/> of a webhook event type.
@@ -352,57 +258,6 @@ public static class TelnyxTelemetry
     }
 
     /// <summary>
-    /// Processes a call webhook delivery in a <c>crestapps.telnyx.webhook.process</c> span linked to the span that
-    /// received it, and records <see cref="WebhookProcessDuration"/>. The delivery's <see cref="TelnyxCallEvent.TraceParent"/>
-    /// carries the receiving span across the webhook inbox.
-    /// </summary>
-    /// <param name="webhookService">The service that processes the event.</param>
-    /// <param name="callEvent">The event.</param>
-    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    /// <returns>How the event was handled.</returns>
-    public static async Task<TelnyxWebhookResult> ProcessWebhookAsync(
-        ITelnyxWebhookService webhookService,
-        TelnyxCallEvent callEvent,
-        CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(webhookService);
-        ArgumentNullException.ThrowIfNull(callEvent);
-
-        using var telemetry = TelemetryScope.StartLinked(
-            ActivitySource,
-            "crestapps.telnyx.webhook.process",
-            WebhookProcessDuration,
-            callEvent.TraceParent,
-            new TagList
-            {
-                { WebhookTypeTag, GetWebhookType(callEvent.EventType) },
-            });
-
-        telemetry.SetSpanTag("crestapps.telnyx.event.id", callEvent.EventId);
-
-        try
-        {
-            var result = await webhookService.ProcessAsync(callEvent, cancellationToken);
-
-            telemetry.AddMetricTag(CrestAppsOrchardCoreTelemetry.ResultTag, result switch
-            {
-                TelnyxWebhookResult.Updated => "updated",
-                TelnyxWebhookResult.Routed => "routed",
-                _ => "ignored",
-            });
-            telemetry.Succeed();
-
-            return result;
-        }
-        catch (Exception ex)
-        {
-            telemetry.Fail(ex);
-
-            throw;
-        }
-    }
-
-    /// <summary>
     /// Records that Telnyx reported a media stream failed.
     /// </summary>
     public static void RecordMediaStreamFailure()
@@ -420,7 +275,7 @@ public static class TelnyxTelemetry
     /// <summary>
     /// Records how a broken media stream ended up.
     /// </summary>
-    /// <param name="result"><see cref="MediaStreamReconnected"/> or <see cref="MediaStreamLost"/>.</param>
+    /// <param name="result"><see cref="MediaStreamReconnected"/>.</param>
     /// <param name="brokenFor">How long the stream was broken before it came back, or <see langword="null"/> when it did not.</param>
     public static void RecordMediaStreamReconnect(string result, TimeSpan? brokenFor)
     {
@@ -438,23 +293,5 @@ public static class TelnyxTelemetry
         {
             MediaStreamReconnectDuration.Record(duration.TotalSeconds, tags);
         }
-    }
-
-    private static string AsName(string segment)
-    {
-        if (string.IsNullOrEmpty(segment) || segment.Length > 40)
-        {
-            return CrestAppsOrchardCoreTelemetry.Other;
-        }
-
-        foreach (var character in segment)
-        {
-            if (character is not ((>= 'a' and <= 'z') or '_'))
-            {
-                return CrestAppsOrchardCoreTelemetry.Other;
-            }
-        }
-
-        return segment;
     }
 }

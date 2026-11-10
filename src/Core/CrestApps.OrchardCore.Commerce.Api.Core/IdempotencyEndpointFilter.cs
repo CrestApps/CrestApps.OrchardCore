@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using System.Text.Json;
-using CrestApps.OrchardCore.Locking;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Distributed;
@@ -49,7 +48,7 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
         }
 
         var (locker, locked) = await httpContext.RequestServices.GetRequiredService<IDistributedLock>()
-            .TryAcquireMeasuredLockAsync(cacheKey, TimeSpan.FromMilliseconds(500), TimeSpan.FromMinutes(2), "commerce.api_idempotency");
+            .TryAcquireLockAsync(cacheKey, TimeSpan.FromMilliseconds(500), TimeSpan.FromMinutes(2));
 
         if (!locked)
         {

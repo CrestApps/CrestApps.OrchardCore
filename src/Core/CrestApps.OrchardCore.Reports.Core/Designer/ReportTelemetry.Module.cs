@@ -171,14 +171,6 @@ public static partial class ReportTelemetry
         "The report widget renders, by kind, cache use and outcome.");
 
     /// <summary>
-    /// Gets the number of open connections to the report designer presence hub.
-    /// </summary>
-    public static UpDownCounter<long> HubConnections { get; } = ReportTelemetrySource.Meter.CreateUpDownCounter<long>(
-        "crestapps.report.hub.connections",
-        "{connection}",
-        "The open connections to the report designer presence hub.");
-
-    /// <summary>
     /// Gets the counter of the presence hub calls refused, tagged with the <see cref="CrestAppsOrchardCoreTelemetry.OperationTag"/>:
     /// <c>join</c> or <c>presence</c>.
     /// </summary>

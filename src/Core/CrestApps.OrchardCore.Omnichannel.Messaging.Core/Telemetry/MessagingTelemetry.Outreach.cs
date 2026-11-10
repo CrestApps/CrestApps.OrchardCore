@@ -10,25 +10,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
 public static partial class MessagingTelemetry
 {
     /// <summary>
-    /// Records a re-engagement nudge considered for a quiet automated conversation.
-    /// </summary>
-    /// <param name="channel">The technical name of the channel.</param>
-    /// <param name="result">The result, one of <see cref="ReEngagementResults"/>.</param>
-    public static void RecordReEngagement(string channel, string result)
-    {
-        if (!ReEngagement.Enabled)
-        {
-            return;
-        }
-
-        Add(ReEngagement, new TagList
-        {
-            { CrestAppsOrchardCoreTelemetry.ChannelTag, GetChannelTag(channel) },
-            { CrestAppsOrchardCoreTelemetry.ResultTag, result },
-        });
-    }
-
-    /// <summary>
     /// Records a broadcast that started or finished.
     /// </summary>
     /// <param name="channel">The technical name of the channel.</param>
@@ -88,7 +69,7 @@ public static partial class MessagingTelemetry
     }
 
     /// <summary>
-    /// The results of <see cref="ReEngagement"/>.
+    /// The results of a re-engagement nudge, counted as its background task's items.
     /// </summary>
     public static class ReEngagementResults
     {

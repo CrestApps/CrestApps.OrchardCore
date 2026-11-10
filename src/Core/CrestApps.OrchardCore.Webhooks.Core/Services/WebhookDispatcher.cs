@@ -152,17 +152,6 @@ public sealed class WebhookDispatcher
         }
         else
         {
-            using var telemetry = ExternalCallTelemetry.Start(
-                WebhookTelemetry.ActivitySource,
-                "crestapps.webhook.delivery.send",
-                WebhookTelemetry.DeliveryDuration,
-                WebhookTelemetry.OutboundProvider,
-                "deliver");
-
-            telemetry.SetSpanTag("crestapps.webhook.delivery.id", delivery.ItemId);
-            telemetry.SetSpanTag("crestapps.webhook.event.name", delivery.EventName);
-            telemetry.SetSpanTag("crestapps.webhook.delivery.attempt", delivery.Attempts);
-
             var result = await _sender.SendAsync(new WebhookSendRequest
             {
                 Url = subscription.Url,
@@ -172,13 +161,6 @@ public sealed class WebhookDispatcher
                 Body = delivery.Payload ?? "{}",
             }, cancellationToken);
 
-            telemetry.SetStatusCode(result.StatusCode);
-
-            if (!result.Succeeded)
-            {
-                telemetry.Fail(GetFailureReason(result));
-            }
-
             Record(delivery, result, now);
             RecordAttempt(delivery, result);
         }
@@ -186,8 +168,7 @@ public sealed class WebhookDispatcher
         await _deliveries.UpdateAsync(delivery, cancellationToken);
     }
 
-    // Each attempt is counted once, by what it came to, and an attempt that will be made again is a retry of the
-    // dispatcher's own back-off loop, logged with its number so a storm reads the same on a chart and in the logs.
+    // Each attempt is counted once, by what it came to; one that failed for good is also logged.
     private void RecordAttempt(WebhookDelivery delivery, WebhookSendResult result)
     {
         if (result.Succeeded)
@@ -209,12 +190,7 @@ public sealed class WebhookDispatcher
             return;
         }
 
-        var deliveryId = delivery.ItemId;
-        var retryDelay = GetRetryDelay(delivery.Attempts);
-
         WebhookTelemetry.RecordDelivery(WebhookTelemetry.DeliveryRetry, reason, result.StatusCode);
-        RetryTelemetry.RecordRetry("webhooks", reason, delivery.Attempts + 1);
-        WebhookLog.DeliveryRetryScheduled(_logger, deliveryId, delivery.EventName, delivery.Attempts, result.StatusCode, retryDelay);
     }
 
     private static string GetFailureReason(WebhookSendResult result)

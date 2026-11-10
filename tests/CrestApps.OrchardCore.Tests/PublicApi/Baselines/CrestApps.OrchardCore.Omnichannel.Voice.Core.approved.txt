@@ -467,8 +467,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
                     OrchardCore.Modules.IClock clock,
                     Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Voice.Services.VoiceAgentConversationLoop> logger,
                     Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Voice.Services.VoiceAgentConversationLoop> stringLocalizer,
-                    System.TimeProvider timeProvider = null,
-                    Microsoft.Extensions.Compliance.Redaction.IRedactorProvider redactorProvider = null) { }
+                    System.TimeProvider timeProvider = null) { }
         public System.Threading.Tasks.Task<bool> ConcludeStrandedCallAsync(string activityId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task HandleAsync(CrestApps.OrchardCore.Omnichannel.Voice.Models.VoiceAgentEvent voiceEvent, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task OnListeningTimedOutAsync(CrestApps.OrchardCore.Omnichannel.Voice.Models.TurnBasedSilence silence, System.Threading.CancellationToken cancellationToken) { }

@@ -8,9 +8,8 @@ using CrestApps.OrchardCore.Workforce.Services;
 namespace CrestApps.OrchardCore.Tests.Telemetry.Scheduling;
 
 /// <summary>
-/// The OR-Tools solvers record <c>crestapps.solver.runs</c>, <c>crestapps.solver.duration</c> and a
-/// <c>crestapps.solver.solve</c> span with the solver, how the search ended and the class of the problem's size, and
-/// never a tag a metric must not carry. The names are a public contract dashboards depend on.
+/// The OR-Tools solvers record <c>crestapps.solver.runs</c> with the solver, how the search ended and the class of
+/// the problem's size, and never a tag a metric must not carry. The names are a public contract dashboards depend on.
 /// </summary>
 public sealed class SolverTelemetryTests
 {
@@ -22,7 +21,7 @@ public sealed class SolverTelemetryTests
     ];
 
     [Fact]
-    public async Task ShiftSolver_RecordsTheRunTheDurationAndTheSpan()
+    public async Task ShiftSolver_RecordsTheRun()
     {
         // Arrange
         using var capture = new TelemetryCapture();
@@ -45,8 +44,6 @@ public sealed class SolverTelemetryTests
             Equals(run.Tags[SolverTelemetry.SizeTag], "le_10") &&
             _searchStatuses.Contains(run.Tags[SolverTelemetry.StatusTag] as string) &&
             Equals(run.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag], CrestAppsOrchardCoreTelemetry.OutcomeOk));
-        Assert.Contains(capture.Find("crestapps.solver.duration", SolverTelemetry.SolverTag, SolverTelemetry.ShiftScheduleSolver), measurement => Equals(measurement.Tags[SolverTelemetry.SizeTag], "le_10"));
-        Assert.Contains(capture.Spans, span => span.OperationName == SolverTelemetry.SolveSpanName && Equals(span.GetTagItem(SolverTelemetry.SolverTag), SolverTelemetry.ShiftScheduleSolver));
         Assert.Empty(capture.FindBannedTagKeys());
     }
 

@@ -270,8 +270,8 @@ OrchardCore__CrestApps__AI__Connections__0__AuthenticationType=ManagedIdentity
 
 Keys: `Temperature`, `MaxOutputTokens`, `TopP` (default `1`), `FrequencyPenalty` (`0`), `PresencePenalty`
 (`0`), `PastMessagesCount` (`10`), `MaximumIterationsPerRequest` (`10`),
-`AbsoluteMaximumIterationsPerRequest` (`100`), `EnableOpenTelemetry` (`false`), `EnableSensitiveData` (`false`) and
-`EnableDistributedCaching` (`true`). The defaults come from CrestApps.Core. `EnableOpenTelemetry` adds the `gen_ai.*` spans and metrics of the AI clients, and `EnableSensitiveData` adds prompts, responses and tool arguments to those spans; see [Observability](observability.md).
+`AbsoluteMaximumIterationsPerRequest` (`100`), `EnableOpenTelemetry` (`false`) and
+`EnableDistributedCaching` (`true`). The defaults come from CrestApps.Core. `EnableOpenTelemetry` adds the `gen_ai.*` spans and metrics of the AI clients, on the `AICompletionService` source; see [Observability](observability.md).
 
 ```json
 {
@@ -1945,17 +1945,17 @@ A parent's policy is set on the platform's **Policy** screen and stored in the p
 
 | | |
 | --- | --- |
-| **Section** | `CrestApps:OpenTelemetry` (read once by the host, for every tenant) |
-| **Controls** | What the CrestApps metrics carry |
+| **Section** | `OrchardCore:OpenTelemetry` (Orchard Core's own section, read once by the host) |
+| **Controls** | Whether telemetry is collected and exported, and what the metrics carry |
 
-Keys: `Metrics:IncludeTenantName` (default `false`) adds a `tenant` tag to the metrics recorded through the shared telemetry helpers (background tasks, deferred work, locks, retries, operation scopes and external calls). It multiplies the series a collector stores by the number of tenants, so leave it off unless you need per-tenant charts; spans and logs carry the tenant either way.
+The host collects and exports telemetry only when an OTLP endpoint is set, through the standard `OTEL_EXPORTER_OTLP_ENDPOINT` value or Orchard Core's `OrchardCore:OpenTelemetry:Otlp:Endpoint`. It collects Orchard Core's telemetry (with ASP.NET Core, HttpClient and the .NET runtime) and that of our own code: the `CrestApps.Core*` and `CrestApps.OrchardCore.*` sources and meters. Other libraries report their own telemetry; add their source or meter names to `Tracing:Sources` or `Metrics:Meters` to collect it.
 
-The host collects and exports telemetry only when an OTLP endpoint is set, through the standard `OTEL_EXPORTER_OTLP_ENDPOINT` value or Orchard Core's `OrchardCore:OpenTelemetry:Otlp:Endpoint`. Orchard Core's `OrchardCore:OpenTelemetry` section controls sampling, the service name and which signals are exported.
+`Metrics:IncludeTenantName` (default `true`) tags Orchard Core's HTTP server metrics and the CrestApps metrics with the tenant (`orchardcore.tenant.name`). Turn it off to limit the number of series with many tenants; spans and logs carry the tenant either way.
 
 ```text
 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
 OTEL_SERVICE_NAME=OrchardCoreCMS
-OrchardCore__CrestApps__OpenTelemetry__Metrics__IncludeTenantName=true
+OrchardCore__OpenTelemetry__Metrics__IncludeTenantName=false
 ```
 
 See [Observability](observability.md).

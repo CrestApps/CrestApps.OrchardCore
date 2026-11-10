@@ -3,7 +3,6 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -193,11 +192,10 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
             return await RouteInboundCoreAsync(inboundEvent, cancellationToken);
         }
 
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             GetInboundLockKey(inboundEvent),
             _inboundLockTimeout,
-            _inboundLockExpiration,
-            "contactcenter.inbound.route");
+            _inboundLockExpiration);
 
         if (!locked)
         {

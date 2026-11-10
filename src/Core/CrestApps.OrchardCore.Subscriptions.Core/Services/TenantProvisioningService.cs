@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Diagnostics;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Telemetry;
 using CrestApps.OrchardCore.Subscriptions.Core.Workflows.Events;
@@ -15,7 +14,6 @@ using OrchardCore.Abstractions.Setup;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
-using OrchardCore.Recipes.Models;
 using OrchardCore.Settings;
 using OrchardCore.Setup.Services;
 using OrchardCore.Workflows.Services;
@@ -106,7 +104,7 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         using var telemetry = SubscriptionsTelemetry.StartProvisioning(jobId);
         using var logScope = _logger.BeginScope(new Dictionary<string, object> { ["ProvisioningJobId"] = jobId });
 
-        var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync("TENANT_PROVISIONING_" + jobId, _lockTimeout, _lockExpiration, "subscriptions.tenant_provisioning");
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync("TENANT_PROVISIONING_" + jobId, _lockTimeout, _lockExpiration);
 
         if (!locked)
         {
@@ -138,15 +136,12 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         // a job that becomes due again rather than one stuck in Running forever.
         job.NextAttemptUtc = _clock.UtcNow.Add(GetBackOff(job.AttemptCount));
 
-        using (SubscriptionsTelemetry.StartProvisioningStep("claim"))
-        {
-            await _jobStore.UpdateAsync(job, cancellationToken);
+        await _jobStore.UpdateAsync(job, cancellationToken);
 
-            // Committed now rather than at the end of the scope. Setting up a tenant takes long enough that the
-            // process can die in the middle of it, and a claim that only existed in memory would leave the job
-            // looking never-attempted, to be picked up again and again by every node.
-            await _session.SaveChangesAsync(cancellationToken);
-        }
+        // Committed now rather than at the end of the scope. Setting up a tenant takes long enough that the
+        // process can die in the middle of it, and a claim that only existed in memory would leave the job
+        // looking never-attempted, to be picked up again and again by every node.
+        await _session.SaveChangesAsync(cancellationToken);
 
         string failure;
 
@@ -224,10 +219,7 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
                 : SubscriptionsTelemetry.ProvisioningFailed);
         }
 
-        using (SubscriptionsTelemetry.StartProvisioningStep("raise_workflow"))
-        {
-            await RaiseAsync(job, failure);
-        }
+        await RaiseAsync(job, failure);
 
         return job.Status;
     }
@@ -248,28 +240,16 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         }
 
         var adminPassword = UnprotectAdminPassword(job);
-        IEnumerable<RecipeDescriptor> recipes;
-
-        using (SubscriptionsTelemetry.StartProvisioningStep("get_recipes"))
-        {
-            recipes = await _setupService.GetSetupRecipesAsync();
-        }
+        var recipes = await _setupService.GetSetupRecipesAsync();
 
         if (!recipes.Any())
         {
             return "No setup recipes are available.";
         }
 
-        ShellSettings shellSettings;
+        var onboarding = await _siteService.GetSettingsAsync<SubscriptionOnboardingSettings>();
 
-        using (SubscriptionsTelemetry.StartProvisioningStep("create_shell_settings"))
-        {
-            var onboarding = await _siteService.GetSettingsAsync<SubscriptionOnboardingSettings>();
-
-            shellSettings = CreateShellSettings(job, onboarding);
-        }
-
-        using var disposableShellSettings = shellSettings;
+        using var shellSettings = CreateShellSettings(job, onboarding);
 
         var setupContext = new SetupContext
         {
@@ -291,16 +271,7 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
             },
         };
 
-        // The heavy step: it creates the database tables and runs the recipe.
-        using (var step = SubscriptionsTelemetry.StartProvisioningStep("setup"))
-        {
-            await _setupService.SetupAsync(setupContext);
-
-            if (setupContext.Errors.Count > 0)
-            {
-                step?.SetStatus(ActivityStatusCode.Error, "The setup reported errors.");
-            }
-        }
+        await _setupService.SetupAsync(setupContext);
 
         return setupContext.Errors.Count == 0
             ? null

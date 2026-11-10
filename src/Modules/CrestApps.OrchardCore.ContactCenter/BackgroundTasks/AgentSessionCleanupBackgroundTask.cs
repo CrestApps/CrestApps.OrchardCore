@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -34,7 +33,6 @@ public sealed class AgentSessionCleanupBackgroundTask : IBackgroundTask
 
             // A session goes stale when its heartbeat stops: the agent's screen went away without signing out.
             run.AddItems(expired, "expired");
-            ContactCenterDiagnostics.RecordHeartbeatLost(expired);
 
             if (expired > 0 && logger.IsEnabled(LogLevel.Debug))
             {

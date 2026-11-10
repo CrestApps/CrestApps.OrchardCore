@@ -2,7 +2,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using CrestApps.OrchardCore.Asterisk.Models;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Telephony.Telemetry;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
@@ -167,7 +166,7 @@ internal sealed class AsteriskPjsipCredentialIssuer : IAsteriskPjsipCredentialIs
 
     public async Task<int> CleanupExpiredAsync(CancellationToken cancellationToken = default)
     {
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(CreateLockKey(), _lockTimeout, _lockExpiration, "asterisk.pjsip_credentials");
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(CreateLockKey(), _lockTimeout, _lockExpiration);
 
         if (!locked)
         {
@@ -363,7 +362,7 @@ internal sealed class AsteriskPjsipCredentialIssuer : IAsteriskPjsipCredentialIs
 
     private async Task<ILocker> AcquireLockAsync()
     {
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(CreateLockKey(), _lockTimeout, _lockExpiration, "asterisk.pjsip_credentials");
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(CreateLockKey(), _lockTimeout, _lockExpiration);
 
         if (!locked)
         {

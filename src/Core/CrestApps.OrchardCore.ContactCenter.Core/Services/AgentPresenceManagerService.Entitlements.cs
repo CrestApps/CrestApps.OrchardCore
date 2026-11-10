@@ -1,7 +1,6 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -76,11 +75,10 @@ public sealed partial class AgentPresenceManagerService
             return null;
         }
 
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             AgentProfileLock.GetKey(profile.UserId),
             _signInLockTimeout,
-            _signInLockExpiration,
-            "contactcenter.agent.presence");
+            _signInLockExpiration);
 
         if (!locked)
         {

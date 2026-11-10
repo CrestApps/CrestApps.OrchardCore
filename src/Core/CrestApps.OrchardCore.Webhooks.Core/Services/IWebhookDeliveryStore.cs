@@ -18,13 +18,6 @@ public interface IWebhookDeliveryStore : ICatalog<WebhookDelivery>
     Task<IReadOnlyList<WebhookDelivery>> ListDueAsync(DateTime utcNow, int take, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Counts the deliveries still pending, due now or waiting out their back-off.
-    /// </summary>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The number of pending deliveries.</returns>
-    Task<int> CountPendingAsync(CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Lists a page of a subscription's deliveries, newest first.
     /// </summary>
     /// <param name="subscriptionId">The subscription.</param>

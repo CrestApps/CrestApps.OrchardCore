@@ -1,4 +1,3 @@
-using System.Net;
 using CrestApps.OrchardCore.Asterisk.Telemetry;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony;
@@ -12,7 +11,6 @@ using CrestApps.OrchardCore.WebSockets.Telemetry;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Moq;
-using Polly.Timeout;
 
 namespace CrestApps.OrchardCore.Tests.Telemetry.VoiceTelephony;
 
@@ -117,33 +115,8 @@ public sealed class TelephonyTelemetryTests
         Assert.Equal(VoiceStreamOrdering.DiscardUnsequenced, unsequenced);
     }
 
-    [Theory]
-    [InlineData(HttpStatusCode.OK, "ok")]
-    [InlineData(HttpStatusCode.NotFound, "http_4xx")]
-    [InlineData(HttpStatusCode.BadGateway, "http_5xx")]
-    public void GetAriResult_ClassifiesTheResponse(HttpStatusCode statusCode, string expected)
-    {
-        // Act
-        var result = AsteriskDiagnostics.GetAriResult(statusCode);
-
-        // Assert
-        Assert.Equal(expected, result);
-    }
-
     [Fact]
-    public void GetAriResult_WithoutAResponse_TellsATimeoutFromAnUnreachableAsterisk()
-    {
-        // Act
-        var timedOut = AsteriskDiagnostics.GetAriResult(null, new TimeoutRejectedException());
-        var unreachable = AsteriskDiagnostics.GetAriResult(null, new HttpRequestException("refused"));
-
-        // Assert
-        Assert.Equal(CrestAppsOrchardCoreTelemetry.OutcomeTimeout, timedOut);
-        Assert.Equal(AsteriskDiagnostics.AriResultUnreachable, unreachable);
-    }
-
-    [Fact]
-    public void Asterisk_RecordsTheNewInstrumentNamesNextToTheDeprecatedOnes_AndTheCurrentConnectionState()
+    public void Asterisk_RecordsTheCrestAppsInstrumentNames_AndTheCurrentConnectionState()
     {
         // Arrange
         using var capture = new TelemetryCapture();
@@ -162,10 +135,9 @@ public sealed class TelephonyTelemetryTests
         AsteriskDiagnostics.RecordRealtimeEvent(provider, "SomethingNew", AsteriskDiagnostics.EventIgnored);
 
         // Assert
-        Assert.Single(capture.Find("asterisk.realtime.ingestion.saturated", "provider", provider));
         Assert.Single(capture.Find("crestapps.asterisk.realtime.ingestion.saturated", "provider", provider));
-        Assert.Single(capture.Find("asterisk.realtime.connected", "provider", provider));
         Assert.Single(capture.Find("crestapps.asterisk.realtime.connections", "provider", provider));
+        Assert.DoesNotContain(capture.Measurements, measurement => measurement.Instrument.StartsWith("asterisk.", StringComparison.Ordinal));
         Assert.Equal(
             new[] { 1d, -1d },
             capture.Find("crestapps.asterisk.realtime.connected", "provider", provider).Select(measurement => measurement.Value));

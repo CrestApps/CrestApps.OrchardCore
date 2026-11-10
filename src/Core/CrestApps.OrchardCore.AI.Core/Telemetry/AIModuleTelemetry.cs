@@ -182,16 +182,6 @@ public static class AIModuleTelemetry
         CrestAppsOrchardCoreTelemetry.LongDurationBucketBoundaries);
 
     /// <summary>
-    /// The number of judge verdicts and test runs, tagged with <see cref="KindTag"/> (<see cref="KindJudge"/> or
-    /// <see cref="KindTestRun"/>) and the result: <see cref="ResultPassed"/>, <see cref="ResultFailed"/>,
-    /// <c>error</c> or <c>skipped</c>.
-    /// </summary>
-    public static readonly Counter<long> EvaluationRuns = Meter.CreateCounter<long>(
-        "crestapps.ai.eval.runs",
-        "{evaluation}",
-        "The number of conversation evaluations and simulation test runs, by their result.");
-
-    /// <summary>
     /// The number of alert incidents opened, tagged with <see cref="MetricTag"/>.
     /// </summary>
     public static readonly Counter<long> AlertsRaised = Meter.CreateCounter<long>(
@@ -208,17 +198,6 @@ public static class AIModuleTelemetry
         "The number of AI alert rule incidents resolved because the metric was back within its threshold.");
 
     /// <summary>
-    /// The number of signed webhooks the Send Signed Webhook workflow task delivered or gave up on, tagged with the
-    /// outcome (<c>ok</c> or <c>error</c>), the <c>status_class</c> of the last response and, for a failure, the
-    /// <c>reason</c>: <c>invalid_url</c>, <c>missing_secret</c>, <c>egress_refused</c>, <c>rejected</c> or
-    /// <c>exhausted</c>. The event name is free text a workflow renders, so it is never a tag.
-    /// </summary>
-    public static readonly Counter<long> WebhookDeliveries = Meter.CreateCounter<long>(
-        "crestapps.ai.webhook.deliveries",
-        "{delivery}",
-        "The number of signed webhooks the workflow task delivered or gave up on.");
-
-    /// <summary>
     /// The duration of delivering a signed webhook, every attempt and the waits between them included, tagged
     /// with the outcome, the <c>status_class</c> of the last response and the <c>reason</c> of a failure.
     /// </summary>
@@ -226,15 +205,6 @@ public static class AIModuleTelemetry
         Meter,
         "crestapps.ai.webhook.delivery.duration",
         "The duration of delivering a signed webhook, retries included.");
-
-    /// <summary>
-    /// The number of requests to the AI completion API, tagged with the <c>operation</c>, the <c>status_class</c>
-    /// of the response and the outcome.
-    /// </summary>
-    public static readonly Counter<long> ApiRequests = Meter.CreateCounter<long>(
-        "crestapps.ai.api.requests",
-        "{request}",
-        "The number of requests to the AI completion API, by the class of their response.");
 
     /// <summary>
     /// The number of recipes AI tools imported, tagged with <see cref="ModeTag"/> (<see cref="ModeInline"/> or
@@ -261,28 +231,6 @@ public static class AIModuleTelemetry
             ToolRegistryEntrySource.Local => "local",
             _ => CrestAppsOrchardCoreTelemetry.Unknown,
         };
-    }
-
-    /// <summary>
-    /// Counts one judge verdict or test run.
-    /// </summary>
-    /// <param name="kind">The kind, <see cref="KindJudge"/> or <see cref="KindTestRun"/>.</param>
-    /// <param name="result">The result, <see cref="ResultPassed"/>, <see cref="ResultFailed"/>, <c>error</c> or <c>skipped</c>.</param>
-    public static void RecordEvaluation(string kind, string result)
-    {
-        if (!EvaluationRuns.Enabled)
-        {
-            return;
-        }
-
-        var tags = new TagList
-        {
-            { KindTag, kind },
-            { CrestAppsOrchardCoreTelemetry.ResultTag, result },
-        };
-
-        CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
-        EvaluationRuns.Add(1, tags);
     }
 
     /// <summary>

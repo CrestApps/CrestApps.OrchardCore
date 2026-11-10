@@ -31,7 +31,7 @@ namespace CrestApps.OrchardCore.Tests.Telemetry.Scheduling;
 public sealed class SchedulingTelemetryTests
 {
     [Fact]
-    public async Task AppointmentHoldsTask_RecordsTheRunAndTheExpiredHolds()
+    public async Task AppointmentHoldsTask_RecordsTheExpiredHolds()
     {
         // Arrange
         using var capture = new TelemetryCapture();
@@ -43,16 +43,13 @@ public sealed class SchedulingTelemetryTests
         await new AppointmentHoldsBackgroundTask().DoWorkAsync(services, TestContext.Current.CancellationToken);
 
         // Assert
-        var runs = capture.Find("crestapps.background_task.runs", CrestAppsOrchardCoreTelemetry.TaskTag, nameof(AppointmentHoldsBackgroundTask));
-        Assert.Contains(runs, run => Equals(run.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag], CrestAppsOrchardCoreTelemetry.OutcomeOk));
-
         var items = capture.Find("crestapps.background_task.items", CrestAppsOrchardCoreTelemetry.TaskTag, nameof(AppointmentHoldsBackgroundTask));
         Assert.Contains(items, item => Equals(item.Tags[CrestAppsOrchardCoreTelemetry.ResultTag], "expired") && item.Value == 3);
         Assert.Empty(capture.FindBannedTagKeys());
     }
 
     [Fact]
-    public async Task GeocodeTask_WhenABatchIsFull_RecordsThatTheRunExceededItsBudget()
+    public async Task GeocodeTask_RecordsTheRequestsItProcessed()
     {
         // Arrange
         using var capture = new TelemetryCapture();
@@ -64,12 +61,12 @@ public sealed class SchedulingTelemetryTests
         await new GeocodeBackgroundTask().DoWorkAsync(services, TestContext.Current.CancellationToken);
 
         // Assert
-        var runs = capture.Find("crestapps.background_task.runs", CrestAppsOrchardCoreTelemetry.TaskTag, nameof(GeocodeBackgroundTask));
-        Assert.Contains(runs, run => Equals(run.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag], BackgroundTaskTelemetry.OutcomeBudgetExceeded));
+        var items = capture.Find("crestapps.background_task.items", CrestAppsOrchardCoreTelemetry.TaskTag, nameof(GeocodeBackgroundTask));
+        Assert.Contains(items, item => item.Value == 50);
     }
 
     [Fact]
-    public async Task GeoService_WhenTheTravelProviderFails_RecordsTheFailedCallAndTheFallback()
+    public async Task GeoService_WhenTheTravelProviderFails_RecordsTheFallback()
     {
         // Arrange
         using var capture = new TelemetryCapture();
@@ -90,16 +87,11 @@ public sealed class SchedulingTelemetryTests
         await service.GetMatrixAsync([new GeoPoint(42.3601, -71.0589)], [new GeoPoint(42.3736, -71.1097)], DateTime.UtcNow, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        var call = Assert.Single(capture.Find("crestapps.geo.provider.duration", CrestAppsOrchardCoreTelemetry.ProviderTag, providerName));
-        Assert.Equal(GeoTelemetry.OperationMatrix, call.Tags[CrestAppsOrchardCoreTelemetry.OperationTag]);
-        Assert.Equal(CrestAppsOrchardCoreTelemetry.OutcomeError, call.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag]);
-
         var fallback = Assert.Single(capture.Find("crestapps.geo.provider.fallbacks", CrestAppsOrchardCoreTelemetry.ProviderTag, providerName));
         Assert.Equal(GeoTelemetry.OperationMatrix, fallback.Tags[CrestAppsOrchardCoreTelemetry.OperationTag]);
 
         var lookup = Assert.Single(capture.Find("crestapps.geo.matrix.cache.lookups", CrestAppsOrchardCoreTelemetry.ProviderTag, providerName));
         Assert.Equal("miss", lookup.Tags[CrestAppsOrchardCoreTelemetry.ResultTag]);
-        Assert.Contains(capture.Spans, span => span.OperationName == "crestapps.geo.matrix" && Equals(span.GetTagItem(CrestAppsOrchardCoreTelemetry.ProviderTag), providerName));
         Assert.Empty(capture.FindBannedTagKeys());
     }
 
@@ -114,7 +106,6 @@ public sealed class SchedulingTelemetryTests
         var result = await TenantHierarchyTelemetry.MeasureChildOperationAsync(
             TenantHierarchyTelemetry.OperationSuspend,
             entryId,
-            NullLogger.Instance,
             () => Task.FromResult(TenantHierarchyResult.Failure("Only a running child can be suspended.")));
 
         // Assert

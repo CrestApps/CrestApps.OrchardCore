@@ -144,8 +144,7 @@ public sealed class SendSignedWebhookTask : TaskActivity<SendSignedWebhookTask>
         using var telemetry = TelemetryScope.Start(
             AIModuleTelemetry.ActivitySource,
             "crestapps.ai.webhook.deliver",
-            AIModuleTelemetry.WebhookDeliveryDuration,
-            kind: ActivityKind.Client);
+            AIModuleTelemetry.WebhookDeliveryDuration);
 
         telemetry.SetSpanTag("crestapps.webhook.delivery.id", deliveryId);
 
@@ -263,24 +262,14 @@ public sealed class SendSignedWebhookTask : TaskActivity<SendSignedWebhookTask>
             telemetry.SetSpanTag("http.response.status_code", code);
         }
 
-        var tags = new TagList
-        {
-            { CrestAppsOrchardCoreTelemetry.StatusClassTag, statusClass },
-        };
-
         if (failureReason is null)
         {
             telemetry.Succeed();
-            tags.Add(CrestAppsOrchardCoreTelemetry.OutcomeTag, CrestAppsOrchardCoreTelemetry.OutcomeOk);
         }
         else
         {
             telemetry.Fail(failureReason);
-            tags.Add(CrestAppsOrchardCoreTelemetry.OutcomeTag, CrestAppsOrchardCoreTelemetry.OutcomeError);
-            tags.Add(CrestAppsOrchardCoreTelemetry.ReasonTag, failureReason);
         }
-
-        AIModuleTelemetry.Add(AIModuleTelemetry.WebhookDeliveries, tags);
     }
 
     private string UnprotectSecret()

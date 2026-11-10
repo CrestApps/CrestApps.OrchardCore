@@ -6,7 +6,6 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Telemetry;
-using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
@@ -24,7 +23,6 @@ internal sealed class PhoneNumberVerificationQueueProcessor : IPhoneNumberVerifi
     private readonly IContactMethodsAccessor _contactMethods;
     private readonly IClock _clock;
     private readonly ILogger _logger;
-    private readonly Redactor _addressRedactor;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PhoneNumberVerificationQueueProcessor"/> class.
@@ -37,16 +35,13 @@ internal sealed class PhoneNumberVerificationQueueProcessor : IPhoneNumberVerifi
     /// <param name="contactMethods">Reads a contact's phone numbers, to copy the result onto the number it is about.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
-    /// <param name="redactorProvider">The redactors that keep phone numbers out of the log; when there is none, the
-    /// numbers are left out of the log entirely.</param>
     public PhoneNumberVerificationQueueProcessor(
         IPhoneNumberVerificationManager verificationManager,
         IPhoneNumberVerificationRequestDelayer requestDelayer,
         IEnumerable<INotInServiceNumberService> notInServiceNumbers,
         IContactMethodsAccessor contactMethods,
         IClock clock,
-        ILogger<PhoneNumberVerificationQueueProcessor> logger,
-        IRedactorProvider redactorProvider = null)
+        ILogger<PhoneNumberVerificationQueueProcessor> logger)
     {
         _verificationManager = verificationManager;
         _requestDelayer = requestDelayer;
@@ -54,7 +49,6 @@ internal sealed class PhoneNumberVerificationQueueProcessor : IPhoneNumberVerifi
         _contactMethods = contactMethods;
         _clock = clock;
         _logger = logger;
-        _addressRedactor = redactorProvider?.GetRedactor(LogDataClassifications.AddressSet);
     }
 
     /// <inheritdoc/>
@@ -160,10 +154,9 @@ internal sealed class PhoneNumberVerificationQueueProcessor : IPhoneNumberVerifi
 
             if (_logger.IsEnabled(LogLevel.Information))
             {
-                // The number goes through the address redactor: it is a customer's.
-                var loggedNumber = string.IsNullOrEmpty(number) ? number : _addressRedactor?.Redact(number) ?? string.Empty;
-
-                PhoneNumberVerificationLog.NotInServiceMarkCleared(_logger, loggedNumber);
+                _logger.LogInformation(
+                    "A new lookup verified '{PhoneNumber}', so the not-in-service mark an earlier lookup made was cleared.",
+                    number.SanitizeLogValue());
             }
         }
     }
@@ -207,13 +200,10 @@ internal sealed class PhoneNumberVerificationQueueProcessor : IPhoneNumberVerifi
         CancellationToken cancellationToken)
     {
         // A record whose last lookup failed is being tried again: the retry the revalidation queue makes, counted on
-        // crestapps.retry.attempts and logged with its attempt number.
+        // crestapps.retry.attempts.
         if (contentItem.TryGet<PhoneNumberVerificationPart>(out var part) && part.FailedAttemptCount > 0)
         {
-            var attempt = part.FailedAttemptCount + 1;
-
-            RetryTelemetry.RecordRetry(PhoneNumberVerificationTelemetry.RetryArea, "previous_failure", attempt);
-            PhoneNumberVerificationLog.RetryingVerification(_logger, contentItem.ContentItemId, attempt);
+            RetryTelemetry.RecordRetry(PhoneNumberVerificationTelemetry.RetryArea, "previous_failure", part.FailedAttemptCount + 1);
         }
 
         using var telemetry = PhoneNumberVerificationTelemetry.StartVerification(contentItem.ContentItemId);

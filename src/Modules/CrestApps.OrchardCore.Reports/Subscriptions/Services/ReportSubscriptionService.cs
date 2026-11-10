@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Net;
-using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
 using CrestApps.OrchardCore.Reports.Designer;
@@ -122,9 +121,8 @@ public sealed class ReportSubscriptionService
                 (subscription.LastError, reason) = await TrySendAsync(subscription, runUtc, timeZone, cancellationToken);
                 sent = subscription.LastError is null;
             }
-            catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+            catch (Exception exception) when (exception is not OperationCanceledException)
             {
-                // A timeout of the email provider or of a report is a failure of this subscription, not a shutdown.
                 _logger.LogError(exception, "Report subscription '{SubscriptionId}' couldn't run its report.", subscription.ItemId);
                 subscription.LastError = S["The report couldn't run."];
                 reason = "exception";
@@ -137,7 +135,7 @@ public sealed class ReportSubscriptionService
             }
             else if (reason is not "exception")
             {
-                // A business failure is only stored on the subscription; it is logged and measured too, by its reason.
+                // A business failure is only stored on the subscription; it is measured too, by its reason.
                 telemetry.SetSpanTag(CrestAppsOrchardCoreTelemetry.ReasonTag, reason);
 
                 if (reason == "send_failed")
@@ -148,8 +146,6 @@ public sealed class ReportSubscriptionService
                 {
                     telemetry.SetOutcome(CrestAppsOrchardCoreTelemetry.OutcomeSkipped);
                 }
-
-                ReportsModuleLog.SubscriptionNotSent(_logger, subscription.ItemId.SanitizeLogValue(), reason);
             }
 
             subscription.LastRunUtc = runUtc;

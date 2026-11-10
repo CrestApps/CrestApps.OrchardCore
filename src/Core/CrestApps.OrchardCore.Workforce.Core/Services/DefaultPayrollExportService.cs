@@ -6,7 +6,6 @@ using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -29,7 +28,6 @@ internal sealed class DefaultPayrollExportService : IPayrollExportService
     private readonly IServiceProvider _serviceProvider;
     private readonly ISession _session;
     private readonly IClock _clock;
-    private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
 
@@ -45,7 +43,6 @@ internal sealed class DefaultPayrollExportService : IPayrollExportService
         IServiceProvider serviceProvider,
         ISession session,
         IClock clock,
-        ILogger<DefaultPayrollExportService> logger,
         IStringLocalizer<DefaultPayrollExportService> stringLocalizer)
     {
         _providers = providers;
@@ -59,7 +56,6 @@ internal sealed class DefaultPayrollExportService : IPayrollExportService
         _serviceProvider = serviceProvider;
         _session = session;
         _clock = clock;
-        _logger = logger;
         S = stringLocalizer;
     }
 
@@ -76,11 +72,6 @@ internal sealed class DefaultPayrollExportService : IPayrollExportService
         catch (Exception ex)
         {
             telemetry.Fail(ex);
-
-            if (ex is not OperationCanceledException)
-            {
-                WorkforceLog.PayrollExportFailed(_logger, ex, periodStart);
-            }
 
             throw;
         }
@@ -113,15 +104,11 @@ internal sealed class DefaultPayrollExportService : IPayrollExportService
         }
 
         var (start, end) = calendar.PeriodOn(periodStart);
-
-        WorkforceLog.PayrollExportStarted(_logger, calendar.ItemId, start, end, provider.Name);
-
-        var lockers = await _locks.LockAsync([TimeOffLocks.PayrollExport(calendar.ItemId, start)], TimeOffLocks.PayrollExportArea);
+        var lockers = await _locks.LockAsync([TimeOffLocks.PayrollExport(calendar.ItemId, start)]);
 
         if (lockers is null)
         {
             WorkforceTelemetry.RejectPayrollExport(telemetry, WorkforceTelemetry.ReasonBusy);
-            WorkforceLog.PayrollExportBusy(_logger, calendar.ItemId, start);
             result.Fail(S["This period is being exported by someone else. Try again in a moment."]);
 
             return result;
@@ -134,7 +121,6 @@ internal sealed class DefaultPayrollExportService : IPayrollExportService
             if (locked.Count == 0)
             {
                 WorkforceTelemetry.RejectPayrollExport(telemetry, WorkforceTelemetry.ReasonNoneLocked);
-                WorkforceLog.PayrollExportRejected(_logger, calendar.ItemId, start, WorkforceTelemetry.ReasonNoneLocked);
                 result.Fail(S["No timesheets of {0} to {1} are locked yet. Approve them, then lock the period.", start.ToString("d", CultureInfo.CurrentCulture), end.ToString("d", CultureInfo.CurrentCulture)]);
 
                 return result;
@@ -148,7 +134,6 @@ internal sealed class DefaultPayrollExportService : IPayrollExportService
             if (timesheets.Count == 0)
             {
                 WorkforceTelemetry.RejectPayrollExport(telemetry, WorkforceTelemetry.ReasonAllExported);
-                WorkforceLog.PayrollExportRejected(_logger, calendar.ItemId, start, WorkforceTelemetry.ReasonAllExported);
                 result.Fail(S["Every locked timesheet of this period was exported already. Choose to export them again to include them."]);
 
                 return result;
@@ -197,7 +182,6 @@ internal sealed class DefaultPayrollExportService : IPayrollExportService
             telemetry.SetSpanTag(WorkforceTelemetry.PayrollBatchIdTag, batch.ItemId);
             telemetry.Succeed();
             WorkforceTelemetry.RecordPayrollExportRows(provider.Name, batch.RowCount);
-            WorkforceLog.PayrollExportCompleted(_logger, timesheets.Count, batch.RowCount, calendar.ItemId, start, batch.ItemId, (long)telemetry.Elapsed.TotalMilliseconds);
 
             result.Value = batch;
 

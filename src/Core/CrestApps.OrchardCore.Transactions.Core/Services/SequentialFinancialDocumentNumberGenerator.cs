@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Transactions.Core.Models;
 using CrestApps.OrchardCore.Transactions.FinancialDocuments;
 using OrchardCore.Environment.Shell.Scope;
@@ -95,7 +94,7 @@ public sealed class SequentialFinancialDocumentNumberGenerator : IFinancialDocum
             return;
         }
 
-        var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync(LockKey, _lockTimeout, _lockExpiration, "transactions.document_number");
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(LockKey, _lockTimeout, _lockExpiration);
 
         if (!locked)
         {

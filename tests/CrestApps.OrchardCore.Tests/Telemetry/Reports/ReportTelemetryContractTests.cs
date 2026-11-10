@@ -38,10 +38,9 @@ public sealed class ReportTelemetryContractTests
         // Assert
         Assert.Same(document, result);
 
-        var run = Assert.Single(capture.Find("crestapps.report.coded.runs", ReportTelemetry.ReportNameTag, name));
+        var run = Assert.Single(capture.Find("crestapps.report.coded.duration", ReportTelemetry.ReportNameTag, name));
         Assert.Equal("export", run.Tags[ReportTelemetry.ModeTag]);
         Assert.Equal(CrestAppsOrchardCoreTelemetry.OutcomeOk, run.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag]);
-        Assert.Single(capture.Find("crestapps.report.coded.duration", ReportTelemetry.ReportNameTag, name));
         Assert.Contains(capture.Spans, span => span.OperationName == "report.coded.run" && Equals(span.GetTagItem(ReportTelemetry.ReportNameTag), name));
         Assert.Empty(capture.FindBannedTagKeys());
     }
@@ -57,7 +56,7 @@ public sealed class ReportTelemetryContractTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => ReportTelemetry.RunCodedReportAsync(new FixedReport(null), Descriptor(name), new ReportContext(new ReportFilter()), TestContext.Current.CancellationToken));
 
         // Assert
-        var run = Assert.Single(capture.Find("crestapps.report.coded.runs", ReportTelemetry.ReportNameTag, name));
+        var run = Assert.Single(capture.Find("crestapps.report.coded.duration", ReportTelemetry.ReportNameTag, name));
         Assert.Equal("display", run.Tags[ReportTelemetry.ModeTag]);
         Assert.Equal(CrestAppsOrchardCoreTelemetry.OutcomeError, run.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag]);
     }

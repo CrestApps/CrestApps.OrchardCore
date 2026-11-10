@@ -5,7 +5,7 @@ using CrestApps.OrchardCore.Diagnostics;
 namespace CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 
 /// <summary>
-/// Deadlines and the work that runs after a commit: in-process deadline timers, post-commit callbacks, and the drain
+/// Deadlines: in-process deadline timers and the drain
 /// a node runs when it shuts down.
 /// </summary>
 public static partial class ContactCenterDiagnostics
@@ -29,11 +29,6 @@ public static partial class ContactCenterDiagnostics
         "crestapps.contactcenter.deadline.failed",
         "{deadline}",
         "The number of deadlines whose work failed and was left to the background sweep, by deadline kind and reason.");
-
-    private static readonly Counter<long> _afterCommitFailures = Meter.CreateCounter<long>(
-        "crestapps.contactcenter.after_commit.failed",
-        "{callback}",
-        "The number of callbacks scheduled to run after a commit that failed, by the service they ran on.");
 
     private static readonly Histogram<double> _shutdownDrainDuration = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
         Meter,
@@ -96,25 +91,6 @@ public static partial class ContactCenterDiagnostics
             {
                 { KindTag, GetDeadlineKind(key) },
                 { CrestAppsOrchardCoreTelemetry.ReasonTag, reason },
-            });
-        }
-    }
-
-    /// <summary>
-    /// Records that a callback scheduled to run after a commit failed.
-    /// </summary>
-    /// <param name="context">The type name of the service it ran on, or <c>callback</c>.</param>
-    /// <param name="exception">The exception it failed with.</param>
-    internal static void RecordAfterCommitFailed(string context, Exception exception)
-    {
-        AddExceptionEvent(exception);
-
-        if (_afterCommitFailures.Enabled)
-        {
-            Add(_afterCommitFailures, new TagList
-            {
-                { CrestAppsOrchardCoreTelemetry.TaskTag, context },
-                { CrestAppsOrchardCoreTelemetry.OutcomeTag, CrestAppsOrchardCoreTelemetry.GetOutcome(exception) },
             });
         }
     }

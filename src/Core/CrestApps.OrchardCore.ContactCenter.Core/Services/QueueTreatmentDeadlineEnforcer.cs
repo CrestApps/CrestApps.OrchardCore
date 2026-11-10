@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -110,11 +109,10 @@ public sealed class QueueTreatmentDeadlineEnforcer : IQueueTreatmentDeadlineEnfo
             return null;
         }
 
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             $"ContactCenterQueueTreatment:{queueId}",
             _lockTimeout,
-            _lockExpiration,
-            "contactcenter.queue.treatment");
+            _lockExpiration);
 
         if (!locked)
         {

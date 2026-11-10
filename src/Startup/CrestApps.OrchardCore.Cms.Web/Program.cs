@@ -1,4 +1,4 @@
-using CrestApps.Core.OpenTelemetry;
+using CrestApps.Core;
 using CrestApps.OrchardCore.Cms.Web;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Diagnostics;
@@ -10,20 +10,22 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseNLogHost();
 
-// The CrestApps metrics carry no tenant tag unless the host opts in, since it multiplies the series a collector
-// stores by the number of tenants. Spans and logs carry the tenant either way.
-CrestAppsOrchardCoreTelemetry.IncludeTenantName = builder.Configuration.GetValue<bool>("OrchardCore:CrestApps:OpenTelemetry:Metrics:IncludeTenantName");
+// The CrestApps metrics follow Orchard Core's own option for tagging metrics with the tenant, so one setting decides it
+// for every metric. Spans and logs carry the tenant either way.
+CrestAppsOrchardCoreTelemetry.IncludeTenantName = builder.Configuration.GetValue("OrchardCore:OpenTelemetry:Metrics:IncludeTenantName", true);
 
 // Telemetry is collected only when it is exported, so a site without a collector creates no spans or measurements.
 // The Aspire AppHost sets OTEL_EXPORTER_OTLP_ENDPOINT for the projects it runs.
 var exportTelemetry = builder.Configuration.HasOtlpEndpoint();
 
-// The Azure OpenAI chat client calls the OpenAI SDK directly, which reports its own gen_ai telemetry once this switch
-// is on.
-if (exportTelemetry)
-{
-    AppContext.SetSwitch("OpenAI.Experimental.EnableOpenTelemetry", true);
-}
+// The sources and meters of our own code. 'X.*' does not match 'X' itself, so both are listed.
+string[] ownSources =
+[
+    CrestAppsTelemetry.SourceName,
+    CrestAppsTelemetry.SourceName + ".*",
+    CrestAppsOrchardCoreTelemetry.SourceNameWildcard,
+    "AICompletionService",
+];
 
 builder.Services
     .AddContactCenterProcessLiveness()
@@ -31,12 +33,14 @@ builder.Services
     {
         if (exportTelemetry)
         {
-            // Collects the traces, metrics and logs of Orchard Core, of CrestApps.Core and of the CrestApps modules,
-            // and exports them over OTLP.
+            // Collects the traces, metrics and logs of Orchard Core (with ASP.NET Core, HttpClient and the runtime), and
+            // the telemetry of our own code: CrestApps.Core and the CrestApps modules. Other libraries' telemetry, such
+            // as an SDK's, is collected only when it is added to 'OrchardCore:OpenTelemetry:Tracing:Sources' or
+            // 'Metrics:Meters'. AICompletionService is the source the AI chat clients report on when the AI "Enable
+            // OpenTelemetry" setting is on.
             orchardCoreBuilder.AddOpenTelemetry(openTelemetry => openTelemetry
-                .WithTracing(tracing => tracing.AddSource(CrestAppsOrchardCoreTelemetry.SourceNameWildcard))
-                .WithMetrics(metrics => metrics.AddMeter(CrestAppsOrchardCoreTelemetry.SourceNameWildcard))
-                .AddCrestAppsOpenTelemetry());
+                .WithTracing(tracing => tracing.AddSource(ownSources))
+                .WithMetrics(metrics => metrics.AddMeter(ownSources)));
         }
 
         orchardCoreBuilder

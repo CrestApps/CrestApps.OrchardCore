@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
 
 namespace CrestApps.OrchardCore.DataConnectors.BackgroundTasks;
@@ -9,8 +10,7 @@ namespace CrestApps.OrchardCore.DataConnectors.BackgroundTasks;
 /// </summary>
 /// <remarks>
 /// The task's lock keeps one instance of the site refreshing at a time, and each refresh also locks its data set, so a
-/// refresh started from the admin and a scheduled one never overlap. The refresh service logs a summary of each run
-/// that had data sets due.
+/// refresh started from the admin and a scheduled one never overlap.
 /// </remarks>
 [BackgroundTask(
     Title = "Connected Data Set Refresh",
@@ -49,7 +49,14 @@ public sealed class DataSetRefreshBackgroundTask : IBackgroundTask
             return;
         }
 
-        // Succeeded and failed refreshes alike; crestapps.dataconnector.refreshes tells them apart.
+        // Succeeded and failed refreshes alike; crestapps.dataconnector.refresh.duration tells them apart.
         run.AddItems(count);
+
+        var logger = serviceProvider.GetRequiredService<ILogger<DataSetRefreshBackgroundTask>>();
+
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("Refreshed {Count} imported data set(s).", count);
+        }
     }
 }

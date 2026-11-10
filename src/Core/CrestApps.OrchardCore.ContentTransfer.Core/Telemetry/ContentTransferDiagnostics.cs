@@ -34,25 +34,14 @@ public static class ContentTransferDiagnostics
     public const string ModeTag = "mode";
 
     /// <summary>
-    /// The tag that records the phase of the work, such as <see cref="PhasePrepare"/> or <see cref="PhaseImport"/>.
+    /// The tag that records the phase of the work, such as <see cref="PhasePrepare"/> or <see cref="PhaseEvaluate"/>.
     /// </summary>
     public const string PhaseTag = "phase";
-
-    /// <summary>
-    /// The tag that records the content import handler, by its type name.
-    /// </summary>
-    public const string HandlerTag = "handler";
 
     /// <summary>
     /// The tag that records the kind of job started after a request: <c>import</c>, <c>export</c> or <c>delete</c>.
     /// </summary>
     public const string JobTag = "job";
-
-    /// <summary>
-    /// The tag that records the storage behind the Content Transfer file store: <c>file_system</c>, <c>azure_blob</c>
-    /// or <c>other</c>.
-    /// </summary>
-    public const string BackendTag = "backend";
 
     /// <summary>
     /// The tag that records which value an export handler had to look up row by row because the page was not prepared.
@@ -194,21 +183,6 @@ public static class ContentTransferDiagnostics
     /// </summary>
     public const string PhaseEvaluate = "evaluate";
 
-    /// <summary>
-    /// A content import handler maps a row onto a content item.
-    /// </summary>
-    public const string PhaseImport = "import";
-
-    /// <summary>
-    /// A content import handler maps a content item onto a row.
-    /// </summary>
-    public const string PhaseExport = "export";
-
-    /// <summary>
-    /// An export batch handler prepares a page of content items.
-    /// </summary>
-    public const string PhasePrepareExport = "prepare_export";
-
     private const int MaxCodeLength = 40;
 
     private static readonly ConcurrentDictionary<object, Func<TimeSpan?>> _rowsInFlight = new();
@@ -224,30 +198,12 @@ public static class ContentTransferDiagnostics
     public static ActivitySource ActivitySource { get; } = CrestAppsOrchardCoreTelemetry.CreateActivitySource("ContentTransfer");
 
     /// <summary>
-    /// Gets the number of import runs, tagged with the <c>outcome</c> (<see cref="OutcomeCompleted"/>,
-    /// <see cref="OutcomeContinued"/>, <see cref="OutcomeStopped"/>, <see cref="OutcomeRetry"/>,
-    /// <see cref="OutcomeAbandoned"/>, <see cref="OutcomeFailed"/>) and the <see cref="ContentTypeTag"/>.
-    /// </summary>
-    public static Counter<long> ImportRuns { get; } = Meter.CreateCounter<long>(
-        "crestapps.contenttransfer.import.runs",
-        "{run}",
-        "The number of import runs, by how they ended.");
-
-    /// <summary>
     /// Gets the number of import runs at work right now on this node.
     /// </summary>
     public static UpDownCounter<long> ImportActive { get; } = Meter.CreateUpDownCounter<long>(
         "crestapps.contenttransfer.import.active",
         "{run}",
         "The number of import runs at work.");
-
-    /// <summary>
-    /// Gets the number of times an import was found locked by another run.
-    /// </summary>
-    public static Counter<long> ImportLockContended { get; } = Meter.CreateCounter<long>(
-        "crestapps.contenttransfer.import.lock_contended",
-        "{attempt}",
-        "The number of times an import was found locked by another run.");
 
     /// <summary>
     /// Gets the number of times a run tried an import again after a failed run, tagged with the <c>reason</c>.
@@ -526,25 +482,6 @@ public static class ContentTransferDiagnostics
         "The number of import, export and delete jobs queued to run after the request.");
 
     /// <summary>
-    /// Gets the duration of the Content Transfer file store operations, tagged with the <c>operation</c>, the
-    /// <see cref="BackendTag"/> and the <c>outcome</c>.
-    /// </summary>
-    public static Histogram<double> StoreDuration { get; } = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
-        Meter,
-        "crestapps.contenttransfer.store.duration",
-        "The duration of the Content Transfer file store operations.");
-
-    /// <summary>
-    /// Gets the duration of the content import handlers, tagged with the <see cref="HandlerTag"/>, the
-    /// <see cref="PhaseTag"/> (<see cref="PhaseImport"/>, <see cref="PhaseExport"/> or <see cref="PhasePrepareExport"/>)
-    /// and the <c>outcome</c>.
-    /// </summary>
-    public static Histogram<double> HandlerDuration { get; } = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
-        Meter,
-        "crestapps.contenttransfer.handler.duration",
-        "The duration of one content import handler on one row or page.");
-
-    /// <summary>
     /// Gets the duration of the file readers and writers, tagged with the <c>format</c> and the <c>operation</c>, such
     /// as <c>count_rows</c> or <c>write_flush</c>.
     /// </summary>
@@ -608,22 +545,6 @@ public static class ContentTransferDiagnostics
         }
 
         return code;
-    }
-
-    /// <summary>
-    /// Gets the bounded <see cref="BackendTag"/> value of the file store behind the Content Transfer file store.
-    /// </summary>
-    /// <param name="fileStore">The file store, or <see langword="null"/>.</param>
-    /// <returns><c>file_system</c>, <c>azure_blob</c>, <c>aws_s3</c> or <c>other</c>.</returns>
-    public static string GetBackend(object fileStore)
-    {
-        return fileStore?.GetType().Name switch
-        {
-            "FileSystemStore" => "file_system",
-            "BlobFileStore" => "azure_blob",
-            "AwsFileStore" => "aws_s3",
-            _ => CrestAppsOrchardCoreTelemetry.Other,
-        };
     }
 
     /// <summary>
@@ -774,25 +695,6 @@ public static class ContentTransferDiagnostics
     }
 
     /// <summary>
-    /// Runs one content import handler and records its duration on <see cref="HandlerDuration"/>.
-    /// </summary>
-    /// <param name="handler">The handler.</param>
-    /// <param name="phase">The phase: <see cref="PhaseImport"/>, <see cref="PhaseExport"/> or <see cref="PhasePrepareExport"/>.</param>
-    /// <param name="work">The work of the handler.</param>
-    /// <returns>A task that completes when the handler completes. Exceptions are recorded and rethrown.</returns>
-    public static Task MeasureHandlerAsync(object handler, string phase, Func<Task> work)
-    {
-        ArgumentNullException.ThrowIfNull(work);
-
-        if (!HandlerDuration.Enabled || handler is null)
-        {
-            return work();
-        }
-
-        return MeasureHandlerCoreAsync(handler.GetType().Name, phase, work);
-    }
-
-    /// <summary>
     /// Watches how long an import row has been in flight, for <see cref="ImportRowInFlightAge"/>.
     /// </summary>
     /// <param name="rowAge">Returns how long the current row has been running, or <see langword="null"/> between rows.
@@ -806,33 +708,6 @@ public static class ContentTransferDiagnostics
         _rowsInFlight[key] = rowAge;
 
         return new RowInFlightRegistration(key);
-    }
-
-    private static async Task MeasureHandlerCoreAsync(string handler, string phase, Func<Task> work)
-    {
-        var startTimestamp = Stopwatch.GetTimestamp();
-        var outcome = CrestAppsOrchardCoreTelemetry.OutcomeError;
-
-        try
-        {
-            await work();
-            outcome = CrestAppsOrchardCoreTelemetry.OutcomeOk;
-        }
-        catch (Exception ex)
-        {
-            outcome = CrestAppsOrchardCoreTelemetry.GetOutcome(ex);
-
-            throw;
-        }
-        finally
-        {
-            Record(HandlerDuration, Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds, new TagList
-            {
-                { HandlerTag, handler },
-                { PhaseTag, phase },
-                { CrestAppsOrchardCoreTelemetry.OutcomeTag, outcome },
-            });
-        }
     }
 
     private static IEnumerable<Measurement<double>> ObserveRowInFlightAge()

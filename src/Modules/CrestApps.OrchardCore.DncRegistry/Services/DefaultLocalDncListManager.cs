@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.BackgroundWork;
 using CrestApps.OrchardCore.Diagnostics;
@@ -6,7 +5,6 @@ using CrestApps.OrchardCore.DncRegistry.BackgroundTasks;
 using CrestApps.OrchardCore.DncRegistry.Indexes;
 using CrestApps.OrchardCore.DncRegistry.Models;
 using CrestApps.OrchardCore.DncRegistry.Telemetry;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.Tabular;
 using Dapper;
@@ -161,11 +159,10 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
 
         using var telemetry = DncRegistryTelemetry.StartImportRun(listId);
         var rows = new DncImportRowTally();
-        string failureReason = null;
 
         try
         {
-            failureReason = await ProcessImportCoreAsync(listId, telemetry, rows, cancellationToken);
+            await ProcessImportCoreAsync(listId, telemetry, rows, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -175,15 +172,13 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
         }
         finally
         {
-            RecordImportRunEnded(listId, telemetry, rows, failureReason);
+            LogImportRunEnded(listId, telemetry, rows);
         }
     }
 
-    private void RecordImportRunEnded(string listId, TelemetryScope telemetry, DncImportRowTally rows, string failureReason)
+    private void LogImportRunEnded(string listId, TelemetryScope telemetry, DncImportRowTally rows)
     {
         var outcome = telemetry.Outcome;
-
-        DncRegistryTelemetry.RecordImportRun(outcome, failureReason);
 
         if (outcome == CrestAppsOrchardCoreTelemetry.OutcomeSkipped || !_logger.IsEnabled(LogLevel.Information))
         {
@@ -552,16 +547,13 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
         // for it to let go. This used to give up after one second and throw from the after-request job,
         // which left the list in Deleting with nothing to ever finish it. Now the list stays in Deleting
         // and the background task resumes the deletion.
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             LocalDncImportBackgroundTask.GetImportLockKey(listId),
             _deleteLockTimeout,
-            _deleteLockExpiration,
-            "dnc.delete");
+            _deleteLockExpiration);
 
         if (!locked)
         {
-            DncRegistryTelemetry.RecordLockContended(DncRegistryTelemetry.OperationDelete);
-
             if (_logger.IsEnabled(LogLevel.Warning))
             {
                 _logger.LogWarning(
@@ -1107,7 +1099,6 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
     {
         list.ProcessSaveUtc = _clock.UtcNow;
 
-        var batchStarted = Stopwatch.GetTimestamp();
         var batchSession = _session.Store.CreateSession();
 
         try
@@ -1141,7 +1132,6 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
                 await batchSession.SaveAsync(trackedList, false, DncRegistryConstants.CollectionName, cancellationToken);
                 await batchSession.SaveChangesAsync(cancellationToken);
 
-                DncRegistryTelemetry.RecordImportBatch(batchStarted, saved: true);
                 rows.Commit();
 
                 // Sync the in-memory status so callers see the change.
@@ -1166,16 +1156,9 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
 
             await batchSession.SaveChangesAsync(cancellationToken);
 
-            DncRegistryTelemetry.RecordImportBatch(batchStarted, saved: true);
             rows.Commit();
 
             return true;
-        }
-        catch
-        {
-            DncRegistryTelemetry.RecordImportBatch(batchStarted, saved: false);
-
-            throw;
         }
         finally
         {

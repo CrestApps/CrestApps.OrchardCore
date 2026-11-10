@@ -9,7 +9,6 @@ using CrestApps.OrchardCore.ContentTransfer.Services;
 using CrestApps.OrchardCore.ContentTransfer.Telemetry;
 using CrestApps.OrchardCore.ContentTransfer.ViewModels;
 using CrestApps.OrchardCore.Diagnostics;
-using CrestApps.OrchardCore.Locking;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -1312,12 +1311,10 @@ public sealed class AdminController : Controller, IUpdateModel
 
     private async Task<bool> IsImportRunningAsync(string entryId)
     {
-        // A probe, measured apart from the imports themselves so it does not read as contention on them.
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             BackgroundTasks.ImportFilesBackgroundTask.GetImportLockKey(entryId),
             TimeSpan.FromMilliseconds(200),
-            TimeSpan.FromSeconds(5),
-            "contenttransfer.import_probe");
+            TimeSpan.FromSeconds(5));
 
         if (!locked)
         {
@@ -1349,7 +1346,6 @@ public sealed class AdminController : Controller, IUpdateModel
                 static (backgroundScope, id, parent) => RunJobAsync(
                     backgroundScope,
                     "contenttransfer_import",
-                    id,
                     parent,
                     jobScope => BackgroundTasks.ImportFilesBackgroundTask.ProcessEntriesAsync(jobScope.ServiceProvider, id, CancellationToken.None)));
         });
@@ -1370,7 +1366,6 @@ public sealed class AdminController : Controller, IUpdateModel
                 static (backgroundScope, id, parent) => RunJobAsync(
                     backgroundScope,
                     "contenttransfer_export",
-                    id,
                     parent,
                     jobScope => BackgroundTasks.ExportFilesBackgroundTask.ProcessEntriesAsync(jobScope.ServiceProvider, id, CancellationToken.None)));
         });
@@ -1391,7 +1386,6 @@ public sealed class AdminController : Controller, IUpdateModel
                 static (backgroundScope, id, parent) => RunJobAsync(
                     backgroundScope,
                     "contenttransfer_delete",
-                    id,
                     parent,
                     async jobScope =>
                     {
@@ -1402,30 +1396,14 @@ public sealed class AdminController : Controller, IUpdateModel
     }
 
     /// <summary>
-    /// Runs a job queued after the request, measured as deferred work linked to the request that queued it. A failure
-    /// used to end inside the background job without a trace; it is now logged.
+    /// Runs a job queued after the request, measured as deferred work linked to the request that queued it.
     /// </summary>
-    private static async Task RunJobAsync(
+    private static Task RunJobAsync(
         ShellScope scope,
         string name,
-        string entryId,
         string traceParent,
         Func<ShellScope, Task> work)
-    {
-        try
-        {
-            await DeferredWork.RunAsync(name, traceParent, scope, work);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            var logger = scope.ServiceProvider.GetService<ILogger<AdminController>>();
-
-            if (logger is not null && logger.IsEnabled(LogLevel.Error))
-            {
-                ContentTransferLog.BackgroundJobFailed(logger, ex, name, entryId);
-            }
-        }
-    }
+        => DeferredWork.RunAsync(name, traceParent, scope, work);
 
     private IContentTransferFileFormatProvider ResolveFileFormatProvider(string format)
     {

@@ -232,24 +232,12 @@ public sealed class ReportDesignRunner
         {
             var elapsed = Stopwatch.GetElapsedTime(started);
 
-            activity?.SetTag(ReportTelemetry.OutcomeTag, LegacyOutcome(outcome));
             activity?.SetTag(CrestAppsOrchardCoreTelemetry.OutcomeTag, outcome);
             activity?.SetTag("crestapps.report.queries", queries.Executed);
             activity?.SetTag("crestapps.report.queries.failed", queries.Invalid + queries.Failed);
             RecordRun(source, outcome, elapsed, queries);
             LogRun(design, source, elapsed, result);
         }
-    }
-
-    // The outcome of the legacy crestapps.report.outcome tag, kept for one release next to the shared outcome tag.
-    private static string LegacyOutcome(string outcome)
-    {
-        return outcome switch
-        {
-            CrestAppsOrchardCoreTelemetry.OutcomeOk => "success",
-            CrestAppsOrchardCoreTelemetry.OutcomeCancelled => "canceled",
-            _ => "failure",
-        };
     }
 
     // A run counts once in the run duration, and once among the failures at the run level when it failed; its queries
@@ -263,7 +251,6 @@ public sealed class ReportDesignRunner
             var durationTags = tags;
 
             durationTags.Add(CrestAppsOrchardCoreTelemetry.OutcomeTag, outcome);
-            durationTags.Add(ReportTelemetry.OutcomeTag, LegacyOutcome(outcome));
             ReportTelemetry.RunDuration.Record(elapsed.TotalSeconds, durationTags);
         }
 

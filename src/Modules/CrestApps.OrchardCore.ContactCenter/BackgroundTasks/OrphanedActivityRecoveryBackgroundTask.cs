@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -70,7 +69,6 @@ public sealed class OrphanedActivityRecoveryBackgroundTask : IBackgroundTask
 
         // Any steady rate of orphans is a state-machine leak worth an alert.
         run.AddItems(recovered, "recovered");
-        ContactCenterDiagnostics.RecordOrphanRecovered("activity", recovered);
 
         if (recovered >= MaxRecoveriesPerRun)
         {

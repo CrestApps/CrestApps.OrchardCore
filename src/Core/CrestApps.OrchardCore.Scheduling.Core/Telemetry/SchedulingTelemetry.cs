@@ -5,13 +5,13 @@ using CrestApps.OrchardCore.Diagnostics;
 namespace CrestApps.OrchardCore.Scheduling.Core.Telemetry;
 
 /// <summary>
-/// The meter and activity source of appointment scheduling, <c>CrestApps.OrchardCore.Scheduling</c>. Appointment,
-/// customer and resource ids go on spans and logs only.
+/// The meter of appointment scheduling, <c>CrestApps.OrchardCore.Scheduling</c>. Appointment, customer and resource
+/// ids go on logs only.
 /// </summary>
 public static class SchedulingTelemetry
 {
     /// <summary>
-    /// The name of the scheduling meter and activity source.
+    /// The name of the scheduling meter.
     /// </summary>
     public const string SourceName = CrestAppsOrchardCoreTelemetry.SourceNamePrefix + ".Scheduling";
 
@@ -34,11 +34,6 @@ public static class SchedulingTelemetry
     /// The meter of appointment scheduling.
     /// </summary>
     public static Meter Meter { get; } = CrestAppsOrchardCoreTelemetry.CreateMeter("Scheduling");
-
-    /// <summary>
-    /// The activity source of appointment scheduling.
-    /// </summary>
-    public static ActivitySource ActivitySource { get; } = CrestAppsOrchardCoreTelemetry.CreateActivitySource("Scheduling");
 
     /// <summary>
     /// The number of appointment changes an observer failed to handle, tagged with <see cref="ObserverTag"/> and

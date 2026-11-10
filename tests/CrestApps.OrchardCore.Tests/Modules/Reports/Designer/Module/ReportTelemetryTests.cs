@@ -108,8 +108,8 @@ public sealed class ReportTelemetryTests : IDisposable
         Assert.Equal("Admin", root.GetTagItem(ReportTelemetry.RunSourceTag));
         Assert.Equal("Dashboard", root.GetTagItem(ReportTelemetry.ReportTitleTag));
         Assert.Equal(true, root.GetTagItem(ReportTelemetry.SelectionTag));
-        Assert.Equal("success", root.GetTagItem(ReportTelemetry.OutcomeTag));
         Assert.Equal(CrestAppsOrchardCoreTelemetry.OutcomeOk, root.GetTagItem(CrestAppsOrchardCoreTelemetry.OutcomeTag));
+        Assert.Null(root.GetTagItem("crestapps.report.outcome"));
 
         // The query spans are children of the run, one for the main query and one for the chart's.
         var queries = spans.Where(span => span.OperationName == "report.query").ToList();
@@ -126,7 +126,7 @@ public sealed class ReportTelemetryTests : IDisposable
         var runDuration = Assert.Single(measurements, measurement => measurement.Instrument == "crestapps.report.run.duration");
         Assert.Equal("Admin", runDuration.Tags[ReportTelemetry.RunSourceTag]);
         Assert.Equal(CrestAppsOrchardCoreTelemetry.OutcomeOk, runDuration.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag]);
-        Assert.Equal("success", runDuration.Tags[ReportTelemetry.OutcomeTag]);
+        Assert.False(runDuration.Tags.ContainsKey("crestapps.report.outcome"));
 
         var queryDurations = measurements.Where(measurement => measurement.Instrument == "crestapps.report.query.duration").ToList();
         Assert.Equal(2, queryDurations.Count);

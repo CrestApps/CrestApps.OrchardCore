@@ -4,7 +4,6 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
@@ -146,11 +145,10 @@ public sealed partial class ActivityReservationService
         TimeSpan lockWait,
         CancellationToken cancellationToken)
     {
-        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             GetReservationLockKey(reservationId),
             lockWait,
-            _coordinationOptions.ReservationLockExpiration,
-            "contactcenter.reservation");
+            _coordinationOptions.ReservationLockExpiration);
 
         if (!locked)
         {

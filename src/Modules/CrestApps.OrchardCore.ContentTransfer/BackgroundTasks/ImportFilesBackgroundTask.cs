@@ -8,7 +8,6 @@ using CrestApps.OrchardCore.ContentTransfer.Models;
 using CrestApps.OrchardCore.ContentTransfer.Services;
 using CrestApps.OrchardCore.ContentTransfer.Telemetry;
 using CrestApps.OrchardCore.Diagnostics;
-using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Localization;
@@ -143,15 +142,13 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
             while (continueImport && !cancellationToken.IsCancellationRequested)
             {
-                (var locker, var locked) = await distributedLock.TryAcquireMeasuredLockAsync(
+                (var locker, var locked) = await distributedLock.TryAcquireLockAsync(
                     GetImportLockKey(entry.EntryId),
                     _importLockTimeout,
-                    _importLockExpiration,
-                    "contenttransfer.import");
+                    _importLockExpiration);
 
                 if (!locked)
                 {
-                    ContentTransferDiagnostics.Add(ContentTransferDiagnostics.ImportLockContended, 1);
                     taskRun?.AddItems(1, "lock_contended");
                     LogLockTaken(logger, clock, entry);
 
@@ -263,8 +260,6 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 telemetry.Activity?.SetStatus(ActivityStatusCode.Error, run.AbandonReason ?? outcome);
             }
 
-            RecordRun(outcome, entry.ContentType);
-
             return run;
         }
         catch (Exception ex)
@@ -276,7 +271,6 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 : ContentTransferDiagnostics.OutcomeFailed;
 
             telemetry.SetOutcome(outcome);
-            RecordRun(outcome, entry.ContentType);
 
             throw;
         }
@@ -284,15 +278,6 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         {
             ContentTransferDiagnostics.Add(ContentTransferDiagnostics.ImportActive, -1);
         }
-    }
-
-    private static void RecordRun(string outcome, string contentType)
-    {
-        ContentTransferDiagnostics.Add(ContentTransferDiagnostics.ImportRuns, 1, new TagList
-        {
-            { CrestAppsOrchardCoreTelemetry.OutcomeTag, outcome },
-            { ContentTransferDiagnostics.ContentTypeTag, contentType },
-        });
     }
 
     internal static string GetRunOutcome(SupervisedImportRun<ImportEntryRunOutcome> run)
@@ -1125,20 +1110,8 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         entry.ProcessSaveUtc = clock.UtcNow;
         entry.Put(progressPart);
 
-        using var saveTelemetry = TelemetryScope.Start(ContentTransferDiagnostics.ActivitySource, "crestapps.contenttransfer.import.batch.save", duration: null);
-
-        try
-        {
-            await session.SaveAsync(entry, false, collection: null, cancellationToken);
-            await session.SaveChangesAsync(cancellationToken);
-            saveTelemetry.Succeed();
-        }
-        catch (Exception ex)
-        {
-            saveTelemetry.Fail(ex);
-
-            throw;
-        }
+        await session.SaveAsync(entry, false, collection: null, cancellationToken);
+        await session.SaveChangesAsync(cancellationToken);
 
         return true;
     }

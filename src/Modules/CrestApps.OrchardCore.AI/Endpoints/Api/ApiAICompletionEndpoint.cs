@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
@@ -12,16 +11,13 @@ using CrestApps.Core.Templates.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.ApiKeys;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Core.Telemetry;
 using CrestApps.OrchardCore.AI.Endpoints.Models;
-using CrestApps.OrchardCore.Diagnostics;
 using Cysharp.Text;
 using Fluid;
 using Fluid.Values;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;
@@ -43,7 +39,7 @@ internal static class ApiAICompletionEndpoint
     public static IEndpointRouteBuilder AddApiAICompletionEndpoint<T>(this IEndpointRouteBuilder builder)
     {
         _ = builder.MapPost("api/ai/completion/chat", HandleAsync<T>)
-            .AddEndpointFilter(MeasureAsync<T>)
+            .AddEndpointFilter(ScopeLogsAsync<T>)
             .DisableAntiforgery()
             .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = AIApiKeys.ApiSchemes })
             .WithTags(AIConversationsApiEndpoints.ChatTag)
@@ -54,15 +50,14 @@ internal static class ApiAICompletionEndpoint
     }
 
     /// <summary>
-    /// Counts each request on <c>crestapps.ai.api.requests</c> by the class of its response, and puts the profile and
-    /// the session in the scope of every log line the request writes. The hubs get that scope from CrestApps.Core;
-    /// this endpoint runs the orchestrator directly, so it adds it itself.
+    /// Puts the profile and the session in the scope of every log line the request writes. The hubs get that scope from
+    /// CrestApps.Core; this endpoint runs the orchestrator directly, so it adds it itself.
     /// </summary>
     /// <typeparam name="T">The type used for logger category resolution.</typeparam>
     /// <param name="context">The endpoint invocation.</param>
     /// <param name="next">The endpoint.</param>
     /// <returns>The endpoint's result.</returns>
-    private static async ValueTask<object> MeasureAsync<T>(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+    private static async ValueTask<object> ScopeLogsAsync<T>(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
         var request = context.Arguments.OfType<AICompletionRequest>().FirstOrDefault();
         var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<T>>();
@@ -73,47 +68,7 @@ internal static class ApiAICompletionEndpoint
             ["SessionId"] = request?.SessionId?.SanitizeLogValue(),
         });
 
-        try
-        {
-            var result = await next(context);
-
-            RecordRequest(GetStatusCode(result));
-
-            return result;
-        }
-        catch (Exception ex)
-        {
-            RecordRequest(statusCode: null, CrestAppsOrchardCoreTelemetry.GetOutcome(ex));
-
-            throw;
-        }
-    }
-
-    private static int? GetStatusCode(object result)
-    {
-        return result switch
-        {
-            IStatusCodeHttpResult { StatusCode: { } statusCode } => statusCode,
-            ForbidHttpResult => StatusCodes.Status403Forbidden,
-            _ => null,
-        };
-    }
-
-    private static void RecordRequest(int? statusCode, string outcome = null)
-    {
-        outcome ??= statusCode switch
-        {
-            >= 200 and < 400 => CrestAppsOrchardCoreTelemetry.OutcomeOk,
-            StatusCodes.Status401Unauthorized or StatusCodes.Status403Forbidden => CrestAppsOrchardCoreTelemetry.OutcomeBlocked,
-            _ => CrestAppsOrchardCoreTelemetry.OutcomeError,
-        };
-
-        AIModuleTelemetry.Add(AIModuleTelemetry.ApiRequests, new TagList
-        {
-            { CrestAppsOrchardCoreTelemetry.OperationTag, "chat_completion" },
-            { CrestAppsOrchardCoreTelemetry.StatusClassTag, ExternalCallTelemetry.GetStatusClass(statusCode) },
-            { CrestAppsOrchardCoreTelemetry.OutcomeTag, outcome },
-        });
+        return await next(context);
     }
 
     private static async Task<IResult> HandleAsync<T>(

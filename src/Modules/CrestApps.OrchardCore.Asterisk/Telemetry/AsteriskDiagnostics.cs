@@ -1,9 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
-using System.Net;
 using CrestApps.OrchardCore.Diagnostics;
-using Polly.Timeout;
 
 namespace CrestApps.OrchardCore.Asterisk.Telemetry;
 
@@ -14,15 +12,13 @@ namespace CrestApps.OrchardCore.Asterisk.Telemetry;
 /// <see cref="System.Diagnostics.Metrics"/> pattern.
 /// </summary>
 /// <remarks>
-/// The <c>asterisk.*</c> instruments are deprecated and are recorded for one more release next to their
-/// <c>crestapps.asterisk.*</c> replacements, which follow the naming of every other CrestApps meter. The activity
-/// source shares the meter's name.
+/// The instruments are named <c>crestapps.asterisk.*</c>, like every other CrestApps meter. The former
+/// <c>asterisk.realtime.*</c> names are no longer emitted.
 /// </remarks>
 public static class AsteriskDiagnostics
 {
     /// <summary>
-    /// The name of the <see cref="System.Diagnostics.Metrics.Meter"/> that emits Asterisk provider metrics, and of
-    /// the activity source of its spans.
+    /// The name of the <see cref="System.Diagnostics.Metrics.Meter"/> that emits Asterisk provider metrics.
     /// </summary>
     public const string MeterName = "CrestApps.OrchardCore.Asterisk";
 
@@ -47,44 +43,9 @@ public static class AsteriskDiagnostics
     /// </summary>
     public const string EventFailed = "failed";
 
-    /// <summary>
-    /// The ARI request was answered with a 4xx status.
-    /// </summary>
-    public const string AriResultHttp4xx = "http_4xx";
-
-    /// <summary>
-    /// The ARI request was answered with a 5xx status.
-    /// </summary>
-    public const string AriResultHttp5xx = "http_5xx";
-
-    /// <summary>
-    /// Asterisk could not be reached.
-    /// </summary>
-    public const string AriResultUnreachable = "unreachable";
-
-    /// <summary>
-    /// The request asked whether something exists, and Asterisk answered 404: an answer, not a failure.
-    /// </summary>
-    public const string AriResultNotFound = "not_found";
-
     private static readonly Meter _meter = new(MeterName);
 
     private static readonly ConcurrentDictionary<RealtimeListenerTracking, byte> _listeners = new();
-
-    private static readonly Counter<long> _realtimeIngestionSaturated = _meter.CreateCounter<long>(
-        "asterisk.realtime.ingestion.saturated",
-        unit: "{episode}",
-        description: "Deprecated: use crestapps.asterisk.realtime.ingestion.saturated. The number of times the Asterisk real-time ingestion buffer filled and applied backpressure to the provider event stream.");
-
-    private static readonly Counter<long> _realtimeConnected = _meter.CreateCounter<long>(
-        "asterisk.realtime.connected",
-        unit: "{connection}",
-        description: "Deprecated: use crestapps.asterisk.realtime.connections. The number of times the Asterisk real-time voice listener successfully established its ARI event-stream connection, counting both the first connection and every reconnection.");
-
-    private static readonly Counter<long> _realtimeReconnectAttempted = _meter.CreateCounter<long>(
-        "asterisk.realtime.reconnect_attempted",
-        unit: "{attempt}",
-        description: "Deprecated: use crestapps.asterisk.realtime.reconnect_attempts. The number of times the Asterisk real-time voice listener re-entered its loop to re-establish the ARI event-stream connection after a prior connection ended or a connect attempt failed. A non-zero rate signals connection churn.");
 
     private static readonly Counter<long> _ingestionSaturated = _meter.CreateCounter<long>(
         "crestapps.asterisk.realtime.ingestion.saturated",
@@ -115,11 +76,6 @@ public static class AsteriskDiagnostics
         _meter,
         "crestapps.asterisk.realtime.event.lag",
         "The time from an ARI event's own timestamp to the listener dispatching it.");
-
-    private static readonly Histogram<double> _ariRequestDuration = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
-        _meter,
-        "crestapps.asterisk.ari.request.duration",
-        "The duration of Asterisk ARI REST requests, until the response headers arrived.");
 
     // Read from the live listeners only: never a query in a gauge callback.
     private static readonly ObservableGauge<double> _lastEventAge = _meter.CreateObservableGauge(
@@ -172,11 +128,6 @@ public static class AsteriskDiagnostics
     };
 
     /// <summary>
-    /// Gets the activity source of the Asterisk provider's spans.
-    /// </summary>
-    public static ActivitySource ActivitySource { get; } = new(MeterName);
-
-    /// <summary>
     /// Records that the real-time ingestion buffer for a provider filled and began applying backpressure. This is
     /// recorded once per saturation episode — on the first wait — not on every full write and not on a drop.
     /// </summary>
@@ -185,7 +136,6 @@ public static class AsteriskDiagnostics
     {
         var provider = new KeyValuePair<string, object>("provider", providerName ?? "unspecified");
 
-        _realtimeIngestionSaturated.Add(1, provider);
         _ingestionSaturated.Add(1, provider);
     }
 
@@ -198,7 +148,6 @@ public static class AsteriskDiagnostics
     {
         var provider = new KeyValuePair<string, object>("provider", providerName ?? "unspecified");
 
-        _realtimeConnected.Add(1, provider);
         _connections.Add(1, provider);
     }
 
@@ -213,7 +162,6 @@ public static class AsteriskDiagnostics
     {
         var provider = new KeyValuePair<string, object>("provider", providerName ?? "unspecified");
 
-        _realtimeReconnectAttempted.Add(1, provider);
         _reconnectAttempts.Add(1, provider);
     }
 
@@ -279,102 +227,6 @@ public static class AsteriskDiagnostics
 
         CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
         _eventLag.Record(Math.Max(0, (nowUtc - occurred).TotalSeconds), tags);
-    }
-
-    /// <summary>
-    /// Starts measuring one ARI REST request: a client span and <c>crestapps.asterisk.ari.request.duration</c>.
-    /// Finish it with <see cref="CompleteAriRequest(TelemetryScope, HttpStatusCode?, Exception)"/>.
-    /// </summary>
-    /// <param name="providerName">The provider technical name.</param>
-    /// <param name="operation">The ARI client operation, such as <c>OriginateAsync</c>.</param>
-    /// <returns>The scope of the request.</returns>
-    public static TelemetryScope StartAriRequest(string providerName, string operation)
-    {
-        return TelemetryScope.Start(
-            ActivitySource,
-            "crestapps.asterisk.ari.request",
-            _ariRequestDuration,
-            new TagList
-            {
-                { CrestAppsOrchardCoreTelemetry.ProviderTag, providerName ?? "unspecified" },
-                { CrestAppsOrchardCoreTelemetry.OperationTag, operation ?? CrestAppsOrchardCoreTelemetry.Unknown },
-            },
-            ActivityKind.Client);
-    }
-
-    /// <summary>
-    /// Records how an ARI request ended: the <c>result</c> (<c>ok</c>, <c>timeout</c>, <see cref="AriResultUnreachable"/>,
-    /// <see cref="AriResultNotFound"/>, <see cref="AriResultHttp4xx"/> or <see cref="AriResultHttp5xx"/>) and the outcome.
-    /// </summary>
-    /// <param name="scope">The scope started with <see cref="StartAriRequest(string, string)"/>.</param>
-    /// <param name="statusCode">The status code of the response, or <see langword="null"/> when none arrived.</param>
-    /// <param name="exception">The exception the request failed with, or <see langword="null"/>.</param>
-    /// <param name="notFoundIsAnAnswer">Whether a 404 answers the request rather than failing it, such as asking
-    /// whether a channel still exists or whether a recording is ready.</param>
-    public static void CompleteAriRequest(TelemetryScope scope, HttpStatusCode? statusCode, Exception exception = null, bool notFoundIsAnAnswer = false)
-    {
-        ArgumentNullException.ThrowIfNull(scope);
-
-        var result = notFoundIsAnAnswer && statusCode == HttpStatusCode.NotFound
-            ? AriResultNotFound
-            : GetAriResult(statusCode, exception);
-
-        scope.AddMetricTag(CrestAppsOrchardCoreTelemetry.ResultTag, result);
-
-        if (statusCode is { } code)
-        {
-            scope.SetSpanTag("http.response.status_code", (int)code);
-        }
-
-        if (exception is not null)
-        {
-            scope.Fail(exception);
-
-            // A timeout of the resilience pipeline is not a TimeoutException, but it is one.
-            if (result == CrestAppsOrchardCoreTelemetry.OutcomeTimeout)
-            {
-                scope.SetOutcome(CrestAppsOrchardCoreTelemetry.OutcomeTimeout);
-            }
-        }
-        else if (result is CrestAppsOrchardCoreTelemetry.OutcomeOk or AriResultNotFound)
-        {
-            scope.Succeed();
-        }
-        else
-        {
-            scope.Fail(result);
-        }
-    }
-
-    /// <summary>
-    /// Gets the bounded <c>result</c> of an ARI request.
-    /// </summary>
-    /// <param name="statusCode">The status code of the response, or <see langword="null"/> when none arrived.</param>
-    /// <param name="exception">The exception the request failed with, or <see langword="null"/>.</param>
-    /// <returns>The result.</returns>
-    public static string GetAriResult(HttpStatusCode? statusCode, Exception exception = null)
-    {
-        if (statusCode is { } code)
-        {
-            return (int)code switch
-            {
-                >= 500 => AriResultHttp5xx,
-                >= 400 => AriResultHttp4xx,
-                _ => CrestAppsOrchardCoreTelemetry.OutcomeOk,
-            };
-        }
-
-        if (exception is TimeoutRejectedException)
-        {
-            return CrestAppsOrchardCoreTelemetry.OutcomeTimeout;
-        }
-
-        return CrestAppsOrchardCoreTelemetry.GetOutcome(exception ?? new InvalidOperationException()) switch
-        {
-            CrestAppsOrchardCoreTelemetry.OutcomeTimeout => CrestAppsOrchardCoreTelemetry.OutcomeTimeout,
-            CrestAppsOrchardCoreTelemetry.OutcomeCancelled => CrestAppsOrchardCoreTelemetry.OutcomeCancelled,
-            _ => AriResultUnreachable,
-        };
     }
 
     /// <summary>

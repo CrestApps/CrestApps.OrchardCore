@@ -6,14 +6,12 @@ using Microsoft.Extensions.Logging;
 namespace CrestApps.OrchardCore.Core.Recipes;
 
 /// <summary>
-/// The OpenTelemetry instruments, spans and log messages of the recipe steps and deployment sources of named catalogs,
-/// under the meter and activity source named <c>CrestApps.OrchardCore.Recipes</c>.
+/// The OpenTelemetry instruments and log messages of the recipe steps of named catalogs,
+/// under the meter named <c>CrestApps.OrchardCore.Recipes</c>.
 /// </summary>
 /// <remarks>
-/// The recipe executions are measured by <c>RecipesTelemetry</c> in <c>CrestApps.OrchardCore.Recipes.Core</c>, which
-/// this project does not reference, so this class creates its own meter and activity source of the same name. A listener
-/// subscribed to the name receives both; the instrument names never overlap. The log messages use the event ids from
-/// <see cref="CrestAppsEventIds.ContentTransfer"/> + 710.
+/// Orchard Core's recipe executor traces the recipe and its steps, so only what a step did with its entries is measured
+/// here. The log messages use the event ids from <see cref="CrestAppsEventIds.ContentTransfer"/> + 710.
 /// </remarks>
 internal static partial class RecipeStepTelemetry
 {
@@ -44,29 +42,9 @@ internal static partial class RecipeStepTelemetry
     public const string ResultSkipped = "skipped";
 
     /// <summary>
-    /// The name of the span of one recipe step that imports a named catalog.
-    /// </summary>
-    public const string StepSpanName = "crestapps.recipes.step";
-
-    /// <summary>
-    /// The name of the span of one deployment step that exports a named catalog.
-    /// </summary>
-    public const string DeploymentSpanName = "crestapps.recipes.deployment.export";
-
-    /// <summary>
-    /// The span tag that records the name of the recipe step or deployment step.
-    /// </summary>
-    public const string StepSpanTag = "crestapps.recipes.step";
-
-    /// <summary>
     /// Gets the meter of the recipe step instruments.
     /// </summary>
     public static Meter Meter { get; } = CrestAppsOrchardCoreTelemetry.CreateMeter("Recipes");
-
-    /// <summary>
-    /// Gets the activity source of the recipe step spans.
-    /// </summary>
-    public static ActivitySource ActivitySource { get; } = CrestAppsOrchardCoreTelemetry.CreateActivitySource("Recipes");
 
     /// <summary>
     /// Gets the number of catalog entries recipe steps read, tagged with the <see cref="StepTag"/> and the
@@ -77,15 +55,6 @@ internal static partial class RecipeStepTelemetry
         "crestapps.recipes.step.entries",
         "{entry}",
         "The number of catalog entries recipe steps read, by what became of them.");
-
-    /// <summary>
-    /// Gets the number of catalog entries a deployment step exported, tagged with the <see cref="StepTag"/>.
-    /// </summary>
-    public static Histogram<long> DeploymentEntries { get; } = CrestAppsOrchardCoreTelemetry.CreateCountHistogram(
-        Meter,
-        "crestapps.recipes.deployment.entries",
-        "{entry}",
-        "The number of catalog entries a deployment step exported.");
 
     /// <summary>
     /// Records the entries of one recipe step that ended the same way.
@@ -108,27 +77,6 @@ internal static partial class RecipeStepTelemetry
 
         CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
         StepEntries.Add(count, tags);
-    }
-
-    /// <summary>
-    /// Records the entries one deployment step exported.
-    /// </summary>
-    /// <param name="step">The name of the deployment step.</param>
-    /// <param name="count">The number of entries exported.</param>
-    public static void RecordDeploymentEntries(string step, long count)
-    {
-        if (!DeploymentEntries.Enabled)
-        {
-            return;
-        }
-
-        var tags = new TagList
-        {
-            { StepTag, step ?? CrestAppsOrchardCoreTelemetry.Unknown },
-        };
-
-        CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
-        DeploymentEntries.Record(count, tags);
     }
 
     /// <summary>

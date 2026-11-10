@@ -58,9 +58,8 @@ public sealed partial class VoiceAgentConversationLoop
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
-            // The number goes through the address redactor: it is the customer's.
             var loggedActivityId = activityId.SanitizeLogValue();
-            var loggedDestination = RedactAddress(destination);
+            var loggedDestination = destination.SanitizeLogValue();
             var loggedDetail = detail.SanitizeLogValue();
 
             VoiceLog.NotInService(_logger, loggedActivityId, loggedDestination, loggedDetail);

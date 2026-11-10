@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Calendars.Core.External;
+using CrestApps.OrchardCore.Calendars.Services;
 using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -38,14 +39,27 @@ public sealed class CalendarSyncBackgroundTask : IBackgroundTask
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                // The synchronization records its own failure on the subscription and returns nothing.
-                var synced = false;
+                // The synchronization records its own failure on the subscription and returns nothing; a calendar
+                // deleted since it was listed is skipped, not failed.
+                var result = "failed";
 
                 try
                 {
                     await ShellScope.UsingChildScopeAsync(async scope =>
                     {
-                        synced = await scope.ServiceProvider.GetRequiredService<CalendarSyncService>().SyncAsync(calendarId, cancellationToken) is not null;
+                        var calendar = await scope.ServiceProvider.GetRequiredService<ICalendarService>().FindByIdAsync(calendarId, cancellationToken);
+
+                        if (calendar is null)
+                        {
+                            result = "skipped";
+
+                            return;
+                        }
+
+                        if (await scope.ServiceProvider.GetRequiredService<CalendarSyncService>().SyncAsync(calendar, cancellationToken) is not null)
+                        {
+                            result = "synced";
+                        }
                     });
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
@@ -54,7 +68,7 @@ public sealed class CalendarSyncBackgroundTask : IBackgroundTask
                     logger.LogError(ex, "Synchronizing the calendar '{CalendarId}' with its external calendar failed.", calendarId);
                 }
 
-                run.AddItems(1, synced ? "synced" : "failed");
+                run.AddItems(1, result);
             }
         });
     }

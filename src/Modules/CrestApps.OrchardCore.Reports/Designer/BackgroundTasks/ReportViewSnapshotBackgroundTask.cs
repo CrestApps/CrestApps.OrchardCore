@@ -122,7 +122,6 @@ public sealed class ReportViewSnapshotBackgroundTask : IBackgroundTask
             activity?.SetTag("crestapps.report.views.refreshed", refreshed);
             activity?.SetTag("crestapps.report.views.failed", failed);
             activity?.SetTag("crestapps.report.views.skipped", skipped);
-            ReportsModuleLog.ViewSweepCompleted(logger, due.Count, refreshed, failed, skipped);
         }
     }
 

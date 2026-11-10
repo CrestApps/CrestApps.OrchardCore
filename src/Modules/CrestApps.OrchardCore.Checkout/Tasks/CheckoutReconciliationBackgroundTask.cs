@@ -170,7 +170,9 @@ public sealed class CheckoutReconciliationBackgroundTask : IBackgroundTask
                 {
                     var result = await engine.ExpireAsync(session.SessionId, cancellationToken);
 
-                    if (result.Status == CheckoutCompletionStatus.Canceled)
+                    // A checkout that had already ended comes back canceled with a message; only one this call
+                    // expired counts.
+                    if (result.Status == CheckoutCompletionStatus.Canceled && string.IsNullOrEmpty(result.ErrorMessage))
                     {
                         expired++;
                         run.AddItems(1, "expired");

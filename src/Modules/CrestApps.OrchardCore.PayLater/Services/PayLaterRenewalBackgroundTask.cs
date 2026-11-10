@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.Diagnostics;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.PayLater.Models;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
@@ -121,11 +120,10 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
 
         // Two nodes running the sweep at the same moment would otherwise both see an unspawned cycle and
         // each create the next period's debt.
-        var (locker, locked) = await distributedLock.TryAcquireMeasuredLockAsync(
+        var (locker, locked) = await distributedLock.TryAcquireLockAsync(
             "PAY_LATER_RENEWAL_" + transaction.ItemId,
             TimeSpan.FromSeconds(5),
-            TimeSpan.FromMinutes(2),
-            "paylater.renewal");
+            TimeSpan.FromMinutes(2));
 
         if (!locked)
         {

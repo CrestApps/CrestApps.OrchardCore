@@ -6,7 +6,7 @@ using CrestApps.OrchardCore.Diagnostics;
 namespace CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 
 /// <summary>
-/// The inbound funnel: provider ingress admission, and routing an inbound call to an agent, a queue, a menu, an
+/// The inbound funnel: routing an inbound call to an agent, a queue, a menu, an
 /// announcement or an AI voice agent.
 /// </summary>
 public static partial class ContactCenterDiagnostics
@@ -32,11 +32,6 @@ public static partial class ContactCenterDiagnostics
         Meter,
         "crestapps.contactcenter.inbound.ai_answer.duration",
         "The time from when the provider received an inbound call to when routing handed it to the entry point's AI voice agent.");
-
-    private static readonly Counter<long> _ingressRejected = Meter.CreateCounter<long>(
-        "crestapps.contactcenter.ingress.rejected",
-        "{request}",
-        "The number of inbound voice routing requests refused before routing, by reason.");
 
     /// <summary>
     /// Starts measuring the routing of one inbound call.
@@ -108,25 +103,6 @@ public static partial class ContactCenterDiagnostics
         Record(_inboundAIAnswerDuration, Math.Max(0, elapsed.TotalSeconds), new TagList
         {
             { CrestAppsOrchardCoreTelemetry.ProviderTag, GetProvider(providerName) },
-        });
-    }
-
-    /// <summary>
-    /// Records that an inbound voice routing request was refused before routing.
-    /// </summary>
-    /// <param name="reason"><c>forbidden</c>, <c>bad_request</c>, <c>feature_unavailable</c> or <c>concurrency_limit</c>.</param>
-    internal static void RecordIngressRejected(string reason)
-    {
-        Activity.Current?.SetTag(CrestAppsOrchardCoreTelemetry.ReasonTag, reason);
-
-        if (!_ingressRejected.Enabled)
-        {
-            return;
-        }
-
-        Add(_ingressRejected, new TagList
-        {
-            { CrestAppsOrchardCoreTelemetry.ReasonTag, reason },
         });
     }
 

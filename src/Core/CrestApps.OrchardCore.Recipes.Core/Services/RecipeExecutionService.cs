@@ -1,7 +1,5 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.Diagnostics;
-using CrestApps.OrchardCore.Recipes.Core.Telemetry;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -50,14 +48,6 @@ public sealed class RecipeExecutionService
     {
         ArgumentNullException.ThrowIfNull(data);
 
-        var handlers = _deploymentTargetHandlers.ToArray();
-        var stepCount = data is JsonObject recipe && recipe["steps"] is JsonArray steps ? steps.Count : 0;
-
-        using var telemetry = TelemetryScope.Start(RecipesTelemetry.ActivitySource, RecipesTelemetry.ExecuteSpanName, RecipesTelemetry.ExecutionDuration);
-        telemetry.SetSpanTag(RecipesTelemetry.StepCountTag, stepCount);
-
-        RecipesLog.ExecutingRecipe(_logger, stepCount, handlers.Length);
-
         var tempArchiveName = _tempDirectoryProvider.GetTempFileName(".json");
         var tempArchiveFolder = _tempDirectoryProvider.GetTempFileName();
 
@@ -74,42 +64,22 @@ public sealed class RecipeExecutionService
 
             var deploymentPackage = new PhysicalFileProvider(tempArchiveFolder);
 
-            foreach (var deploymentTargetHandler in handlers)
+            foreach (var deploymentTargetHandler in _deploymentTargetHandlers)
             {
-                // Each handler gets a child span, so a slow or failing handler shows in the trace of the execution.
-                using var handlerTelemetry = TelemetryScope.Start(RecipesTelemetry.ActivitySource, RecipesTelemetry.DeploymentTargetSpanName, duration: null);
-                handlerTelemetry.SetSpanTag(RecipesTelemetry.HandlerTag, deploymentTargetHandler.GetType().Name);
-
-                try
-                {
-                    // Don't trigger in parallel to avoid potential race conditions in the handlers
-                    await deploymentTargetHandler.ImportFromFileAsync(deploymentPackage);
-                    handlerTelemetry.Succeed();
-                }
-                catch (Exception ex)
-                {
-                    handlerTelemetry.Fail(ex);
-
-                    throw;
-                }
+                // Don't trigger in parallel to avoid potential race conditions in the handlers
+                await deploymentTargetHandler.ImportFromFileAsync(deploymentPackage);
             }
-
-            telemetry.Succeed();
-            RecipesLog.ExecutedRecipe(_logger, stepCount, telemetry.Elapsed.TotalMilliseconds);
 
             return true;
         }
         catch (Exception ex)
         {
-            telemetry.Fail(ex);
             _logger.LogError(ex, "An error occurred while executing a recipe.");
 
             return false;
         }
         finally
         {
-            RecipesTelemetry.RecordExecution(telemetry.Outcome);
-
             if (File.Exists(tempArchiveName))
             {
                 File.Delete(tempArchiveName);
