@@ -109,7 +109,7 @@ public sealed class AIWebhookDeliveryHistoryTests
                     .AddSingleton(Clock())
                     .AddSingleton<ISession>(session)
                     .AddSingleton<IWebhookDeliveryStore>(new WebhookDeliveryStore(session))
-                    .AddSingleton(new WebhookDispatcher(Mock.Of<CrestApps.OrchardCore.Webhooks.IWebhookSender>(), Mock.Of<IWebhookDeliveryStore>(), Mock.Of<IWebhookSubscriptionStore>(), new EphemeralDataProtectionProvider(), Clock(), NullLogger<WebhookDispatcher>.Instance))
+                    .AddSingleton(new WebhookDispatcher(Mock.Of<CrestApps.OrchardCore.Webhooks.IWebhookSender>(), Mock.Of<IWebhookDeliveryStore>(), Mock.Of<IWebhookSubscriptionStore>(), [], new EphemeralDataProtectionProvider(), Clock(), NullLogger<WebhookDispatcher>.Instance))
                     .AddSingleton(Options.Create(options))
                     .BuildServiceProvider();
 
@@ -191,7 +191,7 @@ public sealed class AIWebhookDeliveryHistoryTests
     {
         var protection = new EphemeralDataProtectionProvider();
         var subscriptions = Mock.Of<IWebhookSubscriptionStore>();
-        var dispatcher = new WebhookDispatcher(Mock.Of<CrestApps.OrchardCore.Webhooks.IWebhookSender>(), deliveries, subscriptions, protection, Clock(), NullLogger<WebhookDispatcher>.Instance);
+        var dispatcher = new WebhookDispatcher(Mock.Of<CrestApps.OrchardCore.Webhooks.IWebhookSender>(), deliveries, subscriptions, [], protection, Clock(), NullLogger<WebhookDispatcher>.Instance);
 
         return new AIWebhookImporter(Mock.Of<IAIWebhookSubscriptionStore>(), aiDeliveries, subscriptions, deliveries, dispatcher, protection, Clock(), NullLogger<AIWebhookImporter>.Instance, Mock.Of<ISession>());
     }

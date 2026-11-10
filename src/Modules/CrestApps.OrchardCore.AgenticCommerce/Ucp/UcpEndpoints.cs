@@ -73,7 +73,7 @@ public static class UcpEndpoints
         }
 
         var body = (await profiles.BuildAsync(version, httpContext.RequestAborted)).ToJsonString(JsonSerializerOptions.Web);
-        var etag = "\"" + Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(body))).Substring(0, 32) + "\"";
+        var etag = string.Concat("\"", Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(body))).AsSpan(0, 32), "\"");
 
         httpContext.Response.Headers.CacheControl = "public, max-age=300";
         httpContext.Response.Headers.ETag = etag;
