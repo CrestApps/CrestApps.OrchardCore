@@ -41,6 +41,11 @@ public static class AgenticCommerceConstants
         public const string Acp = "CrestApps.OrchardCore.AgenticCommerce.Acp";
 
         /// <summary>
+        /// ACP's MCP binding.
+        /// </summary>
+        public const string AcpMcp = "CrestApps.OrchardCore.AgenticCommerce.Acp.Mcp";
+
+        /// <summary>
         /// Product feeds for AI agents: OpenAI's file feed and the ACP feed API client.
         /// </summary>
         public const string Feeds = "CrestApps.OrchardCore.AgenticCommerce.Feeds";

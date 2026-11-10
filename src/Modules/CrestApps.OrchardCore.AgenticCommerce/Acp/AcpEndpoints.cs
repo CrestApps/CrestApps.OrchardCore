@@ -1,8 +1,8 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AgenticCommerce.Core.Security;
 using CrestApps.OrchardCore.AgenticCommerce.Core.Services;
-using CrestApps.OrchardCore.AgenticCommerce.Models;
 using CrestApps.OrchardCore.AgenticCommerce.Endpoints;
 using CrestApps.OrchardCore.Commerce.Api;
 using Microsoft.AspNetCore.Builder;
@@ -61,23 +61,34 @@ public static class AcpEndpoints
         return routes;
     }
 
-    private static string Fingerprint(HttpContext httpContext)
+    /// <summary>
+    /// Returns the fingerprint a retry with the same idempotency key must match: the SHA-256 of the body's RFC 8785
+    /// canonical JSON, so equal JSON is the same request whatever its key order or number form, or of the raw body when
+    /// it isn't JSON.
+    /// </summary>
+    /// <param name="json">The body as JSON, or <see langword="null"/>.</param>
+    /// <param name="body">The raw body, used when it isn't JSON.</param>
+    public static string ComputeFingerprint(JsonNode json, byte[] body = null)
     {
-        var request = AgentRequest.Get(httpContext);
-
-        // Equal JSON is the same request, whatever its key order or number form.
-        var canonical = request?.Json is null ? request?.Body ?? [] : JsonCanonicalizer.CanonicalizeToUtf8(request.Json);
+        var canonical = json is null ? body ?? [] : JsonCanonicalizer.CanonicalizeToUtf8(json);
 
         return Convert.ToHexStringLower(SHA256.HashData(canonical));
     }
 
-    private static async Task<IResult> DiscoveryAsync(HttpContext httpContext, AgentSiteUrls urls)
+    private static string Fingerprint(HttpContext httpContext)
+    {
+        var request = AgentRequest.Get(httpContext);
+
+        return ComputeFingerprint(request?.Json, request?.Body);
+    }
+
+    private static async Task<IResult> DiscoveryAsync(HttpContext httpContext, AgentSiteUrls urls, IEnumerable<IAcpDiscoveryContributor> contributors)
     {
         var baseUrl = await urls.GetBaseUrlAsync();
 
         httpContext.Response.Headers.CacheControl = "public, max-age=3600";
 
-        return Results.Json(new JsonObject
+        var document = new JsonObject
         {
             ["protocol"] = new JsonObject
             {
@@ -92,130 +103,54 @@ public static class AcpEndpoints
                 ["services"] = new JsonArray("checkout", "orders"),
                 ["extensions"] = new JsonArray(new JsonObject { ["name"] = "discount" }),
             },
-        });
-    }
-
-    private static async Task<IResult> CreateAsync(HttpContext httpContext, IAgentCheckoutService checkouts, AcpCheckoutMapper mapper)
-    {
-        var request = AgentRequest.Get(httpContext);
-
-        if (request.Json is not JsonObject body)
-        {
-            return AcpResults.Error(StatusCodes.Status400BadRequest, "invalid", "Send the checkout as a JSON object.");
-        }
-
-        var result = await checkouts.CreateAsync(request.Context, AcpCheckoutMapper.ReadInput(body), httpContext.RequestAborted);
-
-        if (!result.Succeeded)
-        {
-            return Fail(result, httpContext);
-        }
-
-        return AcpResults.Json(await mapper.WriteAsync(request, result, httpContext.RequestAborted), StatusCodes.Status201Created);
-    }
-
-    private static async Task<IResult> GetAsync(string id, HttpContext httpContext, IAgentCheckoutService checkouts, AcpCheckoutMapper mapper)
-    {
-        var request = AgentRequest.Get(httpContext);
-        var result = await checkouts.GetAsync(request.Context, id, httpContext.RequestAborted);
-
-        return result.Succeeded
-            ? AcpResults.Json(await mapper.WriteAsync(request, result, httpContext.RequestAborted))
-            : Fail(result, httpContext);
-    }
-
-    private static async Task<IResult> UpdateAsync(string id, HttpContext httpContext, IAgentCheckoutService checkouts, AcpCheckoutMapper mapper)
-    {
-        var request = AgentRequest.Get(httpContext);
-
-        if (request.Json is not JsonObject body)
-        {
-            return AcpResults.Error(StatusCodes.Status400BadRequest, "invalid", "Send the changes as a JSON object.");
-        }
-
-        var current = await checkouts.GetAsync(request.Context, id, httpContext.RequestAborted);
-
-        if (!current.Succeeded)
-        {
-            return Fail(current, httpContext);
-        }
-
-        var result = await checkouts.UpdateAsync(request.Context, id, AcpCheckoutMapper.ReadUpdate(body, current.View), httpContext.RequestAborted);
-
-        return result.Succeeded
-            ? AcpResults.Json(await mapper.WriteAsync(request, result, httpContext.RequestAborted))
-            : Fail(result, httpContext);
-    }
-
-    private static async Task<IResult> CompleteAsync(string id, HttpContext httpContext, IAgentCheckoutService checkouts, AcpCheckoutMapper mapper)
-    {
-        var request = AgentRequest.Get(httpContext);
-
-        if (request.Json is not JsonObject body)
-        {
-            return AcpResults.Error(StatusCodes.Status400BadRequest, "invalid", "Send the payment as a JSON object.");
-        }
-
-        if (AcpCheckoutMapper.ReadPayment(body) is not { } payment || string.IsNullOrEmpty(payment.Credential))
-        {
-            return AcpResults.Error(StatusCodes.Status400BadRequest, "missing", "Send payment_data with the payment handler and its credential.", "$.payment_data");
-        }
-
-        var update = new AgentCheckoutUpdate
-        {
-            Signals = AcpCheckoutMapper.ReadSignals(body),
-            Consents = AcpCheckoutMapper.ReadConsents(body),
-            Attribution = body["affiliate_attribution"]?.DeepClone() as JsonObject,
-            OrderNotes = AgentJson.String(body, "order_notes"),
         };
 
-        if (body["buyer"] is JsonObject)
+        foreach (var contributor in contributors)
         {
-            update.Buyer = AcpCheckoutMapper.ReadInput(new JsonObject { ["buyer"] = body["buyer"].DeepClone() }).Buyer;
+            await contributor.ContributeAsync(document, baseUrl);
         }
 
-        var result = await checkouts.CompleteAsync(request.Context, id, payment, update, httpContext.RequestAborted);
-
-        return result.Succeeded
-            ? AcpResults.Json(await mapper.WriteAsync(request, result, httpContext.RequestAborted))
-            : Fail(result, httpContext);
+        return Results.Json(document);
     }
 
-    private static async Task<IResult> CancelAsync(string id, HttpContext httpContext, IAgentCheckoutService checkouts, AcpCheckoutMapper mapper)
+    private static async Task<IResult> CreateAsync(HttpContext httpContext, AcpCheckoutOperations operations)
     {
         var request = AgentRequest.Get(httpContext);
-        var trace = (request.Json as JsonObject)?["intent_trace"]?.DeepClone() as JsonObject;
-        var result = await checkouts.CancelAsync(request.Context, id, trace, httpContext.RequestAborted);
 
-        if (result.Failure == AgentCheckoutFailure.InvalidState)
-        {
-            return AcpResults.Error(StatusCodes.Status405MethodNotAllowed, "invalid_state", result.Error);
-        }
-
-        return result.Succeeded
-            ? AcpResults.Json(await mapper.WriteAsync(request, result, httpContext.RequestAborted))
-            : Fail(result, httpContext);
+        return ToResult(httpContext, await operations.CreateAsync(request, request.Json, httpContext.RequestAborted));
     }
 
-    private static IResult Fail(AgentCheckoutResult result, HttpContext httpContext)
+    private static async Task<IResult> GetAsync(string id, HttpContext httpContext, AcpCheckoutOperations operations)
+        => ToResult(httpContext, await operations.GetAsync(AgentRequest.Get(httpContext), id, httpContext.RequestAborted));
+
+    private static async Task<IResult> UpdateAsync(string id, HttpContext httpContext, AcpCheckoutOperations operations)
     {
-        switch (result.Failure)
+        var request = AgentRequest.Get(httpContext);
+
+        return ToResult(httpContext, await operations.UpdateAsync(request, id, request.Json, httpContext.RequestAborted));
+    }
+
+    private static async Task<IResult> CompleteAsync(string id, HttpContext httpContext, AcpCheckoutOperations operations)
+    {
+        var request = AgentRequest.Get(httpContext);
+
+        return ToResult(httpContext, await operations.CompleteAsync(request, id, request.Json, httpContext.RequestAborted));
+    }
+
+    private static async Task<IResult> CancelAsync(string id, HttpContext httpContext, AcpCheckoutOperations operations)
+    {
+        var request = AgentRequest.Get(httpContext);
+
+        return ToResult(httpContext, await operations.CancelAsync(request, id, request.Json, httpContext.RequestAborted));
+    }
+
+    private static IResult ToResult(HttpContext httpContext, AcpOperationResult result)
+    {
+        if (result.RetryAfterSeconds is { } seconds)
         {
-            case AgentCheckoutFailure.NotFound:
-                return AcpResults.Error(StatusCodes.Status404NotFound, "not_found", result.Error);
-
-            case AgentCheckoutFailure.Busy:
-                httpContext.Response.Headers[HeaderNames.RetryAfter] = "1";
-
-                return AcpResults.Error(StatusCodes.Status409Conflict, "conflict", result.Error);
-
-            case AgentCheckoutFailure.TooMany:
-                return AcpResults.Error(StatusCodes.Status429TooManyRequests, "rate_limited", result.Error);
-
-            case AgentCheckoutFailure.InvalidState:
-                return AcpResults.Error(StatusCodes.Status409Conflict, "invalid_state", result.Error);
+            httpContext.Response.Headers[HeaderNames.RetryAfter] = seconds.ToString(CultureInfo.InvariantCulture);
         }
 
-        return AcpResults.Error(StatusCodes.Status400BadRequest, "invalid", result.Error);
+        return AcpResults.Json(result.Body, result.StatusCode);
     }
 }

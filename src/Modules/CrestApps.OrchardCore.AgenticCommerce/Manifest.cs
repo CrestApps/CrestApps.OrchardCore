@@ -88,6 +88,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = AgenticCommerceConstants.Features.AcpMcp,
+    Name = "ACP over MCP",
+    Description = "Serves ACP's checkout sessions as Model Context Protocol (MCP) tools at acp/mcp, for agents that use ACP's MCP binding, and lists the mcp transport in /.well-known/acp.json.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        AgenticCommerceConstants.Features.Acp,
+    ]
+)]
+
+[assembly: Feature(
     Id = AgenticCommerceConstants.Features.Feeds,
     Name = "Agent Product Feeds",
     Description = "Publishes the products for AI agents in OpenAI's product feed format, pushes a daily snapshot over SFTP, and keeps agents that host an ACP feed API up to date.",
