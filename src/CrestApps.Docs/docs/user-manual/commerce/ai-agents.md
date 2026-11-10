@@ -181,6 +181,14 @@ An agent's order is an ordinary order in **Commerce > Orders**: you fulfill, shi
 
 A buyer can link their account on your store to an agent, so the agent checks out as them, with their saved addresses, and can see their orders. This needs the **UCP Account Linking** feature and your site's OpenID Connect server, which your administrator sets up, and an OpenID Connect application for the platform. Enter that application's client ID in the platform's **OAuth client ID**. The buyer approves the link on your site's sign-in page.
 
+## Agents that talk to other agents
+
+Some platforms send their agent to talk to an agent of your store, instead of calling your store directly. They use the **Agent2Agent** (A2A) standard for this. Your administrator turns on the **UCP over A2A** feature to give your store such an agent. It needs no AI features.
+
+- The agent buys with the same checkout, prices and rules as every other agent. Its orders are ordinary agent orders.
+- A platform signs in with the same key or token as before. You don't set anything up for A2A.
+- Your store's UCP address tells platforms where to find the agent. They find it on their own.
+
 ## Product feeds and your own AI assistant
 
 AI agents also read your products from feeds. **Settings > Commerce > Agent feeds** publishes them in OpenAI's format for ChatGPT and pushes them to the platforms that host a feed. See [Product listings](product-listings.md#feeds-for-ai-agents).

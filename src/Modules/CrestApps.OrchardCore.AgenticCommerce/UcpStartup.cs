@@ -58,6 +58,7 @@ public sealed class UcpStartup : StartupBase
         services.AddScoped<UcpProfileBuilder>();
         services.AddScoped<UcpNegotiator>();
         services.AddScoped<UcpCheckoutMapper>();
+        services.AddScoped<UcpOperations>();
         services.AddScoped<IUcpProfileContributor, UcpShoppingProfileContributor>();
         services.AddScoped<IAgentOrderPublisher, UcpOrderPublisher>();
         services.AddScoped<IWebhookDeliveryFormatter, UcpOrderWebhookFormatter>();

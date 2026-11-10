@@ -22,6 +22,7 @@ The admin screens are described in the User Manual: [Sell through AI agents](../
 | `CrestApps.OrchardCore.AgenticCommerce.Ucp.IdentityLinking` | UCP Account Linking | UCP, OpenID Server | The `dev.ucp.common.identity_linking` capability: a buyer links their store account to an agent through the tenant's OpenID server. |
 | `CrestApps.OrchardCore.AgenticCommerce.Ucp.Catalog` | UCP Catalog and Cart | UCP, Product Listing | Catalog search and lookup, and the UCP cart. |
 | `CrestApps.OrchardCore.AgenticCommerce.Ucp.Mcp` | UCP over MCP | UCP | UCP's checkout as Model Context Protocol tools at `ucp/mcp`. |
+| `CrestApps.OrchardCore.AgenticCommerce.Ucp.A2a` | UCP over A2A | UCP | UCP's checkout and orders through an Agent2Agent (A2A) agent at `ucp/a2a`. See [UCP over A2A](#ucp-over-a2a). |
 | `CrestApps.OrchardCore.AgenticCommerce.Acp` | Agentic Commerce Protocol | Agentic Commerce | The discovery document at `/.well-known/acp.json`, the ACP checkout REST binding, and signed order webhooks. |
 | `CrestApps.OrchardCore.AgenticCommerce.Feeds` | Agent Product Feeds | Agentic Commerce, Product Feeds | The OpenAI product feed, the daily SFTP push and the ACP feed API client. See [Agent product feeds](#agent-product-feeds). |
 | `CrestApps.OrchardCore.AgenticCommerce.Ap2` | Agent Payments Protocol (Preview) | UCP | The AP2 mandates extension of UCP. See [AP2 mandates (preview)](#ap2-mandates-preview). |
@@ -46,7 +47,7 @@ Agents themselves need no permission. An agent platform signs in with its own cr
 
 ## How it fits on the checkout engine
 
-One protocol-neutral service, `IAgentCheckoutService` (`AgentCheckoutService`), does the work for every protocol. The UCP and ACP endpoints, the MCP tools and the AI tools only map their JSON to it and back.
+One protocol-neutral service, `IAgentCheckoutService` (`AgentCheckoutService`), does the work for every protocol. The UCP and ACP endpoints, the MCP tools, the A2A agent and the AI tools only map their JSON to it and back.
 
 1. **Create.** The agent sends items by the item ids of the product feed (`ProductFeedItemIds`, read back with `IAgentItemResolver`), the buyer, an address and discount codes. The service keeps them on an `AgentCheckout` record in the `AgenticCommerce` YesSql collection.
 2. **Price.** The items are priced as a cart that the store keeps for this checkout only (`ICartService`), so every storefront rule applies: what can be bought, how many, and at which price. An item the store doesn't sell keeps the checkout from starting.
@@ -91,6 +92,8 @@ The paths come after the tenant's base address.
 | `POST ucp/v1/catalog/product` | UCP Catalog and Cart | Returns one product. |
 | `POST ucp/v1/carts`, `GET` and `PUT ucp/v1/carts/{id}`, `POST ucp/v1/carts/{id}/cancel` | UCP Catalog and Cart | The UCP cart. |
 | `POST ucp/mcp` | UCP over MCP | UCP's MCP binding (JSON-RPC). |
+| `GET ucp/a2a/.well-known/agent-card.json` | UCP over A2A | The A2A agent card. Public, cached for five minutes. |
+| `POST ucp/a2a` | UCP over A2A | UCP's A2A binding (JSON-RPC, `message/send`). |
 | `GET /.well-known/oauth-authorization-server` | UCP Account Linking | Redirects to the OpenID server's `/.well-known/openid-configuration`. |
 | `GET /.well-known/acp.json` | ACP | The ACP discovery document. Public, cached for an hour. |
 | `POST acp/checkout_sessions` | ACP | Creates a checkout (`201`). |
@@ -106,7 +109,7 @@ UCP answers a business outcome, such as changing a completed checkout, with HTTP
 
 ### UCP profile and negotiation
 
-`UcpProfileBuilder` builds the profile from what the enabled features offer (`IUcpProfileContributor`): the services and their transports (`rest`, and `mcp` with UCP over MCP), the capabilities and extensions, the payment handlers the store offers, and the store's public signing keys under `keys`.
+`UcpProfileBuilder` builds the profile from what the enabled features offer (`IUcpProfileContributor`): the services and their transports (`rest`, `mcp` with UCP over MCP, and `a2a` with UCP over A2A), the capabilities and extensions, the payment handlers the store offers, and the store's public signing keys under `keys`.
 
 | Capability | Offered by |
 | --- | --- |
@@ -268,6 +271,32 @@ With **UCP over MCP** on, `POST ucp/mcp` serves UCP's MCP binding: JSON-RPC 2.0 
 
 Each tool returns the checkout in `structuredContent`, as the REST binding writes it.
 
+## UCP over A2A
+
+With **UCP over A2A** on, the store serves UCP's [A2A binding](https://ucp.dev/2026-08-25/specification/shopping/checkout/a2a/) as an Agent2Agent agent. It needs no AI feature: the agent reads structured UCP requests, not a buyer's words.
+
+- **Discovery.** The UCP profile lists an `a2a` service whose `endpoint` is the agent card, `ucp/a2a/.well-known/agent-card.json`. The card is an A2A `0.3.0` card. Its `url` is `ucp/a2a` (JSON-RPC), and it lists UCP's extension once per served version (`https://ucp.dev/{version}/specification/reference`), with the checkout and order capabilities in `params.capabilities`. Catalog and cart aren't offered over A2A, because UCP defines no A2A binding for them.
+- **Sign-in.** A request signs in and negotiates like the REST binding: `UCP-Agent`, an API key, an OAuth token or an RFC 9421 signature. Send `X-A2A-Extensions` with the extension URI to activate it; the answer names the activated URI in the same header. A request without the header is still served.
+- **Methods.** `message/send` only. `message/stream` gets `-32004`, the task methods get `-32001` (the agent answers with messages and keeps no tasks), and other methods get `-32601`.
+- **Requests.** Put the action and the UCP payload in data parts. The parts are merged, so they can be split, as UCP's examples do.
+
+| Action | Data |
+| --- | --- |
+| `create_checkout` | `a2a.ucp.checkout`: the checkout the REST binding takes |
+| `get_checkout` | `id` (or `checkout_id`, or `a2a.ucp.checkout.id`) |
+| `update_checkout` | `id`, `a2a.ucp.checkout` |
+| `complete_checkout` | `id`, `a2a.ucp.checkout.payment` (the payment, or one instrument), `a2a.ucp.checkout.signals`, and with AP2 `ap2.checkout_mandate` |
+| `cancel_checkout` | `id` |
+| `add_to_checkout` | `product_id`, `quantity` (default 1): adds to the conversation's open checkout, or starts one |
+| `get_order` | `id` (or `order_id`) |
+
+- **Conversations.** The answer carries a `contextId` (the platform's, or a new one). The agent remembers the last checkout of each `contextId` for 72 hours, so a later turn in the same context can leave out the `id`.
+- **Answers.** An A2A message (`kind: message`, `role: agent`) with one data part: the checkout under `a2a.ucp.checkout`, as the REST binding writes it (with `ap2.merchant_authorization` when AP2 is agreed), or the order under `a2a.ucp.order`. UCP names only the checkout key; the order key follows its pattern. Business outcomes, such as a declined card, are answers with the checkout's messages, as in REST.
+- **Errors.** JSON-RPC errors with UCP's codes, and UCP's code and text in `error.data` (`{ code, content }`, plus `retry_after` when the agent should wait). Discovery and version failures are `-32001`; sign-in, not found, busy, rate limits and idempotency conflicts are `-32000`; a bad digest or signature algorithm is `-32600`; a missing id or action is `-32602`. Errors from sign-in and negotiation keep the REST binding's HTTP status (for example `401` or `424`); the others are HTTP `200`.
+- **Idempotency.** An action that changes something (`create_checkout`, `update_checkout`, `complete_checkout`, `cancel_checkout`, `add_to_checkout`) runs once per A2A `messageId`, for 48 hours, scoped to the platform and the action. A retry with the same message gets the first answer, with the new JSON-RPC `id`. The same `messageId` with other parts gets `idempotency_conflict`, and one still running gets `idempotency_in_flight`. Parts are compared as RFC 8785 canonical JSON. A busy or rate-limited answer isn't kept.
+
+Each action runs the same `UcpOperations` the REST endpoints run, so checkout extensions such as AP2 behave the same over A2A. The idempotency comes from `IdempotentOperation` in Commerce.Api.Core, the building block for keys that arrive in a message body instead of a header.
+
 ## AI tools
 
 When the AI feature (`CrestApps.OrchardCore.AI`), Product Listing and Product Feeds are on with Agentic Commerce, the module registers three AI tools in the **Commerce** category. Administrators pick them on AI profiles, and can expose them over MCP and WebMCP.
@@ -328,7 +357,7 @@ The module adds two recipes, which you run from **Configuration > Recipes**:
 
 | Recipe | What it does |
 | --- | --- |
-| `AgenticCommerceSample` (Agentic commerce: sample) | Turns on Test payments, Agentic Commerce, UCP, UCP Catalog and Cart, UCP over MCP, ACP and Agent Product Feeds, and adds a *Test agent platform* in test mode for UCP and ACP. Give it an API key under **Commerce > AI agents**. |
+| `AgenticCommerceSample` (Agentic commerce: sample) | Turns on Test payments, Agentic Commerce, UCP, UCP Catalog and Cart, UCP over MCP, UCP over A2A, ACP and Agent Product Feeds, and adds a *Test agent platform* in test mode for UCP and ACP. Give it an API key under **Commerce > AI agents**. |
 | `AgenticCommerceAccountLinking` (Agentic commerce: UCP account linking) | Turns on the OpenID server, OpenID token validation and UCP Account Linking, and adds the UCP scopes. See [Account linking](#account-linking-ucp). |
 
 The module has no `appsettings.json` configuration of its own.
@@ -498,7 +527,7 @@ public sealed class ContosoOrderPublisher : IAgentOrderPublisher
 
 - **ACP request signatures** aren't verified. ACP platforms sign in with an API key or an OAuth bearer token.
 - **ACP's delegate payment endpoint** isn't hosted by the store. ACP agents pay with a token their payment service provider issued, such as a Stripe shared payment token.
-- **ACP's MCP binding**, **UCP's A2A binding** and **embedded checkout** aren't built. UCP is served over REST and MCP, and ACP over REST.
+- **ACP's MCP binding** and **embedded checkout** aren't built. UCP is served over REST, MCP and A2A, and ACP over REST.
 - **Delegated 3-D Secure** isn't built. When a bank asks the buyer to approve a payment, the checkout goes to `requires_escalation` and the buyer approves it in the store's checkout.
 - **Account linking** has no authorization server metadata of its own. `/.well-known/oauth-authorization-server` redirects to the OpenID server's discovery document.
 - **Stripe shared payment tokens** are a preview of Stripe's API. The store calls Stripe with the preview API version `2026-09-30.preview`.

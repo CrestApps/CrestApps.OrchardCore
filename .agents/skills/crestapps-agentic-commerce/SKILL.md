@@ -32,8 +32,8 @@ the code was built from are in `docs/engineering/commerce/agentic-commerce-proto
 ## The shape of the module
 
 ```
-UCP REST (UcpEndpoints)   UCP MCP (UcpMcpEndpoints)   ACP REST (AcpEndpoints)   AI tools (AI/*.cs)
-        |  UcpRequestFilter  |                               | AcpRequestFilter        |
+UCP REST (UcpEndpoints)  UCP A2A (UcpA2aEndpoints)  UCP MCP (UcpMcpEndpoints)  ACP REST (AcpEndpoints)  AI tools (AI/*.cs)
+        |  UcpRequestFilter -> UcpOperations (REST + A2A)    | AcpRequestFilter        |
         |  UcpCheckoutMapper |                               | AcpCheckoutMapper       |
         +--------------------+---------------+---------------+-------------------------+
                                              |
@@ -56,8 +56,12 @@ UCP REST (UcpEndpoints)   UCP MCP (UcpMcpEndpoints)   ACP REST (AcpEndpoints)   
 - **`AgentCheckoutService`** owns everything else: the `AgentCheckout` record, pricing, the order and store checkout,
   the steps, discount codes, totals, messages, escalation, payment, expiry and the per-checkout lock.
 
-A new binding (ACP over MCP, UCP over A2A) is a new endpoint plus a mapper over `IAgentCheckoutService`. Never call
-carts, orders or providers from an endpoint.
+A new binding (ACP over MCP) is a new endpoint plus a mapper over `IAgentCheckoutService`. Never call carts, orders or
+providers from an endpoint. A new UCP binding calls `UcpOperations` (create, get, update, complete with the checkout
+extensions, cancel, order get), which returns a `UcpOperationResult` (a UCP body or a transport error) for the binding to
+write; see `UcpA2aMessageHandler`. A JSON-RPC binding marks its endpoint with `UcpJsonRpc.Errors` so
+`UcpRequestFilter` answers sign-in and negotiation failures as JSON-RPC errors, and takes a message-body idempotency
+key through `IdempotentOperation.RunAsync` (Commerce.Api.Core), as A2A does with its `messageId`.
 
 ## Add a payment handler (required pieces)
 
