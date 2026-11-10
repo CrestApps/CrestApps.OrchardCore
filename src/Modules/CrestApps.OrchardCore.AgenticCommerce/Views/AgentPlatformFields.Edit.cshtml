@@ -100,6 +100,48 @@
 </div>
 
 <div class="card mb-3">
+    <div class="card-header">@T["ACP request signatures"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="AcpRequireSignedRequests">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="AcpRequireSignedRequests" class="form-check-input" />
+                    <label asp-for="AcpRequireSignedRequests" class="form-check-label">@T["Require signed requests"]</label>
+                    <span class="hint dashed">@T["Refuse ACP requests that don't carry a valid Signature and Timestamp. Even when it's off, a signed request is checked when a public key is set, and refused if it doesn't match."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="AcpSignatureAlgorithm">
+            <label asp-for="AcpSignatureAlgorithm" class="ocat-label">@T["Algorithm"]</label>
+            <div class="ocat-end">
+                <select asp-for="AcpSignatureAlgorithm" asp-items="Model.SignatureAlgorithmOptions" class="form-select"></select>
+                <span asp-validation-for="AcpSignatureAlgorithm" class="text-danger"></span>
+                <span class="hint">@T["ES256 is ECDSA on the P-256 curve with SHA-256. The platform signs the RFC 8785 canonical JSON of the request body."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="AcpSignaturePublicKey">
+            <label asp-for="AcpSignaturePublicKey" class="ocat-label">@T["Platform's public key"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="AcpSignaturePublicKey" class="form-control font-monospace" rows="4" placeholder='{"kty":"EC","crv":"P-256","x":"…","y":"…"}'></textarea>
+                <span asp-validation-for="AcpSignaturePublicKey" class="text-danger"></span>
+                <span class="hint">@T["A JSON Web Key or a PEM public key (-----BEGIN PUBLIC KEY-----) on P-256, from the platform. It isn't a secret: it's exported with the platform."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="AcpSignatureClockSkewSeconds">
+            <label asp-for="AcpSignatureClockSkewSeconds" class="ocat-label">@T["Allowed clock skew"]</label>
+            <div class="ocat-end">
+                <div class="input-group">
+                    <input asp-for="AcpSignatureClockSkewSeconds" type="number" min="1" max="3600" step="1" class="form-control" placeholder="300" />
+                    <span class="input-group-text">@T["seconds"]</span>
+                </div>
+                <span asp-validation-for="AcpSignatureClockSkewSeconds" class="text-danger"></span>
+                <span class="hint">@T["How far a request's Timestamp may be from the store's clock. Empty means 5 minutes."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
     <div class="card-header">@T["Payments and order updates"]</div>
     <div class="card-body">
         <div class="ocat-wrapper" asp-validation-class-for="AllowedPaymentHandlers">

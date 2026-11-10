@@ -30,6 +30,8 @@ public sealed class AgentPlatformsDeploymentSourceTests
                 ApiKeyHint = "agk_...abcd",
                 ProtectedWebhookSecret = "protected",
                 WebhookUrl = "https://agent.example.com/orders",
+                AcpRequireSignedRequests = true,
+                AcpSignaturePublicKey = "{\"kty\":\"EC\"}",
             },
         ]);
         var source = new AgentPlatformsDeploymentSource(manager.Object);
@@ -44,6 +46,10 @@ public sealed class AgentPlatformsDeploymentSourceTests
 
         Assert.Equal("Shopping assistant", entry["Name"]!.GetValue<string>());
         Assert.Equal("https://agent.example.com/orders", entry["WebhookUrl"]!.GetValue<string>());
+
+        // The public key that verifies its signed ACP requests is configuration, not a secret.
+        Assert.True(entry[nameof(AgentPlatform.AcpRequireSignedRequests)]!.GetValue<bool>());
+        Assert.Equal("{\"kty\":\"EC\"}", entry[nameof(AgentPlatform.AcpSignaturePublicKey)]!.GetValue<string>());
         Assert.DoesNotContain(entry, property => property.Key.Equals(nameof(AgentPlatform.ApiKeyHash), StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(entry, property => property.Key.Equals(nameof(AgentPlatform.ApiKeyHint), StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(entry, property => property.Key.Equals(nameof(AgentPlatform.ProtectedWebhookSecret), StringComparison.OrdinalIgnoreCase));

@@ -85,6 +85,30 @@ public sealed class AgentPlatform : CatalogItem, INameAwareModel, IModifiedUtcAw
     public string AcpOrderUpdatedEvent { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether its ACP requests must be signed (<c>Signature</c> and <c>Timestamp</c>
+    /// headers) with <see cref="AcpSignaturePublicKey"/>.
+    /// </summary>
+    public bool AcpRequireSignedRequests { get; set; }
+
+    /// <summary>
+    /// Gets or sets the algorithm its ACP requests are signed with, from
+    /// <see cref="Security.AcpRequestSignature.Algorithms"/>; ES256 when empty.
+    /// </summary>
+    public string AcpSignatureAlgorithm { get; set; }
+
+    /// <summary>
+    /// Gets or sets the public key that verifies its signed ACP requests: an EC JWK or a PEM <c>PUBLIC KEY</c> on P-256.
+    /// It isn't a secret, so it travels in deployments and recipes.
+    /// </summary>
+    public string AcpSignaturePublicKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many seconds a signed ACP request's <c>Timestamp</c> may be from the store's clock; five minutes
+    /// when empty.
+    /// </summary>
+    public int? AcpSignatureClockSkewSeconds { get; set; }
+
+    /// <summary>
     /// Gets or sets when it was added.
     /// </summary>
     public DateTime CreatedUtc { get; set; }

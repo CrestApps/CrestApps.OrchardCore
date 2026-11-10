@@ -16,6 +16,16 @@ public static class AcpResults
     /// <param name="message">What went wrong.</param>
     /// <param name="param">The JSON path of the field it is about, or <see langword="null"/>.</param>
     public static IResult Error(int statusCode, string code, string message, string param = null)
+        => Results.Json(ErrorBody(statusCode, code, message, param), statusCode: statusCode);
+
+    /// <summary>
+    /// Returns ACP's flat error object <c>{ type, code, message, param }</c>.
+    /// </summary>
+    /// <param name="statusCode">The HTTP status the error goes with.</param>
+    /// <param name="code">The error's code.</param>
+    /// <param name="message">What went wrong.</param>
+    /// <param name="param">The JSON path of the field it is about, or <see langword="null"/>.</param>
+    public static JsonObject ErrorBody(int statusCode, string code, string message, string param = null)
     {
         var json = new JsonObject
         {
@@ -29,7 +39,7 @@ public static class AcpResults
             json["param"] = param;
         }
 
-        return Results.Json(json, statusCode: statusCode);
+        return json;
     }
 
     /// <summary>

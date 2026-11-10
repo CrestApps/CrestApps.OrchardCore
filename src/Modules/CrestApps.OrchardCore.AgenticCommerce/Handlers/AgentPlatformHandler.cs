@@ -2,7 +2,9 @@ using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Nodes;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.AgenticCommerce.Acp;
 using CrestApps.OrchardCore.AgenticCommerce.Core.Models;
+using CrestApps.OrchardCore.AgenticCommerce.Core.Security;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
 
@@ -62,7 +64,36 @@ internal sealed class AgentPlatformHandler : CatalogEntryHandlerBase<AgentPlatfo
             }
         }
 
+        ValidateRequestSigning(context);
+
         return Task.CompletedTask;
+    }
+
+    private void ValidateRequestSigning(ValidatingContext<AgentPlatform> context)
+    {
+        var platform = context.Model;
+
+        if (!AcpSignatureCheck.IsSupported(platform.AcpSignatureAlgorithm))
+        {
+            context.Result.Fail(new ValidationResult(S["Choose an algorithm the store verifies: {0}.", string.Join(", ", AcpRequestSignature.Algorithms)], [nameof(AgentPlatform.AcpSignatureAlgorithm)]));
+        }
+
+        if (!string.IsNullOrWhiteSpace(platform.AcpSignaturePublicKey))
+        {
+            if (!AcpRequestSignature.TryReadPublicKey(platform.AcpSignaturePublicKey, out _))
+            {
+                context.Result.Fail(new ValidationResult(S["Enter a P-256 public key: a JSON Web Key with kty EC and crv P-256, or a PEM block that starts with -----BEGIN PUBLIC KEY-----. Never enter a private key."], [nameof(AgentPlatform.AcpSignaturePublicKey)]));
+            }
+        }
+        else if (platform.AcpRequireSignedRequests)
+        {
+            context.Result.Fail(new ValidationResult(S["Enter the platform's public key to require signed requests."], [nameof(AgentPlatform.AcpSignaturePublicKey)]));
+        }
+
+        if (platform.AcpSignatureClockSkewSeconds is int seconds && (seconds < 1 || seconds > 3600))
+        {
+            context.Result.Fail(new ValidationResult(S["The allowed clock skew is 1 to 3600 seconds."], [nameof(AgentPlatform.AcpSignatureClockSkewSeconds)]));
+        }
     }
 
     private static void Populate(AgentPlatform model, JsonNode data)
@@ -81,6 +112,10 @@ internal sealed class AgentPlatformHandler : CatalogEntryHandlerBase<AgentPlatfo
         model.WebhookUrl = json[nameof(AgentPlatform.WebhookUrl)]?.GetValue<string>()?.Trim() ?? model.WebhookUrl;
         model.AcpOrderCreatedEvent = json[nameof(AgentPlatform.AcpOrderCreatedEvent)]?.GetValue<string>()?.Trim() ?? model.AcpOrderCreatedEvent;
         model.AcpOrderUpdatedEvent = json[nameof(AgentPlatform.AcpOrderUpdatedEvent)]?.GetValue<string>()?.Trim() ?? model.AcpOrderUpdatedEvent;
+        model.AcpRequireSignedRequests = json[nameof(AgentPlatform.AcpRequireSignedRequests)]?.GetValue<bool?>() ?? model.AcpRequireSignedRequests;
+        model.AcpSignatureAlgorithm = json[nameof(AgentPlatform.AcpSignatureAlgorithm)]?.GetValue<string>()?.Trim() ?? model.AcpSignatureAlgorithm;
+        model.AcpSignaturePublicKey = json[nameof(AgentPlatform.AcpSignaturePublicKey)]?.GetValue<string>()?.Trim() ?? model.AcpSignaturePublicKey;
+        model.AcpSignatureClockSkewSeconds = json[nameof(AgentPlatform.AcpSignatureClockSkewSeconds)]?.GetValue<int?>() ?? model.AcpSignatureClockSkewSeconds;
         model.Protocols = ReadList(json[nameof(AgentPlatform.Protocols)]) ?? model.Protocols;
         model.AllowedPaymentHandlers = ReadList(json[nameof(AgentPlatform.AllowedPaymentHandlers)]) ?? model.AllowedPaymentHandlers;
         model.AllowedIpRanges = ReadList(json[nameof(AgentPlatform.AllowedIpRanges)]) ?? model.AllowedIpRanges;

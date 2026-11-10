@@ -1,0 +1,72 @@
+using CrestApps.OrchardCore.AgenticCommerce.Core.Models;
+using CrestApps.OrchardCore.AgenticCommerce.Core.Security;
+
+namespace CrestApps.OrchardCore.AgenticCommerce.Acp;
+
+/// <summary>
+/// Applies a platform's request signing settings to an ACP request: a platform that requires signed requests must sign
+/// every one; any other platform with a public key may sign, and a request it signs must verify.
+/// </summary>
+public static class AcpSignatureCheck
+{
+    /// <summary>
+    /// The ACP error code of a request whose signature is missing or doesn't verify.
+    /// </summary>
+    public const string ErrorCode = "invalid_signature";
+
+    /// <summary>
+    /// Returns why a request's signature isn't accepted, or <see langword="null"/> when it is (or isn't needed).
+    /// </summary>
+    /// <param name="platform">The signed-in platform.</param>
+    /// <param name="input">The signed bytes (the canonical JSON of the body), or <see langword="null"/> when the body isn't JSON.</param>
+    /// <param name="signature">The <c>Signature</c> header or <c>meta.signature</c>.</param>
+    /// <param name="timestamp">The <c>Timestamp</c> header or <c>meta.timestamp</c>.</param>
+    /// <param name="now">The current time.</param>
+    public static string Check(AgentPlatform platform, byte[] input, string signature, string timestamp, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(platform);
+
+        var signed = !string.IsNullOrWhiteSpace(signature) || !string.IsNullOrWhiteSpace(timestamp);
+        var hasKey = !string.IsNullOrWhiteSpace(platform.AcpSignaturePublicKey);
+
+        if (!platform.AcpRequireSignedRequests && (!signed || !hasKey))
+        {
+            return null;
+        }
+
+        if (!signed)
+        {
+            return "Sign the request: send the Signature and Timestamp headers.";
+        }
+
+        if (!IsSupported(platform.AcpSignatureAlgorithm) || !AcpRequestSignature.TryReadPublicKey(platform.AcpSignaturePublicKey, out var key))
+        {
+            return "The store can't verify the platform's signatures: its public key isn't set up.";
+        }
+
+        return AcpRequestSignature.Verify(input, signature, timestamp, key, GetClockSkew(platform), now) switch
+        {
+            AcpSignatureVerification.Valid => null,
+            AcpSignatureVerification.MissingHeaders => "Send both the Signature and the Timestamp headers.",
+            AcpSignatureVerification.InvalidTimestamp => "The Timestamp isn't an RFC 3339 date and time.",
+            AcpSignatureVerification.StaleTimestamp => "The Timestamp is too far from the store's clock.",
+            _ => "The signature doesn't match the request.",
+        };
+    }
+
+    /// <summary>
+    /// Returns the clock skew a platform's timestamps may have.
+    /// </summary>
+    /// <param name="platform">The platform.</param>
+    public static TimeSpan GetClockSkew(AgentPlatform platform)
+        => platform?.AcpSignatureClockSkewSeconds is int seconds && seconds > 0
+            ? TimeSpan.FromSeconds(seconds)
+            : AcpRequestSignature.DefaultClockSkew;
+
+    /// <summary>
+    /// Returns whether the store verifies an algorithm; empty means ES256.
+    /// </summary>
+    /// <param name="algorithm">The algorithm's name.</param>
+    public static bool IsSupported(string algorithm)
+        => string.IsNullOrWhiteSpace(algorithm) || AcpRequestSignature.Algorithms.Contains(algorithm.Trim(), StringComparer.Ordinal);
+}

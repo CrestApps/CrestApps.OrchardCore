@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AgenticCommerce.Core.Models;
+using CrestApps.OrchardCore.AgenticCommerce.Core.Security;
 using CrestApps.OrchardCore.AgenticCommerce.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -62,6 +63,11 @@ internal sealed class AgentPlatformDisplayDriver : DisplayDriver<AgentPlatform>
             model.AllowedIpRanges = string.Join(Environment.NewLine, platform.AllowedIpRanges ?? []);
             model.AcpOrderCreatedEvent = platform.AcpOrderCreatedEvent;
             model.AcpOrderUpdatedEvent = platform.AcpOrderUpdatedEvent;
+            model.AcpRequireSignedRequests = platform.AcpRequireSignedRequests;
+            model.AcpSignatureAlgorithm = platform.AcpSignatureAlgorithm ?? AcpRequestSignature.ES256;
+            model.AcpSignaturePublicKey = platform.AcpSignaturePublicKey;
+            model.AcpSignatureClockSkewSeconds = platform.AcpSignatureClockSkewSeconds;
+            model.SignatureAlgorithmOptions = [.. AcpRequestSignature.Algorithms.Select(algorithm => new SelectListItem(algorithm, algorithm))];
             model.ApiKeyHint = platform.ApiKeyHint;
             model.HasWebhookSecret = !string.IsNullOrEmpty(platform.ProtectedWebhookSecret);
             model.ProtocolOptions =
@@ -92,6 +98,10 @@ internal sealed class AgentPlatformDisplayDriver : DisplayDriver<AgentPlatform>
         platform.AllowedIpRanges = Lines(model.AllowedIpRanges);
         platform.AcpOrderCreatedEvent = Clean(model.AcpOrderCreatedEvent);
         platform.AcpOrderUpdatedEvent = Clean(model.AcpOrderUpdatedEvent);
+        platform.AcpRequireSignedRequests = model.AcpRequireSignedRequests;
+        platform.AcpSignatureAlgorithm = Clean(model.AcpSignatureAlgorithm);
+        platform.AcpSignaturePublicKey = Clean(model.AcpSignaturePublicKey);
+        platform.AcpSignatureClockSkewSeconds = model.AcpSignatureClockSkewSeconds;
 
         return Edit(platform, context);
     }
