@@ -1,3 +1,5 @@
+using System.Text.Json.Nodes;
+
 namespace CrestApps.OrchardCore.AgenticCommerce.Ucp;
 
 /// <summary>
@@ -19,4 +21,9 @@ public sealed class UcpService
     /// Gets or sets its absolute endpoint.
     /// </summary>
     public string Endpoint { get; set; }
+
+    /// <summary>
+    /// Gets or sets its configuration, such as the delegations the embedded transport accepts.
+    /// </summary>
+    public JsonObject Config { get; set; }
 }

@@ -92,6 +92,12 @@ Click **Save**. Agents show these links to the buyer with every checkout.
 | **UCP profile** | The address of the platform's UCP profile, such as *https://platform.example/.well-known/ucp*. The platform gives it to you. Your store checks the platform's signed requests with the keys in it. |
 | **Allowed IP addresses** | One address, or one range such as *203.0.113.0/24*, per line. Requests from other addresses are refused. Leave it empty to allow any address. OpenAI asks stores to allow only the address ranges it publishes. |
 
+### Embedded checkout
+
+| Field | What it does |
+| --- | --- |
+| **Embedding origins** | The addresses of the platform's pages that may show your checkout inside them, one per line, written as *https://* and a host with no path, such as *https://agent.example*. The platform gives them to you. Only this platform's checkouts can be shown there, and only when **Allow embedded checkout** is on. Leave it empty to keep your checkout out of the platform's pages. UCP only. See [Let buyers finish inside the agent](#let-buyers-finish-inside-the-agent). |
+
 ### Payments and order updates
 
 | Field | What it does |
@@ -139,6 +145,7 @@ Open **Settings > Commerce > Agentic commerce**, change what you need, and click
 | **Checkout lifetime (hours)** | How long an agent's checkout holds its items in stock before it expires, from 1 to 72 hours. 6 hours at first, the same as UCP's default. |
 | **Open checkouts per platform** | The most checkouts one platform may keep open at once, so no agent can hold all your stock. 1,000 at first. |
 | **Let UCP platforms the store doesn't know buy** | A UCP platform that isn't in your list may buy when it signs its requests with a key from its own published profile. Off at first. |
+| **Allow embedded checkout** | A UCP platform may show your checkout inside its own page, so the buyer finishes without leaving the agent. Only the pages a platform lists under **Embedding origins** may show its own checkouts; every other page of your site still refuses to be shown inside another site. Off at first. |
 
 ### How agents pay
 
@@ -177,9 +184,19 @@ An agent's order is an ordinary order in **Commerce > Orders**: you fulfill, shi
 - When an agent's order is paid, canceled, refunded or returned, or its shipment ships, is delivered or comes back, the store tells the platform. If the platform doesn't answer, the store tries again for nearly two days.
 - A buyer who opens the link an agent gave them finishes the checkout in your store's own checkout, like any buyer.
 
+## Let buyers finish inside the agent
+
+Some UCP platforms can show your checkout inside their own page instead of sending the buyer to your site (UCP calls it embedded checkout). The buyer sees your checkout, with your prices, shipping and payment methods, and finishes it there; the platform hears when the order is placed.
+
+1. Ask the platform for the addresses of the pages that show checkouts, such as *https://agent.example*.
+2. Open the platform under **Commerce > AI agents**, enter them in **Embedding origins** and click **Save**.
+3. Open **Settings > Commerce > Agentic commerce**, tick **Allow embedded checkout** and click **Save**.
+
+Your store then tells the platform it can embed its checkouts. Your checkout only works inside the platform's page when your site uses *https://*. If the platform signs in with an OpenID Connect application, it can also prove it is the platform when it shows the checkout. To stop it, untick **Allow embedded checkout** or empty the platform's **Embedding origins**; the buyer then gets the ordinary link to your checkout.
+
 ## Let buyers link their account
 
-A buyer can link their account on your store to an agent, so the agent checks out as them, with their saved addresses, and can see their orders. This needs the **UCP Account Linking** feature and your site's OpenID Connect server, which your administrator sets up, and an OpenID Connect application for the platform. Enter that application's client ID in the platform's **OAuth client ID**. The buyer approves the link on your site's sign-in page.
+A buyer can link their account on your store to an agent, so the agent checks out as them, with their saved addresses, and can see their orders. This needs the **UCP Account Linking** feature and your site's OpenID Connect server, which your administrator sets up, and an OpenID Connect application for the platform. Enter that application's client ID in the platform's **OAuth client ID**. The buyer approves the link on your site's sign-in page. Agents find your sign-in server's details at */.well-known/oauth-authorization-server* on your site.
 
 ## Product feeds and your own AI assistant
 
@@ -201,4 +218,5 @@ Your own AI assistant can sell too. When the AI features are on, your administra
 | The platform says the store refused its key | Check that you gave it the latest key, that **Its agents may buy** is ticked, and that its address is in **Allowed IP addresses**. Give it a new key if you aren't sure. |
 | An agent can't pay | Check that Stripe is connected and, for Google's agents, that **Stripe business profile** is filled in. A platform in **Test mode** can only pay with test credentials. A **Payment handlers** list that isn't empty limits how its agents pay. |
 | The platform gets no order updates | For an ACP platform, fill in **Order updates address** and give it a signing secret. For a UCP platform, its profile must give the address, or fill in **Order updates address**. |
+| A platform can't show your checkout inside its page | Check that **Allow embedded checkout** is ticked, that the page's address is in the platform's **Embedding origins** exactly (*https://*, the host and any port, no path), and that your site uses *https://*. |
 | A product isn't offered to agents | Check **Show to AI agents** and **Let AI agents check out** on the product and in the feed's settings. See [Product listings](product-listings.md#feeds-for-ai-agents). |

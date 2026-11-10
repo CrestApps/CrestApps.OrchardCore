@@ -87,6 +87,54 @@ public static class UcpConstants
     }
 
     /// <summary>
+    /// The Embedded Checkout Protocol (ECP): the store's checkout shown in the platform's page from <c>continue_url</c>.
+    /// </summary>
+    public static class Embedded
+    {
+        /// <summary>
+        /// The name of the transport in the profile and in checkout answers.
+        /// </summary>
+        public const string Transport = "embedded";
+
+        /// <summary>
+        /// The schema of the transport, after a version's base address.
+        /// </summary>
+        public const string SchemaPath = "services/shopping/embedded.openrpc.json";
+
+        /// <summary>
+        /// The query parameter with the UCP version of the session; its presence asks for embedded checkout.
+        /// </summary>
+        public const string VersionParameter = "ec_version";
+
+        /// <summary>
+        /// The query parameter with the host's credential.
+        /// </summary>
+        public const string AuthParameter = "ec_auth";
+
+        /// <summary>
+        /// The query parameter with the delegations the host asks for.
+        /// </summary>
+        public const string DelegateParameter = "ec_delegate";
+
+        /// <summary>
+        /// The query parameter with the color scheme the host asks for: <c>light</c> or <c>dark</c>.
+        /// </summary>
+        public const string ColorSchemeParameter = "ec_color_scheme";
+
+        /// <summary>
+        /// The credential type the embedded checkout asks the host for: an OAuth access token from the store's OpenID
+        /// server, issued to the platform's OAuth client.
+        /// </summary>
+        public const string AuthType = "oauth";
+
+        /// <summary>
+        /// The delegations the store accepts: none, so the buyer does every step in the store's own checkout. ECP
+        /// requires no delegation.
+        /// </summary>
+        public static readonly IReadOnlyList<string> Delegations = [];
+    }
+
+    /// <summary>
     /// Returns the address of a page of a version's specification.
     /// </summary>
     /// <param name="version">The version.</param>

@@ -46,6 +46,7 @@ public sealed class AgenticCommerceSettingsDisplayDriver : SiteDisplayDriver<Age
             model.CheckoutLifetimeHours = settings.CheckoutLifetimeHours;
             model.MaxOpenCheckoutsPerPlatform = settings.MaxOpenCheckoutsPerPlatform;
             model.AllowUnregisteredUcpPlatforms = settings.AllowUnregisteredUcpPlatforms;
+            model.AllowEmbeddedCheckout = settings.AllowEmbeddedCheckout;
             model.StripeBusinessProfileId = settings.StripeBusinessProfileId;
             model.EnableGooglePay = settings.EnableGooglePay;
             model.GooglePayMerchantId = settings.GooglePayMerchantId;
@@ -84,6 +85,7 @@ public sealed class AgenticCommerceSettingsDisplayDriver : SiteDisplayDriver<Age
         settings.CheckoutLifetimeHours = model.CheckoutLifetimeHours;
         settings.MaxOpenCheckoutsPerPlatform = model.MaxOpenCheckoutsPerPlatform;
         settings.AllowUnregisteredUcpPlatforms = model.AllowUnregisteredUcpPlatforms;
+        settings.AllowEmbeddedCheckout = model.AllowEmbeddedCheckout;
         settings.StripeBusinessProfileId = Clean(model.StripeBusinessProfileId);
         settings.EnableGooglePay = model.EnableGooglePay;
         settings.GooglePayMerchantId = Clean(model.GooglePayMerchantId);

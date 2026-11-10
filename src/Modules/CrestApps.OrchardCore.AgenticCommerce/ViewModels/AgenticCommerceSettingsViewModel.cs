@@ -11,6 +11,8 @@ public class AgenticCommerceSettingsViewModel
 
     public bool AllowUnregisteredUcpPlatforms { get; set; }
 
+    public bool AllowEmbeddedCheckout { get; set; }
+
     public string StripeBusinessProfileId { get; set; }
 
     public bool EnableGooglePay { get; set; }

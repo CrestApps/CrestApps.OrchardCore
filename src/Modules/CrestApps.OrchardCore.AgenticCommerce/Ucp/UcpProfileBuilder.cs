@@ -82,6 +82,11 @@ public sealed class UcpProfileBuilder
                 entry["endpoint"] = service.Endpoint;
             }
 
+            if (service.Config is not null)
+            {
+                entry["config"] = service.Config.DeepClone();
+            }
+
             services.Add(entry);
         }
 

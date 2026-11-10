@@ -1,10 +1,12 @@
 using CrestApps.OrchardCore.AgenticCommerce.Core.Services;
 using CrestApps.OrchardCore.AgenticCommerce.Services;
+using CrestApps.OrchardCore.AgenticCommerce.Ucp;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.AgenticCommerce.Controllers;
 
@@ -39,7 +41,8 @@ public sealed class AgentHandoffController : Controller
     }
 
     /// <summary>
-    /// Gives the browser the checkout, then opens its next step.
+    /// Gives the browser the checkout, then opens its next step; or, opened with <c>ec_version</c> by a platform that may
+    /// embed it, shows the UCP embedded checkout page.
     /// </summary>
     /// <param name="token">The signed hand-off token.</param>
     [AllowAnonymous]
@@ -54,8 +57,19 @@ public sealed class AgentHandoffController : Controller
             return NotFound();
         }
 
+        // A platform that opens the link with ec_version shows the checkout inside its own page (UCP embedded checkout).
+        // When the checkout can't be embedded, the buyer gets the ordinary hand-off.
+        var embedded = Request.Query.ContainsKey(UcpConstants.Embedded.VersionParameter)
+            ? HttpContext.RequestServices.GetService<EmbeddedCheckoutService>()
+            : null;
+
         if (session.Status == CheckoutSessionStatus.Completed)
         {
+            if (embedded is not null && await embedded.StartAsync(HttpContext, checkout, session, token) is { } completed)
+            {
+                return View("EmbeddedCheckout", completed);
+            }
+
             return RedirectToRoute(CheckoutConstants.RouteNames.Confirmation, new { sessionId = session.SessionId });
         }
 
@@ -67,6 +81,11 @@ public sealed class AgentHandoffController : Controller
             session.GuestTokenHash = _guestTokens.Issue(CheckoutSessionStore.GuestTokenScope, session.SessionId);
 
             await _sessions.SaveAsync(session, HttpContext.RequestAborted);
+        }
+
+        if (embedded is not null && await embedded.StartAsync(HttpContext, checkout, session, token) is { } model)
+        {
+            return View("EmbeddedCheckout", model);
         }
 
         return RedirectToRoute(CheckoutConstants.RouteNames.Step, new { sessionId = session.SessionId });

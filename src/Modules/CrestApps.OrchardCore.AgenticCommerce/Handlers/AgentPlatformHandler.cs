@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AgenticCommerce.Core.Models;
+using CrestApps.OrchardCore.Core.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
 
@@ -62,6 +63,17 @@ internal sealed class AgentPlatformHandler : CatalogEntryHandlerBase<AgentPlatfo
             }
         }
 
+        var invalidOrigins = (context.Model.EmbeddedCheckoutOrigins ?? [])
+            .Where(origin => EmbeddingPolicy.NormalizeOrigin(origin) is null)
+            .ToList();
+
+        if (invalidOrigins.Count > 0)
+        {
+            context.Result.Fail(new ValidationResult(
+                S["Enter each embedding origin as https:// and a host, with no path, such as https://agent.example. Not valid: {0}", string.Join(", ", invalidOrigins)],
+                [nameof(AgentPlatform.EmbeddedCheckoutOrigins)]));
+        }
+
         return Task.CompletedTask;
     }
 
@@ -84,7 +96,19 @@ internal sealed class AgentPlatformHandler : CatalogEntryHandlerBase<AgentPlatfo
         model.Protocols = ReadList(json[nameof(AgentPlatform.Protocols)]) ?? model.Protocols;
         model.AllowedPaymentHandlers = ReadList(json[nameof(AgentPlatform.AllowedPaymentHandlers)]) ?? model.AllowedPaymentHandlers;
         model.AllowedIpRanges = ReadList(json[nameof(AgentPlatform.AllowedIpRanges)]) ?? model.AllowedIpRanges;
+        model.EmbeddedCheckoutOrigins = NormalizeOrigins(ReadList(json[nameof(AgentPlatform.EmbeddedCheckoutOrigins)])) ?? model.EmbeddedCheckoutOrigins;
     }
+
+    /// <summary>
+    /// Returns origins in the shape browsers report them in, keeping an entry that isn't a valid origin as it was
+    /// entered, so validation names it.
+    /// </summary>
+    /// <param name="values">The origins as entered.</param>
+    internal static List<string> NormalizeOrigins(List<string> values)
+        => values?
+            .Select(value => EmbeddingPolicy.NormalizeOrigin(value) ?? value)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
 
     private static List<string> ReadList(JsonNode node)
         => node is JsonArray array

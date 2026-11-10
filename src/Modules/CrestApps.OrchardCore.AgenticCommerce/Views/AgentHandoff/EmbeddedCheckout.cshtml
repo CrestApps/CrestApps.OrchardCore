@@ -1,0 +1,32 @@
+@model EmbeddedCheckoutViewModel
+@{
+    // The agent platform frames this page; it holds the embedded checkout channel and shows the store's checkout in a
+    // frame of its own, without the site's layout around it.
+    Layout = null;
+    var title = string.IsNullOrEmpty(Model.Title) ? T["Checkout"].Value : Model.Title;
+}
+<!DOCTYPE html>
+<html lang="@Orchard.CultureName()" dir="@Orchard.CultureDir()" data-bs-theme="@Model.ColorScheme">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>@title</title>
+    <style>
+        :root { color-scheme: light dark; }
+        :root[data-bs-theme="light"] { color-scheme: light; }
+        :root[data-bs-theme="dark"] { color-scheme: dark; }
+        html, body { height: 100%; margin: 0; }
+        .agent-embedded-checkout { display: block; width: 100%; height: 100%; border: 0; }
+        .agent-embedded-checkout-fallback { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding: 1rem; }
+    </style>
+</head>
+<body>
+    <iframe id="agent-embedded-checkout-frame" class="agent-embedded-checkout" title="@title" allow="payment"></iframe>
+    <noscript>
+        <p class="agent-embedded-checkout-fallback"><a href="@Model.CheckoutUrl" target="_top">@T["Continue to checkout"]</a></p>
+    </noscript>
+    <script type="application/json" id="agent-embedded-checkout-config">@Html.Raw(Model.Config)</script>
+    <script asp-name="agentic-commerce-embedded-checkout" at="Inline"></script>
+</body>
+</html>

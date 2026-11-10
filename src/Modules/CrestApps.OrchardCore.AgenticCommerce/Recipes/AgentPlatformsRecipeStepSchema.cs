@@ -35,6 +35,7 @@ internal sealed class AgentPlatformsRecipeStepSchema : IRecipeStep
                             ("WebhookUrl", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Where its ACP order updates go.")),
                             ("AllowedPaymentHandlers", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("The payment handlers its agents may pay through; empty allows all.")),
                             ("AllowedIpRanges", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("The IP addresses and CIDR ranges its requests come from; empty allows any.")),
+                            ("EmbeddedCheckoutOrigins", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("The https origins whose pages may show the store's checkout in a frame (UCP embedded checkout).")),
                             ("AcpOrderCreatedEvent", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The ACP event name a new order sends; order_create when empty.")),
                             ("AcpOrderUpdatedEvent", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The ACP event name a changed order sends; order_update when empty.")))
                         .Required("Name")
