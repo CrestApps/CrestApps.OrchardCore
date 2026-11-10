@@ -1,3 +1,6 @@
+using System.Globalization;
+using System.Text.Json;
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Core.Models;
 using Stripe;
@@ -9,6 +12,12 @@ namespace CrestApps.OrchardCore.Stripe.Services;
 /// </summary>
 public sealed class StripePaymentIntentService : IStripePaymentIntentService
 {
+    /// <summary>
+    /// The Stripe API version shared payment tokens need while they are in preview.
+    /// </summary>
+    public const string SharedPaymentTokenApiVersion = "2026-09-30.preview";
+
+    private readonly StripeClient _stripeClient;
     private readonly PaymentIntentService _paymentIntentService;
 
     /// <summary>
@@ -17,6 +26,7 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
     /// <param name="stripeClient">The Stripe client used to call the Stripe API.</param>
     public StripePaymentIntentService(StripeClient stripeClient)
     {
+        _stripeClient = stripeClient;
         _paymentIntentService = new PaymentIntentService(stripeClient);
     }
 
@@ -161,6 +171,203 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
     /// </summary>
     /// <param name="model">The charge to make.</param>
     /// <returns>Whether Stripe accepted the charge, and why not when it did not.</returns>
+    public async Task<ChargeDelegatedCredentialResponse> ChargeDelegatedAsync(ChargeDelegatedCredentialRequest model)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        ArgumentException.ThrowIfNullOrEmpty(model.Credential);
+
+        if (string.Equals(model.CredentialType, DelegatedCredentialTypes.StripeSharedPaymentToken, StringComparison.Ordinal))
+        {
+            return await ChargeSharedPaymentTokenAsync(model);
+        }
+
+        if (!string.Equals(model.CredentialType, DelegatedCredentialTypes.GooglePayToken, StringComparison.Ordinal))
+        {
+            return new ChargeDelegatedCredentialResponse
+            {
+                InvalidCredential = true,
+                ErrorMessage = "Stripe doesn't take this kind of credential.",
+            };
+        }
+
+        if (GetGooglePayCardToken(model.Credential) is not { } cardToken)
+        {
+            return new ChargeDelegatedCredentialResponse
+            {
+                InvalidCredential = true,
+                ErrorMessage = "The Google Pay token isn't one Stripe issued.",
+            };
+        }
+
+        var options = new PaymentIntentCreateOptions
+        {
+            Amount = StripeCurrency.ToMinorUnits(model.Amount, model.Currency),
+            Currency = model.Currency,
+            Description = model.Description,
+            Metadata = model.Metadata,
+
+            // Confirmed here: the agent already has the buyer's approval, and there is no browser to confirm it in.
+            Confirm = true,
+        };
+
+        options.AddExtraParam("payment_method_types[0]", "card");
+        options.AddExtraParam("payment_method_data[type]", "card");
+        options.AddExtraParam("payment_method_data[card][token]", cardToken);
+
+        if (!string.IsNullOrEmpty(model.ReturnUrl))
+        {
+            options.ReturnUrl = model.ReturnUrl;
+        }
+
+        try
+        {
+            return ToResponse(await _paymentIntentService.CreateAsync(options, model.ToRequestOptions()));
+        }
+        catch (StripeException ex) when (ex.StripeError is not null)
+        {
+            return ToResponse(ex.StripeError, ex.Message);
+        }
+    }
+
+    // Shared payment tokens are a preview of Stripe's API, which the typed client doesn't send its version for, so the
+    // request is made raw with the preview version.
+    private async Task<ChargeDelegatedCredentialResponse> ChargeSharedPaymentTokenAsync(ChargeDelegatedCredentialRequest model)
+    {
+        var fields = new List<KeyValuePair<string, string>>
+        {
+            new("amount", StripeCurrency.ToMinorUnits(model.Amount, model.Currency).ToString(CultureInfo.InvariantCulture)),
+            new("currency", model.Currency?.ToLowerInvariant()),
+            new("confirm", "true"),
+            new("payment_method_types[0]", "card"),
+            new("payment_method_data[shared_payment_granted_token]", model.Credential),
+        };
+
+        if (!string.IsNullOrEmpty(model.Description))
+        {
+            fields.Add(new("description", model.Description));
+        }
+
+        if (!string.IsNullOrEmpty(model.ReturnUrl))
+        {
+            fields.Add(new("return_url", model.ReturnUrl));
+        }
+
+        foreach (var (key, value) in model.Metadata ?? [])
+        {
+            fields.Add(new($"metadata[{key}]", value));
+        }
+
+        using var content = new FormUrlEncodedContent(fields);
+        var body = await content.ReadAsStringAsync();
+        var options = new RawRequestOptions
+        {
+            IdempotencyKey = model.IdempotencyKey,
+            AdditionalHeaders = new Dictionary<string, string>
+            {
+                ["Stripe-Version"] = SharedPaymentTokenApiVersion,
+            },
+        };
+
+        StripeResponse response;
+
+        try
+        {
+            response = await _stripeClient.RawRequestAsync(HttpMethod.Post, "/v1/payment_intents", body, options);
+        }
+        catch (StripeException ex) when (ex.StripeError is not null)
+        {
+            return ToResponse(ex.StripeError, ex.Message);
+        }
+
+        if ((int)response.StatusCode >= 400)
+        {
+            var error = TryReadError(response.Content);
+
+            return error is null
+                ? new ChargeDelegatedCredentialResponse { ErrorMessage = $"Stripe answered {(int)response.StatusCode}." }
+                : ToResponse(error, error.Message);
+        }
+
+        return ToResponse(StripeEntity.FromJson<PaymentIntent>(response.Content));
+    }
+
+    private static StripeError TryReadError(string json)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+
+            return document.RootElement.TryGetProperty("error", out var error)
+                ? StripeEntity.FromJson<StripeError>(error.GetRawText())
+                : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static ChargeDelegatedCredentialResponse ToResponse(PaymentIntent paymentIntent)
+        => new()
+        {
+            Succeeded = paymentIntent.Status is "succeeded" or "processing",
+            RequiresAction = paymentIntent.Status == "requires_action",
+            RedirectUrl = paymentIntent.NextAction?.RedirectToUrl?.Url,
+            PaymentIntentId = paymentIntent.Id,
+            Status = paymentIntent.Status,
+            ErrorMessage = paymentIntent.LastPaymentError?.Message,
+            DeclineCode = paymentIntent.LastPaymentError?.DeclineCode,
+        };
+
+    private static ChargeDelegatedCredentialResponse ToResponse(StripeError error, string fallbackMessage)
+        => new()
+        {
+            PaymentIntentId = error.PaymentIntent?.Id,
+            Status = error.PaymentIntent?.Status,
+            ErrorMessage = error.Message ?? fallbackMessage,
+            DeclineCode = error.DeclineCode,
+
+            // A used, expired or revoked token, or one issued to another account, is refused before any card is asked.
+            InvalidCredential = error.Type == "invalid_request_error",
+        };
+
+    // A Google Pay token whose gateway is Stripe is a JSON object holding the card token Stripe made for it.
+    internal static string GetGooglePayCardToken(string credential)
+    {
+        var value = credential?.Trim();
+
+        if (string.IsNullOrEmpty(value))
+        {
+            return null;
+        }
+
+        if (value.StartsWith("tok_", StringComparison.Ordinal))
+        {
+            return value;
+        }
+
+        if (!value.StartsWith('{'))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(value);
+
+            return document.RootElement.TryGetProperty("id", out var id) &&
+                id.ValueKind == JsonValueKind.String &&
+                id.GetString() is { } token &&
+                token.StartsWith("tok_", StringComparison.Ordinal)
+                ? token
+                : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     public async Task<ChargeOffSessionResponse> ChargeOffSessionAsync(ChargeOffSessionRequest model)
     {
         ArgumentNullException.ThrowIfNull(model);

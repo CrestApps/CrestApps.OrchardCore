@@ -105,6 +105,9 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
 
         // A card authenticated for future use while the payer is present can be charged again without them.
         SupportsSavedPaymentMethods = true,
+
+        // A shared payment token or a Google Pay token an AI agent brought is charged here, with no browser.
+        AcceptsDelegatedCredentials = true,
     };
 
     /// <inheritdoc/>
@@ -122,6 +125,11 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
         if (CheckoutPaymentDataKeys.IsSet(context.ProviderData, CheckoutPaymentDataKeys.OffSession))
         {
             return await ChargeSavedPaymentMethodAsync(context, grossAmount);
+        }
+
+        if (CheckoutPaymentDataKeys.GetValue(context.ProviderData, CheckoutPaymentDataKeys.DelegatedCredential) is not null)
+        {
+            return await ChargeDelegatedCredentialAsync(context, grossAmount);
         }
 
         var paymentMethodId = CheckoutPaymentDataKeys.GetValue(context.ProviderData, StripeRecurringPaymentProvider.PaymentMethodDataKey);
@@ -481,6 +489,70 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
 
     // Charges a card kept on a customer, server-side. There is no browser to confirm anything, so the result is
     // final at once: accepted (and still verified against Stripe before it counts as paid) or declined.
+    private async Task<PaymentBeginResult> ChargeDelegatedCredentialAsync(BeginPaymentContext context, decimal grossAmount)
+    {
+        var attempt = context.Attempt;
+
+        // A delegated credential pays for this one checkout; Stripe refuses to keep it for later.
+        if (CheckoutPaymentDataKeys.IsSet(context.ProviderData, CheckoutPaymentDataKeys.SavePaymentMethod) || attempt.ObligationId != CheckoutObligations.OneTime)
+        {
+            return PaymentBeginResult.Failure(S["A payment token an AI agent brings pays for one purchase; it can't be kept for later payments."]);
+        }
+
+        ChargeDelegatedCredentialResponse response;
+
+        try
+        {
+            response = await _paymentIntentService.ChargeDelegatedAsync(new ChargeDelegatedCredentialRequest
+            {
+                Amount = grossAmount,
+                Currency = attempt.Currency,
+                CredentialType = CheckoutPaymentDataKeys.GetValue(context.ProviderData, CheckoutPaymentDataKeys.DelegatedCredentialType),
+                Credential = CheckoutPaymentDataKeys.GetValue(context.ProviderData, CheckoutPaymentDataKeys.DelegatedCredential),
+                ReturnUrl = context.ReturnUrl,
+                IdempotencyKey = attempt.IdempotencyKey,
+                Metadata = new Dictionary<string, string>
+                {
+                    ["checkout_attempt_id"] = attempt.ItemId,
+                    ["checkout_session_id"] = attempt.SessionId,
+                    ["delegated"] = "true",
+                },
+            });
+        }
+        catch (Exception ex)
+        {
+            // A transport failure says nothing about the credential; the caller may try again with the same key.
+            _logger.LogError(ex, "Failed to charge a delegated credential with Stripe for checkout attempt '{AttemptId}'.", attempt.ItemId);
+
+            return PaymentBeginResult.Failure(ex.Message);
+        }
+
+        if (response.Succeeded)
+        {
+            return new PaymentBeginResult
+            {
+                Succeeded = true,
+                ProviderReference = response.PaymentIntentId,
+
+                // Confirmed already; settlement is still decided by verifying the intent against Stripe.
+                RequiresAction = false,
+            };
+        }
+
+        if (response.RequiresAction)
+        {
+            return new PaymentBeginResult
+            {
+                Succeeded = true,
+                ProviderReference = response.PaymentIntentId,
+                RedirectUrl = response.RedirectUrl,
+                RequiresAction = true,
+            };
+        }
+
+        return PaymentBeginResult.Decline(response.ErrorMessage ?? S["The payment was declined."].Value, response.PaymentIntentId);
+    }
+
     private async Task<PaymentBeginResult> ChargeSavedPaymentMethodAsync(BeginPaymentContext context, decimal grossAmount)
     {
         var attempt = context.Attempt;

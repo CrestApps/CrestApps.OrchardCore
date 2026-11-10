@@ -20,6 +20,7 @@ using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Shipping.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Commerce.Webhooks;
 using CrestApps.OrchardCore.Webhooks;
 using CrestApps.OrchardCore.Shipping.Api;
@@ -79,6 +80,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<ShippingOrderRateService>();
         services.AddScoped<ICheckoutHandler, ShippingCheckoutHandler>();
         services.AddScoped<ShippingCheckoutStepService>();
+        services.AddScoped<ICheckoutFulfillmentStep, ShippingCheckoutFulfillmentStep>();
         services.AddDisplayDriver<CheckoutFlow, ShippingCheckoutFlowDisplayDriver>();
 
         // Shipments on the order's admin page and on the buyer's order pages, and the email that a shipment left.

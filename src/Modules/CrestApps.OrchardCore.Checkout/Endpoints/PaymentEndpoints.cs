@@ -191,7 +191,9 @@ public static class PaymentEndpoints
             if (pair.Key is CheckoutPaymentDataKeys.OffSession
                 or CheckoutPaymentDataKeys.SavedCustomerReference
                 or CheckoutPaymentDataKeys.SavedPaymentMethodReference
-                or CheckoutPaymentDataKeys.SavePaymentMethod)
+                or CheckoutPaymentDataKeys.SavePaymentMethod
+                or CheckoutPaymentDataKeys.DelegatedCredential
+                or CheckoutPaymentDataKeys.DelegatedCredentialType)
             {
                 continue;
             }

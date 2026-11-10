@@ -38,6 +38,12 @@ public interface IStripePaymentIntentService
     Task<ChargeOffSessionResponse> ChargeOffSessionAsync(ChargeOffSessionRequest model);
 
     /// <summary>
+    /// Creates and confirms a PaymentIntent with a payment credential an AI agent brought, on the server.
+    /// </summary>
+    /// <param name="model">What to charge and the credential.</param>
+    Task<ChargeDelegatedCredentialResponse> ChargeDelegatedAsync(ChargeDelegatedCredentialRequest model);
+
+    /// <summary>
     /// Retrieves the authoritative state of a Stripe payment intent so a checkout can verify what really
     /// happened at the gateway rather than trusting a cached notification.
     /// </summary>

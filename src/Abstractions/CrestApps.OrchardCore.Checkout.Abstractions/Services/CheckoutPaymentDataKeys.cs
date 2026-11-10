@@ -25,6 +25,19 @@ public static class CheckoutPaymentDataKeys
     public const string OffSession = "offSession";
 
     /// <summary>
+    /// A payment credential an AI agent brought for this one payment, such as a Stripe shared payment token or a
+    /// Google Pay token. A provider that accepts it
+    /// (<see cref="PaymentProviderCapabilities.AcceptsDelegatedCredentials"/>) charges it on the server, with no
+    /// browser. Only server code sets it, never a request the payer's browser can shape.
+    /// </summary>
+    public const string DelegatedCredential = "delegatedCredential";
+
+    /// <summary>
+    /// The kind of <see cref="DelegatedCredential"/>, one of <see cref="DelegatedCredentialTypes"/>.
+    /// </summary>
+    public const string DelegatedCredentialType = "delegatedCredentialType";
+
+    /// <summary>
     /// The provider's reference for the customer a saved payment method belongs to
     /// (<see cref="SavedPaymentMethod.CustomerReference"/>).
     /// </summary>
