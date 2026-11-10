@@ -30,6 +30,9 @@ public sealed class MerchantSigningKeyService : IMerchantSigningKeyService
     private readonly IDataProtector _protector;
     private readonly IClock _clock;
 
+    // The document as this request last changed it: the immutable copy is cached for the request and doesn't see it.
+    private MerchantSigningKeysDocument _changed;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="MerchantSigningKeyService"/> class.
     /// </summary>
@@ -49,14 +52,13 @@ public sealed class MerchantSigningKeyService : IMerchantSigningKeyService
     /// <inheritdoc />
     public async Task<EcJsonWebKey> GetSigningKeyAsync(CancellationToken cancellationToken = default)
     {
-        var document = await _documents.GetOrCreateImmutableAsync();
+        var document = await ReadAsync();
         var current = document.Keys?.LastOrDefault(key => key.RetiredUtc is null);
 
         if (current is null)
         {
             await RotateAsync(cancellationToken);
-            document = await _documents.GetOrCreateImmutableAsync();
-            current = document.Keys.Last(key => key.RetiredUtc is null);
+            current = _changed.Keys.Last(key => key.RetiredUtc is null);
         }
 
         return EcJsonWebKey.FromJson(JsonNode.Parse(_protector.Unprotect(current.ProtectedPrivateJwk)) as JsonObject);
@@ -65,12 +67,12 @@ public sealed class MerchantSigningKeyService : IMerchantSigningKeyService
     /// <inheritdoc />
     public async Task<IReadOnlyList<EcJsonWebKey>> GetPublishedKeysAsync(CancellationToken cancellationToken = default)
     {
-        var document = await _documents.GetOrCreateImmutableAsync();
+        var document = await ReadAsync();
 
         if (document.Keys is not { Count: > 0 } || document.Keys.All(key => key.RetiredUtc is not null))
         {
             await GetSigningKeyAsync(cancellationToken);
-            document = await _documents.GetOrCreateImmutableAsync();
+            document = _changed;
         }
 
         var cutoff = _clock.UtcNow - RetiredLifetime;
@@ -114,12 +116,14 @@ public sealed class MerchantSigningKeyService : IMerchantSigningKeyService
         Prune(document, now);
 
         await _documents.UpdateAsync(document);
+
+        _changed = document;
     }
 
     /// <inheritdoc />
     public async Task<bool> RotateIfDueAsync(CancellationToken cancellationToken = default)
     {
-        var document = await _documents.GetOrCreateImmutableAsync();
+        var document = await ReadAsync();
         var current = document.Keys?.LastOrDefault(key => key.RetiredUtc is null);
 
         if (current is null || current.CreatedUtc + RotationAge <= _clock.UtcNow)
@@ -131,6 +135,9 @@ public sealed class MerchantSigningKeyService : IMerchantSigningKeyService
 
         return false;
     }
+
+    private async Task<MerchantSigningKeysDocument> ReadAsync()
+        => _changed ?? await _documents.GetOrCreateImmutableAsync();
 
     // Keys retired long ago verify nothing any more; only the recent ones are kept.
     private static void Prune(MerchantSigningKeysDocument document, DateTime now)

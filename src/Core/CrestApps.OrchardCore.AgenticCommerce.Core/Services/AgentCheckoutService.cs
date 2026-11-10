@@ -1015,11 +1015,11 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
             Links = await BuildLinksAsync(),
         };
 
-        if (order is not null && invoice is not null)
+        if (order is not null)
         {
             foreach (var line in order.Lines)
             {
-                var invoiceLine = invoice.LineItems?.FirstOrDefault(item => item.ItemId == line.LineId);
+                var invoiceLine = invoice?.LineItems?.FirstOrDefault(item => item.ItemId == line.LineId);
                 var unitPrice = invoiceLine?.UnitPrice ?? line.UnitPrice;
                 var discount = invoiceLine?.DiscountAmount ?? 0;
 
@@ -1036,8 +1036,18 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
                 });
             }
 
-            view.Totals = BuildTotals(invoice);
-            view.Discounts = (invoice.Discounts ?? [])
+            // A store checkout that ended may no longer hold its invoice; the order still has what was asked.
+            view.Totals = invoice is null
+                ? new AgentCheckoutTotals
+                {
+                    Subtotal = order.Subtotal,
+                    Discount = order.Discounts?.Sum(discount => discount.Amount) ?? 0,
+                    Fulfillment = order.Shipping?.Amount ?? 0,
+                    Tax = order.TaxAmount ?? 0,
+                    Total = order.Total ?? order.Subtotal,
+                }
+                : BuildTotals(invoice);
+            view.Discounts = (invoice?.Discounts ?? [])
                 .Select(entry => new AgentAppliedDiscount
                 {
                     Code = entry.Code,

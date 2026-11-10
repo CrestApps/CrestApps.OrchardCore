@@ -47,7 +47,7 @@ public sealed class Startup : StartupBase
             .AddScoped<ICatalogEntryHandler<AgentPlatform>, AgentPlatformHandler>()
             .AddScoped<IAgentCheckoutStore, AgentCheckoutStore>()
             .AddScoped<IAgentCheckoutService, AgentCheckoutService>()
-            .AddScoped<IAgentItemResolver, ContentItemAgentItemResolver>()
+            .AddScoped<IAgentItemResolver, ProductAgentItemResolver>()
             .AddScoped<IMerchantSigningKeyService, MerchantSigningKeyService>()
             .AddScoped<AgentSiteUrls>();
 
