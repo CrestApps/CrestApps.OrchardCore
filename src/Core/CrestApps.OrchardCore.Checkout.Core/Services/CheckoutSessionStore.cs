@@ -20,7 +20,11 @@ namespace CrestApps.OrchardCore.Checkout.Core.Services;
 /// </summary>
 public sealed class CheckoutSessionStore : ICheckoutSessionStore
 {
-    private static readonly GuestSessionTokenScope _guestTokenScope = new(
+    /// <summary>
+    /// The scope of the guest tokens that prove a browser owns a guest's checkout: its cookie, its protection and the
+    /// header an API client sends it in. A browser that is handed a checkout gets a token in this scope.
+    /// </summary>
+    public static readonly GuestSessionTokenScope GuestTokenScope = new(
         CheckoutConstants.GuestTokenCookieName,
         CheckoutConstants.GuestTokenProtectorPurpose,
         TimeSpan.FromDays(30),
@@ -85,7 +89,7 @@ public sealed class CheckoutSessionStore : ICheckoutSessionStore
         // IMPORTANT: Only the browser that started this checkout was given the ownership token, so this is
         // what keeps one visitor from resuming another's session and reading their contact details and
         // amounts. The IP address and user agent on the session are audit fields and prove nothing.
-        if (!_guestTokenManager.Verify(_guestTokenScope, sessionId, checkoutSession.GuestTokenHash))
+        if (!_guestTokenManager.Verify(GuestTokenScope, sessionId, checkoutSession.GuestTokenHash))
         {
             return null;
         }
@@ -284,7 +288,7 @@ public sealed class CheckoutSessionStore : ICheckoutSessionStore
             // Recorded for audit only; the token below is what decides who may resume the session.
             checkoutSession.IPAddress = (await _clientIPAddressAccessor.GetIPAddressAsync()).ToString();
             checkoutSession.AgentInfo = _contextAccessor.HttpContext.Request.Headers.UserAgent;
-            checkoutSession.GuestTokenHash = _guestTokenManager.Issue(_guestTokenScope, checkoutSession.SessionId);
+            checkoutSession.GuestTokenHash = _guestTokenManager.Issue(GuestTokenScope, checkoutSession.SessionId);
         }
 
         return checkoutSession;
