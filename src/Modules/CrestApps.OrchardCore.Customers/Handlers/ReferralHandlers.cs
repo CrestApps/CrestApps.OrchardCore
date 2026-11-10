@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Customers.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Services;
@@ -11,7 +12,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Entities;
-using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 
@@ -84,7 +84,7 @@ internal sealed class ReferralOrderEventHandler : OrderEventHandlerBase
 
         // The referrer is rewarded once the order is saved, in a scope of their own: a reward changes a balance under
         // its own lock and commits, which inside a checkout's completion would commit the checkout halfway.
-        ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<ReferralOrderEventHandler>().RewardReferrerAsync(orderId));
+        DeferredWork.Add("referral_reward", scope => scope.ServiceProvider.GetRequiredService<ReferralOrderEventHandler>().RewardReferrerAsync(orderId));
 
         return Task.CompletedTask;
     }

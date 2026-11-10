@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Designer.Services;
 using CrestApps.OrchardCore.Reports.Subscriptions.Models;
 using CrestApps.OrchardCore.Reports.Subscriptions.Services;
@@ -99,32 +101,70 @@ public sealed class ReportSubscriptionsAdminMenu : AdminNavigationProvider
     LockExpiration = 600_000)]
 public sealed class ReportSubscriptionsBackgroundTask : IBackgroundTask
 {
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    {
+        return this.RunAsync(run => SweepAsync(serviceProvider, run, cancellationToken));
+    }
+
+    private static async Task SweepAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var logger = serviceProvider.GetRequiredService<ILogger<ReportSubscriptionsBackgroundTask>>();
+        using var activity = ReportTelemetry.Start("report.subscription.sweep");
+        var sent = 0;
+        var notSent = 0;
+        var failed = 0;
 
         try
         {
             var now = serviceProvider.GetRequiredService<IClock>().UtcNow;
             var service = serviceProvider.GetRequiredService<ReportSubscriptionService>();
+            IReadOnlyCollection<ReportSubscription> due = [.. await serviceProvider.GetRequiredService<IReportSubscriptionStore>().ListDueAsync(now, cancellationToken)];
 
-            foreach (var subscription in await serviceProvider.GetRequiredService<IReportSubscriptionStore>().ListDueAsync(now, cancellationToken))
+            activity?.SetTag("crestapps.report.subscriptions.due", due.Count);
+
+            if (due.Count == 0)
+            {
+                run.Skip();
+
+                return;
+            }
+
+            foreach (var subscription in due)
             {
                 // One subscription that fails never stops the others; it is tried again when it is next due.
                 try
                 {
                     // A run is for its scheduled time, so a late one still covers the period it was due for.
-                    await service.SendAsync(subscription, subscription.NextRunUtc ?? now, reschedule: true, cancellationToken);
+                    if (await service.SendAsync(subscription, subscription.NextRunUtc ?? now, reschedule: true, cancellationToken))
+                    {
+                        sent++;
+                    }
+                    else
+                    {
+                        notSent++;
+                    }
                 }
                 catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
                 {
+                    failed++;
                     logger.LogError(ex, "Report subscription '{SubscriptionId}' couldn't be emailed.", subscription.ItemId);
                 }
             }
         }
         catch (Exception ex)
         {
+            run.ReportError(ex);
+            CrestAppsOrchardCoreTelemetry.RecordException(activity, ex);
             logger.LogError(ex, "An error occurred while emailing report subscriptions.");
+        }
+        finally
+        {
+            run.AddItems(sent, "sent");
+            run.AddItems(notSent, "not_sent");
+            run.AddItems(failed, "failed");
+            activity?.SetTag("crestapps.report.subscriptions.sent", sent);
+            activity?.SetTag("crestapps.report.subscriptions.not_sent", notSent);
+            activity?.SetTag("crestapps.report.subscriptions.failed", failed);
         }
     }
 }

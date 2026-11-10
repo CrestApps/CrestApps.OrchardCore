@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
+using CrestApps.OrchardCore.OrTools.Telemetry;
 using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -33,38 +34,66 @@ public sealed class OrToolsShiftScheduleSolver : IShiftScheduleSolver
     {
         ArgumentNullException.ThrowIfNull(problem);
 
-        var stopwatch = Stopwatch.StartNew();
-        var start = await _builtIn.SolveAsync(problem, cancellationToken);
-        var left = problem.TimeLimit - stopwatch.Elapsed;
+        using var telemetry = SolverTelemetry.Start(SolverTelemetry.ShiftScheduleSolver, (long)problem.Workers.Count * Math.Max(0, problem.Days) * problem.Templates.Count);
 
-        if (problem.Demands.Count == 0 || problem.Workers.Count == 0 || problem.Templates.Count == 0)
+        try
         {
-            return Finish(problem, start.Shifts, stopwatch, timedOut: false);
+            var stopwatch = Stopwatch.StartNew();
+            var start = await _builtIn.SolveAsync(problem, cancellationToken);
+            var left = problem.TimeLimit - stopwatch.Elapsed;
+
+            if (problem.Demands.Count == 0 || problem.Workers.Count == 0 || problem.Templates.Count == 0)
+            {
+                telemetry.Complete(SolverTelemetry.StatusSkipped, usedSolverAnswer: false);
+
+                return Finish(problem, start.Shifts, stopwatch, timedOut: false);
+            }
+
+            var model = new Model(problem);
+
+            model.Build();
+            model.Hint(start.Shifts);
+
+            var solver = new CpSolver
+            {
+                StringParameters = string.Create(CultureInfo.InvariantCulture, $"max_time_in_seconds:{Math.Max(1, left.TotalSeconds):0.###} num_workers:{Math.Clamp(Environment.ProcessorCount, 1, 8)} random_seed:{problem.Seed}"),
+            };
+
+            CpSolverStatus status;
+
+            using (cancellationToken.Register(solver.StopSearch))
+            {
+                status = await Task.Run(() => solver.Solve(model.Cp), CancellationToken.None);
+            }
+
+            if (status is not (CpSolverStatus.Optimal or CpSolverStatus.Feasible))
+            {
+                telemetry.Complete(GetStatus(status, cancellationToken), usedSolverAnswer: false);
+
+                return Finish(problem, start.Shifts, stopwatch, timedOut: true);
+            }
+
+            telemetry.Complete(GetStatus(status, cancellationToken), usedSolverAnswer: true);
+
+            return Finish(problem, model.Read(solver), stopwatch, timedOut: status != CpSolverStatus.Optimal);
         }
-
-        var model = new Model(problem);
-
-        model.Build();
-        model.Hint(start.Shifts);
-
-        var solver = new CpSolver
+        catch (Exception ex)
         {
-            StringParameters = string.Create(CultureInfo.InvariantCulture, $"max_time_in_seconds:{Math.Max(1, left.TotalSeconds):0.###} num_workers:{Math.Clamp(Environment.ProcessorCount, 1, 8)} random_seed:{problem.Seed}"),
+            telemetry.Fail(ex);
+
+            throw;
+        }
+    }
+
+    private static string GetStatus(CpSolverStatus status, CancellationToken cancellationToken)
+    {
+        return status switch
+        {
+            CpSolverStatus.Optimal => SolverTelemetry.StatusOptimal,
+            CpSolverStatus.Feasible => SolverTelemetry.StatusFeasible,
+            CpSolverStatus.Infeasible or CpSolverStatus.ModelInvalid => SolverTelemetry.StatusInfeasible,
+            _ => cancellationToken.IsCancellationRequested ? SolverTelemetry.StatusCancelled : SolverTelemetry.StatusTimedOut,
         };
-
-        CpSolverStatus status;
-
-        using (cancellationToken.Register(solver.StopSearch))
-        {
-            status = await Task.Run(() => solver.Solve(model.Cp), CancellationToken.None);
-        }
-
-        if (status is not (CpSolverStatus.Optimal or CpSolverStatus.Feasible))
-        {
-            return Finish(problem, start.Shifts, stopwatch, timedOut: true);
-        }
-
-        return Finish(problem, model.Read(solver), stopwatch, timedOut: status != CpSolverStatus.Optimal);
     }
 
     private ShiftScheduleProposal Finish(ShiftScheduleProblem problem, IList<ProposedShift> shifts, Stopwatch stopwatch, bool timedOut)

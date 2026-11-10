@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Net.Http;
@@ -6,8 +7,12 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using CrestApps.Core;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.DataConnectors.Http;
+using CrestApps.OrchardCore.DataConnectors.Telemetry;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using OrchardCore.DataSources;
 using OrchardCore.DataSources.Files;
 using OrchardCore.Localization;
@@ -26,15 +31,18 @@ internal sealed partial class HttpApiDataConnector : IDataConnector
     private readonly DataConnectorHttpClient _httpClient;
     private readonly HttpRequestAuthenticator _authenticator;
     private readonly IDataFileFormatManager _fileFormatManager;
+    private readonly ILogger _logger;
 
     public HttpApiDataConnector(
         DataConnectorHttpClient httpClient,
         HttpRequestAuthenticator authenticator,
-        IDataFileFormatManager fileFormatManager)
+        IDataFileFormatManager fileFormatManager,
+        ILogger<HttpApiDataConnector> logger = null)
     {
         _httpClient = httpClient;
         _authenticator = authenticator;
         _fileFormatManager = fileFormatManager;
+        _logger = logger ?? NullLogger<HttpApiDataConnector>.Instance;
     }
 
     public static string Name => DataConnectorConstants.Connectors.HttpApi;
@@ -192,6 +200,10 @@ internal sealed partial class HttpApiDataConnector : IDataConnector
         var next = start;
         string cursor = null;
         long read = 0;
+        var pageTags = new TagList
+        {
+            { DataConnectorsTelemetry.PaginationTag, DataConnectorsTelemetry.ToTag(pagination.Type) },
+        };
 
         for (var page = 0; page < pageLimit && next is not null; page++)
         {
@@ -219,6 +231,8 @@ internal sealed partial class HttpApiDataConnector : IDataConnector
 
             using var response = await _httpClient.SendAsync(settings, context.Secrets, cacheKey, method, uri, body, cancellationToken);
             using var document = await _httpClient.ReadJsonAsync(response, cancellationToken);
+
+            DataConnectorsTelemetry.Add(DataConnectorsTelemetry.HttpPages, pageTags);
 
             var records = JsonRecords.SelectRecords(document.RootElement, dataSetSettings.RecordsPath);
 
@@ -266,6 +280,18 @@ internal sealed partial class HttpApiDataConnector : IDataConnector
                     next = header is null ? null : DataConnectorHttpClient.Resolve(settings, new Uri(uri, header).AbsoluteUri);
                     break;
             }
+        }
+
+        // The loop ran out of pages while the API still had a next one: the read is cut short. A description reads a
+        // sample of pages on purpose, so only a full read counts.
+        if (next is not null && maxPages <= 0)
+        {
+            DataConnectorsTelemetry.Add(DataConnectorsTelemetry.LimitHits, new TagList
+            {
+                { DataConnectorsTelemetry.LimitTag, DataConnectorsTelemetry.LimitMaxPages },
+            });
+
+            _logger.HttpPageLimitReached(context.DataSet.ItemId.SanitizeLogValue(), pageLimit);
         }
     }
 

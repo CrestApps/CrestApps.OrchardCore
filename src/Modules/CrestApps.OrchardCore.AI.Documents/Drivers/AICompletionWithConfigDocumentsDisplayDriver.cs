@@ -14,6 +14,7 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Workflows;
 using CrestApps.OrchardCore.AI.Documents.Services;
 using CrestApps.OrchardCore.AI.Documents.ViewModels;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -179,7 +180,7 @@ public sealed class AICompletionWithConfigDocumentsDisplayDriver : DisplayDriver
 
                 if (chunkIdsToRemove.Count > 0)
                 {
-                    ShellScope.AddDeferredTask(scope => RemoveDocumentChunksAsync(scope, chunkIdsToRemove));
+                    DeferredWork.Add("ai_document_chunk_removal", scope => RemoveDocumentChunksAsync(scope, chunkIdsToRemove));
                 }
             }
 
@@ -245,7 +246,7 @@ public sealed class AICompletionWithConfigDocumentsDisplayDriver : DisplayDriver
 
                 if (processedDocuments.Count > 0)
                 {
-                    ShellScope.AddDeferredTask(scope => IndexDocumentChunksAsync(scope, processedDocuments));
+                    DeferredWork.Add("ai_document_chunk_indexing", scope => IndexDocumentChunksAsync(scope, processedDocuments));
                 }
             }
         }

@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.DataConnectors.Models;
 using CrestApps.OrchardCore.DataConnectors.Services;
 using CrestApps.OrchardCore.DataConnectors.ViewModels;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -31,6 +32,7 @@ namespace CrestApps.OrchardCore.DataConnectors.Controllers;
 public sealed class ConnectedDataSetsController : Controller
 {
     private const string _optionsSearch = "Options.Search";
+    private const string _refreshDeferredTaskName = "dataconnectors_refresh";
 
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
@@ -550,26 +552,31 @@ public sealed class ConnectedDataSetsController : Controller
         dataSet.Import.RefreshRequestedUtc = _clock.UtcNow;
         await _dataSetStore.UpdateAsync(dataSet, HttpContext.RequestAborted);
 
-        var state = (dataSet.ItemId, User.Identity?.Name);
+        var state = (dataSet.ItemId, User.Identity?.Name, TraceParent: TraceContextPropagation.Capture());
 
         // The refresh runs after this request, in its own scope; if the site stops first, the request stays on the
-        // data set and the refresh task runs it.
+        // data set and the refresh task runs it. The job runs detached from the deferred task that queues it, so the
+        // job itself is measured, linked to this request's trace.
         ShellScope.AddDeferredTask(scope => HttpBackgroundJob.ExecuteAfterEndOfRequestAsync(
             $"data-set-refresh-{dataSet.ItemId}",
             state,
-            static async (backgroundScope, request) =>
-            {
-                var store = backgroundScope.ServiceProvider.GetRequiredService<IConnectedDataSetStore>();
-
-                if (await store.FindByIdAsync(request.ItemId) is not { Import.RefreshRequestedUtc: not null } current)
+            static (backgroundScope, request) => DeferredWork.RunAsync(
+                _refreshDeferredTaskName,
+                request.TraceParent,
+                backgroundScope,
+                async scope =>
                 {
-                    return;
-                }
+                    var store = scope.ServiceProvider.GetRequiredService<IConnectedDataSetStore>();
 
-                var refreshService = backgroundScope.ServiceProvider.GetRequiredService<IDataSetRefreshService>();
+                    if (await store.FindByIdAsync(request.ItemId) is not { Import.RefreshRequestedUtc: not null } current)
+                    {
+                        return;
+                    }
 
-                await refreshService.RefreshAsync(current, DataSetRefreshTrigger.Manual, request.Name);
-            }));
+                    var refreshService = scope.ServiceProvider.GetRequiredService<IDataSetRefreshService>();
+
+                    await refreshService.RefreshAsync(current, DataSetRefreshTrigger.Manual, request.Name);
+                })));
     }
 
     private async Task<DataConnectorEditViewModel> BuildEditAsync(ConnectedDataSet dataSet, bool isNew)

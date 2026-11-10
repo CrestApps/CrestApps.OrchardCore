@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using CrestApps.OrchardCore.DataConnectors.Telemetry;
 using Microsoft.Extensions.Caching.Memory;
 using OrchardCore.Environment.Shell;
 
@@ -99,6 +100,8 @@ internal sealed class HttpRequestAuthenticator
 
         if (_cache.TryGetValue(key, out string cached))
         {
+            DataConnectorsTelemetry.RecordTokenRequest(DataConnectorsTelemetry.ToTag(settings.Type), "cache_hit");
+
             return cached;
         }
 
@@ -110,6 +113,8 @@ internal sealed class HttpRequestAuthenticator
         {
             if (_cache.TryGetValue(key, out cached))
             {
+                DataConnectorsTelemetry.RecordTokenRequest(DataConnectorsTelemetry.ToTag(settings.Type), "cache_hit");
+
                 return cached;
             }
 
@@ -126,10 +131,31 @@ internal sealed class HttpRequestAuthenticator
         }
     }
 
+    // Counts every token the cache couldn't serve by whether it was acquired; the endpoint is never a tag or logged.
     private async Task<(string Token, int ExpiresIn)> RequestTokenCoreAsync(HttpAuthenticationSettings settings, IDataConnectorSecrets secrets, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(settings);
 
+        var auth = DataConnectorsTelemetry.ToTag(settings.Type);
+
+        try
+        {
+            var token = await FetchTokenAsync(settings, secrets, cancellationToken);
+
+            DataConnectorsTelemetry.RecordTokenRequest(auth, "acquired");
+
+            return token;
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            DataConnectorsTelemetry.RecordTokenRequest(auth, "failed");
+
+            throw;
+        }
+    }
+
+    private async Task<(string Token, int ExpiresIn)> FetchTokenAsync(HttpAuthenticationSettings settings, IDataConnectorSecrets secrets, CancellationToken cancellationToken)
+    {
         if (string.IsNullOrWhiteSpace(settings.ClientId))
         {
             throw new DataConnectorException("The connection has no client identifier.");

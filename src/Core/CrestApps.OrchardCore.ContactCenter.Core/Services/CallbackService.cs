@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -73,6 +74,7 @@ public sealed class CallbackService : ICallbackService
         await _callbackManager.CreateAsync(callback, cancellationToken: cancellationToken);
 
         await PublishAsync(ContactCenterConstants.Events.CallbackScheduled, callback, cancellationToken);
+        ContactCenterDiagnostics.RecordCallback("scheduled");
 
         return callback;
     }
@@ -118,6 +120,7 @@ public sealed class CallbackService : ICallbackService
             }
 
             await PublishAsync(ContactCenterConstants.Events.CallbackPromoted, callback, cancellationToken);
+            ContactCenterDiagnostics.RecordCallback("promoted");
 
             count++;
         }

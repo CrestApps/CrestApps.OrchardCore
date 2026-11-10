@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
@@ -18,10 +19,15 @@ namespace CrestApps.OrchardCore.Workforce.BackgroundTasks;
 public sealed class TimeOffAccrualBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc />
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        var now = await serviceProvider.GetRequiredService<ILocalClock>().GetLocalNowAsync();
+        return this.RunAsync(async run =>
+        {
+            var now = await serviceProvider.GetRequiredService<ILocalClock>().GetLocalNowAsync();
+            var accrued = await serviceProvider.GetRequiredService<ITimeOffAccrualService>().RunAsync(DateOnly.FromDateTime(now.DateTime), cancellationToken);
 
-        await serviceProvider.GetRequiredService<ITimeOffAccrualService>().RunAsync(DateOnly.FromDateTime(now.DateTime), cancellationToken);
+            run.AddItems(accrued.Workers, "workers");
+            run.AddItems(accrued.Entries, "entries");
+        });
     }
 }

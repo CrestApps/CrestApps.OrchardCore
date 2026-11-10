@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Shell.Scope;
@@ -21,7 +22,7 @@ internal sealed class CrmRecipeStepHandler : IRecipeStepHandler
     {
         if (context?.Name is "ContentDefinition" or "ReplaceContentDefinition" && ShellScope.Current is not null)
         {
-            ShellScope.AddDeferredTask(scope => scope.ServiceProvider
+            DeferredWork.Add("omnichannel_opportunity_contact_sync", scope => scope.ServiceProvider
                 .GetRequiredService<OpportunityContactFieldSynchronizer>()
                 .SynchronizeAsync());
         }

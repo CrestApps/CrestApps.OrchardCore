@@ -1,5 +1,6 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Geo.Core.Indexes;
+using CrestApps.OrchardCore.Geo.Core.Telemetry;
 using CrestApps.OrchardCore.Geo.Models;
 using CrestApps.OrchardCore.Geo.Services;
 using Microsoft.Extensions.Logging;
@@ -141,6 +142,7 @@ public sealed class DefaultGeocodeQueue : IGeocodeQueue
         if (target is null)
         {
             Fail(request, now, $"Nothing writes back a {request.TargetType}.");
+            GeoTelemetry.RecordGeocodeRequest(GeoTelemetry.GeocodeNoTarget);
 
             return;
         }
@@ -161,10 +163,12 @@ public sealed class DefaultGeocodeQueue : IGeocodeQueue
             if (request.Attempts >= MaxAttempts)
             {
                 Fail(request, now, ex.Message);
+                GeoTelemetry.RecordGeocodeRequest(GeoTelemetry.GeocodeFailed);
             }
             else
             {
                 request.NextAttemptUtc = now + RetryWait(request.Attempts);
+                GeoTelemetry.RecordGeocodeRequest(GeoTelemetry.GeocodeRetry);
             }
 
             return;
@@ -174,6 +178,7 @@ public sealed class DefaultGeocodeQueue : IGeocodeQueue
         {
             request.LastError = "No geocoding provider is set up.";
             request.NextAttemptUtc = now + NoProviderWait;
+            GeoTelemetry.RecordGeocodeRequest(GeoTelemetry.GeocodeNoProvider);
 
             return;
         }
@@ -183,6 +188,7 @@ public sealed class DefaultGeocodeQueue : IGeocodeQueue
         if (best is null)
         {
             Fail(request, now, "No place matches the address.");
+            GeoTelemetry.RecordGeocodeRequest(GeoTelemetry.GeocodeNoMatch);
 
             return;
         }
@@ -190,6 +196,7 @@ public sealed class DefaultGeocodeQueue : IGeocodeQueue
         if (!await target.ApplyAsync(request.TargetId, best, response.Provider, cancellationToken))
         {
             Fail(request, now, "The record is gone.");
+            GeoTelemetry.RecordGeocodeRequest(GeoTelemetry.GeocodeGone);
 
             return;
         }
@@ -199,6 +206,7 @@ public sealed class DefaultGeocodeQueue : IGeocodeQueue
         request.Source = response.Provider;
         request.LastError = null;
         request.CompletedUtc = now;
+        GeoTelemetry.RecordGeocodeRequest(GeoTelemetry.GeocodeDone);
     }
 
     private static void Fail(GeocodeRequest request, DateTime now, string error)

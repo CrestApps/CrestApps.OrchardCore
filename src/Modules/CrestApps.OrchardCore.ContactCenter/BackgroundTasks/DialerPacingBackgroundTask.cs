@@ -3,6 +3,7 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -63,13 +64,18 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
     private readonly ConcurrentDictionary<string, DateTime> _lastHoldBackWarningUtc = new(StringComparer.Ordinal);
 
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => DoWorkAsync(serviceProvider, run, cancellationToken));
+
+    private async Task DoWorkAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var workManager = serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>();
         using var workLease = workManager.TryEnter(ContactCenterConstants.Feature.DialerPaced);
 
         if (workLease is null)
         {
+            run.SkipForLease();
+
             return;
         }
 
@@ -103,6 +109,8 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
         }
         catch (OperationCanceledException) when (runToken.IsCancellationRequested)
         {
+            run.BudgetExceeded();
+
             // No queue is known yet, so there is nothing to record against; the warning is what says the run was cut short.
             logger.LogWarning(
                 "The dialer pacing run reached its {BudgetMilliseconds} ms time budget while listing queues; deferring to the next scheduled tick.",
@@ -133,6 +141,7 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
+                run.ReportError(ex);
                 logger.LogError(ex, "The sweep of answered over-dialed calls nothing connected failed; it runs again on the next tick.");
             }
         }
@@ -158,6 +167,7 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
                     MaxRunDurationMilliseconds,
                     campaignQueueIds.Length - index);
 
+                run.BudgetExceeded();
                 await RecordDeferredAsync(recorder, campaignQueueIds.Skip(index), runStartedUtc);
 
                 break;
@@ -217,6 +227,7 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
                 if (DialerPacingScheduler.IsPacedHere(profile))
                 {
                     dialerPacingScheduler.RequestBackstop(queueId);
+                    run.AddItems(1, "queue_paced");
                 }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -231,12 +242,14 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
                     queueId,
                     campaignQueueIds.Length - index);
 
+                run.BudgetExceeded();
                 await RecordDeferredAsync(recorder, campaignQueueIds.Skip(index), runStartedUtc);
 
                 break;
             }
             catch (Exception ex)
             {
+                run.ReportError(ex);
                 logger.LogError(ex, "An error occurred while pacing dialer queue '{QueueId}'.", queueId);
             }
         }

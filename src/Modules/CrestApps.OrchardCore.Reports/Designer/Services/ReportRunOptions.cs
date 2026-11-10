@@ -9,12 +9,12 @@ public sealed class ReportRunOptions
     /// <summary>
     /// The source of a run whose caller doesn't name one.
     /// </summary>
-    public const string OtherSource = "Other";
+    public const string OtherSource = ReportRunSources.Other;
 
     /// <summary>
     /// The source of a run of the designer preview.
     /// </summary>
-    public const string PreviewSource = "Preview";
+    public const string PreviewSource = ReportRunSources.Preview;
 
     /// <summary>
     /// Gets or sets the values picked in the visuals people can click, as keys by visual identifier. Each one filters
@@ -29,7 +29,7 @@ public sealed class ReportRunOptions
     public ISet<string> VisualIds { get; set; }
 
     /// <summary>
-    /// Gets or sets what the run is for, such as <c>Admin</c>, <c>Shared</c>, <c>Link</c> or <c>Preview</c>, to tag its
+    /// Gets or sets what the run is for, one of the values of <see cref="ReportRunSources"/>, to tag its
     /// telemetry with, or <see langword="null"/> for <see cref="OtherSource"/>.
     /// </summary>
     public string Source { get; set; }

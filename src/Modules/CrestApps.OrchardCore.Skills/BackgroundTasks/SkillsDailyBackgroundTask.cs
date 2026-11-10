@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Skills.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
@@ -19,20 +20,26 @@ namespace CrestApps.OrchardCore.Skills.BackgroundTasks;
 public sealed class SkillsDailyBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc />
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        var clock = serviceProvider.GetRequiredService<IClock>();
-        var site = await serviceProvider.GetRequiredService<ISiteService>().GetSiteSettingsAsync();
-        var zone = clock.GetTimeZone(site.TimeZoneId);
-        var today = DateOnly.FromDateTime(clock.ConvertToTimeZone(clock.UtcNow, zone).DateTime);
-        var checkpoints = serviceProvider.GetRequiredService<SkillsDailyCheckpointStore>();
-
-        if (await checkpoints.GetLastRunAsync(cancellationToken) >= today)
+        return this.RunAsync(async run =>
         {
-            return;
-        }
+            var clock = serviceProvider.GetRequiredService<IClock>();
+            var site = await serviceProvider.GetRequiredService<ISiteService>().GetSiteSettingsAsync();
+            var zone = clock.GetTimeZone(site.TimeZoneId);
+            var today = DateOnly.FromDateTime(clock.ConvertToTimeZone(clock.UtcNow, zone).DateTime);
+            var checkpoints = serviceProvider.GetRequiredService<SkillsDailyCheckpointStore>();
 
-        await serviceProvider.GetRequiredService<SkillsDailyCheck>().RunAsync(today, cancellationToken);
-        await checkpoints.SetLastRunAsync(today, cancellationToken);
+            if (await checkpoints.GetLastRunAsync(cancellationToken) >= today)
+            {
+                // The day was checked already; the task wakes every hour.
+                run.Skip();
+
+                return;
+            }
+
+            await serviceProvider.GetRequiredService<SkillsDailyCheck>().RunAsync(today, cancellationToken);
+            await checkpoints.SetLastRunAsync(today, cancellationToken);
+        });
     }
 }

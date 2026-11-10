@@ -2,6 +2,7 @@ using CrestApps.Core.AI.Chat.Privacy;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Documents;
@@ -21,7 +22,10 @@ namespace CrestApps.OrchardCore.AI.Services;
 public sealed class AIConversationPrivacyBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => DoWorkCoreAsync(run, serviceProvider, cancellationToken));
+
+    private static async Task DoWorkCoreAsync(MeasuredTaskRun run, IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         var profileManager = serviceProvider.GetRequiredService<IAIProfileManager>();
         var privacy = serviceProvider.GetRequiredService<AIConversationPrivacyService>();
@@ -42,6 +46,10 @@ public sealed class AIConversationPrivacyBackgroundTask : IBackgroundTask
 
             var result = await privacy.ProcessAsync(profile, cursor, cancellationToken);
 
+            // Conversations redacted or stripped by the storage mode, and conversations deleted past the retention.
+            run.AddItems(result.Applied, "applied");
+            run.AddItems(result.Deleted, "deleted");
+
             if (result.Cursor is null)
             {
                 // Turning a mode on later starts from then, not from the conversations kept before.
@@ -60,5 +68,10 @@ public sealed class AIConversationPrivacyBackgroundTask : IBackgroundTask
         }
 
         await storeCommitter.CommitAsync(cancellationToken);
+
+        if (run.Items.Count == 0)
+        {
+            run.Skip();
+        }
     }
 }

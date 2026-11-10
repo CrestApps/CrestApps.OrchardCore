@@ -2,6 +2,7 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -56,8 +57,24 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
     {
         ArgumentNullException.ThrowIfNull(interactionEvent);
 
-        await _scopeExecutor.ExecuteAsync<ContactCenterRealTimeEventScopeContext>(
-            context => HandleInScopeAsync(interactionEvent, context, cancellationToken));
+        try
+        {
+            await _scopeExecutor.ExecuteAsync<ContactCenterRealTimeEventScopeContext>(
+                context => HandleInScopeAsync(interactionEvent, context, cancellationToken));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            ContactCenterDiagnostics.RecordRealtimeBroadcast(interactionEvent.EventType, lag: null, ex);
+
+            throw;
+        }
+
+        // From the change to the screens hearing of it: how long an offer takes to reach the agent it rings. This
+        // measures the delivery, so a redelivered event is measured again, with the delay its redelivery added.
+        if (interactionEvent.OccurredUtc != default)
+        {
+            ContactCenterDiagnostics.RecordRealtimeBroadcast(interactionEvent.EventType, _clock.UtcNow - interactionEvent.OccurredUtc, exception: null);
+        }
     }
 
     private async Task HandleInScopeAsync(

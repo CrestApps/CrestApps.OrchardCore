@@ -1,5 +1,6 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -143,6 +144,7 @@ public sealed partial class ProviderVoiceOfferSynchronizationService : IProvider
             if (wasRinging)
             {
                 await RecordOfferWithdrawnAsync(reservation, interaction, cancellationToken);
+                ContactCenterDiagnostics.RecordOfferSettled(null, ContactCenterDiagnostics.OfferCancelled, reservation, interaction.Channel, endedUtc ?? _clock.UtcNow);
             }
         }
 
@@ -217,6 +219,12 @@ public sealed partial class ProviderVoiceOfferSynchronizationService : IProvider
             await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
 
             await RecordLeftQueueAsync(queueItem, interaction, session, wasWaiting, cancellationToken);
+
+            // The caller hung up while waiting; one whose agent had already taken them stopped waiting then.
+            if (wasWaiting)
+            {
+                ContactCenterDiagnostics.RecordQueueExit(queueItem, ContactCenterDiagnostics.QueueExitAbandoned, interaction.Channel, endedUtc ?? queueItem.DequeuedUtc.Value);
+            }
         }
 
         var agentId = reservationAgentId ?? session?.AgentId ?? interaction.AgentId;

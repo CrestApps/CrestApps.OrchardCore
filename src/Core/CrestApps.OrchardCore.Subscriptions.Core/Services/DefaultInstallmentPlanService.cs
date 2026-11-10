@@ -4,11 +4,13 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Currencies;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
+using CrestApps.OrchardCore.Subscriptions.Core.Telemetry;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.Services;
 using CrestApps.OrchardCore.Transactions;
@@ -1006,10 +1008,30 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
     // or the reason it failed.
     private async Task<string> ChargePaymentAsync(InstallmentPlan plan, InstallmentPlanPayment payment, bool manual, CancellationToken cancellationToken)
     {
+        var providerKey = plan.PaymentMethod?.ProviderKey;
+
+        using var telemetry = SubscriptionsTelemetry.StartInstallmentCharge(providerKey, manual, plan.ItemId);
+
+        try
+        {
+            return await ChargePaymentCoreAsync(plan, payment, manual, telemetry, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            telemetry.Fail(exception);
+
+            throw;
+        }
+    }
+
+    private async Task<string> ChargePaymentCoreAsync(InstallmentPlan plan, InstallmentPlanPayment payment, bool manual, TelemetryScope telemetry, CancellationToken cancellationToken)
+    {
         var transaction = await FindTransactionAsync(payment, cancellationToken);
 
         if (transaction is null)
         {
+            telemetry.SetOutcome(SubscriptionsTelemetry.ChargeNotFound);
+
             return S["The payment's transaction could not be found."].Value;
         }
 
@@ -1021,6 +1043,7 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         if (transaction.OutstandingAmount <= 0m)
         {
             await SyncPaymentsAsync(plan, cancellationToken);
+            telemetry.SetOutcome(SubscriptionsTelemetry.ChargeAlreadyPaid);
 
             return null;
         }
@@ -1038,6 +1061,7 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
             if (pending.IsCompleted || pending.Status == CheckoutCompletionStatus.Pending)
             {
                 await SyncPaymentsAsync(plan, cancellationToken);
+                telemetry.SetOutcome(SubscriptionsTelemetry.ChargePending);
 
                 return null;
             }
@@ -1091,12 +1115,17 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
                 }
 
                 await SyncPaymentsAsync(plan, cancellationToken);
+                telemetry.SetOutcome(SubscriptionsTelemetry.ChargeCharged);
 
                 return null;
             }
 
+            telemetry.SetOutcome(SubscriptionsTelemetry.ChargeDeclined);
+
             return await RecordChargeFailureAsync(plan, payment, transaction, completion.ErrorMessage ?? S["The payment was declined."].Value, declined: true, manual, cancellationToken);
         }
+
+        telemetry.SetOutcome(outcome.Declined ? SubscriptionsTelemetry.ChargeDeclined : SubscriptionsTelemetry.ChargeTransientFailure);
 
         await _checkoutEngine.CancelAsync(session.SessionId, "The charge was not accepted.", cancellationToken);
 

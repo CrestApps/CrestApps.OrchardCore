@@ -2,6 +2,7 @@ using System.Data;
 using System.Globalization;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContentTransfer;
+using CrestApps.OrchardCore.ContentTransfer.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -257,7 +258,10 @@ public sealed class ContactActivityExportHandler : IContentImportHandler, IConte
             return _activitiesByContact.GetValueOrDefault(contactId);
         }
 
-        // Fallback for callers that map a row without preparing the page first.
+        // Fallback for callers that map a row without preparing the page first. It costs a query per row, so it is
+        // counted: a steady rate means an export path that skips the page preparation.
+        ContentTransferDiagnostics.RecordExportLookupFallback("last_activity");
+
         return await _session.Query<OmnichannelActivity, OmnichannelActivityIndex>(
                 index => index.ContactContentItemId == contactId
                     && index.SubjectContentType == subjectContentType
@@ -280,6 +284,8 @@ public sealed class ContactActivityExportHandler : IContentImportHandler, IConte
         }
 
         // Fallback for callers that map a row without preparing the page first.
+        ContentTransferDiagnostics.RecordExportLookupFallback("completed_by");
+
         var names = await ResolveUserDisplayNamesAsync([activity.CompletedById]);
 
         return names.TryGetValue(activity.CompletedById, out var name)

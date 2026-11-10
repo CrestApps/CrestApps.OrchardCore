@@ -1,6 +1,9 @@
+using System.Diagnostics;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Core.Models;
 using CrestApps.OrchardCore.Telephony.Core.Services;
@@ -105,20 +108,29 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
             return null;
         }
 
+        using var activity = ContactCenterDiagnostics.StartCallIngest(providerEvent.ProviderName, providerEvent.State);
+
         try
         {
-            return await IngestCoreAsync(providerEvent, cancellationToken);
+            return await IngestCoreAsync(providerEvent, activity, cancellationToken);
         }
         catch (ConcurrencyException)
         {
             // The retry starts from the event as it was handed in, because the adjustments the attempt made
             // are derived from it and re-deriving them is what makes the retry equivalent to the first try.
-            return await RetryInFreshScopeAsync(providerEvent, cancellationToken);
+            return await RetryInFreshScopeAsync(providerEvent, activity, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            CrestAppsOrchardCoreTelemetry.RecordException(activity, ex);
+
+            throw;
         }
     }
 
     private async Task<CallSession> IngestCoreAsync(
         ProviderVoiceEvent providerEvent,
+        Activity activity,
         CancellationToken cancellationToken)
     {
         // Canonicalize the provider identity before any interaction, call, or event key is built so that
@@ -182,6 +194,8 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
                     providerEvent.ToAddress.SanitizeLogValue());
             }
 
+            RecordIngest(activity, providerEvent, ContactCenterDiagnostics.ProviderEventUnmatched);
+
             return null;
         }
 
@@ -197,6 +211,7 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
                 providerEvent.ProviderCallId.SanitizeLogValue(),
                 providerEvent.ProviderName,
                 interaction.ProviderName);
+            RecordIngest(activity, providerEvent, ContactCenterDiagnostics.ProviderEventForeign);
 
             return null;
         }
@@ -242,6 +257,8 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
                 await _session.SaveChangesAsync(cancellationToken);
             }
 
+            RecordIngest(activity, providerEvent, ContactCenterDiagnostics.ProviderEventDuplicate);
+
             return (!string.IsNullOrWhiteSpace(providerEvent.ProviderName)
                 ? await _callSessionManager.FindByProviderCallIdAsync(
                     providerEvent.ProviderName,
@@ -261,11 +278,12 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
                 providerEvent.ProviderCallId.SanitizeLogValue());
 
             await _session.SaveChangesAsync(cancellationToken);
+            RecordIngest(activity, providerEvent, ContactCenterDiagnostics.ProviderEventConflict);
 
             return null;
         }
 
-        if (ShouldIgnoreEvent(session, providerEvent, now))
+        if (GetDiscardReason(session, providerEvent, now) is { } discardReason)
         {
             if (_logger.IsEnabled(LogLevel.Debug))
             {
@@ -280,6 +298,7 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
             }
 
             await _session.SaveChangesAsync(cancellationToken);
+            RecordDiscard(activity, providerEvent, discardReason);
 
             return session;
         }
@@ -287,6 +306,7 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
         var previous = CallSessionSnapshot.Of(session);
         var previousState = previous.State;
         var interactionWasSettled = interaction.IsSettled;
+        var wasClassified = session.Metadata.ContainsKey(ContactCenterConstants.TelephonyMetadata.AnswerClassification);
 
         ApplyState(session, interaction, ReportedState(session, providerEvent), now);
         ApplyProviderDetails(session, interaction, providerEvent, now);
@@ -383,36 +403,9 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
         }
 
         await _session.SaveChangesAsync(cancellationToken);
+        RecordIngestApplied(activity, providerEvent, session, interaction, previousState, wasClassified);
 
         return session;
-    }
-
-    private async Task<CallSession> RetryInFreshScopeAsync(
-        ProviderVoiceEvent providerEvent,
-        CancellationToken cancellationToken)
-    {
-        Exception lastException = null;
-
-        for (var attempt = 2; attempt <= MaxIngestionAttempts; attempt++)
-        {
-            CallSession session = null;
-
-            try
-            {
-                await _scopeExecutor.ExecuteAsync<IProviderVoiceEventService>(async service =>
-                {
-                    session = await service.IngestAsync(providerEvent, cancellationToken);
-                });
-
-                return session;
-            }
-            catch (ConcurrencyException exception)
-            {
-                lastException = exception;
-            }
-        }
-
-        throw lastException ?? new ConcurrencyException(new Document());
     }
 
     private async Task<CallSession> EnsureSessionAsync(
@@ -485,9 +478,9 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
         return session;
     }
 
-    private static bool ShouldIgnoreEvent(CallSession session, ProviderVoiceEvent providerEvent, DateTime occurredUtc)
+    private static string GetDiscardReason(CallSession session, ProviderVoiceEvent providerEvent, DateTime occurredUtc)
     {
-        return VoiceStreamOrdering.ShouldDiscard(
+        return VoiceStreamOrdering.GetDiscardReason(
             new VoiceStreamWatermark
             {
                 Phase = GetLifecyclePhase(session.State),

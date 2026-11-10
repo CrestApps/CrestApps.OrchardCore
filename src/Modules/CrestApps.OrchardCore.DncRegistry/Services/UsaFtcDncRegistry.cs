@@ -1,6 +1,8 @@
 using System.Net.Http.Json;
 using System.Security.Cryptography;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.DncRegistry.Models;
+using CrestApps.OrchardCore.DncRegistry.Telemetry;
 using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
@@ -67,6 +69,25 @@ public sealed class UsaFtcDncRegistry : INationalDoNotCallRegistry
     {
         ArgumentNullException.ThrowIfNull(phoneNumbers);
 
+        using var screening = DncRegistryTelemetry.StartScreening(DncRegistryTelemetry.RegistryUsaFtc);
+
+        try
+        {
+            return await ScreenAsync(phoneNumbers, screening, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            screening.Fail(ex);
+
+            throw;
+        }
+    }
+
+    private async Task<HashSet<PhoneNumber>> ScreenAsync(
+        IEnumerable<PhoneNumber> phoneNumbers,
+        TelemetryScope screening,
+        CancellationToken cancellationToken)
+    {
         var dncNumbers = new HashSet<PhoneNumber>();
         var site = await _siteService.GetSiteSettingsAsync();
         var settings = site.GetOrCreate<UsaFtcDncRegistrySettings>();
@@ -75,10 +96,14 @@ public sealed class UsaFtcDncRegistry : INationalDoNotCallRegistry
         {
             _logger.LogWarning("USA FTC DNC Registry API key is not configured. Skipping registry check.");
 
+            screening.SetOutcome(CrestAppsOrchardCoreTelemetry.OutcomeSkipped);
+            screening.AddMetricTag(CrestAppsOrchardCoreTelemetry.ReasonTag, DncRegistryTelemetry.ReasonNotConfigured);
+
             return dncNumbers;
         }
 
         string apiKey = null;
+        var checkedCount = 0;
 
         var client = _httpClientFactory.CreateClient(nameof(UsaFtcDncRegistry));
         var baseUrl = string.IsNullOrWhiteSpace(settings.BaseUrl)
@@ -102,6 +127,7 @@ public sealed class UsaFtcDncRegistry : INationalDoNotCallRegistry
             // The key is only read once a number this registry can answer for is actually being checked, so
             // a batch with no United States numbers never depends on the saved key being readable.
             apiKey ??= UnprotectApiKey(settings.ProtectedApiKey);
+            checkedCount++;
 
             try
             {
@@ -137,6 +163,9 @@ public sealed class UsaFtcDncRegistry : INationalDoNotCallRegistry
                     ex);
             }
         }
+
+        DncRegistryTelemetry.RecordScreened(screening, DncRegistryTelemetry.RegistryUsaFtc, checkedCount, dncNumbers.Count);
+        screening.Succeed();
 
         return dncNumbers;
     }

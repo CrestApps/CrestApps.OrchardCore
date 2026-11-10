@@ -1,6 +1,9 @@
+using System.Diagnostics;
 using System.Security.Cryptography;
 using CrestApps.OrchardCore.Core.Security;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
+using CrestApps.OrchardCore.Subscriptions.Core.Telemetry;
 using CrestApps.OrchardCore.Subscriptions.Core.Workflows.Events;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.Services;
@@ -98,10 +101,15 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
     {
         ArgumentException.ThrowIfNullOrEmpty(jobId);
 
+        using var telemetry = SubscriptionsTelemetry.StartProvisioning(jobId);
+        using var logScope = _logger.BeginScope(new Dictionary<string, object> { ["ProvisioningJobId"] = jobId });
+
         var (locker, locked) = await _distributedLock.TryAcquireLockAsync("TENANT_PROVISIONING_" + jobId, _lockTimeout, _lockExpiration);
 
         if (!locked)
         {
+            telemetry.SetOutcome(SubscriptionsTelemetry.ProvisioningBusy);
+
             // Another node holds this job. Reporting it as still running is honest and leaves the sweep to
             // pick it up later if that node dies.
             return TenantProvisioningStatus.Running;
@@ -114,11 +122,15 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
 
         if (job is null || job.IsTerminal)
         {
+            telemetry.SetOutcome(SubscriptionsTelemetry.ProvisioningSkipped);
+
             return job?.Status ?? TenantProvisioningStatus.Abandoned;
         }
 
         job.Status = TenantProvisioningStatus.Running;
         job.AttemptCount++;
+
+        telemetry.AddMetricTag(SubscriptionsTelemetry.AttemptTag, Math.Clamp(job.AttemptCount, 1, MaxAttempts));
 
         // The next attempt is scheduled before the work starts, so a process that dies mid-setup still leaves
         // a job that becomes due again rather than one stuck in Running forever.
@@ -137,13 +149,16 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         {
             failure = await SetupAsync(job);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException exception)
         {
+            telemetry.Fail(exception);
+
             // Preserve cancellation semantics; the job stays claimable and is retried.
             throw;
         }
         catch (Exception exception)
         {
+            telemetry.Fail(exception);
             _logger.LogError(exception, "Failed to provision the tenant '{TenantName}' for job '{JobId}'.", job.TenantName, job.ItemId);
 
             failure = exception.Message;
@@ -190,6 +205,19 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         }
 
         await _jobStore.UpdateAsync(job, cancellationToken);
+
+        if (failure is null)
+        {
+            telemetry.SetOutcome(SubscriptionsTelemetry.ProvisioningSucceeded);
+            SubscriptionsLog.TenantProvisioned(_logger, job.ItemId, job.AttemptCount, telemetry.Elapsed.TotalSeconds);
+        }
+        else
+        {
+            telemetry.Activity?.SetStatus(ActivityStatusCode.Error, "The site could not be created.");
+            telemetry.SetOutcome(job.Status == TenantProvisioningStatus.Abandoned
+                ? SubscriptionsTelemetry.ProvisioningAbandoned
+                : SubscriptionsTelemetry.ProvisioningFailed);
+        }
 
         await RaiseAsync(job, failure);
 

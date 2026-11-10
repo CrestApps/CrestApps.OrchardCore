@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using CrestApps.OrchardCore.Diagnostics;
 using OrchardCore.DataSources;
 
 namespace CrestApps.OrchardCore.Reports.Designer;
@@ -84,8 +86,16 @@ public sealed class ReportSharedReads
 
         lock (_lock)
         {
-            if (MaxRows == 0 || query.Conditions.Any(condition => condition.IsJoinKey) || !_reads.TryGetValue(key, out kept))
+            if (!_reads.TryGetValue(key, out kept))
             {
+                return dataSet.Source.ReadAsync(query, cancellationToken);
+            }
+
+            // A data set more than one query reads that can't be shared is a miss; the first read of one fills it.
+            if (MaxRows == 0 || query.Conditions.Any(condition => condition.IsJoinKey))
+            {
+                ReportTelemetry.RecordSharedReadMiss(dataSet.Reference.Source, MaxRows == 0 ? "disabled" : "join_key");
+
                 return dataSet.Source.ReadAsync(query, cancellationToken);
             }
 
@@ -100,6 +110,11 @@ public sealed class ReportSharedReads
                 SharedCount++;
 
                 return Replay(match, query.MaxRows, cancellationToken);
+            }
+
+            if (kept.Count > 0)
+            {
+                ReportTelemetry.RecordSharedReadMiss(dataSet.Reference.Source, "conditions");
             }
         }
 
@@ -126,6 +141,20 @@ public sealed class ReportSharedReads
                 {
                     keeping = false;
                     batches = null;
+
+                    // The rows are too many to keep, so the other queries read the data set again.
+                    ReportTelemetry.RecordSharedReadMiss(dataSet.Reference.Source, "too_many_rows");
+
+                    if (ReportTelemetry.LimitHits.Enabled)
+                    {
+                        var tags = new TagList
+                        {
+                            { ReportTelemetry.LimitTag, ReportTelemetry.LimitSharedReadRows },
+                        };
+
+                        CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
+                        ReportTelemetry.LimitHits.Add(1, tags);
+                    }
                 }
                 else
                 {

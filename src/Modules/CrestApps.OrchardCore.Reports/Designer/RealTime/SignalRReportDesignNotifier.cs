@@ -1,8 +1,8 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Reports.Designer.Services;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Shell;
-using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.Reports.Designer.RealTime;
 
@@ -35,7 +35,7 @@ public sealed class SignalRReportDesignNotifier : IReportDesignNotifier
 
         var tenantName = _tenantName;
 
-        ShellScope.AddDeferredTask(scope => SendAsync(scope.ServiceProvider.GetRequiredService<IHubContext<ReportsHub>>(), tenantName, change));
+        DeferredWork.Add("report_design_notify", scope => SendAsync(scope.ServiceProvider.GetRequiredService<IHubContext<ReportsHub>>(), tenantName, change));
 
         return Task.CompletedTask;
     }

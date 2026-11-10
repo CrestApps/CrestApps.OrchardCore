@@ -13,6 +13,7 @@ using CrestApps.Core.Infrastructure.Indexing;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.ApiKeys;
 using CrestApps.OrchardCore.AI.Documents.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -235,7 +236,7 @@ internal static class AIProfileDocumentsApiEndpoints
 
         if (chunkIds.Count > 0)
         {
-            ShellScope.AddDeferredTask(scope => RemoveChunksAsync(scope, chunkIds));
+            DeferredWork.Add("ai_document_chunk_removal", scope => RemoveChunksAsync(scope, chunkIds));
         }
 
         return TypedResults.NoContent();

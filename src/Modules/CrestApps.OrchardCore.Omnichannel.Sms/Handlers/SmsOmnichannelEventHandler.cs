@@ -25,6 +25,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Sms.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Compliance.Redaction;
@@ -39,7 +40,6 @@ using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.Entities;
 using OrchardCore.Flows.Models;
 using OrchardCore.Locking;
-using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Json;
 using OrchardCore.Modules;
 using OrchardCore.Sms;
@@ -342,7 +342,18 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         {
             ["ActivityId"] = activity.ItemId,
             ["SessionId"] = chatSession.SessionId,
+            ["Channel"] = OmnichannelConstants.Channels.Sms,
+            ["Direction"] = "inbound",
+
+            // The automated conversation lives in its AI chat session, so the session is the conversation's id here;
+            // the human thread a handoff opens is logged under its own id.
+            ["ConversationId"] = chatSession.SessionId,
         });
+
+        // One span and one result per customer turn. Ids go on the span only; the metrics carry the channel and the result.
+        using var turn = MessagingTelemetry.StartAITurn(OmnichannelConstants.Channels.Sms);
+        turn.SetSpanTag(MessagingTelemetry.ActivityIdSpanTag, activity.ItemId);
+        turn.SetSpanTag(MessagingTelemetry.AISessionIdSpanTag, chatSession.SessionId);
 
         // Store the inbound customer message, unless it is already the trailing message in the transcript. This makes
         // the handler idempotent so it can be re-driven safely: a Twilio re-delivery of the same message, or the
@@ -398,6 +409,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             if (!locked)
             {
                 _logger.LogWarning("Timed out waiting for the SMS conversation lock for Activity {ActivityId}.", activity.ItemId.SanitizeLogValue());
+                turn.Complete(MessagingTelemetry.AITurnResults.LockTimeout, CrestAppsOrchardCoreTelemetry.OutcomeTimeout);
 
                 return;
             }
@@ -431,6 +443,8 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                     if (pendingInbound.Count == 0)
                     {
+                        turn.Complete(MessagingTelemetry.AITurnResults.NotOwed, CrestAppsOrchardCoreTelemetry.OutcomeSkipped);
+
                         break;
                     }
 
@@ -473,6 +487,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                         }
 
                         handledTurn = true;
+                        turn.Complete(MessagingTelemetry.AITurnResults.NoReply, CrestAppsOrchardCoreTelemetry.OutcomeSkipped);
 
                         break;
                     }
@@ -562,6 +577,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                         catch (Exception ex)
                         {
                             _logger.LogError(ex, "AI Completion failed for Activity {ActivityId} using AI profile {ProfileId}.", activity.ItemId.SanitizeLogValue(), profile.ItemId.SanitizeLogValue());
+                            turn.Complete(MessagingTelemetry.AITurnResults.CompletionFailed, CrestAppsOrchardCoreTelemetry.OutcomeError);
 
                             break;
                         }
@@ -570,6 +586,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                     if (string.IsNullOrWhiteSpace(bestChoice))
                     {
                         _logger.LogWarning("AI Completion did not return any content for Activity {ActivityId} using AI profile {ProfileId}.", activity.ItemId.SanitizeLogValue(), profile.ItemId.SanitizeLogValue());
+                        turn.Complete(MessagingTelemetry.AITurnResults.EmptyReply, CrestAppsOrchardCoreTelemetry.OutcomeError);
 
                         break;
                     }
@@ -625,7 +642,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                     {
                         // The reply leaves through the provider that owns the endpoint's number, which is the one
                         // the customer texted; the tenant default may be a different carrier.
-                        var result = await _smsProviderRouter.SendAsync(new SmsMessage
+                        var result = await SmsAutomatedSend.SendAsync(_smsProviderRouter, new SmsMessage
                         {
                             To = activity.PreferredDestination,
                             From = endpoint.Value,
@@ -637,6 +654,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                     catch (Exception ex)
                     {
                         _logger.LogError(ex, "Failed to send SMS message to {To} for Activity {ActivityId}.", _addressRedactor.Redact(activity.PreferredDestination), activity.ItemId.SanitizeLogValue());
+                        turn.Complete(MessagingTelemetry.AITurnResults.SendFailed, CrestAppsOrchardCoreTelemetry.OutcomeError);
 
                         break;
                     }
@@ -644,6 +662,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                     if (!sendSucceeded)
                     {
                         _logger.LogWarning("The SMS provider reported a failed send for Activity {ActivityId}; no reply was delivered this turn.", activity.ItemId.SanitizeLogValue());
+                        turn.Complete(MessagingTelemetry.AITurnResults.SendFailed, CrestAppsOrchardCoreTelemetry.OutcomeError);
 
                         break;
                     }
@@ -673,6 +692,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                     chatSession.LastActivityUtc = _clock.UtcNow;
                     handledTurn = true;
+                    turn.Complete(MessagingTelemetry.AITurnResults.Replied);
 
                     if (_logger.IsEnabled(LogLevel.Information))
                     {
@@ -705,7 +725,9 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                     await _omnichannelActivityStore.UpdateAsync(activity, cancellationToken);
 
-                    ShellScope.AddDeferredTask(async scope =>
+                    // Measured as crestapps.deferred.sms_conversation_conclusion: it runs after the turn, so a failure in
+                    // it would otherwise be only a log line.
+                    DeferredWork.Add("sms_conversation_conclusion", async scope =>
                     {
                         // In a deferred task, we check the status of the converation and concluded it if needed.
                         // we use deferred task here to ensure that we don't hold current process for a longer running
@@ -1011,6 +1033,22 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             {
                 _logger.LogDebug("SMS reply generation for session {SessionId} was superseded by a newer inbound message.", chatSession.SessionId.SanitizeLogValue());
             }
+
+            if (!turn.IsCompleted)
+            {
+                turn.Complete(MessagingTelemetry.AITurnResults.Superseded, CrestAppsOrchardCoreTelemetry.OutcomeCancelled);
+            }
+        }
+        catch (Exception ex) when (!turn.IsCompleted)
+        {
+            turn.Fail(ex);
+
+            throw;
+        }
+
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.AITurnEnded(activity.ItemId.SanitizeLogValue(), turn.Result, (long)turn.Elapsed.TotalMilliseconds);
         }
     }
 
@@ -1056,10 +1094,15 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                 ContactAddress = activity.PreferredDestination,
                 Transcript = prompts,
             }, cancellationToken);
+
+            MessagingTelemetry.RecordAIHandoff(
+                OmnichannelConstants.Channels.Sms,
+                result.Succeeded ? MessagingTelemetry.HandoffResults.HandedOff : MessagingTelemetry.HandoffResults.Failed);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "The SMS handoff for Activity {ActivityId} threw; leaving the conversation open.", activity.ItemId.SanitizeLogValue());
+            MessagingTelemetry.RecordAIHandoff(OmnichannelConstants.Channels.Sms, MessagingTelemetry.ResultError);
             result = OmnichannelHandoffResult.Failure(ex.Message);
         }
 
@@ -1207,6 +1250,8 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             });
 
             await _contentManager.UpdateAsync(contact);
+
+            MessagingTelemetry.RecordOptOut(OmnichannelConstants.Channels.Sms, MessagingTelemetry.OptOutSources.AutomatedConversation, optedOut: true);
         }
 
         activity.Status = ActivityStatus.Cancelled;
@@ -1250,6 +1295,8 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
             if (deployment is null)
             {
+                MessagingTelemetry.RecordRespondDecision(OmnichannelConstants.Channels.Sms, MessagingTelemetry.RespondDecisions.Fallback);
+
                 return true;
             }
 
@@ -1271,8 +1318,12 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                     _logger.LogDebug("Skipping an SMS reply for Activity {ActivityId} because a reply was judged unwarranted. Reason: {Reason}", activity.ItemId.SanitizeLogValue(), decision.Result.Reason);
                 }
 
+                MessagingTelemetry.RecordRespondDecision(OmnichannelConstants.Channels.Sms, MessagingTelemetry.RespondDecisions.Skip);
+
                 return false;
             }
+
+            MessagingTelemetry.RecordRespondDecision(OmnichannelConstants.Channels.Sms, MessagingTelemetry.RespondDecisions.Respond);
 
             return true;
         }
@@ -1280,6 +1331,12 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         {
             // Fail open: if the decision cannot be made, reply as normal rather than going silent on the customer.
             _logger.LogWarning(ex, "The should-respond evaluation failed for Activity {ActivityId}; replying by default.", activity.ItemId.SanitizeLogValue());
+
+            // A turn a newer message superseded made no decision; the turn records that it was superseded.
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                MessagingTelemetry.RecordRespondDecision(OmnichannelConstants.Channels.Sms, MessagingTelemetry.RespondDecisions.Fallback);
+            }
 
             return true;
         }

@@ -1,5 +1,6 @@
 ﻿using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundJobs;
@@ -148,12 +149,16 @@ internal sealed class OrchardAIDataSourceIndexingQueue : IAIDataSourceIndexingQu
 
         var workItems = _workItems;
 
-        ShellScope.AddDeferredTask(scope => ProcessAfterEndOfRequestAsync(scope, workItems));
+        // Captured while the request that queued the work is still running, so the indexing links back to it.
+        var traceParent = TraceContextPropagation.Capture();
+
+        ShellScope.AddDeferredTask(scope => ProcessAfterEndOfRequestAsync(scope, workItems, traceParent));
     }
 
     private static Task ProcessAfterEndOfRequestAsync(
         ShellScope shellScope,
-        List<OrchardAIDataSourceIndexingWorkItem> workItems)
+        List<OrchardAIDataSourceIndexingWorkItem> workItems,
+        string traceParent)
     {
         ArgumentNullException.ThrowIfNull(shellScope);
         ArgumentNullException.ThrowIfNull(workItems);
@@ -165,9 +170,10 @@ internal sealed class OrchardAIDataSourceIndexingQueue : IAIDataSourceIndexingQu
             return Task.CompletedTask;
         }
 
+        // The work runs in the background job, so that is what is measured, rather than the hand-off to it.
         return HttpBackgroundJob.ExecuteAfterEndOfRequestAsync(
             "process-ai-datasource-indexing",
-            scope => ProcessAsync(scope, pendingWorkItems));
+            scope => DeferredWork.RunAsync("ai_datasource_indexing", traceParent, scope, s => ProcessAsync(s, pendingWorkItems)));
     }
 
     private static async Task ProcessAsync(

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -28,7 +29,10 @@ namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 public sealed class DirectRingTimeoutBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => DoWorkAsync(serviceProvider, run, cancellationToken));
+
+    private static async Task DoWorkAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var workManager = serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>();
         var scopeExecutor = serviceProvider.GetRequiredService<IContactCenterScopeExecutor>();
@@ -42,6 +46,8 @@ public sealed class DirectRingTimeoutBackgroundTask : IBackgroundTask
 
         if (workLease is null)
         {
+            run.SkipForLease();
+
             return;
         }
 
@@ -64,6 +70,7 @@ public sealed class DirectRingTimeoutBackgroundTask : IBackgroundTask
         }
         catch (Exception ex)
         {
+            run.ReportError(ex);
             logger.LogError(ex, "An error occurred while enforcing the direct-to-agent ring timeout.");
         }
     }

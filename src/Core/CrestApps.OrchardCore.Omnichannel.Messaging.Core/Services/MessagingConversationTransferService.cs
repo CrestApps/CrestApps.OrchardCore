@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Notifications;
 using Microsoft.AspNetCore.Authorization;
@@ -195,6 +196,8 @@ public sealed class MessagingConversationTransferService : IMessagingConversatio
         }
 
         await _conversationStore.UpdateAsync(conversation, cancellationToken);
+
+        MessagingTelemetry.RecordAssignment(conversation.Channel, MessagingTelemetry.AssignmentTriggers.Transfer, conversation.AssignmentStatus);
 
         var notification = MessagingAssignmentNotifications.Create(conversation, previousAgentId, request.ActingAgentId);
         notification.IsTransfer = true;

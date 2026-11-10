@@ -1,5 +1,6 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
@@ -57,12 +58,16 @@ public sealed class QueueLimitService : IQueueLimitService
 
         if (waiting < queue.MaxQueueSize)
         {
+            ContactCenterDiagnostics.RecordQueueAdmission("admitted");
+
             return QueueAdmissionDecision.Admit(queue.ItemId);
         }
 
         switch (queue.QueueFullAction)
         {
             case QueueMaxWaitAction.Voicemail:
+                ContactCenterDiagnostics.RecordQueueAdmission("voicemail");
+
                 return QueueAdmissionDecision.SendToVoicemail();
 
             case QueueMaxWaitAction.Overflow:
@@ -70,6 +75,8 @@ public sealed class QueueLimitService : IQueueLimitService
 
                 if (target is not null)
                 {
+                    ContactCenterDiagnostics.RecordQueueAdmission("overflowed");
+
                     return QueueAdmissionDecision.Overflow(target);
                 }
 
@@ -82,6 +89,8 @@ public sealed class QueueLimitService : IQueueLimitService
                         "Queue '{QueueId}' is full and configured to overflow, but no overflow queue can take the caller; the caller was admitted over the limit.",
                         queue.ItemId.SanitizeLogValue());
                 }
+
+                ContactCenterDiagnostics.RecordQueueAdmission("admitted_over_limit");
 
                 return QueueAdmissionDecision.Admit(queue.ItemId);
 
@@ -185,18 +194,29 @@ public sealed class QueueLimitService : IQueueLimitService
                             queue.ItemId.SanitizeLogValue());
                     }
 
+                    ContactCenterDiagnostics.RecordQueueMaxWaitAction("overflow", "no_target");
+
                     return false;
                 }
 
                 await _queueService.OverflowItemAsync(item, queue, target, cancellationToken);
+                ContactCenterDiagnostics.RecordQueueMaxWaitAction("overflow", "applied");
 
                 return true;
 
             case QueueMaxWaitAction.Voicemail:
-                var moved = await _voicemailSink.SendToVoicemailAsync(
-                    item,
-                    ContactCenterConstants.QueueLimits.MaxWaitVoicemailReasonCode,
-                    cancellationToken);
+                bool moved;
+
+                // The caller leaves the queue because they waited too long, whatever the voicemail path calls it.
+                using (ContactCenterDiagnostics.BeginQueueExit(ContactCenterDiagnostics.QueueExitTimeout))
+                {
+                    moved = await _voicemailSink.SendToVoicemailAsync(
+                        item,
+                        ContactCenterConstants.QueueLimits.MaxWaitVoicemailReasonCode,
+                        cancellationToken);
+                }
+
+                ContactCenterDiagnostics.RecordQueueMaxWaitAction("voicemail", moved ? "applied" : "no_target");
 
                 if (!moved && _logger.IsEnabled(LogLevel.Warning))
                 {

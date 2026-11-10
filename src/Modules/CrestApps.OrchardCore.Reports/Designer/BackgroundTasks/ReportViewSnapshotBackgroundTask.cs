@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Reports.Designer.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -24,11 +25,17 @@ public sealed class ReportViewSnapshotBackgroundTask : IBackgroundTask
     /// <param name="serviceProvider">The tenant service provider.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(serviceProvider);
 
+        return this.RunAsync(run => SweepAsync(serviceProvider, run, cancellationToken));
+    }
+
+    private static async Task SweepAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
+    {
         var logger = serviceProvider.GetRequiredService<ILogger<ReportViewSnapshotBackgroundTask>>();
+        using var activity = ReportTelemetry.Start("report.view.sweep");
         IReadOnlyList<string> due;
 
         try
@@ -42,29 +49,79 @@ public sealed class ReportViewSnapshotBackgroundTask : IBackgroundTask
                 logger.LogWarning(exception, "The report views that are due for a refresh could not be listed.");
             }
 
+            CrestAppsOrchardCoreTelemetry.RecordException(activity, exception);
+            run.ReportError(exception);
+
             return;
         }
 
-        foreach (var viewId in due)
-        {
-            if (cancellationToken.IsCancellationRequested)
-            {
-                return;
-            }
+        activity?.SetTag("crestapps.report.views.due", due.Count);
 
-            try
+        if (due.Count == 0)
+        {
+            run.Skip();
+
+            return;
+        }
+
+        var refreshed = 0;
+        var failed = 0;
+        var skipped = 0;
+
+        try
+        {
+            foreach (var viewId in due)
             {
-                await InScopeAsync(serviceProvider, scoped => scoped
-                    .GetRequiredService<ReportViewSnapshotRefresher>()
-                    .RefreshAsync(viewId, onlyWhenDue: true, cancellationToken));
-            }
-            catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
-            {
-                if (logger.IsEnabled(LogLevel.Warning))
+                if (cancellationToken.IsCancellationRequested)
                 {
-                    logger.LogWarning(exception, "The report view '{ViewId}' could not be refreshed.", viewId);
+                    return;
+                }
+
+                try
+                {
+                    ReportViewRefreshStatus? status = null;
+
+                    using (logger.BeginScope(new Dictionary<string, object> { ["ReportViewId"] = viewId }))
+                    {
+                        await InScopeAsync(serviceProvider, async scoped => status = (await scoped
+                            .GetRequiredService<ReportViewSnapshotRefresher>()
+                            .RefreshAsync(viewId, onlyWhenDue: true, cancellationToken)).Status);
+                    }
+
+                    switch (status)
+                    {
+                        case ReportViewRefreshStatus.Refreshed:
+                            refreshed++;
+                            break;
+
+                        case ReportViewRefreshStatus.Failed:
+                            failed++;
+                            break;
+
+                        default:
+                            skipped++;
+                            break;
+                    }
+                }
+                catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
+                {
+                    failed++;
+
+                    if (logger.IsEnabled(LogLevel.Warning))
+                    {
+                        logger.LogWarning(exception, "The report view '{ViewId}' could not be refreshed.", viewId);
+                    }
                 }
             }
+        }
+        finally
+        {
+            run.AddItems(refreshed, "refreshed");
+            run.AddItems(failed, "failed");
+            run.AddItems(skipped, "skipped");
+            activity?.SetTag("crestapps.report.views.refreshed", refreshed);
+            activity?.SetTag("crestapps.report.views.failed", failed);
+            activity?.SetTag("crestapps.report.views.skipped", skipped);
         }
     }
 

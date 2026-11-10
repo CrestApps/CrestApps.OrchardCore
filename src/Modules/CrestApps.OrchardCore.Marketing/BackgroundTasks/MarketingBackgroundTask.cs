@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Marketing.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
@@ -19,7 +20,10 @@ namespace CrestApps.OrchardCore.Marketing.BackgroundTasks;
     UsePipeline = true)]
 public sealed class MarketingBackgroundTask : IBackgroundTask
 {
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => BackfillAndSendAsync(serviceProvider, run, cancellationToken));
+
+    private static async Task BackfillAndSendAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         await serviceProvider.GetRequiredService<CustomerPurchasesService>().BackfillAsync(cancellationToken);
 
@@ -28,6 +32,8 @@ public sealed class MarketingBackgroundTask : IBackgroundTask
         // Without the site's address there's no unsubscribe link, so nothing goes out.
         if (string.IsNullOrWhiteSpace(baseUrl))
         {
+            run.Skip();
+
             return;
         }
 
@@ -36,7 +42,7 @@ public sealed class MarketingBackgroundTask : IBackgroundTask
 
         foreach (var campaign in due)
         {
-            await campaigns.StartSendingAsync(campaign, cancellationToken);
+            run.AddItems(1, await campaigns.StartSendingAsync(campaign, cancellationToken) ? "started" : "not_started");
         }
     }
 }

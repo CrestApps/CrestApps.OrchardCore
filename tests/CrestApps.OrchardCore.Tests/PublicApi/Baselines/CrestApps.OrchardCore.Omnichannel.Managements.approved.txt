@@ -1107,7 +1107,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports
 {
     public sealed class ActivitySummaryReportProvider : CrestApps.OrchardCore.Omnichannel.Managements.Reports.OmnichannelReportBase, CrestApps.OrchardCore.Reports.IReport, CrestApps.OrchardCore.Reports.IReportRunner
     {
-        public ActivitySummaryReportProvider(YesSql.ISession session, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignManager, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivitySourceOptions> activitySourceOptions, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.ActivitySummaryReportProvider> stringLocalizer) { }
+        public ActivitySummaryReportProvider(YesSql.ISession session, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignManager, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivitySourceOptions> activitySourceOptions, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.ActivitySummaryReportProvider> stringLocalizer, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Reports.ActivitySummaryReportProvider> logger = null) { }
         public static string Category { get; }
         public static OrchardCore.Localization.LocalizationSource Description { get; }
         public static OrchardCore.Localization.LocalizationSource DisplayName { get; }
@@ -1117,7 +1117,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports
     }
     public sealed class CampaignPerformanceReportProvider : CrestApps.OrchardCore.Omnichannel.Managements.Reports.OmnichannelReportBase, CrestApps.OrchardCore.Reports.IReport, CrestApps.OrchardCore.Reports.IReportRunner
     {
-        public CampaignPerformanceReportProvider(YesSql.ISession session, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignManager, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaignGroup> campaignGroupManager, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivitySourceOptions> activitySourceOptions, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.CampaignPerformanceReportProvider> stringLocalizer) { }
+        public CampaignPerformanceReportProvider(YesSql.ISession session, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignManager, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaignGroup> campaignGroupManager, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivitySourceOptions> activitySourceOptions, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.CampaignPerformanceReportProvider> stringLocalizer, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Reports.CampaignPerformanceReportProvider> logger = null) { }
         public static string Category { get; }
         public static OrchardCore.Localization.LocalizationSource Description { get; }
         public static OrchardCore.Localization.LocalizationSource DisplayName { get; }
@@ -1141,7 +1141,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports
     }
     public sealed class DispositionBreakdownReportProvider : CrestApps.OrchardCore.Omnichannel.Managements.Reports.OmnichannelReportBase, CrestApps.OrchardCore.Reports.IReport, CrestApps.OrchardCore.Reports.IReportRunner
     {
-        public DispositionBreakdownReportProvider(YesSql.ISession session, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignManager, CrestApps.Core.Services.INamedCatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> dispositionManager, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivitySourceOptions> activitySourceOptions, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.DispositionBreakdownReportProvider> stringLocalizer) { }
+        public DispositionBreakdownReportProvider(YesSql.ISession session, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignManager, CrestApps.Core.Services.INamedCatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> dispositionManager, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivitySourceOptions> activitySourceOptions, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.DispositionBreakdownReportProvider> stringLocalizer, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Reports.DispositionBreakdownReportProvider> logger = null) { }
         public static string Category { get; }
         public static OrchardCore.Localization.LocalizationSource Description { get; }
         public static OrchardCore.Localization.LocalizationSource DisplayName { get; }
@@ -1156,7 +1156,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports
     }
     public sealed class HandoffContainmentReportProvider : CrestApps.OrchardCore.Omnichannel.Managements.Reports.OmnichannelReportBase, CrestApps.OrchardCore.Reports.IReport, CrestApps.OrchardCore.Reports.IReportRunner
     {
-        public HandoffContainmentReportProvider(YesSql.ISession session, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.HandoffContainmentReportProvider> stringLocalizer) { }
+        public HandoffContainmentReportProvider(YesSql.ISession session, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.HandoffContainmentReportProvider> stringLocalizer, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Reports.HandoffContainmentReportProvider> logger = null) { }
         public static string Category { get; }
         public static OrchardCore.Localization.LocalizationSource Description { get; }
         public static OrchardCore.Localization.LocalizationSource DisplayName { get; }
@@ -1181,7 +1181,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports
     }
     public sealed class LeadConversionReportProvider : CrestApps.OrchardCore.Omnichannel.Managements.Reports.OmnichannelReportBase, CrestApps.OrchardCore.Reports.IReport, CrestApps.OrchardCore.Reports.IReportFilterMetadata, CrestApps.OrchardCore.Reports.IReportRunner
     {
-        public LeadConversionReportProvider(YesSql.ISession session, CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadSourceProvider sources, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.LeadConversionReportProvider> stringLocalizer) { }
+        public LeadConversionReportProvider(YesSql.ISession session, CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadSourceProvider sources, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.LeadConversionReportProvider> stringLocalizer, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Reports.LeadConversionReportProvider> logger = null) { }
         public System.Collections.Generic.IReadOnlyCollection<string> FilterNames { get; }
         public static string Category { get; }
         public static OrchardCore.Localization.LocalizationSource Description { get; }
@@ -1192,7 +1192,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports
     }
     public sealed class LeadFunnelReportProvider : CrestApps.OrchardCore.Omnichannel.Managements.Reports.OmnichannelReportBase, CrestApps.OrchardCore.Reports.IReport, CrestApps.OrchardCore.Reports.IReportFilterMetadata, CrestApps.OrchardCore.Reports.IReportRunner
     {
-        public LeadFunnelReportProvider(YesSql.ISession session, CrestApps.Core.Services.INamedCatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.LeadStatus> statuses, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.LeadFunnelReportProvider> stringLocalizer) { }
+        public LeadFunnelReportProvider(YesSql.ISession session, CrestApps.Core.Services.INamedCatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.LeadStatus> statuses, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.LeadFunnelReportProvider> stringLocalizer, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Reports.LeadFunnelReportProvider> logger = null) { }
         public System.Collections.Generic.IReadOnlyCollection<string> FilterNames { get; }
         public static string Category { get; }
         public static OrchardCore.Localization.LocalizationSource Description { get; }
@@ -1209,7 +1209,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports
     }
     public sealed class OpportunityPipelineReportProvider : CrestApps.OrchardCore.Omnichannel.Managements.Reports.OmnichannelReportBase, CrestApps.OrchardCore.Reports.IReport, CrestApps.OrchardCore.Reports.IReportFilterMetadata, CrestApps.OrchardCore.Reports.IReportRunner
     {
-        public OpportunityPipelineReportProvider(YesSql.ISession session, CrestApps.Core.Services.INamedCatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OpportunityStage> stages, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.OpportunityPipelineReportProvider> stringLocalizer) { }
+        public OpportunityPipelineReportProvider(YesSql.ISession session, CrestApps.Core.Services.INamedCatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OpportunityStage> stages, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.OpportunityPipelineReportProvider> stringLocalizer, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Reports.OpportunityPipelineReportProvider> logger = null) { }
         public System.Collections.Generic.IReadOnlyCollection<string> FilterNames { get; }
         public static string Category { get; }
         public static OrchardCore.Localization.LocalizationSource Description { get; }

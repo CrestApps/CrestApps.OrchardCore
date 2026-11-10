@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using CrestApps.OrchardCore.Asterisk.Models;
+using CrestApps.OrchardCore.Telephony.Telemetry;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
 using OrchardCore;
@@ -70,11 +71,17 @@ internal sealed class AsteriskPjsipCredentialIssuer : IAsteriskPjsipCredentialIs
 
         ValidateRequest(request);
 
-        await using var locker = await AcquireLockAsync();
-        var credential = await IssueCoreAsync(request, cancellationToken);
-        await SignalTenantAsync();
+        return await TelephonyTelemetry.MeasureSoftPhoneCredentialAsync(
+            AsteriskConstants.ProviderTechnicalName,
+            TelephonyTelemetry.CredentialIssue,
+            async () =>
+            {
+                await using var locker = await AcquireLockAsync();
+                var credential = await IssueCoreAsync(request, cancellationToken);
+                await SignalTenantAsync();
 
-        return credential;
+                return credential;
+            });
     }
 
     public async Task<AsteriskPjsipCredential> RotateAsync(

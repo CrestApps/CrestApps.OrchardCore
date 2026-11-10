@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Realtime;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.Omnichannel.Voice.Telemetry;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 
@@ -145,6 +146,43 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// </summary>
     /// <returns><see langword="true"/> when the call is being carried by a new session.</returns>
     private async Task<bool> ReconnectAsync(
+        LiveConversation live,
+        RealtimeVoiceConversationContext context,
+        int attempt,
+        CancellationToken callToken)
+    {
+        using var telemetry = VoiceTelemetry.StartSpan("crestapps.voice.ai.session.reconnect", context.Activity?.ItemId);
+
+        telemetry.SetSpanTag("crestapps.voice.ai.reconnect.attempt", attempt);
+
+        try
+        {
+            var reconnected = await ReconnectCoreAsync(live, context, attempt, callToken);
+
+            if (reconnected)
+            {
+                telemetry.Succeed();
+            }
+            else
+            {
+                telemetry.Fail("not_reconnected");
+            }
+
+            return reconnected;
+        }
+        catch (Exception ex)
+        {
+            telemetry.Fail(ex);
+
+            throw;
+        }
+        finally
+        {
+            VoiceTelemetry.RecordSessionReconnect(telemetry.Outcome);
+        }
+    }
+
+    private async Task<bool> ReconnectCoreAsync(
         LiveConversation live,
         RealtimeVoiceConversationContext context,
         int attempt,

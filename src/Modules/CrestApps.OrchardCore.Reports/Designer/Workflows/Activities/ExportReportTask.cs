@@ -52,6 +52,9 @@ public sealed class ExportReportTask : ReportTaskActivity<ExportReportTask>
     /// <inheritdoc/>
     public override LocalizedString DisplayText => S["Export Report"];
 
+    /// <inheritdoc/>
+    protected override string TelemetryName => "export";
+
     /// <summary>
     /// Gets or sets the export format, such as <c>csv</c> or <c>xlsx</c>.
     /// </summary>
@@ -85,7 +88,7 @@ public sealed class ExportReportTask : ReportTaskActivity<ExportReportTask>
         {
             _logger.LogWarning("The Export Report task of workflow '{WorkflowId}' found no report to export.", workflowContext.WorkflowId);
 
-            return Outcome("Failed");
+            return Finish("Failed");
         }
 
         var file = await _presenter.ExportAsync(design, await _reports.GetFilterValuesAsync(Filters, workflowContext), Format, CancellationToken.None);
@@ -94,7 +97,7 @@ public sealed class ExportReportTask : ReportTaskActivity<ExportReportTask>
         {
             _logger.LogWarning("The Export Report task of workflow '{WorkflowId}' could not export report '{ReportId}'.", workflowContext.WorkflowId, design.ItemId);
 
-            return Outcome("Failed");
+            return Finish("Failed");
         }
 
         var output = new Dictionary<string, object>(StringComparer.Ordinal)
@@ -118,7 +121,7 @@ public sealed class ExportReportTask : ReportTaskActivity<ExportReportTask>
             {
                 _logger.LogWarning("The Export Report task of workflow '{WorkflowId}' cannot save to the media library because the Media feature is off.", workflowContext.WorkflowId);
 
-                return Outcome("Failed");
+                return Finish("Failed");
             }
 
             var path = mediaStore.Combine(folder, file.FileName);
@@ -139,6 +142,6 @@ public sealed class ExportReportTask : ReportTaskActivity<ExportReportTask>
         workflowContext.Output[string.IsNullOrWhiteSpace(OutputName) ? DefaultOutputName : OutputName.Trim()] = output;
         workflowContext.LastResult = output;
 
-        return Outcome("Done");
+        return Finish("Done");
     }
 }

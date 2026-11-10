@@ -1,6 +1,7 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -21,7 +22,10 @@ namespace CrestApps.OrchardCore.AI.Services;
 public sealed class AIAlertRuleBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => DoWorkCoreAsync(run, serviceProvider, cancellationToken));
+
+    private static async Task DoWorkCoreAsync(MeasuredTaskRun run, IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         var store = serviceProvider.GetRequiredService<IAIAlertRuleStore>();
         var evaluator = serviceProvider.GetRequiredService<AIAlertRuleEvaluator>();
@@ -50,11 +54,22 @@ public sealed class AIAlertRuleBackgroundTask : IBackgroundTask
                 await store.UpdateAsync(rule, cancellationToken);
                 await session.SaveChangesAsync(cancellationToken);
                 await notifier.NotifyAsync(rule, change);
+
+                run.AddItems(1, "checked");
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 logger.LogError(ex, "AI alert rule '{RuleId}' could not be checked.", rule.ItemId.SanitizeLogValue());
+
+                run.AddItems(1, "failed");
+                run.ReportError(ex);
             }
+        }
+
+        if (run.Items.Count == 0)
+        {
+            // No rule was due.
+            run.Skip();
         }
     }
 }

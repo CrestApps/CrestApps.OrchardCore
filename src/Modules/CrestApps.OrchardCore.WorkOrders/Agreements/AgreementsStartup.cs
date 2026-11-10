@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Accounts;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.WorkOrders.Agreements.Drivers;
 using CrestApps.OrchardCore.WorkOrders.Agreements.ViewModels;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
@@ -90,7 +91,7 @@ public sealed class ServiceAgreementBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-        => serviceProvider.GetRequiredService<CrestApps.OrchardCore.WorkOrders.Core.Services.ServiceAgreementScheduler>().RunAsync(cancellationToken);
+        => this.RunAsync(async run => run.AddItems(await serviceProvider.GetRequiredService<CrestApps.OrchardCore.WorkOrders.Core.Services.ServiceAgreementScheduler>().RunAsync(cancellationToken), "created"));
 }
 
 /// <summary>

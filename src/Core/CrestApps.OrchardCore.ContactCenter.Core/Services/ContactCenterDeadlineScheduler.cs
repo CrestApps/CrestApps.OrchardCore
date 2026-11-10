@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -201,7 +203,7 @@ public sealed class ContactCenterDeadlineScheduler : IContactCenterDeadlineSched
             delay = TimeSpan.Zero;
         }
 
-        var entry = new Entry(work, conflictRetries);
+        var entry = new Entry(work, conflictRetries, dueUtc);
         Entry replaced = null;
 
         lock (_gate)
@@ -283,6 +285,8 @@ public sealed class ContactCenterDeadlineScheduler : IContactCenterDeadlineSched
         // Off the timer thread before anything else, so the timer queue is never held by a database round trip.
         await Task.Yield();
 
+        ContactCenterDiagnostics.RecordDeadlineFired(key, _clock.UtcNow - entry.DueUtc);
+
         DateTime? next = null;
 
         try
@@ -306,6 +310,7 @@ public sealed class ContactCenterDeadlineScheduler : IContactCenterDeadlineSched
             // failure: the work runs again on a fresh scope, which reads what the other transition did.
             if (entry.ConflictRetries >= MaximumConflictRetries)
             {
+                ContactCenterDiagnostics.RecordDeadlineFailed(key, "conflicts_exhausted");
                 _logger.LogWarning(ex, "The Contact Center deadline '{DeadlineKey}' kept losing write races to other transitions; the background sweep will pick it up.", key.SanitizeLogValue());
 
                 return;
@@ -316,6 +321,7 @@ public sealed class ContactCenterDeadlineScheduler : IContactCenterDeadlineSched
                 _logger.LogDebug("The Contact Center deadline '{DeadlineKey}' lost a write race to another transition and will run again shortly.", key.SanitizeLogValue());
             }
 
+            ContactCenterDiagnostics.RecordDeadlineConflictRetry(key);
             TrySchedule(key, _clock.UtcNow, work, replaceExisting: false, minimumDelay: MinimumRescheduleDelay, conflictRetries: entry.ConflictRetries + 1);
 
             return;
@@ -323,6 +329,7 @@ public sealed class ContactCenterDeadlineScheduler : IContactCenterDeadlineSched
         catch (Exception ex)
         {
             // The sweep is still the backstop for this deadline, so a failure here costs precision, not the work.
+            ContactCenterDiagnostics.RecordDeadlineFailed(key, CrestAppsOrchardCoreTelemetry.OutcomeError);
             _logger.LogError(ex, "The Contact Center deadline '{DeadlineKey}' could not be processed; the background sweep will pick it up.", key.SanitizeLogValue());
 
             return;
@@ -360,11 +367,17 @@ public sealed class ContactCenterDeadlineScheduler : IContactCenterDeadlineSched
 
     private sealed class Entry
     {
-        public Entry(Func<IServiceProvider, CancellationToken, Task<DateTime?>> work, int conflictRetries)
+        public Entry(Func<IServiceProvider, CancellationToken, Task<DateTime?>> work, int conflictRetries, DateTime dueUtc)
         {
             Work = work;
             ConflictRetries = conflictRetries;
+            DueUtc = dueUtc;
         }
+
+        /// <summary>
+        /// Gets when the deadline was due, which its run measures its lateness against.
+        /// </summary>
+        public DateTime DueUtc { get; }
 
         public Func<IServiceProvider, CancellationToken, Task<DateTime?>> Work { get; }
 

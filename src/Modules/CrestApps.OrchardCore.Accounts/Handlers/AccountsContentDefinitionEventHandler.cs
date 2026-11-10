@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Accounts.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentTypes.Events;
 using OrchardCore.Environment.Shell.Scope;
@@ -89,7 +90,7 @@ internal sealed class AccountsContentDefinitionEventHandler : IContentDefinition
 
         _scheduled = true;
 
-        ShellScope.AddDeferredTask(scope => scope.ServiceProvider
+        DeferredWork.Add("account_list_sync", scope => scope.ServiceProvider
             .GetRequiredService<AccountListSynchronizer>()
             .SynchronizeAsync());
     }

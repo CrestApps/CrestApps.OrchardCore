@@ -1,5 +1,6 @@
 using System.Data.Common;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -158,13 +159,17 @@ public sealed class ActivityQueueService : IActivityQueueService
 
         await _publisher.PublishAsync(addedEvent, cancellationToken);
 
+        var interaction = await _interactionManager.FindByActivityIdAsync(activityItemId, cancellationToken);
+
         await _auditRecorder.RecordQueueChangeAsync(
             ContactCenterConstants.Events.CallQueued,
             item,
-            await _interactionManager.FindByActivityIdAsync(activityItemId, cancellationToken),
+            interaction,
             item.QueueEnteredUtc,
             CallLifecycleReasons.Enqueued,
             cancellationToken: cancellationToken);
+
+        ContactCenterDiagnostics.RecordQueueEntered(item, interaction?.Channel);
 
         return item;
     }
@@ -237,14 +242,32 @@ public sealed class ActivityQueueService : IActivityQueueService
             SourceComponent = ContactCenterConstants.Components.Queues,
         }, cancellationToken);
 
+        var interaction = await _interactionManager.FindByActivityIdAsync(queueItem.ActivityItemId, cancellationToken);
+
         await _auditRecorder.RecordQueueChangeAsync(
             ContactCenterConstants.Events.CallDequeued,
             queueItem,
-            await _interactionManager.FindByActivityIdAsync(queueItem.ActivityItemId, cancellationToken),
+            interaction,
             queueItem.DequeuedUtc.Value,
             status.ToString(),
             cancellationToken: cancellationToken);
+
+        // A caller an agent had already taken stopped waiting then; only one still waiting leaves the queue here.
+        if (wasWaiting)
+        {
+            ContactCenterDiagnostics.RecordQueueExit(queueItem, ResolveQueueExit(status, interaction), interaction?.Channel, queueItem.DequeuedUtc.Value);
+        }
     }
+
+    // A caller whose call ended before anybody answered it hung up while waiting; anything else that takes waiting work
+    // out of a queue (a withdrawal, the dialer finishing it, recovery) is a removal. A caller sent to voicemail is named
+    // by the code that sends them, through ContactCenterDiagnostics.BeginQueueExit.
+    private static string ResolveQueueExit(QueueItemStatus status, Interaction interaction)
+        => status == QueueItemStatus.Completed
+            ? ContactCenterDiagnostics.QueueExitCompleted
+            : interaction is { EndedUtc: not null, AnsweredUtc: null }
+                ? ContactCenterDiagnostics.QueueExitAbandoned
+                : ContactCenterDiagnostics.QueueExitRemoved;
 
     /// <inheritdoc/>
     /// <remarks>
@@ -281,9 +304,10 @@ public sealed class ActivityQueueService : IActivityQueueService
         {
             throw;
         }
-        catch
+        catch (Exception ex)
         {
-            // Deliberately swallowed: see the remarks above.
+            // Deliberately swallowed: see the remarks above. Counted, so a provider that keeps refusing the stop shows.
+            ContactCenterDiagnostics.RecordHoldMusicStopFailed(ex);
         }
     }
 
@@ -365,6 +389,9 @@ public sealed class ActivityQueueService : IActivityQueueService
             fromQueue.ItemId,
             targetQueueId,
             cancellationToken);
+
+        ContactCenterDiagnostics.RecordQueueExit(queueItem, ContactCenterDiagnostics.QueueExitOverflowed, interaction?.Channel, now);
+        ContactCenterDiagnostics.RecordQueueOverflow(interaction?.Channel);
 
         queueItem.OverflowedFromQueueId = fromQueue.ItemId;
         queueItem.QueueId = targetQueueId;

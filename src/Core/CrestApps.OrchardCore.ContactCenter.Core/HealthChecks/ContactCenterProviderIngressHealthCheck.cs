@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.Webhooks.Core.Models;
 using CrestApps.OrchardCore.Webhooks.Core.Services;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -43,7 +44,12 @@ public sealed class ContactCenterProviderIngressHealthCheck : IHealthCheck
             var deadLettered = await _inboxStore.CountByStatusAsync(ProviderWebhookInboxStatus.DeadLettered, cancellationToken);
             var overdue = await _inboxStore.CountOverdueAsync(_clock.UtcNow, cancellationToken);
 
-            return BacklogHealthEvaluator.Evaluate("Contact Center provider ingress", deadLettered, overdue, _options);
+            var result = BacklogHealthEvaluator.Evaluate("Contact Center provider ingress", deadLettered, overdue, _options);
+
+            // The gauges report what this check read and decided, so a dashboard and the health endpoint agree.
+            ContactCenterDiagnostics.ObserveBacklog(ContactCenterDiagnostics.SubsystemProviderIngress, deadLettered, overdue, result.Status);
+
+            return result;
         }
         catch (Exception ex)
         {

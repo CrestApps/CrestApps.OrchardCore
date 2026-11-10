@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Workforce.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
@@ -18,6 +19,6 @@ public sealed class ShiftReminderBackgroundTask : IBackgroundTask
     /// <inheritdoc />
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        return serviceProvider.GetRequiredService<ShiftReminderService>().SendDueAsync(cancellationToken);
+        return this.RunAsync(async run => run.AddItems(await serviceProvider.GetRequiredService<ShiftReminderService>().SendDueAsync(cancellationToken), "sent"));
     }
 }

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Bookings.Models;
 using CrestApps.OrchardCore.Bookings.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell.Scope;
@@ -53,7 +54,7 @@ internal sealed class BookingWorkflowHandler : IBookingHandler
 
         var input = CreateInput(booking, context.PreviousStatus);
 
-        ShellScope.AddDeferredTask(async scope =>
+        DeferredWork.Add("booking_workflow", async scope =>
         {
             var workflowManager = scope.ServiceProvider.GetService<IWorkflowManager>();
 

@@ -23,20 +23,48 @@ public sealed partial class ReportQueryEngine
     }
 
     // The groups the data source computed, each as a row that stands for its rows, with how many after the fields of
-    // the plan; or null when the source can't group the report exactly.
+    // the plan; or null when the source can't group the report exactly. A grouped query records whether its source
+    // grouped it, or why it reads every row instead.
     private static async Task<List<object[]>> TryAggregateAsync(QueryRun run, CancellationToken cancellationToken)
+    {
+        if (!run.Plan.IsAggregated)
+        {
+            return null;
+        }
+
+        var (rows, reason) = await AggregateInSourceAsync(run, cancellationToken);
+
+        run.Activity?.SetTag("crestapps.report.pushdown_fallback", reason);
+        ReportTelemetry.RecordAggregatePushdown(run.Plan.DataSets.Count > 0 ? run.Plan.DataSets[0].Reference.Source : null, reason);
+
+        return rows;
+    }
+
+    // The groups the data source computed, or null and the reason, from a bounded set, why it could not group them.
+    private static async Task<(List<object[]> Rows, string Reason)> AggregateInSourceAsync(QueryRun run, CancellationToken cancellationToken)
     {
         var plan = run.Plan;
         var context = run.Context;
         var today = run.Today;
 
-        if (plan.DataSets.Count != 1 ||
-            plan.Joins.Count > 0 ||
-            plan.RowCalculations.Count > 0 ||
-            !plan.IsAggregated ||
-            plan.DataSets[0].Source is not IDataAggregateSource source)
+        if (plan.DataSets.Count != 1)
         {
-            return null;
+            return (null, "multiple_data_sets");
+        }
+
+        if (plan.Joins.Count > 0)
+        {
+            return (null, "joins");
+        }
+
+        if (plan.RowCalculations.Count > 0)
+        {
+            return (null, "row_calculations");
+        }
+
+        if (plan.DataSets[0].Source is not IDataAggregateSource source)
+        {
+            return (null, "not_supported");
         }
 
         var dataSet = plan.DataSets[0];
@@ -55,14 +83,14 @@ public sealed partial class ReportQueryEngine
 
             if (field is null || field.Kind != PlannedFieldKind.DataSetField || (filter.Filter.Definition.Exposed && UsesOptions(filter.Filter.Definition, field.DataType)))
             {
-                return null;
+                return (null, "filter");
             }
 
             var conditions = DataFilterPredicates.BuildExactConditions(field.FieldName, filter.Filter.Definition.Operator, field.DataType, filter.Values, context.ToUtc, today);
 
             if (conditions is null)
             {
-                return null;
+                return (null, "filter");
             }
 
             foreach (var condition in conditions)
@@ -78,12 +106,12 @@ public sealed partial class ReportQueryEngine
         {
             if (column.Field.Kind != PlannedFieldKind.DataSetField)
             {
-                return null;
+                return (null, "dimension");
             }
 
             if (!TryGetBucketSize(column.Definition.Transform, column.Field.DataType, out var size))
             {
-                return null;
+                return (null, "dimension");
             }
 
             // A field grouped several ways is grouped by the finest of them; grouping by the value itself is finest.
@@ -111,7 +139,7 @@ public sealed partial class ReportQueryEngine
                 column.Definition.Transform != DataFieldTransform.None ||
                 dimensions.ContainsKey(column.Field))
             {
-                return null;
+                return (null, "measure");
             }
 
             DataAggregate[] kinds = column.Definition.Aggregate switch
@@ -126,7 +154,7 @@ public sealed partial class ReportQueryEngine
 
             if (kinds is null)
             {
-                return null;
+                return (null, "measure");
             }
 
             if (!measured.TryGetValue(column.Field, out var set))
@@ -153,7 +181,7 @@ public sealed partial class ReportQueryEngine
 
             if (boundaries is null)
             {
-                return null;
+                return (null, "too_many_buckets");
             }
 
             query.Groups.Add(new DataAggregateGroup { Field = field.FieldName, Boundaries = boundaries.Utc });
@@ -177,7 +205,7 @@ public sealed partial class ReportQueryEngine
 
         if (table is null || table.Any(row => row is null || row.Length != query.Groups.Count + query.Measures.Count))
         {
-            return null;
+            return (null, "declined");
         }
 
         var rows = new List<object[]>(table.Count);
@@ -243,7 +271,7 @@ public sealed partial class ReportQueryEngine
         run.SourceRows = total;
         run.FilteredRows = total;
 
-        return rows;
+        return (rows, null);
     }
 
     // How a dimension groups a field: by its value (no transform), or by local hour, day, or month for a date transform;

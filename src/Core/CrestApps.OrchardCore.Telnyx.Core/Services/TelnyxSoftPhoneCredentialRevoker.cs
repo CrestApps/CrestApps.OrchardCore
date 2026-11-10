@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Telemetry;
 
 namespace CrestApps.OrchardCore.Telnyx.Services;
 
@@ -23,9 +24,15 @@ public sealed class TelnyxSoftPhoneCredentialRevoker : ISoftPhoneCredentialRevok
 
     /// <inheritdoc/>
     public Task<int> RevokeForUserAsync(string userId, string reason, CancellationToken cancellationToken = default)
-        => _credentialIssuer.RevokeForUserAsync(userId, reason, cancellationToken);
+        => TelephonyTelemetry.MeasureSoftPhoneCredentialAsync(
+            ProviderName,
+            TelephonyTelemetry.CredentialRevoke,
+            () => _credentialIssuer.RevokeForUserAsync(userId, reason, cancellationToken));
 
     /// <inheritdoc/>
     public Task<bool> RevokeCredentialAsync(string userId, string credentialId, string reason, CancellationToken cancellationToken = default)
-        => _credentialIssuer.RevokeCredentialAsync(userId, credentialId, reason, cancellationToken);
+        => TelephonyTelemetry.MeasureSoftPhoneCredentialAsync(
+            ProviderName,
+            TelephonyTelemetry.CredentialRevoke,
+            () => _credentialIssuer.RevokeCredentialAsync(userId, credentialId, reason, cancellationToken));
 }

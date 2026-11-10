@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Memberships.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
@@ -16,5 +17,12 @@ namespace CrestApps.OrchardCore.Memberships.BackgroundTasks;
 public sealed class MembershipsBackgroundTask : IBackgroundTask
 {
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-        => serviceProvider.GetRequiredService<MembershipService>().ExpireAsync(200, cancellationToken);
+    {
+        return this.RunAsync(async run =>
+        {
+            var ended = await serviceProvider.GetRequiredService<MembershipService>().ExpireAsync(200, cancellationToken);
+
+            run.AddItems(ended, "ended");
+        });
+    }
 }

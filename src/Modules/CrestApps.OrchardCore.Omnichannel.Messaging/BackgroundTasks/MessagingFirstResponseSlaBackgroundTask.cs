@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -20,23 +21,27 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.BackgroundTasks;
 public sealed class MessagingFirstResponseSlaBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        var sweep = serviceProvider.GetRequiredService<MessagingFirstResponseSlaSweep>();
-        var logger = serviceProvider.GetRequiredService<ILogger<MessagingFirstResponseSlaBackgroundTask>>();
+        return this.RunAsync(async run =>
+        {
+            var sweep = serviceProvider.GetRequiredService<MessagingFirstResponseSlaSweep>();
+            var logger = serviceProvider.GetRequiredService<ILogger<MessagingFirstResponseSlaBackgroundTask>>();
 
-        try
-        {
-            await sweep.RunAndArmAsync(cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            // The next run tries again; a failed pass must not take the background loop down with it.
-            logger.LogError(ex, "An first-response escalation pass failed.");
-        }
+            try
+            {
+                await sweep.RunAndArmAsync(cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                // The next run tries again; a failed pass must not take the background loop down with it.
+                logger.LogError(ex, "An first-response escalation pass failed.");
+                run.ReportError(ex);
+            }
+        });
     }
 }

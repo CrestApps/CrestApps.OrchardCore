@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.WorkQueues;
 using CrestApps.OrchardCore.YesSql.Core.WorkQueues;
 using Microsoft.AspNetCore.Http;
@@ -171,6 +173,8 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
             return;
         }
 
+        using var activity = StartDispatch(interactionEvent, ContactCenterDiagnostics.DeliveryFirst);
+
         (var firstError, var handlerUnavailable) = await RunHandlersAsync(interactionEvent, claimed, cancellationToken);
         await SettleInFreshScopeAsync(
             claimed,
@@ -179,6 +183,8 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
             firstError,
             handlerUnavailable,
             cancellationToken);
+
+        ContactCenterDiagnostics.RecordOutboxDispatch(activity, ContactCenterDiagnostics.DeliveryFirst, firstError is null);
 
         if (firstError is not null)
         {
@@ -203,6 +209,11 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         var now = _clock.UtcNow;
         var due = await _outboxStore.GetDueAsync(now, MaxBatchSize, cancellationToken);
         var redelivered = 0;
+
+        // The batch is already in hand, so how far behind the outbox is costs no extra read.
+        ContactCenterDiagnostics.ObserveOutboxPendingAge(due.Count == 0
+            ? TimeSpan.Zero
+            : now - due.Min(message => message.CreatedUtc));
 
         foreach (var message in due)
         {
@@ -281,15 +292,21 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
             return false;
         }
 
+        using var activity = StartDispatch(interactionEvent, ContactCenterDiagnostics.DeliveryRetry);
+
         (var firstError, var handlerUnavailable) = await RunHandlersAsync(interactionEvent, message, cancellationToken);
 
-        return await SettleInFreshScopeAsync(
+        var completed = await SettleInFreshScopeAsync(
             message,
             ownerToken,
             fenceToken,
             firstError,
             handlerUnavailable,
             cancellationToken);
+
+        ContactCenterDiagnostics.RecordOutboxDispatch(activity, ContactCenterDiagnostics.DeliveryRetry, firstError is null);
+
+        return completed;
     }
 
     /// <inheritdoc/>
@@ -492,6 +509,8 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
                 continue;
             }
 
+            var handlerStarted = Stopwatch.GetTimestamp();
+
             try
             {
                 // Commit each handler effect and its replay marker in an isolated child scope. A handler
@@ -500,14 +519,18 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
                 await _scopeExecutor.ExecuteAsync<IContactCenterOutbox>(outbox =>
                     outbox.DispatchHandlerAsync(interactionEvent, handlerId, cancellationToken));
 
+                ContactCenterDiagnostics.RecordOutboxHandler(handlerId, Stopwatch.GetElapsedTime(handlerStarted), exception: null);
                 completedHandlerIds.Add(handlerId);
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
             {
+                ContactCenterDiagnostics.RecordOutboxHandler(handlerId, Stopwatch.GetElapsedTime(handlerStarted), ex);
+
                 throw;
             }
             catch (Exception ex)
             {
+                ContactCenterDiagnostics.RecordOutboxHandler(handlerId, Stopwatch.GetElapsedTime(handlerStarted), ex);
                 handlerFailed = true;
                 firstError ??= ex.Message;
 
@@ -525,6 +548,24 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         message.CompletedHandlerTypes = completedHandlerIds.ToArray();
 
         return (firstError, handlerUnavailable && !handlerFailed);
+    }
+
+    // The span links to the trace that published the event, which the publisher stamped on it, rather than joining
+    // whatever request or background pass happens to be delivering it now.
+    private Activity StartDispatch(InteractionEvent interactionEvent, string delivery)
+    {
+        if (interactionEvent.RecordedUtc != default)
+        {
+            ContactCenterDiagnostics.RecordOutboxLag(delivery, _clock.UtcNow - interactionEvent.RecordedUtc);
+        }
+
+        var traceParent = interactionEvent.EntityProperties?[TraceContextPropagation.TraceParentKey]?.GetValue<string>();
+        var activity = ContactCenterDiagnostics.StartOutboxDispatch(interactionEvent.EventType, delivery, traceParent);
+
+        activity?.SetTag("crestapps.contactcenter.event.id", interactionEvent.ItemId);
+        activity?.SetTag("crestapps.contactcenter.interaction.id", interactionEvent.InteractionId);
+
+        return activity;
     }
 
     private async Task<bool> SettleInFreshScopeAsync(

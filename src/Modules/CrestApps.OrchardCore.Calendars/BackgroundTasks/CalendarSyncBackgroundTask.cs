@@ -1,4 +1,6 @@
 using CrestApps.OrchardCore.Calendars.Core.External;
+using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -19,23 +21,55 @@ namespace CrestApps.OrchardCore.Calendars.BackgroundTasks;
 public sealed class CalendarSyncBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc />
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        var calendarIds = await serviceProvider.GetRequiredService<CalendarSyncService>().ListDueAsync(cancellationToken);
-        var logger = serviceProvider.GetRequiredService<ILogger<CalendarSyncBackgroundTask>>();
-
-        foreach (var calendarId in calendarIds)
+        return this.RunAsync(async run =>
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            var calendarIds = await serviceProvider.GetRequiredService<CalendarSyncService>().ListDueAsync(cancellationToken);
+            var logger = serviceProvider.GetRequiredService<ILogger<CalendarSyncBackgroundTask>>();
 
-            try
+            if (calendarIds.Count == 0)
             {
-                await ShellScope.UsingChildScopeAsync(scope => scope.ServiceProvider.GetRequiredService<CalendarSyncService>().SyncAsync(calendarId, cancellationToken));
+                run.Skip();
+
+                return;
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+
+            foreach (var calendarId in calendarIds)
             {
-                logger.LogError(ex, "Synchronizing the calendar '{CalendarId}' with its external calendar failed.", calendarId);
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // The synchronization records its own failure on the subscription and returns nothing; a calendar
+                // deleted since it was listed is skipped, not failed.
+                var result = "failed";
+
+                try
+                {
+                    await ShellScope.UsingChildScopeAsync(async scope =>
+                    {
+                        var calendar = await scope.ServiceProvider.GetRequiredService<ICalendarService>().FindByIdAsync(calendarId, cancellationToken);
+
+                        if (calendar is null)
+                        {
+                            result = "skipped";
+
+                            return;
+                        }
+
+                        if (await scope.ServiceProvider.GetRequiredService<CalendarSyncService>().SyncAsync(calendar, cancellationToken) is not null)
+                        {
+                            result = "synced";
+                        }
+                    });
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    run.ReportError(ex);
+                    logger.LogError(ex, "Synchronizing the calendar '{CalendarId}' with its external calendar failed.", calendarId);
+                }
+
+                run.AddItems(1, result);
             }
-        }
+        });
     }
 }

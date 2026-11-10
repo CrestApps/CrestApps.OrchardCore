@@ -1,6 +1,7 @@
 using CrestApps.Core.AI.Documents;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell.Scope;
@@ -67,7 +68,7 @@ public sealed class OrchardAIChatDocumentEventHandler : IAIChatDocumentEventHand
         var uploadedDocuments = _uploadedDocuments;
         var removedChunkIds = _removedChunkIds;
 
-        ShellScope.AddDeferredTask(scope => ProcessAsync(scope, uploadedDocuments, removedChunkIds));
+        DeferredWork.Add("ai_chat_document_indexing", scope => ProcessAsync(scope, uploadedDocuments, removedChunkIds));
     }
 
     private static async Task ProcessAsync(ShellScope scope, List<AIChatUploadedDocument> uploadedDocuments, List<string> removedChunkIds)

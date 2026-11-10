@@ -2,6 +2,7 @@ using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Handlers;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Tooling;
+using CrestApps.OrchardCore.AI.Core.Telemetry;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -174,6 +175,9 @@ public static class AIConversationTools
 
                 return tool is AIFunction function and not TimeLimitedAIFunction
                     ? new TimeLimitedAIFunction(function, timeout, started, finished)
+                    {
+                        ToolSource = AIModuleTelemetry.GetToolSource(entry.Source),
+                    }
                     : tool;
             },
         };

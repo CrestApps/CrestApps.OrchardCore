@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Security.Claims;
 using System.Text.Json;
+using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Reports.Designer.Models;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
@@ -111,6 +113,11 @@ public sealed class ReportDesignRunner
         {
             _logger.LogWarning("Designed report '{ReportId}' cannot run because its owner '{OwnerId}' no longer exists or is disabled.", design.ItemId, design.OwnerId);
 
+            var tags = ReportTelemetry.Tags(options?.Source);
+
+            tags.Add(CrestAppsOrchardCoreTelemetry.ReasonTag, "owner_missing");
+            ReportTelemetry.Add(ReportTelemetry.RejectedRuns, tags);
+
             var result = new ReportRunResult();
             result.Errors.Add(S["This report cannot run because its owner no longer has an active account. Ask someone who designs reports to clone it and share the copy again."]);
 
@@ -184,9 +191,10 @@ public sealed class ReportDesignRunner
 
         var selections = options?.Selections ?? new Dictionary<string, IList<string>>(StringComparer.Ordinal);
         var only = options?.VisualIds;
-        var source = string.IsNullOrEmpty(options?.Source) ? ReportRunOptions.OtherSource : options.Source;
+        var source = ReportRunSources.Normalize(options?.Source);
         using var activity = ReportTelemetry.Start("report.run");
         var started = Stopwatch.GetTimestamp();
+        var queries = new RunQueries();
 
         activity?.SetTag(ReportTelemetry.ReportIdTag, design.ItemId);
         activity?.SetTag(ReportTelemetry.ReportTitleTag, design.DisplayText);
@@ -194,13 +202,14 @@ public sealed class ReportDesignRunner
         activity?.SetTag(ReportTelemetry.SelectionTag, selections.Values.Any(keys => keys?.Count > 0));
         activity?.SetTag("crestapps.report.refreshed_visuals", only is null ? null : string.Join(',', only));
 
-        var outcome = "failure";
+        var outcome = CrestAppsOrchardCoreTelemetry.OutcomeError;
+        ReportRunResult result = null;
 
         try
         {
-            var result = await RunCoreAsync(design, dataUser, filterValues, period, selections, only, source, cancellationToken);
+            result = await RunCoreAsync(design, dataUser, filterValues, period, selections, only, source, queries, cancellationToken);
 
-            outcome = result.Errors.Count > 0 ? "failure" : "success";
+            outcome = result.Errors.Count > 0 ? CrestAppsOrchardCoreTelemetry.OutcomeError : CrestAppsOrchardCoreTelemetry.OutcomeOk;
 
             activity?.SetTag("crestapps.report.rows.returned", result.RowCount);
             activity?.SetTag("crestapps.report.warnings", result.Warnings.Count);
@@ -214,31 +223,97 @@ public sealed class ReportDesignRunner
         }
         catch (Exception exception)
         {
-            outcome = exception is OperationCanceledException ? "canceled" : "failure";
+            outcome = ReportTelemetry.GetOutcome(exception);
             ReportTelemetry.Fail(activity, exception);
 
             throw;
         }
         finally
         {
-            activity?.SetTag(ReportTelemetry.OutcomeTag, outcome);
+            var elapsed = Stopwatch.GetElapsedTime(started);
 
-            if (ReportTelemetry.RunDuration.Enabled || ReportTelemetry.Failures.Enabled)
-            {
-                var tags = new TagList
-                {
-                    { ReportTelemetry.ReportIdTag, design.ItemId },
-                    { ReportTelemetry.RunSourceTag, source },
-                    { ReportTelemetry.OutcomeTag, outcome },
-                };
+            activity?.SetTag(CrestAppsOrchardCoreTelemetry.OutcomeTag, outcome);
+            activity?.SetTag("crestapps.report.queries", queries.Executed);
+            activity?.SetTag("crestapps.report.queries.failed", queries.Invalid + queries.Failed);
+            RecordRun(source, outcome, elapsed, queries);
+            LogRun(design, source, elapsed, result);
+        }
+    }
 
-                ReportTelemetry.RunDuration.Record(Stopwatch.GetElapsedTime(started).TotalSeconds, tags);
+    // A run counts once in the run duration, and once among the failures at the run level when it failed; its queries
+    // count in the queries histogram, and those that did not run in the skipped queries.
+    private static void RecordRun(string source, string outcome, TimeSpan elapsed, RunQueries queries)
+    {
+        var tags = ReportTelemetry.Tags(source);
 
-                if (outcome == "failure")
-                {
-                    ReportTelemetry.Failures.Add(1, tags);
-                }
-            }
+        if (ReportTelemetry.RunDuration.Enabled)
+        {
+            var durationTags = tags;
+
+            durationTags.Add(CrestAppsOrchardCoreTelemetry.OutcomeTag, outcome);
+            ReportTelemetry.RunDuration.Record(elapsed.TotalSeconds, durationTags);
+        }
+
+        if (outcome is CrestAppsOrchardCoreTelemetry.OutcomeError or CrestAppsOrchardCoreTelemetry.OutcomeTimeout && ReportTelemetry.Failures.Enabled)
+        {
+            var failureTags = tags;
+
+            failureTags.Add(ReportTelemetry.LevelTag, ReportTelemetry.LevelRun);
+            ReportTelemetry.Failures.Add(1, failureTags);
+        }
+
+        if (ReportTelemetry.RunQueries.Enabled)
+        {
+            ReportTelemetry.RunQueries.Record(queries.Executed, tags);
+        }
+
+        if (ReportTelemetry.SkippedQueries.Enabled)
+        {
+            AddSkipped(tags, "invalid", queries.Invalid);
+            AddSkipped(tags, "failed", queries.Skipped);
+        }
+    }
+
+    private static void AddSkipped(TagList tags, string reason, int count)
+    {
+        if (count <= 0)
+        {
+            return;
+        }
+
+        tags.Add(CrestAppsOrchardCoreTelemetry.ReasonTag, reason);
+        ReportTelemetry.SkippedQueries.Add(count, tags);
+    }
+
+    // A query whose plan is invalid counts once among the failures at the query level: the engine never runs it, so it
+    // does not count it.
+    private static void RecordQueryFailure(string source)
+    {
+        if (!ReportTelemetry.Failures.Enabled)
+        {
+            return;
+        }
+
+        var tags = ReportTelemetry.Tags(source);
+
+        tags.Add(ReportTelemetry.LevelTag, ReportTelemetry.LevelQuery);
+        ReportTelemetry.Failures.Add(1, tags);
+    }
+
+    private void LogRun(ReportDesign design, string source, TimeSpan elapsed, ReportRunResult result)
+    {
+        if (result is null)
+        {
+            return;
+        }
+
+        if (result.Errors.Count > 0)
+        {
+            ReportsModuleLog.RunEndedWithErrors(_logger, design.ItemId.SanitizeLogValue(), source, (long)elapsed.TotalMilliseconds, result.Errors.Count);
+        }
+        else if (elapsed > ReportTelemetry.SlowRunThreshold)
+        {
+            ReportsModuleLog.SlowRun(_logger, design.ItemId.SanitizeLogValue(), source, (long)elapsed.TotalMilliseconds, (long)ReportTelemetry.SlowRunThreshold.TotalMilliseconds, result.RowCount, result.Warnings.Count);
         }
     }
 
@@ -250,6 +325,7 @@ public sealed class ReportDesignRunner
         IDictionary<string, IList<string>> selections,
         ISet<string> only,
         string source,
+        RunQueries stats,
         CancellationToken cancellationToken)
     {
         var result = new ReportRunResult();
@@ -329,14 +405,20 @@ public sealed class ReportDesignRunner
             }
             catch (ReportQueryException exception)
             {
+                RecordQueryFailure(source);
+
                 if (AddErrors(job, exception, result))
                 {
+                    stats.Invalid++;
+
                     return result;
                 }
             }
 
             if (job.Plan is null)
             {
+                stats.Invalid++;
+
                 if (job.IsMain)
                 {
                     return result;
@@ -348,10 +430,20 @@ public sealed class ReportDesignRunner
             context.SharedReads.Register(job.Plan);
         }
 
-        foreach (var job in jobs.Where(job => job.Plan is not null && !job.Skipped))
+        foreach (var job in jobs.Where(job => job.Plan is not null))
         {
+            // The other runs of a query that failed are not run.
+            if (job.Skipped)
+            {
+                stats.Skipped++;
+
+                continue;
+            }
+
             try
             {
+                stats.Executed++;
+
                 var queryResult = await RunQueryAsync(job, job.IsMain && visuals.Count == 0, context, result, sections, selections, cancellationToken);
 
                 if (job.GivesRows)
@@ -363,6 +455,8 @@ public sealed class ReportDesignRunner
             }
             catch (ReportQueryException exception)
             {
+                stats.Failed++;
+
                 if (AddErrors(job, exception, result))
                 {
                     return result;
@@ -443,6 +537,8 @@ public sealed class ReportDesignRunner
 
         if (!plan.IsValid)
         {
+            RecordQueryFailure(context.Source);
+
             foreach (var error in plan.Errors)
             {
                 if (isMain)
@@ -704,6 +800,19 @@ public sealed class ReportDesignRunner
         public ReportQueryPlan Plan { get; set; }
 
         public bool Skipped { get; set; }
+    }
+
+    // The queries of one run: those that ran, those whose plan is invalid, those that failed, and the other runs of a
+    // failed query that were skipped.
+    private sealed class RunQueries
+    {
+        public int Executed { get; set; }
+
+        public int Invalid { get; set; }
+
+        public int Failed { get; set; }
+
+        public int Skipped { get; set; }
     }
 
     /// <summary>

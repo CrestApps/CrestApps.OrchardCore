@@ -10,7 +10,7 @@ public sealed class AsteriskRealtimeConnectivityMetricsTests
     {
         // Arrange
         const string providerName = "asterisk-a";
-        using var probe = new CounterProbe("asterisk.realtime.connected", providerName);
+        using var probe = new CounterProbe("crestapps.asterisk.realtime.connections", providerName);
 
         // Act
         AsteriskDiagnostics.RecordRealtimeConnected(providerName);
@@ -25,7 +25,7 @@ public sealed class AsteriskRealtimeConnectivityMetricsTests
     {
         // Arrange
         const string providerName = "asterisk-b";
-        using var probe = new CounterProbe("asterisk.realtime.reconnect_attempted", providerName);
+        using var probe = new CounterProbe("crestapps.asterisk.realtime.reconnect_attempts", providerName);
 
         // Act
         AsteriskDiagnostics.RecordRealtimeReconnectAttempted(providerName);
@@ -38,7 +38,7 @@ public sealed class AsteriskRealtimeConnectivityMetricsTests
     public void RecordRealtimeConnected_TagsMeasurementWithProvider_SoAnotherProviderIsNotCounted()
     {
         // Arrange
-        using var probe = new CounterProbe("asterisk.realtime.connected", "asterisk-watched");
+        using var probe = new CounterProbe("crestapps.asterisk.realtime.connections", "asterisk-watched");
 
         // Act
         AsteriskDiagnostics.RecordRealtimeConnected("asterisk-other");

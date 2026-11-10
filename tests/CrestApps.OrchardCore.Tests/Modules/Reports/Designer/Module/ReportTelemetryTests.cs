@@ -2,15 +2,18 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Globalization;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Designer.Models;
 using CrestApps.OrchardCore.Reports.Designer.Services;
+using CrestApps.OrchardCore.Tests.Telemetry.Reports;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Reports.Designer.Module;
 
 /// <summary>
 /// A report run emits spans for itself and its phases, and metrics, under the report telemetry source and meter.
 /// </summary>
+[Collection(nameof(ReportTelemetryCollection))]
 public sealed class ReportTelemetryTests : IDisposable
 {
     private readonly CultureInfo _culture = CultureInfo.CurrentCulture;
@@ -52,6 +55,10 @@ public sealed class ReportTelemetryTests : IDisposable
         };
         ActivitySource.AddActivityListener(activities);
 
+        // The metrics never carry the report identifier, so the measurements of this run are told apart by its trace.
+        using var parent = new Activity("report-telemetry-test").Start();
+        var traceId = parent.TraceId;
+
         var measurements = new ConcurrentQueue<(string Instrument, double Value, Dictionary<string, object> Tags)>();
         using var meters = new MeterListener
         {
@@ -65,6 +72,11 @@ public sealed class ReportTelemetryTests : IDisposable
         };
         void Record(Instrument instrument, double value, ReadOnlySpan<KeyValuePair<string, object>> tags)
         {
+            if (Activity.Current?.TraceId != traceId)
+            {
+                return;
+            }
+
             var values = new Dictionary<string, object>(StringComparer.Ordinal);
 
             foreach (var tag in tags)
@@ -72,10 +84,7 @@ public sealed class ReportTelemetryTests : IDisposable
                 values[tag.Key] = tag.Value;
             }
 
-            if (Equals(values.GetValueOrDefault(ReportTelemetry.ReportIdTag), reportId))
-            {
-                measurements.Enqueue((instrument.Name, value, values));
-            }
+            measurements.Enqueue((instrument.Name, value, values));
         }
 
         meters.SetMeasurementEventCallback<double>((instrument, value, tags, _) => Record(instrument, value, tags));
@@ -99,7 +108,8 @@ public sealed class ReportTelemetryTests : IDisposable
         Assert.Equal("Admin", root.GetTagItem(ReportTelemetry.RunSourceTag));
         Assert.Equal("Dashboard", root.GetTagItem(ReportTelemetry.ReportTitleTag));
         Assert.Equal(true, root.GetTagItem(ReportTelemetry.SelectionTag));
-        Assert.Equal("success", root.GetTagItem(ReportTelemetry.OutcomeTag));
+        Assert.Equal(CrestAppsOrchardCoreTelemetry.OutcomeOk, root.GetTagItem(CrestAppsOrchardCoreTelemetry.OutcomeTag));
+        Assert.Null(root.GetTagItem("crestapps.report.outcome"));
 
         // The query spans are children of the run, one for the main query and one for the chart's.
         var queries = spans.Where(span => span.OperationName == "report.query").ToList();
@@ -113,10 +123,22 @@ public sealed class ReportTelemetryTests : IDisposable
         Assert.All(reads, span => Assert.Equal(5L, span.GetTagItem("crestapps.report.rows.read")));
         Assert.All(reads, span => Assert.Equal("Order", span.GetTagItem(ReportTelemetry.DataSetTag)));
 
-        Assert.Single(measurements, measurement => measurement.Instrument == "crestapps.report.run.duration");
-        Assert.Equal(2, measurements.Count(measurement => measurement.Instrument == "crestapps.report.query.duration"));
+        var runDuration = Assert.Single(measurements, measurement => measurement.Instrument == "crestapps.report.run.duration");
+        Assert.Equal("Admin", runDuration.Tags[ReportTelemetry.RunSourceTag]);
+        Assert.Equal(CrestAppsOrchardCoreTelemetry.OutcomeOk, runDuration.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag]);
+        Assert.False(runDuration.Tags.ContainsKey("crestapps.report.outcome"));
+
+        var queryDurations = measurements.Where(measurement => measurement.Instrument == "crestapps.report.query.duration").ToList();
+        Assert.Equal(2, queryDurations.Count);
+        Assert.All(queryDurations, measurement => Assert.Equal(CrestAppsOrchardCoreTelemetry.OutcomeOk, measurement.Tags[CrestAppsOrchardCoreTelemetry.OutcomeTag]));
+
         Assert.Equal(5d, measurements.Where(measurement => measurement.Instrument == "crestapps.report.rows.read").Sum(measurement => measurement.Value));
         Assert.Single(measurements, measurement => measurement.Instrument == "crestapps.report.reads.shared");
+        Assert.Equal(2d, Assert.Single(measurements, measurement => measurement.Instrument == "crestapps.report.run.queries").Value);
+        Assert.DoesNotContain(measurements, measurement => measurement.Instrument == "crestapps.report.run.failures");
+
+        // No metric carries the report, the query or the data set: they are span tags only.
+        Assert.DoesNotContain(measurements.SelectMany(measurement => measurement.Tags.Keys), CrestAppsOrchardCoreTelemetry.BannedMetricTagKeys.Contains);
     }
 
     [Fact]
@@ -125,7 +147,7 @@ public sealed class ReportTelemetryTests : IDisposable
         // Act
         var activity = ReportTelemetry.Start("report.unheard");
 
-        // Assert: nothing else in the test project listens to the report source.
+        // Assert: the tests that listen to the report source are in this collection, which runs on its own.
         Assert.Null(activity);
     }
 }

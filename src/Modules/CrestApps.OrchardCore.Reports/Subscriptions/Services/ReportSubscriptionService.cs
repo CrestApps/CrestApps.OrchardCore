@@ -1,5 +1,8 @@
+using System.Diagnostics;
 using System.Net;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
+using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Designer.Services;
 using CrestApps.OrchardCore.Reports.Designer.Workflows;
 using CrestApps.OrchardCore.Reports.Models;
@@ -97,49 +100,98 @@ public sealed class ReportSubscriptionService
     {
         ArgumentNullException.ThrowIfNull(subscription);
 
-        var timeZone = await GetTimeZoneAsync();
-        var sent = false;
+        var trigger = reschedule ? ReportTelemetry.TriggerSchedule : ReportTelemetry.TriggerManual;
+        var tags = new TagList
+        {
+            { CrestAppsOrchardCoreTelemetry.TriggerTag, trigger },
+        };
+
+        using var telemetry = TelemetryScope.Start(ReportTelemetry.ActivitySource, "report.subscription.send", ReportTelemetry.SubscriptionDuration, tags);
+        string reason = null;
+
+        telemetry.SetSpanTag(ReportTelemetry.SubscriptionIdTag, subscription.ItemId);
 
         try
         {
-            subscription.LastError = await TrySendAsync(subscription, runUtc, timeZone, cancellationToken);
-            sent = subscription.LastError is null;
+            var timeZone = await GetTimeZoneAsync();
+            var sent = false;
+
+            try
+            {
+                (subscription.LastError, reason) = await TrySendAsync(subscription, runUtc, timeZone, cancellationToken);
+                sent = subscription.LastError is null;
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+            {
+                // A timeout of the email provider or of a report is a failure of this subscription, not a shutdown.
+                _logger.LogError(exception, "Report subscription '{SubscriptionId}' couldn't run its report.", subscription.ItemId);
+                subscription.LastError = S["The report couldn't run."];
+                reason = "exception";
+                telemetry.Fail(exception);
+            }
+
+            if (sent)
+            {
+                telemetry.Succeed();
+            }
+            else if (reason is not "exception")
+            {
+                // A business failure is only stored on the subscription; it is measured too, by its reason.
+                telemetry.SetSpanTag(CrestAppsOrchardCoreTelemetry.ReasonTag, reason);
+
+                if (reason == "send_failed")
+                {
+                    telemetry.Fail(reason);
+                }
+                else
+                {
+                    telemetry.SetOutcome(CrestAppsOrchardCoreTelemetry.OutcomeSkipped);
+                }
+            }
+
+            subscription.LastRunUtc = runUtc;
+
+            if (reschedule)
+            {
+                subscription.NextRunUtc = ReportSubscriptionSchedule.GetNextRunUtc(subscription, runUtc, timeZone);
+            }
+
+            subscription.ModifiedUtc = _clock.UtcNow;
+            await _store.UpdateAsync(subscription, cancellationToken);
+
+            return sent;
         }
-        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        catch (Exception exception)
         {
-            // A timeout of the email provider or of a report is a failure of this subscription, not a shutdown.
-            _logger.LogError(exception, "Report subscription '{SubscriptionId}' couldn't run its report.", subscription.ItemId);
-            subscription.LastError = S["The report couldn't run."];
+            // Saving the subscription, or a cancellation, ends the run too.
+            telemetry.Fail(exception);
+            reason = exception is OperationCanceledException ? null : "exception";
+
+            throw;
         }
-
-        subscription.LastRunUtc = runUtc;
-
-        if (reschedule)
+        finally
         {
-            subscription.NextRunUtc = ReportSubscriptionSchedule.GetNextRunUtc(subscription, runUtc, timeZone);
+            ReportTelemetry.RecordSubscriptionSend(telemetry.Outcome, reason, trigger);
         }
-
-        subscription.ModifiedUtc = _clock.UtcNow;
-        await _store.UpdateAsync(subscription, cancellationToken);
-
-        return sent;
     }
 
-    private async Task<string> TrySendAsync(ReportSubscription subscription, DateTime runUtc, TimeZoneInfo timeZone, CancellationToken cancellationToken)
+    // Sends a subscription's email. Returns, when nothing was sent, the error to show on the subscription and the
+    // bounded reason that tags its telemetry.
+    private async Task<(string Error, string Reason)> TrySendAsync(ReportSubscription subscription, DateTime runUtc, TimeZoneInfo timeZone, CancellationToken cancellationToken)
     {
         if (_emailService is null)
         {
-            return S["The site's email isn't set up."];
+            return (S["The site's email isn't set up."], "no_email");
         }
 
         if (string.IsNullOrWhiteSpace(subscription.Recipients))
         {
-            return S["It has no recipients."];
+            return (S["It has no recipients."], "no_recipients");
         }
 
         if (_reports.GetDescriptor(subscription.ReportName) is not { } descriptor)
         {
-            return S["The report {0} isn't available; its feature may be off.", subscription.ReportName];
+            return (S["The report {0} isn't available; its feature may be off.", subscription.ReportName], "report_unavailable");
         }
 
         var format = string.IsNullOrWhiteSpace(subscription.AttachmentFormat) ? null : _exports.GetDescriptor(subscription.AttachmentFormat);
@@ -147,7 +199,7 @@ public sealed class ReportSubscriptionService
         // A report that needs a permission to export is attached only while the person who saved the subscription has it.
         if (format is not null && descriptor.ExportPermission is not null && !await CanExportAsync(subscription, descriptor))
         {
-            return S["The file can't be attached, because {0} may not export this report. Choose no file format, or give them the permission to export it.", subscription.ModifiedBy ?? subscription.CreatedBy];
+            return (S["The file can't be attached, because {0} may not export this report. Choose no file format, or give them the permission to export it.", subscription.ModifiedBy ?? subscription.CreatedBy], "export_denied");
         }
 
         var (fromUtc, toUtc) = ReportSubscriptionSchedule.GetPeriod(subscription, runUtc, timeZone);
@@ -182,7 +234,7 @@ public sealed class ReportSubscriptionService
         {
             if (format is not null)
             {
-                attachment = new MemoryStream(_exports.GetFormat(format.Name).Serialize(exportDocument));
+                attachment = new MemoryStream(ReportTelemetry.Serialize(_exports.GetFormat(format.Name), format, exportDocument, ReportRunSources.Subscription));
                 message.Attachments.Add(new MailMessageAttachment
                 {
                     Filename = $"{descriptor.Name}-{fromLocal:yyyyMMdd}-to-{toLocal:yyyyMMdd}{format.Extension}",
@@ -192,7 +244,9 @@ public sealed class ReportSubscriptionService
 
             var result = await _emailService.SendAsync(message, cancellationToken: cancellationToken);
 
-            return result.Succeeded ? null : S["The email couldn't be sent: {0}", string.Join("; ", result.Errors.Select(error => error.Message))];
+            return result.Succeeded
+                ? (null, null)
+                : (S["The email couldn't be sent: {0}", string.Join("; ", result.Errors.Select(error => error.Message))], "send_failed");
         }
         finally
         {
@@ -206,7 +260,7 @@ public sealed class ReportSubscriptionService
 
         filter.SetDateRange(new ReportDateRange { FromUtc = fromUtc, ToUtc = toUtc });
 
-        var document = await _reports.GetReport(descriptor.Name).RunAsync(new ReportContext(filter, mode), cancellationToken);
+        var document = await ReportTelemetry.RunCodedReportAsync(_reports.GetReport(descriptor.Name), descriptor, new ReportContext(filter, mode), cancellationToken);
 
         document.Title = title;
         await _displayValues.ResolveAsync(document);

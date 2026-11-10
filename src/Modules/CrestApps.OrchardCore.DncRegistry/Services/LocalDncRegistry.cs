@@ -1,5 +1,7 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.DncRegistry.Indexes;
 using CrestApps.OrchardCore.DncRegistry.Models;
+using CrestApps.OrchardCore.DncRegistry.Telemetry;
 using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.Extensions.Localization;
 using YesSql;
@@ -62,6 +64,29 @@ public sealed class LocalDncRegistry : INationalDoNotCallRegistry
     {
         ArgumentNullException.ThrowIfNull(phoneNumbers);
 
+        using var screening = DncRegistryTelemetry.StartScreening(DncRegistryTelemetry.RegistryLocal);
+
+        try
+        {
+            var dncNumbers = await ScreenAsync(phoneNumbers, context, screening, cancellationToken);
+            screening.Succeed();
+
+            return dncNumbers;
+        }
+        catch (Exception ex)
+        {
+            screening.Fail(ex);
+
+            throw;
+        }
+    }
+
+    private async Task<HashSet<PhoneNumber>> ScreenAsync(
+        IEnumerable<PhoneNumber> phoneNumbers,
+        NumberSearchContext context,
+        TelemetryScope screening,
+        CancellationToken cancellationToken)
+    {
         var dncNumbers = new HashSet<PhoneNumber>();
 
         // The numbers arrive canonical, so the stored entries and the queried values are in the same form by
@@ -82,6 +107,8 @@ public sealed class LocalDncRegistry : INationalDoNotCallRegistry
         {
             return dncNumbers;
         }
+
+        screening.SetSpanTag("crestapps.dnc.country_filter", !string.IsNullOrWhiteSpace(context?.CountryCode));
 
         var e164Numbers = queriedNumbers.Keys.ToList();
 
@@ -114,6 +141,8 @@ public sealed class LocalDncRegistry : INationalDoNotCallRegistry
 
         if (listIds.Length == 0)
         {
+            DncRegistryTelemetry.RecordScreened(screening, DncRegistryTelemetry.RegistryLocal, queriedNumbers.Count, listedCount: 0);
+
             return dncNumbers;
         }
 
@@ -136,6 +165,8 @@ public sealed class LocalDncRegistry : INationalDoNotCallRegistry
                 dncNumbers.Add(registeredNumber);
             }
         }
+
+        DncRegistryTelemetry.RecordScreened(screening, DncRegistryTelemetry.RegistryLocal, queriedNumbers.Count, dncNumbers.Count);
 
         return dncNumbers;
     }

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Products.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -23,13 +24,18 @@ namespace CrestApps.OrchardCore.Products.Tasks;
     LockExpiration = 600_000)]
 public sealed class ProductSearchIndexBackgroundTask : IBackgroundTask
 {
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => RebuildWhenChangedAsync(serviceProvider, run, cancellationToken));
+
+    private static async Task RebuildWhenChangedAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var indexer = serviceProvider.GetRequiredService<ProductSearchIndexer>();
         var fingerprint = await indexer.GetFingerprintAsync();
 
         if (string.Equals(fingerprint, await indexer.GetSavedFingerprintAsync(), StringComparison.Ordinal))
         {
+            run.Skip();
+
             return;
         }
 
@@ -40,6 +46,8 @@ public sealed class ProductSearchIndexBackgroundTask : IBackgroundTask
         logger.LogInformation("Rebuilding the product search index because product types or their attributes changed.");
 
         var count = await ProductSearchIndexer.RebuildAsync(shellHost, shellSettings, cancellationToken);
+
+        run.AddItems(count, "indexed");
 
         if (cancellationToken.IsCancellationRequested)
         {

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -85,6 +86,8 @@ public sealed class ReportSharedLinkHandler : ISharedLinkHandler
 
         if (design is null)
         {
+            RecordRequest("not_found");
+
             return new NotFoundResult();
         }
 
@@ -100,6 +103,8 @@ public sealed class ReportSharedLinkHandler : ISharedLinkHandler
         {
             if (!allowExport)
             {
+                RecordRequest("export_denied");
+
                 return new NotFoundResult();
             }
 
@@ -109,6 +114,8 @@ public sealed class ReportSharedLinkHandler : ISharedLinkHandler
             }
 
             var file = await _presenter.ExportAsync(design, request.Query, format, httpContext.RequestAborted, ReportEventSource.Link, userName);
+
+            RecordRequest(file is null ? "not_found" : "exported");
 
             return file is null
                 ? new NotFoundResult()
@@ -132,6 +139,8 @@ public sealed class ReportSharedLinkHandler : ISharedLinkHandler
             ReportEventSource.Link,
             userName);
 
+        RecordRequest("opened");
+
         model.IsPublic = true;
         model.ExportFormatField = FormatField;
         model.HiddenFields[TokenField] = request.Query[TokenField].ToString();
@@ -144,6 +153,12 @@ public sealed class ReportSharedLinkHandler : ISharedLinkHandler
                 Model = model,
             },
         };
+    }
+
+    // Share links reach anonymous visitors, so their requests are counted by result.
+    private static void RecordRequest(string result)
+    {
+        ReportTelemetry.Count(ReportTelemetry.SharedLinkRequests, (CrestAppsOrchardCoreTelemetry.ResultTag, result));
     }
 
     /// <inheritdoc/>

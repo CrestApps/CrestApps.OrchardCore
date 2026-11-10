@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Asterisk.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -23,7 +24,10 @@ namespace CrestApps.OrchardCore.Asterisk.BackgroundTasks;
 public sealed class AsteriskInboundReconciliationBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => ReconcileAsync(serviceProvider, run, cancellationToken));
+
+    private static async Task ReconcileAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         // The service provider is the tenant's scoped container (Orchard runs background tasks per tenant), so the
         // resolved reconcilers, binding store, and ARI client are all scoped to this tenant — the sweep can never
@@ -46,6 +50,7 @@ public sealed class AsteriskInboundReconciliationBackgroundTask : IBackgroundTas
             }
             catch (Exception ex)
             {
+                run.ReportError(ex);
                 logger.LogError(
                     ex,
                     "The periodic Asterisk channel binding reconciliation sweep failed for provider {ProviderName}.",

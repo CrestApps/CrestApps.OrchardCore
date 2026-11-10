@@ -2,13 +2,13 @@ using System.Data;
 using System.Globalization;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.ContentTransfer.Handlers;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Inventory.Core.Models;
 using CrestApps.OrchardCore.Inventory.Core.Services;
 using CrestApps.OrchardCore.Inventory.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
-using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.Inventory.ContentTransfer;
 
@@ -98,7 +98,7 @@ public sealed class InventoryPartContentImportHandler : ContentImportHandlerBase
             var contentItemId = context.ContentItem.ContentItemId;
 
             // The stock items are made after the product is saved, so the counts are set then.
-            ShellScope.AddDeferredTask(async scope =>
+            DeferredWork.Add("inventory_import_counts", async scope =>
             {
                 var services = scope.ServiceProvider;
 

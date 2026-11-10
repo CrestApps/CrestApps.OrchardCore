@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -20,22 +21,26 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.BackgroundTasks;
 public sealed class MessagingOutboxBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        var outbox = serviceProvider.GetRequiredService<IMessagingOutbox>();
-        var logger = serviceProvider.GetRequiredService<ILogger<MessagingOutboxBackgroundTask>>();
+        return this.RunAsync(async run =>
+        {
+            var outbox = serviceProvider.GetRequiredService<IMessagingOutbox>();
+            var logger = serviceProvider.GetRequiredService<ILogger<MessagingOutboxBackgroundTask>>();
 
-        try
-        {
-            await outbox.DispatchDueAsync(cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "An error occurred while retrying queued outbound messages.");
-        }
+            try
+            {
+                run.AddItems(await outbox.DispatchDueAsync(cancellationToken), "accepted");
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "An error occurred while retrying queued outbound messages.");
+                run.ReportError(ex);
+            }
+        });
     }
 }

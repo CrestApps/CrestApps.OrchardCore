@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
+using CrestApps.OrchardCore.WebSockets.Telemetry;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.WebSockets.Services;
@@ -23,7 +25,7 @@ internal sealed class DistributedWebSocketConnectionRegistry : IWebSocketConnect
     /// </summary>
     private static readonly TimeSpan _ownershipTimeToLive = TimeSpan.FromMinutes(10);
 
-    private readonly ConcurrentDictionary<string, WebSocketRendezvous> _pending = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, PendingRendezvous> _pending = new(StringComparer.Ordinal);
     private readonly IRendezvousOwnerStore _owners;
     private readonly string _nodeId;
     private readonly ILogger _logger;
@@ -51,8 +53,10 @@ internal sealed class DistributedWebSocketConnectionRegistry : IWebSocketConnect
 
         var rendezvous = new WebSocketRendezvous();
 
-        if (!_pending.TryAdd(key, rendezvous))
+        if (!_pending.TryAdd(key, new PendingRendezvous(rendezvous, Stopwatch.GetTimestamp())))
         {
+            WebSocketsTelemetry.Record(WebSocketsTelemetry.ResultConflict);
+
             throw new InvalidOperationException("A WebSocket rendezvous is already pending for this key.");
         }
 
@@ -68,6 +72,7 @@ internal sealed class DistributedWebSocketConnectionRegistry : IWebSocketConnect
             // callback returns to this node, which is the common case; failing here would take call audio down
             // with Redis.
             _logger.LogWarning(ex, "The shared WebSocket rendezvous store is unreachable; falling back to node-local rendezvous only.");
+            WebSocketsTelemetry.Record(WebSocketsTelemetry.ResultRegistered);
 
             return rendezvous;
         }
@@ -77,9 +82,12 @@ internal sealed class DistributedWebSocketConnectionRegistry : IWebSocketConnect
             // The key is unguessable, so two nodes holding it is a bug rather than a collision — and it would
             // bind the provider's callback to whichever won the race, leaving the other call silent.
             _pending.TryRemove(key, out _);
+            WebSocketsTelemetry.Record(WebSocketsTelemetry.ResultConflict);
 
             throw new InvalidOperationException("A WebSocket rendezvous is already pending for this key on another node.");
         }
+
+        WebSocketsTelemetry.Record(WebSocketsTelemetry.ResultRegistered);
 
         return rendezvous;
     }
@@ -92,11 +100,12 @@ internal sealed class DistributedWebSocketConnectionRegistry : IWebSocketConnect
             return null;
         }
 
-        if (_pending.TryRemove(key, out var rendezvous))
+        if (_pending.TryRemove(key, out var pending))
         {
+            WebSocketsTelemetry.Record(WebSocketsTelemetry.ResultClaimed, pending.RegisteredTimestamp);
             await ReleaseQuietlyAsync(key, cancellationToken);
 
-            return rendezvous;
+            return pending.Rendezvous;
         }
 
         // Not ours. Say which node has it, so a misrouted callback reads as a routing problem rather than as a
@@ -113,7 +122,11 @@ internal sealed class DistributedWebSocketConnectionRegistry : IWebSocketConnect
             _logger.LogWarning(ex, "The shared WebSocket rendezvous store is unreachable while claiming a rendezvous.");
         }
 
-        if (!string.IsNullOrEmpty(owner) && !string.Equals(owner, _nodeId, StringComparison.Ordinal))
+        var crossNode = !string.IsNullOrEmpty(owner) && !string.Equals(owner, _nodeId, StringComparison.Ordinal);
+
+        WebSocketsTelemetry.Record(crossNode ? WebSocketsTelemetry.ResultCrossNode : WebSocketsTelemetry.ResultMiss);
+
+        if (crossNode)
         {
             _logger.LogWarning(
                 "A WebSocket callback arrived on node '{NodeId}' for a rendezvous held by node '{OwnerNodeId}'. A live socket cannot be handed between nodes; route provider callbacks to the node that started them.",
@@ -134,6 +147,7 @@ internal sealed class DistributedWebSocketConnectionRegistry : IWebSocketConnect
 
         if (_pending.TryRemove(key, out _))
         {
+            WebSocketsTelemetry.Record(WebSocketsTelemetry.ResultRemoved);
             await ReleaseQuietlyAsync(key, cancellationToken);
         }
     }
@@ -150,4 +164,6 @@ internal sealed class DistributedWebSocketConnectionRegistry : IWebSocketConnect
             _logger.LogWarning(ex, "Failed to release a WebSocket rendezvous from the shared store; it will expire on its own.");
         }
     }
+
+    private readonly record struct PendingRendezvous(WebSocketRendezvous Rendezvous, long RegisteredTimestamp);
 }

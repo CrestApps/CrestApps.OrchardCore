@@ -1,5 +1,7 @@
 using System.Globalization;
 using CrestApps.Core;
+using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Workforce.Core.Telemetry;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -59,9 +61,30 @@ internal sealed class DefaultPayrollExportService : IPayrollExportService
 
     public async Task<PlanningResult<PayrollExportBatch>> RunAsync(string providerName, string payPeriodCalendarId, DateOnly periodStart, bool includeExported, string actor, CancellationToken cancellationToken = default)
     {
+        using var telemetry = WorkforceTelemetry.StartPayrollExport();
+
+        telemetry.SetSpanTag(WorkforceTelemetry.PayPeriodCalendarIdTag, payPeriodCalendarId);
+
+        try
+        {
+            return await ExportAsync(providerName, payPeriodCalendarId, periodStart, includeExported, actor, telemetry, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            telemetry.Fail(ex);
+
+            throw;
+        }
+    }
+
+    private async Task<PlanningResult<PayrollExportBatch>> ExportAsync(string providerName, string payPeriodCalendarId, DateOnly periodStart, bool includeExported, string actor, TelemetryScope telemetry, CancellationToken cancellationToken)
+    {
         var result = new PlanningResult<PayrollExportBatch>();
         var provider = _providers.FirstOrDefault(provider => string.Equals(provider.Name, providerName, StringComparison.OrdinalIgnoreCase));
         var calendar = string.IsNullOrEmpty(payPeriodCalendarId) ? null : await _calendarStore.FindByIdAsync(payPeriodCalendarId, cancellationToken);
+
+        // The provider's registered name, never the requested one, so the tag stays bounded.
+        telemetry.AddMetricTag(CrestAppsOrchardCoreTelemetry.ProviderTag, provider?.Name ?? CrestAppsOrchardCoreTelemetry.Unknown);
 
         if (provider is null)
         {
@@ -75,6 +98,8 @@ internal sealed class DefaultPayrollExportService : IPayrollExportService
 
         if (!result.Succeeded)
         {
+            WorkforceTelemetry.RejectPayrollExport(telemetry, provider is null ? WorkforceTelemetry.ReasonNoProvider : WorkforceTelemetry.ReasonNoCalendar);
+
             return result;
         }
 
@@ -83,6 +108,7 @@ internal sealed class DefaultPayrollExportService : IPayrollExportService
 
         if (lockers is null)
         {
+            WorkforceTelemetry.RejectPayrollExport(telemetry, WorkforceTelemetry.ReasonBusy);
             result.Fail(S["This period is being exported by someone else. Try again in a moment."]);
 
             return result;
@@ -94,6 +120,7 @@ internal sealed class DefaultPayrollExportService : IPayrollExportService
 
             if (locked.Count == 0)
             {
+                WorkforceTelemetry.RejectPayrollExport(telemetry, WorkforceTelemetry.ReasonNoneLocked);
                 result.Fail(S["No timesheets of {0} to {1} are locked yet. Approve them, then lock the period.", start.ToString("d", CultureInfo.CurrentCulture), end.ToString("d", CultureInfo.CurrentCulture)]);
 
                 return result;
@@ -106,6 +133,7 @@ internal sealed class DefaultPayrollExportService : IPayrollExportService
 
             if (timesheets.Count == 0)
             {
+                WorkforceTelemetry.RejectPayrollExport(telemetry, WorkforceTelemetry.ReasonAllExported);
                 result.Fail(S["Every locked timesheet of this period was exported already. Choose to export them again to include them."]);
 
                 return result;
@@ -150,6 +178,10 @@ internal sealed class DefaultPayrollExportService : IPayrollExportService
 
             await MarkPredictabilityPayExportedAsync(timesheets, cancellationToken);
             await _session.SaveChangesAsync(cancellationToken);
+
+            telemetry.SetSpanTag(WorkforceTelemetry.PayrollBatchIdTag, batch.ItemId);
+            telemetry.Succeed();
+            WorkforceTelemetry.RecordPayrollExportRows(provider.Name, batch.RowCount);
 
             result.Value = batch;
 

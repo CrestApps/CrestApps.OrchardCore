@@ -1,6 +1,9 @@
 using System.Data;
+using System.Diagnostics;
 using CrestApps.OrchardCore.ContentTransfer.Indexes;
 using CrestApps.OrchardCore.ContentTransfer.Models;
+using CrestApps.OrchardCore.ContentTransfer.Telemetry;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -27,21 +30,32 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
 {
     private static readonly TimeSpan _exportLockTimeout = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan _exportLockExpiration = TimeSpan.FromMinutes(30);
+    private static readonly TimeSpan _progressLogInterval = TimeSpan.FromMinutes(1);
 
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-        => ProcessEntriesAsync(serviceProvider, cancellationToken: cancellationToken);
+    {
+        // Each export runs under a lock of its own that outlives the task's lock by far, so the run is not measured
+        // against the task's lock expiration.
+        return BackgroundTaskTelemetry.RunAsync(
+            nameof(ExportFilesBackgroundTask),
+            run => ProcessEntriesAsync(serviceProvider, entryId: null, run, cancellationToken),
+            lockExpiration: null);
+    }
 
-    internal static async Task ProcessEntriesAsync(IServiceProvider serviceProvider, string entryId = null, CancellationToken cancellationToken = default)
+    internal static Task ProcessEntriesAsync(IServiceProvider serviceProvider, string entryId = null, CancellationToken cancellationToken = default)
+    {
+        return ProcessEntriesAsync(serviceProvider, entryId, taskRun: null, cancellationToken);
+    }
+
+    private static async Task ProcessEntriesAsync(
+        IServiceProvider serviceProvider,
+        string entryId,
+        MeasuredTaskRun taskRun,
+        CancellationToken cancellationToken)
     {
         var session = serviceProvider.GetRequiredService<ISession>();
         var distributedLock = serviceProvider.GetRequiredService<IDistributedLock>();
-        var clock = serviceProvider.GetRequiredService<IClock>();
         var contentImportOptions = serviceProvider.GetRequiredService<IOptions<ContentImportOptions>>().Value;
-        var localizer = serviceProvider.GetRequiredService<IStringLocalizer<ExportFilesBackgroundTask>>();
-        var fileStore = serviceProvider.GetRequiredService<IContentTransferFileStore>();
-        var contentDefinitionManager = serviceProvider.GetRequiredService<IContentDefinitionManager>();
-        var contentImportManager = serviceProvider.GetRequiredService<IContentImportManager>();
-        var tempDirectoryProvider = serviceProvider.GetRequiredService<ITempDirectoryProvider>();
         var logger = serviceProvider.GetRequiredService<ILogger<ExportFilesBackgroundTask>>();
 
         var entries = await session.Query<ContentTransferEntry, ContentTransferEntryIndex>(x =>
@@ -50,6 +64,13 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
             && (entryId == null || x.EntryId == entryId))
         .OrderBy(x => x.CreatedUtc)
         .ListAsync(cancellationToken);
+
+        if (!entries.Any())
+        {
+            taskRun?.Skip();
+
+            return;
+        }
 
         var batchSize = contentImportOptions.ExportBatchSize < 1
             ? ContentImportOptions.DefaultExportBatchSize
@@ -69,212 +90,372 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
 
             if (!locked)
             {
+                taskRun?.AddItems(1, "lock_contended");
+
+                if (logger.IsEnabled(LogLevel.Information))
+                {
+                    ContentTransferLog.ExportLockTaken(logger, entry.EntryId);
+                }
+
                 continue;
             }
 
             await using var acquiredLock = locker;
 
-            var contentTypeDefinition = await contentDefinitionManager.GetTypeDefinitionAsync(entry.ContentType);
-
-            if (contentTypeDefinition == null)
+            using var logScope = logger.BeginScope(new Dictionary<string, object>
             {
-                await SaveEntryWithErrorAsync(session, clock, entry, localizer["The content definition was removed."]);
-                continue;
+                ["EntryId"] = entry.EntryId,
+                ["ContentType"] = entry.ContentType,
+                ["Direction"] = entry.Direction.ToString(),
+            });
+
+            var outcome = await ExportEntryAsync(serviceProvider, session, entry, batchSize, logger, cancellationToken);
+
+            taskRun?.AddItems(1, outcome);
+        }
+    }
+
+    /// <summary>
+    /// Exports one entry, measured as the <c>crestapps.contenttransfer.export.run</c> span linked to the request that
+    /// queued it.
+    /// </summary>
+    /// <returns>How the export ended: <c>ok</c>, <c>error</c> or <c>cancelled</c>.</returns>
+    private static async Task<string> ExportEntryAsync(
+        IServiceProvider serviceProvider,
+        ISession session,
+        ContentTransferEntry entry,
+        int batchSize,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        var clock = serviceProvider.GetRequiredService<IClock>();
+        var localizer = serviceProvider.GetRequiredService<IStringLocalizer<ExportFilesBackgroundTask>>();
+        var fileStore = serviceProvider.GetRequiredService<IContentTransferFileStore>();
+        var contentDefinitionManager = serviceProvider.GetRequiredService<IContentDefinitionManager>();
+        var contentImportManager = serviceProvider.GetRequiredService<IContentImportManager>();
+        var tempDirectoryProvider = serviceProvider.GetRequiredService<ITempDirectoryProvider>();
+        var format = ContentTransferDiagnostics.GetFormat(entry.StoredFileName);
+
+        using var telemetry = TelemetryScope.StartLinked(
+            ContentTransferDiagnostics.ActivitySource,
+            "crestapps.contenttransfer.export.run",
+            ContentTransferDiagnostics.ExportDuration,
+            ContentTransferDiagnostics.GetTraceParent(entry),
+            new TagList
+            {
+                { CrestAppsOrchardCoreTelemetry.FormatTag, format },
+                { ContentTransferDiagnostics.ContentTypeTag, entry.ContentType },
+            });
+
+        telemetry.SetSpanTag(ContentTransferDiagnostics.EntryIdSpanTag, entry.EntryId);
+
+        var contentTypeDefinition = await contentDefinitionManager.GetTypeDefinitionAsync(entry.ContentType);
+
+        if (contentTypeDefinition == null)
+        {
+            await SaveEntryWithErrorAsync(session, clock, entry, localizer["The content definition was removed."]);
+            FailExport(telemetry, logger, entry, "content_type_removed");
+
+            return telemetry.Outcome;
+        }
+
+        entry.Status = ContentTransferEntryStatus.Processing;
+
+        var progressPart = entry.GetOrCreate<ImportFileProcessStatsPart>();
+        progressPart.Errors ??= [];
+
+        // An export always writes its file from the first page, including one a stopping host interrupted, so its
+        // counts start over too instead of adding to the interrupted run's.
+        progressPart.CurrentRow = 0;
+        progressPart.TotalProcessed = 0;
+        progressPart.ImportedCount = 0;
+
+        try
+        {
+            var context = new ImportContentContext()
+            {
+                ContentItem = await serviceProvider.GetRequiredService<IContentManager>().NewAsync(entry.ContentType),
+                ContentTypeDefinition = contentTypeDefinition,
+                Entry = entry,
+            };
+
+            var columns = await contentImportManager.GetColumnsAsync(context);
+            var exportColumns = columns.Where(x => x.Type != ImportColumnType.ImportOnly).ToList();
+
+            // Count total records for progress tracking.
+            var hasFilters = entry.TryGet<ExportFilterPart>(out var filters);
+
+            var totalCountQuery = BuildExportQuery(
+                session, entry.ContentType, hasFilters,
+                filters?.LatestOnly ?? false,
+                filters?.AllVersions ?? false,
+                filters?.CreatedFrom, filters?.CreatedTo,
+                filters?.ModifiedFrom, filters?.ModifiedTo,
+                filters?.Owners);
+
+            var totalCount = await totalCountQuery.CountAsync(cancellationToken);
+
+            progressPart.TotalRecords = totalCount;
+
+            // Resolve file format provider from the stored file name extension.
+            var formatProviders = serviceProvider.GetServices<IContentTransferFileFormatProvider>()
+                .OrderBy(provider => provider.FileExtension, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var formatProvider = formatProviders.FirstOrDefault(provider => provider.CanHandle(entry.StoredFileName))
+                ?? formatProviders.FirstOrDefault();
+
+            if (formatProvider == null)
+            {
+                await SaveEntryWithErrorAsync(session, clock, entry, localizer["No file formats are currently enabled."]);
+                FailExport(telemetry, logger, entry, "no_format");
+
+                return telemetry.Outcome;
             }
 
-            entry.Status = ContentTransferEntryStatus.Processing;
-
-            var progressPart = entry.GetOrCreate<ImportFileProcessStatsPart>();
-            progressPart.Errors ??= [];
-
-            // An export always writes its file from the first page, including one a stopping host interrupted, so its
-            // counts start over too instead of adding to the interrupted run's.
-            progressPart.CurrentRow = 0;
-            progressPart.TotalProcessed = 0;
-            progressPart.ImportedCount = 0;
-
-            try
+            if (logger.IsEnabled(LogLevel.Information))
             {
-                var context = new ImportContentContext()
+                ContentTransferLog.ExportStarted(logger, entry.EntryId, entry.ContentType, totalCount);
+            }
+
+            var fileName = entry.StoredFileName;
+            var tempFilePath = tempDirectoryProvider.GetTempFileName();
+
+            using var tempStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.ReadWrite, FileShare.None, bufferSize: 4096, FileOptions.DeleteOnClose);
+            var columnNames = exportColumns.Select(c => c.Name).ToList();
+            var lastProgressLogTimestamp = Stopwatch.GetTimestamp();
+
+            using (var writer = formatProvider.CreateWriter(tempStream, contentTypeDefinition.DisplayName))
+            {
+                writer.WriteHeader(columnNames);
+
+                // Paginate content items and write each page directly.
+                var page = 0;
+                var contentManager = serviceProvider.GetRequiredService<IContentManager>();
+
+                while (true)
                 {
-                    ContentItem = await serviceProvider.GetRequiredService<IContentManager>().NewAsync(entry.ContentType),
-                    ContentTypeDefinition = contentTypeDefinition,
-                    Entry = entry,
-                };
-
-                var columns = await contentImportManager.GetColumnsAsync(context);
-                var exportColumns = columns.Where(x => x.Type != ImportColumnType.ImportOnly).ToList();
-
-                // Count total records for progress tracking.
-                var hasFilters = entry.TryGet<ExportFilterPart>(out var filters);
-
-                var totalCountQuery = BuildExportQuery(
-                    session, entry.ContentType, hasFilters,
-                    filters?.LatestOnly ?? false,
-                    filters?.AllVersions ?? false,
-                    filters?.CreatedFrom, filters?.CreatedTo,
-                    filters?.ModifiedFrom, filters?.ModifiedTo,
-                    filters?.Owners);
-
-                var totalCount = await totalCountQuery.CountAsync(cancellationToken);
-
-                progressPart.TotalRecords = totalCount;
-
-                // Resolve file format provider from the stored file name extension.
-                var formatProviders = serviceProvider.GetServices<IContentTransferFileFormatProvider>()
-                    .OrderBy(provider => provider.FileExtension, StringComparer.OrdinalIgnoreCase)
-                    .ToList();
-
-                var formatProvider = formatProviders.FirstOrDefault(provider => provider.CanHandle(entry.StoredFileName))
-                    ?? formatProviders.FirstOrDefault();
-
-                if (formatProvider == null)
-                {
-                    await SaveEntryWithErrorAsync(session, clock, entry, localizer["No file formats are currently enabled."]);
-                    continue;
-                }
-
-                var fileName = entry.StoredFileName;
-                var tempFilePath = tempDirectoryProvider.GetTempFileName();
-
-                using var tempStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.ReadWrite, FileShare.None, bufferSize: 4096, FileOptions.DeleteOnClose);
-                var columnNames = exportColumns.Select(c => c.Name).ToList();
-
-                using (var writer = formatProvider.CreateWriter(tempStream, contentTypeDefinition.DisplayName))
-                {
-                    writer.WriteHeader(columnNames);
-
-                    // Paginate content items and write each page directly.
-                    var page = 0;
-                    var contentManager = serviceProvider.GetRequiredService<IContentManager>();
-
-                    while (true)
+                    if (cancellationToken.IsCancellationRequested)
                     {
-                        if (cancellationToken.IsCancellationRequested)
-                        {
-                            break;
-                        }
-
-                        var pageQuery = BuildExportQuery(
-                            session, entry.ContentType, hasFilters,
-                            filters?.LatestOnly ?? false,
-                            filters?.AllVersions ?? false,
-                            filters?.CreatedFrom, filters?.CreatedTo,
-                            filters?.ModifiedFrom, filters?.ModifiedTo,
-                            filters?.Owners);
-
-                        var contentItems = await pageQuery
-                            .Skip(page * batchSize)
-                            .Take(batchSize)
-                            .ListAsync(cancellationToken);
-
-                        var items = contentItems.ToList();
-
-                        if (items.Count == 0)
-                        {
-                            break;
-                        }
-
-                        // Let handlers pre-load per-page data in a single pass before mapping rows.
-                        await contentImportManager.PrepareExportBatchAsync(new ContentExportBatchContext
-                        {
-                            ContentItems = items,
-                            ContentTypeDefinition = contentTypeDefinition,
-                            Entry = entry,
-                        });
-
-                        // Create a temporary DataTable for this batch only.
-                        using var dataTable = new DataTable();
-
-                        foreach (var colName in columnNames)
-                        {
-                            dataTable.Columns.Add(colName);
-                        }
-
-                        foreach (var contentItem in items)
-                        {
-                            var mapContext = new ContentExportContext()
-                            {
-                                ContentItem = contentItem,
-                                ContentTypeDefinition = contentTypeDefinition,
-                                Entry = entry,
-                                Row = dataTable.NewRow(),
-                            };
-
-                            await contentImportManager.ExportAsync(mapContext);
-
-                            progressPart.TotalProcessed++;
-
-                            // A handler may exclude a content item from the output (for example, a contributed
-                            // "only rows that match" filter). Count it as processed but do not write it.
-                            if (mapContext.Exclude)
-                            {
-                                continue;
-                            }
-
-                            var rowValues = new List<string>(columnNames.Count);
-                            foreach (var colName in columnNames)
-                            {
-                                rowValues.Add(mapContext.Row[colName]?.ToString() ?? string.Empty);
-                            }
-
-                            writer.WriteRow(rowValues);
-
-                            // Track how many records were actually written so the UI can show the exported total.
-                            progressPart.ImportedCount++;
-                        }
-
-                        // Save progress after each page.
-                        progressPart.CurrentRow = progressPart.TotalProcessed;
-                        entry.ProcessSaveUtc = clock.UtcNow;
-                        entry.Put(progressPart);
-
-                        await session.SaveAsync(entry, false, collection: null, cancellationToken);
-                        await session.SaveChangesAsync(cancellationToken);
-
-                        page++;
+                        break;
                     }
 
-                    writer.Flush();
+                    using var pageTelemetry = TelemetryScope.Start(
+                        ContentTransferDiagnostics.ActivitySource,
+                        "crestapps.contenttransfer.export.page",
+                        ContentTransferDiagnostics.ExportPageDuration,
+                        new TagList
+                        {
+                            { ContentTransferDiagnostics.ModeTag, ContentTransferDiagnostics.ModeQueued },
+                        });
+
+                    var pageQuery = BuildExportQuery(
+                        session, entry.ContentType, hasFilters,
+                        filters?.LatestOnly ?? false,
+                        filters?.AllVersions ?? false,
+                        filters?.CreatedFrom, filters?.CreatedTo,
+                        filters?.ModifiedFrom, filters?.ModifiedTo,
+                        filters?.Owners);
+
+                    var contentItems = await pageQuery
+                        .Skip(page * batchSize)
+                        .Take(batchSize)
+                        .ListAsync(cancellationToken);
+
+                    var items = contentItems.ToList();
+
+                    if (items.Count == 0)
+                    {
+                        pageTelemetry.Succeed();
+
+                        break;
+                    }
+
+                    pageTelemetry.SetSpanTag(ContentTransferDiagnostics.RowsSpanTag, items.Count);
+
+                    // Let handlers pre-load per-page data in a single pass before mapping rows.
+                    await contentImportManager.PrepareExportBatchAsync(new ContentExportBatchContext
+                    {
+                        ContentItems = items,
+                        ContentTypeDefinition = contentTypeDefinition,
+                        Entry = entry,
+                    });
+
+                    // Create a temporary DataTable for this batch only.
+                    using var dataTable = new DataTable();
+
+                    foreach (var colName in columnNames)
+                    {
+                        dataTable.Columns.Add(colName);
+                    }
+
+                    var written = 0;
+                    var excluded = 0;
+
+                    foreach (var contentItem in items)
+                    {
+                        var mapContext = new ContentExportContext()
+                        {
+                            ContentItem = contentItem,
+                            ContentTypeDefinition = contentTypeDefinition,
+                            Entry = entry,
+                            Row = dataTable.NewRow(),
+                        };
+
+                        await contentImportManager.ExportAsync(mapContext);
+
+                        progressPart.TotalProcessed++;
+
+                        // A handler may exclude a content item from the output (for example, a contributed
+                        // "only rows that match" filter). Count it as processed but do not write it.
+                        if (mapContext.Exclude)
+                        {
+                            excluded++;
+
+                            continue;
+                        }
+
+                        var rowValues = new List<string>(columnNames.Count);
+                        foreach (var colName in columnNames)
+                        {
+                            rowValues.Add(mapContext.Row[colName]?.ToString() ?? string.Empty);
+                        }
+
+                        writer.WriteRow(rowValues);
+
+                        // Track how many records were actually written so the UI can show the exported total.
+                        progressPart.ImportedCount++;
+                        written++;
+                    }
+
+                    // Save progress after each page.
+                    progressPart.CurrentRow = progressPart.TotalProcessed;
+                    entry.ProcessSaveUtc = clock.UtcNow;
+                    entry.Put(progressPart);
+
+                    await session.SaveAsync(entry, false, collection: null, cancellationToken);
+                    await session.SaveChangesAsync(cancellationToken);
+
+                    RecordPage(ContentTransferDiagnostics.ModeQueued, written, excluded);
+                    pageTelemetry.Succeed();
+
+                    if (Stopwatch.GetElapsedTime(lastProgressLogTimestamp) >= _progressLogInterval && logger.IsEnabled(LogLevel.Information))
+                    {
+                        lastProgressLogTimestamp = Stopwatch.GetTimestamp();
+                        ContentTransferLog.ExportProgress(logger, entry.EntryId, progressPart.TotalProcessed, progressPart.TotalRecords);
+                    }
+
+                    page++;
                 }
 
-                // A stopping host ends the page loop early. The partial file must not be stored as a completed export:
-                // the entry stays in progress and starts over on the next run.
-                cancellationToken.ThrowIfCancellationRequested();
-
-                // Save the completed file to the file store.
-                tempStream.Seek(0, SeekOrigin.Begin);
-                await fileStore.CreateFileFromStreamAsync(fileName, tempStream, true);
-
-                var nowUtc = clock.UtcNow;
-                entry.ProcessSaveUtc = nowUtc;
-                entry.CompletedUtc = nowUtc;
-                entry.Status = ContentTransferEntryStatus.Completed;
-                entry.Put(progressPart);
-
-                await session.SaveAsync(entry, false, collection: null, cancellationToken);
-                await session.SaveChangesAsync(cancellationToken);
-
-                // Send notification if the Notifications module is enabled. The file is stored and the export is
-                // complete, so a notification that cannot be sent no longer marks the export as failed.
-                try
-                {
-                    await TrySendExportNotificationAsync(serviceProvider, entry, contentTypeDefinition.DisplayName);
-                }
-                catch (Exception ex) when (ex is not OperationCanceledException)
-                {
-                    logger.LogWarning(ex, "The export '{EntryId}' completed, but its notification could not be sent.", entry.EntryId);
-                }
+                writer.Flush();
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+
+            // A stopping host ends the page loop early. The partial file must not be stored as a completed export: the
+            // entry stays in progress and starts over on the next run.
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var fileSize = tempStream.Length;
+
+            // Save the completed file to the file store.
+            tempStream.Seek(0, SeekOrigin.Begin);
+            await fileStore.CreateFileFromStreamAsync(fileName, tempStream, true);
+
+            var nowUtc = clock.UtcNow;
+            entry.ProcessSaveUtc = nowUtc;
+            entry.CompletedUtc = nowUtc;
+            entry.Status = ContentTransferEntryStatus.Completed;
+            entry.Put(progressPart);
+
+            await session.SaveAsync(entry, false, collection: null, cancellationToken);
+            await session.SaveChangesAsync(cancellationToken);
+
+            ContentTransferDiagnostics.Record(ContentTransferDiagnostics.ExportFileSize, fileSize, new TagList
             {
-                // The host is stopping: the entry stays in progress and the next run exports it again.
+                { CrestAppsOrchardCoreTelemetry.FormatTag, format },
+                { ContentTransferDiagnostics.ModeTag, ContentTransferDiagnostics.ModeQueued },
+            });
+
+            telemetry.Succeed();
+
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                ContentTransferLog.ExportFinished(logger, entry.EntryId, telemetry.Elapsed, progressPart.ImportedCount, progressPart.TotalProcessed, fileSize);
             }
-            catch (Exception ex)
+
+            // Send notification if the Notifications module is enabled. The file is stored and the export is complete,
+            // so a notification that cannot be sent no longer marks the export as failed.
+            try
             {
-                await SaveEntryWithErrorAsync(session, clock, entry, localizer["Error processing export: {0}", ex.Message]);
+                await TrySendExportNotificationAsync(serviceProvider, entry, contentTypeDefinition.DisplayName);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogWarning(ex, "The export '{EntryId}' completed, but its notification could not be sent.", entry.EntryId);
             }
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // The host is stopping: the entry stays in progress and the next run exports it again.
+            telemetry.SetOutcome(CrestAppsOrchardCoreTelemetry.OutcomeCancelled);
+        }
+        catch (Exception ex)
+        {
+            telemetry.Fail(ex);
+            RecordExportFailure("exception");
+
+            if (logger.IsEnabled(LogLevel.Error))
+            {
+                ContentTransferLog.ExportFailed(logger, ex, entry.EntryId);
+            }
+
+            await SaveEntryWithErrorAsync(session, clock, entry, localizer["Error processing export: {0}", ex.Message]);
+        }
+
+        return telemetry.Outcome;
+    }
+
+    private static void FailExport(TelemetryScope telemetry, ILogger logger, ContentTransferEntry entry, string reason)
+    {
+        telemetry.Fail(reason);
+        RecordExportFailure(reason);
+
+        if (logger.IsEnabled(LogLevel.Error))
+        {
+            ContentTransferLog.ExportEntryFailed(logger, entry.EntryId, reason);
+        }
+    }
+
+    private static void RecordExportFailure(string reason)
+    {
+        ContentTransferDiagnostics.Add(ContentTransferDiagnostics.ExportFailures, 1, new TagList
+        {
+            { CrestAppsOrchardCoreTelemetry.ReasonTag, reason },
+            { ContentTransferDiagnostics.ModeTag, ContentTransferDiagnostics.ModeQueued },
+        });
+    }
+
+    /// <summary>
+    /// Records one page of an export on <c>crestapps.contenttransfer.export.pages</c> and
+    /// <c>crestapps.contenttransfer.export.rows</c>.
+    /// </summary>
+    /// <param name="mode">How the export runs: <c>queued</c> or <c>inline</c>.</param>
+    /// <param name="written">The content items written to the file.</param>
+    /// <param name="excluded">The content items a handler excluded from the file.</param>
+    internal static void RecordPage(string mode, int written, int excluded)
+    {
+        ContentTransferDiagnostics.Add(ContentTransferDiagnostics.ExportPages, 1, ContentTransferDiagnostics.ModeTag, mode);
+        ContentTransferDiagnostics.Add(ContentTransferDiagnostics.ExportRows, written, new TagList
+        {
+            { ContentTransferDiagnostics.ModeTag, mode },
+            { CrestAppsOrchardCoreTelemetry.ResultTag, ContentTransferDiagnostics.ResultWritten },
+        });
+
+        ContentTransferDiagnostics.Add(ContentTransferDiagnostics.ExportRows, excluded, new TagList
+        {
+            { ContentTransferDiagnostics.ModeTag, mode },
+            { CrestAppsOrchardCoreTelemetry.ResultTag, ContentTransferDiagnostics.ResultExcluded },
+        });
     }
 
     private static async Task TrySendExportNotificationAsync(

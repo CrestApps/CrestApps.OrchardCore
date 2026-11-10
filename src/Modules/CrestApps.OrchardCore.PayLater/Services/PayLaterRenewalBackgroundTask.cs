@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.PayLater.Models;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
@@ -46,7 +47,10 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
         => _logger = logger;
 
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => RenewDueAsync(serviceProvider, run, cancellationToken));
+
+    private async Task RenewDueAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var transactionManager = serviceProvider.GetRequiredService<ITransactionManager>();
         var siteService = serviceProvider.GetRequiredService<ISiteService>();
@@ -60,6 +64,8 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
 
         if (due.Count == 0)
         {
+            run.Skip();
+
             return;
         }
 
@@ -80,18 +86,22 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
 
             try
             {
-                await RenewAsync(transactionManager, distributedLock, localizer, localClock, settings, transaction, now, cancellationToken);
+                run.AddItems(1, await RenewAsync(transactionManager, distributedLock, localizer, localClock, settings, transaction, now, cancellationToken)
+                    ? "renewed"
+                    : "skipped");
             }
             catch (Exception exception)
             {
                 // One bad agreement must not stop the rest of the sweep. The cycle stays unspawned, so the
                 // next run tries it again.
+                run.AddItems(1, CrestAppsOrchardCoreTelemetry.OutcomeError);
                 _logger.LogError(exception, "Failed to create the next Pay Later billing cycle for transaction '{TransactionId}'.", transaction.ItemId);
             }
         }
     }
 
-    private static async Task RenewAsync(
+    // Returns whether the next cycle was created.
+    private static async Task<bool> RenewAsync(
         ITransactionManager transactionManager,
         IDistributedLock distributedLock,
         IStringLocalizer localizer,
@@ -105,7 +115,7 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
 
         if (recurrence?.GetNextCycleUtc() is null)
         {
-            return;
+            return false;
         }
 
         // Two nodes running the sweep at the same moment would otherwise both see an unspawned cycle and
@@ -117,7 +127,7 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
 
         if (!locked)
         {
-            return;
+            return false;
         }
 
         await using var _ = locker;
@@ -127,7 +137,7 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
 
         if (current?.Recurrence?.GetNextCycleUtc() is null)
         {
-            return;
+            return false;
         }
 
         var next = await BuildNextCycleAsync(transactionManager, localizer, localClock, settings, current, now);
@@ -145,6 +155,8 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
 
         await transactionManager.UpdateAsync(current, cancellationToken: cancellationToken);
         await transactionManager.CreateAsync(next, cancellationToken: cancellationToken);
+
+        return true;
     }
 
     private static async Task<Transaction> BuildNextCycleAsync(

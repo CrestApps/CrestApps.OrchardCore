@@ -2,8 +2,10 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 using YesSql;
@@ -19,18 +21,22 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 public sealed class HandoffContainmentReportProvider : OmnichannelReportBase, IReport
 {
     private readonly ISession _session;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="HandoffContainmentReportProvider"/> class.
     /// </summary>
     /// <param name="session">The YesSql session.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="logger">The logger, which warns when the report reads more index rows than it should hold in memory.</param>
     public HandoffContainmentReportProvider(
         ISession session,
-        IStringLocalizer<HandoffContainmentReportProvider> stringLocalizer)
+        IStringLocalizer<HandoffContainmentReportProvider> stringLocalizer,
+        ILogger<HandoffContainmentReportProvider> logger = null)
         : base(stringLocalizer)
     {
         _session = session;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -76,6 +82,8 @@ public sealed class HandoffContainmentReportProvider : OmnichannelReportBase, IR
                      index.CompletedUtc <= to,
             collection: OmnichannelConstants.CollectionName)
             .ListAsync(cancellationToken);
+
+        ReportTelemetry.RecordCodedIndexRows(Name, contained.Count + escalated.Count, _logger);
 
         var summary = HandoffContainmentAggregator.Compute(contained.Concat(escalated).Select(index => new OmnichannelActivity
         {

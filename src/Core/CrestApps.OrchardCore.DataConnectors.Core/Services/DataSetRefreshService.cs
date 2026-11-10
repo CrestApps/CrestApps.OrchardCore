@@ -1,6 +1,9 @@
 using System.Globalization;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.DataConnectors.Models;
 using CrestApps.OrchardCore.DataConnectors.Storage;
+using CrestApps.OrchardCore.DataConnectors.Telemetry;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -80,6 +83,9 @@ internal sealed class DataSetRefreshService : IDataSetRefreshService
             ? _options.RefreshTimeout + TimeSpan.FromMinutes(5)
             : TimeSpan.FromHours(2);
 
+        using var measurement = DataSetRefreshMeasurement.Start(dataSet, run);
+        using var logScope = _logger.BeginRefreshScope(dataSet.ItemId.SanitizeLogValue(), run.ItemId);
+
         // A zero timeout never acquires the Redis lock (its wait is cancelled before the first attempt), so with Redis
         // every refresh was skipped. Try the lock once without waiting instead.
         var (locker, locked) = await _distributedLock.TryAcquireLockWithoutWaitingAsync($"CrestApps.DataConnectors.Refresh:{dataSet.ItemId}", lockExpiration);
@@ -96,18 +102,29 @@ internal sealed class DataSetRefreshService : IDataSetRefreshService
             run.Status = DataSetRefreshStatus.Skipped;
             run.CompletedUtc = run.StartedUtc;
             run.Error = "Another refresh of this data set was running.";
+            measurement.End(CrestAppsOrchardCoreTelemetry.OutcomeSkipped);
 
             return run;
         }
 
         await using (locker)
         {
-            await _runStore.CreateAsync(run, cancellationToken);
+            try
+            {
+                await _runStore.CreateAsync(run, cancellationToken);
 
-            dataSet.Import ??= new DataSetImportState();
-            dataSet.Import.RefreshRequestedUtc = null;
-            await _dataSetStore.UpdateAsync(dataSet, cancellationToken);
-            await _session.SaveChangesAsync(cancellationToken);
+                dataSet.Import ??= new DataSetImportState();
+                dataSet.Import.RefreshRequestedUtc = null;
+                await _dataSetStore.UpdateAsync(dataSet, cancellationToken);
+                await _session.SaveChangesAsync(cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                // The refresh could not record that it started; it ends as a failure, and the exception still escapes.
+                measurement.Fail(exception, timedOut: false);
+
+                throw;
+            }
 
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
@@ -118,13 +135,16 @@ internal sealed class DataSetRefreshService : IDataSetRefreshService
 
             try
             {
-                await ImportAsync(dataSet, run, timeout.Token);
+                await ImportAsync(dataSet, run, measurement, timeout.Token);
                 await PublishAsync(dataSet, run, cancellationToken);
+                measurement.End(CrestAppsOrchardCoreTelemetry.OutcomeOk);
             }
             catch (Exception exception)
             {
                 var canceled = exception is OperationCanceledException && cancellationToken.IsCancellationRequested;
                 var timedOut = exception is OperationCanceledException && !canceled;
+
+                measurement.Fail(exception, timedOut);
 
                 await FailAsync(dataSet, run, canceled ? DataSetRefreshStatus.Canceled : DataSetRefreshStatus.Failed, timedOut ? $"The refresh took longer than {_options.RefreshTimeout} and was stopped." : ToSafeMessage(exception));
 
@@ -163,9 +183,14 @@ internal sealed class DataSetRefreshService : IDataSetRefreshService
         return count;
     }
 
-    private async Task ImportAsync(ConnectedDataSet dataSet, DataSetRefreshRun run, CancellationToken cancellationToken)
+    private async Task ImportAsync(
+        ConnectedDataSet dataSet,
+        DataSetRefreshRun run,
+        DataSetRefreshMeasurement measurement,
+        CancellationToken cancellationToken)
     {
         var source = await _reader.ResolveAsync(dataSet, cancellationToken);
+        measurement.SetConnector(source.Descriptor.Name);
 
         // Finding the connection opened a transaction of the session. It is closed before any row is written, because
         // on SQLite an open read transaction keeps the row store's connection from committing.
@@ -177,7 +202,13 @@ internal sealed class DataSetRefreshService : IDataSetRefreshService
         }
 
         // The source's fields are read first, so a change is known before any row is written.
-        var sourceFields = await _reader.DescribeAsync(source, dataSet, cancellationToken);
+        IReadOnlyList<DataField> sourceFields;
+
+        using (var describe = TelemetryScope.Start(DataConnectorsTelemetry.ActivitySource, "crestapps.dataconnector.refresh.describe", duration: null))
+        {
+            sourceFields = await _reader.DescribeAsync(source, dataSet, cancellationToken);
+            describe.Succeed();
+        }
 
         if (sourceFields.Count == 0)
         {
@@ -189,6 +220,12 @@ internal sealed class DataSetRefreshService : IDataSetRefreshService
         if (changes.HasChanges)
         {
             run.SchemaChanges = changes.ToString();
+            measurement.Activity?.SetTag("crestapps.dataconnector.refresh.schema_changed", true);
+
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.RefreshSchemaChanged(dataSet.Name.SanitizeLogValue(), run.SchemaChanges.SanitizeLogValue());
+            }
 
             if (dataSet.Refresh?.SchemaChangePolicy == DataSetSchemaChangePolicy.Fail)
             {
@@ -216,6 +253,17 @@ internal sealed class DataSetRefreshService : IDataSetRefreshService
             incrementalIndex >= 0 &&
             !changes.HasChanges;
 
+        if (run.Mode == DataSetRefreshMode.Incremental && !incremental)
+        {
+            var reason = GetFullReadReason(source, dataSet, identifierIndexes.Length, incrementalIndex, changes.HasChanges);
+            measurement.Activity?.SetTag("crestapps.dataconnector.refresh.full_read_reason", reason);
+
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.RefreshDowngradedToFull(dataSet.Name.SanitizeLogValue(), reason);
+            }
+        }
+
         run.Mode = incremental ? DataSetRefreshMode.Incremental : DataSetRefreshMode.Full;
 
         var context = new DataConnectorReadContext(source.Connection, source.Secrets, dataSet)
@@ -230,7 +278,12 @@ internal sealed class DataSetRefreshService : IDataSetRefreshService
         {
             largest = DataValues.Coerce(dataSet.Import.Watermark, incrementalField.Type);
 
-            await _rowStore.CopyAsync(dataSet.ItemId, dataSet.Import.ActiveVersion, run.Version, cancellationToken);
+            using (var copy = TelemetryScope.Start(DataConnectorsTelemetry.ActivitySource, "crestapps.dataconnector.refresh.copy", duration: null))
+            {
+                var copied = await _rowStore.CopyAsync(dataSet.ItemId, dataSet.Import.ActiveVersion, run.Version, cancellationToken);
+                copy.SetSpanTag(DataConnectorsTelemetry.RowsSpanTag, copied);
+                copy.Succeed();
+            }
 
             if (largest is not null)
             {
@@ -239,40 +292,57 @@ internal sealed class DataSetRefreshService : IDataSetRefreshService
             }
         }
 
-        await foreach (var batch in mapper.MapAsync(source.Connector.ReadAsync(context, cancellationToken), context.BatchSize, maxRows: 0, cancellationToken))
+        // One span covers every batch, so a large import doesn't record thousands of them.
+        using (var load = TelemetryScope.Start(DataConnectorsTelemetry.ActivitySource, "crestapps.dataconnector.refresh.batches", duration: null))
         {
-            if (batch.Count == 0)
+            var batches = 0;
+
+            await foreach (var batch in mapper.MapAsync(source.Connector.ReadAsync(context, cancellationToken), context.BatchSize, maxRows: 0, cancellationToken))
             {
-                continue;
-            }
-
-            var rows = new List<DataSetRow>(batch.Count);
-
-            foreach (var row in batch.Rows)
-            {
-                var key = identifierIndexes.Length == 0
-                    ? null
-                    : DataSetRows.ToKey([.. identifierIndexes.Select(index => row[index])]);
-
-                rows.Add(new DataSetRow(key, DataSetRows.ToJson(mapper.DataSetFields, row)));
-
-                if (incrementalIndex >= 0 && row[incrementalIndex] is { } value && !DataValues.IsEmpty(value) &&
-                    (largest is null || DataValues.Compare(value, largest) > 0))
+                if (batch.Count == 0)
                 {
-                    largest = value;
+                    continue;
                 }
+
+                var rows = new List<DataSetRow>(batch.Count);
+
+                foreach (var row in batch.Rows)
+                {
+                    var key = identifierIndexes.Length == 0
+                        ? null
+                        : DataSetRows.ToKey([.. identifierIndexes.Select(index => row[index])]);
+
+                    rows.Add(new DataSetRow(key, DataSetRows.ToJson(mapper.DataSetFields, row)));
+
+                    if (incrementalIndex >= 0 && row[incrementalIndex] is { } value && !DataValues.IsEmpty(value) &&
+                        (largest is null || DataValues.Compare(value, largest) > 0))
+                    {
+                        largest = value;
+                    }
+                }
+
+                if (incremental)
+                {
+                    await _rowStore.DeleteKeysAsync(dataSet.ItemId, run.Version, [.. rows.Select(row => row.Key)], cancellationToken);
+                }
+
+                await _rowStore.WriteAsync(dataSet.ItemId, run.Version, rows, cancellationToken);
+                run.RowsRead += rows.Count;
+                batches++;
             }
 
-            if (incremental)
-            {
-                await _rowStore.DeleteKeysAsync(dataSet.ItemId, run.Version, [.. rows.Select(row => row.Key)], cancellationToken);
-            }
-
-            await _rowStore.WriteAsync(dataSet.ItemId, run.Version, rows, cancellationToken);
-            run.RowsRead += rows.Count;
+            load.SetSpanTag("crestapps.dataconnector.batches", batches);
+            load.SetSpanTag(DataConnectorsTelemetry.RowsSpanTag, run.RowsRead);
+            load.Succeed();
         }
 
-        run.RowCount = await _rowStore.CountAsync(dataSet.ItemId, run.Version, cancellationToken);
+        using (var count = TelemetryScope.Start(DataConnectorsTelemetry.ActivitySource, "crestapps.dataconnector.refresh.count", duration: null))
+        {
+            run.RowCount = await _rowStore.CountAsync(dataSet.ItemId, run.Version, cancellationToken);
+            count.SetSpanTag(DataConnectorsTelemetry.RowsSpanTag, run.RowCount);
+            count.Succeed();
+        }
+
         dataSet.Import.Watermark = largest switch
         {
             null => null,
@@ -356,6 +426,37 @@ internal sealed class DataSetRefreshService : IDataSetRefreshService
         => dataSet.Refresh?.IntervalMinutes is > 0 and var minutes
             ? utcNow.AddMinutes(minutes)
             : null;
+
+    // Why an incremental refresh reads every row: a bounded value for the span and the log.
+    private static string GetFullReadReason(
+        ConnectedSource source,
+        ConnectedDataSet dataSet,
+        int identifiers,
+        int incrementalIndex,
+        bool fieldsChanged)
+    {
+        if (!source.Descriptor.Supports(DataConnectorCapabilities.IncrementalImport))
+        {
+            return "unsupported";
+        }
+
+        if (string.IsNullOrEmpty(dataSet.Import?.ActiveVersion))
+        {
+            return "no_published_version";
+        }
+
+        if (identifiers == 0)
+        {
+            return "no_identifiers";
+        }
+
+        if (incrementalIndex < 0)
+        {
+            return "no_incremental_field";
+        }
+
+        return fieldsChanged ? "fields_changed" : CrestAppsOrchardCoreTelemetry.Other;
+    }
 
     private static ConnectedDataField FindIncrementalField(ConnectedDataSet dataSet)
     {

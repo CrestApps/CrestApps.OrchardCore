@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -42,7 +43,10 @@ public sealed class SecureCaptureExpiryBackgroundTask : IBackgroundTask
     private const int MaxCapturesPerRun = 200;
 
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => DoWorkAsync(serviceProvider, run, cancellationToken));
+
+    private static async Task DoWorkAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var secureCaptureService = serviceProvider.GetRequiredService<ISecureCaptureService>();
         var logger = serviceProvider.GetRequiredService<ILogger<SecureCaptureExpiryBackgroundTask>>();
@@ -55,12 +59,16 @@ public sealed class SecureCaptureExpiryBackgroundTask : IBackgroundTask
         {
             var expired = await secureCaptureService.ExpireDueAsync(MaxCapturesPerRun, runToken);
 
+            run.AddItems(expired, "expired");
+
             if (expired > 0 && logger.IsEnabled(LogLevel.Information))
             {
                 logger.LogInformation("Expired {Count} secure capture session(s) whose window elapsed without a submission.", expired);
             }
 
             var recovered = await secureCaptureService.RecoverRecordingResumesAsync(MaxCapturesPerRun, runToken);
+
+            run.AddItems(recovered, "recovered");
 
             if (recovered > 0 && logger.IsEnabled(LogLevel.Information))
             {
@@ -73,6 +81,8 @@ public sealed class SecureCaptureExpiryBackgroundTask : IBackgroundTask
         }
         catch (OperationCanceledException) when (runToken.IsCancellationRequested)
         {
+            run.BudgetExceeded();
+
             if (logger.IsEnabled(LogLevel.Debug))
             {
                 logger.LogDebug(
@@ -82,6 +92,7 @@ public sealed class SecureCaptureExpiryBackgroundTask : IBackgroundTask
         }
         catch (Exception ex)
         {
+            run.ReportError(ex);
             logger.LogError(ex, "An error occurred while expiring secure capture sessions.");
         }
     }

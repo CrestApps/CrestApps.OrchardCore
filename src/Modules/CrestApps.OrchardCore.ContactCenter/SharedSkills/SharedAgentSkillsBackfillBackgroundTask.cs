@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
 
@@ -19,15 +20,21 @@ internal sealed class SharedAgentSkillsBackfillBackgroundTask : IBackgroundTask
 
     private volatile bool _done;
 
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => DoWorkAsync(serviceProvider, run, cancellationToken));
+
+    private async Task DoWorkAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         if (_done)
         {
+            run.Skip();
+
             return;
         }
 
         var pushed = await serviceProvider.GetRequiredService<SharedAgentSkillsBackfill>().RunAsync(BatchSize, cancellationToken);
 
+        run.AddItems(pushed, "pushed");
         _done = pushed == 0;
     }
 }

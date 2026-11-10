@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
+using CrestApps.OrchardCore.Omnichannel.Voice.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell;
@@ -142,6 +143,7 @@ internal sealed class AIVoiceSessionTracker : IAIVoiceSessionTracker
         catch (Exception ex)
         {
             // A report that cannot be written must never cost the call anything.
+            VoiceTelemetry.RecordSummaryLost("scope");
             _logger.LogWarning(ex, "Could not open a scope to record the AI voice session of activity '{ActivityId}'.", draft.ActivityId.SanitizeLogValue());
         }
     }
@@ -180,6 +182,7 @@ internal sealed class AIVoiceSessionTracker : IAIVoiceSessionTracker
         catch (Exception ex)
         {
             // Around the scope rather than inside it, so a commit refused when the scope ends is reported too.
+            VoiceTelemetry.RecordSummaryLost("write");
             _logger.LogWarning(ex, "Could not record the AI voice session of activity '{ActivityId}'.", draft.ActivityId.SanitizeLogValue());
         }
         finally

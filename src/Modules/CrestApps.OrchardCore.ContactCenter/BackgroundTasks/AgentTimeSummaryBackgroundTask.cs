@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Reports.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -18,7 +19,10 @@ namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 public sealed class AgentTimeSummaryBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => DoWorkAsync(serviceProvider, run, cancellationToken));
+
+    private static async Task DoWorkAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var roller = serviceProvider.GetRequiredService<AgentTimeSummaryRoller>();
         var logger = serviceProvider.GetRequiredService<ILogger<AgentTimeSummaryBackgroundTask>>();
@@ -29,6 +33,7 @@ public sealed class AgentTimeSummaryBackgroundTask : IBackgroundTask
         }
         catch (Exception ex)
         {
+            run.ReportError(ex);
             logger.LogError(ex, "An error occurred while updating the Contact Center agent time summaries.");
         }
     }

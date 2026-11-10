@@ -2,6 +2,7 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Consent;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Outreach;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Outreach;
 using CrestApps.OrchardCore.Outreach.Models;
@@ -73,6 +74,7 @@ public sealed class MessagingBroadcastService : IMessagingBroadcastService
             await _broadcastStore.UpdateAsync(broadcast, cancellationToken);
 
             _logger.LogWarning("Broadcast {BroadcastId} failed: a channel, a sending address and a body are required.", broadcast.ItemId.SanitizeLogValue());
+            MessagingTelemetry.RecordBroadcast(null, MessagingTelemetry.BroadcastResults.Rejected);
 
             return;
         }
@@ -103,5 +105,12 @@ public sealed class MessagingBroadcastService : IMessagingBroadcastService
         broadcast.OutreachRunId = run.ItemId;
         broadcast.Status = MessagingBroadcastStatus.Running;
         await _broadcastStore.UpdateAsync(broadcast, cancellationToken);
+
+        MessagingTelemetry.RecordBroadcast(broadcast.Channel, MessagingTelemetry.BroadcastResults.Started);
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.BroadcastStarted(broadcast.ItemId.SanitizeLogValue(), broadcast.Channel.SanitizeLogValue(), run.ItemId.SanitizeLogValue());
+        }
     }
 }

@@ -1,5 +1,7 @@
 using System.Globalization;
 using System.Security.Claims;
+using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Reports.Services;
 using CrestApps.OrchardCore.Reports.Widgets.Models;
@@ -82,8 +84,13 @@ public sealed class ReportWidgetService
 
         if (minutes > 0 && _memoryCache.TryGetValue(key, out CachedReportWidget cached))
         {
+            RecordWidgetRequest("hit", CrestAppsOrchardCoreTelemetry.OutcomeOk);
+
             return ReportWidgetResult.Success(descriptor, cached.Document, cached.GeneratedUtc, cached.From, cached.To);
         }
+
+        var cache = minutes > 0 ? "miss" : "off";
+        var outcome = CrestAppsOrchardCoreTelemetry.OutcomeError;
 
         try
         {
@@ -95,7 +102,7 @@ public sealed class ReportWidgetService
             var filter = new ReportFilter { ReportName = descriptor.Name };
             filter.SetDateRange(new ReportDateRange { FromUtc = fromUtc, ToUtc = toUtc, Key = period.ToString() });
 
-            var document = await _reportManager.GetReport(descriptor.Name).RunAsync(new ReportContext(filter), cancellationToken);
+            var document = await ReportTelemetry.RunCodedReportAsync(_reportManager.GetReport(descriptor.Name), descriptor, new ReportContext(filter), cancellationToken);
             document.Title = _localizerFactory.Localize(descriptor.DisplayName).Value;
 
             await _displayValueResolver.ResolveNonTableValuesAsync(document);
@@ -108,6 +115,8 @@ public sealed class ReportWidgetService
                 _memoryCache.Set(key, new CachedReportWidget(document, generated, fromLocal, toLocal), TimeSpan.FromMinutes(minutes));
             }
 
+            outcome = CrestAppsOrchardCoreTelemetry.OutcomeOk;
+
             return ReportWidgetResult.Success(descriptor, document, generated, fromLocal, toLocal);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -117,6 +126,25 @@ public sealed class ReportWidgetService
 
             return ReportWidgetResult.Failed(descriptor);
         }
+        catch (OperationCanceledException)
+        {
+            outcome = CrestAppsOrchardCoreTelemetry.OutcomeCancelled;
+
+            throw;
+        }
+        finally
+        {
+            RecordWidgetRequest(cache, outcome);
+        }
+    }
+
+    private static void RecordWidgetRequest(string cache, string outcome)
+    {
+        ReportTelemetry.Count(
+            ReportTelemetry.WidgetRequests,
+            (ReportTelemetry.KindTag, "coded"),
+            (ReportTelemetry.CacheTag, cache),
+            (CrestAppsOrchardCoreTelemetry.OutcomeTag, outcome));
     }
 
     private sealed record CachedReportWidget(ReportDocument Document, DateTime GeneratedUtc, DateTime? From, DateTime? To);

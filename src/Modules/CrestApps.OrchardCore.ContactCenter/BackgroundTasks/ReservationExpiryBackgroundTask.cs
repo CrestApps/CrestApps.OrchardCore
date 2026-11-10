@@ -2,6 +2,7 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,7 +50,10 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
 
     /// <inheritdoc/>
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-        => RunAsync(serviceProvider, cancellationToken);
+        => BackgroundTaskTelemetry.RunAsync(
+            nameof(ReservationExpiryBackgroundTask),
+            run => RunAsync(serviceProvider, run, cancellationToken),
+            TimeSpan.FromMilliseconds(LockExpirationMilliseconds));
 
     /// <summary>
     /// Makes one reservation-and-assignment pass. The scheduled sweep runs it once a minute; the tenant also runs it
@@ -57,13 +61,23 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
     /// </summary>
     /// <param name="serviceProvider">The service provider of the scope the pass runs in.</param>
     /// <param name="cancellationToken">The token that stops the pass.</param>
-    internal static async Task RunAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    /// <returns>A task that completes when the pass completes.</returns>
+    /// <remarks>
+    /// Only the scheduled sweep is measured as a run of this background task; the pass the tenant runs after it starts
+    /// is not.
+    /// </remarks>
+    internal static Task RunAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => RunAsync(serviceProvider, run: null, cancellationToken);
+
+    private static async Task RunAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var workManager = serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>();
         using var workLease = workManager.TryEnter(ContactCenterConstants.Feature.Queues);
 
         if (workLease is null)
         {
+            run?.SkipForLease();
+
             return;
         }
 
@@ -108,6 +122,8 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
         }
         catch (OperationCanceledException) when (runToken.IsCancellationRequested)
         {
+            run?.BudgetExceeded();
+
             if (logger.IsEnabled(LogLevel.Debug))
             {
                 logger.LogDebug(
@@ -122,6 +138,8 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
         {
             if (clock.UtcNow >= runDeadlineUtc)
             {
+                run?.BudgetExceeded();
+
                 if (logger.IsEnabled(LogLevel.Debug))
                 {
                     logger.LogDebug(
@@ -210,6 +228,7 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
                 }
 
                 await assignmentService.AssignQueueAsync(queue.ItemId, runToken);
+                run?.AddItems(1, "queue_assigned");
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -217,6 +236,8 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
             }
             catch (OperationCanceledException) when (runToken.IsCancellationRequested)
             {
+                run?.BudgetExceeded();
+
                 if (logger.IsEnabled(LogLevel.Debug))
                 {
                     logger.LogDebug(
@@ -229,6 +250,7 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
             }
             catch (Exception ex)
             {
+                run?.ReportError(ex);
                 logger.LogError(
                     ex,
                     "An error occurred while assigning work for queue '{QueueId}'.",
@@ -258,6 +280,8 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
         }
         catch (OperationCanceledException) when (runToken.IsCancellationRequested)
         {
+            run?.BudgetExceeded();
+
             if (logger.IsEnabled(LogLevel.Debug))
             {
                 logger.LogDebug(
@@ -272,6 +296,8 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
         {
             if (clock.UtcNow >= runDeadlineUtc)
             {
+                run?.BudgetExceeded();
+
                 if (logger.IsEnabled(LogLevel.Debug))
                 {
                     logger.LogDebug(
@@ -316,6 +342,8 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
             }
             catch (OperationCanceledException) when (runToken.IsCancellationRequested)
             {
+                run?.BudgetExceeded();
+
                 if (logger.IsEnabled(LogLevel.Debug))
                 {
                     logger.LogDebug(
@@ -328,6 +356,7 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
             }
             catch (Exception ex)
             {
+                run?.ReportError(ex);
                 logger.LogError(
                     ex,
                     "An error occurred while assigning work for campaign queue '{QueueId}'.",

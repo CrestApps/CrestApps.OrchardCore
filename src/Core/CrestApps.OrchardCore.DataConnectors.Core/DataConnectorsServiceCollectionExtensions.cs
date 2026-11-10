@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.DataConnectors.Http;
 using CrestApps.OrchardCore.DataConnectors.Services;
 using CrestApps.OrchardCore.DataConnectors.Storage;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -40,7 +41,9 @@ public static class DataConnectorsServiceCollectionExtensions
         // Redirects are followed by the client itself, only to the same origin; the handler refuses to connect to the
         // site's own network unless the configuration allows it, whatever a host name resolves to when it is called.
         services.AddHttpClient(DataConnectorConstants.HttpClientName, client => client.Timeout = Timeout.InfiniteTimeSpan)
-            .ConfigurePrimaryHttpMessageHandler(serviceProvider => DataConnectorNetwork.CreateHandler(serviceProvider.GetRequiredService<IOptions<DataConnectorNetworkOptions>>().Value));
+            .ConfigurePrimaryHttpMessageHandler(serviceProvider => DataConnectorNetwork.CreateHandler(
+                serviceProvider.GetRequiredService<IOptions<DataConnectorNetworkOptions>>().Value,
+                serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(DataConnectorNetwork))));
 
         services.AddDataSource<ConnectedDataSource>();
         services.AddDataSource<ImportedDataSource>();

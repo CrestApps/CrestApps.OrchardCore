@@ -1,5 +1,6 @@
 ﻿using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -23,13 +24,18 @@ public sealed class DataSourceAlignmentBackgroundTask : IBackgroundTask
     /// </summary>
     /// <param name="serviceProvider">The service provider.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => DoWorkCoreAsync(run, serviceProvider, cancellationToken));
+
+    private static async Task DoWorkCoreAsync(MeasuredTaskRun run, IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         var logger = serviceProvider.GetRequiredService<ILogger<DataSourceAlignmentBackgroundTask>>();
         var dataSourceStore = serviceProvider.GetService<IAIDataSourceStore>();
 
         if (dataSourceStore is null)
         {
+            run.Skip();
+
             return;
         }
 
@@ -37,6 +43,8 @@ public sealed class DataSourceAlignmentBackgroundTask : IBackgroundTask
 
         if (dataSources.Length == 0)
         {
+            run.Skip();
+
             return;
         }
 
@@ -45,10 +53,15 @@ public sealed class DataSourceAlignmentBackgroundTask : IBackgroundTask
             var indexingService = serviceProvider.GetRequiredService<IAIDataSourceIndexingService>();
 
             await indexingService.SyncAllAsync(cancellationToken);
+
+            // Each data source's sync is measured on crestapps.ai.datasource.sync.duration.
+            run.AddItems(dataSources.Length, "considered");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error during AI data-source alignment background task.");
+
+            run.ReportError(ex);
         }
     }
 }

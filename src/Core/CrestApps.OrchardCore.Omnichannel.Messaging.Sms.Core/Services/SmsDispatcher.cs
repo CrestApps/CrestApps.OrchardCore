@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.Localization;
@@ -75,18 +76,36 @@ public sealed class SmsDispatcher : ISmsDispatcher
     {
         ArgumentNullException.ThrowIfNull(message);
 
-        mediaUrls ??= [];
+        using var telemetry = MessagingTelemetry.StartSend(OmnichannelConstants.Channels.Sms);
 
+        try
+        {
+            return await DispatchAsync(message, mediaUrls ?? [], telemetry, cancellationToken);
+        }
+        catch (Exception ex) when (!telemetry.IsCompleted)
+        {
+            telemetry.Fail(ex);
+
+            throw;
+        }
+    }
+
+    private async Task<MessageDispatchResult> DispatchAsync(
+        SmsMessage message,
+        IReadOnlyList<string> mediaUrls,
+        MessagingMeasurement telemetry,
+        CancellationToken cancellationToken)
+    {
         if (string.IsNullOrEmpty(message.From))
         {
-            return MessageDispatchResult.Failed("The sending number (From) is required to resolve a provider.");
+            return NoProvider(telemetry, "The sending number (From) is required to resolve a provider.");
         }
 
         var providerName = await ResolveProviderNameAsync(message.From, cancellationToken);
 
         if (string.IsNullOrEmpty(providerName))
         {
-            return MessageDispatchResult.Failed("No SMS provider could be resolved for the sending number or the tenant default.");
+            return NoProvider(telemetry, "No SMS provider could be resolved for the sending number or the tenant default.");
         }
 
         // The router logs the warning when the provider is missing.
@@ -94,8 +113,10 @@ public sealed class SmsDispatcher : ISmsDispatcher
 
         if (provider is null)
         {
-            return MessageDispatchResult.Failed($"The SMS provider '{providerName}' is not registered or enabled.");
+            return NoProvider(telemetry, $"The SMS provider '{providerName}' is not registered or enabled.");
         }
+
+        MessagingTelemetry.SetProvider(telemetry, providerName);
 
         // Pictures only leave through a provider that can carry them. Sending the text alone would tell the customer
         // about a picture they never receive.
@@ -109,6 +130,7 @@ public sealed class SmsDispatcher : ISmsDispatcher
 
             var refused = MessageDispatchResult.Failed($"The SMS provider '{providerName}' cannot send pictures.");
             refused.ErrorCode = OmnichannelConstants.SmsErrorCodes.MediaNotSupported;
+            MessagingTelemetry.CompleteSend(telemetry, refused);
 
             return refused;
         }
@@ -145,14 +167,24 @@ public sealed class SmsDispatcher : ISmsDispatcher
         if (!dispatch.Succeeded)
         {
             dispatch.ErrorCode ??= refusal.ErrorCode;
+        }
 
-            if (string.Equals(dispatch.ErrorCode, OmnichannelConstants.SmsErrorCodes.RecipientOptedOut, StringComparison.Ordinal))
-            {
-                await RecordOptOutAsync(message.To, cancellationToken);
-            }
+        MessagingTelemetry.CompleteSend(telemetry, dispatch);
+
+        if (!dispatch.Succeeded && string.Equals(dispatch.ErrorCode, OmnichannelConstants.SmsErrorCodes.RecipientOptedOut, StringComparison.Ordinal))
+        {
+            await RecordOptOutAsync(message.To, cancellationToken);
         }
 
         return dispatch;
+    }
+
+    private static MessageDispatchResult NoProvider(MessagingMeasurement telemetry, string error)
+    {
+        MessagingTelemetry.SetProvider(telemetry, null);
+        telemetry.Complete(MessagingTelemetry.SendResults.NoProvider, CrestAppsOrchardCoreTelemetry.OutcomeError);
+
+        return MessageDispatchResult.Failed(error);
     }
 
     // The provider refuses a recipient who opted out with it or the carrier — a STOP it handled itself — and will
@@ -187,6 +219,8 @@ public sealed class SmsDispatcher : ISmsDispatcher
                 },
                 cancellationToken);
 
+            MessagingTelemetry.RecordOptOut(OmnichannelConstants.Channels.Sms, MessagingTelemetry.OptOutSources.ProviderRefusal, optedOut: true);
+
             if (_logger.IsEnabled(LogLevel.Information))
             {
                 _logger.LogInformation(
@@ -205,6 +239,8 @@ public sealed class SmsDispatcher : ISmsDispatcher
         contact.Alter<OmnichannelContactPart>(contactPart => contactPart.SetDoNotSms(true, _clock.UtcNow));
 
         await _contentManager.UpdateAsync(contact);
+
+        MessagingTelemetry.RecordOptOut(OmnichannelConstants.Channels.Sms, MessagingTelemetry.OptOutSources.ProviderRefusal, optedOut: true);
 
         if (_logger.IsEnabled(LogLevel.Information))
         {

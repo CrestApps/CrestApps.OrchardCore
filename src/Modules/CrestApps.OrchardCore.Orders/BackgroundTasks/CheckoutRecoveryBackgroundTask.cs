@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Orders.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
@@ -16,5 +17,12 @@ namespace CrestApps.OrchardCore.Orders.BackgroundTasks;
 public sealed class CheckoutRecoveryBackgroundTask : IBackgroundTask
 {
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-        => serviceProvider.GetRequiredService<CheckoutRecoveryService>().SendDueAsync(cancellationToken);
+    {
+        return this.RunAsync(async run =>
+        {
+            var sent = await serviceProvider.GetRequiredService<CheckoutRecoveryService>().SendDueAsync(cancellationToken);
+
+            run.AddItems(sent, "sent");
+        });
+    }
 }

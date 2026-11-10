@@ -109,6 +109,8 @@ public sealed class ReportViewsDataSource : IDataSource
 
         var plan = await _runner.PlanAsync(view, query.Context, cancellationToken);
 
+        var mode = "live";
+
         if (view.RefreshIntervalMinutes > ReportViewRefreshIntervals.Live && plan.IsValid)
         {
             var snapshot = await _snapshots.FindAsync(view.ItemId);
@@ -117,13 +119,19 @@ public sealed class ReportViewsDataSource : IDataSource
             // refresh. A view whose first refresh has not happened yet runs too.
             if (snapshot?.RefreshedUtc is not null && ReportViewSnapshotData.Matches(snapshot, ReportViewRunner.DescribeFields(plan)))
             {
+                ReportTelemetry.RecordViewRead("snapshot");
+
                 var table = ReportViewSnapshotData.ToTable(snapshot, query.Fields, maxRows);
 
                 yield return new DataBatch(table.Fields, [.. table.Rows]);
 
                 yield break;
             }
+
+            mode = snapshot?.RefreshedUtc is null ? "first_run" : "stale_snapshot";
         }
+
+        ReportTelemetry.RecordViewRead(mode);
 
         // A live view streams its rows as its query computes them, without keeping them.
         await foreach (var batch in _runner.ReadAsync(plan, query.Context, maxRows, query.BatchSize, cancellationToken).WithCancellation(cancellationToken))

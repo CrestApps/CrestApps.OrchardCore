@@ -4,7 +4,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CrestApps.OrchardCore.Addresses.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Taxation.Core.Models;
+using CrestApps.OrchardCore.Taxation.Core.Telemetry;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
@@ -120,6 +122,7 @@ public sealed class TaxService : ITaxService
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
+                TaxationTelemetry.RecordFallback(provider.GetType().Name, CrestAppsOrchardCoreTelemetry.GetOutcome(exception));
                 _logger.LogWarning(exception, "The tax provider '{Provider}' couldn't work out the tax; the store's own rules did instead.", provider.GetType().Name);
             }
         }

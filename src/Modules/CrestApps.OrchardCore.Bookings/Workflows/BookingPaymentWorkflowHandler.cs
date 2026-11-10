@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Bookings.Models;
 using CrestApps.OrchardCore.Bookings.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell.Scope;
@@ -48,7 +49,7 @@ internal sealed class BookingPaymentWorkflowHandler : IBookingPaymentHandler
         // The input is read now, while the bookings are as this payment left them.
         var inputs = bookings.Select(booking => (booking.ItemId, Input: CreateInput(booking, context))).ToList();
 
-        ShellScope.AddDeferredTask(async scope =>
+        DeferredWork.Add("booking_payment_workflow", async scope =>
         {
             var workflowManager = scope.ServiceProvider.GetService<IWorkflowManager>();
 

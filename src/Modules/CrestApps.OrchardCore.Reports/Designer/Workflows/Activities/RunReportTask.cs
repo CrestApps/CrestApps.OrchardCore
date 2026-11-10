@@ -40,6 +40,9 @@ public sealed class RunReportTask : ReportTaskActivity<RunReportTask>
     public override LocalizedString DisplayText => S["Run Report"];
 
     /// <inheritdoc/>
+    protected override string TelemetryName => "run";
+
+    /// <inheritdoc/>
     public override IEnumerable<Outcome> GetPossibleOutcomes(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
     {
         return [new Outcome(S["Done"]), new Outcome(S["No rows"]), new Outcome(S["Failed"])];
@@ -54,7 +57,7 @@ public sealed class RunReportTask : ReportTaskActivity<RunReportTask>
         {
             _logger.LogWarning("The Run Report task of workflow '{WorkflowId}' found no report to run.", workflowContext.WorkflowId);
 
-            return Outcome("Failed");
+            return Finish("Failed");
         }
 
         var run = await _reports.RunAsync(design, await _reports.GetFilterValuesAsync(Filters, workflowContext));
@@ -67,9 +70,9 @@ public sealed class RunReportTask : ReportTaskActivity<RunReportTask>
         {
             _logger.LogWarning("The Run Report task of workflow '{WorkflowId}' could not run report '{ReportId}'.", workflowContext.WorkflowId, design.ItemId);
 
-            return Outcome("Failed");
+            return Finish("Failed");
         }
 
-        return Outcome(run.RowCount == 0 ? "No rows" : "Done");
+        return Finish(run.RowCount == 0 ? "No rows" : "Done");
     }
 }

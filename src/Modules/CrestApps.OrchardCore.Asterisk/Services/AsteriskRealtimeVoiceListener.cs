@@ -22,6 +22,7 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceList
     private readonly ShellSettings _shellSettings;
     private readonly AsteriskCoordinationOptions _coordinationOptions;
     private readonly ILogger<AsteriskRealtimeVoiceListener> _logger;
+    private readonly TimeProvider _timeProvider;
     private readonly Lock _lock = new();
     private CancellationTokenSource _listenerCancellationTokenSource;
     private Task _listenerTask;
@@ -30,12 +31,14 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceList
         IShellHost shellHost,
         ShellSettings shellSettings,
         IOptions<AsteriskCoordinationOptions> coordinationOptions,
-        ILogger<AsteriskRealtimeVoiceListener> logger)
+        ILogger<AsteriskRealtimeVoiceListener> logger,
+        TimeProvider timeProvider = null)
     {
         _shellHost = shellHost;
         _shellSettings = shellSettings;
         _coordinationOptions = coordinationOptions.Value;
         _logger = logger;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public Task StartAsync(IReadOnlyList<AsteriskResolvedSettings> listeners)
@@ -176,6 +179,10 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceList
 
         AsteriskDiagnostics.RecordRealtimeConnected(settings.ProviderName);
 
+        // Counts as connected, and feeds the event-age and queue-depth gauges, until this method returns: every way
+        // out of it is the connection ending.
+        using var tracking = AsteriskDiagnostics.TrackRealtimeListener(settings.ProviderName);
+
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
@@ -196,6 +203,8 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceList
             SingleWriter = true,
             FullMode = BoundedChannelFullMode.Wait,
         });
+
+        tracking.ObserveQueue(() => channel.Reader.CanCount ? channel.Reader.Count : 0);
 
         var ingestion = new AsteriskRealtimeIngestionWriter(
             channel.Writer,
@@ -255,6 +264,8 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceList
                 while (!result.EndOfMessage);
 
                 var payload = Encoding.UTF8.GetString(message.ToArray());
+
+                tracking.EventReceived();
 
                 // Apply real backpressure rather than dropping the connection on the first full write: the receive
                 // loop stops draining the socket while the buffer is full, so TCP flow control slows the provider.
@@ -385,33 +396,57 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceList
             return;
         }
 
-        if (!AsteriskRealtimeVoiceEventMapper.TryMap(providerName, payload, out var voiceEvent))
+        string eventType = null;
+
+        try
         {
+            if (!AsteriskRealtimeVoiceEventMapper.TryMap(providerName, payload, out var voiceEvent, out eventType))
+            {
+                AsteriskDiagnostics.RecordRealtimeEvent(providerName, eventType, AsteriskDiagnostics.EventIgnored);
+
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug(
+                        "Ignored an Asterisk real-time payload for provider {ProviderName} because it did not map to a voice-state update.",
+                        providerName);
+                }
+
+                return;
+            }
+
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 _logger.LogDebug(
-                    "Ignored an Asterisk real-time payload for provider {ProviderName} because it did not map to a voice-state update.",
-                    providerName);
+                    "Received Asterisk real-time event {EventType} for provider {ProviderName} call {CallId}; mapped to state {State}.",
+                    voiceEvent.EventType.SanitizeLogValue(),
+                    voiceEvent.ProviderName,
+                    voiceEvent.CallId.SanitizeLogValue(),
+                    voiceEvent.State);
             }
 
-            return;
-        }
+            AsteriskDiagnostics.RecordRealtimeEventLag(providerName, voiceEvent.OccurredUtc, _timeProvider.GetUtcNow().UtcDateTime);
 
-        if (_logger.IsEnabled(LogLevel.Debug))
-        {
-            _logger.LogDebug(
-                "Received Asterisk real-time event {EventType} for provider {ProviderName} call {CallId}; mapped to state {State}.",
-                voiceEvent.EventType.SanitizeLogValue(),
-                voiceEvent.ProviderName,
-                voiceEvent.CallId.SanitizeLogValue(),
-                voiceEvent.State);
-        }
+            await ExecuteInTenantScopeAsync(async serviceProvider =>
+            {
+                var dispatcher = serviceProvider.GetRequiredService<AsteriskRealtimeVoiceEventDispatcher>();
+                await dispatcher.HandleAsync(voiceEvent, cancellationToken);
+            });
 
-        await ExecuteInTenantScopeAsync(async serviceProvider =>
+            // Counted once dispatched: a dispatch that throws is counted as failed below.
+            AsteriskDiagnostics.RecordRealtimeEvent(providerName, voiceEvent.EventType, AsteriskDiagnostics.EventApplied);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            var dispatcher = serviceProvider.GetRequiredService<AsteriskRealtimeVoiceEventDispatcher>();
-            await dispatcher.HandleAsync(voiceEvent, cancellationToken);
-        });
+            throw;
+        }
+        catch
+        {
+            // Counted here, with the event's type when it was read, so a payload that fails to parse or dispatch is
+            // still counted.
+            AsteriskDiagnostics.RecordRealtimeEvent(providerName, eventType, AsteriskDiagnostics.EventFailed);
+
+            throw;
+        }
     }
 
     private async Task ExecuteInTenantScopeAsync(Func<IServiceProvider, Task> action)
