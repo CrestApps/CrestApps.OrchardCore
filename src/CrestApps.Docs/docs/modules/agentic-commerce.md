@@ -22,7 +22,8 @@ The admin screens are described in the User Manual: [Sell through AI agents](../
 | `CrestApps.OrchardCore.AgenticCommerce.Ucp.IdentityLinking` | UCP Account Linking | UCP, OpenID Server | The `dev.ucp.common.identity_linking` capability: a buyer links their store account to an agent through the tenant's OpenID server. |
 | `CrestApps.OrchardCore.AgenticCommerce.Ucp.Catalog` | UCP Catalog and Cart | UCP, Product Listing | Catalog search and lookup, and the UCP cart. |
 | `CrestApps.OrchardCore.AgenticCommerce.Ucp.Mcp` | UCP over MCP | UCP | UCP's checkout as Model Context Protocol tools at `ucp/mcp`. |
-| `CrestApps.OrchardCore.AgenticCommerce.Acp` | Agentic Commerce Protocol | Agentic Commerce | The discovery document at `/.well-known/acp.json`, the ACP checkout REST binding, and signed order webhooks. |
+| `CrestApps.OrchardCore.AgenticCommerce.Acp` | Agentic Commerce Protocol | Agentic Commerce | The discovery document at `/.well-known/acp.json`, the ACP checkout REST binding, optional request signatures, and signed order webhooks. |
+| `CrestApps.OrchardCore.AgenticCommerce.Acp.Mcp` | ACP over MCP | ACP | ACP's checkout sessions as Model Context Protocol tools at `acp/mcp`. See [ACP over MCP](#acp-over-mcp). |
 | `CrestApps.OrchardCore.AgenticCommerce.Feeds` | Agent Product Feeds | Agentic Commerce, Product Feeds | The OpenAI product feed, the daily SFTP push and the ACP feed API client. See [Agent product feeds](#agent-product-feeds). |
 | `CrestApps.OrchardCore.AgenticCommerce.Ap2` | Agent Payments Protocol (Preview) | UCP | The AP2 mandates extension of UCP. See [AP2 mandates (preview)](#ap2-mandates-preview). |
 
@@ -98,6 +99,7 @@ The paths come after the tenant's base address.
 | `POST acp/checkout_sessions/{id}` | ACP | Changes a checkout. |
 | `POST acp/checkout_sessions/{id}/complete` | ACP | Pays and completes a checkout. |
 | `POST acp/checkout_sessions/{id}/cancel` | ACP | Cancels a checkout. A checkout that can't be canceled gets `405`. |
+| `POST acp/mcp` | ACP over MCP | ACP's MCP binding (JSON-RPC). |
 | `GET agentic-commerce/continue/{token}` | Agentic Commerce | The hand-off link. See [When the buyer must act](#when-the-buyer-must-act). |
 
 A request body is at most 1 MB; a larger one gets `413`. The body is read once, exactly as sent, so its signature and digest can be checked.
@@ -122,7 +124,7 @@ An agent names its platform's profile in the `UCP-Agent` header (`profile="https
 
 ### ACP discovery and versions
 
-`/.well-known/acp.json` names the protocol, the supported versions, `api_base_url` (`{base}/acp`), the `rest` transport, the `checkout` and `orders` services and the `discount` extension. Every ACP request sends `API-Version`; a missing or unknown version gets `400` with `missing_api_version` or `unsupported_api_version` and the `supported_versions`. A `Request-Id` header is echoed back.
+`/.well-known/acp.json` names the protocol, the supported versions, `api_base_url` (`{base}/acp`), the transports (`rest`, and `mcp` with ACP over MCP), the `checkout` and `orders` services and the `discount` extension. Features add to it with `IAcpDiscoveryContributor`. Every ACP request sends `API-Version`; a missing or unknown version gets `400` with `missing_api_version` or `unsupported_api_version` and the `supported_versions`. A `Request-Id` header is echoed back.
 
 ## How a platform signs in
 
@@ -140,6 +142,32 @@ A signed request is checked even when an API key or a token also signed it in. A
 
 A request without credentials gets `401` with `WWW-Authenticate: Bearer`.
 
+## ACP request signatures
+
+ACP lets a platform sign each request with a `Signature` header (a base64url detached signature) and a `Timestamp` header (RFC 3339). The specification leaves the algorithm, the signed bytes and the key to the merchant and the platform, so the store settles them per platform, in the **ACP request signatures** card of the platform:
+
+| Setting | Property | Meaning |
+| --- | --- | --- |
+| Require signed requests | `AcpRequireSignedRequests` | Every ACP request must carry a valid signature. |
+| Algorithm | `AcpSignatureAlgorithm` | `ES256` (ECDSA on P-256 with SHA-256), the only one. .NET 10 has no Ed25519 signature API of its own, so Ed25519 isn't offered. |
+| Platform's public key | `AcpSignaturePublicKey` | An EC JSON Web Key (`{"kty":"EC","crv":"P-256","x":...,"y":...}`) or a PEM `PUBLIC KEY` block, on P-256. A private key is refused when the platform is saved. The key isn't a secret: it travels in deployments and recipes. |
+| Allowed clock skew | `AcpSignatureClockSkewSeconds` | How far `Timestamp` may be from the store's clock, 1 to 3600 seconds; 300 when empty. |
+
+How a request is verified (`AcpRequestSignature` in the Core project, applied by `AcpSignatureCheck`):
+
+- **Signed bytes:** the RFC 8785 (JCS) canonical JSON of the request body, or nothing for a request without a body. Key order, whitespace and number form don't change it; array order does. The timestamp isn't part of the signed bytes: no ACP source defines a `timestamp.body` form, so the store only checks `Timestamp` against the skew window.
+- **Signature:** the 64-byte `r || s` form JOSE uses, base64url (padding is allowed). A DER signature is accepted too.
+- **When:** after the platform signs in and before any checkout work, including the idempotency replay.
+
+A platform that requires signed requests gets `401` with `type: invalid_request` and `code: invalid_signature` for a missing, stale or wrong signature. A platform that doesn't require them may still sign: when it has a public key, a signed request is verified and refused the same way if it doesn't match. Without a key, the headers are ignored.
+
+```csharp
+// How an agent signs a request for this store.
+var input = AcpRequestSignature.GetSigningInput(JsonNode.Parse(body));
+request.Headers.Add("Signature", AcpRequestSignature.Sign(input, privateKey));
+request.Headers.Add("Timestamp", DateTimeOffset.UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture));
+```
+
 ## Idempotency
 
 The checkout and cart endpoints that change something take an `Idempotency-Key` header, through `WithIdempotency(IdempotencyPolicy)` from `CrestApps.OrchardCore.Commerce.Api.Core`. Keys are kept for each platform.
@@ -155,6 +183,8 @@ The checkout and cart endpoints that change something take an `Idempotency-Key` 
 | Same key, first request still running | `409 idempotency_in_flight` | `409 idempotency_in_flight` with `Retry-After: 1` |
 
 `IdempotencyPolicy` sets the header, the lifetime, the key length, the fingerprint and the answer for each case, so another protocol can keep its own rules on the same filter.
+
+ACP over MCP takes the key in `meta.idempotency_key` instead of a header, and follows the same ACP rules with `AcpMcpIdempotency`: keys are kept per platform, tool and checkout, and a replayed answer has `_meta.idempotent_replayed: true`.
 
 ## Payment handlers
 
@@ -268,6 +298,32 @@ With **UCP over MCP** on, `POST ucp/mcp` serves UCP's MCP binding: JSON-RPC 2.0 
 
 Each tool returns the checkout in `structuredContent`, as the REST binding writes it.
 
+## ACP over MCP
+
+With **ACP over MCP** on, `POST acp/mcp` serves ACP's MCP binding: JSON-RPC 2.0 over MCP Streamable HTTP, answered as plain JSON, with the MCP protocol version `2025-06-18`. `/.well-known/acp.json` then lists `mcp` in `transports`. It answers `initialize`, `ping`, `tools/list` and `tools/call`; a notification gets `202`.
+
+The platform signs in on the HTTP request, with the same API key or OAuth bearer token as REST. Authorization is never a tool argument. A request that can't sign in gets HTTP `401` (or `403`) with a JSON-RPC error `-32000` whose `data` is the ACP error.
+
+Every tool takes `{ meta, id, payload }`:
+
+| Argument | Meaning |
+| --- | --- |
+| `meta` | The values REST sends as headers: `api_version` (required), `idempotency_key`, `request_id`, `signature`, `timestamp`. Other members are allowed and ignored. |
+| `id` | The checkout session's id. Every tool but `create_checkout_session` needs it. |
+| `payload` | The REST request body, in the same schema: required for create, update and complete, optional for cancel. |
+
+| Tool | Runs the same code as |
+| --- | --- |
+| `create_checkout_session` | `POST acp/checkout_sessions` |
+| `get_checkout_session` | `GET acp/checkout_sessions/{id}` |
+| `update_checkout_session` | `POST acp/checkout_sessions/{id}` |
+| `complete_checkout_session` | `POST acp/checkout_sessions/{id}/complete` |
+| `cancel_checkout_session` | `POST acp/checkout_sessions/{id}/cancel` |
+
+Both bindings call `AcpCheckoutOperations`, so the checks and answers are the same. Every tool but `get_checkout_session` needs `meta.idempotency_key` (see [Idempotency](#idempotency)). When the platform signs its requests, `meta.signature` and `meta.timestamp` are checked as [ACP request signatures](#acp-request-signatures) are, over the canonical JSON of `payload`, so one signature works for both bindings.
+
+A successful call returns the REST body in `structuredContent` (and as text in `content`), with `meta.request_id` echoed in `_meta.request_id`. Any ACP error, including a missing idempotency key, a conflict, an unknown version or a bad signature, is a JSON-RPC error `-32000` with the ACP error (`type`, `code`, `message`, `param`) in `error.data`. Only malformed arguments (no tool name, an unknown tool, no `meta.api_version`, a missing `id` or `payload`) get `-32602`.
+
 ## AI tools
 
 When the AI feature (`CrestApps.OrchardCore.AI`), Product Listing and Product Feeds are on with Agentic Commerce, the module registers three AI tools in the **Commerce** category. Administrators pick them on AI profiles, and can expose them over MCP and WebMCP.
@@ -282,7 +338,7 @@ The tools use the same catalog and agent checkout as UCP. `startStoreCheckout` k
 
 ## Recipes and deployment
 
-Agent platforms travel with the **AI agent platforms** deployment step and the `AgentPlatforms` recipe step. Credentials never travel: the deployment step leaves the API key hash, its hint and the signing secret out, and the recipe step never reads them. An imported platform has no API key or signing secret, so give it new ones in the admin.
+Agent platforms travel with the **AI agent platforms** deployment step and the `AgentPlatforms` recipe step. Credentials never travel: the deployment step leaves the API key hash, its hint and the signing secret out, and the recipe step never reads them. The ACP request signing settings, the platform's public key included, do travel. An imported platform has no API key or signing secret, so give it new ones in the admin.
 
 ```json
 {
@@ -300,7 +356,11 @@ Agent platforms travel with the **AI agent platforms** deployment step and the `
       "AllowedPaymentHandlers": [ "com.stripe.payments", "dev.acp.tokenized.card" ],
       "AllowedIpRanges": [ "203.0.113.0/24" ],
       "AcpOrderCreatedEvent": "order_create",
-      "AcpOrderUpdatedEvent": "order_update"
+      "AcpOrderUpdatedEvent": "order_update",
+      "AcpRequireSignedRequests": true,
+      "AcpSignatureAlgorithm": "ES256",
+      "AcpSignaturePublicKey": "{\"kty\":\"EC\",\"crv\":\"P-256\",\"x\":\"...\",\"y\":\"...\"}",
+      "AcpSignatureClockSkewSeconds": 300
     }
   ]
 }
@@ -328,7 +388,7 @@ The module adds two recipes, which you run from **Configuration > Recipes**:
 
 | Recipe | What it does |
 | --- | --- |
-| `AgenticCommerceSample` (Agentic commerce: sample) | Turns on Test payments, Agentic Commerce, UCP, UCP Catalog and Cart, UCP over MCP, ACP and Agent Product Feeds, and adds a *Test agent platform* in test mode for UCP and ACP. Give it an API key under **Commerce > AI agents**. |
+| `AgenticCommerceSample` (Agentic commerce: sample) | Turns on Test payments, Agentic Commerce, UCP, UCP Catalog and Cart, UCP over MCP, ACP, ACP over MCP and Agent Product Feeds, and adds a *Test agent platform* in test mode for UCP and ACP. Give it an API key under **Commerce > AI agents**. |
 | `AgenticCommerceAccountLinking` (Agentic commerce: UCP account linking) | Turns on the OpenID server, OpenID token validation and UCP Account Linking, and adds the UCP scopes. See [Account linking](#account-linking-ucp). |
 
 The module has no `appsettings.json` configuration of its own.
@@ -341,6 +401,7 @@ The module has no `appsettings.json` configuration of its own.
 | `IAgentCheckoutService` | AgenticCommerce.Core | Create, change, complete and cancel agent checkouts from another binding. |
 | `IUcpProfileContributor` | AgenticCommerce (module) | Add a capability, an extension or a transport to the UCP profile. |
 | `IUcpCheckoutExtension` | AgenticCommerce (module) | Add members to every UCP checkout answer, check a complete request, and act once the checkout is completed. |
+| `IAcpDiscoveryContributor` | AgenticCommerce (module) | Add to the ACP discovery document, such as a transport. |
 | `IAgentOrderPublisher` | AgenticCommerce (module) | Send a protocol's order updates. |
 | `IWebhookOutbox`, `IWebhookDeliveryFormatter` | Webhooks.Abstractions | Queue a signed delivery to one receiver, and sign it the way its protocol asks. See [Direct deliveries](webhooks.md#direct-deliveries). |
 | `ICheckoutContactStep`, `ICheckoutFulfillmentStep` | Checkout.Abstractions | Fill the Contact and Shipping steps from code. See [Checkout](checkout.md#filling-steps-from-code). |
@@ -496,9 +557,10 @@ public sealed class ContosoOrderPublisher : IAgentOrderPublisher
 
 ## Limitations
 
-- **ACP request signatures** aren't verified. ACP platforms sign in with an API key or an OAuth bearer token.
+- **ACP request signatures** are verified with ES256 only. Ed25519 isn't offered, because .NET 10 has no Ed25519 signature API of its own.
 - **ACP's delegate payment endpoint** isn't hosted by the store. ACP agents pay with a token their payment service provider issued, such as a Stripe shared payment token.
-- **ACP's MCP binding**, **UCP's A2A binding** and **embedded checkout** aren't built. UCP is served over REST and MCP, and ACP over REST.
+- **UCP's A2A binding** and **embedded checkout** aren't built. UCP and ACP are served over REST and MCP.
+- **ACP over MCP** serves tool schemas with `payload` as a plain object; it doesn't bundle ACP's JSON Schemas into `tools/list`.
 - **Delegated 3-D Secure** isn't built. When a bank asks the buyer to approve a payment, the checkout goes to `requires_escalation` and the buyer approves it in the store's checkout.
 - **Account linking** has no authorization server metadata of its own. `/.well-known/oauth-authorization-server` redirects to the OpenID server's discovery document.
 - **Stripe shared payment tokens** are a preview of Stripe's API. The store calls Stripe with the preview API version `2026-09-30.preview`.

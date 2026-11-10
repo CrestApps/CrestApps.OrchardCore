@@ -36,7 +36,11 @@ internal sealed class AgentPlatformsRecipeStepSchema : IRecipeStep
                             ("AllowedPaymentHandlers", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("The payment handlers its agents may pay through; empty allows all.")),
                             ("AllowedIpRanges", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("The IP addresses and CIDR ranges its requests come from; empty allows any.")),
                             ("AcpOrderCreatedEvent", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The ACP event name a new order sends; order_create when empty.")),
-                            ("AcpOrderUpdatedEvent", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The ACP event name a changed order sends; order_update when empty.")))
+                            ("AcpOrderUpdatedEvent", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The ACP event name a changed order sends; order_update when empty.")),
+                            ("AcpRequireSignedRequests", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether its ACP requests must carry a valid Signature and Timestamp.")),
+                            ("AcpSignatureAlgorithm", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The algorithm its ACP requests are signed with; ES256 when empty.")),
+                            ("AcpSignaturePublicKey", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The P-256 public key that verifies its signed ACP requests: an EC JSON Web Key or a PEM PUBLIC KEY block.")),
+                            ("AcpSignatureClockSkewSeconds", new JsonSchemaBuilder().Type(SchemaValueType.Integer | SchemaValueType.Null).Minimum(1).Maximum(3600).Description("How many seconds a signed request's Timestamp may be from the store's clock; 300 when empty.")))
                         .Required("Name")
                         .AdditionalProperties(true))
                     .Description("The AI agent platforms to create or update. API keys and webhook secrets are never imported; give them new ones in the admin.")))

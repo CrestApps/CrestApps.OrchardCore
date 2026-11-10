@@ -32,6 +32,17 @@ public class AgentPlatformViewModel
 
     public string AcpOrderUpdatedEvent { get; set; }
 
+    public bool AcpRequireSignedRequests { get; set; }
+
+    public string AcpSignatureAlgorithm { get; set; }
+
+    public string AcpSignaturePublicKey { get; set; }
+
+    public int? AcpSignatureClockSkewSeconds { get; set; }
+
+    [BindNever]
+    public IList<SelectListItem> SignatureAlgorithmOptions { get; set; } = [];
+
     [BindNever]
     public bool IsNew { get; set; }
 

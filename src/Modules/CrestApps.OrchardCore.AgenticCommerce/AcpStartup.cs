@@ -18,6 +18,7 @@ public sealed class AcpStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<AcpCheckoutMapper>();
+        services.AddScoped<AcpCheckoutOperations>();
         services.AddScoped<IAgentOrderPublisher, AcpOrderPublisher>();
         services.AddScoped<IWebhookDeliveryFormatter, AcpOrderWebhookFormatter>();
     }

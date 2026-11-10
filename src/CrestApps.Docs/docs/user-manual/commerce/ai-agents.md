@@ -92,6 +92,17 @@ Click **Save**. Agents show these links to the buyer with every checkout.
 | **UCP profile** | The address of the platform's UCP profile, such as *https://platform.example/.well-known/ucp*. The platform gives it to you. Your store checks the platform's signed requests with the keys in it. |
 | **Allowed IP addresses** | One address, or one range such as *203.0.113.0/24*, per line. Requests from other addresses are refused. Leave it empty to allow any address. OpenAI asks stores to allow only the address ranges it publishes. |
 
+### ACP request signatures
+
+Some ACP platforms sign each request with their own private key, so your store can check that the request really comes from them. Ask the platform whether it signs, and for its public key.
+
+| Field | What it does |
+| --- | --- |
+| **Require signed requests** | Refuse every ACP request that isn't signed with the platform's key. Leave it unticked if the platform doesn't sign. Even when it's unticked, a signed request is checked when a public key is set, and refused if the signature is wrong. |
+| **Algorithm** | How the platform signs. **ES256** is the only choice. |
+| **Platform's public key** | The public key the platform gives you, as a JSON Web Key (it starts with *{"kty":"EC"*) or a PEM block (it starts with *-----BEGIN PUBLIC KEY-----*). It must be a P-256 key. Never paste a private key: the store refuses it. The public key isn't secret, so it is copied when you export the platform. |
+| **Allowed clock skew** | How many seconds the time on a signed request may differ from your store's clock. Leave it empty for 5 minutes. |
+
 ### Payments and order updates
 
 | Field | What it does |
@@ -185,6 +196,8 @@ A buyer can link their account on your store to an agent, so the agent checks ou
 
 AI agents also read your products from feeds. **Settings > Commerce > Agent feeds** publishes them in OpenAI's format for ChatGPT and pushes them to the platforms that host a feed. See [Product listings](product-listings.md#feeds-for-ai-agents).
 
+Some agents use the Model Context Protocol (MCP) instead of plain web requests. Your administrator turns on **UCP over MCP** or **ACP over MCP** for them. Nothing changes on the platform: it signs in with the same key.
+
 Your own AI assistant can sell too. When the AI features are on, your administrator can pick the **Search store products**, **Get store product** and **Start store checkout** tools on an AI profile. The assistant then finds products for a visitor and gives them a link to your checkout. It never pays for them. See [Tools, Agents and Connections](../ai/tools-and-agents.md).
 
 ## Stop or remove a platform
@@ -200,5 +213,6 @@ Your own AI assistant can sell too. When the AI features are on, your administra
 | A platform's agents can't reach the store with a protocol | Your administrator must turn on that protocol's feature, and the protocol must be ticked on the platform. |
 | The platform says the store refused its key | Check that you gave it the latest key, that **Its agents may buy** is ticked, and that its address is in **Allowed IP addresses**. Give it a new key if you aren't sure. |
 | An agent can't pay | Check that Stripe is connected and, for Google's agents, that **Stripe business profile** is filled in. A platform in **Test mode** can only pay with test credentials. A **Payment handlers** list that isn't empty limits how its agents pay. |
+| The platform says its signed requests are refused | Check that **Platform's public key** is the key the platform signs with, and that the platform's clock is right. If the platform doesn't sign, untick **Require signed requests**. |
 | The platform gets no order updates | For an ACP platform, fill in **Order updates address** and give it a signing secret. For a UCP platform, its profile must give the address, or fill in **Order updates address**. |
 | A product isn't offered to agents | Check **Show to AI agents** and **Let AI agents check out** on the product and in the feed's settings. See [Product listings](product-listings.md#feeds-for-ai-agents). |
