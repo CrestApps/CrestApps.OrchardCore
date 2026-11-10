@@ -592,6 +592,74 @@ public sealed class DefaultCheckoutEngineTests
         Assert.Equal(CheckoutCompletionStatus.Pending, result.Status);
     }
 
+    /// <summary>
+    /// A payment waiting on the buyer's bank with one provider (an AI agent's card) and the buyer then paying with
+    /// another in the browser must never both settle. The first is canceled at its provider before the second begins.
+    /// </summary>
+    [Fact]
+    public async Task BeginPaymentAsync_WithAnotherProvider_CancelsThePendingAttemptFirst()
+    {
+        var attemptStore = new InMemoryPaymentAttemptStore();
+        var first = new RecordingProvider(ProviderKey);
+        var second = new RecordingProvider("second");
+        var (engine, sessionStore) = CreateEngine(attemptStore, first, otherProviders: second);
+        sessionStore.Seed(CreateSession(oneTimeAmount: 30m));
+
+        await engine.BeginPaymentAsync("session-1", new BeginPaymentOptions { ProviderKey = ProviderKey }, TestContext.Current.CancellationToken);
+        var outcome = await engine.BeginPaymentAsync("session-1", new BeginPaymentOptions { ProviderKey = "second" }, TestContext.Current.CancellationToken);
+
+        Assert.True(outcome.Succeeded);
+        Assert.Equal(1, first.CancelCallCount);
+        Assert.Equal(1, second.BeginCallCount);
+
+        var attempts = await attemptStore.GetBySessionAsync("session-1", TestContext.Current.CancellationToken);
+        var released = Assert.Single(attempts, attempt => attempt.ProviderKey == ProviderKey);
+
+        Assert.Equal(PaymentAttemptState.Canceled, released.State);
+        Assert.True(released.IsSuperseded);
+        Assert.Single(attempts, attempt => attempt.ProviderKey == "second" && attempt.State != PaymentAttemptState.Canceled);
+    }
+
+    [Fact]
+    public async Task BeginPaymentAsync_WithAnotherProvider_WhenTheFirstWasPaid_BeginsNothing()
+    {
+        var attemptStore = new InMemoryPaymentAttemptStore();
+        var first = new RecordingProvider(ProviderKey)
+        {
+            Verification = _ => new PaymentVerificationResult { Status = PaymentStatus.Succeeded },
+        };
+        var second = new RecordingProvider("second");
+        var (engine, sessionStore) = CreateEngine(attemptStore, first, otherProviders: second);
+        sessionStore.Seed(CreateSession(oneTimeAmount: 30m));
+
+        await engine.BeginPaymentAsync("session-1", new BeginPaymentOptions { ProviderKey = ProviderKey }, TestContext.Current.CancellationToken);
+        var outcome = await engine.BeginPaymentAsync("session-1", new BeginPaymentOptions { ProviderKey = "second" }, TestContext.Current.CancellationToken);
+
+        Assert.False(outcome.Succeeded);
+        Assert.Equal(0, first.CancelCallCount);
+        Assert.Equal(0, second.BeginCallCount);
+    }
+
+    [Fact]
+    public async Task BeginPaymentAsync_WithAnotherProvider_WhenTheFirstCantBeCanceled_BeginsNothing()
+    {
+        var attemptStore = new InMemoryPaymentAttemptStore();
+        var first = new RecordingProvider(ProviderKey) { CancelSucceeds = false };
+        var second = new RecordingProvider("second");
+        var (engine, sessionStore) = CreateEngine(attemptStore, first, otherProviders: second);
+        sessionStore.Seed(CreateSession(oneTimeAmount: 30m));
+
+        await engine.BeginPaymentAsync("session-1", new BeginPaymentOptions { ProviderKey = ProviderKey }, TestContext.Current.CancellationToken);
+        var outcome = await engine.BeginPaymentAsync("session-1", new BeginPaymentOptions { ProviderKey = "second" }, TestContext.Current.CancellationToken);
+
+        Assert.False(outcome.Succeeded);
+        Assert.Equal(0, second.BeginCallCount);
+
+        var attempt = Assert.Single(await attemptStore.GetBySessionAsync("session-1", TestContext.Current.CancellationToken));
+
+        Assert.NotEqual(PaymentAttemptState.Canceled, attempt.State);
+    }
+
     private static RecordingProvider ConfirmingProvider()
         => new(ProviderKey)
         {
@@ -712,12 +780,18 @@ public sealed class DefaultCheckoutEngineTests
         RecordingRefundService refundService = null,
         bool lockGranted = true,
         bool supportsRecurring = true,
-        IPaymentIssueRecorder paymentIssues = null)
+        IPaymentIssueRecorder paymentIssues = null,
+        params RecordingProvider[] otherProviders)
     {
         var sessionStore = new InMemoryCheckoutSessionStore();
 
         var providerResolver = new Mock<ICheckoutPaymentProviderResolver>();
         providerResolver.Setup(r => r.GetProvider(ProviderKey)).Returns(provider);
+
+        foreach (var other in otherProviders)
+        {
+            providerResolver.Setup(r => r.GetProvider(other.Key)).Returns(other);
+        }
 
         var recurringResolver = new Mock<ICheckoutRecurringPaymentProviderResolver>();
         recurringResolver
@@ -791,11 +865,13 @@ public sealed class DefaultCheckoutEngineTests
         public Task<PaymentVerificationResult> VerifyAsync(VerifyPaymentContext context, CancellationToken cancellationToken = default)
             => Task.FromResult(Verification(context));
 
+        public bool CancelSucceeds { get; set; } = true;
+
         public Task<PaymentCancelResult> CancelAsync(CancelPaymentContext context, CancellationToken cancellationToken = default)
         {
             CancelCallCount++;
 
-            return Task.FromResult(PaymentCancelResult.Success());
+            return Task.FromResult(CancelSucceeds ? PaymentCancelResult.Success() : PaymentCancelResult.Failure("can't cancel"));
         }
 
         public int BeginRecurringCallCount { get; private set; }

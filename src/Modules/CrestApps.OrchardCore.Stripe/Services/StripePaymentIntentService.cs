@@ -210,7 +210,7 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
             Confirm = true,
         };
 
-        options.AddExtraParam("payment_method_types[0]", "card");
+        // No payment_method_types: current API versions refuse it, and the card token says what pays.
         options.AddExtraParam("payment_method_data[type]", "card");
         options.AddExtraParam("payment_method_data[card][token]", cardToken);
 
@@ -238,7 +238,8 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
             new("amount", StripeCurrency.ToMinorUnits(model.Amount, model.Currency).ToString(CultureInfo.InvariantCulture)),
             new("currency", model.Currency?.ToLowerInvariant()),
             new("confirm", "true"),
-            new("payment_method_types[0]", "card"),
+
+            // The preview version refuses payment_method_types: the token says what pays.
             new("payment_method_data[shared_payment_granted_token]", model.Credential),
         };
 
@@ -247,11 +248,7 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
             fields.Add(new("description", model.Description));
         }
 
-        if (!string.IsNullOrEmpty(model.ReturnUrl))
-        {
-            fields.Add(new("return_url", model.ReturnUrl));
-        }
-
+        // No return_url: for a token-backed PaymentIntent the agent gives it, and Stripe refuses one from the seller.
         foreach (var (key, value) in model.Metadata ?? [])
         {
             fields.Add(new($"metadata[{key}]", value));
@@ -317,6 +314,7 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
             Status = paymentIntent.Status,
             ErrorMessage = paymentIntent.LastPaymentError?.Message,
             DeclineCode = paymentIntent.LastPaymentError?.DeclineCode,
+            Declined = paymentIntent.Status is "requires_payment_method" or "canceled",
         };
 
     private static ChargeDelegatedCredentialResponse ToResponse(StripeError error, string fallbackMessage)
@@ -329,7 +327,17 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
 
             // A used, expired or revoked token, or one issued to another account, is refused before any card is asked.
             InvalidCredential = error.Type == "invalid_request_error",
+
+            Declined = IsFinal(error),
         };
+
+    // Whether Stripe's error is its final answer, with no money taken: a card error (the bank refused), or a request it
+    // refused outright (a used token, a bad parameter), which Stripe answers before it charges anything. A new try is
+    // then a new charge and needs a new idempotency key, or Stripe keeps replaying the refusal. Everything else (a
+    // server error, a rate limit, an idempotency conflict) leaves the outcome unknown, and only a retry with the same
+    // key is safe: Stripe replays what it did instead of charging again.
+    internal static bool IsFinal(StripeError error)
+        => error?.Type is "card_error" or "invalid_request_error";
 
     // A Google Pay token whose gateway is Stripe is a JSON object holding the card token Stripe made for it.
     internal static string GetGooglePayCardToken(string credential)
@@ -401,11 +409,13 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
                 Status = paymentIntent.Status,
                 ErrorMessage = paymentIntent.LastPaymentError?.Message,
                 DeclineCode = paymentIntent.LastPaymentError?.DeclineCode,
+                Declined = paymentIntent.Status is "requires_payment_method" or "canceled",
             };
         }
         catch (StripeException ex) when (ex.StripeError is not null)
         {
             // A declined card is an answer, not a fault: report it so the caller can record why and retry later.
+            // Only a card error is that answer; a server error or a rate limit says nothing about the money.
             return new ChargeOffSessionResponse
             {
                 Succeeded = false,
@@ -414,6 +424,7 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
                 ErrorMessage = ex.StripeError.Message ?? ex.Message,
                 DeclineCode = ex.StripeError.DeclineCode,
                 RequiresAuthentication = string.Equals(ex.StripeError.Code, "authentication_required", StringComparison.Ordinal),
+                Declined = IsFinal(ex.StripeError),
             };
         }
     }

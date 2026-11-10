@@ -550,7 +550,16 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
             };
         }
 
-        return PaymentBeginResult.Decline(response.ErrorMessage ?? S["The payment was declined."].Value, response.PaymentIntentId);
+        if (response.Declined)
+        {
+            return PaymentBeginResult.Decline(response.ErrorMessage ?? S["The payment was declined."].Value, response.PaymentIntentId);
+        }
+
+        // Stripe's outcome is unknown (a server error, a rate limit, an idempotency conflict). The attempt keeps its
+        // idempotency key, so trying again replays whatever Stripe did rather than making a second charge.
+        _logger.LogWarning("Stripe didn't take the delegated credential for checkout attempt '{AttemptId}': {Error}", attempt.ItemId, response.ErrorMessage);
+
+        return PaymentBeginResult.Failure(response.ErrorMessage ?? S["Stripe didn't take the payment. Try again."].Value);
     }
 
     private async Task<PaymentBeginResult> ChargeSavedPaymentMethodAsync(BeginPaymentContext context, decimal grossAmount)
@@ -599,6 +608,15 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
                 return PaymentBeginResult.AuthenticationRequired(
                     S["The card's bank asked the cardholder to approve this payment, which cannot be done without them. The customer needs to pay it themselves."].Value,
                     response.PaymentIntentId);
+            }
+
+            if (!response.Declined)
+            {
+                // Stripe didn't decide the charge (a server error, a rate limit). The attempt keeps its idempotency
+                // key, so the next try replays whatever Stripe did rather than charging the card again.
+                _logger.LogWarning("Stripe didn't take the saved-card charge for checkout attempt '{AttemptId}': {Error}", attempt.ItemId, response.ErrorMessage);
+
+                return PaymentBeginResult.Failure(response.ErrorMessage ?? S["Stripe didn't take the payment. Try again."].Value);
             }
 
             return PaymentBeginResult.Decline(response.ErrorMessage ?? S["The card was declined."].Value, response.PaymentIntentId);

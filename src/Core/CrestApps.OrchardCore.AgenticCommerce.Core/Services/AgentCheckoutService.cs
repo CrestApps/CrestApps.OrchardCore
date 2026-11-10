@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -411,11 +412,39 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
 
             if (result.Checkout is not null)
             {
-                await _store.UpdateAsync(result.Checkout, cancellationToken);
+                await _store.UpdateAsync(await GetTrackedAsync(result.Checkout, cancellationToken), cancellationToken);
+
+                // Committed before the lock is released, so the next request for this checkout reads what this one
+                // did (a completed checkout, a payment in progress) and never pays again from a stale copy.
+                await _session.SaveChangesAsync(cancellationToken);
             }
 
             return result;
         }
+    }
+
+    // The checkout engine commits the session part way through a request (it must, so a payment it starts is on record
+    // before the provider is called). A commit makes YesSql forget the documents it loaded, so saving the copy this
+    // request changed would insert a second row with the same id, and a later read could find the stale one: a paid
+    // checkout that looks payable again. The changes go onto the row as it's stored now instead.
+    private async Task<AgentCheckout> GetTrackedAsync(AgentCheckout changed, CancellationToken cancellationToken)
+    {
+        var tracked = await _store.FindByIdAsync(changed.ItemId, cancellationToken);
+
+        if (tracked is null || ReferenceEquals(tracked, changed))
+        {
+            return changed;
+        }
+
+        foreach (var property in typeof(AgentCheckout).GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        {
+            if (property.CanRead && property.CanWrite && property.GetIndexParameters().Length == 0)
+            {
+                property.SetValue(tracked, property.GetValue(changed));
+            }
+        }
+
+        return tracked;
     }
 
     // A checkout that ran out of time expires; one being paid moves on when the provider confirms the payment.

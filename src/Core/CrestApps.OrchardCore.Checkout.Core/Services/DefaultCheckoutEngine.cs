@@ -680,6 +680,14 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             }, null, false, false);
         }
 
+        // One obligation is paid one way. A payment begun with another provider (an agent's card waiting on the bank,
+        // then the buyer paying with something else in the browser) is set aside first, and only when that provider
+        // confirms it's canceled; otherwise both could settle and the buyer would pay twice.
+        if (attempt is null && !await TryReleaseOtherProvidersAsync(session, provider.Key, obligationId, existingAttempts, cancellationToken))
+        {
+            return (null, "A payment for this checkout is already under way with another payment method. Finish it, or try again in a few minutes.", false, false);
+        }
+
         if (attempt is null)
         {
             attempt = CreateAttempt(session, invoice, provider.Key, obligationId);
@@ -861,6 +869,76 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         }
 
         await SupersedeAsync(attempt, cancellationToken);
+
+        return true;
+    }
+
+    // Sets aside the live attempts other providers made for this obligation. Returns false, leaving everything as it
+    // is, when one of them was paid, can't be checked, or its provider won't confirm it's canceled.
+    private async Task<bool> TryReleaseOtherProvidersAsync(
+        CheckoutSession session,
+        string providerKey,
+        string obligationId,
+        List<PaymentAttempt> existingAttempts,
+        CancellationToken cancellationToken)
+    {
+        var others = existingAttempts
+            .Where(candidate =>
+                string.Equals(candidate.ObligationId, obligationId, StringComparison.Ordinal) &&
+                !string.Equals(candidate.ProviderKey, providerKey, StringComparison.OrdinalIgnoreCase) &&
+                !candidate.IsSuperseded &&
+                candidate.State is PaymentAttemptState.Created or PaymentAttemptState.Pending or PaymentAttemptState.Succeeded)
+            .ToList();
+
+        foreach (var other in others)
+        {
+            if (other.State == PaymentAttemptState.Succeeded || _providerResolver.GetProvider(other.ProviderKey) is not { } otherProvider)
+            {
+                return false;
+            }
+
+            try
+            {
+                if (other.State == PaymentAttemptState.Pending)
+                {
+                    var verification = await otherProvider.VerifyAsync(new VerifyPaymentContext { Session = session, Attempt = other }, cancellationToken);
+
+                    if (verification.Status == PaymentStatus.Succeeded)
+                    {
+                        _logger.LogWarning("Attempt '{AttemptId}' of checkout '{SessionId}' was paid through '{ProviderKey}', so no payment is begun with '{NewProviderKey}'.", other.ItemId, session.SessionId, other.ProviderKey, providerKey);
+
+                        return false;
+                    }
+                }
+
+                var canceled = await otherProvider.CancelAsync(
+                    new CancelPaymentContext
+                    {
+                        Session = session,
+                        Attempt = other,
+                        Reason = "The buyer paid with another payment method.",
+                    },
+                    cancellationToken);
+
+                if (!canceled.Succeeded)
+                {
+                    return false;
+                }
+            }
+            catch (Exception exception)
+            {
+                _logger.LogWarning(exception, "Could not set aside attempt '{AttemptId}' of checkout '{SessionId}', so no payment is begun with '{ProviderKey}'.", other.ItemId, session.SessionId, providerKey);
+
+                return false;
+            }
+
+            other.State = PaymentAttemptState.Canceled;
+            other.IsSuperseded = true;
+            other.FailureReason = "The buyer paid with another payment method.";
+
+            await _attemptStore.UpdateAsync(other, cancellationToken);
+            existingAttempts.Remove(other);
+        }
 
         return true;
     }

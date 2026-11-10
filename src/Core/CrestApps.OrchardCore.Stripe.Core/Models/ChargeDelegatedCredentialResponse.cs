@@ -44,4 +44,13 @@ public sealed class ChargeDelegatedCredentialResponse
     /// Gets or sets a value indicating whether the credential itself was refused, such as an expired or used token.
     /// </summary>
     public bool InvalidCredential { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether Stripe gave its final answer and took no money: a card error, a request
+    /// it refused (such as a used token), or a PaymentIntent that ended without the money. Only then is the charge
+    /// over for good, so another try is a new charge with a new idempotency key. Any other failure (a server error, a
+    /// timeout, an idempotency conflict) leaves the outcome unknown, and a retry must send the same key so Stripe
+    /// replays what it did instead of charging again.
+    /// </summary>
+    public bool Declined { get; set; }
 }

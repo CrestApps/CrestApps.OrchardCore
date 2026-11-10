@@ -36,4 +36,12 @@ public sealed class ChargeOffSessionResponse
     /// happen without them present. The customer has to pay this one themselves.
     /// </summary>
     public bool RequiresAuthentication { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether Stripe gave its final answer and took no money: a card error, a request
+    /// it refused, or a PaymentIntent that ended without the money. Any other failure (a server error, a rate limit,
+    /// an idempotency conflict) leaves the outcome unknown, and a retry must reuse the idempotency key so it never
+    /// charges twice.
+    /// </summary>
+    public bool Declined { get; set; }
 }

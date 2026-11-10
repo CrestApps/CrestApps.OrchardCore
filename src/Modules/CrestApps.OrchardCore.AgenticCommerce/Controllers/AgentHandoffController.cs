@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using CrestApps.OrchardCore.AgenticCommerce.Core.Services;
 using CrestApps.OrchardCore.AgenticCommerce.Services;
 using CrestApps.OrchardCore.Checkout;
@@ -54,21 +55,22 @@ public sealed class AgentHandoffController : Controller
             return NotFound();
         }
 
-        if (session.Status == CheckoutSessionStatus.Completed)
-        {
-            return RedirectToRoute(CheckoutConstants.RouteNames.Confirmation, new { sessionId = session.SessionId });
-        }
-
-        // A guest's checkout belongs to whoever holds its token: the browser the agent sends the buyer to gets one. A
-        // signed-in buyer's checkout stays theirs.
+        // The checkout goes to the browser the agent sends the buyer to, the way the store gives out a new checkout: to
+        // the signed-in user, or to a guest who holds its token. A checkout already made for a linked buyer stays theirs.
         if (string.IsNullOrEmpty(session.OwnerId) || session.OwnerId.StartsWith(AgentPrincipal.OwnerPrefix, StringComparison.Ordinal))
         {
-            session.OwnerId = null;
-            session.GuestTokenHash = _guestTokens.Issue(CheckoutSessionStore.GuestTokenScope, session.SessionId);
+            var userId = User.Identity?.IsAuthenticated == true ? User.FindFirstValue(ClaimTypes.NameIdentifier) : null;
+
+            session.OwnerId = userId;
+            session.GuestTokenHash = userId is null ? _guestTokens.Issue(CheckoutSessionStore.GuestTokenScope, session.SessionId) : null;
 
             await _sessions.SaveAsync(session, HttpContext.RequestAborted);
         }
 
-        return RedirectToRoute(CheckoutConstants.RouteNames.Step, new { sessionId = session.SessionId });
+        // A buyer back from their bank's approval may find the checkout already paid: they see the confirmation, which
+        // is theirs now too.
+        return session.Status == CheckoutSessionStatus.Completed
+            ? RedirectToRoute(CheckoutConstants.RouteNames.Confirmation, new { sessionId = session.SessionId })
+            : RedirectToRoute(CheckoutConstants.RouteNames.Step, new { sessionId = session.SessionId });
     }
 }
