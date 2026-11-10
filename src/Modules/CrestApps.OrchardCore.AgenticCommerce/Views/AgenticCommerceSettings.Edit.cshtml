@@ -29,6 +29,15 @@
                 </div>
             </div>
         </div>
+        <div class="ocat-wrapper" asp-validation-class-for="AllowEmbeddedCheckout">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="AllowEmbeddedCheckout" class="form-check-input" />
+                    <label asp-for="AllowEmbeddedCheckout" class="form-check-label">@T["Allow embedded checkout"]</label>
+                    <span class="hint dashed">@T["A UCP platform may show the store's checkout inside its own page, so the buyer finishes there without leaving the agent. Only the pages a platform lists under Embedding origins may frame its own checkouts; every other page of the site still refuses to be framed."]</span>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 

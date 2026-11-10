@@ -28,6 +28,8 @@ public class AgentPlatformViewModel
 
     public string AllowedIpRanges { get; set; }
 
+    public string EmbeddedCheckoutOrigins { get; set; }
+
     public string AcpOrderCreatedEvent { get; set; }
 
     public string AcpOrderUpdatedEvent { get; set; }

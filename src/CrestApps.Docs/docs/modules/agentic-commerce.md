@@ -96,7 +96,7 @@ The paths come after the tenant's base address.
 | `POST ucp/mcp` | UCP over MCP | UCP's MCP binding (JSON-RPC). |
 | `GET ucp/a2a/.well-known/agent-card.json` | UCP over A2A | The A2A agent card. Public, cached for five minutes. |
 | `POST ucp/a2a` | UCP over A2A | UCP's A2A binding (JSON-RPC, `message/send`). |
-| `GET /.well-known/oauth-authorization-server` | UCP Account Linking | Redirects to the OpenID server's `/.well-known/openid-configuration`. |
+| `GET /.well-known/oauth-authorization-server` | UCP Account Linking | The OAuth authorization server metadata (RFC 8414) of the tenant's OpenID server, with UCP's scopes and S256-only PKCE. `404` when the OpenID server isn't on. See [Account linking](#account-linking-ucp). |
 | `GET /.well-known/acp.json` | ACP | The ACP discovery document. Public, cached for an hour. |
 | `POST acp/checkout_sessions` | ACP | Creates a checkout (`201`). |
 | `GET acp/checkout_sessions/{id}` | ACP | Reads a checkout. |
@@ -104,7 +104,9 @@ The paths come after the tenant's base address.
 | `POST acp/checkout_sessions/{id}/complete` | ACP | Pays and completes a checkout. |
 | `POST acp/checkout_sessions/{id}/cancel` | ACP | Cancels a checkout. A checkout that can't be canceled gets `405`. |
 | `POST acp/mcp` | ACP over MCP | ACP's MCP binding (JSON-RPC). |
-| `GET agentic-commerce/continue/{token}` | Agentic Commerce | The hand-off link. See [When the buyer must act](#when-the-buyer-must-act). |
+| `GET agentic-commerce/continue/{token}` | Agentic Commerce | The hand-off link. See [When the buyer must act](#when-the-buyer-must-act). With `ec_version`, the embedded checkout page; see [Embedded checkout](#embedded-checkout-ucp). |
+| `GET agentic-commerce/embedded/{token}/checkout` | UCP | The embedded checkout page reads its checkout as UCP JSON (`{ "checkout": { ... } }`). |
+| `POST agentic-commerce/embedded/{token}/auth` | UCP | The embedded checkout page has the store check the platform's credential (`{ "credential": "..." }`). |
 
 A request body is at most 1 MB; a larger one gets `413`. The body is read once, exactly as sent, so its signature and digest can be checked.
 
@@ -253,6 +255,38 @@ Money can't move twice. The second complete resumes the attempt the first one ma
 
 UCP's `dev.ucp.common.payment.authentication` extension isn't offered. In UCP 2026-08-25 it doesn't carry a 3-D Secure result: the business shows a challenge page that speaks UCP's embedded protocol to the platform, which the store doesn't have. UCP checkouts keep the `requires_escalation` hand-off.
 
+## Embedded checkout (UCP)
+
+UCP's Embedded Checkout Protocol (ECP) lets a platform show the store's checkout inside its own page, in an iframe or a native app's web view, so the buyer finishes without leaving the agent. The store follows the [UCP 2026-08-25 Embedded Protocol and its checkout binding](https://github.com/Universal-Commerce-Protocol/ucp/blob/v2026-08-25/docs/specification/shopping/checkout/embedded.md) (the same messages in 2026-04-08).
+
+It is off until both of these are set:
+
+- **Allow embedded checkout** in **Settings > Commerce > Agentic commerce** (`AgenticCommerceSettings.AllowEmbeddedCheckout`, off at first);
+- the platform's **Embedding origins** (`AgentPlatform.EmbeddedCheckoutOrigins`): the `https://host[:port]` origins of its pages that frame the checkout. They are checked and normalized when saved (`EmbeddingPolicy.NormalizeOrigin`), and `http` is only accepted on a loopback host, for development. They aren't secret, so they travel with the platform in deployments and recipes.
+
+Then the store's profile lists the `embedded` transport (`services/shopping/embedded.openrpc.json`), and every checkout answer whose `continue_url` is the hand-off link carries the embedded service binding the checkout binding requires: `ucp.services["dev.ucp.shopping"]` with `{ "transport": "embedded", "config": { "delegate": [] } }`. A `continue_url` that is a bank's 3-D Secure page gets no binding.
+
+When the platform opens `continue_url` with `ec_version` (the checkout's version), the store answers with the embedded checkout page instead of the redirect:
+
+- The response carries `Content-Security-Policy: frame-ancestors <the platform's origins>` (merged into the site's own policy, replacing only its `frame-ancestors`) and loses `X-Frame-Options`. Every other page of the site keeps its anti-framing headers. The store checkout pages of that session (its steps, the payment calls and the confirmation) may be framed by the page itself and the platform's origins, and nothing else.
+- The page holds the protocol channel for the whole session and shows the store's own checkout in a frame of its own, so the buyer moves through the checkout's pages without the channel being set up again. Links to other pages open outside the frame.
+- A signed cookie marks the frame (`EmbeddedCheckoutContextCookie`). Over HTTPS, it and the checkout's own cookies (the guest token, the antiforgery cookie) are rewritten to `SameSite=None; Secure; Partitioned`, so they work in a cross-site frame and live only in the platform's partition. Browsers only allow that over HTTPS.
+- `ec_color_scheme=light|dark` sets Bootstrap's `data-bs-theme` on the page and the checkout frame. `ec_delegate` is read but no delegation is accepted: the buyer does every step in the store's checkout, which ECP allows.
+- Without `ec_version`, or when the checkout can't be embedded (embedded checkout off, an ACP checkout, a version that isn't the checkout's, a platform without origins), the buyer gets the ordinary hand-off.
+
+The script (`agentic-commerce-embedded-checkout`) speaks JSON-RPC 2.0 over `postMessage`, and only to and from the platform's origins, or through the `EmbeddedCheckoutProtocolConsumer` a native app injects:
+
+| Message | Kind | When |
+| --- | --- | --- |
+| `ec.ready` | Request | On load, with `delegate: []` and, when the host must give a credential, `auth: { "type": "oauth" }`. A `MessagePort` in the answer's `upgrade` replaces the window channel, and the handshake is sent again over it. A handshake error ends the session. |
+| `ec.auth` | Request | A minute before the host's credential runs out. A recoverable error is retried twice; then the session ends with `ec.error`. |
+| `ec.start` | Notification | Once the store's checkout shows, with the full checkout. |
+| `ec.line_items.change`, `ec.buyer.change`, `ec.fulfillment.change`, `ec.payment.change`, `ec.totals.change`, `ec.messages.change` | Notification | When a checkout page loads with a change, with the full checkout; a domain's change comes before the totals it moved. |
+| `ec.complete` | Notification | Once the order is placed, with the checkout and its `order`. |
+| `ec.error` | Notification | When the session can't go on (a refused credential, a version the host changed), with `continue_url` so the host can hand the buyer off. |
+
+`ec_auth`, when the platform sends it, is an OAuth access token the store's OpenID server issued to the platform's **OAuth client ID** (OpenIddict's validation, so it needs the OpenID validation feature). A valid token binds the frame to the platform until it expires, and the page renews it with `ec.auth`. An expired or invalid one makes the page ask for a credential in `ec.ready`, and the session's checkout pages can't be framed until the store accepts one. Without an OAuth client, or without `ec_auth`, the signed hand-off link alone authorizes the session, as it does for the ordinary hand-off.
+
 ## Order updates
 
 When an agent's order changes, the store tells the platform. `AgentOrderEventHandler` (an `IOrderEventHandler`) and, with the Shipping module, `AgentShipmentEventHandler` call `AgentOrderUpdates`, which finds the agent checkout of an order with the `agent` channel and calls each `IAgentOrderPublisher` of the checkout's protocol.
@@ -299,7 +333,9 @@ A refused mandate is answered with the checkout, an `error` status and an unreco
 
 With **UCP Account Linking** on, the profile offers `dev.ucp.common.identity_linking` with two scopes: `dev.ucp.shopping.checkout:manage` (check out as the buyer, with their saved addresses) and `dev.ucp.shopping.order:read` (read the buyer's orders). The buyer links their account through the tenant's OpenID server with the authorization code flow, and the agent then sends the token the buyer's consent gave it.
 
-- `/.well-known/oauth-authorization-server` redirects to the OpenID server's own discovery document, which UCP agents read.
+- `/.well-known/oauth-authorization-server` is the authorization server metadata (RFC 8414). The OpenID server (OpenIddict) answers it itself, before routing, from the options Orchard Core's OpenID server feature gives it: `issuer`, `authorization_endpoint`, `token_endpoint`, `revocation_endpoint`, `jwks_uri`, `response_types_supported`, `grant_types_supported`, `token_endpoint_auth_methods_supported`, `authorization_response_iss_parameter_supported: true` and the rest. UCP Account Linking adds to it with an OpenIddict handler (`UcpAuthorizationServerMetadataHandler`): `scopes_supported` gets `dev.ucp.shopping.checkout:manage` and `dev.ucp.shopping.order:read`, and `code_challenge_methods_supported` is `["S256"]`. The same applies to `/.well-known/openid-configuration`.
+- While UCP Account Linking is on, **the OpenID server accepts only S256 PKCE challenges**: the feature removes `plain` from the server's code challenge methods, as UCP requires. A client that sends `code_challenge_method=plain` is refused.
+- When the OpenID server isn't on, the address answers `404` and agents fall back to OpenID discovery, as UCP expects. If the server is on but doesn't answer the address itself, the module serves the same document, built from the server's options (`OAuthAuthorizationServerMetadata`).
 - With `checkout:manage`, the agent's checkouts belong to the buyer (`AgentCheckoutContext.UserId`), so the store checkout and the order are theirs.
 - With `order:read`, `GET ucp/v1/orders/{id}` also returns the buyer's own orders.
 
@@ -416,6 +452,7 @@ Agent platforms travel with the **AI agent platforms** deployment step and the `
       "WebhookUrl": "https://agents.contoso.com/webhooks/orders",
       "AllowedPaymentHandlers": [ "com.stripe.payments", "dev.acp.tokenized.card" ],
       "AllowedIpRanges": [ "203.0.113.0/24" ],
+      "EmbeddedCheckoutOrigins": [ "https://agents.contoso.com" ],
       "AcpOrderCreatedEvent": "order_create",
       "AcpOrderUpdatedEvent": "order_update",
       "AcpRequireSignedRequests": true,
@@ -436,6 +473,7 @@ Agent platforms travel with the **AI agent platforms** deployment step and the `
     "CheckoutLifetimeHours": 6,
     "MaxOpenCheckoutsPerPlatform": 1000,
     "AllowUnregisteredUcpPlatforms": false,
+    "AllowEmbeddedCheckout": false,
     "StripeBusinessProfileId": "profile_123",
     "EnableGooglePay": true,
     "GooglePayMerchantId": "BCR2DN4T000000",
@@ -620,10 +658,9 @@ public sealed class ContosoOrderPublisher : IAgentOrderPublisher
 
 - **ACP request signatures** are verified with ES256 only. Ed25519 isn't offered, because .NET 10 has no Ed25519 signature API of its own.
 - **ACP's delegate payment endpoint** isn't hosted by the store. ACP agents pay with a token their payment service provider issued, such as a Stripe shared payment token.
-- **Embedded checkout** isn't built. UCP is served over REST, MCP and A2A, and ACP over REST and MCP.
 - **ACP over MCP** serves tool schemas with `payload` as a plain object; it doesn't bundle ACP's JSON Schemas into `tools/list`.
 - **Delegated 3-D Secure** is built for ACP only (see [Delegated 3-D Secure](#delegated-3-d-secure-acp)). UCP's payment authentication extension needs a challenge page that speaks UCP's embedded protocol, which isn't built, so UCP checkouts go to `requires_escalation`. ACP's Delegate Authentication API is hosted by the authentication provider, not the store.
-- **Account linking** has no authorization server metadata of its own. `/.well-known/oauth-authorization-server` redirects to the OpenID server's discovery document.
+- **Embedded checkout** accepts no delegation (`payment.credential`, `fulfillment.address_change`, `window.open` and the others): the buyer does every step in the store's checkout. Change notifications are sent when a checkout page loads, not while the buyer types.
 - **Stripe shared payment tokens** are a preview of Stripe's API. The store calls Stripe with the preview API version `2026-09-30.preview`.
 - **AP2** is a preview, for UCP only.
 

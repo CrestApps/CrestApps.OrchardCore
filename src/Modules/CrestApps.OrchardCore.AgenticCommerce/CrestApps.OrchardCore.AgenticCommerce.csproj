@@ -39,6 +39,8 @@
     <PackageReference Include="OrchardCore.ResourceManagement" />
     <PackageReference Include="OrchardCore.Settings.Core" />
     <PackageReference Include="SSH.NET" />
+    <PackageReference Include="OpenIddict.Server" />
+    <PackageReference Include="OpenIddict.Validation" />
   </ItemGroup>
 
   <ItemGroup>

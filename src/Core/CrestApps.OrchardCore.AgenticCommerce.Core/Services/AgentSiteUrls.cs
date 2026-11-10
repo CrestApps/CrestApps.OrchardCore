@@ -16,6 +16,12 @@ public sealed class AgentSiteUrls
     /// </summary>
     public const string HandoffPath = "agentic-commerce/continue";
 
+    /// <summary>
+    /// The path of an embedded checkout's own calls (its checkout state and its host's credential), after the tenant's
+    /// base address.
+    /// </summary>
+    public const string EmbeddedPath = "agentic-commerce/embedded";
+
     private static readonly TimeSpan _handoffLifetime = TimeSpan.FromDays(2);
 
     private readonly IHttpContextAccessor _httpContextAccessor;

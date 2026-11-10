@@ -75,6 +75,12 @@ public sealed class AgentPlatform : CatalogItem, INameAwareModel, IModifiedUtcAw
     public List<string> AllowedIpRanges { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the origins (<c>https://host[:port]</c>) whose pages may show the store's checkout in a frame, for
+    /// UCP embedded checkout. They aren't secret, so they travel with the platform in exports.
+    /// </summary>
+    public List<string> EmbeddedCheckoutOrigins { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the name of the ACP event a new order sends; <c>order_create</c> when empty.
     /// </summary>
     public string AcpOrderCreatedEvent { get; set; }

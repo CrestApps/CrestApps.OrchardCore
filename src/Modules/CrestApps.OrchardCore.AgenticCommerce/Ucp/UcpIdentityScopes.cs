@@ -19,4 +19,9 @@ public static class UcpIdentityScopes
     /// Lets an agent change the linked buyer's orders.
     /// </summary>
     public const string OrderManage = "dev.ucp.shopping.order:manage";
+
+    /// <summary>
+    /// The scopes the store offers linked agents: checking out as the buyer and reading their orders.
+    /// </summary>
+    public static readonly IReadOnlyList<string> Offered = [CheckoutManage, OrderRead];
 }

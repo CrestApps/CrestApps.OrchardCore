@@ -142,6 +142,20 @@
 </div>
 
 <div class="card mb-3">
+    <div class="card-header">@T["Embedded checkout"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="EmbeddedCheckoutOrigins">
+            <label asp-for="EmbeddedCheckoutOrigins" class="ocat-label">@T["Embedding origins"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="EmbeddedCheckoutOrigins" class="form-control" rows="2" placeholder="https://agent.example"></textarea>
+                <span asp-validation-for="EmbeddedCheckoutOrigins" class="text-danger"></span>
+                <span class="hint">@T["The addresses (https:// and a host, no path) of the platform's pages that may show the store's checkout inside them, one per line. Only this platform's checkouts can be shown there, and only when Allow embedded checkout is on in Settings › Agentic commerce. Empty keeps the checkout out of frames. UCP only."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
     <div class="card-header">@T["Payments and order updates"]</div>
     <div class="card-body">
         <div class="ocat-wrapper" asp-validation-class-for="AllowedPaymentHandlers">

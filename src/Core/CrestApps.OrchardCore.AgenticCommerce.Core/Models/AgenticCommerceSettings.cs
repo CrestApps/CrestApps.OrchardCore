@@ -22,6 +22,12 @@ public sealed class AgenticCommerceSettings
     public bool AllowUnregisteredUcpPlatforms { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether a UCP platform may show the store's checkout inside its own page (UCP
+    /// embedded checkout), when the platform lists the origins that frame it.
+    /// </summary>
+    public bool AllowEmbeddedCheckout { get; set; }
+
+    /// <summary>
     /// Gets or sets the store's Stripe business profile ID (<c>profile_…</c>), which agents issue shared payment tokens
     /// to.
     /// </summary>

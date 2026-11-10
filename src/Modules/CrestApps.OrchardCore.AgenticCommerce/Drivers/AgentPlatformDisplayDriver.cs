@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.AgenticCommerce.Core.Models;
 using CrestApps.OrchardCore.AgenticCommerce.Core.Security;
+using CrestApps.OrchardCore.AgenticCommerce.Handlers;
 using CrestApps.OrchardCore.AgenticCommerce.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -61,6 +62,7 @@ internal sealed class AgentPlatformDisplayDriver : DisplayDriver<AgentPlatform>
             model.WebhookUrl = platform.WebhookUrl;
             model.AllowedPaymentHandlers = string.Join(Environment.NewLine, platform.AllowedPaymentHandlers ?? []);
             model.AllowedIpRanges = string.Join(Environment.NewLine, platform.AllowedIpRanges ?? []);
+            model.EmbeddedCheckoutOrigins = string.Join(Environment.NewLine, platform.EmbeddedCheckoutOrigins ?? []);
             model.AcpOrderCreatedEvent = platform.AcpOrderCreatedEvent;
             model.AcpOrderUpdatedEvent = platform.AcpOrderUpdatedEvent;
             model.AcpRequireSignedRequests = platform.AcpRequireSignedRequests;
@@ -96,6 +98,7 @@ internal sealed class AgentPlatformDisplayDriver : DisplayDriver<AgentPlatform>
         platform.WebhookUrl = Clean(model.WebhookUrl);
         platform.AllowedPaymentHandlers = Lines(model.AllowedPaymentHandlers);
         platform.AllowedIpRanges = Lines(model.AllowedIpRanges);
+        platform.EmbeddedCheckoutOrigins = AgentPlatformHandler.NormalizeOrigins(Lines(model.EmbeddedCheckoutOrigins));
         platform.AcpOrderCreatedEvent = Clean(model.AcpOrderCreatedEvent);
         platform.AcpOrderUpdatedEvent = Clean(model.AcpOrderUpdatedEvent);
         platform.AcpRequireSignedRequests = model.AcpRequireSignedRequests;

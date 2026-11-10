@@ -23,6 +23,21 @@ public static class AgenticCommerceStorage
     public const string HandoffTokenPurpose = "CrestApps.OrchardCore.AgenticCommerce.Handoff";
 
     /// <summary>
+    /// The purpose of the signed token an embedded checkout reads its checkout and checks its host's credential with.
+    /// </summary>
+    public const string EmbeddedCheckoutTokenPurpose = "CrestApps.OrchardCore.AgenticCommerce.EmbeddedCheckout";
+
+    /// <summary>
+    /// The purpose of the cookie that marks the browser frame an embedded checkout runs in.
+    /// </summary>
+    public const string EmbeddedCheckoutContextPurpose = "CrestApps.OrchardCore.AgenticCommerce.EmbeddedCheckoutContext";
+
+    /// <summary>
+    /// The name of the cookie that marks the browser frame an embedded checkout runs in.
+    /// </summary>
+    public const string EmbeddedCheckoutContextCookieName = "crestapps_agent_ec";
+
+    /// <summary>
     /// The sales channel of the orders AI agents place.
     /// </summary>
     public const string OrderChannel = OrderChannels.Agent;
