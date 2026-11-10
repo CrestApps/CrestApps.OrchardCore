@@ -95,7 +95,7 @@
                     @if (transaction.DueUtc.HasValue)
                     {
                         <dt class="col-sm-4">@T["Due"]</dt>
-                        <dd class="col-sm-8">@((await LocalAsync(transaction.DueUtc.Value)).ToString("d"))</dd>
+                        <dd class="col-sm-8">@((await DocumentDates.ToSiteDueDateAsync(LocalClock, transaction.DueUtc.Value)).ToString("d"))</dd>
                     }
 
                     @if (!string.IsNullOrEmpty(transaction.InvoiceNumber))

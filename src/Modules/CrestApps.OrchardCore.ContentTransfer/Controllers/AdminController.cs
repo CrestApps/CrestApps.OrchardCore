@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Calendars;
 using System.Data;
 using System.Security.Claims;
 using CrestApps.OrchardCore.ContentTransfer.Filters;
@@ -1076,7 +1077,7 @@ public sealed class AdminController : Controller, IUpdateModel
     }
 
     private static async Task<DateTime?> ToUtcAsync(DateTime? localDay, ILocalClock localClock)
-        => localDay is { } value ? await localClock.ConvertToUtcAsync(value.Date) : null;
+        => localDay is { } value ? await localClock.ToUtcLenientAsync(value.Date) : null;
 
     private async Task<ContentExporterViewModel> BuildContentExporterViewModelAsync(
         IList<SelectListItem> exportableTypes,

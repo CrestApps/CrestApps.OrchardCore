@@ -53,7 +53,7 @@ public sealed class TransactionInvoiceBuilder : ITransactionInvoiceBuilder
 
         if (transaction.DueUtc.HasValue)
         {
-            notes.Add(S["Due on {0:d}.", await DocumentDates.ToSiteTimeAsync(_localClock, transaction.DueUtc.Value)].Value);
+            notes.Add(S["Due on {0:d}.", await DocumentDates.ToSiteDueDateAsync(_localClock, transaction.DueUtc.Value)].Value);
         }
 
         if (!paid && transaction.AmountPaid > 0m)

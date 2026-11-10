@@ -56,7 +56,7 @@
                                 }
                                 @if (transaction.DueUtc.HasValue)
                                 {
-                                    <span class="ms-2">@T["Due: {0}", (await LocalAsync(transaction.DueUtc.Value)).ToString("d")]</span>
+                                    <span class="ms-2">@T["Due: {0}", (await DocumentDates.ToSiteDueDateAsync(LocalClock, transaction.DueUtc.Value)).ToString("d")]</span>
                                 }
                             </div>
                             @if (!string.IsNullOrEmpty(entry.InvoiceUrl) || entry.Receipts.Count > 0)

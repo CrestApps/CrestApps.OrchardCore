@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Calendars;
 using System.Globalization;
 using CrestApps.OrchardCore.Fundraising.Models;
 using CrestApps.OrchardCore.Fundraising.Services;
@@ -123,7 +124,7 @@ internal sealed class FundraisingCampaignPartDisplayDriver : ContentPartDisplayD
         part.MinimumAmount = Math.Max(0.01m, minimum == 0m ? 1m : minimum);
         part.SuggestedAmounts = [.. amounts.Distinct().Order().Take(6)];
         // Entered in the site's time zone.
-        part.EndsUtc = model.Ends is { } ends ? await _localClock.ConvertToUtcAsync(ends) : null;
+        part.EndsUtc = model.Ends is { } ends ? await _localClock.ToUtcLenientAsync(ends) : null;
         part.TaxDeductible = model.TaxDeductible;
 
         return Edit(part, context);

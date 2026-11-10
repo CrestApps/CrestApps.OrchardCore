@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Products.ViewModels;
@@ -169,8 +170,8 @@ public sealed class ProductPricePartDisplayDriver : ContentPartDisplayDriver<Pro
             IsDefault = entry.IsDefault,
             IsActive = entry.IsActive,
             // The editor shows and takes the dates in the site's time zone.
-            EffectiveFromUtc = entry.EffectiveFrom is { } from ? await _localClock.ConvertToUtcAsync(from) : null,
-            EffectiveToUtc = entry.EffectiveTo is { } to ? await _localClock.ConvertToUtcAsync(to) : null,
+            EffectiveFromUtc = entry.EffectiveFrom is { } from ? await _localClock.ToUtcLenientAsync(from) : null,
+            EffectiveToUtc = entry.EffectiveTo is { } to ? await _localClock.ToUtcLenientAsync(to) : null,
         };
 
     private async Task<ProductPriceViewModel> ToViewModelAsync(ProductPrice price)

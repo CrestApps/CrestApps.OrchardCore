@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Core;
@@ -404,7 +405,7 @@ public sealed class GiftCardsAdminController : Controller
 
     // The form shows and takes the expiry in the site's time zone.
     private async Task<DateTime?> ToUtcAsync(DateTime? local)
-        => local.HasValue ? await _localClock.ConvertToUtcAsync(local.Value) : null;
+        => local.HasValue ? await _localClock.ToUtcLenientAsync(local.Value) : null;
 
     private static string TrimToNull(string value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

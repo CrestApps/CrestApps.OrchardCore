@@ -68,7 +68,7 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
         // Dates are compared and shown as the owner reads them, in the site's time zone.
         var today = (await DocumentDates.ToSiteTimeAsync(_localClock, _clock.UtcNow)).Date;
         var due = transaction.DueUtc.HasValue
-            ? await DocumentDates.ToSiteTimeAsync(_localClock, transaction.DueUtc.Value)
+            ? await DocumentDates.ToSiteDueDateAsync(_localClock, transaction.DueUtc.Value)
             : (DateTime?)null;
 
         // The first notice on the due date is the invoice itself coming due; later ones chase an unpaid balance.
@@ -145,7 +145,7 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
 
         var amount = FormatAmount(transaction.OutstandingAmount, transaction.Currency);
         var title = GetTitle(transaction);
-        var due = await DocumentDates.ToSiteTimeAsync(_localClock, transaction.DueUtc.Value);
+        var due = await DocumentDates.ToSiteDueDateAsync(_localClock, transaction.DueUtc.Value);
         var paymentMethod = transaction.AutoCollection?.PaymentMethodDescription;
 
         // A payment that will be taken automatically needs no action, only notice: the owner should know which
@@ -220,7 +220,7 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
 
         // The invoice itself, not a reminder: it asks for the payment for the first time.
         var body = transaction.DueUtc.HasValue
-            ? S["Here is your invoice for {0}: {1}, due on {2:d}.", title, amount, await DocumentDates.ToSiteTimeAsync(_localClock, transaction.DueUtc.Value)].Value
+            ? S["Here is your invoice for {0}: {1}, due on {2:d}.", title, amount, await DocumentDates.ToSiteDueDateAsync(_localClock, transaction.DueUtc.Value)].Value
             : S["Here is your invoice for {0}: {1}.", title, amount].Value;
 
         var reminder = new Reminder

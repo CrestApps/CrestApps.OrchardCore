@@ -37,7 +37,7 @@ else
                 <div class="h4 mb-0">@outstanding</div>
                 @if (transaction.DueUtc.HasValue)
                 {
-                    <div class="text-muted small">@T["Due on {0:d}", await LocalAsync(transaction.DueUtc.Value)]</div>
+                    <div class="text-muted small">@T["Due on {0:d}", await DocumentDates.ToSiteDueDateAsync(LocalClock, transaction.DueUtc.Value)]</div>
                 }
             </div>
             @if (Model.CanPay)

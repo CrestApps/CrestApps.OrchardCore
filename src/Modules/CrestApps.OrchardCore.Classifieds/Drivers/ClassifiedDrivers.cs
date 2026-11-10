@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Calendars;
 using System.Globalization;
 using CrestApps.OrchardCore.Classifieds.Models;
 using CrestApps.OrchardCore.Classifieds.Services;
@@ -84,8 +85,8 @@ internal sealed class ClassifiedPartDisplayDriver : ContentPartDisplayDriver<Cla
         {
             part.Status = Enum.IsDefined(model.Status) ? model.Status : part.Status;
             // Staff enter the dates in the site's time zone.
-            part.ExpiresUtc = model.Expires is { } expires ? await _localClock.ConvertToUtcAsync(expires) : null;
-            part.FeaturedUntilUtc = model.FeaturedUntil is { } featured ? await _localClock.ConvertToUtcAsync(featured) : null;
+            part.ExpiresUtc = model.Expires is { } expires ? await _localClock.ToUtcLenientAsync(expires) : null;
+            part.FeaturedUntilUtc = model.FeaturedUntil is { } featured ? await _localClock.ToUtcLenientAsync(featured) : null;
         }
 
         return Edit(part, context);

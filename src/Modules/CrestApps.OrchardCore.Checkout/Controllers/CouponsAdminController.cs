@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Calendars;
 using System.Globalization;
 using System.Text;
 using CrestApps.OrchardCore.Checkout.Core;
@@ -497,8 +498,8 @@ public sealed class CouponsAdminController : Controller
     // The form shows and takes the dates in the site's time zone; the coupon keeps them in UTC.
     private static async Task SetUtcDatesAsync(CouponEditViewModel model, ILocalClock localClock)
     {
-        model.StartsUtc = model.Starts.HasValue ? await localClock.ConvertToUtcAsync(model.Starts.Value) : null;
-        model.EndsUtc = model.Ends.HasValue ? await localClock.ConvertToUtcAsync(model.Ends.Value) : null;
+        model.StartsUtc = model.Starts.HasValue ? await localClock.ToUtcLenientAsync(model.Starts.Value) : null;
+        model.EndsUtc = model.Ends.HasValue ? await localClock.ToUtcLenientAsync(model.Ends.Value) : null;
     }
 
     private static async Task<DateTime?> ToLocalAsync(DateTime? utc, ILocalClock localClock)

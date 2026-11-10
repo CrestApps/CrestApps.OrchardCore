@@ -1,6 +1,7 @@
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core.ApiKeys;
 using CrestApps.OrchardCore.AI.ViewModels;
+using CrestApps.OrchardCore.Calendars;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
@@ -118,7 +119,7 @@ public sealed class AIApiKeyDisplayDriver : DisplayDriver<AIApiKey>
 
         key.Name = model.Name?.Trim();
         key.Enabled = model.Enabled;
-        key.ExpiresUtc = model.Expires is { } expires ? await _localClock.ConvertToUtcAsync(expires) : null;
+        key.ExpiresUtc = model.Expires is { } expires ? await _localClock.ToUtcLenientAsync(expires) : null;
 
         if (key.Kind == AIApiKeyKind.Browser)
         {
