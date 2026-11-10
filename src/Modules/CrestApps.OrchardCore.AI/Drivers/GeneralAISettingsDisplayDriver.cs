@@ -55,10 +55,17 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
         return Initialize<GeneralAISettingsViewModel>("GeneralAISettings_Edit", model =>
         {
             model.EnablePreemptiveMemoryRetrieval = settings.EnablePreemptiveMemoryRetrieval;
-            model.MaximumIterationsPerRequest = settings.MaximumIterationsPerRequest;
+            // A setting the site has not overridden shows the value configuration gives it, the one in effect.
+            model.MaximumIterationsPerRequest = settings.OverrideMaximumIterationsPerRequest
+                ? settings.MaximumIterationsPerRequest
+                : _defaultAIOptions.MaximumIterationsPerRequest;
             model.AbsoluteMaximumIterationsPerRequest = _defaultAIOptions.AbsoluteMaximumIterationsPerRequest;
-            model.EnableDistributedCaching = settings.EnableDistributedCaching;
-            model.EnableOpenTelemetry = settings.EnableOpenTelemetry;
+            model.EnableDistributedCaching = settings.OverrideEnableDistributedCaching
+                ? settings.EnableDistributedCaching
+                : _defaultAIOptions.EnableDistributedCaching;
+            model.EnableOpenTelemetry = settings.OverrideEnableOpenTelemetry
+                ? settings.EnableOpenTelemetry
+                : _defaultAIOptions.EnableOpenTelemetry;
         }).Location("Content:1%General;1")
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles));
@@ -76,9 +83,9 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
         var maximumIterationsPerRequest = Math.Min(model.MaximumIterationsPerRequest, _defaultAIOptions.AbsoluteMaximumIterationsPerRequest);
         var settingsChanged =
             settings.EnablePreemptiveMemoryRetrieval != model.EnablePreemptiveMemoryRetrieval ||
-            settings.MaximumIterationsPerRequest != maximumIterationsPerRequest ||
-            settings.EnableDistributedCaching != model.EnableDistributedCaching ||
-            settings.EnableOpenTelemetry != model.EnableOpenTelemetry;
+            GetMaximumIterationsPerRequest(settings) != maximumIterationsPerRequest ||
+            GetEnableDistributedCaching(settings) != model.EnableDistributedCaching ||
+            GetEnableOpenTelemetry(settings) != model.EnableOpenTelemetry;
 
         if (model.MaximumIterationsPerRequest < 1)
         {
@@ -95,10 +102,15 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
             return Edit(site, settings, context);
         }
 
+        // A saved value overrides configuration only when it differs from it; without the override flags, the saved
+        // values were ignored. A value equal to configuration keeps following configuration.
         settings.EnablePreemptiveMemoryRetrieval = model.EnablePreemptiveMemoryRetrieval;
         settings.MaximumIterationsPerRequest = maximumIterationsPerRequest;
+        settings.OverrideMaximumIterationsPerRequest = maximumIterationsPerRequest != _defaultAIOptions.MaximumIterationsPerRequest;
         settings.EnableDistributedCaching = model.EnableDistributedCaching;
+        settings.OverrideEnableDistributedCaching = model.EnableDistributedCaching != _defaultAIOptions.EnableDistributedCaching;
         settings.EnableOpenTelemetry = model.EnableOpenTelemetry;
+        settings.OverrideEnableOpenTelemetry = model.EnableOpenTelemetry != _defaultAIOptions.EnableOpenTelemetry;
 
         if (settingsChanged)
         {
@@ -107,4 +119,13 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
 
         return Edit(site, settings, context);
     }
+
+    private int GetMaximumIterationsPerRequest(GeneralAISettings settings)
+        => settings.OverrideMaximumIterationsPerRequest ? settings.MaximumIterationsPerRequest : _defaultAIOptions.MaximumIterationsPerRequest;
+
+    private bool GetEnableDistributedCaching(GeneralAISettings settings)
+        => settings.OverrideEnableDistributedCaching ? settings.EnableDistributedCaching : _defaultAIOptions.EnableDistributedCaching;
+
+    private bool GetEnableOpenTelemetry(GeneralAISettings settings)
+        => settings.OverrideEnableOpenTelemetry ? settings.EnableOpenTelemetry : _defaultAIOptions.EnableOpenTelemetry;
 }
