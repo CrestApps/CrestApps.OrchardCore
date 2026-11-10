@@ -66,6 +66,14 @@ public sealed class StoreProfileSettingsDisplayDriver : SiteDisplayDriver<StoreP
             TaxId = settings.TaxId,
             Email = settings.Email,
             Phone = settings.Phone,
+            Website = settings.Website,
+            TermsOfService = settings.Policies?.TermsOfService,
+            PrivacyPolicy = settings.Policies?.PrivacyPolicy,
+            ReturnPolicy = settings.Policies?.ReturnPolicy,
+            ShippingPolicy = settings.Policies?.ShippingPolicy,
+            Faq = settings.Policies?.Faq,
+            Contact = settings.Policies?.Contact,
+            About = settings.Policies?.About,
             Address = await _addressEditor.BuildAsync(settings.Address, EditorOptions(settings.Address?.Country)),
         };
 
@@ -90,6 +98,24 @@ public sealed class StoreProfileSettingsDisplayDriver : SiteDisplayDriver<StoreP
         if (email is not null && !_emailAddress.IsValid(email))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Email), S["Enter a valid email address."]);
+        }
+
+        foreach (var (field, value) in new[]
+        {
+            (nameof(model.Website), model.Website),
+            (nameof(model.TermsOfService), model.TermsOfService),
+            (nameof(model.PrivacyPolicy), model.PrivacyPolicy),
+            (nameof(model.ReturnPolicy), model.ReturnPolicy),
+            (nameof(model.ShippingPolicy), model.ShippingPolicy),
+            (nameof(model.Faq), model.Faq),
+            (nameof(model.Contact), model.Contact),
+            (nameof(model.About), model.About),
+        })
+        {
+            if (Clean(value) is { } link && !IsLink(link))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, field, S["Enter a full address that starts with https://, or a path on this site that starts with /."]);
+            }
         }
 
         // The address is optional; one that's started has to be complete for its country, as parcels ship from it.
@@ -122,6 +148,17 @@ public sealed class StoreProfileSettingsDisplayDriver : SiteDisplayDriver<StoreP
         settings.Email = email;
         settings.Phone = PhoneNumberNormalization.ToE164OrTrimmed(model.Phone, _phoneNumberService, address?.Country);
         settings.Address = address;
+        settings.Website = Clean(model.Website);
+        settings.Policies = new StorePolicyLinks
+        {
+            TermsOfService = Clean(model.TermsOfService),
+            PrivacyPolicy = Clean(model.PrivacyPolicy),
+            ReturnPolicy = Clean(model.ReturnPolicy),
+            ShippingPolicy = Clean(model.ShippingPolicy),
+            Faq = Clean(model.Faq),
+            Contact = Clean(model.Contact),
+            About = Clean(model.About),
+        };
 
         return await EditAsync(site, settings, context);
     }
@@ -142,6 +179,14 @@ public sealed class StoreProfileSettingsDisplayDriver : SiteDisplayDriver<StoreP
             view.TaxId = model.TaxId;
             view.Email = model.Email;
             view.Phone = model.Phone;
+            view.Website = model.Website;
+            view.TermsOfService = model.TermsOfService;
+            view.PrivacyPolicy = model.PrivacyPolicy;
+            view.ReturnPolicy = model.ReturnPolicy;
+            view.ShippingPolicy = model.ShippingPolicy;
+            view.Faq = model.Faq;
+            view.Contact = model.Contact;
+            view.About = model.About;
             view.Address = model.Address;
             view.AddressEditor = addressEditor;
             view.SiteName = siteName;
@@ -157,6 +202,11 @@ public sealed class StoreProfileSettingsDisplayDriver : SiteDisplayDriver<StoreP
             ShowCompany = false,
             DefaultCountry = string.IsNullOrWhiteSpace(country) ? null : country,
         };
+
+    // A policy is a page on the site or an absolute web address: buyers and agents open it as is.
+    private static bool IsLink(string value)
+        => value.StartsWith('/') && !value.StartsWith("//", StringComparison.Ordinal) ||
+            Uri.TryCreate(value, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp);
 
     private static string Clean(string value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

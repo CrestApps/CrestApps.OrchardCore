@@ -1,0 +1,63 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore Agentic Commerce</Title>
+    <Description>
+      $(OCCMSDescription)
+
+      Sell through AI agents. Agents such as Google's AI Mode and Gemini or ChatGPT discover the store, check out and
+      pay for a buyer, and follow the order through the open agentic commerce protocols: the Universal Commerce
+      Protocol (UCP), the Agentic Commerce Protocol (ACP) and the Agent Payments Protocol (AP2), over the store's own
+      checkout, prices, tax, shipping and stock.
+    </Description>
+    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Commerce AgenticCommerce UCP ACP AP2</PackageTags>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.Admin.Abstractions" />
+    <PackageReference Include="OrchardCore.Data.Abstractions" />
+    <PackageReference Include="OrchardCore.Deployment.Abstractions" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.Navigation.Core" />
+    <PackageReference Include="OrchardCore.Recipes.Abstractions" />
+    <PackageReference Include="OrchardCore.ResourceManagement" />
+    <PackageReference Include="OrchardCore.Settings.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.AgenticCommerce.Abstractions\CrestApps.OrchardCore.AgenticCommerce.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Checkout.Abstractions\CrestApps.OrchardCore.Checkout.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Commerce.Abstractions\CrestApps.OrchardCore.Commerce.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Webhooks.Abstractions\CrestApps.OrchardCore.Webhooks.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.AgenticCommerce.Core\CrestApps.OrchardCore.AgenticCommerce.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Checkout.Core\CrestApps.OrchardCore.Checkout.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Commerce.Api.Core\CrestApps.OrchardCore.Commerce.Api.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Orders.Core\CrestApps.OrchardCore.Orders.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Products.Core\CrestApps.OrchardCore.Products.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Recipes.Core\CrestApps.OrchardCore.Recipes.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Webhooks.Core\CrestApps.OrchardCore.Webhooks.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Checkout\CrestApps.OrchardCore.Checkout.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Commerce.StoreProfile\CrestApps.OrchardCore.Commerce.StoreProfile.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Orders\CrestApps.OrchardCore.Orders.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Products\CrestApps.OrchardCore.Products.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Webhooks\CrestApps.OrchardCore.Webhooks.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+</Project>

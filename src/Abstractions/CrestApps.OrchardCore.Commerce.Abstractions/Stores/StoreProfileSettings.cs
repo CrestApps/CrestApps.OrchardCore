@@ -39,6 +39,16 @@ public sealed class StoreProfileSettings
     public Address Address { get; set; }
 
     /// <summary>
+    /// Gets or sets the address of the store's website; the site's own address when empty.
+    /// </summary>
+    public string Website { get; set; }
+
+    /// <summary>
+    /// Gets or sets the links to the store's policies, which checkouts, product feeds and AI agents show buyers.
+    /// </summary>
+    public StorePolicyLinks Policies { get; set; } = new();
+
+    /// <summary>
     /// Returns how to reach the store.
     /// </summary>
     public ContactInfo ToContactInfo()
