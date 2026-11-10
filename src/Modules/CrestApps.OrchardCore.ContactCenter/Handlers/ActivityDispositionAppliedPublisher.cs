@@ -23,6 +23,7 @@ public sealed class ActivityDispositionAppliedPublisher : IActivityDispositionHa
     private readonly ICatalog<OmnichannelDisposition> _dispositionsCatalog;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly IInteractionManager _interactionManager;
+    private readonly IAgentProfileManager _agentManager;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -31,16 +32,19 @@ public sealed class ActivityDispositionAppliedPublisher : IActivityDispositionHa
     /// <param name="dispositionsCatalog">The dispositions, for the applied disposition's name and outcome.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="interactionManager">The interactions, read for the dialer attempt the activity was completed after.</param>
+    /// <param name="agentManager">The agent profiles, read for the user of the agent who took or was held for the call.</param>
     /// <param name="logger">The logger.</param>
     public ActivityDispositionAppliedPublisher(
         ICatalog<OmnichannelDisposition> dispositionsCatalog,
         IContactCenterEventPublisher publisher,
         IInteractionManager interactionManager,
+        IAgentProfileManager agentManager,
         ILogger<ActivityDispositionAppliedPublisher> logger)
     {
         _dispositionsCatalog = dispositionsCatalog;
         _publisher = publisher;
         _interactionManager = interactionManager;
+        _agentManager = agentManager;
         _logger = logger;
     }
 
@@ -95,6 +99,19 @@ public sealed class ActivityDispositionAppliedPublisher : IActivityDispositionHa
                     ? Math.Max(0, data.MaxAttempts.Value - data.AttemptNumber.Value)
                     : null;
             }
+
+            // On an automated dial the agent held for the call stays on the interaction when nobody answers, so the
+            // follow-up of a disposition the system applied still belongs to them.
+            if (!string.IsNullOrEmpty(interaction.AgentId))
+            {
+                var agent = await _agentManager.FindByIdAsync(interaction.AgentId, cancellationToken);
+                data.AgentUserId = agent?.UserId;
+            }
+        }
+
+        if (string.IsNullOrEmpty(data.AgentUserId) && request.Source == ActivityDispositionSource.Agent)
+        {
+            data.AgentUserId = activity.CompletedById;
         }
 
         var actor = request.Source switch

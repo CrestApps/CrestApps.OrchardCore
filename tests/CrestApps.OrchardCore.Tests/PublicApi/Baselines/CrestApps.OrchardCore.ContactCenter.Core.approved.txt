@@ -665,6 +665,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
     {
         public ActivityDispositionEventData() { }
         public string ActivityItemId { get; set; }
+        public string AgentUserId { get; set; }
         public int? AttemptNumber { get; set; }
         public int Attempts { get; set; }
         public string CampaignId { get; set; }

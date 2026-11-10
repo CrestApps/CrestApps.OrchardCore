@@ -60,6 +60,11 @@ public sealed class DialerPacingBannerService : IDialerPacingBannerService
             }
         }
 
+        // Campaigns outside the viewer's supervisor profile are left out of the banner, but they are counted: a banner
+        // that only says "nothing to call" while the dialer works campaigns the viewer does not oversee reads as a
+        // stopped dialer.
+        var hiddenQueueCount = snapshot.Queues.Count - visible.Count;
+
         snapshot.Queues = visible;
 
         var names = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -79,7 +84,7 @@ public sealed class DialerPacingBannerService : IDialerPacingBannerService
 
         var timeZone = await _localClock.GetLocalTimeZoneAsync();
 
-        return Build(snapshot, S, names, utc => _clock.ConvertToTimeZone(new DateTimeOffset(DateTime.SpecifyKind(utc, DateTimeKind.Utc)), timeZone).DateTime);
+        return Build(snapshot, S, names, utc => _clock.ConvertToTimeZone(new DateTimeOffset(DateTime.SpecifyKind(utc, DateTimeKind.Utc)), timeZone).DateTime, hiddenQueueCount);
     }
 
     /// <summary>
@@ -89,12 +94,14 @@ public sealed class DialerPacingBannerService : IDialerPacingBannerService
     /// <param name="S">The localizer.</param>
     /// <param name="campaignNames">The names of the campaigns, by identifier.</param>
     /// <param name="toLocal">Converts a UTC time to the site time zone.</param>
+    /// <param name="hiddenQueueCount">How many paced campaign queues with waiting work the viewer may not see.</param>
     /// <returns>The banner.</returns>
     internal static DialerPacingBanner Build(
         DialerPacingHealthSnapshot snapshot,
         IStringLocalizer S,
         IReadOnlyDictionary<string, string> campaignNames,
-        Func<DateTime, DateTime> toLocal)
+        Func<DateTime, DateTime> toLocal,
+        int hiddenQueueCount = 0)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(S);
@@ -157,6 +164,16 @@ public sealed class DialerPacingBannerService : IDialerPacingBannerService
                 State = DialerPacingHealthState.NothingToCall,
                 Level = "secondary",
                 Message = S["Nothing due yet: records wait ({0}), but the latest pacing cycle found none it may dial now.", campaigns].Value,
+            },
+            // Every campaign with work is outside the viewer's supervisor profile: the dialer may well be calling, so the
+            // banner must not say there is nothing to call.
+            _ when hiddenQueueCount > 0 => new DialerPacingBanner
+            {
+                State = DialerPacingHealthState.NothingToCall,
+                Level = "info",
+                Message = (hiddenQueueCount == 1
+                    ? S["None of your campaigns has work waiting. 1 other campaign has dialer work; add it to Allowed campaigns on your agent profile to see it here."]
+                    : S["None of your campaigns has work waiting. {0} other campaigns have dialer work; add them to Allowed campaigns on your agent profile to see them here.", hiddenQueueCount]).Value,
             },
             _ => new DialerPacingBanner
             {

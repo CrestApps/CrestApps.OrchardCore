@@ -103,4 +103,16 @@ public sealed class ActivityDispositionEventData
     /// Gets or sets the user who completed the activity, when a person did.
     /// </summary>
     public string CompletedById { get; set; }
+
+    /// <summary>
+    /// Gets or sets the user the follow-up belongs to: the agent who took the call or, on an automated dial, the agent
+    /// the dialer held for it, even when nobody answered and the system applied the disposition; otherwise the agent
+    /// who applied it.
+    /// </summary>
+    /// <remarks>
+    /// A text sent after a Power dial's answering machine used to go out as a system message that belonged to no agent:
+    /// <see cref="CompletedById"/> is empty when the system completes the activity, so the conversation and the
+    /// customer's reply landed unassigned and the agent never saw either.
+    /// </remarks>
+    public string AgentUserId { get; set; }
 }
