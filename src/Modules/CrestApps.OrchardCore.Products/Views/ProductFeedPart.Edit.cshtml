@@ -48,4 +48,26 @@
             </div>
         </div>
     </div>
+    <div class="ocat-wrapper">
+        <label asp-for="ShowToAgents" class="ocat-label">@T["Show to AI agents"]</label>
+        <div class="ocat-end">
+            <select asp-for="ShowToAgents" class="form-select">
+                <option value="">@T["The store's default"]</option>
+                <option value="yes">@T["Yes"]</option>
+                <option value="no">@T["No"]</option>
+            </select>
+            <span class="hint">@T["Whether AI agents, such as ChatGPT, may show the product to buyers."]</span>
+        </div>
+    </div>
+    <div class="ocat-wrapper">
+        <label asp-for="AgentCheckout" class="ocat-label">@T["Let AI agents check out"]</label>
+        <div class="ocat-end">
+            <select asp-for="AgentCheckout" class="form-select">
+                <option value="">@T["The store's default"]</option>
+                <option value="yes">@T["Yes"]</option>
+                <option value="no">@T["No"]</option>
+            </select>
+            <span class="hint">@T["Whether AI agents may buy the product for a buyer. Agents can only buy products they may show."]</span>
+        </div>
+    </div>
 </fieldset>

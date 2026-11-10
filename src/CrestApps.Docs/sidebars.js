@@ -488,6 +488,7 @@ const sidebars = {
             link: { type: 'doc', id: 'modules/commerce' },
             items: [
                 'modules/products',
+                'modules/agentic-commerce',
                 'modules/markets',
                 'modules/carts-and-orders',
                 'modules/customers',

@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Products.Feeds;
+namespace CrestApps.OrchardCore.Products.Core.Feeds;
 
 /// <summary>
 /// A feed and why the products left out of it were.

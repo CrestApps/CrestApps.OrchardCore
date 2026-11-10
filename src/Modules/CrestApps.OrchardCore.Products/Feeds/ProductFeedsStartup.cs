@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Products.Core;
+using CrestApps.OrchardCore.Products.Core.Feeds;
 using CrestApps.OrchardCore.Products.Services.Attributes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -23,7 +24,7 @@ public sealed class ProductFeedsStartup : StartupBase
     {
         services.AddScoped<ProductFeedBuilder>();
         services.TryAddScoped<TaxonomyTermLookup>();
-        services.AddScoped<ProductFeedService>();
+        services.AddScoped<IProductFeedService, ProductFeedService>();
         services.AddDataMigration<Migrations.ProductFeedMigrations>();
         services.AddContentPart<ProductFeedPart>()
             .UseDisplayDriver<ProductFeedPartDisplayDriver>();

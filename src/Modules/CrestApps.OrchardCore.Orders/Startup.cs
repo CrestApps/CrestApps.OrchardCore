@@ -23,6 +23,8 @@ using CrestApps.OrchardCore.Orders.Handlers;
 using CrestApps.OrchardCore.Orders.Migrations;
 using CrestApps.OrchardCore.Orders.Navigation;
 using CrestApps.OrchardCore.Orders.Services;
+using CrestApps.OrchardCore.Products.Core;
+using CrestApps.OrchardCore.Products.Core.Feeds;
 using Fluid;
 using CrestApps.OrchardCore.Commerce.Webhooks;
 using CrestApps.OrchardCore.Webhooks;
@@ -300,4 +302,15 @@ public sealed class WebhooksStartup : StartupBase
         services.AddWebhookEvent(CommerceWebhookEvents.OrderCanceled, "Order canceled", "Orders");
         services.AddWebhookEvent(CommerceWebhookEvents.OrderRefunded, "Order refunded", "Orders");
     }
+}
+
+/// <summary>
+/// Gives product feed items the store's return window and exchanges when Product Feeds is on.
+/// </summary>
+[Feature(OrderConstants.Features.Returns)]
+[RequireFeatures(ProductConstants.Feature.Feeds)]
+public sealed class ReturnsProductFeedsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddScoped<IProductFeedItemContributor, ReturnsProductFeedContributor>();
 }

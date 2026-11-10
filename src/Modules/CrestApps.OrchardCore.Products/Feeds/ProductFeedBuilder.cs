@@ -1,10 +1,13 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.Commerce.Stores;
+using CrestApps.OrchardCore.Products.Core.Feeds;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Products.Services;
 using CrestApps.OrchardCore.Products.Services.Attributes;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Records;
@@ -20,7 +23,8 @@ namespace CrestApps.OrchardCore.Products.Feeds;
 /// <summary>
 /// Builds the store's product feed: every published product sold online, and each enabled variant of one with variants,
 /// priced in the store's currency or another one converted, with its photos, availability, brand and identifiers.
-/// An item Merchant Center would refuse is left out, with why.
+/// An item Merchant Center would refuse is left out, with why. The store profile gives every item its seller and policy
+/// links, and each <see cref="IProductFeedItemContributor"/> adds what its module owns, such as stock, weight or returns.
 /// </summary>
 public sealed class ProductFeedBuilder
 {
@@ -36,6 +40,8 @@ public sealed class ProductFeedBuilder
     private readonly IClock _clock;
     private readonly IShopperCurrency _shopperCurrency;
     private readonly TaxonomyTermLookup _termLookup;
+    private readonly IEnumerable<IProductFeedItemContributor> _contributors;
+    private readonly ILogger _logger;
 
     public ProductFeedBuilder(
         ISession session,
@@ -47,7 +53,9 @@ public sealed class ProductFeedBuilder
         LinkGenerator linkGenerator,
         IClock clock,
         IShopperCurrency shopperCurrency,
-        TaxonomyTermLookup termLookup)
+        TaxonomyTermLookup termLookup,
+        IEnumerable<IProductFeedItemContributor> contributors,
+        ILogger<ProductFeedBuilder> logger)
     {
         _session = session;
         _contentManager = contentManager;
@@ -59,17 +67,33 @@ public sealed class ProductFeedBuilder
         _clock = clock;
         _shopperCurrency = shopperCurrency;
         _termLookup = termLookup;
+        _contributors = contributors;
+        _logger = logger;
     }
 
     /// <summary>
     /// Builds the feed, priced in <paramref name="currency"/>, or the store's when none.
     /// </summary>
-    public async Task<ProductFeed> BuildAsync(string currency = null, CancellationToken cancellationToken = default)
+    public Task<ProductFeed> BuildAsync(string currency = null, CancellationToken cancellationToken = default)
+        => BuildAsync(currency, contentItemIds: null, cancellationToken);
+
+    /// <summary>
+    /// Builds the feed of some products, or of all when <paramref name="contentItemIds"/> is <see langword="null"/>,
+    /// priced in <paramref name="currency"/>, or the store's when none.
+    /// </summary>
+    public async Task<ProductFeed> BuildAsync(string currency, IReadOnlyCollection<string> contentItemIds, CancellationToken cancellationToken = default)
     {
         var now = _clock.UtcNow;
         var site = await _siteService.GetSiteSettingsAsync();
         var settings = await _siteService.GetSettingsAsync<ProductFeedSettings>();
+        var profile = await _siteService.GetStoreProfileAsync();
         var baseUrl = site.BaseUrl?.TrimEnd('/');
+        var sellerName = string.IsNullOrWhiteSpace(profile.Name) ? site.SiteName : profile.Name.Trim();
+        var sellerUrl = ToSiteUrl(profile.Website, baseUrl) ?? (string.IsNullOrEmpty(baseUrl) ? null : baseUrl + "/");
+        var policies = profile.Policies ?? new StorePolicyLinks();
+        var termsUrl = ToSiteUrl(policies.TermsOfService, baseUrl);
+        var privacyUrl = ToSiteUrl(policies.PrivacyPolicy, baseUrl);
+        var returnsUrl = ToSiteUrl(policies.ReturnPolicy, baseUrl);
         var types = await _productTypes.GetProductTypesAsync(_contentDefinitionManager);
         var availabilityProviders = _serviceProvider.GetServices<IProductAvailabilityProvider>();
         var media = _serviceProvider.GetService<IMediaFileStore>();
@@ -77,14 +101,18 @@ public sealed class ProductFeedBuilder
         var items = new List<ProductFeedItem>();
         var problems = new List<ProductFeedProblem>();
 
-        if (types.Count == 0)
+        if (types.Count == 0 || contentItemIds is { Count: 0 })
         {
             return new ProductFeed(items, problems, now);
         }
 
         for (var skip = 0; ; skip += BatchSize)
         {
-            var batch = (await _session.Query<ContentItem, ContentItemIndex>(index => index.ContentType.IsIn(types) && index.Published)
+            var query = contentItemIds is null
+                ? _session.Query<ContentItem, ContentItemIndex>(index => index.ContentType.IsIn(types) && index.Published)
+                : _session.Query<ContentItem, ContentItemIndex>(index => index.ContentType.IsIn(types) && index.Published && index.ContentItemId.IsIn(contentItemIds));
+
+            var batch = (await query
                 .OrderBy(index => index.Id)
                 .Skip(skip)
                 .Take(BatchSize)
@@ -137,9 +165,12 @@ public sealed class ProductFeedBuilder
                 {
                     var item = new ProductFeedItem
                     {
-                        Id = Truncate(id, ProductFeedValidator.MaxIdLength),
+                        Id = id,
                         ItemGroupId = variant is null ? null : contentItem.ContentItemId,
+                        ContentItemId = contentItem.ContentItemId,
+                        VariantId = variant?.VariantId,
                         Title = Truncate(title, ProductFeedValidator.MaxTitleLength),
+                        ProductTitle = Truncate(contentItem.DisplayText, ProductFeedValidator.MaxTitleLength),
                         Description = string.IsNullOrWhiteSpace(description) ? Truncate(title, ProductFeedValidator.MaxDescriptionLength) : description,
                         Link = link,
                         ImageLink = ToAbsolute(variant?.ImagePath is { Length: > 0 } variantImage ? media?.MapPathToPublicUrl(variantImage) : null, baseUrl) ?? images.FirstOrDefault(),
@@ -152,7 +183,22 @@ public sealed class ProductFeedBuilder
                         ProductType = productType,
                         Color = variant?.Options.FirstOrDefault(option => IsOption(option.Key, "color", "colour")).Value ?? productColor,
                         Size = variant?.Options.FirstOrDefault(option => IsOption(option.Key, "size")).Value,
+                        VariantOptions = variant?.Options is { Count: > 0 } options
+                            ? new Dictionary<string, string>(options, StringComparer.OrdinalIgnoreCase)
+                            : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+                        AvailableQuantity = itemStock is null ? null : Math.Max(0, itemStock.Available),
+                        SellerName = sellerName,
+                        SellerUrl = sellerUrl,
+                        TermsOfServiceUrl = termsUrl,
+                        PrivacyPolicyUrl = privacyUrl,
+                        ReturnPolicyUrl = returnsUrl,
+                        IsDigital = partSettings.Type == ProductType.Digital,
+                        ShowToAgents = feedPart?.ShowToAgents ?? settings.ShowToAgentsByDefault,
+                        AgentCheckout = feedPart?.AgentCheckout ?? settings.AgentCheckoutByDefault,
                     };
+
+                    // Checking out needs search: an agent can't buy what it isn't shown.
+                    item.AgentCheckout &= item.ShowToAgents;
 
                     (item.Availability, item.AvailabilityDateUtc) = itemStock?.Status switch
                     {
@@ -169,7 +215,7 @@ public sealed class ProductFeedBuilder
 
                 if (enabled.Count == 0)
                 {
-                    candidates.Add((Item(product.Sku is { Length: > 0 } sku ? sku : contentItem.ContentItemId, contentItem.DisplayText, null, stock), null));
+                    candidates.Add((Item(ProductFeedItemIds.Create(contentItem.ContentItemId, null, product.Sku), contentItem.DisplayText, null, stock), null));
                 }
                 else
                 {
@@ -181,7 +227,7 @@ public sealed class ProductFeedBuilder
                         var variantTitle = variant.GetTitle(optionNames);
                         var title = string.IsNullOrEmpty(variantTitle) ? contentItem.DisplayText : $"{contentItem.DisplayText} - {variantTitle}";
 
-                        candidates.Add((Item(variant.Sku is { Length: > 0 } sku ? sku : $"{contentItem.ContentItemId}-{variant.VariantId}", title, variant, variantStock.GetValueOrDefault(new ProductStockKey(contentItem.ContentItemId, variant.VariantId)) ?? stock), variant));
+                        candidates.Add((Item(ProductFeedItemIds.Create(contentItem.ContentItemId, variant.VariantId, variant.Sku), title, variant, variantStock.GetValueOrDefault(new ProductStockKey(contentItem.ContentItemId, variant.VariantId)) ?? stock), variant));
                     }
                 }
 
@@ -198,6 +244,8 @@ public sealed class ProductFeedBuilder
 
                         continue;
                     }
+
+                    await ContributeAsync(new ProductFeedItemContext(contentItem, variant, partSettings.Type, item), cancellationToken);
 
                     var found = ProductFeedValidator.Validate(item);
 
@@ -258,6 +306,42 @@ public sealed class ProductFeedBuilder
         }
 
         return true;
+    }
+
+    // Each contributor adds what its module owns; one that fails leaves its values out, not the item.
+    private async Task ContributeAsync(ProductFeedItemContext context, CancellationToken cancellationToken)
+    {
+        foreach (var contributor in _contributors)
+        {
+            try
+            {
+                await contributor.ContributeAsync(context, cancellationToken);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                _logger.LogWarning(exception, "The product feed contributor '{Contributor}' failed for the item '{ItemId}'.", contributor.GetType().Name, context.Item.Id);
+            }
+        }
+    }
+
+    // A link the store set, such as a policy: an absolute address as it is, or a path on the site after its base URL.
+    internal static string ToSiteUrl(string url, string baseUrl)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return null;
+        }
+
+        url = url.Trim();
+
+        if (Uri.TryCreate(url, UriKind.Absolute, out var absolute) && (absolute.Scheme == Uri.UriSchemeHttps || absolute.Scheme == Uri.UriSchemeHttp))
+        {
+            return url;
+        }
+
+        return string.IsNullOrEmpty(baseUrl) || url.Contains(':', StringComparison.Ordinal)
+            ? null
+            : baseUrl + "/" + url.TrimStart('~').TrimStart('/');
     }
 
     private async Task<string> GetLinkAsync(ContentItem contentItem, string baseUrl)

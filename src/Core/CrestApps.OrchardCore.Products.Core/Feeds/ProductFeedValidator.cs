@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace CrestApps.OrchardCore.Products.Feeds;
+namespace CrestApps.OrchardCore.Products.Core.Feeds;
 
 /// <summary>
 /// Google Merchant Center's rules for an item, checked before it goes in a feed: an item that breaks one Merchant Center

@@ -12,11 +12,13 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Shipping.Drivers;
 
 /// <summary>
-/// A product's weight, the weight of variants that differ, and its shipping class.
+/// A product's weight and size, the weight and size of variants that differ, and its shipping class.
 /// </summary>
 public sealed class ShippingPartDisplayDriver : ContentPartDisplayDriver<ShippingPart>
 {
     private const decimal MaxWeight = 1_000_000;
+
+    private const decimal MaxSize = 100_000;
 
     private readonly ISiteService _siteService;
 
@@ -34,6 +36,9 @@ public sealed class ShippingPartDisplayDriver : ContentPartDisplayDriver<Shippin
             var settings = await _siteService.GetSettingsAsync<ShippingSettings>();
 
             model.Weight = part.Weight;
+            model.Length = part.Length;
+            model.Width = part.Width;
+            model.Height = part.Height;
             model.ShippingClass = part.ShippingClass;
             model.WeightUnit = settings.WeightUnit;
             model.ShippingClasses = settings.ShippingClasses ?? [];
@@ -43,6 +48,9 @@ public sealed class ShippingPartDisplayDriver : ContentPartDisplayDriver<Shippin
                     VariantId = variant.VariantId,
                     Title = variant.Title,
                     Weight = part.VariantWeights?.TryGetValue(variant.VariantId, out var weight) == true ? weight : null,
+                    Length = Dimensions(part, variant.VariantId)?.Length,
+                    Width = Dimensions(part, variant.VariantId)?.Width,
+                    Height = Dimensions(part, variant.VariantId)?.Height,
                 })
                 .ToList();
         });
@@ -58,7 +66,15 @@ public sealed class ShippingPartDisplayDriver : ContentPartDisplayDriver<Shippin
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Weight), S["Enter a weight from 0 to {0}.", MaxWeight]);
         }
 
+        if (!IsSize(model.Length) || !IsSize(model.Width) || !IsSize(model.Height))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Length), S["Enter a length, width and height from 0 to {0}.", MaxSize]);
+        }
+
         part.Weight = model.Weight;
+        part.Length = model.Length;
+        part.Width = model.Width;
+        part.Height = model.Height;
         part.ShippingClass = string.IsNullOrWhiteSpace(model.ShippingClass) ? null : model.ShippingClass.Trim();
 
         // Only the variants the product has now are kept, and only when they weigh something of their own.
@@ -68,8 +84,28 @@ public sealed class ShippingPartDisplayDriver : ContentPartDisplayDriver<Shippin
             .Where(variant => variant.Weight is >= 0 and <= MaxWeight && variantIds.Contains(variant.VariantId ?? string.Empty))
             .ToDictionary(variant => variant.VariantId, variant => variant.Weight.Value, StringComparer.Ordinal);
 
+        // A variant's own size counts only with its length, width and height all entered.
+        part.VariantDimensions = (model.Variants ?? [])
+            .Where(variant => variant.Length is > 0 and <= MaxSize && variant.Width is > 0 and <= MaxSize && variant.Height is > 0 and <= MaxSize &&
+                variantIds.Contains(variant.VariantId ?? string.Empty))
+            .ToDictionary(
+                variant => variant.VariantId,
+                variant => new ShippingDimensions
+                {
+                    Length = variant.Length.Value,
+                    Width = variant.Width.Value,
+                    Height = variant.Height.Value,
+                },
+                StringComparer.Ordinal);
+
         return Edit(part, context);
     }
+
+    private static bool IsSize(decimal? value)
+        => value is null or (>= 0 and <= MaxSize);
+
+    private static ShippingDimensions Dimensions(ShippingPart part, string variantId)
+        => part.VariantDimensions?.TryGetValue(variantId, out var dimensions) == true ? dimensions : null;
 
     private static IEnumerable<(string VariantId, string Title)> GetVariants(ShippingPart part)
     {

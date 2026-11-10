@@ -20,6 +20,8 @@ internal sealed class ProductFeedSettingsSchema : SiteSettingsSchemaBase
                 ("DefaultCondition", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Default("new").Description("The condition of products that name none: new, refurbished or used.")),
                 ("DefaultGoogleProductCategory", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The Google product category of products that name none, as its id or full path.")),
                 ("IncludeOutOfStock", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Default(true).Description("Whether products that are out of stock stay in the feed, marked so.")),
-                ("Key", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("A key the feed's address has to carry (?key=...), or none for a public feed.")))
+                ("Key", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("A key the feed's address has to carry (?key=...), or none for a public feed.")),
+                ("ShowToAgentsByDefault", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Default(true).Description("Whether AI agents may show products to buyers when a product doesn't say.")),
+                ("AgentCheckoutByDefault", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Default(false).Description("Whether AI agents may check products out for buyers when a product doesn't say.")))
             .AdditionalProperties(true);
 }
