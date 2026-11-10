@@ -18,6 +18,11 @@ public sealed class AgentAuthentication
     public string UserId { get; init; }
 
     /// <summary>
+    /// Gets the OAuth scopes the bearer token grants, when the platform signed in with one.
+    /// </summary>
+    public IReadOnlyCollection<string> Scopes { get; init; } = [];
+
+    /// <summary>
     /// Gets the HTTP status of a refusal.
     /// </summary>
     public int StatusCode { get; init; }

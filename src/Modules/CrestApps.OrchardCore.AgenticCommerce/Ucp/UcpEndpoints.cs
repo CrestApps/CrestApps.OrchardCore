@@ -237,7 +237,10 @@ public static class UcpEndpoints
 
         // A platform reads the orders its agents placed; with a linked account, the buyer's own orders too.
         var mine = checkout is not null && string.Equals(checkout.PlatformId, request.Platform.ItemId, StringComparison.Ordinal);
-        var buyers = order is not null && !string.IsNullOrEmpty(request.Context.UserId) && string.Equals(order.UserId, request.Context.UserId, StringComparison.Ordinal);
+        var buyers = order is not null &&
+            !string.IsNullOrEmpty(request.LinkedUserId) &&
+            request.Scopes.Contains(UcpIdentityScopes.OrderRead) &&
+            string.Equals(order.UserId, request.LinkedUserId, StringComparison.Ordinal);
 
         if (order is null || (!mine && !buyers))
         {

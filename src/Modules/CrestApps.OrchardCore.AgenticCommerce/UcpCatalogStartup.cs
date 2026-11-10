@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.AgenticCommerce.Ucp;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AgenticCommerce;
@@ -15,7 +16,7 @@ public sealed class UcpCatalogStartup : StartupBase
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<UcpCatalog>();
+        services.TryAddScoped<UcpCatalog>();
         services.AddScoped<IUcpProfileContributor, UcpCatalogProfileContributor>();
     }
 

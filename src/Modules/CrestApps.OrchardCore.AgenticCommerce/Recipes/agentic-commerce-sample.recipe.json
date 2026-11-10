@@ -1,0 +1,48 @@
+{
+  "name": "AgenticCommerceSample",
+  "displayName": "Agentic commerce: sample",
+  "description": "Turns on selling through AI agents with UCP and ACP, the agent product feeds and the test payment provider, and adds a test agent platform in test mode, whose agents may only pay with test credentials. Give the platform an API key under Commerce > AI agents.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "commerce"
+  ],
+  "tags": [
+    "commerce",
+    "agentic",
+    "ucp",
+    "acp",
+    "sample"
+  ],
+  "steps": [
+    {
+      "name": "feature",
+      "enable": [
+        "CrestApps.OrchardCore.Checkout.TestProvider",
+        "CrestApps.OrchardCore.AgenticCommerce",
+        "CrestApps.OrchardCore.AgenticCommerce.Ucp",
+        "CrestApps.OrchardCore.AgenticCommerce.Ucp.Catalog",
+        "CrestApps.OrchardCore.AgenticCommerce.Ucp.Mcp",
+        "CrestApps.OrchardCore.AgenticCommerce.Acp",
+        "CrestApps.OrchardCore.AgenticCommerce.Feeds"
+      ]
+    },
+    {
+      "name": "AgentPlatforms",
+      "Platforms": [
+        {
+          "Name": "Test agent platform",
+          "Description": "A sandbox platform for trying UCP and ACP with test credentials.",
+          "Enabled": true,
+          "TestMode": true,
+          "Protocols": [
+            "ucp",
+            "acp"
+          ]
+        }
+      ]
+    }
+  ]
+}

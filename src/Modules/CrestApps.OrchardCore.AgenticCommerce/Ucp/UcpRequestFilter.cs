@@ -135,9 +135,14 @@ public sealed class UcpRequestFilter : IEndpointFilter
             return UcpResults.Error(StatusCodes.Status422UnprocessableEntity, "version_unsupported", $"The store serves UCP {string.Join(" and ", UcpConstants.Versions)}.");
         }
 
+        var linkedUserId = authentication.UserId;
+        var scopes = authentication.Scopes ?? [];
+
         var agentRequest = new AgentRequest
         {
             Platform = signedIn,
+            Scopes = scopes,
+            LinkedUserId = linkedUserId,
             Body = body,
             Json = AgentRequestBody.Parse(body),
             Version = negotiation.Version,
@@ -151,7 +156,7 @@ public sealed class UcpRequestFilter : IEndpointFilter
                 ProtocolVersion = negotiation.Version,
                 TestMode = signedIn.TestMode,
                 AllowedPaymentHandlers = signedIn.AllowedPaymentHandlers ?? [],
-                UserId = authentication.UserId,
+                UserId = linkedUserId is not null && scopes.Contains(UcpIdentityScopes.CheckoutManage) ? linkedUserId : null,
                 ClientAddress = httpContext.Connection.RemoteIpAddress?.ToString(),
             },
         };

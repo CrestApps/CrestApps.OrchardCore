@@ -51,6 +51,7 @@ public sealed class AgentPlatformAuthenticator
 
         AgentPlatform platform = null;
         string userId = null;
+        IReadOnlyCollection<string> scopes = [];
 
         if (!string.IsNullOrEmpty(apiKey))
         {
@@ -86,6 +87,12 @@ public sealed class AgentPlatformAuthenticator
             {
                 userId = subject;
             }
+
+            scopes = principal.FindAll("scope")
+                .Concat(principal.FindAll("oi_scp"))
+                .SelectMany(claim => claim.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
         }
 
         if (platform is null)
@@ -93,7 +100,16 @@ public sealed class AgentPlatformAuthenticator
             return AgentAuthentication.Fail(StatusCodes.Status401Unauthorized, null);
         }
 
-        return Check(platform, protocol, httpContext, userId);
+        var result = Check(platform, protocol, httpContext, userId);
+
+        return result.Succeeded
+            ? new AgentAuthentication
+            {
+                Platform = result.Platform,
+                UserId = result.UserId,
+                Scopes = scopes,
+            }
+            : result;
     }
 
     /// <summary>

@@ -49,6 +49,17 @@ public sealed class AgentRequest
     public JsonObject PlatformProfile { get; set; }
 
     /// <summary>
+    /// Gets or sets the OAuth scopes the platform's token grants.
+    /// </summary>
+    public IReadOnlyCollection<string> Scopes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the linked buyer the token was issued for, even when its scopes don't let the agent check out as
+    /// them.
+    /// </summary>
+    public string LinkedUserId { get; set; }
+
+    /// <summary>
     /// Gets or sets the address of the platform's UCP profile.
     /// </summary>
     public string ProfileUrl { get; set; }

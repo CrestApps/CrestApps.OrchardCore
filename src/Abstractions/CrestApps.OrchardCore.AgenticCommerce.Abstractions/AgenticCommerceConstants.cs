@@ -65,6 +65,11 @@ public static class AgenticCommerceConstants
         /// The Agentic Commerce Protocol.
         /// </summary>
         public const string Acp = "acp";
+
+        /// <summary>
+        /// The site's own AI assistant, through its commerce tools.
+        /// </summary>
+        public const string Assistant = "assistant";
     }
 
     /// <summary>
