@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Orders.Core.Models;
+
 namespace CrestApps.OrchardCore.AgenticCommerce.Core;
 
 /// <summary>
@@ -23,5 +25,5 @@ public static class AgenticCommerceStorage
     /// <summary>
     /// The sales channel of the orders AI agents place.
     /// </summary>
-    public const string OrderChannel = "agent";
+    public const string OrderChannel = OrderChannels.Agent;
 }

@@ -35,7 +35,16 @@ public sealed class TestAgentPaymentHandler : IAgentPaymentHandler
 
     /// <inheritdoc />
     public Task<AgentPaymentHandlerDescriptor> DescribeAsync(AgentPaymentHandlerContext context, CancellationToken cancellationToken = default)
-        => Task.FromResult(new AgentPaymentHandlerDescriptor
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        // Only a platform in test mode pays with test credentials; a live platform's buyers pay for real.
+        if (!context.TestMode)
+        {
+            return Task.FromResult<AgentPaymentHandlerDescriptor>(null);
+        }
+
+        return Task.FromResult(new AgentPaymentHandlerDescriptor
         {
             Id = "test",
             Name = Name,
@@ -51,11 +60,18 @@ public sealed class TestAgentPaymentHandler : IAgentPaymentHandler
                 ["tokens"] = new JsonArray { "tok_test_success", "tok_test_decline", "tok_test_3ds" },
             },
         });
+    }
 
     /// <inheritdoc />
     public Task<AgentPaymentPreparation> PrepareAsync(AgentPaymentHandlerContext context, AgentPayment payment, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(payment);
+
+        if (!context.TestMode)
+        {
+            return Task.FromResult(AgentPaymentPreparation.Fail(S["Test credentials are only taken from platforms in test mode."]));
+        }
 
         if (string.IsNullOrWhiteSpace(payment.Credential))
         {
