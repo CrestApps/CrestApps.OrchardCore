@@ -110,8 +110,16 @@ public sealed class ReportSubscriptionsBackgroundTask : IBackgroundTask
 
             foreach (var subscription in await serviceProvider.GetRequiredService<IReportSubscriptionStore>().ListDueAsync(now, cancellationToken))
             {
-                // A run is for its scheduled time, so a late one still covers the period it was due for.
-                await service.SendAsync(subscription, subscription.NextRunUtc ?? now, reschedule: true, cancellationToken);
+                // One subscription that fails never stops the others; it is tried again when it is next due.
+                try
+                {
+                    // A run is for its scheduled time, so a late one still covers the period it was due for.
+                    await service.SendAsync(subscription, subscription.NextRunUtc ?? now, reschedule: true, cancellationToken);
+                }
+                catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+                {
+                    logger.LogError(ex, "Report subscription '{SubscriptionId}' couldn't be emailed.", subscription.ItemId);
+                }
             }
         }
         catch (Exception ex)

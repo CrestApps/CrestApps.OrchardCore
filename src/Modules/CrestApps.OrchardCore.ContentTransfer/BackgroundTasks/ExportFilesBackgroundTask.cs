@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContentTransfer.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
@@ -41,6 +42,7 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
         var contentDefinitionManager = serviceProvider.GetRequiredService<IContentDefinitionManager>();
         var contentImportManager = serviceProvider.GetRequiredService<IContentImportManager>();
         var tempDirectoryProvider = serviceProvider.GetRequiredService<ITempDirectoryProvider>();
+        var logger = serviceProvider.GetRequiredService<ILogger<ExportFilesBackgroundTask>>();
 
         var entries = await session.Query<ContentTransferEntry, ContentTransferEntryIndex>(x =>
             (x.Status == ContentTransferEntryStatus.New || x.Status == ContentTransferEntryStatus.Processing)
@@ -84,6 +86,12 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
 
             var progressPart = entry.GetOrCreate<ImportFileProcessStatsPart>();
             progressPart.Errors ??= [];
+
+            // An export always writes its file from the first page, including one a stopping host interrupted, so its
+            // counts start over too instead of adding to the interrupted run's.
+            progressPart.CurrentRow = 0;
+            progressPart.TotalProcessed = 0;
+            progressPart.ImportedCount = 0;
 
             try
             {
@@ -230,6 +238,10 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
                     writer.Flush();
                 }
 
+                // A stopping host ends the page loop early. The partial file must not be stored as a completed export:
+                // the entry stays in progress and starts over on the next run.
+                cancellationToken.ThrowIfCancellationRequested();
+
                 // Save the completed file to the file store.
                 tempStream.Seek(0, SeekOrigin.Begin);
                 await fileStore.CreateFileFromStreamAsync(fileName, tempStream, true);
@@ -243,8 +255,20 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
                 await session.SaveAsync(entry, false, collection: null, cancellationToken);
                 await session.SaveChangesAsync(cancellationToken);
 
-                // Send notification if the Notifications module is enabled.
-                await TrySendExportNotificationAsync(serviceProvider, entry, contentTypeDefinition.DisplayName);
+                // Send notification if the Notifications module is enabled. The file is stored and the export is
+                // complete, so a notification that cannot be sent no longer marks the export as failed.
+                try
+                {
+                    await TrySendExportNotificationAsync(serviceProvider, entry, contentTypeDefinition.DisplayName);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    logger.LogWarning(ex, "The export '{EntryId}' completed, but its notification could not be sent.", entry.EntryId);
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // The host is stopping: the entry stays in progress and the next run exports it again.
             }
             catch (Exception ex)
             {

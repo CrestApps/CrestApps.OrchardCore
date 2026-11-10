@@ -1,6 +1,7 @@
 using System.Globalization;
 using CrestApps.OrchardCore.DataConnectors.Models;
 using CrestApps.OrchardCore.DataConnectors.Storage;
+using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore;
@@ -79,7 +80,9 @@ internal sealed class DataSetRefreshService : IDataSetRefreshService
             ? _options.RefreshTimeout + TimeSpan.FromMinutes(5)
             : TimeSpan.FromHours(2);
 
-        var (locker, locked) = await _distributedLock.TryAcquireLockAsync($"CrestApps.DataConnectors.Refresh:{dataSet.ItemId}", TimeSpan.Zero, lockExpiration);
+        // A zero timeout never acquires the Redis lock (its wait is cancelled before the first attempt), so with Redis
+        // every refresh was skipped. Try the lock once without waiting instead.
+        var (locker, locked) = await _distributedLock.TryAcquireLockWithoutWaitingAsync($"CrestApps.DataConnectors.Refresh:{dataSet.ItemId}", lockExpiration);
 
         if (!locked)
         {

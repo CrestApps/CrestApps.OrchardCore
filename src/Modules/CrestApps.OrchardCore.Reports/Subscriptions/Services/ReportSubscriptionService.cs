@@ -105,8 +105,9 @@ public sealed class ReportSubscriptionService
             subscription.LastError = await TrySendAsync(subscription, runUtc, timeZone, cancellationToken);
             sent = subscription.LastError is null;
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
+            // A timeout of the email provider or of a report is a failure of this subscription, not a shutdown.
             _logger.LogError(exception, "Report subscription '{SubscriptionId}' couldn't run its report.", subscription.ItemId);
             subscription.LastError = S["The report couldn't run."];
         }
