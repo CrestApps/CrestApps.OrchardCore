@@ -247,13 +247,15 @@ These tools are meant for customer-facing assistants and also work for anonymous
 
 **Available when:** `CrestApps.OrchardCore.AgenticCommerce` with `CrestApps.OrchardCore.AI`, `CrestApps.OrchardCore.Products.Listing` and `CrestApps.OrchardCore.Products.Feeds` on
 
-These tools are meant for a customer-facing shopping assistant and also work for anonymous visitors. They read the same products as the store's product feeds, and only products agents may see (**Show to AI agents**). The assistant never pays: `startStoreCheckout` returns a link where the buyer enters their address and pays in the store's own checkout. A signed-in visitor's checkout is theirs. The tools are in the **Commerce** category and selectable on AI profiles, the MCP Server and WebMCP. See [Agentic Commerce](../modules/agentic-commerce.md#ai-tools).
+These tools are meant for a customer-facing shopping assistant and also work for anonymous visitors. They read the same products as the store's product feeds, and only products agents may see (**Show to AI agents**). The assistant never pays: `startStoreCheckout` returns a link where the buyer enters their address and pays in the store's own checkout. A signed-in visitor's checkout is theirs. The cart tools only use the caller's own cart. The tools are in the **Commerce** category and selectable on AI profiles, the MCP Server and WebMCP. They are marked safe for anyone, so WebMCP can offer them to visitors who aren't signed in (see [storefront tools](mcp/webmcp.md#storefront-tools)). See [Agentic Commerce](../modules/agentic-commerce.md#ai-tools).
 
 | Function | Description |
 | --- | --- |
 | `searchStoreProducts` | Searches the store's products (`query`, `limit` 1 to 20, 10 by default). Returns each product with its variants, the item id to buy each with, its price and whether it is in stock. |
 | `getStoreProduct` | Returns one of the store's products with its description, photos and variants, each with its item id, price and availability. Takes a product id or a variant's item id. |
 | `startStoreCheckout` | Starts a checkout for the buyer's chosen items (item ids and quantities) and optional e-mail address, and returns its total, its items, any problems and the `checkout_url` where the buyer pays. |
+| `addToStoreCart` | Adds an item (item id and quantity) to the caller's own cart and returns the cart. |
+| `getStoreCart` | Returns the caller's own cart: its items, prices, subtotal and the cart page link. |
 
 ## Tool permissions
 

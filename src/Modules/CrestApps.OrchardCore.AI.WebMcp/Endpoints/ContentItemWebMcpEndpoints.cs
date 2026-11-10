@@ -1,4 +1,3 @@
-using System.Text.Json;
 using CrestApps.Core.AI.WebMcp.Endpoints;
 using CrestApps.Core.AI.WebMcp.Models;
 using CrestApps.Core.AI.WebMcp.Services;
@@ -91,7 +90,7 @@ internal static class ContentItemWebMcpEndpoints
             return TypedResults.BadRequest("The tool input is too large.");
         }
 
-        var arguments = await ReadArgumentsAsync(httpContext.Request, httpContext.RequestAborted);
+        var arguments = await WebMcpToolRequests.ReadArgumentsAsync(httpContext.Request, httpContext.RequestAborted);
 
         if (arguments is null)
         {
@@ -100,22 +99,7 @@ internal static class ContentItemWebMcpEndpoints
 
         var result = await toolServiceFactory.Create(part.Tools).InvokeAsync(httpContext.User, name, arguments, httpContext.RequestAborted);
 
-        if (result.Status == WebMcpToolInvocationStatus.NotFound)
-        {
-            return TypedResults.NotFound();
-        }
-
-        return TypedResults.Ok(new WebMcpToolCallResponse
-        {
-            Content =
-            [
-                new WebMcpTextContent
-                {
-                    Text = result.Text,
-                },
-            ],
-            IsError = result.IsError,
-        });
+        return WebMcpToolRequests.ToResult(result);
     }
 
     /// <summary>
@@ -157,36 +141,5 @@ internal static class ContentItemWebMcpEndpoints
         }
 
         return (null, part);
-    }
-
-    private static async Task<IDictionary<string, object>> ReadArgumentsAsync(HttpRequest request, CancellationToken cancellationToken)
-    {
-        var arguments = new Dictionary<string, object>(StringComparer.Ordinal);
-
-        if (request.ContentLength == 0)
-        {
-            return arguments;
-        }
-
-        try
-        {
-            using var document = await JsonDocument.ParseAsync(request.Body, cancellationToken: cancellationToken);
-
-            if (document.RootElement.ValueKind != JsonValueKind.Object)
-            {
-                return null;
-            }
-
-            foreach (var property in document.RootElement.EnumerateObject())
-            {
-                arguments[property.Name] = property.Value.Clone();
-            }
-
-            return arguments;
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
     }
 }

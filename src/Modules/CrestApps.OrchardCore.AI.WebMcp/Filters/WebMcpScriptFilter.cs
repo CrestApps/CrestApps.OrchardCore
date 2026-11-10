@@ -18,7 +18,8 @@ namespace CrestApps.OrchardCore.AI.WebMcp.Filters;
 /// Adds the WebMCP scripts and their configuration to the full pages a signed-in user with the
 /// <see cref="WebMcpPermissionsProvider.UseWebMcpTools"/> permission opens, on the page kinds the settings turn on:
 /// the W3C reference polyfill (for browsers without native WebMCP), CrestApps.Core's <c>webmcp.js</c>, and the scripts
-/// the enabled features add.
+/// the enabled features add. When the storefront tools are on, every other visitor of a front-end page gets the
+/// polyfill and <c>webmcp.js</c> pointed at the storefront tool endpoints, and nothing else.
 /// </summary>
 public sealed class WebMcpScriptFilter : IAsyncResultFilter
 {
@@ -70,18 +71,17 @@ public sealed class WebMcpScriptFilter : IAsyncResultFilter
 
         var httpContext = context.HttpContext;
         var user = httpContext.User;
-
-        if (user?.Identity?.IsAuthenticated != true)
-        {
-            await next();
-
-            return;
-        }
-
         var isAdminPage = AdminAttribute.IsApplied(httpContext);
 
-        if (!_options.IsEnabledFor(isAdminPage) ||
-            !await _authorizationService.AuthorizeAsync(user, WebMcpPermissionsProvider.UseWebMcpTools))
+        var mayUseSiteTools = user?.Identity?.IsAuthenticated == true &&
+            _options.IsEnabledFor(isAdminPage) &&
+            await _authorizationService.AuthorizeAsync(user, WebMcpPermissionsProvider.UseWebMcpTools);
+
+        // Everyone else on a front-end page gets the storefront tools when they are on: only the selected tools marked
+        // safe for anonymous callers, through their own endpoints, with no page tools or other scripts.
+        var mayUseStorefrontTools = !mayUseSiteTools && !isAdminPage && _options.EnableStorefrontTools;
+
+        if (!mayUseSiteTools && !mayUseStorefrontTools)
         {
             await next();
 
@@ -92,20 +92,23 @@ public sealed class WebMcpScriptFilter : IAsyncResultFilter
         var tokens = _antiforgery.GetAndStoreTokens(httpContext);
         var pathBase = httpContext.Request.PathBase.Value ?? string.Empty;
 
-        configuration.Settings["toolsUrl"] = $"{pathBase}/{WebMcpConstants.ToolsRoute}";
-        configuration.Settings["invokeUrlTemplate"] = $"{pathBase}/{WebMcpConstants.InvokeRoute}";
+        configuration.Settings["toolsUrl"] = $"{pathBase}/{(mayUseSiteTools ? WebMcpConstants.ToolsRoute : WebMcpConstants.StorefrontToolsRoute)}";
+        configuration.Settings["invokeUrlTemplate"] = $"{pathBase}/{(mayUseSiteTools ? WebMcpConstants.InvokeRoute : WebMcpConstants.StorefrontInvokeRoute)}";
         configuration.Settings["antiforgeryHeaderName"] = tokens.HeaderName;
         configuration.Settings["antiforgeryToken"] = tokens.RequestToken;
         configuration.Settings["isAdmin"] = isAdminPage;
 
-        if (_options.PageToolOrigins is { Count: > 0 })
+        if (mayUseSiteTools)
         {
-            configuration.Settings["pageToolOrigins"] = _options.PageToolOrigins.ToArray();
-        }
+            if (_options.PageToolOrigins is { Count: > 0 })
+            {
+                configuration.Settings["pageToolOrigins"] = _options.PageToolOrigins.ToArray();
+            }
 
-        foreach (var handler in _handlers)
-        {
-            await handler.ConfigureAsync(configuration);
+            foreach (var handler in _handlers)
+            {
+                await handler.ConfigureAsync(configuration);
+            }
         }
 
         // The block goes in the head so it is in the document before the foot scripts that read it run.

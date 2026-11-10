@@ -23,6 +23,12 @@ public sealed class WebMcpPageOptions
     public bool EnablePageTools { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets a value indicating whether front-end pages offer storefront tools to visitors who are not signed
+    /// in, and to signed-in users without the WebMCP permission: the selected tools marked safe for anonymous callers.
+    /// </summary>
+    public bool EnableStorefrontTools { get; set; }
+
+    /// <summary>
     /// Gets or sets the origins of cross-origin frames whose shared WebMCP tools the AI chat may use. A frame also
     /// needs <c>allow="tools"</c>. Empty by default, so the chat only uses the page's own tools.
     /// </summary>

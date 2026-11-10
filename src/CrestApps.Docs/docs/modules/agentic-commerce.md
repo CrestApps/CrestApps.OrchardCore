@@ -270,15 +270,21 @@ Each tool returns the checkout in `structuredContent`, as the REST binding write
 
 ## AI tools
 
-When the AI feature (`CrestApps.OrchardCore.AI`), Product Listing and Product Feeds are on with Agentic Commerce, the module registers three AI tools in the **Commerce** category. Administrators pick them on AI profiles, and can expose them over MCP and WebMCP.
+When the AI feature (`CrestApps.OrchardCore.AI`), Product Listing and Product Feeds are on with Agentic Commerce, the module registers five AI tools in the **Commerce** category. Administrators pick them on AI profiles, and can expose them over MCP and WebMCP.
 
 | Tool | What it does |
 | --- | --- |
 | `searchStoreProducts` | Searches the products (`query`, `limit` 1 to 20, 10 by default) and returns each with its variants, the item id to buy each with, its price and whether it is in stock. |
 | `getStoreProduct` | Returns one product (`id`, a product id or a variant's item id) with its description, photos and variants. |
 | `startStoreCheckout` | Starts a checkout for `items` (each an item `id` and a `quantity`) and an optional buyer `email`, and returns its total and the `checkout_url` where the buyer enters their address and pays. It never pays. |
+| `addToStoreCart` | Adds an item (`id`, `quantity` 1 by default) to the caller's own storefront cart, with the same rules as the store's add to cart button, and returns the cart. |
+| `getStoreCart` | Returns the caller's own storefront cart: each item with its item id, quantity, price and any problem, the subtotal, and `cart_url`, the cart page. |
 
-The tools use the same catalog and agent checkout as UCP. `startStoreCheckout` keeps its checkouts under the platform id `site-assistant` with the protocol `assistant`, and a signed-in user's checkout is theirs. See [AI Tools](../ai/tools.md#commerce-tools).
+The tools use the same catalog and agent checkout as UCP. `startStoreCheckout` keeps its checkouts under the platform id `site-assistant` with the protocol `assistant`, and a signed-in user's checkout is theirs. Each call starts a new checkout, which counts toward **Open checkouts per platform** and expires after **Checkout lifetime**. The checkout belongs to nobody until the buyer opens `checkout_url`.
+
+The cart tools take no cart id. `ICartService` finds the cart from the request: the signed-in user's cart, or the guest's cart from their cart cookie. They need a visitor's request, so they answer with a message when they run elsewhere, and they don't start a guest's cart over a chat connection, which can't set the cookie.
+
+All five tools are marked safe for anyone (`MarkAIToolAnonymousSafe`). With WebMCP's **Offer storefront tools to visitors** on, visitors who aren't signed in can use the ones selected on the **WebMCP** card. See [WebMCP storefront tools](../ai/mcp/webmcp.md#storefront-tools) and [AI Tools](../ai/tools.md#commerce-tools).
 
 ## Recipes and deployment
 
