@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.DataConnectors.Services;
 using CrestApps.OrchardCore.DataConnectors.Storage;
 using OrchardCore.DataSources;
 using OrchardCore.Localization;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.DataConnectors.DataSources;
 
@@ -20,17 +21,20 @@ internal sealed class ImportedDataSource : IDataSource
     private readonly IDataConnectionStore _connectionStore;
     private readonly IDataSetRowStore _rowStore;
     private readonly ConnectedDataSetAuthorizer _authorizer;
+    private readonly ILocalClock _localClock;
 
     public ImportedDataSource(
         IConnectedDataSetStore dataSetStore,
         IDataConnectionStore connectionStore,
         IDataSetRowStore rowStore,
-        ConnectedDataSetAuthorizer authorizer)
+        ConnectedDataSetAuthorizer authorizer,
+        ILocalClock localClock)
     {
         _dataSetStore = dataSetStore;
         _connectionStore = connectionStore;
         _rowStore = rowStore;
         _authorizer = authorizer;
+        _localClock = localClock;
     }
 
     public static string Name => DataConnectorConstants.ImportedDataSourceName;
@@ -51,7 +55,7 @@ internal sealed class ImportedDataSource : IDataSource
             {
                 var group = connections.TryGetValue(dataSet.ConnectionId ?? string.Empty, out var connection) ? connection.DisplayText : null;
 
-                descriptors.Add(Describe(dataSet, group));
+                descriptors.Add(await DescribeAsync(dataSet, group));
             }
         }
 
@@ -71,7 +75,7 @@ internal sealed class ImportedDataSource : IDataSource
 
         return new DataSetSchema
         {
-            DataSet = Describe(record, connection?.DisplayText),
+            DataSet = await DescribeAsync(record, connection?.DisplayText),
             Fields = [.. ConnectedDataSetFields.ToDataFields(record, identifiersAreKeyFilterable: true)],
         };
     }
@@ -170,13 +174,15 @@ internal sealed class ImportedDataSource : IDataSource
             .ToArray();
     }
 
-    private static DataSetDescriptor Describe(ConnectedDataSet dataSet, string group)
+    private async Task<DataSetDescriptor> DescribeAsync(ConnectedDataSet dataSet, string group)
     {
         var descriptor = ConnectedDataSetFields.ToDescriptor(dataSet, group);
 
-        if (dataSet.Import?.LastSuccessUtc is { } refreshed)
+        if (dataSet.Import?.LastSuccessUtc is { } refreshedUtc)
         {
-            var refreshedText = refreshed.ToString("yyyy-MM-dd HH:mm 'UTC'", CultureInfo.InvariantCulture);
+            // People read the description, so the time is in the site time zone.
+            var refreshed = await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(refreshedUtc, DateTimeKind.Utc));
+            var refreshedText = refreshed.DateTime.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
 
             descriptor.Description = string.IsNullOrWhiteSpace(descriptor.Description)
                 ? $"Imported {refreshedText}."

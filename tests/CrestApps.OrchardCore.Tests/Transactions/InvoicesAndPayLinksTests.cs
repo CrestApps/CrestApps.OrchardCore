@@ -197,6 +197,7 @@ public sealed class InvoicesAndPayLinksTests
             TestCustomerOwnerNotifier.Create(notifications.Object, userService.Object, Mock.Of<ICustomerContactResolver>(), services.BuildServiceProvider()),
             services.BuildServiceProvider(),
             new TestClock(_now),
+            null,
             NullLogger<DefaultTransactionReminderService>.Instance,
             new PassThroughStringLocalizer<DefaultTransactionReminderService>());
     }

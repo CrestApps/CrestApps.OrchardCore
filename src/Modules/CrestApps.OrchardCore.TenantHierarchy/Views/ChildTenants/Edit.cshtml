@@ -1,4 +1,11 @@
 @model ChildTenantEditViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    // Stored times are UTC; people read them in the site time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 
 @{
     var labels = Model.Labels;
@@ -53,7 +60,7 @@
             <div class="ocat-end">
                 <dl class="row mb-0 small">
                     <dt class="col-sm-3">@T["Created"]</dt>
-                    <dd class="col-sm-9">@Model.Info.Entry.CreatedUtc.ToLocalTime().ToString("f") @if (!string.IsNullOrEmpty(Model.Info.Entry.CreatedByName)) { <span class="text-muted">@T["by {0}", Model.Info.Entry.CreatedByName]</span> }</dd>
+                    <dd class="col-sm-9">@((await LocalAsync(Model.Info.Entry.CreatedUtc)).ToString("f")) @if (!string.IsNullOrEmpty(Model.Info.Entry.CreatedByName)) { <span class="text-muted">@T["by {0}", Model.Info.Entry.CreatedByName]</span> }</dd>
                     <dt class="col-sm-3">@T["Setup recipe"]</dt>
                     <dd class="col-sm-9">@Model.Info.Entry.RecipeName</dd>
                 </dl>

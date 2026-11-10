@@ -521,6 +521,7 @@ public sealed class TransactionCommandServiceTests
             TestCustomerOwnerNotifier.Create(notifications.Object, userService.Object, Mock.Of<ICustomerContactResolver>(), services.BuildServiceProvider()),
             services.BuildServiceProvider(),
             clock,
+            null,
             NullLogger<DefaultTransactionReminderService>.Instance,
             new PassThroughStringLocalizer<DefaultTransactionReminderService>());
     }

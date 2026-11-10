@@ -1129,7 +1129,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports
     {
         public const int PageSize = 100;
         public const string ReportName = "omnichannel-dialer-call-detail";
-        public DialerCallDetailReportProvider(YesSql.ISession session, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignManager, CrestApps.Core.Services.INamedCatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> dispositionManager, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivitySourceOptions> activitySourceOptions, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.DialerCallDetailReportProvider> stringLocalizer) { }
+        public DialerCallDetailReportProvider(YesSql.ISession session, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignManager, CrestApps.Core.Services.INamedCatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> dispositionManager, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivitySourceOptions> activitySourceOptions, OrchardCore.Modules.ILocalClock localClock, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.DialerCallDetailReportProvider> stringLocalizer) { }
         public System.Collections.Generic.IReadOnlyCollection<string> FilterNames { get; }
         public static string Category { get; }
         public static OrchardCore.Localization.LocalizationSource Description { get; }

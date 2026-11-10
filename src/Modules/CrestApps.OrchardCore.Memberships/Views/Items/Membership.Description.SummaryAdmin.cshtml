@@ -1,10 +1,17 @@
 @model ShapeViewModel<Membership>
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    // Stored times are UTC; people read them in the site time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 
 @{
     var membership = Model.Value;
 }
 <div class="admin-list-secondary">
-    <span>@(membership.EndsUtc is { } ends ? T["Until {0:d}", ends] : T["No end date"])</span>
+    <span>@(membership.EndsUtc is { } ends ? T["Until {0:d}", await LocalAsync(ends)] : T["No end date"])</span>
     @foreach (var role in membership.RoleNames)
     {
         <span class="badge ta-badge fw-normal">@role</span>

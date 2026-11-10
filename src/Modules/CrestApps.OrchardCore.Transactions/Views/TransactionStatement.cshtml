@@ -3,6 +3,13 @@
 @using Microsoft.AspNetCore.Mvc.Localization
 @using OrchardCore.DisplayManagement
 @model TransactionStatementViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    // Stored times are UTC; people read them in the site time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 
 @*
     The TransactionStatement shape: one page of a customer's statement of their own transactions, for the site theme.
@@ -49,7 +56,7 @@
                                 }
                                 @if (transaction.DueUtc.HasValue)
                                 {
-                                    <span class="ms-2">@T["Due: {0}", transaction.DueUtc.Value.ToString("d")]</span>
+                                    <span class="ms-2">@T["Due: {0}", (await DocumentDates.ToSiteDueDateAsync(LocalClock, transaction.DueUtc.Value)).ToString("d")]</span>
                                 }
                             </div>
                             @if (!string.IsNullOrEmpty(entry.InvoiceUrl) || entry.Receipts.Count > 0)

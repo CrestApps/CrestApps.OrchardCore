@@ -44,9 +44,9 @@ public class AIApiKeyViewModel
     public string[] AllowedProfileIds { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets when the key stops working.
+    /// Gets or sets when the key stops working, in the site's time zone.
     /// </summary>
-    public DateTime? ExpiresUtc { get; set; }
+    public DateTime? Expires { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the key works.

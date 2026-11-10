@@ -173,6 +173,9 @@ public sealed class PayLaterDeferralTests
         services.AddSingleton(SiteServiceFactory.Create(new PayLaterSettings { NetTermDays = 0 }));
         services.AddSingleton<IDistributedLock, LocalLock>();
         services.AddSingleton<IClock>(new TestClock(now));
+        var localClock = new Mock<ILocalClock>();
+        localClock.Setup(clock => clock.ConvertToLocalAsync(It.IsAny<DateTimeOffset>())).Returns<DateTimeOffset>(Task.FromResult);
+        services.AddSingleton(localClock.Object);
         services.AddSingleton(typeof(IStringLocalizer<>), typeof(PassThroughStringLocalizer<>));
 
         return (new PayLaterRenewalBackgroundTask(NullLogger<PayLaterRenewalBackgroundTask>.Instance), services.BuildServiceProvider());

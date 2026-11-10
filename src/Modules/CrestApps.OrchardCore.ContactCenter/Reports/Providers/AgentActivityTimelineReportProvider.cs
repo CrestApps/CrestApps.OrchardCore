@@ -143,11 +143,12 @@ public sealed class AgentActivityTimelineReportProvider : ContactCenterReportBas
         callEvents.AddRange(await _eventStore.GetByAggregateWindowAsync(nameof(CallSession), AgentActivityTimeline.CallEventTypes, null, fromUtc, toUtc, cancellationToken));
 
         // Only the entries the page lists are built; the rest are only counted.
-        var selection = AgentActivityTimeline.SelectFirst(timelines, sessionEvents, offerEvents, callEvents, fromUtc, toUtc, EntryLimit);
+        var selection = AgentActivityTimeline.SelectFirst(timelines, sessionEvents, offerEvents, callEvents, fromUtc, toUtc, EntryLimit, timeZone);
 
         return Build(
             selection,
-            agentId => ReportValue.UserDisplayName(agentId is not null && agents.TryGetValue(agentId, out var userName) ? userName : null, S["(Unknown agent)"].Value));
+            agentId => ReportValue.UserDisplayName(agentId is not null && agents.TryGetValue(agentId, out var userName) ? userName : null, S["(Unknown agent)"].Value),
+            timeZone);
     }
 
     /// <summary>
@@ -155,10 +156,13 @@ public sealed class AgentActivityTimelineReportProvider : ContactCenterReportBas
     /// </summary>
     /// <param name="selection">The first entries, in order, and the counts of every entry.</param>
     /// <param name="agentName">Resolves an agent's display name.</param>
+    /// <param name="timeZone">The zone the times are shown in; UTC when none is given.</param>
     /// <returns>The report document.</returns>
-    internal ReportDocument Build(AgentActivitySelection selection, Func<string, string> agentName)
+    internal ReportDocument Build(AgentActivitySelection selection, Func<string, string> agentName, ReportTimeZone timeZone = null)
     {
         ArgumentNullException.ThrowIfNull(selection);
+
+        timeZone ??= ReportTimeZone.Utc;
 
         var document = new ReportDocument()
             .Add(ReportSection.ForMetrics(S["Summary"].Value,
@@ -173,15 +177,15 @@ public sealed class AgentActivityTimelineReportProvider : ContactCenterReportBas
         var columns = new[]
         {
             new ReportColumn(S["Agent"].Value),
-            new ReportColumn(S["Start (UTC)"].Value),
-            new ReportColumn(S["End (UTC)"].Value),
+            new ReportColumn(S["Start ({0})", timeZone.Name].Value),
+            new ReportColumn(S["End ({0})", timeZone.Name].Value),
             new ReportColumn(S["Duration"].Value, ReportColumnAlign.End),
             new ReportColumn(S["Kind"].Value),
             new ReportColumn(S["Activity"].Value),
             new ReportColumn(S["Detail"].Value),
             new ReportColumn(S["Interaction"].Value),
             new ReportColumn(S["Changed by"].Value),
-            new ReportColumn(S["Logged (UTC)"].Value),
+            new ReportColumn(S["Logged ({0})", timeZone.Name].Value),
         };
 
         var rows = selection.Entries
@@ -190,15 +194,15 @@ public sealed class AgentActivityTimelineReportProvider : ContactCenterReportBas
                 var row = new ReportRow(
                 [
                     agentName(entry.AgentId),
-                    AuditReportFormat.Timestamp(entry.StartUtc),
-                    entry.EndUtc.HasValue ? AuditReportFormat.Timestamp(entry.EndUtc.Value) : "—",
+                    AuditReportFormat.Timestamp(entry.StartUtc, timeZone),
+                    entry.EndUtc.HasValue ? AuditReportFormat.Timestamp(entry.EndUtc.Value, timeZone) : "—",
                     entry.DurationSeconds.HasValue ? AuditReportFormat.Clock(entry.DurationSeconds.Value) : "—",
                     entry.Kind.ToString(),
                     entry.Name,
                     string.IsNullOrEmpty(entry.Detail) ? "—" : entry.Detail,
                     entry.InteractionId ?? "—",
                     entry.ActorType.ToString(),
-                    AuditReportFormat.Timestamp(entry.RecordedUtc),
+                    AuditReportFormat.Timestamp(entry.RecordedUtc, timeZone),
                 ]);
 
                 return entry.Flagged

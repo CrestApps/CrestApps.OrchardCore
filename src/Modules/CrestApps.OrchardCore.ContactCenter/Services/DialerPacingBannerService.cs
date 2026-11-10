@@ -2,6 +2,7 @@ using System.Globalization;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
@@ -17,6 +18,8 @@ public sealed class DialerPacingBannerService : IDialerPacingBannerService
 
     private readonly IDialerPacingHealthService _healthService;
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
+    private readonly IClock _clock;
+    private readonly ILocalClock _localClock;
     private readonly IStringLocalizer S;
 
     /// <summary>
@@ -24,14 +27,20 @@ public sealed class DialerPacingBannerService : IDialerPacingBannerService
     /// </summary>
     /// <param name="healthService">The service that reads what the dialer is doing for each paced campaign queue.</param>
     /// <param name="campaignManagers">The campaign catalog, when the campaign feature is on, for campaign names.</param>
+    /// <param name="clock">Converts times to a time zone.</param>
+    /// <param name="localClock">Gives the site time zone.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public DialerPacingBannerService(
         IDialerPacingHealthService healthService,
         IEnumerable<ICatalogManager<OmnichannelCampaign>> campaignManagers,
+        IClock clock,
+        ILocalClock localClock,
         IStringLocalizer<DialerPacingBannerService> stringLocalizer)
     {
         _healthService = healthService;
         _campaignManager = campaignManagers.FirstOrDefault();
+        _clock = clock;
+        _localClock = localClock;
         S = stringLocalizer;
     }
 
@@ -68,7 +77,9 @@ public sealed class DialerPacingBannerService : IDialerPacingBannerService
             }
         }
 
-        return Build(snapshot, S, names);
+        var timeZone = await _localClock.GetLocalTimeZoneAsync();
+
+        return Build(snapshot, S, names, utc => _clock.ConvertToTimeZone(new DateTimeOffset(DateTime.SpecifyKind(utc, DateTimeKind.Utc)), timeZone).DateTime);
     }
 
     /// <summary>
@@ -77,14 +88,17 @@ public sealed class DialerPacingBannerService : IDialerPacingBannerService
     /// <param name="snapshot">The dialer's state over the queues the viewer may see.</param>
     /// <param name="S">The localizer.</param>
     /// <param name="campaignNames">The names of the campaigns, by identifier.</param>
+    /// <param name="toLocal">Converts a UTC time to the site time zone.</param>
     /// <returns>The banner.</returns>
     internal static DialerPacingBanner Build(
         DialerPacingHealthSnapshot snapshot,
         IStringLocalizer S,
-        IReadOnlyDictionary<string, string> campaignNames)
+        IReadOnlyDictionary<string, string> campaignNames,
+        Func<DateTime, DateTime> toLocal)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(S);
+        ArgumentNullException.ThrowIfNull(toLocal);
 
         var state = snapshot.State;
         var inState = snapshot.Queues.Where(queue => queue.State == state).ToArray();
@@ -101,7 +115,7 @@ public sealed class DialerPacingBannerService : IDialerPacingBannerService
                 Level = "danger",
                 Message = S["Dialer not pacing: the pacing lock of {0} has not been acquired since {1} ({2} minutes ago), so every pacing cycle skips itself. Check the distributed lock.",
                     campaigns,
-                    lockNotAcquiredSinceUtc.ToString("yyyy-MM-dd HH:mm 'UTC'", CultureInfo.InvariantCulture),
+                    toLocal(lockNotAcquiredSinceUtc).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture),
                     (int)(snapshot.EvaluatedUtc - lockNotAcquiredSinceUtc).TotalMinutes].Value,
             },
             DialerPacingHealthState.Stalled => new DialerPacingBanner

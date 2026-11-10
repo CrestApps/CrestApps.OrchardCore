@@ -24,4 +24,20 @@ internal static class DocumentDates
 
         return local.DateTime;
     }
+
+    /// <summary>
+    /// Returns the site's date a payment is due. Some due dates are calendar dates kept at midnight UTC, such as an
+    /// installment's, and stay that date; any other due time is read in the site's time zone.
+    /// </summary>
+    /// <param name="localClock">The site's clock, or <see langword="null"/>.</param>
+    /// <param name="dueUtc">The stored due time.</param>
+    public static async Task<DateTime> ToSiteDueDateAsync(ILocalClock localClock, DateTime dueUtc)
+    {
+        if (dueUtc.TimeOfDay == TimeSpan.Zero)
+        {
+            return dueUtc.Date;
+        }
+
+        return (await ToSiteTimeAsync(localClock, dueUtc)).Date;
+    }
 }

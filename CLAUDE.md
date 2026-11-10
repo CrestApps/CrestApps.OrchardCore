@@ -20,3 +20,8 @@
 
 - Every admin form page puts its buttons (Save, Cancel, Delete...) in Orchard Core's sticky bottom action bar: `<div class="action-bar-bottom">` inside the `<form>`, with less used ones marked `action-bar-secondary`. Never end a form with an `ocat-wrapper`/`ocat-end-offset` row of buttons.
 - Follow `.agents/skills/crestapps-admin-edit-views/SKILL.md` and the "Admin Edit (Form) Page Buttons" rules in `AGENTS.md`. Modals, card sub-forms, list filters, row actions and storefront pages keep their buttons inline.
+
+## Dates and Times
+
+- Never show a user a UTC time unless they asked for one. Every date and time in the UI, reports, exports, emails and notices is converted with Orchard Core's `ILocalClock` (the user's or site's time zone); editors convert entered times back with `ILocalClock.ToUtcLenientAsync`. No `ToLocalTime()`, no formatting a stored UTC value directly, no "(UTC)" labels.
+- Follow the "Showing Dates and Times (never UTC)" rules in `AGENTS.md`, including its exceptions (pure dates, a contact's own time zone, machine formats).

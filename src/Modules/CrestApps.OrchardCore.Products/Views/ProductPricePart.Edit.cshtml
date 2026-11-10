@@ -116,13 +116,13 @@
 
                     <div class="row g-2 mt-1">
                         <div class="col-md-4">
-                            <label asp-for="Prices[i].EffectiveFromUtc" class="form-label">@T["Offered from"]</label>
-                            <input type="datetime-local" asp-for="Prices[i].EffectiveFromUtc" class="form-control" />
+                            <label asp-for="Prices[i].EffectiveFrom" class="form-label">@T["Offered from"]</label>
+                            <input type="datetime-local" asp-for="Prices[i].EffectiveFrom" class="form-control" />
                         </div>
                         <div class="col-md-4">
-                            <label asp-for="Prices[i].EffectiveToUtc" class="form-label">@T["Offered until"]</label>
-                            <input type="datetime-local" asp-for="Prices[i].EffectiveToUtc" class="form-control" />
-                            <span asp-validation-for="Prices[i].EffectiveToUtc"></span>
+                            <label asp-for="Prices[i].EffectiveTo" class="form-label">@T["Offered until"]</label>
+                            <input type="datetime-local" asp-for="Prices[i].EffectiveTo" class="form-control" />
+                            <span asp-validation-for="Prices[i].EffectiveTo"></span>
                         </div>
                         <div class="col-md-4 d-flex align-items-end">
                             <div class="form-check">

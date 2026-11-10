@@ -48,6 +48,7 @@ public sealed class DialerDecisionLogReportProvider : ContactCenterReportBase, I
     private readonly IAgentProfileStore _agentProfileStore;
     private readonly UserManager<IUser> _userManager;
     private readonly IClock _clock;
+    private readonly ILocalClock _localClock;
     private readonly ContactCenterReportingOptions _reportingOptions;
 
     /// <summary>
@@ -63,6 +64,7 @@ public sealed class DialerDecisionLogReportProvider : ContactCenterReportBase, I
     /// <param name="agentProfileStore">The agent directory, for agent names.</param>
     /// <param name="userManager">The user manager, for the name of an agent whose profile does not carry one.</param>
     /// <param name="clock">The clock, for how long a queue has gone without a decision.</param>
+    /// <param name="localClock">The tenant's local clock, for the time zone the times are shown in.</param>
     /// <param name="reportingOptions">The reporting options, for how long is too long without a decision.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public DialerDecisionLogReportProvider(
@@ -76,6 +78,7 @@ public sealed class DialerDecisionLogReportProvider : ContactCenterReportBase, I
         IAgentProfileStore agentProfileStore,
         UserManager<IUser> userManager,
         IClock clock,
+        ILocalClock localClock,
         IOptions<ContactCenterReportingOptions> reportingOptions,
         IStringLocalizer<DialerDecisionLogReportProvider> stringLocalizer)
         : base(reportingService, capabilityGuard, stringLocalizer)
@@ -88,6 +91,7 @@ public sealed class DialerDecisionLogReportProvider : ContactCenterReportBase, I
         _agentProfileStore = agentProfileStore;
         _userManager = userManager;
         _clock = clock;
+        _localClock = localClock;
         _reportingOptions = reportingOptions.Value;
     }
 
@@ -127,6 +131,7 @@ public sealed class DialerDecisionLogReportProvider : ContactCenterReportBase, I
     protected override async Task<ReportDocument> RunCoreAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
         var range = context.Filter.GetDateRange();
+        var timeZone = await ReportTimeZone.ResolveAsync(_localClock);
         var query = new DialerDecisionLogQuery
         {
             FromUtc = range.FromUtc,
@@ -219,7 +224,7 @@ public sealed class DialerDecisionLogReportProvider : ContactCenterReportBase, I
                 new ReportColumn(S["Reason"].Value),
                 new ReportColumn(S["Decisions"].Value, ReportColumnAlign.End),
                 new ReportColumn(S["Events"].Value, ReportColumnAlign.End),
-                new ReportColumn(S["Last made (UTC)"].Value),
+                new ReportColumn(S["Last made ({0})", timeZone.Name].Value),
             };
 
             var reasonRows = reasons
@@ -229,7 +234,7 @@ public sealed class DialerDecisionLogReportProvider : ContactCenterReportBase, I
                     DialerDecisionLabels.Reason(row.Reason, S),
                     ReportFormat.Number(row.Decisions),
                     ReportFormat.Number(row.Events),
-                    FormatUtc(row.LastSeenUtc),
+                    FormatTime(row.LastSeenUtc, timeZone),
                 ]))
                 .ToList();
 
@@ -240,13 +245,13 @@ public sealed class DialerDecisionLogReportProvider : ContactCenterReportBase, I
         // queues and campaigns, not at one record, one agent or one reason.
         if (string.IsNullOrEmpty(query.AgentId) && string.IsNullOrEmpty(query.ActivityItemId) && string.IsNullOrEmpty(query.Reason))
         {
-            await AddQuietQueuesAsync(document, query, queues.Values, campaigns.Keys, QueueName, cancellationToken);
+            await AddQuietQueuesAsync(document, query, queues.Values, campaigns.Keys, QueueName, timeZone, cancellationToken);
         }
 
         var columns = new[]
         {
-            new ReportColumn(S["Last made (UTC)"].Value),
-            new ReportColumn(S["First made (UTC)"].Value),
+            new ReportColumn(S["Last made ({0})", timeZone.Name].Value),
+            new ReportColumn(S["First made ({0})", timeZone.Name].Value),
             new ReportColumn(S["Times"].Value, ReportColumnAlign.End),
             new ReportColumn(S["Kind"].Value),
             new ReportColumn(S["Queue"].Value),
@@ -263,8 +268,8 @@ public sealed class DialerDecisionLogReportProvider : ContactCenterReportBase, I
         var detailRows = rows
             .Select(row => new ReportRow(
             [
-                FormatUtc(row.LastSeenUtc),
-                FormatUtc(row.OccurredUtc),
+                FormatTime(row.LastSeenUtc, timeZone),
+                FormatTime(row.OccurredUtc, timeZone),
                 ReportFormat.Number(row.Occurrences),
                 DialerDecisionLabels.Kind(row.EventType, S),
                 QueueName(row.QueueId),
@@ -300,6 +305,7 @@ public sealed class DialerDecisionLogReportProvider : ContactCenterReportBase, I
         IEnumerable<ActivityQueue> queues,
         IEnumerable<string> campaignIds,
         Func<string, string> queueName,
+        ReportTimeZone timeZone,
         CancellationToken cancellationToken)
     {
         string[] scope;
@@ -360,7 +366,7 @@ public sealed class DialerDecisionLogReportProvider : ContactCenterReportBase, I
             new ReportColumn(S["Queue"].Value),
             new ReportColumn(S["Waiting"].Value, ReportColumnAlign.End),
             new ReportColumn(S["Due now"].Value, ReportColumnAlign.End),
-            new ReportColumn(S["Last routing decision (UTC)"].Value),
+            new ReportColumn(S["Last routing decision ({0})", timeZone.Name].Value),
             new ReportColumn(S["Minutes since"].Value, ReportColumnAlign.End),
             new ReportColumn(S["Status"].Value),
         };
@@ -387,7 +393,7 @@ public sealed class DialerDecisionLogReportProvider : ContactCenterReportBase, I
                 queueName(entry.Diagnosis.QueueId),
                 ReportFormat.Number(waiting.GetValueOrDefault(entry.Diagnosis.QueueId)),
                 ReportFormat.Number(entry.Diagnosis.DialableNowCount),
-                entry.Last is { } madeUtc ? FormatUtc(madeUtc) : S["Never"].Value,
+                entry.Last is { } madeUtc ? FormatTime(madeUtc, timeZone) : S["Never"].Value,
                 entry.Last is { } sinceUtc ? ReportFormat.Number((long)Math.Floor((now - sinceUtc).TotalMinutes)) : string.Empty,
                 isQuiet
                     ? S["No routing decision in the last {0} minutes", minutes].Value
@@ -521,8 +527,8 @@ public sealed class DialerDecisionLogReportProvider : ContactCenterReportBase, I
             ? null
             : value.Trim();
 
-    private static string FormatUtc(DateTime value)
-        => value.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+    private static string FormatTime(DateTime utc, ReportTimeZone timeZone)
+        => timeZone.ToLocal(utc).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
 
     /// <summary>
     /// Represents what one listed decision says.

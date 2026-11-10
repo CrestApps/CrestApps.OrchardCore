@@ -48,7 +48,8 @@ public sealed class AIChatExtractedDataReportTests
         var document = await RunAsync(Filter("profile-1"));
 
         var table = document.Sections.Single(section => section.Rows.Count > 0);
-        Assert.Equal(["Session started (UTC)", "Session", "Email", "Topics"], table.Columns.Select(column => column.Label));
+        Assert.Equal(["Session started", "Session", "Email", "Topics"], table.Columns.Select(column => column.Label));
+        Assert.Equal("2026-11-02 05:00", table.Rows[0].Cells[0]);
         Assert.Equal("s2", table.Rows[0].Cells[1]);
         Assert.Equal("Billing, Refund", table.Rows[1].Cells[3]);
         _store.Verify(store => store.GetAsync("profile-1", _day, _day.AddDays(1).AddTicks(-1), It.IsAny<CancellationToken>()));
@@ -111,7 +112,7 @@ public sealed class AIChatExtractedDataReportTests
     }
 
     private Task<ReportDocument> RunAsync(ReportFilter filter, ReportRunMode mode = ReportRunMode.Display)
-        => new AIChatExtractedDataReport(_store.Object, new PassThroughStringLocalizer<AIChatExtractedDataReport>())
+        => new AIChatExtractedDataReport(_store.Object, ReportTestClocks.LocalClock(TimeSpan.FromHours(-5)), new PassThroughStringLocalizer<AIChatExtractedDataReport>())
             .RunAsync(new ReportContext(filter, mode), TestContext.Current.CancellationToken);
 
     private static ReportFilter Filter(string profileId)

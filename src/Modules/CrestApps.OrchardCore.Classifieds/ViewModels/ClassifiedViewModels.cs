@@ -19,9 +19,10 @@ public class ClassifiedPartViewModel
 
     public string Longitude { get; set; }
 
-    public DateTime? ExpiresUtc { get; set; }
+    // In the site's time zone; the part keeps them in UTC.
+    public DateTime? Expires { get; set; }
 
-    public DateTime? FeaturedUntilUtc { get; set; }
+    public DateTime? FeaturedUntil { get; set; }
 
     [BindNever]
     public string RejectReason { get; set; }

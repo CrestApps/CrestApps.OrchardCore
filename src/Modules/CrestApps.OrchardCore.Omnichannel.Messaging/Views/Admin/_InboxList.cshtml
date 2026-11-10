@@ -48,7 +48,7 @@
                                 <span class="messaging-row-name text-truncate fw-semibold">@favorite.Name</span>
                                 @if (conversation?.LastMessageUtc is { } lastMessageUtc)
                                 {
-                                    <span class="text-muted small text-nowrap">@lastMessageUtc.ToLocalTime().ToString("g")</span>
+                                    <span class="text-muted small text-nowrap">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(lastMessageUtc, DateTimeKind.Utc), Format: "g"))</span>
                                 }
                             </div>
                             <div class="messaging-row-preview text-muted small text-truncate">

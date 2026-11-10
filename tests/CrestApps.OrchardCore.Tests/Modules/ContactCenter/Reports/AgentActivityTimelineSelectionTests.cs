@@ -91,6 +91,35 @@ public sealed class AgentActivityTimelineSelectionTests
         Assert.Contains($"The first 100 of {all.Count}", document.Sections[1].Description, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Report_ShowsEveryTimeInTheSiteTimeZone()
+    {
+        // Arrange
+        var (timelines, offers, calls) = BusyDay();
+        var zone = ReportTimeZone.FromId("Asia/Tokyo");
+        var selection = AgentActivityTimeline.SelectFirst(timelines, [], offers, calls, _from, _to, 10, zone);
+        var provider = new AgentActivityTimelineReportProvider(
+            Mock.Of<IContactCenterReportingService>(),
+            Mock.Of<IContactCenterReportCapabilityGuard>(),
+            Mock.Of<IInteractionEventStore>(),
+            Mock.Of<IAgentProfileManager>(),
+            Mock.Of<IClock>(),
+            Mock.Of<ILocalClock>(),
+            Options.Create(new ContactCenterReportingOptions()),
+            new PassThroughStringLocalizer<AgentActivityTimelineReportProvider>());
+
+        // Act
+        var document = provider.Build(selection, agentId => agentId, zone);
+
+        // Assert: Tokyo is nine hours ahead of UTC.
+        var table = document.Sections[1];
+        var first = selection.Entries[0];
+        Assert.Equal("Start (Asia/Tokyo)", table.Columns[1].Label);
+        Assert.Equal("Logged (Asia/Tokyo)", table.Columns[9].Label);
+        Assert.Equal(first.StartUtc.AddHours(9).ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture), table.Rows[0].Cells[1]);
+        Assert.Equal(first.RecordedUtc.AddHours(9).ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture), table.Rows[0].Cells[9]);
+    }
+
     private static string Describe(AgentActivityEntry entry)
         => string.Join(
             "|",

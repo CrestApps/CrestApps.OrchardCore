@@ -1,4 +1,11 @@
 @model PhoneNumberVerificationPartViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    // Stored times are UTC; people read them in the site time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 
 @{
     var statusClass = Model.VerificationStatus switch
@@ -13,5 +20,5 @@
 <span class="badge @statusClass" title="@T["Phone number verification status"]">@Model.VerificationStatus.ToString()</span>
 @if (Model.LastVerifiedUtc.HasValue)
 {
-    <span class="text-muted ms-1">@T["Verified {0}", Model.LastVerifiedUtc.Value.ToString("g")]</span>
+    <span class="text-muted ms-1">@T["Verified {0}", (await LocalAsync(Model.LastVerifiedUtc.Value)).ToString("g")]</span>
 }

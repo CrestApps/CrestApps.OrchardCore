@@ -77,7 +77,7 @@ When at least one enabled coupon has neither a usage limit nor an end date, a wa
 | **Minimum quantity** | Optional. How many of the items the coupon counts the order needs, for example *3* for "buy 3 or more and save 10%". A coupon limited to some products counts only those. |
 | **Usage limit** | Optional. How many purchases can use the coupon in total. Leave blank for unlimited. |
 | **Uses per customer** | Optional. How many times one customer can use it. A customer is their account, or the email a guest checks out with. |
-| **Valid from (UTC)** / **Valid until (UTC)** | Optional dates and times, in UTC, between which the coupon works. The end must come after the start. |
+| **Valid from** / **Valid until** | Optional dates and times, in the site's time zone, between which the coupon works. The end must come after the start. |
 | **Enabled** | Clear it to stop the coupon working without deleting it. |
 | **Combines with** | Which other kinds of discount can be used on the same order: **Product discounts**, **Order discounts** and **Shipping discounts**. See [Combine discounts](#combine-discounts). |
 
@@ -166,7 +166,7 @@ The code is counted as used only when the transaction is settled. If less was co
 2. Change what you need. The page shows how many times the coupon has been redeemed, for example *Redeemed 12 times.*, how many uses are held by buyers who are paying, and **Recent uses**: when, whether it was **Used**, **Held at checkout**, **Let go** or **Given back**, by whom, for which order, and how much it took off.
 3. Click **Save**. The message *The coupon was updated.* confirms it.
 
-To pause a coupon, clear **Enabled** and save. To end a campaign on a date, set **Valid until (UTC)**.
+To pause a coupon, clear **Enabled** and save. To end a campaign on a date, set **Valid until**.
 
 ## Delete a coupon
 
@@ -194,7 +194,7 @@ On the **Payment** step of the checkout, the buyer types the code in **Promotion
 | *Enter a percentage between 1 and 100.* | Fix the **Percentage**. |
 | *Enter an amount greater than zero.* | Fix the **Amount**. |
 | *A fixed amount needs a currency.* | Enter the **Currency**. |
-| *The end date must be after the start date.* | Fix **Valid from (UTC)** or **Valid until (UTC)**. |
+| *The end date must be after the start date.* | Fix **Valid from** or **Valid until**. |
 | *The maximum amount can't be less than the minimum amount.* | Fix **Maximum amount** or **Minimum amount**. |
 | *Leave the limit blank for no limit, or enter a number greater than zero.* | Fix **Uses per customer**. |
 | *Leave the limit blank for unlimited, or enter a number greater than zero.* | Fix the **Usage limit**. |

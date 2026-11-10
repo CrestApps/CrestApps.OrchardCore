@@ -160,6 +160,7 @@ public sealed class UpcomingPaymentReminderTests
             TestCustomerOwnerNotifier.Create(notifications.Object, userService.Object, Mock.Of<ICustomerContactResolver>(), new ServiceCollection().BuildServiceProvider()),
             new ServiceCollection().BuildServiceProvider(),
             new TestClock(_now),
+            null,
             NullLogger<DefaultTransactionReminderService>.Instance,
             new PassThroughStringLocalizer<DefaultTransactionReminderService>());
     }

@@ -53,6 +53,7 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
         var distributedLock = serviceProvider.GetRequiredService<IDistributedLock>();
         var localizer = serviceProvider.GetRequiredService<IStringLocalizer<PayLaterRenewalBackgroundTask>>();
         var clock = serviceProvider.GetRequiredService<IClock>();
+        var localClock = serviceProvider.GetRequiredService<ILocalClock>();
 
         var now = clock.UtcNow;
         var due = await transactionManager.GetDueForRenewalAsync(now - _grace, cancellationToken);
@@ -79,7 +80,7 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
 
             try
             {
-                await RenewAsync(transactionManager, distributedLock, localizer, settings, transaction, now, cancellationToken);
+                await RenewAsync(transactionManager, distributedLock, localizer, localClock, settings, transaction, now, cancellationToken);
             }
             catch (Exception exception)
             {
@@ -94,6 +95,7 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
         ITransactionManager transactionManager,
         IDistributedLock distributedLock,
         IStringLocalizer localizer,
+        ILocalClock localClock,
         PayLaterSettings settings,
         Transaction transaction,
         DateTime now,
@@ -128,7 +130,7 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
             return;
         }
 
-        var next = await BuildNextCycleAsync(transactionManager, localizer, settings, current, now);
+        var next = await BuildNextCycleAsync(transactionManager, localizer, localClock, settings, current, now);
 
         // The source is marked before the new cycle is created so a crash between the two leaves the
         // schedule stopped rather than invoicing the same period on every later sweep.
@@ -148,6 +150,7 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
     private static async Task<Transaction> BuildNextCycleAsync(
         ITransactionManager transactionManager,
         IStringLocalizer localizer,
+        ILocalClock localClock,
         PayLaterSettings settings,
         Transaction source,
         DateTime now)
@@ -199,11 +202,14 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
             CycleTaxAmount = recurrence.CycleTaxAmount,
         };
 
+        // The period's first day as the site reads it, in its own time zone.
+        var localPeriodStart = (await localClock.ConvertToLocalAsync(DateTime.SpecifyKind(periodStart, DateTimeKind.Utc))).DateTime;
+
         next.Events.Add(new TransactionEvent
         {
             CreatedUtc = now,
             Type = TransactionEventType.Created,
-            Message = localizer["An outstanding Pay Later balance was recorded for the billing period starting {0:d}.", periodStart].Value,
+            Message = localizer["An outstanding Pay Later balance was recorded for the billing period starting {0:d}.", localPeriodStart].Value,
         });
 
         return next;
