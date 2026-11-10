@@ -25,6 +25,7 @@
         "CrestApps.OrchardCore.AgenticCommerce.Ucp",
         "CrestApps.OrchardCore.AgenticCommerce.Ucp.Catalog",
         "CrestApps.OrchardCore.AgenticCommerce.Ucp.Mcp",
+        "CrestApps.OrchardCore.AgenticCommerce.Ucp.A2a",
         "CrestApps.OrchardCore.AgenticCommerce.Acp",
         "CrestApps.OrchardCore.AgenticCommerce.Acp.Mcp",
         "CrestApps.OrchardCore.AgenticCommerce.Feeds"

@@ -15,6 +15,7 @@ An agent checkout must be the store's checkout. If a protocol priced items, held
 | UCP Account Linking | `CrestApps.OrchardCore.AgenticCommerce.Ucp.IdentityLinking` | Buyers link their account through the OpenID server. |
 | UCP Catalog and Cart | `CrestApps.OrchardCore.AgenticCommerce.Ucp.Catalog` | Catalog search and lookup, and the UCP cart. |
 | UCP over MCP | `CrestApps.OrchardCore.AgenticCommerce.Ucp.Mcp` | UCP's checkout as MCP tools at `ucp/mcp`. |
+| UCP over A2A | `CrestApps.OrchardCore.AgenticCommerce.Ucp.A2a` | UCP's checkout and orders through an A2A agent at `ucp/a2a`, with its agent card at `ucp/a2a/.well-known/agent-card.json`. |
 | Agentic Commerce Protocol | `CrestApps.OrchardCore.AgenticCommerce.Acp` | `/.well-known/acp.json`, `acp` checkout sessions, optional request signatures, signed order webhooks. |
 | ACP over MCP | `CrestApps.OrchardCore.AgenticCommerce.Acp.Mcp` | ACP's checkout sessions as MCP tools at `acp/mcp`. |
 | Agent Product Feeds | `CrestApps.OrchardCore.AgenticCommerce.Feeds` | The OpenAI product feed, the daily SFTP push and the ACP feed API client. |

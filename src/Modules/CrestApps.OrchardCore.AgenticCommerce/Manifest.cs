@@ -77,6 +77,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = AgenticCommerceConstants.Features.UcpA2a,
+    Name = "UCP over A2A",
+    Description = "Serves UCP's checkout and orders through an Agent2Agent (A2A) agent, with its agent card at ucp/a2a/.well-known/agent-card.json, for agents that use UCP's A2A binding.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        AgenticCommerceConstants.Features.Ucp,
+    ]
+)]
+
+[assembly: Feature(
     Id = AgenticCommerceConstants.Features.Acp,
     Name = "Agentic Commerce Protocol",
     Description = "Lets agents that speak the Agentic Commerce Protocol (ACP), such as ChatGPT, check out and pay with a delegated payment token, and sends them signed order updates.",

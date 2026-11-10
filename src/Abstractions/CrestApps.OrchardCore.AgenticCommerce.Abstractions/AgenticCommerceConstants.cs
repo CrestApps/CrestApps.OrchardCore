@@ -36,6 +36,11 @@ public static class AgenticCommerceConstants
         public const string UcpMcp = "CrestApps.OrchardCore.AgenticCommerce.Ucp.Mcp";
 
         /// <summary>
+        /// UCP's Agent2Agent (A2A) binding.
+        /// </summary>
+        public const string UcpA2a = "CrestApps.OrchardCore.AgenticCommerce.Ucp.A2a";
+
+        /// <summary>
         /// The Agentic Commerce Protocol: checkout, discovery and order webhooks.
         /// </summary>
         public const string Acp = "CrestApps.OrchardCore.AgenticCommerce.Acp";

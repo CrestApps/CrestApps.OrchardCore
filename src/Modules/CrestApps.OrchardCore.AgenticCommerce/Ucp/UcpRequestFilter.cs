@@ -27,7 +27,7 @@ public sealed class UcpRequestFilter : IEndpointFilter
 
         if (body is null)
         {
-            return UcpResults.Error(StatusCodes.Status413PayloadTooLarge, "request_too_large", "The request is too large.");
+            return Fail(httpContext, body, StatusCodes.Status413PayloadTooLarge, "request_too_large", "The request is too large.");
         }
 
         string profileUrl = null;
@@ -37,7 +37,7 @@ public sealed class UcpRequestFilter : IEndpointFilter
         {
             if (!StructuredFieldParser.TryParseDictionary(agentHeader, out var agent) || agent.GetString("profile") is not { } profile)
             {
-                return UcpResults.Error(StatusCodes.Status400BadRequest, "invalid_profile_url", "The UCP-Agent header doesn't name a profile.");
+                return Fail(httpContext, body, StatusCodes.Status400BadRequest, "invalid_profile_url", "The UCP-Agent header doesn't name a profile.");
             }
 
             profileUrl = profile;
@@ -52,7 +52,9 @@ public sealed class UcpRequestFilter : IEndpointFilter
 
             if (fetched is null)
             {
-                return UcpResults.Error(
+                return Fail(
+                    httpContext,
+                    body,
                     error == "profile_unreachable" ? StatusCodes.Status424FailedDependency : error == "invalid_profile_url" ? StatusCodes.Status400BadRequest : StatusCodes.Status422UnprocessableEntity,
                     error,
                     "The platform's UCP profile can't be read.");
@@ -65,7 +67,7 @@ public sealed class UcpRequestFilter : IEndpointFilter
 
         if (!authentication.Succeeded && authentication.Error is not null)
         {
-            return UcpResults.Error(authentication.StatusCode, authentication.StatusCode == StatusCodes.Status401Unauthorized ? "unauthorized" : "forbidden", authentication.Error);
+            return Fail(httpContext, body, authentication.StatusCode, authentication.StatusCode == StatusCodes.Status401Unauthorized ? "unauthorized" : "forbidden", authentication.Error);
         }
 
         if (!string.IsNullOrEmpty(request.Headers["Signature-Input"]))
@@ -95,14 +97,14 @@ public sealed class UcpRequestFilter : IEndpointFilter
 
                 if (platform is null)
                 {
-                    return UcpResults.Error(StatusCodes.Status403Forbidden, "forbidden", "The platform isn't one this store sells to.");
+                    return Fail(httpContext, body, StatusCodes.Status403Forbidden, "forbidden", "The platform isn't one this store sells to.");
                 }
 
                 authentication = AgentPlatformAuthenticator.Check(platform, AgenticCommerceConstants.Protocols.Ucp, httpContext);
 
                 if (!authentication.Succeeded)
                 {
-                    return UcpResults.Error(authentication.StatusCode, "forbidden", authentication.Error);
+                    return Fail(httpContext, body, authentication.StatusCode, "forbidden", authentication.Error);
                 }
             }
         }
@@ -111,7 +113,7 @@ public sealed class UcpRequestFilter : IEndpointFilter
         {
             httpContext.Response.Headers.WWWAuthenticate = "Bearer";
 
-            return UcpResults.Error(StatusCodes.Status401Unauthorized, "unauthorized", "Sign in with the platform's API key or OAuth token, or sign the request.");
+            return Fail(httpContext, body, StatusCodes.Status401Unauthorized, "unauthorized", "Sign in with the platform's API key or OAuth token, or sign the request.");
         }
 
         var signedIn = authentication.Platform;
@@ -119,7 +121,7 @@ public sealed class UcpRequestFilter : IEndpointFilter
         // A platform acts only for its own profile.
         if (profileUrl is not null && !string.IsNullOrEmpty(signedIn.ProfileUrl) && !string.Equals(profileUrl, signedIn.ProfileUrl, StringComparison.Ordinal))
         {
-            return UcpResults.Error(StatusCodes.Status403Forbidden, "forbidden", "The UCP-Agent profile isn't the platform's.");
+            return Fail(httpContext, body, StatusCodes.Status403Forbidden, "forbidden", "The UCP-Agent profile isn't the platform's.");
         }
 
         if (platformProfile is null && !string.IsNullOrEmpty(signedIn.ProfileUrl))
@@ -132,7 +134,7 @@ public sealed class UcpRequestFilter : IEndpointFilter
 
         if (negotiation.Version is null)
         {
-            return UcpResults.Error(StatusCodes.Status422UnprocessableEntity, "version_unsupported", $"The store serves UCP {string.Join(" and ", UcpConstants.Versions)}.");
+            return Fail(httpContext, body, StatusCodes.Status422UnprocessableEntity, "version_unsupported", $"The store serves UCP {string.Join(" and ", UcpConstants.Versions)}.");
         }
 
         var linkedUserId = authentication.UserId;
@@ -176,7 +178,7 @@ public sealed class UcpRequestFilter : IEndpointFilter
 
         if (body.Length > 0 && !ContentDigest.Verify(request.Headers["Content-Digest"].ToString(), body))
         {
-            return UcpResults.Error(StatusCodes.Status400BadRequest, "digest_mismatch", "The body doesn't match its Content-Digest.");
+            return Fail(httpContext, body, StatusCodes.Status400BadRequest, "digest_mismatch", "The body doesn't match its Content-Digest.");
         }
 
         var keys = JsonWebKeySet.Parse(platformProfile?["keys"]);
@@ -192,11 +194,19 @@ public sealed class UcpRequestFilter : IEndpointFilter
             return null;
         }
 
-        return UcpResults.Error(
+        return Fail(
+            httpContext,
+            body,
             verification.ErrorCode == "algorithm_unsupported" ? StatusCodes.Status400BadRequest : StatusCodes.Status401Unauthorized,
             verification.ErrorCode ?? "signature_invalid",
             "The request's signature can't be verified with the platform's keys.");
     }
+
+    // A JSON-RPC binding (UCP over A2A) answers the same errors as JSON-RPC errors, with the same HTTP status.
+    private static IResult Fail(HttpContext httpContext, byte[] body, int statusCode, string code, string content)
+        => httpContext.GetEndpoint()?.Metadata.GetMetadata<UcpJsonRpcErrors>() is not null
+            ? UcpJsonRpc.WriteTransportError(body, statusCode, code, content)
+            : UcpResults.Error(statusCode, code, content);
 
     internal static HttpSignatureMessage ToSignatureMessage(HttpRequest request)
     {

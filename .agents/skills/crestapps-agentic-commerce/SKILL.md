@@ -32,11 +32,11 @@ the code was built from are in `docs/engineering/commerce/agentic-commerce-proto
 ## The shape of the module
 
 ```
-UCP REST (UcpEndpoints)   UCP MCP (UcpMcpEndpoints)   ACP REST (AcpEndpoints)  ACP MCP (AcpMcpEndpoints)   AI tools
-        |  UcpRequestFilter  |                               | AcpRequestFilter (sign-in, Signature) |   (AI/*.cs)
-        |  UcpCheckoutMapper |                               +-- AcpCheckoutOperations --------------+       |
-        |                    |                                   AcpCheckoutMapper                           |
-        +--------------------+---------------+-------------------------------------------------------------+
+UCP REST (UcpEndpoints)  UCP A2A (UcpA2aEndpoints)  UCP MCP (UcpMcpEndpoints)  ACP REST (AcpEndpoints)  ACP MCP (AcpMcpEndpoints)  AI tools
+        |  UcpRequestFilter -> UcpOperations (REST + A2A)    | AcpRequestFilter (sign-in, Signature)  |   (AI/*.cs)
+        |  UcpCheckoutMapper |                               +-- AcpCheckoutOperations (REST + MCP) --+       |
+        |                    |                                   AcpCheckoutMapper                            |
+        +--------------------+---------------+--------------------------------------------------------------+
                                              |
                           IAgentCheckoutService (AgentCheckoutService, Core)
                                              |
@@ -67,8 +67,13 @@ UCP REST (UcpEndpoints)   UCP MCP (UcpMcpEndpoints)   ACP REST (AcpEndpoints)  A
   isn't signed (no ACP source defines that). .NET 10 has no Ed25519, so don't add it without a vetted library. The
   public key is configuration: it is exported, and validated in `AgentPlatformHandler.ValidatingAsync`.
 
-A new binding (such as UCP over A2A) is a new endpoint plus a mapper over `IAgentCheckoutService`. Never call
-carts, orders or providers from an endpoint.
+A new binding is a new endpoint plus a mapper over `IAgentCheckoutService`. Never call carts, orders or
+providers from an endpoint. A new UCP binding calls `UcpOperations` (create, get, update, complete with the checkout
+extensions, cancel, order get), which returns a `UcpOperationResult` (a UCP body or a transport error) for the binding to
+write; see `UcpA2aMessageHandler`. A JSON-RPC binding marks its endpoint with `UcpJsonRpc.Errors` so
+`UcpRequestFilter` answers sign-in and negotiation failures as JSON-RPC errors, and takes a message-body idempotency
+key through `IdempotentOperation.RunAsync` (Commerce.Api.Core), as A2A does with its `messageId`. A new ACP binding calls `AcpCheckoutOperations`,
+as `AcpMcpEndpoints` does.
 
 ## Add a payment handler (required pieces)
 

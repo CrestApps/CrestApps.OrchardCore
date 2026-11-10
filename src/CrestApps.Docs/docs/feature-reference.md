@@ -282,6 +282,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.AgenticCommerce.Ucp.IdentityLinking` | UCP Account Linking | [Agentic Commerce](./modules/agentic-commerce#account-linking-ucp) |
 | `CrestApps.OrchardCore.AgenticCommerce.Ucp.Catalog` | UCP Catalog and Cart | [Agentic Commerce](./modules/agentic-commerce#catalog-and-cart-ucp) |
 | `CrestApps.OrchardCore.AgenticCommerce.Ucp.Mcp` | UCP over MCP | [Agentic Commerce](./modules/agentic-commerce#ucp-over-mcp) |
+| `CrestApps.OrchardCore.AgenticCommerce.Ucp.A2a` | UCP over A2A | [Agentic Commerce](./modules/agentic-commerce#ucp-over-a2a) |
 | `CrestApps.OrchardCore.AgenticCommerce.Acp` | Agentic Commerce Protocol | [Agentic Commerce](./modules/agentic-commerce#acp-discovery-and-versions) |
 | `CrestApps.OrchardCore.AgenticCommerce.Acp.Mcp` | ACP over MCP | [Agentic Commerce](./modules/agentic-commerce#acp-over-mcp) |
 | `CrestApps.OrchardCore.AgenticCommerce.Feeds` | Agent Product Feeds | [Agentic Commerce](./modules/agentic-commerce#agent-product-feeds) |
