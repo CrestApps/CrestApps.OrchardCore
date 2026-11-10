@@ -29,4 +29,15 @@ public sealed class WebhookSendRequest
     /// Gets or sets the JSON body.
     /// </summary>
     public string Body { get; set; }
+
+    /// <summary>
+    /// Gets or sets more headers to send, such as a protocol's own signature.
+    /// </summary>
+    public IDictionary<string, string> Headers { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to add the webhook signature headers with <see cref="Secret"/>. A direct
+    /// delivery whose formatter signs it itself turns it off.
+    /// </summary>
+    public bool Sign { get; set; } = true;
 }

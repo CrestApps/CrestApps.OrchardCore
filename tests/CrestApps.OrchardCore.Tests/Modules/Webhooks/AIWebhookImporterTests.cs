@@ -61,7 +61,7 @@ public sealed class AIWebhookImporterTests
             .Callback<WebhookDelivery, CancellationToken>((delivery, _) => createdDeliveries.Add(delivery))
             .Returns(ValueTask.CompletedTask);
 
-        var dispatcher = new WebhookDispatcher(Mock.Of<CrestApps.OrchardCore.Webhooks.IWebhookSender>(), deliveries.Object, subscriptions.Object, protection, Clock(), NullLogger<WebhookDispatcher>.Instance);
+        var dispatcher = new WebhookDispatcher(Mock.Of<CrestApps.OrchardCore.Webhooks.IWebhookSender>(), deliveries.Object, subscriptions.Object, [], protection, Clock(), NullLogger<WebhookDispatcher>.Instance);
         var importer = new AIWebhookImporter(aiSubscriptions.Object, aiDeliveries.Object, subscriptions.Object, deliveries.Object, dispatcher, protection, Clock(), NullLogger<AIWebhookImporter>.Instance, Mock.Of<global::YesSql.ISession>());
 
         // Act
@@ -105,7 +105,7 @@ public sealed class AIWebhookImporterTests
         var subscriptions = new Mock<IWebhookSubscriptionStore>();
         subscriptions.Setup(store => store.FindByIdAsync("ai-sub-1", It.IsAny<CancellationToken>())).ReturnsAsync(new WebhookSubscription { ItemId = "ai-sub-1" });
         var deliveries = new Mock<IWebhookDeliveryStore>();
-        var dispatcher = new WebhookDispatcher(Mock.Of<CrestApps.OrchardCore.Webhooks.IWebhookSender>(), deliveries.Object, subscriptions.Object, protection, Clock(), NullLogger<WebhookDispatcher>.Instance);
+        var dispatcher = new WebhookDispatcher(Mock.Of<CrestApps.OrchardCore.Webhooks.IWebhookSender>(), deliveries.Object, subscriptions.Object, [], protection, Clock(), NullLogger<WebhookDispatcher>.Instance);
         var importer = new AIWebhookImporter(aiSubscriptions.Object, aiDeliveries.Object, subscriptions.Object, deliveries.Object, dispatcher, protection, Clock(), NullLogger<AIWebhookImporter>.Instance, Mock.Of<global::YesSql.ISession>());
 
         // Act

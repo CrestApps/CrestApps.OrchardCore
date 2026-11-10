@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Payments;
@@ -105,6 +107,12 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
 
         // A card authenticated for future use while the payer is present can be charged again without them.
         SupportsSavedPaymentMethods = true,
+
+        // A shared payment token or a Google Pay token an AI agent brought is charged here, with no browser.
+        AcceptsDelegatedCredentials = true,
+
+        // A 3-D Secure result the agent got is imported with the payment (Stripe's "Import 3D Secure results").
+        AcceptsExternalAuthentication = true,
     };
 
     /// <inheritdoc/>
@@ -122,6 +130,11 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
         if (CheckoutPaymentDataKeys.IsSet(context.ProviderData, CheckoutPaymentDataKeys.OffSession))
         {
             return await ChargeSavedPaymentMethodAsync(context, grossAmount);
+        }
+
+        if (CheckoutPaymentDataKeys.GetValue(context.ProviderData, CheckoutPaymentDataKeys.DelegatedCredential) is not null)
+        {
+            return await ChargeDelegatedCredentialAsync(context, grossAmount);
         }
 
         var paymentMethodId = CheckoutPaymentDataKeys.GetValue(context.ProviderData, StripeRecurringPaymentProvider.PaymentMethodDataKey);
@@ -295,6 +308,14 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
 
         if (string.IsNullOrEmpty(attempt.ProviderReference))
         {
+            // A begin whose answer never arrived (a Stripe server error, a timeout) may still have made the
+            // PaymentIntent. When Stripe has one for this attempt, it's recorded on the attempt and verified like any
+            // other, so a charge Stripe took is never left unseen.
+            attempt.ProviderReference = await FindPaymentIntentAsync(attempt);
+        }
+
+        if (string.IsNullOrEmpty(attempt.ProviderReference))
+        {
             // The attempt was created but the PaymentIntent was never begun, so there is nothing to
             // confirm yet. Leave the obligation outstanding rather than inventing a settlement.
             return new PaymentVerificationResult
@@ -386,6 +407,13 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
         ArgumentNullException.ThrowIfNull(context.Attempt);
 
         var attempt = context.Attempt;
+
+        if (string.IsNullOrEmpty(attempt.ProviderReference))
+        {
+            // A begin whose answer never arrived may still have made the PaymentIntent: it's voided, or refunded when it
+            // was paid, like any other.
+            attempt.ProviderReference = await FindPaymentIntentAsync(attempt);
+        }
 
         if (string.IsNullOrEmpty(attempt.ProviderReference))
         {
@@ -481,6 +509,204 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
 
     // Charges a card kept on a customer, server-side. There is no browser to confirm anything, so the result is
     // final at once: accepted (and still verified against Stripe before it counts as paid) or declined.
+    private async Task<PaymentBeginResult> ChargeDelegatedCredentialAsync(BeginPaymentContext context, decimal grossAmount)
+    {
+        var attempt = context.Attempt;
+
+        // A delegated credential pays for this one checkout; Stripe refuses to keep it for later.
+        if (CheckoutPaymentDataKeys.IsSet(context.ProviderData, CheckoutPaymentDataKeys.SavePaymentMethod) || attempt.ObligationId != CheckoutObligations.OneTime)
+        {
+            return PaymentBeginResult.Failure(S["A payment token an AI agent brings pays for one purchase; it can't be kept for later payments."]);
+        }
+
+        var authentication = ThreeDSecureResult.From(context.ProviderData);
+
+        if (authentication is not null)
+        {
+            if (authentication.GetInvalidMember() is not null)
+            {
+                return PaymentBeginResult.Failure(S["The 3-D Secure result isn't complete or valid."]);
+            }
+
+            if (!authentication.AllowsPayment)
+            {
+                // A payment this attempt began earlier can't go ahead either, so nothing is left to confirm later.
+                await TryCancelAsync(attempt, attempt.ProviderReference);
+
+                return PaymentBeginResult.Decline(S["The buyer's bank didn't authenticate them, so the payment wasn't taken."].Value, attempt.ProviderReference);
+            }
+        }
+
+        var credentialType = CheckoutPaymentDataKeys.GetValue(context.ProviderData, CheckoutPaymentDataKeys.DelegatedCredentialType);
+
+        // The same attempt was begun before and the bank asked the buyer to approve it: that PaymentIntent is confirmed
+        // with the result, never a second one made for the same attempt.
+        var confirmsEarlierPayment = authentication is not null && IsPaymentIntentReference(attempt.ProviderReference);
+
+        ChargeDelegatedCredentialResponse response;
+
+        try
+        {
+            response = confirmsEarlierPayment
+                ? await _paymentIntentService.ConfirmDelegatedAsync(new ConfirmDelegatedCredentialRequest
+                {
+                    PaymentIntentId = attempt.ProviderReference,
+                    CredentialType = credentialType,
+                    Credential = CheckoutPaymentDataKeys.GetValue(context.ProviderData, CheckoutPaymentDataKeys.DelegatedCredential),
+                    ThreeDSecure = ToImport(authentication),
+                    IdempotencyKey = GetAuthenticationIdempotencyKey(attempt, authentication),
+                })
+                : await _paymentIntentService.ChargeDelegatedAsync(new ChargeDelegatedCredentialRequest
+                {
+                    Amount = grossAmount,
+                    Currency = attempt.Currency,
+                    CredentialType = credentialType,
+                    Credential = CheckoutPaymentDataKeys.GetValue(context.ProviderData, CheckoutPaymentDataKeys.DelegatedCredential),
+                    ReturnUrl = context.ReturnUrl,
+                    IdempotencyKey = attempt.IdempotencyKey,
+                    ThreeDSecure = authentication is null ? null : ToImport(authentication),
+                    Metadata = new Dictionary<string, string>
+                    {
+                        ["checkout_attempt_id"] = attempt.ItemId,
+                        ["checkout_session_id"] = attempt.SessionId,
+                        ["delegated"] = "true",
+                    },
+                });
+        }
+        catch (Exception ex)
+        {
+            // A transport failure says nothing about the credential; the caller may try again with the same key.
+            _logger.LogError(ex, "Failed to charge a delegated credential with Stripe for checkout attempt '{AttemptId}'.", attempt.ItemId);
+
+            return PaymentBeginResult.Failure(ex.Message);
+        }
+
+        if (response.Succeeded)
+        {
+            return new PaymentBeginResult
+            {
+                Succeeded = true,
+                ProviderReference = response.PaymentIntentId ?? attempt.ProviderReference,
+
+                // Confirmed already; settlement is still decided by verifying the intent against Stripe.
+                RequiresAction = false,
+                CardBrand = response.CardBrand,
+            };
+        }
+
+        if (response.RequiresAction)
+        {
+            return new PaymentBeginResult
+            {
+                Succeeded = true,
+                ProviderReference = response.PaymentIntentId,
+                RedirectUrl = response.RedirectUrl,
+                RequiresAction = true,
+                CardBrand = response.CardBrand,
+            };
+        }
+
+        var reference = response.PaymentIntentId ?? (confirmsEarlierPayment ? attempt.ProviderReference : null);
+
+        if (!response.Declined)
+        {
+            // Stripe's outcome is unknown (a server error, a rate limit, an idempotency conflict). The attempt keeps
+            // its idempotency key and its PaymentIntent, so trying again replays whatever Stripe did rather than
+            // making a second charge.
+            _logger.LogWarning("Stripe didn't take the delegated credential for checkout attempt '{AttemptId}': {Error}", attempt.ItemId, response.ErrorMessage);
+
+            return PaymentBeginResult.Failure(response.ErrorMessage ?? S["Stripe didn't take the payment. Try again."].Value);
+        }
+
+        if (confirmsEarlierPayment)
+        {
+            // The attempt ends here, so the PaymentIntent it began is canceled: nothing can confirm it later.
+            await TryCancelAsync(attempt, reference);
+        }
+
+        if (response.RequiresAuthentication)
+        {
+            var refused = PaymentBeginResult.AuthenticationRequired(response.ErrorMessage ?? S["The buyer's bank asks them to approve the payment."].Value, reference);
+
+            refused.CardBrand = response.CardBrand;
+
+            return refused;
+        }
+
+        var declined = PaymentBeginResult.Decline(response.ErrorMessage ?? S["The payment was declined."].Value, reference);
+
+        declined.CardBrand = response.CardBrand;
+
+        return declined;
+    }
+
+    // Stripe's form of a 3-D Secure result.
+    internal static StripeThreeDSecureImport ToImport(ThreeDSecureResult authentication)
+        => new()
+        {
+            Cryptogram = authentication.Cryptogram,
+            ElectronicCommerceIndicator = authentication.ElectronicCommerceIndicator,
+            TransactionId = authentication.TransactionId,
+            Version = authentication.Version,
+            AresTransStatus = authentication.TransactionStatus,
+        };
+
+    // A retry of the same result collapses at Stripe; a different result for the same payment is a new request.
+    internal static string GetAuthenticationIdempotencyKey(PaymentAttempt attempt, ThreeDSecureResult authentication)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes($"{authentication.TransactionId}|{authentication.Cryptogram}|{authentication.ElectronicCommerceIndicator}|{authentication.Version}"));
+
+        return $"{attempt.IdempotencyKey}_3ds_{Convert.ToHexStringLower(hash.AsSpan(0, 8))}";
+    }
+
+    // The PaymentIntent Stripe made for an attempt whose begin ended without Stripe's answer, or null. A failed search
+    // leaves things as they were: the attempt is treated as never begun, the way it was before the search.
+    private async Task<string> FindPaymentIntentAsync(PaymentAttempt attempt)
+    {
+        try
+        {
+            return await _paymentIntentService.FindByCheckoutAttemptAsync(attempt.ItemId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not search Stripe for a PaymentIntent of checkout attempt '{AttemptId}'.", attempt.ItemId);
+
+            return null;
+        }
+    }
+
+    private static bool IsPaymentIntentReference(string providerReference)
+        => providerReference is not null && providerReference.StartsWith("pi_", StringComparison.Ordinal);
+
+    private async Task TryCancelAsync(PaymentAttempt attempt, string paymentIntentId)
+    {
+        if (!IsPaymentIntentReference(paymentIntentId))
+        {
+            return;
+        }
+
+        try
+        {
+            var intent = await _paymentIntentService.RetrieveAsync(new RetrievePaymentIntentRequest { PaymentIntentId = paymentIntentId });
+
+            if (intent.Status is "succeeded" or "processing" or "canceled")
+            {
+                return;
+            }
+
+            await _paymentIntentService.CancelAsync(new CancelPaymentIntentRequest
+            {
+                PaymentIntentId = paymentIntentId,
+                CancellationReason = "abandoned",
+                IdempotencyKey = "cancel_" + attempt.ItemId,
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not cancel Stripe PaymentIntent '{PaymentIntentId}' of checkout attempt '{AttemptId}' after its 3-D Secure result was refused.", paymentIntentId, attempt.ItemId);
+        }
+    }
+
     private async Task<PaymentBeginResult> ChargeSavedPaymentMethodAsync(BeginPaymentContext context, decimal grossAmount)
     {
         var attempt = context.Attempt;
@@ -527,6 +753,15 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
                 return PaymentBeginResult.AuthenticationRequired(
                     S["The card's bank asked the cardholder to approve this payment, which cannot be done without them. The customer needs to pay it themselves."].Value,
                     response.PaymentIntentId);
+            }
+
+            if (!response.Declined)
+            {
+                // Stripe didn't decide the charge (a server error, a rate limit). The attempt keeps its idempotency
+                // key, so the next try replays whatever Stripe did rather than charging the card again.
+                _logger.LogWarning("Stripe didn't take the saved-card charge for checkout attempt '{AttemptId}': {Error}", attempt.ItemId, response.ErrorMessage);
+
+                return PaymentBeginResult.Failure(response.ErrorMessage ?? S["Stripe didn't take the payment. Try again."].Value);
             }
 
             return PaymentBeginResult.Decline(response.ErrorMessage ?? S["The card was declined."].Value, response.PaymentIntentId);

@@ -175,7 +175,7 @@ The note given at the close is shown with it.
 
 A register sale is an order, like an online one, so it's under **Commerce > Orders**, in your reports, and in the buyer's account when you named a customer with an account. It differs in these ways:
 
-- Its **channel** is *Point of sale*. The orders list filters by channel (**Every channel**, **Online**, **Point of sale**, **Drafts sent by staff**), and its CSV export follows the filter. A register sale shows a badge with its register.
+- Its **channel** is *Point of sale*. The orders list filters by channel (**Every channel**, **Online**, **Point of sale**, **Drafts sent by staff**, **AI agents**), and its CSV export follows the filter. A register sale shows a badge with its register.
 - Its **location** is the register's store: its stock is held and sold there. When that store has none of an item, the stock comes off your main location.
 - It records the **register**, the **shift** and the **staff member** who rang it up.
 - The buyer takes it with them: nothing is shipped, and its checkout skips the **Contact** and **Shipping** steps.

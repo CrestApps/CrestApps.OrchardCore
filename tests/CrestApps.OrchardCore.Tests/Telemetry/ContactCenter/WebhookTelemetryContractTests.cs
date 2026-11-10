@@ -119,6 +119,7 @@ public sealed class WebhookTelemetryContractTests
             sender,
             Mock.Of<IWebhookDeliveryStore>(),
             subscriptions.Object,
+            [],
             protection,
             Mock.Of<IClock>(clock => clock.UtcNow == _now),
             NullLogger<WebhookDispatcher>.Instance);

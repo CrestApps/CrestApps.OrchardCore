@@ -34,6 +34,28 @@ public sealed class PaymentEndpointsProviderDataTests
     }
 
     [Fact]
+    public void SanitizeProviderData_DropsADelegatedCredentialTheBrowserPosted()
+    {
+        // Arrange
+        var posted = new Dictionary<string, string>
+        {
+            ["paymentMethodId"] = "pm_browser",
+            [CheckoutPaymentDataKeys.DelegatedCredential] = "tok_test_success",
+            [CheckoutPaymentDataKeys.DelegatedCredentialType] = DelegatedCredentialTypes.Test,
+        };
+
+        // Act
+        var sanitized = PaymentEndpoints.SanitizeProviderData(posted);
+
+        // Assert
+        var only = Assert.Single(sanitized);
+
+        Assert.Equal("paymentMethodId", only.Key);
+        Assert.False(sanitized.ContainsKey(CheckoutPaymentDataKeys.DelegatedCredential));
+        Assert.False(sanitized.ContainsKey(CheckoutPaymentDataKeys.DelegatedCredentialType));
+    }
+
+    [Fact]
     public void SanitizeProviderData_WithOnlyServerKeys_LeavesNothing()
     {
         // Arrange

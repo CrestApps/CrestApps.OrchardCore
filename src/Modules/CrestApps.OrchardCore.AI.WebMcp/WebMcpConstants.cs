@@ -18,6 +18,29 @@ public static class WebMcpConstants
     public const string InvokeRoute = $"{CoreWebMcpConstants.DefaultRoutePrefix}/tools/{{name}}/invoke";
 
     /// <summary>
+    /// The relative route of the endpoint that lists the storefront tools: the selected tools marked safe for
+    /// anonymous callers.
+    /// </summary>
+    public const string StorefrontToolsRoute = $"{CoreWebMcpConstants.DefaultRoutePrefix}/storefront/tools";
+
+    /// <summary>
+    /// The relative route of the endpoint that calls one storefront tool.
+    /// </summary>
+    public const string StorefrontInvokeRoute = $"{CoreWebMcpConstants.DefaultRoutePrefix}/storefront/tools/{{name}}/invoke";
+
+    /// <summary>
+    /// The rate-limit group of the storefront tool endpoints, which holds each visitor to
+    /// <see cref="StorefrontRequestsPerMinute"/> when Orchard Core's Rate Limits feature is enabled.
+    /// </summary>
+    public const string StorefrontRateLimitGroup = "webmcp-storefront";
+
+    /// <summary>
+    /// The most requests a visitor can send to the storefront tool endpoints in a minute when Orchard Core's Rate
+    /// Limits feature is enabled.
+    /// </summary>
+    public const int StorefrontRequestsPerMinute = 60;
+
+    /// <summary>
     /// The id of the JSON block that carries the page configuration to the browser scripts.
     /// </summary>
     public const string ConfigurationElementId = CoreWebMcpConstants.ConfigurationElementId;

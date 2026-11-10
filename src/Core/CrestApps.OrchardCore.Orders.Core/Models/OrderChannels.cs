@@ -21,6 +21,11 @@ public static class OrderChannels
     public const string Draft = "draft";
 
     /// <summary>
+    /// An AI agent, such as a shopping assistant, checked out for the buyer through an agentic commerce protocol.
+    /// </summary>
+    public const string Agent = "agent";
+
+    /// <summary>
     /// Returns whether the order is sold over a counter: the buyer takes it, so nothing is shipped and no contact
     /// details are asked for.
     /// </summary>

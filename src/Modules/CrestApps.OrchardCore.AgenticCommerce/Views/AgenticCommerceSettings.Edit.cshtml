@@ -1,0 +1,144 @@
+@model AgenticCommerceSettingsViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["Agent checkouts"]</div>
+    <div class="card-body">
+        <p class="text-body-secondary">@T["AI agents check out through the store's own checkout: its prices, tax, shipping, discounts and stock. Add the platforms whose agents may buy under Commerce › AI agents."]</p>
+        <div class="ocat-wrapper" asp-validation-class-for="CheckoutLifetimeHours">
+            <label asp-for="CheckoutLifetimeHours" class="ocat-label">@T["Checkout lifetime (hours)"]</label>
+            <div class="ocat-end">
+                <input asp-for="CheckoutLifetimeHours" type="number" min="1" max="72" class="form-control" />
+                <span asp-validation-for="CheckoutLifetimeHours" class="text-danger"></span>
+                <span class="hint">@T["How long an agent's checkout holds its items in stock before it expires. UCP's default is 6 hours."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="MaxOpenCheckoutsPerPlatform">
+            <label asp-for="MaxOpenCheckoutsPerPlatform" class="ocat-label">@T["Open checkouts per platform"]</label>
+            <div class="ocat-end">
+                <input asp-for="MaxOpenCheckoutsPerPlatform" type="number" min="1" class="form-control" />
+                <span asp-validation-for="MaxOpenCheckoutsPerPlatform" class="text-danger"></span>
+                <span class="hint">@T["The most checkouts one platform may keep open at once, so no agent can hold all the stock."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="AllowUnregisteredUcpPlatforms">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="AllowUnregisteredUcpPlatforms" class="form-check-input" />
+                    <label asp-for="AllowUnregisteredUcpPlatforms" class="form-check-label">@T["Let UCP platforms the store doesn't know buy"]</label>
+                    <span class="hint dashed">@T["A UCP platform that isn't in the list may buy when it signs its requests with a key from its own published profile."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="AllowEmbeddedCheckout">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="AllowEmbeddedCheckout" class="form-check-input" />
+                    <label asp-for="AllowEmbeddedCheckout" class="form-check-label">@T["Allow embedded checkout"]</label>
+                    <span class="hint dashed">@T["A UCP platform may show the store's checkout inside its own page, so the buyer finishes there without leaving the agent. Only the pages a platform lists under Embedding origins may frame its own checkouts; every other page of the site still refuses to be framed."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["How agents pay"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="StripeBusinessProfileId">
+            <label asp-for="StripeBusinessProfileId" class="ocat-label">@T["Stripe business profile"]</label>
+            <div class="ocat-end">
+                <input asp-for="StripeBusinessProfileId" class="form-control" placeholder="profile_..." maxlength="200" />
+                <span asp-validation-for="StripeBusinessProfileId" class="text-danger"></span>
+                <span class="hint">@T["The store's Stripe business profile ID. Agents issue Stripe shared payment tokens to it. Leave it empty to not offer shared payment tokens to UCP agents."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="EnableGooglePay">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="EnableGooglePay" class="form-check-input" />
+                    <label asp-for="EnableGooglePay" class="form-check-label">@T["Offer Google Pay to UCP agents"]</label>
+                    <span class="hint dashed">@T["Google Pay tokens are charged through Stripe, so Stripe must be set up."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="GooglePayMerchantId">
+            <label asp-for="GooglePayMerchantId" class="ocat-label">@T["Google Pay merchant ID"]</label>
+            <div class="ocat-end">
+                <input asp-for="GooglePayMerchantId" class="form-control" maxlength="200" />
+                <span asp-validation-for="GooglePayMerchantId" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="GooglePayMerchantName">
+            <label asp-for="GooglePayMerchantName" class="ocat-label">@T["Google Pay merchant name"]</label>
+            <div class="ocat-end">
+                <input asp-for="GooglePayMerchantName" class="form-control" maxlength="200" />
+                <span asp-validation-for="GooglePayMerchantName" class="text-danger"></span>
+                <span class="hint">@T["The name Google Pay shows the buyer. Empty uses the store's name."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="GooglePayTestEnvironment">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="GooglePayTestEnvironment" class="form-check-input" />
+                    <label asp-for="GooglePayTestEnvironment" class="form-check-label">@T["Use Google Pay's test environment"]</label>
+                    <span class="hint dashed">@T["Test tokens are never charged. Turn it off only when Stripe uses live keys."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["3-D Secure by agents"]</div>
+    <div class="card-body">
+        <p class="text-body-secondary">@T["When the buyer's bank wants to approve a payment, an agent that can run 3-D Secure itself authenticates the buyer and sends the result, which the payment provider uses for the same payment. Other agents, or a store without these details, send the buyer to the store's checkout instead. Your payment provider gives you the acquirer details."]</p>
+        <div class="ocat-wrapper" asp-validation-class-for="EnableDelegatedAuthentication">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="EnableDelegatedAuthentication" class="form-check-input" />
+                    <label asp-for="EnableDelegatedAuthentication" class="form-check-label">@T["Let agents run 3-D Secure"]</label>
+                    <span class="hint dashed">@T["Only for agents that say they can (ACP's 3ds intervention), and payment providers that take an outside 3-D Secure result, such as Stripe with 3D Secure import turned on for the account."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="AcquirerBin">
+            <label asp-for="AcquirerBin" class="ocat-label">@T["Acquirer BIN"]</label>
+            <div class="ocat-end">
+                <input asp-for="AcquirerBin" class="form-control" maxlength="11" />
+                <span asp-validation-for="AcquirerBin" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="AcquirerCountry">
+            <label asp-for="AcquirerCountry" class="ocat-label">@T["Acquirer country"]</label>
+            <div class="ocat-end">
+                <input asp-for="AcquirerCountry" class="form-control" maxlength="2" placeholder="US" />
+                <span asp-validation-for="AcquirerCountry" class="text-danger"></span>
+                <span class="hint">@T["The acquirer's two-letter country code."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="AcquirerMerchantId">
+            <label asp-for="AcquirerMerchantId" class="ocat-label">@T["Acquirer merchant ID"]</label>
+            <div class="ocat-end">
+                <input asp-for="AcquirerMerchantId" class="form-control" maxlength="35" />
+                <span asp-validation-for="AcquirerMerchantId" class="text-danger"></span>
+                <span class="hint">@T["The store's merchant ID at the acquirer."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="AuthenticationMerchantName">
+            <label asp-for="AuthenticationMerchantName" class="ocat-label">@T["Merchant name"]</label>
+            <div class="ocat-end">
+                <input asp-for="AuthenticationMerchantName" class="form-control" maxlength="40" />
+                <span asp-validation-for="AuthenticationMerchantName" class="text-danger"></span>
+                <span class="hint">@T["The name the buyer's bank shows while it authenticates them."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="ThreeDSecureRequestorId">
+            <label asp-for="ThreeDSecureRequestorId" class="ocat-label">@T["3-D Secure requestor ID"]</label>
+            <div class="ocat-end">
+                <input asp-for="ThreeDSecureRequestorId" class="form-control" maxlength="35" />
+                <span asp-validation-for="ThreeDSecureRequestorId" class="text-danger"></span>
+                <span class="hint">@T["Optional. Leave it empty when your acquirer gave you none."]</span>
+            </div>
+        </div>
+    </div>
+</div>

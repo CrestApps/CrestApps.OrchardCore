@@ -4,6 +4,7 @@ title: Product listings
 description: Publish pages that list your products with filters, sorting, search and product pages, for products you sell online and products you only list, such as homes or cars.
 technical_manual:
   - modules/products
+  - modules/agentic-commerce
 ---
 
 A **product listing** is a page of your site that lists products: a shop, a page of homes for sale, a dealership's stock, or your subscription plans. Visitors filter, sort, search and page through the products, switch between a grid and a list, and open a product's own page. A listing works the same for products sold online and for products that are only listed, whose visitors call or send an inquiry instead.
@@ -190,7 +191,49 @@ With **Product Feeds** on, your products are published as a feed for Google Merc
 
 Each product you sell online is in the feed with its price, sale price, photos and whether it's in stock; a product sold in variants is in it once for each variant. To give a product a brand, a GTIN (the barcode's number) or an MPN, add the **Product Feed** part to its content type, or set the store's **Brand** under the feed's settings. Products whose brand is in a taxonomy named for brands get it from there. Tick **Leave it out of shopping feeds** on a product to keep it out.
 
-Choose **Make a key** under **Feed key** so only the channels you give the address to can read the feed. The feed is rebuilt every 15 minutes.
+Choose **Make a key** under **Feed key** so only the channels you give the address to can read the feed. The feed is rebuilt every 15 minutes, and sooner when stock changes.
+
+The feed also tells AI agents, such as ChatGPT, which products they may show buyers and buy for them. Under the feed's settings, **Show products to AI agents** (on at first) and **Let AI agents check out** (off at first) set what the store allows; on a product with the **Product Feed** part, **Show to AI agents** and **Let AI agents check out** say otherwise for that product. Agents can only buy products they may show. Enter a product's **Length**, **Width** and **Height** with its weight on its shipping fields, so feeds show its size.
+
+## Feeds for AI agents
+
+| | |
+| --- | --- |
+| **Menu** | Settings > Commerce > Agent feeds |
+| **Permission** | Manage agent product feeds |
+| **Feature** | Agent Product Feeds (it turns on Agentic Commerce and Product Feeds) |
+
+<AskYourAdmin />
+
+AI agents read your products from feeds too. **Settings > Commerce > Agent feeds** publishes them in OpenAI's format for ChatGPT, pushes them to the agent platforms you sell through, and shows how the last pushes went. It uses the products, prices, photos and stock of the shopping feed, the store's name, website and policy links from **Settings > Commerce > Store**, the shipping rates and the return settings.
+
+1. Set your site's base URL under **Settings > General**, and the links to your terms of service and privacy policy under **Settings > Commerce > Store**: agents can only check out products whose feed has both.
+2. Open **Settings > Commerce > Agent feeds**. The **OpenAI product feed** card shows the feed's addresses, how many products are in it, and why any are left out, such as a product with no brand.
+3. Enter the **Target countries** you sell to through agents, such as *US, CA*, or leave it empty for the store's own country.
+4. Set up the push your agent platform asks for, and choose **Save**.
+
+### Push the feed over SFTP every day
+
+OpenAI reads the feed from an SFTP server it gives the stores it approves. In the **Daily SFTP push** card, tick **Push the full feed over SFTP every day** and enter the **Host**, **Port**, **User name**, and a **Password** or **Private key** (with its **Key passphrase**) OpenAI gave you. Saved passwords and keys aren't shown again: leave a field empty to keep it, or tick **Remove the saved password** or **Remove the saved key**.
+
+| Field | What it does |
+| --- | --- |
+| **Host key fingerprint** | Optional. The server's fingerprint: the push stops when the server shows another key. |
+| **Folder** | The folder on the server the files go in. |
+| **File format** | **JSON lines, gzipped** or **CSV, gzipped**. |
+| **Currency** | Optional. The currency the feed is priced in; each product's own when empty. |
+
+Each push writes the whole catalog and replaces the files of the last one. The card shows when the last push ran and how it went.
+
+### Push products to an ACP feed API
+
+Some agent platforms host a feed of your products that you push to, with the Agentic Commerce Protocol. In the **ACP feed APIs** card, fill in **Add a feed API**: a **Name**, the platform's **Address** (an https address) and **API key**, and optionally its **Feed ID**, **Target country** and **Currency**. Leave **Feed ID** empty to have the store create the feed on the first push. After you save, an empty **Add a feed API** box adds another. Untick **Push products to this platform** to pause it, or tick **Remove this feed API** to remove it.
+
+The store pushes every product once a day, and pushes a product again after it is published or its stock changes. Only products agents may show are pushed.
+
+### Push now
+
+**Push now** pushes the products with the saved settings at once, over SFTP and to every feed API that is on, instead of waiting for the daily push. Save your changes first. A message says how each push went.
 
 ## Find your products and listings
 

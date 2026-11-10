@@ -16,6 +16,7 @@
   </Folder>
   <Folder Name="/src/" />
   <Folder Name="/src/Abstractions/">
+    <Project Path="src/Abstractions/CrestApps.OrchardCore.AgenticCommerce.Abstractions/CrestApps.OrchardCore.AgenticCommerce.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Accounts.Abstractions/CrestApps.OrchardCore.Accounts.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Addresses.Abstractions/CrestApps.OrchardCore.Addresses.Abstractions.csproj" />
@@ -59,6 +60,7 @@
     <Project Path="src/Abstractions/CrestApps.OrchardCore.WebSockets.Abstractions/CrestApps.OrchardCore.WebSockets.Abstractions.csproj" />
   </Folder>
   <Folder Name="/src/Core/">
+    <Project Path="src/Core/CrestApps.OrchardCore.AgenticCommerce.Core/CrestApps.OrchardCore.AgenticCommerce.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.AI.Chat.Core/CrestApps.OrchardCore.AI.Chat.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
@@ -193,6 +195,7 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.OpenAI/CrestApps.OrchardCore.OpenAI.csproj" />
   </Folder>
   <Folder Name="/src/Modules/Commerce/">
+    <Project Path="src/Modules/CrestApps.OrchardCore.AgenticCommerce/CrestApps.OrchardCore.AgenticCommerce.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Carts/CrestApps.OrchardCore.Carts.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Checkout/CrestApps.OrchardCore.Checkout.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Commerce/CrestApps.OrchardCore.Commerce.csproj" />

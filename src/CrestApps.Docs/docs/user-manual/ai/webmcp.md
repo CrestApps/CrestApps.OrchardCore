@@ -6,7 +6,7 @@ technical_manual:
   - ai/mcp/webmcp
 ---
 
-Some web browsers now come with an AI assistant, and some people add one as a browser extension. **WebMCP** lets such an assistant work with this site the way you do: it can use the AI tools your administrator picks, read the page you have open, open another page of the site and fill in a form for you to review. It works as you, with your permissions, and only while you are signed in. The site's own AI chat can use every tool the page you have open offers, so you can ask it to fill in the form in front of you.
+Some web browsers now come with an AI assistant, and some people add one as a browser extension. **WebMCP** lets such an assistant work with this site the way you do: it can use the AI tools your administrator picks, read the page you have open, open another page of the site and fill in a form for you to review. It works as you, with your permissions, and only while you are signed in. A store can also let its shoppers' assistants search products and fill their cart without signing in. The site's own AI chat can use every tool the page you have open offers, so you can ask it to fill in the form in front of you.
 
 | | |
 | --- | --- |
@@ -25,7 +25,8 @@ WebMCP is new, and only some browsers have it built in. The site adds it to the 
 1. Open **Settings > Artificial Intelligence** and find the **WebMCP** card.
 2. Choose where tools are offered:
    - **Offer tools on admin pages** is on at first.
-   - **Offer tools on front-end pages** is off at first. Turn it on to offer tools on the site's public pages too. Visitors who are not signed in never get tools.
+   - **Offer tools on front-end pages** is off at first. Turn it on to offer tools on the site's public pages too.
+   - **Offer storefront tools to visitors** is off at first. See [Let shoppers' assistants use your store](#let-shoppers-assistants-use-your-store).
 3. Leave **Add page tools** on to also offer the page tools described below, or turn it off.
 4. Pick the tools. Tick the tools and tool instances an assistant may use, or turn on **Expose all tools** to offer every one of them; the tool lists are hidden while it is on. At first, none is offered.
 5. Click **Save**.
@@ -34,11 +35,24 @@ WebMCP is new, and only some browsers have it built in. The site adds it to the 
 | --- | --- |
 | **Offer tools on admin pages** | Admin pages offer tools to users who have the **Use WebMCP tools in the browser** permission. |
 | **Offer tools on front-end pages** | The site's public pages also offer tools to signed-in users who have the permission. |
+| **Offer storefront tools to visitors** | The site's public pages offer visitors who are not signed in the ticked tools that are safe for anyone. Off at first. |
 | **Add page tools** | The pages that offer tools also offer the page tools. On at first. |
 | **Expose all tools** | Every tool and tool instance in the lists is offered, and the selection is ignored. |
 | Tool and tool instance lists | The tools an assistant may use. The lists show only the tools you are allowed to use yourself. |
 
 Even when a tool is offered, each person can only use the tools their role allows (**Access any AI tool**, or **Access AI tool -** *tool name*). An assistant can never do more than the person using it.
+
+## Let shoppers' assistants use your store
+
+Most shoppers aren't signed in. With **Offer storefront tools to visitors**, a shopper's browser assistant can search your products, read a product, add items to the shopper's own cart, read that cart, and start a checkout. It never pays: the shopper pays in your checkout.
+
+1. On the **WebMCP** card, tick **Offer storefront tools to visitors**.
+2. Tick the tools to offer, such as **Search store products** and **Add to store cart**.
+3. Click **Save**.
+
+Visitors only get the ticked tools that are safe for anyone. Every other tool stays for signed-in people with the permission. Visitors don't get the page tools, and admin pages never offer storefront tools.
+
+Ask your administrator to turn on the **Rate Limits** feature, so no visitor can call the tools too often.
 
 ## Offer tools on one content item's page
 

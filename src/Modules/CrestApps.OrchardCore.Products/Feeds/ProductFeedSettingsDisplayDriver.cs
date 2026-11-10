@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using CrestApps.OrchardCore.Products.Core.Feeds;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
@@ -19,14 +20,14 @@ public sealed class ProductFeedSettingsDisplayDriver : SiteDisplayDriver<Product
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
-    private readonly ProductFeedService _feeds;
+    private readonly IProductFeedService _feeds;
 
     internal readonly IStringLocalizer S;
 
     public ProductFeedSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
-        ProductFeedService feeds,
+        IProductFeedService feeds,
         IStringLocalizer<ProductFeedSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
@@ -49,6 +50,8 @@ public sealed class ProductFeedSettingsDisplayDriver : SiteDisplayDriver<Product
             model.DefaultCondition = settings.DefaultCondition;
             model.DefaultGoogleProductCategory = settings.DefaultGoogleProductCategory;
             model.IncludeOutOfStock = settings.IncludeOutOfStock;
+            model.ShowToAgentsByDefault = settings.ShowToAgentsByDefault;
+            model.AgentCheckoutByDefault = settings.AgentCheckoutByDefault;
             model.HasKey = !string.IsNullOrEmpty(settings.Key);
             model.HasBaseUrl = !string.IsNullOrWhiteSpace(site.BaseUrl);
             model.XmlUrl = $"{baseUrl}/feeds/products.xml{query}";
@@ -73,6 +76,8 @@ public sealed class ProductFeedSettingsDisplayDriver : SiteDisplayDriver<Product
         settings.DefaultCondition = model.DefaultCondition is "new" or "refurbished" or "used" ? model.DefaultCondition : "new";
         settings.DefaultGoogleProductCategory = string.IsNullOrWhiteSpace(model.DefaultGoogleProductCategory) ? null : model.DefaultGoogleProductCategory.Trim();
         settings.IncludeOutOfStock = model.IncludeOutOfStock;
+        settings.ShowToAgentsByDefault = model.ShowToAgentsByDefault;
+        settings.AgentCheckoutByDefault = model.AgentCheckoutByDefault;
 
         if (model.KeyAction == "new")
         {

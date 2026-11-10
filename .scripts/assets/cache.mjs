@@ -62,11 +62,11 @@ function readPackageVersion(name) {
 }
 
 function hashDefinition(group, toolingKey) {
-    const { name, action, source, dest, global: globalName, tags } = group;
+    const { name, action, source, dest, global: globalName, minify, tags } = group;
 
     return crypto.createHash("sha256")
         .update(toolingKey)
-        .update(JSON.stringify({ name, action, source, dest, global: globalName, tags }))
+        .update(JSON.stringify({ name, action, source, dest, global: globalName, minify, tags }))
         .digest("hex");
 }
 

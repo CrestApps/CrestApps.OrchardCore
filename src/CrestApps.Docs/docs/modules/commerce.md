@@ -263,6 +263,27 @@ Commerce is a composition shell, not a domain:
 
 **Settings > Commerce > Store** (`Admin/Settings/store-profile`, the **Manage the store profile** permission, granted to administrators and store managers; module `CrestApps.OrchardCore.Commerce.StoreProfile`) keeps who the store is in one place: its name (the site's name when empty), logo, tax ID, e-mail, phone (kept in E.164 form when it parses) and address (the Addresses module's editor, laid out for the address's country). The settings are `StoreProfileSettings` (Commerce.Abstractions, namespace `CrestApps.OrchardCore.Commerce.Stores`), exported by the **Store profile** deployment step and imported by Orchard Core's Settings recipe step. The online store recipe enables the feature.
 
+The **Website and policies** card keeps the store's `Website` (when it isn't this site) and its policy links in `StoreProfileSettings.Policies` (`StorePolicyLinks`): `TermsOfService`, `PrivacyPolicy`, `ReturnPolicy`, `ShippingPolicy`, `Faq`, `Contact` and `About`. Each is a full `http` or `https` address or a path on this site, such as `/terms`; a path is made absolute with the site's base URL where it leaves the site. The [product feeds](products.md#feed-items-for-ai-agents) give the seller's website and the terms, privacy and return links to Google and the AI agent feeds, and [Agentic Commerce](agentic-commerce.md) sends every link that is set to agents with each checkout (`links`). Google and OpenAI ask for the terms of service and the privacy policy before agents may check out.
+
+```json
+{
+  "name": "Settings",
+  "StoreProfileSettings": {
+    "Name": "Contoso",
+    "Website": "https://contoso.com",
+    "Policies": {
+      "TermsOfService": "/terms",
+      "PrivacyPolicy": "/privacy",
+      "ReturnPolicy": "/returns",
+      "ShippingPolicy": "/shipping",
+      "Faq": "/faq",
+      "Contact": "/contact",
+      "About": "/about"
+    }
+  }
+}
+```
+
 Other settings fall back to the profile when they're empty, and keep winning when they're set:
 
 | Setting | Falls back to |

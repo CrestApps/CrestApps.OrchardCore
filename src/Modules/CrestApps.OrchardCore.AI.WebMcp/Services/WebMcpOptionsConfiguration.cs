@@ -57,6 +57,7 @@ internal sealed class WebMcpOptionsConfiguration : IConfigureOptions<WebMcpOptio
         options.EnableOnAdminPages = settings.EnableOnAdminPages;
         options.EnableOnFrontEndPages = settings.EnableOnFrontEndPages;
         options.EnablePageTools = settings.EnablePageTools;
+        options.EnableStorefrontTools = settings.EnableStorefrontTools;
 
         _shellConfiguration.GetSection(WebMcpConstants.ConfigurationSection).Bind(options);
     }

@@ -59,4 +59,18 @@ public sealed class PaymentProviderCapabilities
     /// neither offered nor accepted on a checkout that settles one (<see cref="CheckoutSession.SettlesExistingBalance"/>).
     /// </summary>
     public bool DefersPayment { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the provider charges, on the server and with no browser, a payment
+    /// credential an AI agent brought (<see cref="CheckoutPaymentDataKeys.DelegatedCredential"/>).
+    /// </summary>
+    public bool AcceptsDelegatedCredentials { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the provider charges a card with the result of a 3-D Secure
+    /// authentication run outside it (<see cref="ThreeDSecureResult"/>, in the <c>ThreeDSecure…</c> keys of
+    /// <see cref="CheckoutPaymentDataKeys"/>) instead of running its own. When it began the same attempt earlier and the
+    /// bank asked for authentication, it finishes that payment with the result rather than starting another.
+    /// </summary>
+    public bool AcceptsExternalAuthentication { get; set; }
 }

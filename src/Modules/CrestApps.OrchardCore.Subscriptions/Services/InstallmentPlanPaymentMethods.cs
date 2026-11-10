@@ -23,8 +23,9 @@ internal static class InstallmentPlanPaymentMethods
             provider.Capabilities.SupportsEmbeddedElements &&
             savedPaymentMethodProviders.Any(saved => string.Equals(saved.Key, provider.Key, StringComparison.OrdinalIgnoreCase)));
 
-    // What the browser sent is bounded, and the keys that decide whether a saved card is spent are stripped: only
-    // this server decides to keep a card, and nothing a browser sends may charge one without the customer.
+    // What the browser sent is bounded, and the keys only server code may set are stripped: only this server decides
+    // to keep a card, and nothing a browser sends may charge one without the customer, spend an agent's credential or
+    // bring a 3-D Secure result.
     public static Dictionary<string, string> BuildProviderData(Dictionary<string, string> providerData, bool savePaymentMethod)
     {
         var sanitized = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -34,7 +35,7 @@ internal static class InstallmentPlanPaymentMethods
             if (string.IsNullOrEmpty(pair.Key) ||
                 pair.Key.Length > MaxProviderDataKeyLength ||
                 (pair.Value is not null && pair.Value.Length > MaxProviderDataValueLength) ||
-                pair.Key is CheckoutPaymentDataKeys.OffSession or CheckoutPaymentDataKeys.SavedCustomerReference or CheckoutPaymentDataKeys.SavedPaymentMethodReference or CheckoutPaymentDataKeys.SavePaymentMethod)
+                CheckoutPaymentDataKeys.IsServerOnly(pair.Key))
             {
                 continue;
             }

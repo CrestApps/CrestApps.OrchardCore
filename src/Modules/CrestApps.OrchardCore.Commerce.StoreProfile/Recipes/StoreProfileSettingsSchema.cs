@@ -14,13 +14,22 @@ internal sealed class StoreProfileSettingsSchema : SiteSettingsSchemaBase
     protected override JsonSchemaBuilder BuildSchemaCore()
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
-            .Description("Who the store is (Settings › Commerce › Store): its name, logo, tax ID, how to reach it and where it is. Receipts, the address parcels ship from and the tax origin fall back to it when their own settings are empty.")
+            .Description("Who the store is (Settings › Commerce › Store): its name, logo, tax ID, how to reach it, its website and policies, and where it is. Receipts, the address parcels ship from and the tax origin fall back to it when their own settings are empty.")
             .Properties(
                 ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The store's name, such as the business's legal or trading name; the site's name when empty.")),
                 ("LogoUrl", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The address of the store's logo, such as a media library path or an absolute URL.")),
                 ("TaxId", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The store's tax ID, such as a VAT, GST or EIN number.")),
                 ("Email", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The e-mail address customers reach the store at.")),
                 ("Phone", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The phone number customers reach the store at, in E.164 form when it parses.")),
+                ("Website", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The address of the store's own website; the site's own address when empty.")),
+                ("Policies", new JsonSchemaBuilder().Type(SchemaValueType.Object | SchemaValueType.Null).Description("Links to the store's policies, which checkouts, product feeds and AI agents show buyers. Each is an absolute URL or a path on the site, such as /terms.").Properties(
+                    ("TermsOfService", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The link to the terms of service.")),
+                    ("PrivacyPolicy", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The link to the privacy policy.")),
+                    ("ReturnPolicy", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The link to the return and refund policy.")),
+                    ("ShippingPolicy", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The link to the shipping policy.")),
+                    ("Faq", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The link to the frequently asked questions.")),
+                    ("Contact", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The link to the page buyers contact the store from.")),
+                    ("About", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The link to the page about the store."))).AdditionalProperties(true)),
                 ("Address", new JsonSchemaBuilder().Type(SchemaValueType.Object | SchemaValueType.Null).Properties(
                     ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The recipient full name (the person or attention line the address is addressed to).")),
                     ("Company", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The company or organization name, when the address belongs to a business.")),

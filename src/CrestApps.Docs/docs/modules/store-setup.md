@@ -63,6 +63,7 @@ The role names are `CommerceConstants.StaffRoles` (in `CrestApps.OrchardCore.Abs
 | Marketing | `ManageMarketing` | | | `ManageMarketing` |
 | Product Reviews | `ManageProductReviews` | | | `ManageProductReviews` |
 | Product feeds | `ManageProductFeeds` | | | `ManageProductFeeds` |
+| Agentic Commerce | `ManageAgentPlatforms`, `ManageAgenticCommerceSettings`, `ManageAgentFeeds` | | | |
 | Subscriptions | `ManageSubscriptions` | | `ManageSubscriptions` | |
 | Bookings | `ManageBookings` | | `ManageBookings` | |
 | Memberships | `ManageMemberships` | | `ManageMemberships` | |

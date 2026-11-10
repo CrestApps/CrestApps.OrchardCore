@@ -548,6 +548,45 @@ With Stripe enabled, the storefront account page **Payment methods** (`account/p
 
 A provider that can be charged this way reports `SupportsSavedPaymentMethods`, implements `ICheckoutSavedPaymentMethodProvider`, and honors `CheckoutPaymentDataKeys.OffSession`. When the card's bank asks the cardholder to approve an off-session charge, it returns `PaymentBeginResult.AuthenticationRequired(...)`; the engine then reports `PaymentBeginOutcome.RequiresAuthentication` alongside `Declined`, so the caller can ask the customer to pay it themselves rather than trying the card again.
 
+## Payments an AI agent brings
+
+An AI agent pays with a credential its platform got from the buyer for this one payment, such as a Stripe shared payment token or a Google Pay token, and there is no browser to confirm it in. Server code passes it to `ICheckoutEngine.BeginPaymentAsync` in the provider data:
+
+| Key | Value |
+| --- | --- |
+| `CheckoutPaymentDataKeys.DelegatedCredential` (`delegatedCredential`) | The credential. |
+| `CheckoutPaymentDataKeys.DelegatedCredentialType` (`delegatedCredentialType`) | Its kind, from `DelegatedCredentialTypes`: `stripe_shared_payment_token`, `google_pay_token` or `test`. |
+
+A provider that charges such a credential on the server sets `PaymentProviderCapabilities.AcceptsDelegatedCredentials` and, in `BeginAsync`, charges it when the key is present. Stripe charges shared payment tokens and Google Pay tokens (see [Payments](payments.md#payments-ai-agents-bring)), and the test provider charges the [test credentials](agentic-commerce.md#test-payments) `tok_test_success`, `tok_test_decline` and `tok_test_3ds`. A bank that asks the buyer to approve the payment is reported as `PaymentBeginOutcome.RequiresAuthentication` or `RequiresAction`, and the caller sends the buyer to the checkout.
+
+Only server code sets these keys. The public payment endpoints and the commerce API drop them, with the off-session keys, from anything a browser or an app sends (`PaymentEndpoints.SanitizeProviderData`, which uses `CheckoutPaymentDataKeys.IsServerOnly`). [Agentic Commerce](agentic-commerce.md#payment-handlers) is the caller today.
+
+### A 3-D Secure result from outside the provider
+
+When the payer was authenticated with 3-D Secure outside the payment provider, such as by an AI agent, server code passes the result with the credential, as a `ThreeDSecureResult` written into the provider data with `CopyTo`:
+
+| Key | Value |
+| --- | --- |
+| `ThreeDSecureOutcome` (`threeDSecureOutcome`) | The outcome, from `ThreeDSecureOutcomes`. Only `authenticated`, `attempt_acknowledged` and `informational` let the payment go ahead (`ThreeDSecureResult.AllowsPayment`). |
+| `ThreeDSecureCryptogram` (`threeDSecureCryptogram`) | The authentication value: 28 base64 characters that decode to 20 bytes. |
+| `ThreeDSecureElectronicCommerceIndicator` (`threeDSecureEci`) | The ECI: `01`, `02`, `05`, `06` or `07`. |
+| `ThreeDSecureTransactionId` (`threeDSecureTransactionId`) | The directory server's transaction id. |
+| `ThreeDSecureVersion` (`threeDSecureVersion`) | The version that ran, such as `2.2.0`. |
+| `ThreeDSecureTransactionStatus` (`threeDSecureTransStatus`) | Optional: the ARes `transStatus`. |
+
+`ThreeDSecureResult.GetInvalidMember()` names the first member that isn't valid. A provider that takes the result sets `PaymentProviderCapabilities.AcceptsExternalAuthentication`, reads it with `ThreeDSecureResult.From`, and charges with it instead of authenticating the payer itself. When the engine resumes an attempt that already has a `ProviderReference`, because the bank asked for authentication on the first try, the provider finishes that payment with the result rather than starting another. A provider sets `PaymentBeginResult.CardBrand` when it knows the card's brand; the engine passes it on as `PaymentBeginOutcome.CardBrand`, so the caller can pick the card network's directory server. These keys are server-only too.
+
+## Filling steps from code
+
+The Contact and Shipping steps can be saved from code, such as an API or an AI agent, with the same rules as their pages. The module that owns each step implements its contract in `CrestApps.OrchardCore.Checkout.Abstractions`; resolve it as an `IEnumerable` and use it only when present.
+
+| Contract | Implemented by | Members |
+| --- | --- | --- |
+| `ICheckoutContactStep` | Customers (`CustomerCheckoutContactStep`) | `StepKey`; `SaveAsync(flow, CheckoutContactDetails)` saves the buyer's details and, when the store asks for one, their billing address, and marks the step done. |
+| `ICheckoutFulfillmentStep` | Shipping (`ShippingCheckoutFulfillmentStep`) | `StepKey`; `QuoteAsync(flow, address)` returns the ways to ship to an address, cheapest first, without saving; `GetPickupOptionsAsync(flow)` returns the places to collect from; `SaveAsync(flow, CheckoutFulfillmentChoice)` saves the choice, puts its cost on the checkout and marks the step done. |
+
+Both return a `CheckoutStepSaveResult` with the errors of each field. A step without a contract, such as a step another module adds, is finished by the buyer on the checkout's own page.
+
 ## Test payments
 
 | | |

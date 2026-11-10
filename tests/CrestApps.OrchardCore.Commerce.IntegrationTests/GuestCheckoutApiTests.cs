@@ -219,7 +219,7 @@ public sealed class GuestCheckoutApiTests
         return completed.Json["orderId"].GetValue<string>();
     }
 
-    private static async Task<string> FindPurchasableAsync(ApiClient client)
+    internal static async Task<string> FindPurchasableAsync(ApiClient client)
     {
         var list = await client.GetAsync("products?take=30");
 

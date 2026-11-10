@@ -34,7 +34,7 @@ public sealed class SalesSummaryPart : ContentPart
 
     /// <summary>
     /// Gets or sets the channel whose orders count: <see cref="OrderChannels.Online"/>,
-    /// <see cref="OrderChannels.PointOfSale"/> or <see cref="OrderChannels.Draft"/>; empty counts them all.
+    /// <see cref="OrderChannels.PointOfSale"/>, <see cref="OrderChannels.Draft"/> or <see cref="OrderChannels.Agent"/>; empty counts them all.
     /// </summary>
     public string Channel { get; set; }
 }

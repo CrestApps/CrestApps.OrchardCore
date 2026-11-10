@@ -57,7 +57,7 @@ public sealed class WebhookSubscriptionsRecipeTests
             .Callback<WebhookSubscription, CancellationToken>((subscription, _) => created.Add(subscription))
             .Returns(ValueTask.CompletedTask);
         var protection = new EphemeralDataProtectionProvider();
-        var dispatcher = new WebhookDispatcher(Mock.Of<IWebhookSender>(), Mock.Of<IWebhookDeliveryStore>(), store.Object, protection, Mock.Of<IClock>(clock => clock.UtcNow == _now), NullLogger<WebhookDispatcher>.Instance);
+        var dispatcher = new WebhookDispatcher(Mock.Of<IWebhookSender>(), Mock.Of<IWebhookDeliveryStore>(), store.Object, [], protection, Mock.Of<IClock>(clock => clock.UtcNow == _now), NullLogger<WebhookDispatcher>.Instance);
         var step = new WebhookSubscriptionsStep(store.Object, dispatcher, Mock.Of<IHostEnvironment>(environment => environment.EnvironmentName == "Production"), Mock.Of<IClock>(clock => clock.UtcNow == _now));
         var context = new RecipeExecutionContext
         {

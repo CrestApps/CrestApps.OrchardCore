@@ -212,6 +212,7 @@ const sidebars = {
                 'user-manual/commerce/payment-providers',
                 'user-manual/commerce/products-and-currencies',
                 'user-manual/commerce/product-listings',
+                'user-manual/commerce/ai-agents',
                 'user-manual/commerce/markets',
                 'user-manual/commerce/taxes',
                 'user-manual/commerce/coupons',
@@ -490,6 +491,7 @@ const sidebars = {
             link: { type: 'doc', id: 'modules/commerce' },
             items: [
                 'modules/products',
+                'modules/agentic-commerce',
                 'modules/markets',
                 'modules/carts-and-orders',
                 'modules/customers',

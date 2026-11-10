@@ -153,10 +153,17 @@ public sealed class DefaultShippingRateService : IShippingRateService
         return !string.IsNullOrEmpty(region) && regions.Contains(prefix + region, StringComparer.OrdinalIgnoreCase);
     }
 
-    // What the units in the method's surcharged shipping classes add. Classes are matched ignoring case, which a
-    // dictionary read back from JSON no longer does.
-    private static decimal GetSurcharge(ShippingMethod method, ShippingRateRequest request)
+    /// <summary>
+    /// Gets what the units in the method's surcharged shipping classes add to its rate. Classes are matched ignoring
+    /// case, which a dictionary read back from JSON no longer does.
+    /// </summary>
+    /// <param name="method">The shipping method.</param>
+    /// <param name="request">What is shipped.</param>
+    public static decimal GetSurcharge(ShippingMethod method, ShippingRateRequest request)
     {
+        ArgumentNullException.ThrowIfNull(method);
+        ArgumentNullException.ThrowIfNull(request);
+
         if (method.ClassSurcharges is not { Count: > 0 } surcharges)
         {
             return 0;

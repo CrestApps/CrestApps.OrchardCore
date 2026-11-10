@@ -20,6 +20,7 @@ The module is a thin Orchard Core layer over [CrestApps.Core's WebMCP](https://c
 | Part | What it does |
 | --- | --- |
 | [Site tools](#site-tools) | Gives the AI tools and [tool instances](../tool-instances.md) you select on the **WebMCP** settings card to every page a signed-in user opens (admin pages by default). |
+| [Storefront tools](#storefront-tools) | Off by default. Gives visitors who are not signed in the selected tools that are marked safe for anyone, such as searching products and using their own cart. |
 | [Content item tools](#content-item-tools) | The **WebMCP tools** content part: attach it to a content type, and each content item picks the tools its own page exposes. |
 | [Page tools](#page-tools) | Tools that work on the page itself: page info, links, opening a page, and reading and filling forms. On by default; the **Add page tools** setting turns them off. |
 | [The AI chat as a WebMCP agent](#the-ai-chat-as-a-webmcp-agent) | When **AI Chat** is enabled, the [AI chat](../chat.md) discovers and runs **every** WebMCP tool the page exposes, whoever registered it, for the AI profiles that allow it. It switches on by itself with AI Chat (`[RequireFeatures]`); there is nothing else to enable. |
@@ -48,9 +49,11 @@ Both features read the same tool catalog: tools registered with `AddCoreAITool<T
 
 A full page (an MVC view or Razor page) gets the WebMCP scripts when all of these are true:
 
-1. The user is signed in. Anonymous visitors never get the scripts.
+1. The user is signed in.
 2. The page kind is turned on: admin pages by default, front-end pages only when **Offer tools on front-end pages** is on.
 3. The user has the **Use WebMCP tools in the browser** (`UseWebMcpTools`) permission. Administrators have it by default.
+
+Everyone else gets nothing, unless [storefront tools](#storefront-tools) are on.
 
 The page then gets, in order: the polyfill, CrestApps.Core's `webmcp.js` (resource `CrestAppsWebMcp`), the page tools (unless **Add page tools** is off), and the scripts other modules add. `webmcp.js` lists the tools the user may call and registers each with `document.modelContext.registerTool()`. A tool is listed when it is selectable, the settings allow it (by **Expose all tools** or the selection), and the user has **Access AI tool** for it. The server checks the same rules again on every call.
 
@@ -118,6 +121,7 @@ The `CrestApps:AI:WebMcp` shell configuration section overrides the stored setti
 | `ExposeAllTools`, `Tools` | The tools given to browser agents (tool and tool instance names). |
 | `EnableOnAdminPages`, `EnableOnFrontEndPages` | The page kinds that get the scripts. |
 | `EnablePageTools` | Whether those pages also get the page tools. On by default. |
+| `EnableStorefrontTools` | Whether front-end pages give everyone else the [storefront tools](#storefront-tools). Off by default. |
 | `PageToolOrigins` | The origins of cross-origin frames whose shared tools the AI chat may use. Empty by default. See [Frames on other origins](#frames-on-other-origins). |
 
 ```json
@@ -141,6 +145,42 @@ OrchardCore__CrestApps__AI__WebMcp__Tools__0=listTimeZones
 ```
 
 Saving the **WebMCP** settings card releases the tenant, so the new selection takes effect on the next request. While **Expose all tools** is checked, the card hides the tool lists, because they are ignored.
+
+## Storefront tools
+
+A shop's visitors usually aren't signed in. **Offer storefront tools to visitors** (`EnableStorefrontTools`, off by default) gives their browser agents a small set of tools on the site's front-end pages. It gives them only the tools that are both:
+
+- **marked safe for anyone** by the module that registers them, and
+- **selected** on the **WebMCP** card (or offered by **Expose all tools**).
+
+Tool instances, unmarked tools and the page tools are never given. Admin pages never get storefront tools.
+
+Who gets them: visitors who are not signed in, and signed-in users who don't get the site tools (no `UseWebMcpTools` permission, or front-end pages off). The page gets the polyfill and `webmcp.js`, pointed at the storefront endpoints, and no other scripts.
+
+| Method and route | What it does | Answers |
+| --- | --- | --- |
+| `GET /api/ai/webmcp/storefront/tools` | Lists the storefront tools. | `404` while the setting is off |
+| `POST /api/ai/webmcp/storefront/tools/{name}/invoke` | Calls one, with the antiforgery token. | `404` while the setting is off or when the tool isn't a storefront tool, `400` as for the site tools |
+
+The server checks the setting, the mark and the selection on every list and every call, so a direct call can't reach any other tool. Tools run as the caller: a guest, or the signed-in user. There is no per-tool permission check, because a marked tool is one anyone may run.
+
+When Orchard Core's **Rate Limits** feature is on, each visitor (by IP address) may call the storefront endpoints 60 times a minute (`WebMcpConstants.StorefrontRequestsPerMinute`, rate-limit group `webmcp-storefront`). Turn it on for public sites.
+
+Pages with storefront tools carry an antiforgery token, so browsers and proxies don't cache them.
+
+### Marking a tool safe for anyone
+
+Mark a tool when you register it, with `MarkAIToolAnonymousSafe` from `CrestApps.OrchardCore.AI.Core.Extensions`:
+
+```csharp
+services.AddCoreAITool<SearchStoreProductsTool>(SearchStoreProductsTool.ToolName)
+    .WithTitle(S["Search store products"])
+    .Selectable();
+
+services.MarkAIToolAnonymousSafe(SearchStoreProductsTool.ToolName);
+```
+
+The marks are kept in `AnonymousAIToolOptions` (`CrestApps.OrchardCore.AI.Core.Models`). Mark a tool only when anyone may run it: it reads public data or acts on the caller's own data (such as their own cart), never shows another person's data, and never pays, deletes or changes the site. The [store's commerce tools](../../modules/agentic-commerce.md#ai-tools) are marked.
 
 ## Content item tools
 
@@ -238,6 +278,7 @@ The WebMCP settings are a site settings section, so the **Settings** step sets t
         "EnableOnAdminPages": true,
         "EnableOnFrontEndPages": false,
         "EnablePageTools": true,
+        "EnableStorefrontTools": false,
         "ExposeAllTools": false,
         "Tools": [ "listAIProfiles" ]
       }
@@ -305,7 +346,8 @@ Set the profile options in the **AIProfile** step, under the profile's `Settings
 
 ## Security
 
-- Nothing is given by default. You select the tools, and front-end pages are off.
+- Nothing is given by default. You select the tools, and front-end pages and storefront tools are off.
+- Anonymous visitors only ever reach tools marked safe for anyone that you also selected, and only while storefront tools are on.
 - The server checks the user, `UseWebMcpTools`, the selection and **Access AI tool** on every list and every call. The script's list only decides what is registered in the browser.
 - Calls need the antiforgery token, so another site cannot make the user's browser call a tool.
 - A browser agent acts as the signed-in user. Give agents only the tools you would let the user run, and prefer read-only tools.

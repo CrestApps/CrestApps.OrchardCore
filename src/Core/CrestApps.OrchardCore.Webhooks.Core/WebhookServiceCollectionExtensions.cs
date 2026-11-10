@@ -53,6 +53,7 @@ public static class WebhookServiceCollectionExtensions
         services.TryAddScoped<IWebhookDeliveryStore, WebhookDeliveryStore>();
         services.TryAddScoped<IWebhookEventCatalog, WebhookEventCatalog>();
         services.TryAddScoped<IWebhookPublisher, WebhookPublisher>();
+        services.TryAddScoped<IWebhookOutbox, WebhookOutbox>();
         services.TryAddScoped<WebhookDispatcher>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWebhookEventProvider, OptionsWebhookEventProvider>());
 

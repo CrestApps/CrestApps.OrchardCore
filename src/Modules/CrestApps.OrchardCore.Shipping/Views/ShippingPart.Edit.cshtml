@@ -2,6 +2,7 @@
 
 @{
     var unit = Model.WeightUnit == WeightUnit.Pound ? T["lb"] : T["kg"];
+    var sizeUnit = Model.WeightUnit == WeightUnit.Pound ? T["in"] : T["cm"];
 }
 
 <div class="ocat-limited-wrapper" asp-validation-class-for="Weight">
@@ -10,6 +11,29 @@
         <input asp-for="Weight" type="number" min="0" step="any" class="form-control" />
         <span asp-validation-for="Weight"></span>
         <span class="hint">@T["The weight of one unit, packed, for weight-based shipping rates. Leave it empty if it doesn't matter."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Length">
+    <label asp-for="Length" class="ocat-label">@T["Length ({0})", sizeUnit]</label>
+    <div class="ocat-limited">
+        <input asp-for="Length" type="number" min="0" step="any" class="form-control" />
+        <span asp-validation-for="Length"></span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="Width" class="ocat-label">@T["Width ({0})", sizeUnit]</label>
+    <div class="ocat-limited">
+        <input asp-for="Width" type="number" min="0" step="any" class="form-control" />
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="Height" class="ocat-label">@T["Height ({0})", sizeUnit]</label>
+    <div class="ocat-limited">
+        <input asp-for="Height" type="number" min="0" step="any" class="form-control" />
+        <span class="hint">@T["The size of one unit, packed, which product feeds show shoppers and AI agents. Leave them empty if it doesn't matter."]</span>
     </div>
 </div>
 
@@ -37,19 +61,24 @@
 @if (Model.Variants.Count > 0)
 {
     <div class="ocat-wrapper">
-        <span class="ocat-label">@T["Variant weights ({0})", unit]</span>
+        <span class="ocat-label">@T["Variant weights and sizes"]</span>
         <div class="ocat-end">
             <ul class="list-group">
                 @for (var i = 0; i < Model.Variants.Count; i++)
                 {
-                    <li class="list-group-item d-flex justify-content-between align-items-center gap-3">
+                    <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-3">
                         <label for="@Html.IdFor(m => m.Variants[i].Weight)" class="mb-0">@Model.Variants[i].Title</label>
                         <input type="hidden" asp-for="Variants[i].VariantId" />
-                        <input asp-for="Variants[i].Weight" type="number" min="0" step="any" class="form-control form-control-sm w-auto" placeholder="@Model.Weight" />
+                        <div class="d-flex flex-wrap gap-2">
+                            <input asp-for="Variants[i].Weight" type="number" min="0" step="any" class="form-control form-control-sm w-auto" placeholder="@Model.Weight" aria-label="@T["Weight ({0})", unit]" title="@T["Weight ({0})", unit]" />
+                            <input asp-for="Variants[i].Length" type="number" min="0" step="any" class="form-control form-control-sm w-auto" placeholder="@T["Length"]" aria-label="@T["Length ({0})", sizeUnit]" title="@T["Length ({0})", sizeUnit]" />
+                            <input asp-for="Variants[i].Width" type="number" min="0" step="any" class="form-control form-control-sm w-auto" placeholder="@T["Width"]" aria-label="@T["Width ({0})", sizeUnit]" title="@T["Width ({0})", sizeUnit]" />
+                            <input asp-for="Variants[i].Height" type="number" min="0" step="any" class="form-control form-control-sm w-auto" placeholder="@T["Height"]" aria-label="@T["Height ({0})", sizeUnit]" title="@T["Height ({0})", sizeUnit]" />
+                        </div>
                     </li>
                 }
             </ul>
-            <span class="hint">@T["Leave a variant empty to use the product's weight. New variants appear here once the product is saved."]</span>
+            <span class="hint">@T["Weight in {0}, then length, width and height in {1}. Leave a variant's weight empty to use the product's, and its size empty to use the product's size. New variants appear here once the product is saved.", unit, sizeUnit]</span>
         </div>
     </div>
 }

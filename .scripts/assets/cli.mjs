@@ -106,7 +106,7 @@ async function runBuild(groups, force) {
 
 async function buildGroup(group, toolingKey) {
     const started = performance.now();
-    const result = group.action === "vite" ? await buildViteGroup(group) : buildCopyGroup(group);
+    const result = group.action === "vite" ? await buildViteGroup(group) : await buildCopyGroup(group);
     let written = 0;
 
     for (const file of result.files) {

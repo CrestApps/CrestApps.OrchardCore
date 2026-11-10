@@ -164,6 +164,12 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
         var progressPart = entry.GetOrCreate<ImportFileProcessStatsPart>();
         progressPart.Errors ??= [];
 
+        // An export always writes its file from the first page, including one a stopping host interrupted, so its
+        // counts start over too instead of adding to the interrupted run's.
+        progressPart.CurrentRow = 0;
+        progressPart.TotalProcessed = 0;
+        progressPart.ImportedCount = 0;
+
         try
         {
             var context = new ImportContentContext()
@@ -345,6 +351,10 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
                 writer.Flush();
             }
 
+            // A stopping host ends the page loop early. The partial file must not be stored as a completed export: the
+            // entry stays in progress and starts over on the next run.
+            cancellationToken.ThrowIfCancellationRequested();
+
             var fileSize = tempStream.Length;
 
             // Save the completed file to the file store.
@@ -373,8 +383,21 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
                 ContentTransferLog.ExportFinished(logger, entry.EntryId, telemetry.Elapsed, progressPart.ImportedCount, progressPart.TotalProcessed, fileSize);
             }
 
-            // Send notification if the Notifications module is enabled.
-            await TrySendExportNotificationAsync(serviceProvider, entry, contentTypeDefinition.DisplayName);
+            // Send notification if the Notifications module is enabled. The file is stored and the export is complete,
+            // so a notification that cannot be sent no longer marks the export as failed.
+            try
+            {
+                await TrySendExportNotificationAsync(serviceProvider, entry, contentTypeDefinition.DisplayName);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogWarning(ex, "The export '{EntryId}' completed, but its notification could not be sent.", entry.EntryId);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // The host is stopping: the entry stays in progress and the next run exports it again.
+            telemetry.SetOutcome(CrestAppsOrchardCoreTelemetry.OutcomeCancelled);
         }
         catch (Exception ex)
         {

@@ -29,7 +29,7 @@ This feature registers reusable Orchard resource-manager assets that can be cons
 Current shared libraries include:
 
 - `intl-tel-input` script and stylesheet resources, backed by local copied assets with CDN fallbacks
-- `fullcalendar` and `fullcalendar-locales` scripts: [FullCalendar](https://fullcalendar.io/) 7 (MIT), the day, week, month and list calendar the Calendars module uses, with its translations, plus the `fullcalendar`, `fullcalendar-theme` and `fullcalendar-palette` stylesheets it needs. Local copied assets with CDN fallbacks.
+- `fullcalendar`, `fullcalendar-locales` and `fullcalendar-theme` scripts: [FullCalendar](https://fullcalendar.io/) 7 (MIT), the day, week, month and list calendar the Calendars module uses, with its translations and its classic theme, plus the `fullcalendar`, `fullcalendar-theme` and `fullcalendar-palette` stylesheets it needs. Local copied assets with CDN fallbacks; the scripts are served minified unless resource debug mode is on.
 
 ## Named script resources
 
@@ -45,6 +45,7 @@ The feature also registers reusable scripts that other modules can require by na
 | `date-range-picker` | `flatpickr`, `flatpickr-culture` | A reusable date-range dropdown described below. |
 | `fullcalendar` | – | [FullCalendar](https://fullcalendar.io/) 7 global build (`FullCalendar.Calendar`), with the day grid, time grid, list, multi-month and interaction plugins. |
 | `fullcalendar-locales` | `fullcalendar` | Every FullCalendar translation; pass the page culture as the calendar's `locale`. |
+| `fullcalendar-theme` | `fullcalendar` | The FullCalendar classic theme. FullCalendar 7 draws nothing without a theme; pair it with the `fullcalendar-theme` and `fullcalendar-palette` styles. |
 
 ## Date range picker
 

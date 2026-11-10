@@ -104,6 +104,8 @@ Customers made by the `Customers` recipe step aren't published.
 
 **Send again** in the admin (`WebhookDispatcher.ResendAsync`) resets a delivery to pending with no attempts and sends it at once.
 
+The same outbox also sends [direct deliveries](webhooks.md#direct-deliveries) to receivers that aren't subscriptions, such as the order updates [Agentic Commerce](agentic-commerce.md#order-updates) sends AI agent platforms. They are signed by their protocol's formatter instead of with `X-Webhook-Signature`, and retried on the same schedule.
+
 ## Receiving
 
 A receiver should check the signature against the raw body, refuse an old timestamp, answer `2xx` quickly and do its work afterwards, and drop an `X-Webhook-Id` it has already handled, since a delivery can arrive more than once. A retried message can arrive after a later one, so it reads the `status` and times in `data`, or gets the latest from the [commerce API](commerce-api.md), rather than relying on the order events arrive in.

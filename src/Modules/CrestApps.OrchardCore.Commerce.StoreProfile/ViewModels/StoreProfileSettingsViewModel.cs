@@ -19,6 +19,22 @@ public class StoreProfileSettingsViewModel
 
     public string Phone { get; set; }
 
+    public string Website { get; set; }
+
+    public string TermsOfService { get; set; }
+
+    public string PrivacyPolicy { get; set; }
+
+    public string ReturnPolicy { get; set; }
+
+    public string ShippingPolicy { get; set; }
+
+    public string Faq { get; set; }
+
+    public string Contact { get; set; }
+
+    public string About { get; set; }
+
     /// <summary>
     /// Gets or sets the store's address as entered.
     /// </summary>

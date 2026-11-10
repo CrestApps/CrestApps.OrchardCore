@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Commerce.Core;
+using CrestApps.OrchardCore.Products.Core;
+using CrestApps.OrchardCore.Products.Core.Feeds;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Shipping.Deployments;
@@ -20,6 +22,7 @@ using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Shipping.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Commerce.Webhooks;
 using CrestApps.OrchardCore.Webhooks;
 using CrestApps.OrchardCore.Shipping.Api;
@@ -79,6 +82,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<ShippingOrderRateService>();
         services.AddScoped<ICheckoutHandler, ShippingCheckoutHandler>();
         services.AddScoped<ShippingCheckoutStepService>();
+        services.AddScoped<ICheckoutFulfillmentStep, ShippingCheckoutFulfillmentStep>();
         services.AddDisplayDriver<CheckoutFlow, ShippingCheckoutFlowDisplayDriver>();
 
         // Shipments on the order's admin page and on the buyer's order pages, and the email that a shipment left.
@@ -182,4 +186,14 @@ public sealed class WebhooksStartup : StartupBase
         services.AddWebhookEvent(CommerceWebhookEvents.ShipmentShipped, "Shipment shipped", "Shipments");
         services.AddWebhookEvent(CommerceWebhookEvents.ShipmentDelivered, "Shipment delivered", "Shipments");
     }
+}
+
+/// <summary>
+/// Gives product feed items their weight, size and cheapest shipping rate when Product Feeds is on.
+/// </summary>
+[RequireFeatures(ProductConstants.Feature.Feeds)]
+public sealed class ProductFeedsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddScoped<IProductFeedItemContributor, ShippingProductFeedContributor>();
 }

@@ -223,6 +223,7 @@ public sealed class OutboundWebhookTests
             CreateSender(handler),
             Mock.Of<IWebhookDeliveryStore>(),
             subscriptions.Object,
+            [],
             protection,
             Clock(),
             NullLogger<WebhookDispatcher>.Instance);

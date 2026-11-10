@@ -9,6 +9,7 @@ One feature, **WebMCP** (`CrestApps.OrchardCore.AI.WebMcp`):
 | Part | What it adds |
 | --- | --- |
 | Site tools | Registers the AI tools and tool instances selected on the **WebMCP** settings card with `document.modelContext`, on the pages a signed-in user with the **Use WebMCP tools in the browser** permission opens. Adds the W3C reference polyfill for browsers without native WebMCP. |
+| Storefront tools | Off by default (**Offer storefront tools to visitors**). Gives everyone else on front-end pages, signed in or not, the selected tools marked safe for anyone with `MarkAIToolAnonymousSafe`, through `api/ai/webmcp/storefront/...`. Rate limited per visitor when Orchard Core's Rate Limits feature is on. |
 | Content item tools | The **WebMCP tools** content part (`WebMcpPart`, when Orchard Core's Contents feature is on): each content item picks, among the tools the editor may use, the tools its own page exposes. |
 | Page tools | Tools that read the page, list its links, open another page of the site, and read and fill its forms without submitting them. On by default (**Add page tools**). |
 | AI chat | When AI Chat is enabled (`[RequireFeatures]`), the AI chat discovers and runs every WebMCP tool the page exposes, through the AI chat hub, for AI profiles with **Allow page tools** on. |
@@ -22,7 +23,7 @@ Reference the `CrestApps.OrchardCore.AI.WebMcp` package (it is included in `Cres
 - **Settings > Artificial Intelligence**, **WebMCP** card: the page kinds that get the scripts (admin pages on, front-end pages off by default), **Add page tools** (on), and the tools browser agents may call on every page (none by default; the lists are hidden while **Expose all tools** is on). Saving it releases the tenant.
 - **Content types**: attach **WebMCP tools** and pick tools per content item.
 - **AI profile editor**, **Capabilities** tab: **Allow page tools** and **Allow consequential page tools** (both off by default).
-- The `CrestApps:AI:WebMcp` shell configuration section overrides the stored settings (`ExposeAllTools`, `Tools`, `EnableOnAdminPages`, `EnableOnFrontEndPages`, `EnablePageTools`) and sets `PageToolOrigins`, and `CrestApps:AI:WebMcp:Chat:ToolCallTimeout` (default one minute) sets how long the chat waits for a page tool.
+- The `CrestApps:AI:WebMcp` shell configuration section overrides the stored settings (`ExposeAllTools`, `Tools`, `EnableOnAdminPages`, `EnableOnFrontEndPages`, `EnablePageTools`, `EnableStorefrontTools`) and sets `PageToolOrigins`, and `CrestApps:AI:WebMcp:Chat:ToolCallTimeout` (default one minute) sets how long the chat waits for a page tool.
 
 ## Usage
 

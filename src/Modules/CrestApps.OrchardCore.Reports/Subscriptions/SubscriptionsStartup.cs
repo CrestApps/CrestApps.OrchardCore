@@ -112,6 +112,7 @@ public sealed class ReportSubscriptionsBackgroundTask : IBackgroundTask
         using var activity = ReportTelemetry.Start("report.subscription.sweep");
         var sent = 0;
         var notSent = 0;
+        var failed = 0;
 
         try
         {
@@ -130,14 +131,23 @@ public sealed class ReportSubscriptionsBackgroundTask : IBackgroundTask
 
             foreach (var subscription in due)
             {
-                // A run is for its scheduled time, so a late one still covers the period it was due for.
-                if (await service.SendAsync(subscription, subscription.NextRunUtc ?? now, reschedule: true, cancellationToken))
+                // One subscription that fails never stops the others; it is tried again when it is next due.
+                try
                 {
-                    sent++;
+                    // A run is for its scheduled time, so a late one still covers the period it was due for.
+                    if (await service.SendAsync(subscription, subscription.NextRunUtc ?? now, reschedule: true, cancellationToken))
+                    {
+                        sent++;
+                    }
+                    else
+                    {
+                        notSent++;
+                    }
                 }
-                else
+                catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
                 {
-                    notSent++;
+                    failed++;
+                    logger.LogError(ex, "Report subscription '{SubscriptionId}' couldn't be emailed.", subscription.ItemId);
                 }
             }
         }
@@ -151,8 +161,10 @@ public sealed class ReportSubscriptionsBackgroundTask : IBackgroundTask
         {
             run.AddItems(sent, "sent");
             run.AddItems(notSent, "not_sent");
+            run.AddItems(failed, "failed");
             activity?.SetTag("crestapps.report.subscriptions.sent", sent);
             activity?.SetTag("crestapps.report.subscriptions.not_sent", notSent);
+            activity?.SetTag("crestapps.report.subscriptions.failed", failed);
         }
     }
 }

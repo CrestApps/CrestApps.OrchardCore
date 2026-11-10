@@ -1,0 +1,22 @@
+@model ShapeViewModel<AgentPlatform>
+
+@foreach (var protocol in Model.Value.Protocols ?? [])
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Protocol"]">
+        <i class="fa-solid fa-robot text-secondary me-1" aria-hidden="true"></i>@protocol.ToUpperInvariant()
+    </span>
+}
+
+@if (Model.Value.TestMode)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Its agents may only pay with test credentials."]">
+        <i class="fa-solid fa-flask text-info me-1" aria-hidden="true"></i>@T["Test mode"]
+    </span>
+}
+
+@if (!Model.Value.Enabled)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+        <i class="fa-solid fa-ban text-warning me-1" aria-hidden="true"></i>@T["Disabled"]
+    </span>
+}

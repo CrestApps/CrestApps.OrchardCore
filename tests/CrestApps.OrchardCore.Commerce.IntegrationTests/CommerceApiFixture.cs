@@ -37,6 +37,8 @@ public sealed class CommerceApiFixture : IAsyncLifetime
         "CrestApps.OrchardCore.Shipping.Api",
         "CrestApps.OrchardCore.Commerce.Webhooks",
         "CrestApps.OrchardCore.Commerce.StoreProfile",
+        "CrestApps.OrchardCore.AgenticCommerce",
+        "CrestApps.OrchardCore.AgenticCommerce.Acp",
     ];
 
     private WebApplication _application;

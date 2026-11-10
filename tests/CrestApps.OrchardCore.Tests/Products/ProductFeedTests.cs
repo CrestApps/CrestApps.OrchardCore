@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using CrestApps.OrchardCore.Products.Core.Feeds;
 using CrestApps.OrchardCore.Products.Feeds;
 
 namespace CrestApps.OrchardCore.Tests.Products;
