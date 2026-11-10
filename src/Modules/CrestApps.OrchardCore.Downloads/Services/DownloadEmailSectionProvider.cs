@@ -13,16 +13,19 @@ internal sealed class DownloadEmailSectionProvider : IOrderEmailSectionProvider
 {
     private readonly DownloadService _downloads;
     private readonly IClock _clock;
+    private readonly ILocalClock _localClock;
 
     internal readonly IStringLocalizer S;
 
     public DownloadEmailSectionProvider(
         DownloadService downloads,
         IStringLocalizer<DownloadEmailSectionProvider> stringLocalizer,
-        IClock clock)
+        IClock clock,
+        ILocalClock localClock)
     {
         _downloads = downloads;
         _clock = clock;
+        _localClock = localClock;
         S = stringLocalizer;
     }
 
@@ -41,17 +44,22 @@ internal sealed class DownloadEmailSectionProvider : IOrderEmailSectionProvider
                 continue;
             }
 
-            section.Links.Add(new OrderEmailLink(entitlement.FileName, url, Note(entitlement)));
+            section.Links.Add(new OrderEmailLink(entitlement.FileName, url, await NoteAsync(entitlement)));
         }
 
         return section;
     }
 
-    private string Note(DownloadEntitlement entitlement)
+    private async Task<string> NoteAsync(DownloadEntitlement entitlement)
     {
-        if (entitlement.DownloadLimit.HasValue && entitlement.ExpiresUtc.HasValue)
+        // The last day the link works, in the site's time zone.
+        var expires = entitlement.ExpiresUtc.HasValue
+            ? (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(entitlement.ExpiresUtc.Value, DateTimeKind.Utc))).DateTime
+            : (DateTime?)null;
+
+        if (entitlement.DownloadLimit.HasValue && expires.HasValue)
         {
-            return S["{0} downloads, until {1:d}", entitlement.DownloadLimit.Value, entitlement.ExpiresUtc.Value].Value;
+            return S["{0} downloads, until {1:d}", entitlement.DownloadLimit.Value, expires.Value].Value;
         }
 
         if (entitlement.DownloadLimit.HasValue)
@@ -59,6 +67,6 @@ internal sealed class DownloadEmailSectionProvider : IOrderEmailSectionProvider
             return S["{0} downloads", entitlement.DownloadLimit.Value].Value;
         }
 
-        return entitlement.ExpiresUtc.HasValue ? S["until {0:d}", entitlement.ExpiresUtc.Value].Value : null;
+        return expires.HasValue ? S["until {0:d}", expires.Value].Value : null;
     }
 }

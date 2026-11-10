@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using Moq;
+using OrchardCore.Modules;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Tests.Carts;
@@ -60,16 +61,18 @@ public sealed class OrderLinkTests
     }
 
     [Fact]
-    public void FindMyOrder_EmailsALinkToEachOrder()
+    public async Task FindMyOrder_EmailsALinkToEachOrder()
     {
-        var builder = new OrderLinksEmailBuilder(new PassThroughLocalizer());
+        var localClock = new Mock<ILocalClock>();
+        localClock.Setup(clock => clock.ConvertToLocalAsync(It.IsAny<DateTimeOffset>())).Returns<DateTimeOffset>(Task.FromResult);
+        var builder = new OrderLinksEmailBuilder(localClock.Object, new PassThroughLocalizer());
         var orders = new List<(Order, string)>
         {
             (new Order { OrderNumber = "261017-AAA111", Currency = "USD", Total = 25m, CreatedUtc = new DateTime(2026, 10, 17) }, "https://store.test/orders/view/one"),
             (new Order { OrderNumber = "261001-BBB222", Currency = "USD", Total = 40m, CreatedUtc = new DateTime(2026, 10, 1) }, "https://store.test/orders/view/two"),
         };
 
-        var email = builder.Build(orders);
+        var email = await builder.BuildAsync(orders);
 
         Assert.Contains("https://store.test/orders/view/one", email.Text);
         Assert.Contains("https://store.test/orders/view/two", email.Html);

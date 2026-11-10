@@ -79,6 +79,7 @@ public sealed class DonationService
     private readonly ICommerceEmailSender _emailSender;
     private readonly HtmlEncoder _encoder;
     private readonly IClock _clock;
+    private readonly ILocalClock _localClock;
     private readonly IShopperCurrency _shopperCurrency;
 
     internal readonly IStringLocalizer S;
@@ -90,6 +91,7 @@ public sealed class DonationService
         ICommerceEmailSender emailSender,
         HtmlEncoder encoder,
         IClock clock,
+        ILocalClock localClock,
         IStringLocalizer<DonationService> stringLocalizer,
         IShopperCurrency shopperCurrency)
     {
@@ -99,6 +101,7 @@ public sealed class DonationService
         _emailSender = emailSender;
         _encoder = encoder;
         _clock = clock;
+        _localClock = localClock;
         _shopperCurrency = shopperCurrency;
         S = stringLocalizer;
     }
@@ -218,10 +221,13 @@ public sealed class DonationService
         var site = await _siteService.GetSiteSettingsAsync();
         var organization = string.IsNullOrWhiteSpace(settings.OrganizationName) ? site.SiteName : settings.OrganizationName;
         var amount = ProductPriceFormatter.Format(donation.Amount, donation.Currency);
+
+        // The day the gift was received, in the site's time zone.
+        var received = (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(donation.CreatedUtc, DateTimeKind.Utc))).DateTime;
         var lines = new List<string>
         {
             S["Receipt {0}", donation.ReceiptNumber],
-            S["Received from {0} on {1}", donation.DonorName ?? donation.DonorEmail, donation.CreatedUtc.ToString("D", CultureInfo.CurrentCulture)],
+            S["Received from {0} on {1}", donation.DonorName ?? donation.DonorEmail, received.ToString("D", CultureInfo.CurrentCulture)],
             S["Donation to {0}: {1}", donation.CampaignTitle, amount],
         };
 

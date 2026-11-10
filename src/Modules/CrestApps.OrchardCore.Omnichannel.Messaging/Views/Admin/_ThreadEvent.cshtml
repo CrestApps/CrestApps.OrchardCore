@@ -15,7 +15,7 @@
             // Written from a code block, as the sentence always was, so the badge keeps its exact whitespace.
             @transfer
         }
-        <span class="ms-1">&middot; @Model.OccurredUtc.ToLocalTime().ToString("t")</span>
+        <span class="ms-1">&middot; @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(Model.OccurredUtc, DateTimeKind.Utc), Format: "t"))</span>
     </span>
     @if (!string.IsNullOrWhiteSpace(Model.Note))
     {

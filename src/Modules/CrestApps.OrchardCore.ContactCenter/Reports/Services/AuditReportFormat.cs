@@ -8,20 +8,30 @@ namespace CrestApps.OrchardCore.ContactCenter.Reports.Services;
 internal static class AuditReportFormat
 {
     /// <summary>
-    /// Formats an instant to the millisecond.
+    /// Formats an instant to the millisecond, in the report's zone.
     /// </summary>
-    /// <param name="value">The instant, in UTC.</param>
-    /// <returns>The formatted instant.</returns>
-    public static string Timestamp(DateTime value)
-        => value.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
+    /// <param name="utc">The instant, in UTC.</param>
+    /// <param name="timeZone">The zone to show it in.</param>
+    /// <returns>The formatted local time.</returns>
+    public static string Timestamp(DateTime utc, ReportTimeZone timeZone)
+    {
+        ArgumentNullException.ThrowIfNull(timeZone);
+
+        return timeZone.ToLocal(utc).ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
+    }
 
     /// <summary>
-    /// Formats a time of day to the second.
+    /// Formats the time of day of an instant to the second, in the report's zone.
     /// </summary>
-    /// <param name="value">The instant, in UTC.</param>
-    /// <returns>The formatted time of day.</returns>
-    public static string TimeOfDay(DateTime value)
-        => value.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+    /// <param name="utc">The instant, in UTC.</param>
+    /// <param name="timeZone">The zone to show it in.</param>
+    /// <returns>The formatted local time of day.</returns>
+    public static string TimeOfDay(DateTime utc, ReportTimeZone timeZone)
+    {
+        ArgumentNullException.ThrowIfNull(timeZone);
+
+        return timeZone.ToLocal(utc).ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+    }
 
     /// <summary>
     /// Formats a whole number of seconds as hours, minutes and seconds, with the hours unbounded, so a column of

@@ -1,6 +1,13 @@
 @using System.Globalization
 @using OrchardCore.DisplayManagement.Html
 @model DonationReceiptViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    // Stored times are UTC; people read them in the site time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 
 @{
     var donation = Model.Donation;
@@ -35,7 +42,7 @@
                 <dt class="col-sm-4">@T["Received from"]</dt>
                 <dd class="col-sm-8">@(donation.DonorName ?? donation.DonorEmail)</dd>
                 <dt class="col-sm-4">@T["Date"]</dt>
-                <dd class="col-sm-8">@donation.CreatedUtc.ToString("D", CultureInfo.CurrentCulture)</dd>
+                <dd class="col-sm-8">@((await LocalAsync(donation.CreatedUtc)).ToString("D", CultureInfo.CurrentCulture))</dd>
                 <dt class="col-sm-4">@T["Campaign"]</dt>
                 <dd class="col-sm-8">@donation.CampaignTitle</dd>
                 @if (!string.IsNullOrEmpty(donation.Tribute))

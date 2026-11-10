@@ -1,4 +1,11 @@
 @model MyWorkHomeViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    // Stored times are UTC; people read them in the site time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 <zone Name="Title"><breadcrumb name="MyWork" title="@T["My Work"]" /></zone>
 <partial name="~/Areas/CrestApps.OrchardCore.Workforce/Views/Shared/_MyWorkAssets.cshtml" />
 
@@ -77,7 +84,7 @@ else
                         {
                             <div class="small text-muted fw-normal">@item.Body</div>
                         }
-                        <div class="small text-muted fw-normal">@item.CreatedUtc.ToLocalTime().ToString("g")</div>
+                        <div class="small text-muted fw-normal">@((await LocalAsync(item.CreatedUtc)).ToString("g"))</div>
                     </li>
                 }
             </ul>

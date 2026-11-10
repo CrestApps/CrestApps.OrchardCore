@@ -3,6 +3,7 @@ using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Orders.Services;
 
@@ -13,14 +14,19 @@ public sealed class OrderLinksEmailBuilder
 {
     private static readonly HtmlEncoder _encoder = HtmlEncoder.Default;
 
+    private readonly ILocalClock _localClock;
+
     internal readonly IStringLocalizer S;
 
-    public OrderLinksEmailBuilder(IStringLocalizer<OrderLinksEmailBuilder> stringLocalizer)
+    public OrderLinksEmailBuilder(
+        ILocalClock localClock,
+        IStringLocalizer<OrderLinksEmailBuilder> stringLocalizer)
     {
+        _localClock = localClock;
         S = stringLocalizer;
     }
 
-    public OrderConfirmationEmail Build(IReadOnlyList<(Order Order, string Url)> orders)
+    public async Task<OrderConfirmationEmail> BuildAsync(IReadOnlyList<(Order Order, string Url)> orders)
     {
         ArgumentNullException.ThrowIfNull(orders);
 
@@ -32,7 +38,9 @@ public sealed class OrderLinksEmailBuilder
 
         foreach (var (order, url) in orders)
         {
-            var label = S["Order {0}, placed {1:d}, {2}", order.OrderNumber, order.CreatedUtc, ProductPriceFormatter.Format(order.Total ?? order.Subtotal, order.Currency)].Value;
+            // The day the customer placed it, in the site's time zone.
+            var placed = (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(order.CreatedUtc, DateTimeKind.Utc))).DateTime;
+            var label = S["Order {0}, placed {1:d}, {2}", order.OrderNumber, placed, ProductPriceFormatter.Format(order.Total ?? order.Subtotal, order.Currency)].Value;
 
             text.AppendLine(label).AppendLine(url).AppendLine();
             html.Append("<li style=\"margin-bottom:8px\"><a href=\"").Append(_encoder.Encode(url)).Append("\">").Append(_encoder.Encode(label)).Append("</a></li>");

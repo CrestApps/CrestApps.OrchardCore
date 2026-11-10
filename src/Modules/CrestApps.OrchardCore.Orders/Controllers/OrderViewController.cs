@@ -210,16 +210,16 @@ public sealed class OrderViewController : Controller
         {
             To = email,
             Reference = "Find my order",
-        }, _ =>
+        }, async _ =>
         {
-            var message = _linksEmailBuilder.Build(recent);
+            var message = await _linksEmailBuilder.BuildAsync(recent);
 
-            return Task.FromResult(new CommerceEmailContent
+            return new CommerceEmailContent
             {
                 Subject = message.Subject,
                 Text = message.Text,
                 Html = message.Html,
-            });
+            };
         });
     }
 

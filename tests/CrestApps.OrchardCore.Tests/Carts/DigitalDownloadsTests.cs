@@ -198,7 +198,10 @@ public sealed class DigitalDownloadsTests : IAsyncLifetime
 
         await GrantAsync(order, Product(file, limit: 3, days: 30));
 
-        var section = await InSessionAsync(service => new DownloadEmailSectionProvider(service, new PassThroughLocalizer<DownloadEmailSectionProvider>(), new TestClock(DateTime.UtcNow)).GetSectionAsync(order, TestContext.Current.CancellationToken));
+        var localClock = new Mock<ILocalClock>();
+        localClock.Setup(clock => clock.ConvertToLocalAsync(It.IsAny<DateTimeOffset>())).Returns<DateTimeOffset>(Task.FromResult);
+
+        var section = await InSessionAsync(service => new DownloadEmailSectionProvider(service, new PassThroughLocalizer<DownloadEmailSectionProvider>(), new TestClock(DateTime.UtcNow), localClock.Object).GetSectionAsync(order, TestContext.Current.CancellationToken));
 
         var link = Assert.Single(section.Links);
         Assert.Equal("guide.pdf", link.Text);

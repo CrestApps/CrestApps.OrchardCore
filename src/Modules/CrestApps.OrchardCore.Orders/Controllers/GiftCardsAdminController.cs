@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Core;
@@ -43,6 +44,7 @@ public sealed class GiftCardsAdminController : Controller
     private readonly ISiteService _siteService;
     private readonly INotifier _notifier;
     private readonly IClock _clock;
+    private readonly ILocalClock _localClock;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -55,6 +57,7 @@ public sealed class GiftCardsAdminController : Controller
         ISiteService siteService,
         INotifier notifier,
         IClock clock,
+        ILocalClock localClock,
         IHtmlLocalizer<GiftCardsAdminController> htmlLocalizer,
         IStringLocalizer<GiftCardsAdminController> stringLocalizer)
     {
@@ -65,6 +68,7 @@ public sealed class GiftCardsAdminController : Controller
         _siteService = siteService;
         _notifier = notifier;
         _clock = clock;
+        _localClock = localClock;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -191,9 +195,11 @@ public sealed class GiftCardsAdminController : Controller
             ModelState.AddModelError(nameof(model.Code), S["A code is 8 to 32 letters and digits. Leave it blank to have one made up."]);
         }
 
-        if (model.ExpiresUtc.HasValue && model.ExpiresUtc.Value <= _clock.UtcNow)
+        var expiresUtc = await ToUtcAsync(model.Expires);
+
+        if (expiresUtc.HasValue && expiresUtc.Value <= _clock.UtcNow)
         {
-            ModelState.AddModelError(nameof(model.ExpiresUtc), S["The expiry date must be in the future."]);
+            ModelState.AddModelError(nameof(model.Expires), S["The expiry date must be in the future."]);
         }
 
         if (model.SendEmail && string.IsNullOrWhiteSpace(model.RecipientEmail))
@@ -212,7 +218,7 @@ public sealed class GiftCardsAdminController : Controller
             S["Issued"],
             card =>
             {
-                card.ExpiresUtc = model.ExpiresUtc;
+                card.ExpiresUtc = expiresUtc;
                 card.RecipientName = TrimToNull(model.RecipientName);
                 card.RecipientEmail = TrimToNull(model.RecipientEmail);
                 card.Note = TrimToNull(model.Note);
@@ -261,7 +267,7 @@ public sealed class GiftCardsAdminController : Controller
             return NotFound();
         }
 
-        return View(ToModel(card));
+        return View(await ToModelAsync(card));
     }
 
     [HttpPost]
@@ -282,9 +288,9 @@ public sealed class GiftCardsAdminController : Controller
 
         if (!ModelState.IsValid)
         {
-            var invalid = ToModel(card);
+            var invalid = await ToModelAsync(card);
             invalid.IsEnabled = model.IsEnabled;
-            invalid.ExpiresUtc = model.ExpiresUtc;
+            invalid.Expires = model.Expires;
             invalid.RecipientName = model.RecipientName;
             invalid.RecipientEmail = model.RecipientEmail;
             invalid.Note = model.Note;
@@ -293,7 +299,7 @@ public sealed class GiftCardsAdminController : Controller
         }
 
         card.IsEnabled = model.IsEnabled;
-        card.ExpiresUtc = model.ExpiresUtc;
+        card.ExpiresUtc = await ToUtcAsync(model.Expires);
         card.RecipientName = TrimToNull(model.RecipientName);
         card.RecipientEmail = TrimToNull(model.RecipientEmail);
         card.Note = TrimToNull(model.Note);
@@ -376,7 +382,7 @@ public sealed class GiftCardsAdminController : Controller
         return RedirectToAction(nameof(Edit), new { itemId });
     }
 
-    private static GiftCardEditViewModel ToModel(GiftCard card)
+    private async Task<GiftCardEditViewModel> ToModelAsync(GiftCard card)
         => new()
         {
             ItemId = card.ItemId,
@@ -389,11 +395,17 @@ public sealed class GiftCardsAdminController : Controller
             CreatedUtc = card.CreatedUtc,
             Activity = [.. (card.Activity ?? []).OrderByDescending(activity => activity.CreatedUtc)],
             IsEnabled = card.IsEnabled,
-            ExpiresUtc = card.ExpiresUtc,
+            Expires = card.ExpiresUtc.HasValue
+                ? (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(card.ExpiresUtc.Value, DateTimeKind.Utc))).DateTime
+                : null,
             RecipientName = card.RecipientName,
             RecipientEmail = card.RecipientEmail,
             Note = card.Note,
         };
+
+    // The form shows and takes the expiry in the site's time zone.
+    private async Task<DateTime?> ToUtcAsync(DateTime? local)
+        => local.HasValue ? await _localClock.ToUtcLenientAsync(local.Value) : null;
 
     private static string TrimToNull(string value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

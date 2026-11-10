@@ -50,11 +50,11 @@
         </div>
     </div>
 
-    <div class="ocat-limited-wrapper" asp-validation-class-for="ExpiresUtc">
-        <label asp-for="ExpiresUtc" class="ocat-label">@T["Expires (UTC)"]</label>
+    <div class="ocat-limited-wrapper" asp-validation-class-for="Expires">
+        <label asp-for="Expires" class="ocat-label">@T["Expires"]</label>
         <div class="ocat-limited">
-            <input asp-for="ExpiresUtc" type="datetime-local" class="form-control" />
-            <span asp-validation-for="ExpiresUtc"></span>
+            <input asp-for="Expires" type="datetime-local" class="form-control" />
+            <span asp-validation-for="Expires"></span>
             <span class="hint">@T["Optional. Leave blank for a card that never expires; some places require that."]</span>
         </div>
     </div>

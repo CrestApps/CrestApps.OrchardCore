@@ -130,14 +130,14 @@ public class ProductPriceViewModel
     public bool IsActive { get; set; } = true;
 
     /// <summary>
-    /// Gets or sets when the price starts being offered.
+    /// Gets or sets when the price starts being offered, in the site's time zone.
     /// </summary>
-    public DateTime? EffectiveFromUtc { get; set; }
+    public DateTime? EffectiveFrom { get; set; }
 
     /// <summary>
-    /// Gets or sets when the price stops being offered.
+    /// Gets or sets when the price stops being offered, in the site's time zone.
     /// </summary>
-    public DateTime? EffectiveToUtc { get; set; }
+    public DateTime? EffectiveTo { get; set; }
 
     /// <summary>
     /// Gets or sets whether the editor should drop this row.

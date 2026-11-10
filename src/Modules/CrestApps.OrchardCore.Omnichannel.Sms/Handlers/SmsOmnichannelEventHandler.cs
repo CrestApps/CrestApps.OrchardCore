@@ -1,5 +1,6 @@
 ﻿using CrestApps.Core.AI.Guardrails;
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
@@ -797,16 +798,22 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                             }
                         }
 
+                        // Customers speak in local time ("tomorrow at 3pm"), so the model also gets the site's
+                        // local time and offset to resolve relative times against before writing them as UTC.
+                        var localClock = scope.ServiceProvider.GetService<ILocalClock>();
+                        var localNow = localClock is null ? new DateTimeOffset(_clock.UtcNow) : await localClock.GetLocalNowAsync();
+
                         var userPrompt = $"""
 
                         Current UTC time: {_clock.UtcNow:O}
+                        Current local date and time: {localNow.ToString("dddd yyyy-MM-dd'T'HH:mm:sszzz", CultureInfo.InvariantCulture)}
                         Chat Summary: {JsonSerializer.Serialize(sessionPrompts)}
                         Subject Goal: {flowSettings.SubjectGoal}
                         List of Dispositions: {JsonSerializer.Serialize(SubjectDispositionGuidance.Describe(dispositions, allActions, activity.SubjectContentType))}
 
                         Decide whether the conversation has genuinely ended. Set Concluded to true ONLY when the exchange is clearly over: the agent has said goodbye or sent a closing message, or the customer has opted out, declined, or stopped engaging. Do NOT conclude while the agent is still asking a question or waiting for the customer to answer or confirm something (for example, right after the agent asked "is that correct?" the conversation is NOT concluded). When Concluded is true, select the single best DispositionId from the list above.
                         Always return Notes: a concise plain-text summary of the outcome to store on the account.
-                        If, and only if, the customer clearly agreed to be contacted again at a specific time, set CallbackAtUtc to that moment as an absolute UTC timestamp (ISO 8601), resolving any relative time against the current UTC time above; otherwise leave CallbackAtUtc null.
+                        If, and only if, the customer clearly agreed to be contacted again at a specific time, set CallbackAtUtc to that moment as an absolute UTC timestamp (ISO 8601), resolving any relative or local time the customer gives against the current local date and time above (including its UTC offset) and converting it to UTC; otherwise leave CallbackAtUtc null.
                         If a follow-up is warranted, set NextActivityNotes to short preparation notes for whoever handles the next activity; otherwise leave it null.
                         {(subjectTextFields.Count > 0 ? "You are given a list of subject field keys. Return SubjectFields as a JSON object mapping the exact key shown to a short plain-text value, for any field the conversation clearly revealed; omit fields you did not learn and never invent keys." : "Do not return SubjectFields.")}
                         {(activity.AllowAIToUpdateContact ? "If, and only if, the customer clearly provided an email address for follow-up, set ContactEmail to that exact address (lowercased, no surrounding words); if it matches the current email on file or none was given, omit ContactEmail." : "Do not return ContactEmail.")}

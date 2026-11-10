@@ -1,4 +1,11 @@
 @model ShapeViewModel<ClassifiedEntry>
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    // Stored times are UTC; people read them in the site time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 @inject OrchardCore.Modules.IClock Clock
 
 @{
@@ -6,7 +13,7 @@
     var (css, label) = part.Status switch
     {
         ClassifiedStatus.Pending => ("text-bg-warning", T["Waiting for approval"]),
-        ClassifiedStatus.Approved => ("text-bg-success", T["Up until {0:d}", part.ExpiresUtc]),
+        ClassifiedStatus.Approved => ("text-bg-success", T["Up until {0:d}", part.ExpiresUtc is { } expiresUtc ? await LocalAsync(expiresUtc) : null]),
         ClassifiedStatus.Rejected => ("text-bg-danger", T["Rejected"]),
         _ => ("text-bg-secondary", T["Expired"]),
     };
@@ -15,7 +22,7 @@
     <span class="badge @css">@label</span>
     @if (part.FeaturedUntilUtc > Clock.UtcNow)
     {
-        <span class="badge text-bg-info">@T["Featured until {0:d}", part.FeaturedUntilUtc]</span>
+        <span class="badge text-bg-info">@T["Featured until {0:d}", part.FeaturedUntilUtc is { } featuredUntilUtc ? await LocalAsync(featuredUntilUtc) : null]</span>
     }
     @if (!string.IsNullOrEmpty(part.Place))
     {

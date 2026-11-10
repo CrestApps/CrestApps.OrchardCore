@@ -71,6 +71,22 @@ public sealed class PresenceAuditRowLimitTests
         Assert.True(string.IsNullOrEmpty(section.Description));
     }
 
+    [Fact]
+    public void BuildPresenceAudit_ShowsEachChangeInTheSiteTimeZone()
+    {
+        // Arrange
+        var timelines = Timelines(1);
+        var provider = CreateProvider();
+
+        // Act
+        var document = provider.BuildPresenceAudit(timelines, Agents(), _startUtc, _startUtc.AddDays(2), ReportTimeZone.FromId("America/Los_Angeles"));
+
+        // Assert: 00:00:01 UTC on the 24th is 17:00:01 on the 23rd in Pacific daylight time.
+        var section = Assert.Single(document.Sections);
+        Assert.Equal("Changed (America/Los_Angeles)", section.Columns[0].Label);
+        Assert.Equal("2026-09-23 17:00:01.000", Assert.Single(section.Rows).Cells[0]);
+    }
+
     // Alternates an agent between available and busy once a second, so every event is a state change.
     private static IReadOnlyList<AgentStateTimeline> Timelines(int changes)
     {

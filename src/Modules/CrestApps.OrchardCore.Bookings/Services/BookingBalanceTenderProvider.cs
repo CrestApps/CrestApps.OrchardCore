@@ -32,6 +32,7 @@ public sealed class BookingBalanceTenderProvider : DeferredBalanceTenderProvider
     private readonly IServiceProvider _serviceProvider;
     private readonly IOrderStore _orders;
     private readonly IClock _clock;
+    private readonly ILocalClock _localClock;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -44,6 +45,7 @@ public sealed class BookingBalanceTenderProvider : DeferredBalanceTenderProvider
         IServiceProvider serviceProvider,
         IOrderStore orders,
         IClock clock,
+        ILocalClock localClock,
         ILogger<BookingBalanceTenderProvider> logger,
         IStringLocalizer<BookingBalanceTenderProvider> stringLocalizer)
         : base(transactions, commands, clock, logger, stringLocalizer)
@@ -53,6 +55,7 @@ public sealed class BookingBalanceTenderProvider : DeferredBalanceTenderProvider
         _serviceProvider = serviceProvider;
         _orders = orders;
         _clock = clock;
+        _localClock = localClock;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -92,7 +95,8 @@ public sealed class BookingBalanceTenderProvider : DeferredBalanceTenderProvider
             new TenderLine
             {
                 Reference = reference,
-                Description = S["Balance, due {0:d}", offer.DueUtc],
+                // The offer's due date is already the site's own date.
+                Description = S["Balance, due {0:d}", offer.DueDate],
                 Amount = offer.Balance,
             },
         ];
@@ -137,7 +141,7 @@ public sealed class BookingBalanceTenderProvider : DeferredBalanceTenderProvider
             Title = S["Order {0}, balance", order.OrderNumber].Value,
             Source = BookingsConstants.TransactionSource,
             DueUtc = dueUtc,
-            Message = S["The rest of the bookings' price after the deposit, charged to the card on {0:d}.", dueUtc].Value,
+            Message = S["The rest of the bookings' price after the deposit, charged to the card on {0:d}.", (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(dueUtc, DateTimeKind.Utc))).DateTime].Value,
             State = order,
         };
     }

@@ -14,6 +14,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Moq;
+using OrchardCore.Modules;
 using OrchardCore.Environment.Shell.Configuration;
 using YesSql;
 using YesSql.Provider.Sqlite;
@@ -165,6 +166,7 @@ public sealed class EnterpriseInteractionReportConcurrencyTests
             agentManager,
             kind,
             guard,
+            Mock.Of<ILocalClock>(),
             new PassThroughStringLocalizer<EnterpriseInteractionReportProvider>(),
             Options.Create(new ContactCenterReportingOptions { MaximumReportRange = TimeSpan.FromDays(400) }));
     }

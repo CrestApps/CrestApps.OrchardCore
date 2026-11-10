@@ -21,6 +21,7 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
     private readonly ICustomerOwnerNotifier _ownerNotifier;
     private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
+    private readonly ILocalClock _localClock;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -31,18 +32,21 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
     /// <param name="ownerNotifier">The notifier that reaches the owner: a user through their notifications, a guest by email.</param>
     /// <param name="serviceProvider">The service provider the optional invoice and pay-link services are resolved from.</param>
     /// <param name="clock">The clock used to stamp the reminder.</param>
+    /// <param name="localClock">The clock that turns the stored UTC due date into the site's time zone.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public DefaultTransactionReminderService(
         ICustomerOwnerNotifier ownerNotifier,
         IServiceProvider serviceProvider,
         IClock clock,
+        ILocalClock localClock,
         ILogger<DefaultTransactionReminderService> logger,
         IStringLocalizer<DefaultTransactionReminderService> stringLocalizer)
     {
         _ownerNotifier = ownerNotifier;
         _serviceProvider = serviceProvider;
         _clock = clock;
+        _localClock = localClock;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -61,10 +65,16 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
         var title = GetTitle(transaction);
         var invoice = await PrepareInvoiceAsync(transaction, cancellationToken);
 
+        // Dates are compared and shown as the owner reads them, in the site's time zone.
+        var today = (await DocumentDates.ToSiteTimeAsync(_localClock, _clock.UtcNow)).Date;
+        var due = transaction.DueUtc.HasValue
+            ? await DocumentDates.ToSiteDueDateAsync(_localClock, transaction.DueUtc.Value)
+            : (DateTime?)null;
+
         // The first notice on the due date is the invoice itself coming due; later ones chase an unpaid balance.
         var dueToday = transaction.ReminderCount == 0 &&
-            transaction.DueUtc.HasValue &&
-            transaction.DueUtc.Value.Date == _clock.UtcNow.Date;
+            due.HasValue &&
+            due.Value.Date == today;
 
         string body;
 
@@ -72,14 +82,14 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
         {
             body = S["A payment of {0} for {1} is due today.", amount, title].Value;
         }
-        else if (transaction.DueUtc.HasValue && transaction.DueUtc.Value.Date > _clock.UtcNow.Date)
+        else if (due.HasValue && due.Value.Date > today)
         {
             // Sent by hand before the due date.
-            body = S["This is a reminder that a payment of {0} for {1} is due on {2:d}.", amount, title, transaction.DueUtc.Value].Value;
+            body = S["This is a reminder that a payment of {0} for {1} is due on {2:d}.", amount, title, due.Value].Value;
         }
-        else if (transaction.DueUtc.HasValue)
+        else if (due.HasValue)
         {
-            body = S["This is a reminder that you have an outstanding balance of {0} for {1}, which was due on {2:d}.", amount, title, transaction.DueUtc.Value].Value;
+            body = S["This is a reminder that you have an outstanding balance of {0} for {1}, which was due on {2:d}.", amount, title, due.Value].Value;
         }
         else
         {
@@ -135,7 +145,7 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
 
         var amount = FormatAmount(transaction.OutstandingAmount, transaction.Currency);
         var title = GetTitle(transaction);
-        var dueUtc = transaction.DueUtc.Value;
+        var due = await DocumentDates.ToSiteDueDateAsync(_localClock, transaction.DueUtc.Value);
         var paymentMethod = transaction.AutoCollection?.PaymentMethodDescription;
 
         // A payment that will be taken automatically needs no action, only notice: the owner should know which
@@ -144,13 +154,13 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
         var reminder = transaction.AutoCollection is not null
             ? new Reminder
             {
-                Subject = S["Upcoming payment: {0} on {1:d}", amount, dueUtc].Value,
+                Subject = S["Upcoming payment: {0} on {1:d}", amount, due].Value,
                 Summary = string.IsNullOrEmpty(paymentMethod)
-                    ? S["{0} for {1} will be charged to your card on file on {2:d}.", amount, title, dueUtc].Value
-                    : S["{0} for {1} will be charged to {2} on {3:d}.", amount, title, paymentMethod, dueUtc].Value,
+                    ? S["{0} for {1} will be charged to your card on file on {2:d}.", amount, title, due].Value
+                    : S["{0} for {1} will be charged to {2} on {3:d}.", amount, title, paymentMethod, due].Value,
                 Body = string.IsNullOrEmpty(paymentMethod)
-                    ? S["This is a reminder that your scheduled payment of {0} for {1} will be charged to your card on file on {2:d}. You do not need to do anything. If the card has changed, please contact us before then.", amount, title, dueUtc].Value
-                    : S["This is a reminder that your scheduled payment of {0} for {1} will be charged to {2} on {3:d}. You do not need to do anything. If the card has changed, please contact us before then.", amount, title, paymentMethod, dueUtc].Value,
+                    ? S["This is a reminder that your scheduled payment of {0} for {1} will be charged to your card on file on {2:d}. You do not need to do anything. If the card has changed, please contact us before then.", amount, title, due].Value
+                    : S["This is a reminder that your scheduled payment of {0} for {1} will be charged to {2} on {3:d}. You do not need to do anything. If the card has changed, please contact us before then.", amount, title, paymentMethod, due].Value,
             }
             : null;
 
@@ -162,9 +172,9 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
             invoice = await PrepareInvoiceAsync(transaction, cancellationToken);
             reminder = new Reminder
             {
-                Subject = S["Payment due on {1:d}: {0}", amount, dueUtc].Value,
-                Summary = S["A payment of {0} for {1} is due on {2:d}.", amount, title, dueUtc].Value,
-                Body = S["This is a reminder that a payment of {0} for {1} is due on {2:d}.", amount, title, dueUtc].Value + invoice.Instructions,
+                Subject = S["Payment due on {1:d}: {0}", amount, due].Value,
+                Summary = S["A payment of {0} for {1} is due on {2:d}.", amount, title, due].Value,
+                Body = S["This is a reminder that a payment of {0} for {1} is due on {2:d}.", amount, title, due].Value + invoice.Instructions,
                 ActionUrl = invoice.PayUrl,
                 ActionText = S["Pay {0}", amount].Value,
                 InvoiceUrl = invoice.InvoiceUrl,
@@ -187,7 +197,7 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
         {
             CreatedUtc = now,
             Type = TransactionEventType.ReminderSent,
-            Message = S["A reminder that {0} is due on {1:d} was sent.", amount, dueUtc].Value,
+            Message = S["A reminder that {0} is due on {1:d} was sent.", amount, due].Value,
         });
 
         return true;
@@ -210,7 +220,7 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
 
         // The invoice itself, not a reminder: it asks for the payment for the first time.
         var body = transaction.DueUtc.HasValue
-            ? S["Here is your invoice for {0}: {1}, due on {2:d}.", title, amount, transaction.DueUtc.Value].Value
+            ? S["Here is your invoice for {0}: {1}, due on {2:d}.", title, amount, await DocumentDates.ToSiteDueDateAsync(_localClock, transaction.DueUtc.Value)].Value
             : S["Here is your invoice for {0}: {1}.", title, amount].Value;
 
         var reminder = new Reminder

@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Localization;
+using OrchardCore.Modules;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Users;
 
@@ -37,6 +38,7 @@ public sealed class CallQualityReportProvider : ContactCenterReportBase, IReport
     private readonly IInteractionEventStore _eventStore;
     private readonly IAgentProfileStore _agentProfileStore;
     private readonly UserManager<IUser> _userManager;
+    private readonly ILocalClock _localClock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CallQualityReportProvider"/> class.
@@ -48,6 +50,7 @@ public sealed class CallQualityReportProvider : ContactCenterReportBase, IReport
     /// <param name="eventStore">The event log, from which each interaction's outcome is read.</param>
     /// <param name="agentProfileStore">The agent directory, for agent names.</param>
     /// <param name="userManager">The user manager, for the name of an agent whose profile does not carry one.</param>
+    /// <param name="localClock">The tenant's local clock, for the time zone the times are shown in.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public CallQualityReportProvider(
         IContactCenterReportingService reportingService,
@@ -57,6 +60,7 @@ public sealed class CallQualityReportProvider : ContactCenterReportBase, IReport
         IInteractionEventStore eventStore,
         IAgentProfileStore agentProfileStore,
         UserManager<IUser> userManager,
+        ILocalClock localClock,
         IStringLocalizer<CallQualityReportProvider> stringLocalizer)
         : base(reportingService, capabilityGuard, stringLocalizer)
     {
@@ -65,6 +69,7 @@ public sealed class CallQualityReportProvider : ContactCenterReportBase, IReport
         _eventStore = eventStore;
         _agentProfileStore = agentProfileStore;
         _userManager = userManager;
+        _localClock = localClock;
     }
 
     /// <inheritdoc/>
@@ -100,6 +105,7 @@ public sealed class CallQualityReportProvider : ContactCenterReportBase, IReport
     {
         var range = context.Filter.GetDateRange();
         var criteria = ContactCenterReportFilter.GetCriteria(context.Filter);
+        var timeZone = await ReportTimeZone.ResolveAsync(_localClock);
 
         var records = (await _recordStore.GetObservedBetweenAsync(
             range.FromUtc.GetValueOrDefault(),
@@ -236,7 +242,7 @@ public sealed class CallQualityReportProvider : ContactCenterReportBase, IReport
         {
             var columns = new[]
             {
-                new ReportColumn(S["Ended (UTC)"].Value),
+                new ReportColumn(S["Ended ({0})", timeZone.Name].Value),
                 new ReportColumn(S["Agent"].Value),
                 new ReportColumn(S["Side"].Value),
                 new ReportColumn(S["MOS"].Value, ReportColumnAlign.End),
@@ -252,7 +258,7 @@ public sealed class CallQualityReportProvider : ContactCenterReportBase, IReport
             var rows = listed
                 .Select(record => new ReportRow(
                 [
-                    record.ObservedUtc.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                    timeZone.ToLocal(record.ObservedUtc).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
                     AgentName(record.AgentId),
                     record.LegRole == CallPartyRole.Customer ? S["Customer"].Value : S["Agent"].Value,
                     FormatNumber(record.Mos, "0.00"),

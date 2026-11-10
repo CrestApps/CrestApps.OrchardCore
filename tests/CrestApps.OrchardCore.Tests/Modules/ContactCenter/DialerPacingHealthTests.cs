@@ -112,9 +112,9 @@ public sealed class DialerPacingHealthTests
         };
 
         // Act
-        var stalled = DialerPacingBannerService.Build(Snapshot(Queue(_stalledQueue, DialerPacingHealthState.Stalled, TimeSpan.FromMinutes(12))), localizer, names);
-        var idle = DialerPacingBannerService.Build(Snapshot(Queue(_idleQueue, DialerPacingHealthState.Idle, TimeSpan.FromSeconds(30))), localizer, names);
-        var nothing = DialerPacingBannerService.Build(Snapshot(), localizer, names);
+        var stalled = DialerPacingBannerService.Build(Snapshot(Queue(_stalledQueue, DialerPacingHealthState.Stalled, TimeSpan.FromMinutes(12))), localizer, names, utc => utc);
+        var idle = DialerPacingBannerService.Build(Snapshot(Queue(_idleQueue, DialerPacingHealthState.Idle, TimeSpan.FromSeconds(30))), localizer, names, utc => utc);
+        var nothing = DialerPacingBannerService.Build(Snapshot(), localizer, names, utc => utc);
 
         // Assert
         Assert.Equal("danger", stalled.Level);
@@ -349,12 +349,12 @@ public sealed class DialerPacingHealthTests
         queue.LockNotAcquiredSinceUtc = _now.AddMinutes(-20);
 
         // Act
-        var banner = DialerPacingBannerService.Build(Snapshot(queue), localizer, names);
+        var banner = DialerPacingBannerService.Build(Snapshot(queue), localizer, names, utc => utc.AddHours(-4));
 
         // Assert
         Assert.Equal("danger", banner.Level);
         Assert.Equal(DialerPacingHealthState.LockNotAcquired, banner.State);
-        Assert.Contains("the pacing lock of Renewals has not been acquired since 2026-10-17 11:40 UTC (20 minutes ago)", banner.Message, StringComparison.Ordinal);
+        Assert.Contains("the pacing lock of Renewals has not been acquired since 2026-10-17 07:40 (20 minutes ago)", banner.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -365,8 +365,8 @@ public sealed class DialerPacingHealthTests
         var names = new Dictionary<string, string>(StringComparer.Ordinal) { ["nothing"] = "Win-back" };
 
         // Act
-        var waiting = DialerPacingBannerService.Build(Snapshot(Queue(_nothingQueue, DialerPacingHealthState.NothingToCall, TimeSpan.FromSeconds(20))), localizer, names);
-        var empty = DialerPacingBannerService.Build(Snapshot(), localizer, names);
+        var waiting = DialerPacingBannerService.Build(Snapshot(Queue(_nothingQueue, DialerPacingHealthState.NothingToCall, TimeSpan.FromSeconds(20))), localizer, names, utc => utc);
+        var empty = DialerPacingBannerService.Build(Snapshot(), localizer, names, utc => utc);
 
         // Assert
         Assert.Equal(DialerPacingHealthState.NothingToCall, waiting.State);

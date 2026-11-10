@@ -1,8 +1,10 @@
 @model IntervalStatisticsViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
 @using System.Globalization
 
 @{
-    string Utc(DateTime? value) => value.HasValue ? DateTime.SpecifyKind(value.Value, DateTimeKind.Utc).ToString("yyyy-MM-dd HH:mm", CultureInfo.CurrentCulture) + " UTC" : T["Never"].Value;
+    // Run times are read in the site time zone; the statistics days themselves stay UTC days.
+    async Task<string> Local(DateTime? value) => value.HasValue ? (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(value.Value, DateTimeKind.Utc))).ToString("yyyy-MM-dd HH:mm", CultureInfo.CurrentCulture) : T["Never"].Value;
     string Day(DateTime? value) => value.HasValue ? value.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : string.Empty;
     var total = Model.TodayTotal;
 }
@@ -29,11 +31,11 @@
                 <h2 class="h6 card-title">@T["Progress"]</h2>
                 <dl class="row mb-0 small">
                     <dt class="col-6">@T["Last run"]</dt>
-                    <dd class="col-6">@Utc(Model.State.LastRunUtc)</dd>
+                    <dd class="col-6">@await Local(Model.State.LastRunUtc)</dd>
                     <dt class="col-6">@T["Last 30 days computed"]</dt>
                     <dd class="col-6">@T["{0} of 30 ({1} final)", Model.DaysComputed, Model.DaysFinal]</dd>
                     <dt class="col-6">@T["Today computed"]</dt>
-                    <dd class="col-6">@(Model.Today is null ? T["Not yet"].Value : Utc(Model.Today.ComputedUtc))</dd>
+                    <dd class="col-6">@(Model.Today is null ? T["Not yet"].Value : await Local(Model.Today.ComputedUtc))</dd>
                     <dt class="col-6">@T["Kept for"]</dt>
                     <dd class="col-6">@T["{0} days", Model.RetentionDays]</dd>
                 </dl>

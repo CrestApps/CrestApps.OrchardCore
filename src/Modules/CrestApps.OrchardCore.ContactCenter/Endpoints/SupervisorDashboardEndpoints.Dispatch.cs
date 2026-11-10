@@ -311,14 +311,16 @@ internal static partial class SupervisorDashboardEndpoints
                 {
                     Blocker = bucket.Blocker.ToString(),
                     Count = bucket.Count,
-                    NextDueUtc = bucket.NextDueUtc,
+                    // Read back from stored records, these can come with an unspecified kind; marked as UTC so the
+                    // JSON carries a Z and the browser does not read them as its own local time.
+                    NextDueUtc = bucket.NextDueUtc is { } nextDueUtc ? DateTime.SpecifyKind(nextDueUtc, DateTimeKind.Utc) : null,
                 })
                 .ToList(),
             Routing = diagnosis.RoutingFinding is null
                 ? null
                 : new SupervisorDispatchRoutingViewModel
                 {
-                    OccurredUtc = diagnosis.RoutingFinding.OccurredUtc,
+                    OccurredUtc = DateTime.SpecifyKind(diagnosis.RoutingFinding.OccurredUtc, DateTimeKind.Utc),
                     Reason = diagnosis.RoutingFinding.Reason,
                     CandidateCount = diagnosis.RoutingFinding.CandidateCount,
                     CandidateReasons = diagnosis.RoutingFinding.CandidateReasons

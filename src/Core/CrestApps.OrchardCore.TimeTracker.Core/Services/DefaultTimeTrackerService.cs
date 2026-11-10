@@ -686,21 +686,24 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
         return errors;
     }
 
-    // In the site's time when there is a site; tests and tools without one get UTC.
     private async Task<string> LocalAsync(DateTime utc)
-    {
-        var local = _localClocks.FirstOrDefault() is { } clock
+        => (await ToLocalAsync(utc)).ToString("ddd d MMM HH:mm:ss", CultureInfo.CurrentCulture);
+
+    // In the site's time when there is a site; tests and tools without one get UTC.
+    private async Task<DateTime> ToLocalAsync(DateTime utc)
+        => _localClocks.FirstOrDefault() is { } clock
             ? (await clock.ConvertToLocalAsync(new DateTimeOffset(DateTime.SpecifyKind(utc, DateTimeKind.Utc)))).DateTime
             : utc;
-
-        return local.ToString("ddd d MMM HH:mm:ss", CultureInfo.CurrentCulture);
-    }
 
     private async Task<string> DescribeAsync(TimeEntry entry, CancellationToken cancellationToken)
     {
         var stage = await FindStageAsync(entry.StageId, cancellationToken, includeDisabled: true);
+        var start = (await ToLocalAsync(entry.StartUtc)).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
+        var end = entry.EndUtc is { } endUtc
+            ? (await ToLocalAsync(endUtc)).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)
+            : "open";
 
-        return string.Create(CultureInfo.InvariantCulture, $"{stage?.Name ?? entry.StageId} {entry.StartUtc:yyyy-MM-dd HH:mm}-{(entry.EndUtc is { } end ? end.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) : "open")} UTC");
+        return $"{stage?.Name ?? entry.StageId} {start}-{end}";
     }
 
     private async Task<TimeStage> FindStageAsync(string stageId, CancellationToken cancellationToken, bool includeDisabled = false)

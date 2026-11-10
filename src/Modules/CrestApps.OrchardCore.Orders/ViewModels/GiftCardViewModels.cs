@@ -36,7 +36,8 @@ public class GiftCardCreateViewModel
 
     public string Code { get; set; }
 
-    public DateTime? ExpiresUtc { get; set; }
+    // In the site's time zone; the card keeps it in UTC.
+    public DateTime? Expires { get; set; }
 
     public string RecipientName { get; set; }
 
@@ -81,7 +82,8 @@ public class GiftCardEditViewModel
 
     public bool IsEnabled { get; set; }
 
-    public DateTime? ExpiresUtc { get; set; }
+    // In the site's time zone; the card keeps it in UTC.
+    public DateTime? Expires { get; set; }
 
     public string RecipientName { get; set; }
 

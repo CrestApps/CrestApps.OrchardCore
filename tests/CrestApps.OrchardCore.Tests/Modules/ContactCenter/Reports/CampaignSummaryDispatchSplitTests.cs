@@ -211,7 +211,8 @@ public sealed class CampaignSummaryDispatchSplitTests
             CreateCampaignGroups().Object,
             Options.Create(new ContactCenterReportingOptions()),
             Mock.Of<IInteractionEventStore>(),
-            Options.Create(new ActivitySourceOptions()));
+            Options.Create(new ActivitySourceOptions()),
+            CrestApps.OrchardCore.Tests.Modules.AI.Chat.Reports.ReportTestClocks.LocalClock(TimeSpan.Zero));
 
         return new CampaignSummaryReportProvider(
             reportingService,

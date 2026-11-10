@@ -1,4 +1,11 @@
 @model VendorDashboardViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    // Stored times are UTC; people read them in the site time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 
 @* What a vendor has earned and been paid, on its admin page and on its own vendor page. *@
 
@@ -61,7 +68,7 @@
                         @switch (earning.Status)
                         {
                             case VendorEarningStatus.Held:
-                                <span class="badge text-bg-warning">@(earning.AwaitsFulfillment ? T["Held until {0:d} and fulfilled", earning.HoldUntilUtc] : T["Held until {0:d}", earning.HoldUntilUtc])</span>
+                                <span class="badge text-bg-warning">@(earning.AwaitsFulfillment ? T["Held until {0:d} and fulfilled", await LocalAsync(earning.HoldUntilUtc)] : T["Held until {0:d}", await LocalAsync(earning.HoldUntilUtc)])</span>
                                 break;
                             case VendorEarningStatus.Available:
                                 <span class="badge text-bg-info">@T["Ready to pay out"]</span>
@@ -98,7 +105,7 @@ else
                 @foreach (var payout in Model.Payouts)
                 {
                     <tr>
-                        <td>@payout.CreatedUtc.ToString("d", culture)</td>
+                        <td>@((await LocalAsync(payout.CreatedUtc)).ToString("d", culture))</td>
                         <td>@payout.OrderNumber</td>
                         <td class="text-end">@ProductPriceFormatter.Format(payout.Amount, payout.Currency)</td>
                         <td>@(payout.Status == VendorPayoutStatus.Paid ? T["Sent to Stripe"] : T["Failed: {0}", payout.Failure])</td>

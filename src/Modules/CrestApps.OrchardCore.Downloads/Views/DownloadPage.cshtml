@@ -40,7 +40,7 @@
             @switch (Model.Problem)
             {
                 case DownloadProblem.Expired:
-                    @T["The link expired on {0:d}.", entitlement?.ExpiresUtc]
+                    @T["The link expired on {0:d}.", entitlement?.ExpiresUtc is { } expiredUtc ? await LocalAsync(expiredUtc) : null]
                     break;
                 case DownloadProblem.LimitReached:
                     @T["All of its downloads have been used."]

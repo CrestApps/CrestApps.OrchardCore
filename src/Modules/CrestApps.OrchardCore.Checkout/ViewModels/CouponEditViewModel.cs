@@ -72,6 +72,16 @@ public sealed class CouponEditViewModel
     public DateTime? EndsUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets when the coupon starts being valid, in the site's time zone, as the admin form shows it.
+    /// </summary>
+    public DateTime? Starts { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the coupon stops being valid, in the site's time zone, as the admin form shows it.
+    /// </summary>
+    public DateTime? Ends { get; set; }
+
+    /// <summary>
     /// Gets or sets how many times the coupon may be redeemed in total.
     /// </summary>
     public int? MaxRedemptions { get; set; }

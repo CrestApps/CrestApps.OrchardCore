@@ -1,4 +1,11 @@
 @model MySettingsViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    // Stored times are UTC; people read them in the site time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 <zone Name="Title">
     <breadcrumb name="MyWorkSettings" title="@T["Settings"]">
         <breadcrumb-item id="MyWork" action="Index" controller="MyWork" area="CrestApps.OrchardCore.Workforce">@T["My Work"]</breadcrumb-item>
@@ -21,7 +28,7 @@
                 @foreach (var device in Model.Devices)
                 {
                     <li class="list-group-item px-0 d-flex flex-wrap align-items-center gap-2">
-                        <span class="me-auto small">@(string.IsNullOrEmpty(device.UserAgent) ? T["A device"].Value : device.UserAgent)<br /><span class="text-muted">@T["Added {0}", device.CreatedUtc.ToLocalTime().ToString("d")]@if (device.LastSentUtc.HasValue) {<text> · </text>@T["last reached {0}", device.LastSentUtc.Value.ToLocalTime().ToString("g")]}</span></span>
+                        <span class="me-auto small">@(string.IsNullOrEmpty(device.UserAgent) ? T["A device"].Value : device.UserAgent)<br /><span class="text-muted">@T["Added {0}", (await LocalAsync(device.CreatedUtc)).ToString("d")]@if (device.LastSentUtc.HasValue) {<text> · </text>@T["last reached {0}", (await LocalAsync(device.LastSentUtc.Value)).ToString("g")]}</span></span>
                         <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/push/unsubscribe")"><input type="hidden" name="endpoint" value="@device.Endpoint" /><button type="submit" class="btn btn-outline-danger btn-sm">@T["Turn off"]</button></form>
                     </li>
                 }
