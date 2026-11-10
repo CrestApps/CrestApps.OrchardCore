@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Xml;
+using CrestApps.OrchardCore.Products.Core.Feeds;
 using CrestApps.OrchardCore.Tabular;
 
 namespace CrestApps.OrchardCore.Products.Feeds;
@@ -57,7 +58,8 @@ public static class ProductFeedWriter
         {
             "id", "item_group_id", "title", "description", "link", "image_link", "additional_image_link", "availability",
             "availability_date", "price", "sale_price", "sale_price_effective_date", "brand", "gtin", "mpn",
-            "identifier_exists", "condition", "google_product_category", "product_type", "color", "size",
+            "identifier_exists", "condition", "google_product_category", "product_type", "color", "size", "shipping_weight",
+            "shipping_length", "shipping_width", "shipping_height",
         };
 
         var csv = new StringBuilder();
@@ -161,7 +163,23 @@ public static class ProductFeedWriter
         {
             yield return ("size", item.Size);
         }
+
+        // Google reads a weight in lb, oz, g or kg, and a size in in or cm.
+        if (item.Weight is > 0m && item.WeightUnit is "lb" or "oz" or "g" or "kg")
+        {
+            yield return ("shipping_weight", Measure(item.Weight.Value, item.WeightUnit));
+        }
+
+        if (item is { Length: > 0m, Width: > 0m, Height: > 0m } && item.DimensionsUnit is "in" or "cm")
+        {
+            yield return ("shipping_length", Measure(item.Length.Value, item.DimensionsUnit));
+            yield return ("shipping_width", Measure(item.Width.Value, item.DimensionsUnit));
+            yield return ("shipping_height", Measure(item.Height.Value, item.DimensionsUnit));
+        }
     }
+
+    private static string Measure(decimal value, string unit)
+        => value.ToString("0.###", CultureInfo.InvariantCulture) + " " + unit;
 
     private static string Quote(string value)
         => CsvWriter.Escape(value?.Replace('\n', ' ').Replace('\r', ' '), guardFormula: false);

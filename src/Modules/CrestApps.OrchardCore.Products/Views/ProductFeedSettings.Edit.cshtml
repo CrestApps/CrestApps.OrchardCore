@@ -86,6 +86,26 @@
     </div>
 </div>
 
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="ShowToAgentsByDefault" type="checkbox" class="form-check-input" />
+            <label asp-for="ShowToAgentsByDefault" class="form-check-label">@T["Show products to AI agents"]</label>
+        </div>
+        <span class="hint dashed">@T["Whether AI agents, such as ChatGPT, may show products to buyers. A product's Product Feed part can say otherwise."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="AgentCheckoutByDefault" type="checkbox" class="form-check-input" />
+            <label asp-for="AgentCheckoutByDefault" class="form-check-label">@T["Let AI agents check products out"]</label>
+        </div>
+        <span class="hint dashed">@T["Whether AI agents may buy products for buyers. Agents can only buy products they may show."]</span>
+    </div>
+</div>
+
 <div class="ocat-limited-wrapper">
     <label asp-for="KeyAction" class="ocat-label">@T["Feed key"]</label>
     <div class="ocat-limited">

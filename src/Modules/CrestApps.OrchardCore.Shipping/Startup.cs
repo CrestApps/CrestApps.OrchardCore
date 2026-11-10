@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Commerce.Core;
+using CrestApps.OrchardCore.Products.Core;
+using CrestApps.OrchardCore.Products.Core.Feeds;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Shipping.Deployments;
@@ -184,4 +186,14 @@ public sealed class WebhooksStartup : StartupBase
         services.AddWebhookEvent(CommerceWebhookEvents.ShipmentShipped, "Shipment shipped", "Shipments");
         services.AddWebhookEvent(CommerceWebhookEvents.ShipmentDelivered, "Shipment delivered", "Shipments");
     }
+}
+
+/// <summary>
+/// Gives product feed items their weight, size and cheapest shipping rate when Product Feeds is on.
+/// </summary>
+[RequireFeatures(ProductConstants.Feature.Feeds)]
+public sealed class ProductFeedsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddScoped<IProductFeedItemContributor, ShippingProductFeedContributor>();
 }

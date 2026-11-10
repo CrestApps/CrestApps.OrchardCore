@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Products.Feeds;
+namespace CrestApps.OrchardCore.Products.Core.Feeds;
 
 /// <summary>
 /// Why an item would be refused, or was left out of the feed.

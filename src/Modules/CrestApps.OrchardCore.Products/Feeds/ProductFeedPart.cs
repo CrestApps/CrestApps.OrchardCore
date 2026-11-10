@@ -27,4 +27,15 @@ public sealed class ProductFeedPart : ContentPart
     public string GoogleProductCategory { get; set; }
 
     public bool ExcludeFromFeeds { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether AI agents may show the product to buyers, or <see langword="null"/> for the store's default.
+    /// </summary>
+    public bool? ShowToAgents { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether AI agents may check the product out for a buyer, or <see langword="null"/> for the store's
+    /// default.
+    /// </summary>
+    public bool? AgentCheckout { get; set; }
 }
