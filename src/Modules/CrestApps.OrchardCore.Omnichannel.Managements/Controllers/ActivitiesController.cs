@@ -1918,9 +1918,14 @@ public sealed class ActivitiesController : Controller
                     continue;
                 }
 
-                // Queueing a record with no number to dial only hands agents an offer that fails with "The activity has
-                // no destination to dial", so it is left as it is.
-                if (string.IsNullOrWhiteSpace(activity.PreferredDestination))
+                // The dialer calls the activity's number, which is copied from the contact when the activity is created.
+                // A record loaded by hand on a subject with no phone channel has none, and one loaded for SMS or email
+                // has an address the dialer cannot call, so the contact's phone number is looked up now. Those records
+                // used to be queued without it, offered once, and failed with "The activity has no destination to dial".
+                var destination = await FindDialableDestinationAsync(activity);
+
+                // Queueing a record with no number to dial only hands agents an offer that fails, so it is left as it is.
+                if (string.IsNullOrWhiteSpace(destination))
                 {
                     noDestinationCount++;
 
@@ -1952,6 +1957,11 @@ public sealed class ActivitiesController : Controller
                 activity.Source = profile.ActivitySource;
                 activity.DialerProfileId = profile.ProfileId;
                 activity.InteractionType = ActivityInteractionType.Manual;
+
+                // A dialer record is a phone call, as a dialer load makes it.
+                activity.Channel = OmnichannelConstants.Channels.Phone;
+                activity.Kind = ActivityKind.Call;
+                activity.PreferredDestination = destination;
                 activity.AISessionId = null;
 
                 // The dialer offers each record to whichever agent signed in to the campaign is free, so an assignee
@@ -2123,6 +2133,30 @@ public sealed class ActivitiesController : Controller
             activity.Status == ActivityStatus.NotStated &&
             activity.InteractionType == ActivityInteractionType.Manual &&
             string.Equals(activity.ContactContentItemId, contactContentItemId, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The number the dialer can call for an activity: its own when it is already a phone activity with a number,
+    /// otherwise its contact's preferred phone number, unless the contact has opted out of calls.
+    /// </summary>
+    private async Task<string> FindDialableDestinationAsync(OmnichannelActivity activity)
+    {
+        if (string.Equals(activity.Channel, OmnichannelConstants.Channels.Phone, StringComparison.Ordinal) &&
+            !string.IsNullOrWhiteSpace(activity.PreferredDestination))
+        {
+            return activity.PreferredDestination;
+        }
+
+        if (string.IsNullOrEmpty(activity.ContactContentItemId))
+        {
+            return null;
+        }
+
+        var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+
+        return contact is null
+            ? null
+            : OmnichannelHelper.GetPreferredDestenation(contact, _contactMethods.Get(contact), OmnichannelConstants.Channels.Phone);
     }
 
     private static void ResetAssignment(OmnichannelActivity activity)

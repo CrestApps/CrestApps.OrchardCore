@@ -1,4 +1,6 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.ContentFields.Fields;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Controllers;
@@ -9,12 +11,14 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
 using Moq;
+using OrchardCore.ContentFields.Fields;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Flows.Models;
 using OrchardCore.Modules;
 using OrchardCore.Users;
 using CrestApps.OrchardCore.Users;
@@ -121,6 +125,76 @@ public sealed class BulkChangeDialerProfileTests
             dialer => dialer.EnqueueAsync("activity-2", It.IsAny<string>(), It.IsAny<ActivityDialerProfileDescriptor>(), It.IsAny<CancellationToken>()),
             Times.Never);
         Assert.NotEmpty(harness.Notifier.Invocations);
+    }
+
+    // A record loaded by hand on a subject with no phone channel has no number of its own, though its lead has one. It
+    // used to be queued as it was, offered once and failed with "The activity has no destination to dial"; a hundred
+    // such records then sat failed while agents signed in to their campaign got nothing.
+    [Fact]
+    public async Task BulkChangeDialerProfileAsync_WhenTheRecordHasNoNumberButItsLeadHasOne_DialsTheLeadsNumber()
+    {
+        // Arrange
+        var harness = new Harness();
+        var activity = harness.AddActivity("activity-1", CampaignId);
+        activity.Channel = null;
+        activity.PreferredDestination = null;
+        activity.ContactContentItemId = "lead-1";
+        harness.AddLead("lead-1", "+15555550123");
+
+        // Act
+        var processed = await harness.Controller.BulkChangeDialerProfileAsync([activity], PowerProfileId);
+
+        // Assert
+        Assert.Equal(1, processed);
+        Assert.Equal("+15555550123", activity.PreferredDestination);
+        Assert.Equal(OmnichannelConstants.Channels.Phone, activity.Channel);
+        Assert.Equal(ActivityKind.Call, activity.Kind);
+        harness.Dialer.Verify(
+            dialer => dialer.EnqueueAsync("activity-1", CampaignId, It.IsAny<ActivityDialerProfileDescriptor>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    // An email address is not something the dialer can call.
+    [Fact]
+    public async Task BulkChangeDialerProfileAsync_WhenTheRecordWasForEmail_DialsTheLeadsPhoneNumber()
+    {
+        // Arrange
+        var harness = new Harness();
+        var activity = harness.AddActivity("activity-1", CampaignId);
+        activity.Channel = OmnichannelConstants.Channels.Email;
+        activity.PreferredDestination = "lead@example.com";
+        activity.ContactContentItemId = "lead-1";
+        harness.AddLead("lead-1", "+15555550123");
+
+        // Act
+        await harness.Controller.BulkChangeDialerProfileAsync([activity], PowerProfileId);
+
+        // Assert
+        Assert.Equal("+15555550123", activity.PreferredDestination);
+        Assert.Equal(OmnichannelConstants.Channels.Phone, activity.Channel);
+    }
+
+    // A failed record moved to a dialer profile is worked again, so it starts over rather than staying failed and being
+    // withdrawn from the queue the moment the dialer reads it.
+    [Fact]
+    public async Task BulkChangeDialerProfileAsync_WhenTheRecordFailed_ReopensAndQueuesIt()
+    {
+        // Arrange
+        var harness = new Harness();
+        var activity = harness.AddActivity("activity-1", CampaignId);
+        activity.Status = ActivityStatus.Failed;
+        activity.AssignmentStatus = ActivityAssignmentStatus.Released;
+
+        // Act
+        var processed = await harness.Controller.BulkChangeDialerProfileAsync([activity], PowerProfileId);
+
+        // Assert
+        Assert.Equal(1, processed);
+        Assert.Equal(ActivityStatus.Scheduled, activity.Status);
+        Assert.Equal(ActivityAssignmentStatus.Available, activity.AssignmentStatus);
+        harness.Dialer.Verify(
+            dialer => dialer.EnqueueAsync("activity-1", CampaignId, It.IsAny<ActivityDialerProfileDescriptor>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     // A campaign's waiting records are worked under the profile of the one at the head of its queue, so records moved
@@ -299,6 +373,7 @@ public sealed class BulkChangeDialerProfileTests
     private sealed class Harness
     {
         private readonly Mock<IOmnichannelActivityManager> _activityManager = new();
+        private readonly Mock<IContentManager> _contentManager = new();
 
         public Harness()
         {
@@ -334,7 +409,7 @@ public sealed class BulkChangeDialerProfileTests
             Controller = new ActivitiesController(
                 new Mock<global::YesSql.ISession>().Object,
                 new Mock<IUpdateModelAccessor>().Object,
-                new Mock<IContentManager>().Object,
+                _contentManager.Object,
                 new Mock<IDisplayManager<OmnichannelActivity>>().Object,
                 _activityManager.Object,
                 new Mock<IAuthorizationService>().Object,
@@ -378,6 +453,7 @@ public sealed class BulkChangeDialerProfileTests
                 CampaignId = campaignId,
                 Source = ActivitySources.Manual,
                 Status = ActivityStatus.NotStated,
+                Channel = OmnichannelConstants.Channels.Phone,
                 PreferredDestination = "+15555550100",
             };
 
@@ -386,6 +462,33 @@ public sealed class BulkChangeDialerProfileTests
                 .ReturnsAsync(activity);
 
             return activity;
+        }
+
+        public ContentItem AddLead(string contentItemId, string phoneNumber)
+        {
+            var phone = new ContentItem { ContentType = OmnichannelConstants.ContentTypes.PhoneNumber };
+            phone.Alter<PhoneNumberInfoPart>(part =>
+            {
+                part.Number = new PhoneField { PhoneNumber = phoneNumber };
+                part.Type = new TextField { Text = ContactPhoneTypes.Cell };
+            });
+
+            var bag = new BagPart();
+            bag.ContentItems.Add(phone);
+
+            var lead = new ContentItem
+            {
+                ContentItemId = contentItemId,
+                ContentType = "Lead",
+            };
+            lead.Alter<OmnichannelContactPart>(_ => { });
+            lead.Apply(OmnichannelConstants.NamedParts.ContactMethods, bag);
+
+            _contentManager
+                .Setup(manager => manager.GetAsync(contentItemId, It.IsAny<VersionOptions>()))
+                .ReturnsAsync(lead);
+
+            return lead;
         }
 
         public void AssertNotQueued()
