@@ -20,4 +20,16 @@ public class AgenticCommerceSettingsViewModel
     public string GooglePayMerchantName { get; set; }
 
     public bool GooglePayTestEnvironment { get; set; }
+
+    public bool EnableDelegatedAuthentication { get; set; }
+
+    public string AcquirerBin { get; set; }
+
+    public string AcquirerCountry { get; set; }
+
+    public string AcquirerMerchantId { get; set; }
+
+    public string AuthenticationMerchantName { get; set; }
+
+    public string ThreeDSecureRequestorId { get; set; }
 }

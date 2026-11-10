@@ -44,4 +44,15 @@ public sealed class ChargeDelegatedCredentialResponse
     /// Gets or sets a value indicating whether the credential itself was refused, such as an expired or used token.
     /// </summary>
     public bool InvalidCredential { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether Stripe refused the payment because the bank asks the buyer to approve it
+    /// and the request asked Stripe not to start that itself.
+    /// </summary>
+    public bool RequiresAuthentication { get; set; }
+
+    /// <summary>
+    /// Gets or sets the brand of the card, such as <c>visa</c>, when Stripe said.
+    /// </summary>
+    public string CardBrand { get; set; }
 }

@@ -55,6 +55,13 @@ public sealed class PaymentBeginResult
     public bool RequiresAuthentication { get; set; }
 
     /// <summary>
+    /// Gets or sets the brand of the card being charged, such as <c>visa</c>, <c>mastercard</c> or <c>amex</c>, when
+    /// the provider knows it. A caller that authenticates the payer outside the provider uses it to pick the card
+    /// network's 3-D Secure directory server.
+    /// </summary>
+    public string CardBrand { get; set; }
+
+    /// <summary>
     /// Creates a successful result.
     /// </summary>
     /// <param name="providerReference">The provider's authoritative reference.</param>

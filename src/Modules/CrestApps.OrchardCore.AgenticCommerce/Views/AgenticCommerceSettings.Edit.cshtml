@@ -78,3 +78,58 @@
         </div>
     </div>
 </div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["3-D Secure by agents"]</div>
+    <div class="card-body">
+        <p class="text-body-secondary">@T["When the buyer's bank wants to approve a payment, an agent that can run 3-D Secure itself authenticates the buyer and sends the result, which the payment provider uses for the same payment. Other agents, or a store without these details, send the buyer to the store's checkout instead. Your payment provider gives you the acquirer details."]</p>
+        <div class="ocat-wrapper" asp-validation-class-for="EnableDelegatedAuthentication">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="EnableDelegatedAuthentication" class="form-check-input" />
+                    <label asp-for="EnableDelegatedAuthentication" class="form-check-label">@T["Let agents run 3-D Secure"]</label>
+                    <span class="hint dashed">@T["Only for agents that say they can (ACP's 3ds intervention), and payment providers that take an outside 3-D Secure result, such as Stripe with 3D Secure import turned on for the account."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="AcquirerBin">
+            <label asp-for="AcquirerBin" class="ocat-label">@T["Acquirer BIN"]</label>
+            <div class="ocat-end">
+                <input asp-for="AcquirerBin" class="form-control" maxlength="11" />
+                <span asp-validation-for="AcquirerBin" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="AcquirerCountry">
+            <label asp-for="AcquirerCountry" class="ocat-label">@T["Acquirer country"]</label>
+            <div class="ocat-end">
+                <input asp-for="AcquirerCountry" class="form-control" maxlength="2" placeholder="US" />
+                <span asp-validation-for="AcquirerCountry" class="text-danger"></span>
+                <span class="hint">@T["The acquirer's two-letter country code."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="AcquirerMerchantId">
+            <label asp-for="AcquirerMerchantId" class="ocat-label">@T["Acquirer merchant ID"]</label>
+            <div class="ocat-end">
+                <input asp-for="AcquirerMerchantId" class="form-control" maxlength="35" />
+                <span asp-validation-for="AcquirerMerchantId" class="text-danger"></span>
+                <span class="hint">@T["The store's merchant ID at the acquirer."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="AuthenticationMerchantName">
+            <label asp-for="AuthenticationMerchantName" class="ocat-label">@T["Merchant name"]</label>
+            <div class="ocat-end">
+                <input asp-for="AuthenticationMerchantName" class="form-control" maxlength="40" />
+                <span asp-validation-for="AuthenticationMerchantName" class="text-danger"></span>
+                <span class="hint">@T["The name the buyer's bank shows while it authenticates them."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="ThreeDSecureRequestorId">
+            <label asp-for="ThreeDSecureRequestorId" class="ocat-label">@T["3-D Secure requestor ID"]</label>
+            <div class="ocat-end">
+                <input asp-for="ThreeDSecureRequestorId" class="form-control" maxlength="35" />
+                <span asp-validation-for="ThreeDSecureRequestorId" class="text-danger"></span>
+                <span class="hint">@T["Optional. Leave it empty when your acquirer gave you none."]</span>
+            </div>
+        </div>
+    </div>
+</div>

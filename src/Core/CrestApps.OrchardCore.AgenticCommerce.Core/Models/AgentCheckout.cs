@@ -128,6 +128,11 @@ public sealed class AgentCheckout : CatalogItem, IModifiedUtcAwareModel
     public string EscalationUrl { get; set; }
 
     /// <summary>
+    /// Gets or sets the 3-D Secure authentication the checkout waits for the agent to run, or <see langword="null"/>.
+    /// </summary>
+    public AgentPendingAuthentication Authentication { get; set; }
+
+    /// <summary>
     /// Gets or sets the brand and last digits of the card the agent paid with, as the agent showed them.
     /// </summary>
     public string PaymentDisplay { get; set; }

@@ -249,7 +249,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
             foreach (var obligationId in expectedObligations)
             {
-                var (step, providerError, declined, requiresAuthentication) = await BeginObligationAsync(
+                var (step, providerError, declined, requiresAuthentication, cardBrand) = await BeginObligationAsync(
                     session,
                     invoice,
                     provider,
@@ -257,6 +257,8 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                     existingAttempts,
                     options,
                     cancellationToken);
+
+                outcome.CardBrand ??= cardBrand;
 
                 if (step is null)
                 {
@@ -273,6 +275,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                     failure.ProviderErrorMessage = providerError;
                     failure.Declined = declined;
                     failure.RequiresAuthentication = requiresAuthentication;
+                    failure.CardBrand = cardBrand;
 
                     return failure;
                 }
@@ -645,7 +648,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
     // Begins (or resumes) one obligation. An obligation that already has a non-failed attempt is resumed
     // rather than re-created, which is what makes a refreshed payment page or a double submit safe.
-    private async Task<(PaymentBeginStep Step, string ProviderError, bool Declined, bool RequiresAuthentication)> BeginObligationAsync(
+    private async Task<(PaymentBeginStep Step, string ProviderError, bool Declined, bool RequiresAuthentication, string CardBrand)> BeginObligationAsync(
         CheckoutSession session,
         CheckoutInvoice invoice,
         ICheckoutPaymentProvider provider,
@@ -677,7 +680,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                 ObligationId = obligationId,
                 AttemptId = attempt.ItemId,
                 RequiresAction = false,
-            }, null, false, false);
+            }, null, false, false, null);
         }
 
         if (attempt is null)
@@ -733,7 +736,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         {
             _logger.LogError(exception, "Provider '{ProviderKey}' threw while beginning obligation '{ObligationId}' of checkout '{SessionId}'.", provider.Key, obligationId, session.SessionId);
 
-            return (null, null, false, false);
+            return (null, null, false, false, null);
         }
 
         if (!result.Succeeded)
@@ -756,7 +759,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                 await _attemptStore.UpdateAsync(attempt, cancellationToken);
             }
 
-            return (null, result.ErrorMessage, result.Declined, result.Declined && result.RequiresAuthentication);
+            return (null, result.ErrorMessage, result.Declined, result.Declined && result.RequiresAuthentication, result.CardBrand);
         }
 
         // Record the provider's reference immediately so the remote resource can always be found again,
@@ -773,7 +776,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             ClientSecret = result.ClientSecret,
             RedirectUrl = result.RedirectUrl,
             RequiresAction = result.RequiresAction || !string.IsNullOrEmpty(result.RedirectUrl),
-        }, null, false, false);
+        }, null, false, false, result.CardBrand);
     }
 
     // Establishes the recurring agreement for one interval. A provider whose capabilities claim recurring

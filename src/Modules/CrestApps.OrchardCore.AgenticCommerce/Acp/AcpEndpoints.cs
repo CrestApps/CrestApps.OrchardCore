@@ -104,6 +104,8 @@ public static class AcpEndpoints
             return AcpResults.Error(StatusCodes.Status400BadRequest, "invalid", "Send the checkout as a JSON object.");
         }
 
+        request.Context.RunsThreeDSecure = AcpCheckoutMapper.ReadRunsThreeDSecure(body);
+
         var result = await checkouts.CreateAsync(request.Context, AcpCheckoutMapper.ReadInput(body), httpContext.RequestAborted);
 
         if (!result.Succeeded)
@@ -161,6 +163,13 @@ public static class AcpEndpoints
             return AcpResults.Error(StatusCodes.Status400BadRequest, "missing", "Send payment_data with the payment handler and its credential.", "$.payment_data");
         }
 
+        AcpCheckoutMapper.ReadAuthenticationResult(body, out var invalidAuthentication);
+
+        if (invalidAuthentication is not null)
+        {
+            return AcpResults.Error(StatusCodes.Status400BadRequest, "invalid", "The 3-D Secure result isn't complete or valid.", invalidAuthentication);
+        }
+
         var update = new AgentCheckoutUpdate
         {
             Signals = AcpCheckoutMapper.ReadSignals(body),
@@ -214,6 +223,10 @@ public static class AcpEndpoints
 
             case AgentCheckoutFailure.InvalidState:
                 return AcpResults.Error(StatusCodes.Status409Conflict, "invalid_state", result.Error);
+
+            case AgentCheckoutFailure.AuthenticationRequired:
+                // A checkout waiting for authentication is completed with the result (ACP 3-D Secure flow).
+                return AcpResults.Error(StatusCodes.Status400BadRequest, "requires_3ds", result.Error, "$.authentication_result");
         }
 
         return AcpResults.Error(StatusCodes.Status400BadRequest, "invalid", result.Error);

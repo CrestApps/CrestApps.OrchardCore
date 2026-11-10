@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.AgenticCommerce.Core.Services;
 using CrestApps.OrchardCore.AgenticCommerce.Models;
 using CrestApps.OrchardCore.AgenticCommerce.Endpoints;
 using CrestApps.OrchardCore.AgenticCommerce.Payments;
+using CrestApps.OrchardCore.Checkout.Services;
 
 namespace CrestApps.OrchardCore.AgenticCommerce.Acp;
 
@@ -13,6 +14,11 @@ namespace CrestApps.OrchardCore.AgenticCommerce.Acp;
 /// </summary>
 public sealed class AcpCheckoutMapper
 {
+    /// <summary>
+    /// The intervention an agent declares when it can run 3-D Secure itself.
+    /// </summary>
+    public const string ThreeDSecureIntervention = "3ds";
+
     private readonly IAgentCheckoutService _checkouts;
 
     public AcpCheckoutMapper(IAgentCheckoutService checkouts)
@@ -130,7 +136,11 @@ public sealed class AcpCheckoutMapper
             InstrumentType = AgentJson.String(payment["instrument"], "type") ?? "card",
             CredentialType = AgentJson.String(payment["instrument"]?["credential"], "type"),
             Credential = token,
+
+            // An agentic token names its card network; a shared payment token doesn't, and the provider says instead.
+            Brand = AgentJson.String(payment["instrument"]?["credential"], "network"),
             BillingAddress = ReadAddress(payment["billing_address"]),
+            Authentication = ReadAuthenticationResult(body, out _),
         };
     }
 
@@ -168,6 +178,20 @@ public sealed class AcpCheckoutMapper
             ["messages"] = new JsonArray([.. view.Messages.Select(message => (JsonNode)WriteMessage(message))]),
             ["links"] = new JsonArray([.. view.Links.Select(link => (JsonNode)new JsonObject { ["type"] = ToLinkType(link.Type), ["url"] = link.Url })]),
         };
+
+        // The interventions both sides handle: 3-D Secure, when the agent runs it and the store takes its result.
+        if (view.AcceptsAuthenticationResult)
+        {
+            json["capabilities"]["interventions"] = new JsonObject
+            {
+                ["supported"] = new JsonArray(ThreeDSecureIntervention),
+            };
+        }
+
+        if (view.AuthenticationMetadata is not null)
+        {
+            json["authentication_metadata"] = WriteAuthenticationMetadata(view.AuthenticationMetadata);
+        }
 
         if (view.Buyer is not null)
         {
@@ -234,8 +258,83 @@ public sealed class AcpCheckoutMapper
             AgentCheckoutStatus.Completed => "completed",
             AgentCheckoutStatus.Canceled => "canceled",
             AgentCheckoutStatus.Expired => "expired",
+            AgentCheckoutStatus.AuthenticationRequired => "authentication_required",
             _ => "not_ready_for_payment",
         };
+
+    /// <summary>
+    /// Returns whether a create request says the agent can run 3-D Secure itself: <c>capabilities.interventions.supported</c>
+    /// holds <c>3ds</c>.
+    /// </summary>
+    /// <param name="body">The request's body.</param>
+    public static bool ReadRunsThreeDSecure(JsonObject body)
+        => body?["capabilities"]?["interventions"]?["supported"] is JsonArray supported &&
+            supported.Any(entry => entry is JsonValue value && value.TryGetValue<string>(out var type) && string.Equals(type, ThreeDSecureIntervention, StringComparison.Ordinal));
+
+    /// <summary>
+    /// Returns the <c>authentication_result</c> of a complete request, or <see langword="null"/> when it has none. When
+    /// it is malformed, <paramref name="invalidPath"/> is the JSON path of what is wrong.
+    /// </summary>
+    /// <param name="body">The request's body.</param>
+    /// <param name="invalidPath">The JSON path of the first member that isn't valid, or <see langword="null"/>.</param>
+    public static ThreeDSecureResult ReadAuthenticationResult(JsonObject body, out string invalidPath)
+    {
+        invalidPath = null;
+
+        if (body is null || !body.ContainsKey("authentication_result"))
+        {
+            return null;
+        }
+
+        if (body["authentication_result"] is not JsonObject json)
+        {
+            invalidPath = "$.authentication_result";
+
+            return null;
+        }
+
+        var details = json["outcome_details"];
+        var result = new ThreeDSecureResult
+        {
+            Outcome = AgentJson.String(json, "outcome"),
+            Cryptogram = AgentJson.String(details, "three_ds_cryptogram"),
+            ElectronicCommerceIndicator = AgentJson.String(details, "electronic_commerce_indicator"),
+            TransactionId = AgentJson.String(details, "transaction_id"),
+            Version = AgentJson.String(details, "version"),
+        };
+
+        invalidPath = result.GetInvalidMember() switch
+        {
+            null => null,
+            nameof(ThreeDSecureResult.Outcome) => "$.authentication_result.outcome",
+            nameof(ThreeDSecureResult.Cryptogram) => "$.authentication_result.outcome_details.three_ds_cryptogram",
+            nameof(ThreeDSecureResult.ElectronicCommerceIndicator) => "$.authentication_result.outcome_details.electronic_commerce_indicator",
+            nameof(ThreeDSecureResult.TransactionId) => "$.authentication_result.outcome_details.transaction_id",
+            nameof(ThreeDSecureResult.Version) => "$.authentication_result.outcome_details.version",
+            _ => "$.authentication_result",
+        };
+
+        return result;
+    }
+
+    private static JsonObject WriteAuthenticationMetadata(AgentAuthenticationMetadata metadata)
+    {
+        var acquirer = new JsonObject
+        {
+            ["acquirer_bin"] = metadata.AcquirerBin,
+            ["acquirer_country"] = metadata.AcquirerCountry,
+            ["acquirer_merchant_id"] = metadata.AcquirerMerchantId,
+            ["merchant_name"] = metadata.MerchantName,
+        };
+
+        AgentJson.AddIf(acquirer, "requestor_id", metadata.RequestorId);
+
+        return new JsonObject
+        {
+            ["acquirer_details"] = acquirer,
+            ["directory_server"] = metadata.DirectoryServer,
+        };
+    }
 
     private static string ToLinkType(string type)
         => type switch

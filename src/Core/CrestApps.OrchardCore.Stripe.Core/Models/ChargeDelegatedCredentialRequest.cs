@@ -40,4 +40,10 @@ public sealed class ChargeDelegatedCredentialRequest : StripeWriteRequest
     /// Gets or sets the metadata kept with the payment.
     /// </summary>
     public Dictionary<string, string> Metadata { get; set; }
+
+    /// <summary>
+    /// Gets or sets the result of a 3-D Secure authentication run outside Stripe, which Stripe imports instead of
+    /// running its own; the payment then fails rather than asking the buyer to approve it again.
+    /// </summary>
+    public StripeThreeDSecureImport ThreeDSecure { get; set; }
 }

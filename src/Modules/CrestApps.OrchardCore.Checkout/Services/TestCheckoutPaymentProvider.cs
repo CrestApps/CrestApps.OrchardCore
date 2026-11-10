@@ -59,6 +59,12 @@ public sealed class TestCheckoutPaymentProvider :
     public const string AuthenticationRequiredCredential = "tok_test_3ds";
 
     /// <summary>
+    /// The card brand the test provider reports for <see cref="AuthenticationRequiredCredential"/>, so a caller can pick
+    /// a 3-D Secure directory server for it.
+    /// </summary>
+    public const string TestCardBrand = "visa";
+
+    /// <summary>
     /// The last two digits, in the currency's smallest unit, of an amount the test provider leaves pending.
     /// </summary>
     public const int PendingCents = 5;
@@ -127,6 +133,10 @@ public sealed class TestCheckoutPaymentProvider :
 
         // It takes the test credentials an AI agent brings in a sandbox.
         AcceptsDelegatedCredentials = true,
+
+        // A 3-D Secure result for the credential whose bank asks the buyer to approve the payment settles it, as a
+        // gateway that imports an outside authentication would.
+        AcceptsExternalAuthentication = true,
     };
 
     /// <inheritdoc/>
@@ -283,12 +293,44 @@ public sealed class TestCheckoutPaymentProvider :
         return credential switch
         {
             DeclinedCredential => PaymentBeginResult.Decline(S["The test credential was declined."], PaymentReferencePrefix + IdGenerator.GenerateId()),
-            AuthenticationRequiredCredential => PaymentBeginResult.AuthenticationRequired(
-                S["The test card's bank asked the cardholder to approve this payment."],
-                PaymentReferencePrefix + IdGenerator.GenerateId()),
+            AuthenticationRequiredCredential => BeginAuthenticated(context),
             SuccessCredential => Begin(context.Attempt, PaymentReferencePrefix),
             _ => PaymentBeginResult.Decline(S["The test credential isn't one the test payment provider knows."]),
         };
+    }
+
+    // The credential whose bank asks the buyer to approve the payment: without a 3-D Secure result it is refused as
+    // needing the cardholder, a result that lets the payment go ahead pays, and any other outcome is declined.
+    private PaymentBeginResult BeginAuthenticated(BeginPaymentContext context)
+    {
+        var authentication = ThreeDSecureResult.From(context.ProviderData);
+
+        if (authentication is null)
+        {
+            var refused = PaymentBeginResult.AuthenticationRequired(
+                S["The test card's bank asked the cardholder to approve this payment."],
+                PaymentReferencePrefix + IdGenerator.GenerateId());
+
+            refused.CardBrand = TestCardBrand;
+
+            return refused;
+        }
+
+        if (authentication.GetInvalidMember() is not null)
+        {
+            return PaymentBeginResult.Failure(S["The 3-D Secure result isn't complete or valid."]);
+        }
+
+        if (!authentication.AllowsPayment)
+        {
+            return PaymentBeginResult.Decline(S["The test card's bank didn't authenticate the cardholder ({0}).", authentication.Outcome], PaymentReferencePrefix + IdGenerator.GenerateId());
+        }
+
+        var result = Begin(context.Attempt, PaymentReferencePrefix);
+
+        result.CardBrand = TestCardBrand;
+
+        return result;
     }
 
     private PaymentBeginResult Begin(PaymentAttempt attempt, string prefix)

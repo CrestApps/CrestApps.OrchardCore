@@ -86,7 +86,92 @@ public sealed class TestCheckoutPaymentProviderDelegatedCredentialTests
         Assert.False(string.IsNullOrEmpty(result.ErrorMessage));
     }
 
-    private static BeginPaymentContext Context(string credential, string credentialType = DelegatedCredentialTypes.Test)
+    [Fact]
+    public async Task BeginAsync_WithThe3dsCredentialAndNoResult_ReportsTheCardBrand()
+    {
+        // Arrange
+        var provider = TestCheckoutPaymentProviderTests.CreateProvider();
+
+        // Act
+        var result = await provider.BeginAsync(Context(TestCheckoutPaymentProvider.AuthenticationRequiredCredential), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(TestCheckoutPaymentProvider.TestCardBrand, result.CardBrand);
+        Assert.True(provider.Capabilities.AcceptsExternalAuthentication);
+    }
+
+    [Theory]
+    [InlineData(ThreeDSecureOutcomes.Authenticated)]
+    [InlineData(ThreeDSecureOutcomes.AttemptAcknowledged)]
+    public async Task BeginAsync_WithThe3dsCredentialAndAnAuthenticatedResult_Succeeds(string outcome)
+    {
+        // Arrange
+        var provider = TestCheckoutPaymentProviderTests.CreateProvider();
+        var authentication = ThreeDSecureResultTests.Authenticated();
+
+        authentication.Outcome = outcome;
+
+        // Act
+        var result = await provider.BeginAsync(Context(TestCheckoutPaymentProvider.AuthenticationRequiredCredential, authentication: authentication), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.False(result.RequiresAction);
+        Assert.False(result.Declined);
+    }
+
+    [Theory]
+    [InlineData(ThreeDSecureOutcomes.Denied)]
+    [InlineData(ThreeDSecureOutcomes.Rejected)]
+    public async Task BeginAsync_WithThe3dsCredentialAndARefusedResult_Declines(string outcome)
+    {
+        // Arrange
+        var provider = TestCheckoutPaymentProviderTests.CreateProvider();
+
+        // Act
+        var result = await provider.BeginAsync(
+            Context(TestCheckoutPaymentProvider.AuthenticationRequiredCredential, authentication: new ThreeDSecureResult { Outcome = outcome }),
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.True(result.Declined);
+        Assert.False(result.RequiresAuthentication);
+    }
+
+    [Fact]
+    public async Task BeginAsync_WithThe3dsCredentialAndAnIncompleteResult_Fails()
+    {
+        // Arrange
+        var provider = TestCheckoutPaymentProviderTests.CreateProvider();
+        var authentication = ThreeDSecureResultTests.Authenticated();
+
+        authentication.Cryptogram = "short";
+
+        // Act
+        var result = await provider.BeginAsync(Context(TestCheckoutPaymentProvider.AuthenticationRequiredCredential, authentication: authentication), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.False(result.Declined);
+    }
+
+    private static BeginPaymentContext Context(string credential, string credentialType = DelegatedCredentialTypes.Test, ThreeDSecureResult authentication = null)
+    {
+        var context = CreateContext(credential, credentialType);
+
+        if (authentication is not null)
+        {
+            var providerData = new Dictionary<string, string>(context.ProviderData);
+
+            authentication.CopyTo(providerData);
+            context.ProviderData = providerData;
+        }
+
+        return context;
+    }
+
+    private static BeginPaymentContext CreateContext(string credential, string credentialType)
         => new()
         {
             Attempt = new PaymentAttempt

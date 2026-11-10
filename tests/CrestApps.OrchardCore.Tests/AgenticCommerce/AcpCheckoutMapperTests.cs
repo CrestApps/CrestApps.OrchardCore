@@ -299,6 +299,148 @@ public sealed class AcpCheckoutMapperTests
         Assert.Equal("1 First St", json["fulfillment_details"]["address"]["line_one"].GetValue<string>());
     }
 
+    [Fact]
+    public void ReadRunsThreeDSecure_IsTrueOnlyWhenTheAgentSupportsThe3dsIntervention()
+    {
+        // Act & Assert
+        Assert.True(AcpCheckoutMapper.ReadRunsThreeDSecure(JsonNode.Parse("""{ "capabilities": { "interventions": { "supported": [ "address_verification", "3ds" ] } } }""").AsObject()));
+        Assert.False(AcpCheckoutMapper.ReadRunsThreeDSecure(JsonNode.Parse("""{ "capabilities": { "interventions": { "supported": [ "biometric" ] } } }""").AsObject()));
+        Assert.False(AcpCheckoutMapper.ReadRunsThreeDSecure(JsonNode.Parse("""{ "line_items": [] }""").AsObject()));
+    }
+
+    [Fact]
+    public void ReadPayment_ReadsTheAuthenticationResult()
+    {
+        // Arrange
+        var body = JsonNode.Parse("""
+            {
+              "payment_data": { "handler_id": "card", "instrument": { "type": "card", "credential": { "type": "spt", "token": "spt_1" } } },
+              "authentication_result": {
+                "outcome": "authenticated",
+                "outcome_details": {
+                  "three_ds_cryptogram": "M6+990I6FLD8Y6rZz9d5QbfrMNY=",
+                  "electronic_commerce_indicator": "05",
+                  "transaction_id": "f879ea1c-aa2c-4441-806d-e30406466d79",
+                  "version": "2.2.0"
+                }
+              }
+            }
+            """).AsObject();
+
+        // Act
+        var payment = AcpCheckoutMapper.ReadPayment(body);
+        AcpCheckoutMapper.ReadAuthenticationResult(body, out var invalidPath);
+
+        // Assert
+        Assert.Null(invalidPath);
+        Assert.Equal("authenticated", payment.Authentication.Outcome);
+        Assert.Equal("M6+990I6FLD8Y6rZz9d5QbfrMNY=", payment.Authentication.Cryptogram);
+        Assert.Equal("05", payment.Authentication.ElectronicCommerceIndicator);
+        Assert.Equal("f879ea1c-aa2c-4441-806d-e30406466d79", payment.Authentication.TransactionId);
+        Assert.Equal("2.2.0", payment.Authentication.Version);
+    }
+
+    [Theory]
+    [InlineData("""{ "outcome": "authenticated", "outcome_details": { "three_ds_cryptogram": "short", "electronic_commerce_indicator": "05", "transaction_id": "t", "version": "2.2.0" } }""", "$.authentication_result.outcome_details.three_ds_cryptogram")]
+    [InlineData("""{ "outcome": "authenticated", "outcome_details": { "three_ds_cryptogram": "M6+990I6FLD8Y6rZz9d5QbfrMNY=", "electronic_commerce_indicator": "04", "transaction_id": "t", "version": "2.2.0" } }""", "$.authentication_result.outcome_details.electronic_commerce_indicator")]
+    [InlineData("""{ "outcome": "authenticated" }""", "$.authentication_result.outcome_details.three_ds_cryptogram")]
+    [InlineData("""{ "outcome": "perhaps" }""", "$.authentication_result.outcome")]
+    [InlineData("\"authenticated\"", "$.authentication_result")]
+    public void ReadAuthenticationResult_WhenMalformed_NamesThePathOfWhatIsWrong(string result, string expectedPath)
+    {
+        // Arrange
+        var body = JsonNode.Parse($$"""{ "authentication_result": {{result}} }""").AsObject();
+
+        // Act
+        AcpCheckoutMapper.ReadAuthenticationResult(body, out var invalidPath);
+
+        // Assert
+        Assert.Equal(expectedPath, invalidPath);
+    }
+
+    [Fact]
+    public void ReadAuthenticationResult_WithADeniedOutcome_NeedsNoDetails()
+    {
+        // Act
+        var result = AcpCheckoutMapper.ReadAuthenticationResult(JsonNode.Parse("""{ "authentication_result": { "outcome": "denied" } }""").AsObject(), out var invalidPath);
+
+        // Assert
+        Assert.Null(invalidPath);
+        Assert.False(result.AllowsPayment);
+        Assert.Null(AcpCheckoutMapper.ReadAuthenticationResult(JsonNode.Parse("{}").AsObject(), out _));
+    }
+
+    [Fact]
+    public async Task WriteAsync_WhenAuthenticationIsRequired_WritesTheStatusMetadataAndIntervention()
+    {
+        // Arrange
+        var checkouts = new Mock<IAgentCheckoutService>();
+
+        checkouts
+            .Setup(service => service.GetPaymentHandlersAsync(It.IsAny<AgentCheckoutContext>(), It.IsAny<AgentCheckoutView>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var mapper = new AcpCheckoutMapper(checkouts.Object);
+        var request = new AgentRequest
+        {
+            Version = AgenticCommerceConstants.Versions.Acp20260130,
+            Context = new AgentCheckoutContext { Protocol = AgenticCommerceConstants.Protocols.Acp },
+        };
+        var view = CreateView();
+
+        view.Status = AgentCheckoutStatus.AuthenticationRequired;
+        view.AcceptsAuthenticationResult = true;
+        view.AuthenticationMetadata = new AgentAuthenticationMetadata
+        {
+            AcquirerBin = "424242",
+            AcquirerCountry = "US",
+            AcquirerMerchantId = "acq_1",
+            MerchantName = "Example Store",
+            DirectoryServer = AgentDirectoryServers.Visa,
+        };
+
+        // Act
+        var json = await mapper.WriteAsync(request, new AgentCheckoutResult { View = view }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("authentication_required", json["status"].GetValue<string>());
+        Assert.Equal("3ds", json["capabilities"]["interventions"]["supported"][0].GetValue<string>());
+
+        var metadata = json["authentication_metadata"];
+
+        Assert.Equal("visa", metadata["directory_server"].GetValue<string>());
+        Assert.Equal("424242", metadata["acquirer_details"]["acquirer_bin"].GetValue<string>());
+        Assert.Equal("US", metadata["acquirer_details"]["acquirer_country"].GetValue<string>());
+        Assert.Equal("acq_1", metadata["acquirer_details"]["acquirer_merchant_id"].GetValue<string>());
+        Assert.Equal("Example Store", metadata["acquirer_details"]["merchant_name"].GetValue<string>());
+        Assert.False(metadata["acquirer_details"].AsObject().ContainsKey("requestor_id"));
+    }
+
+    [Fact]
+    public async Task WriteAsync_WithoutDelegatedAuthentication_WritesNoInterventionOrMetadata()
+    {
+        // Arrange
+        var checkouts = new Mock<IAgentCheckoutService>();
+
+        checkouts
+            .Setup(service => service.GetPaymentHandlersAsync(It.IsAny<AgentCheckoutContext>(), It.IsAny<AgentCheckoutView>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var mapper = new AcpCheckoutMapper(checkouts.Object);
+        var request = new AgentRequest
+        {
+            Version = AgenticCommerceConstants.Versions.Acp20260417,
+            Context = new AgentCheckoutContext { Protocol = AgenticCommerceConstants.Protocols.Acp },
+        };
+
+        // Act
+        var json = await mapper.WriteAsync(request, new AgentCheckoutResult { View = CreateView() }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(json["capabilities"].AsObject().ContainsKey("interventions"));
+        Assert.False(json.ContainsKey("authentication_metadata"));
+    }
+
     private static AgentCheckoutView CreateView()
         => new()
         {

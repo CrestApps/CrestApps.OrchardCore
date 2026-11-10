@@ -214,6 +214,11 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
         options.AddExtraParam("payment_method_data[type]", "card");
         options.AddExtraParam("payment_method_data[card][token]", cardToken);
 
+        foreach (var (name, value) in GetThreeDSecureFields(model.ThreeDSecure))
+        {
+            options.AddExtraParam(name, value);
+        }
+
         if (!string.IsNullOrEmpty(model.ReturnUrl))
         {
             options.ReturnUrl = model.ReturnUrl;
@@ -221,7 +226,7 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
 
         try
         {
-            return ToResponse(await _paymentIntentService.CreateAsync(options, model.ToRequestOptions()));
+            return await WithCardBrandAsync(ToResponse(await _paymentIntentService.CreateAsync(options, model.ToRequestOptions())));
         }
         catch (StripeException ex) when (ex.StripeError is not null)
         {
@@ -257,26 +262,93 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
             fields.Add(new($"metadata[{key}]", value));
         }
 
+        fields.AddRange(GetThreeDSecureFields(model.ThreeDSecure));
+
+        return await PostAsync("/v1/payment_intents", fields, model.IdempotencyKey, preview: true, paymentIntentId: null);
+    }
+
+    /// <summary>
+    /// Confirms again a PaymentIntent made from a delegated credential, with the result of a 3-D Secure authentication
+    /// run outside Stripe.
+    /// </summary>
+    /// <param name="model">The PaymentIntent and the 3-D Secure result.</param>
+    /// <returns>Whether Stripe took the payment, and why not when it did not.</returns>
+    public Task<ChargeDelegatedCredentialResponse> ConfirmDelegatedAsync(ConfirmDelegatedCredentialRequest model)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        ArgumentException.ThrowIfNullOrEmpty(model.PaymentIntentId);
+        ArgumentNullException.ThrowIfNull(model.ThreeDSecure);
+
+        // A PaymentIntent made from a shared payment token is only reachable with the preview version it was made with.
+        return PostAsync(
+            $"/v1/payment_intents/{Uri.EscapeDataString(model.PaymentIntentId)}/confirm",
+            GetThreeDSecureFields(model.ThreeDSecure),
+            model.IdempotencyKey,
+            preview: string.Equals(model.CredentialType, DelegatedCredentialTypes.StripeSharedPaymentToken, StringComparison.Ordinal),
+            paymentIntentId: model.PaymentIntentId);
+    }
+
+    /// <summary>
+    /// Returns the form fields that import a 3-D Secure result run outside Stripe
+    /// (<c>payment_method_options[card][three_d_secure]</c>), with <c>error_on_requires_action</c> so Stripe fails the
+    /// payment instead of asking the buyer to authenticate again. Empty when there is no result.
+    /// </summary>
+    /// <param name="threeDSecure">The 3-D Secure result, or <see langword="null"/>.</param>
+    internal static List<KeyValuePair<string, string>> GetThreeDSecureFields(StripeThreeDSecureImport threeDSecure)
+    {
+        if (threeDSecure is null)
+        {
+            return [];
+        }
+
+        const string prefix = "payment_method_options[card][three_d_secure]";
+
+        var fields = new List<KeyValuePair<string, string>>
+        {
+            new($"{prefix}[cryptogram]", threeDSecure.Cryptogram),
+            new($"{prefix}[electronic_commerce_indicator]", threeDSecure.ElectronicCommerceIndicator),
+            new($"{prefix}[transaction_id]", threeDSecure.TransactionId),
+            new($"{prefix}[version]", threeDSecure.Version),
+        };
+
+        if (!string.IsNullOrEmpty(threeDSecure.AresTransStatus))
+        {
+            fields.Add(new($"{prefix}[ares_trans_status]", threeDSecure.AresTransStatus));
+        }
+
+        // The buyer already authenticated; Stripe must not start a challenge of its own on a soft decline.
+        fields.Add(new("error_on_requires_action", "true"));
+
+        return fields;
+    }
+
+    // Posts a form to the PaymentIntents API, raw, so a shared payment token's preview version can be sent.
+    private async Task<ChargeDelegatedCredentialResponse> PostAsync(string path, List<KeyValuePair<string, string>> fields, string idempotencyKey, bool preview, string paymentIntentId)
+    {
         using var content = new FormUrlEncodedContent(fields);
         var body = await content.ReadAsStringAsync();
         var options = new RawRequestOptions
         {
-            IdempotencyKey = model.IdempotencyKey,
-            AdditionalHeaders = new Dictionary<string, string>
+            IdempotencyKey = idempotencyKey,
+        };
+
+        if (preview)
+        {
+            options.AdditionalHeaders = new Dictionary<string, string>
             {
                 ["Stripe-Version"] = SharedPaymentTokenApiVersion,
-            },
-        };
+            };
+        }
 
         StripeResponse response;
 
         try
         {
-            response = await _stripeClient.RawRequestAsync(HttpMethod.Post, "/v1/payment_intents", body, options);
+            response = await _stripeClient.RawRequestAsync(HttpMethod.Post, path, body, options);
         }
         catch (StripeException ex) when (ex.StripeError is not null)
         {
-            return ToResponse(ex.StripeError, ex.Message);
+            return await FromErrorAsync(ex.StripeError, ex.Message, paymentIntentId);
         }
 
         if ((int)response.StatusCode >= 400)
@@ -285,10 +357,60 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
 
             return error is null
                 ? new ChargeDelegatedCredentialResponse { ErrorMessage = $"Stripe answered {(int)response.StatusCode}." }
-                : ToResponse(error, error.Message);
+                : await FromErrorAsync(error, error.Message, paymentIntentId);
         }
 
-        return ToResponse(StripeEntity.FromJson<PaymentIntent>(response.Content));
+        return await WithCardBrandAsync(ToResponse(StripeEntity.FromJson<PaymentIntent>(response.Content)));
+    }
+
+    // A confirm Stripe refuses because the PaymentIntent already moved on, such as one an earlier try confirmed, answers
+    // with where it stands now rather than a failure, so a retry never reports a payment that went through as refused.
+    private async Task<ChargeDelegatedCredentialResponse> FromErrorAsync(StripeError error, string fallbackMessage, string paymentIntentId)
+    {
+        if (paymentIntentId is not null && string.Equals(error.Code, "payment_intent_unexpected_state", StringComparison.Ordinal))
+        {
+            try
+            {
+                var current = await _paymentIntentService.GetAsync(paymentIntentId);
+
+                if (current.Status is "succeeded" or "processing")
+                {
+                    return ToResponse(current);
+                }
+            }
+            catch (StripeException)
+            {
+                // What Stripe refused is answer enough; the checkout verifies the payment before it counts anyway.
+            }
+        }
+
+        return ToResponse(error, fallbackMessage);
+    }
+
+    // The bank asked the buyer to approve the payment: the card's brand tells an agent that authenticates the buyer itself
+    // which directory server to use. Stripe answers without it unless the payment method is expanded.
+    private async Task<ChargeDelegatedCredentialResponse> WithCardBrandAsync(ChargeDelegatedCredentialResponse response)
+    {
+        if (!response.RequiresAction || !string.IsNullOrEmpty(response.CardBrand) || string.IsNullOrEmpty(response.PaymentIntentId))
+        {
+            return response;
+        }
+
+        try
+        {
+            var paymentIntent = await _paymentIntentService.GetAsync(response.PaymentIntentId, new PaymentIntentGetOptions
+            {
+                Expand = ["payment_method"],
+            });
+
+            response.CardBrand = paymentIntent.PaymentMethod?.Card?.Brand;
+        }
+        catch (StripeException)
+        {
+            // The brand is a convenience; the payment stands without it.
+        }
+
+        return response;
     }
 
     private static StripeError TryReadError(string json)
@@ -317,6 +439,7 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
             Status = paymentIntent.Status,
             ErrorMessage = paymentIntent.LastPaymentError?.Message,
             DeclineCode = paymentIntent.LastPaymentError?.DeclineCode,
+            CardBrand = paymentIntent.PaymentMethod?.Card?.Brand,
         };
 
     private static ChargeDelegatedCredentialResponse ToResponse(StripeError error, string fallbackMessage)
@@ -329,6 +452,10 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
 
             // A used, expired or revoked token, or one issued to another account, is refused before any card is asked.
             InvalidCredential = error.Type == "invalid_request_error",
+
+            // Stripe was asked not to start its own authentication, and the bank wants the buyer to approve the payment.
+            RequiresAuthentication = string.Equals(error.Code, "authentication_required", StringComparison.Ordinal),
+            CardBrand = error.PaymentMethod?.Card?.Brand,
         };
 
     // A Google Pay token whose gateway is Stripe is a JSON object holding the card token Stripe made for it.

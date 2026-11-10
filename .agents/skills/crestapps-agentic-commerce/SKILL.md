@@ -76,7 +76,10 @@ carts, orders or providers from an endpoint.
    server when `DelegatedCredential` is present: confirmed at once, idempotent on `attempt.IdempotencyKey`, one-time
    only (refuse `SavePaymentMethod` and recurring obligations), `RequiresAction` with a `RedirectUrl` when the bank asks
    for 3-D Secure, `Decline` otherwise. Model on `StripeCheckoutPaymentProvider.ChargeDelegatedCredentialAsync` and
-   `TestCheckoutPaymentProvider.BeginDelegated`.
+   `TestCheckoutPaymentProvider.BeginDelegated`. For delegated 3-D Secure (ACP `authentication_required`), also set
+   `AcceptsExternalAuthentication`, read `ThreeDSecureResult.From(context.ProviderData)`, finish the attempt's existing
+   payment (`attempt.ProviderReference`) with the result instead of making a second one, and report
+   `PaymentBeginResult.CardBrand` so the directory server is known.
 3. **A new credential kind** goes in `DelegatedCredentialTypes` (Checkout.Abstractions).
 4. **Register** in a startup with `[Feature(AgenticCommerceConstants.Features.AgenticCommerce)]` and
    `[RequireFeatures(<the provider's feature>)]`: `services.AddScoped<IAgentPaymentHandler, YourHandler>()`. See

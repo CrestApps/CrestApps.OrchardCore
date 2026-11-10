@@ -69,6 +69,7 @@ Requests for one checkout are taken one at a time, under a distributed lock (`ag
 | `Completed` | `completed` | `completed` | The order is paid. |
 | `Canceled` | `canceled` | `canceled` | The agent canceled it. |
 | `Expired` | `canceled` | `expired` | It ran out of time. |
+| `AuthenticationRequired` | (not used) | `authentication_required` | The bank asks for 3-D Secure and the agent runs it itself. See [Delegated 3-D Secure](#delegated-3-d-secure-acp). |
 
 A checkout lasts **Checkout lifetime (hours)** (1 to 72, 6 by default) unless it is completed. The **Agent checkout expiry** background task runs every five minutes, expires the checkouts whose time ran out, and releases the stock they held. One platform may keep at most **Open checkouts per platform** (1,000 by default) open at once; one more gets `429`.
 
@@ -178,7 +179,7 @@ While the Test payments feature is on and its provider is active (see [Checkout]
 | --- | --- |
 | `tok_test_success` | The payment succeeds and the checkout completes. |
 | `tok_test_decline` | The payment is declined (`payment_declined`). |
-| `tok_test_3ds` | The bank asks the buyer to approve the payment: the checkout goes to `requires_escalation` with a continue URL. |
+| `tok_test_3ds` | The bank asks the buyer to approve the payment: the checkout goes to `requires_escalation` with a continue URL, or to `authentication_required` with delegated 3-D Secure (the card's brand is `visa`). Completed again with an `authenticated`, `attempt_acknowledged` or `informational` result, it pays; with any other outcome it is declined. |
 
 Any other credential is declined. The test handler is offered only to platforms in test mode, and it refuses a payment from any other platform, so a live platform's buyers always pay for real.
 
@@ -193,6 +194,31 @@ Every checkout that isn't completed, canceled or expired carries a `continue_url
 - the browser is sent to the checkout's next step.
 
 The agent's request runs as the platform, and a store checkout would otherwise take the request's user as its owner. So the store checkout belongs to the linked buyer, or to nobody until the hand-off link gives it to a browser.
+
+## Delegated 3-D Secure (ACP)
+
+An ACP agent that can run 3-D Secure itself authenticates the buyer and sends the result, instead of handing the buyer to the store's checkout. The store asks for it only when all of these hold:
+
+- **Let agents run 3-D Secure** is on in **Settings › Commerce › Agentic commerce**, with the **Acquirer BIN**, **Acquirer country**, **Acquirer merchant ID** and **Merchant name** (and, when the acquirer gave one, the **3-D Secure requestor ID**). They are `AgenticCommerceSettings.EnableDelegatedAuthentication`, `AcquirerBin`, `AcquirerCountry`, `AcquirerMerchantId`, `AuthenticationMerchantName` and `ThreeDSecureRequestorId`.
+- The agent's create request says it can: `capabilities.interventions.supported` holds `3ds`. The answer then carries `capabilities.interventions.supported: ["3ds"]`.
+- The payment provider takes an outside 3-D Secure result (`PaymentProviderCapabilities.AcceptsExternalAuthentication`), as Stripe and the test provider do.
+- The card's brand has a directory server (`visa`, `mastercard` or `american_express`). The agent's `instrument.credential.network` gives it, or the provider reports it (`PaymentBeginResult.CardBrand`).
+
+Otherwise the checkout goes to `requires_escalation`, as before.
+
+The flow, on both ACP versions:
+
+1. The agent completes the checkout. The bank asks for authentication, so the checkout answers with `status: "authentication_required"`, a `requires_3ds` message, and `authentication_metadata` (`acquirer_details` and `directory_server`). The `continue_url` hand-off link stays, for an agent that would rather hand the buyer over.
+2. The agent runs 3-D Secure, then completes again, with a new idempotency key, the same payment handler, and `authentication_result` (`outcome` and, for `authenticated`, `attempt_acknowledged` or `informational`, `outcome_details` with `three_ds_cryptogram`, `electronic_commerce_indicator`, `transaction_id` and `version`).
+3. A complete without `authentication_result` gets `400` with `code: "requires_3ds"` and `param: "$.authentication_result"`. A malformed result gets `400 invalid` with the path of what is wrong (the cryptogram is 28 base64 characters that decode to 20 bytes; the ECI is `01`, `02`, `05`, `06` or `07`).
+4. Any other outcome, such as `denied` or `rejected`, cancels the store checkout, which voids what the provider began, and answers with a `payment_declined` message. The next request starts a new store checkout the agent may pay another way.
+5. An authenticated result finishes the payment: `CompleteAsync` resumes the same payment attempt with the result in the provider data, and the provider imports it. If the bank still wants to authenticate the buyer, the checkout goes to `requires_escalation` instead of asking again.
+
+The result travels in provider-neutral, server-only provider data: `CheckoutPaymentDataKeys.ThreeDSecureOutcome`, `ThreeDSecureCryptogram`, `ThreeDSecureElectronicCommerceIndicator`, `ThreeDSecureTransactionId`, `ThreeDSecureVersion` and `ThreeDSecureTransactionStatus`. Write and read them with `ThreeDSecureResult.CopyTo` and `ThreeDSecureResult.From`; `PaymentEndpoints.SanitizeProviderData` drops them from browser and API requests.
+
+Money can't move twice. The second complete resumes the attempt the first one made, so a provider confirms the payment it began (Stripe confirms the same PaymentIntent) rather than making another. A provider that refused the first payment outright, as the test provider does, has a failed attempt, and the engine makes a new one for the authenticated payment. The result is only taken through the payment provider the buyer authenticated for.
+
+UCP's `dev.ucp.common.payment.authentication` extension isn't offered. In UCP 2026-08-25 it doesn't carry a 3-D Secure result: the business shows a challenge page that speaks UCP's embedded protocol to the platform, which the store doesn't have. UCP checkouts keep the `requires_escalation` hand-off.
 
 ## Order updates
 
@@ -413,7 +439,7 @@ public sealed class ContosoAgentPaymentsStartup : StartupBase
 }
 ```
 
-The `ICheckoutPaymentProvider` with the key `contoso` sets `AcceptsDelegatedCredentials` and, in `BeginAsync`, charges the credential on the server when `CheckoutPaymentDataKeys.DelegatedCredential` is in the provider data.
+The `ICheckoutPaymentProvider` with the key `contoso` sets `AcceptsDelegatedCredentials` and, in `BeginAsync`, charges the credential on the server when `CheckoutPaymentDataKeys.DelegatedCredential` is in the provider data. To take an agent's 3-D Secure result, it also sets `AcceptsExternalAuthentication`, reads `ThreeDSecureResult.From(context.ProviderData)`, and, when the attempt already has a `ProviderReference`, finishes that payment with the result instead of starting another. Set `PaymentBeginResult.CardBrand` when the bank asks for authentication, so the agent knows the directory server.
 
 ### Add a UCP capability or extension
 
@@ -499,7 +525,7 @@ public sealed class ContosoOrderPublisher : IAgentOrderPublisher
 - **ACP request signatures** aren't verified. ACP platforms sign in with an API key or an OAuth bearer token.
 - **ACP's delegate payment endpoint** isn't hosted by the store. ACP agents pay with a token their payment service provider issued, such as a Stripe shared payment token.
 - **ACP's MCP binding**, **UCP's A2A binding** and **embedded checkout** aren't built. UCP is served over REST and MCP, and ACP over REST.
-- **Delegated 3-D Secure** isn't built. When a bank asks the buyer to approve a payment, the checkout goes to `requires_escalation` and the buyer approves it in the store's checkout.
+- **Delegated 3-D Secure** is built for ACP only (see [Delegated 3-D Secure](#delegated-3-d-secure-acp)). UCP's payment authentication extension needs a challenge page that speaks UCP's embedded protocol, which isn't built, so UCP checkouts go to `requires_escalation`. ACP's Delegate Authentication API is hosted by the authentication provider, not the store.
 - **Account linking** has no authorization server metadata of its own. `/.well-known/oauth-authorization-server` redirects to the OpenID server's discovery document.
 - **Stripe shared payment tokens** are a preview of Stripe's API. The store calls Stripe with the preview API version `2026-09-30.preview`.
 - **AP2** is a preview, for UCP only.

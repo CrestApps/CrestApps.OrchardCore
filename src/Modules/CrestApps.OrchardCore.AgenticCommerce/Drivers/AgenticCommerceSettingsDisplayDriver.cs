@@ -51,6 +51,12 @@ public sealed class AgenticCommerceSettingsDisplayDriver : SiteDisplayDriver<Age
             model.GooglePayMerchantId = settings.GooglePayMerchantId;
             model.GooglePayMerchantName = settings.GooglePayMerchantName;
             model.GooglePayTestEnvironment = settings.GooglePayTestEnvironment;
+            model.EnableDelegatedAuthentication = settings.EnableDelegatedAuthentication;
+            model.AcquirerBin = settings.AcquirerBin;
+            model.AcquirerCountry = settings.AcquirerCountry;
+            model.AcquirerMerchantId = settings.AcquirerMerchantId;
+            model.AuthenticationMerchantName = settings.AuthenticationMerchantName;
+            model.ThreeDSecureRequestorId = settings.ThreeDSecureRequestorId;
         }).Location("Content:1")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, AgenticCommercePermissions.ManageAgenticCommerceSettings))
         .OnGroup(SettingsGroupId);
@@ -81,6 +87,8 @@ public sealed class AgenticCommerceSettingsDisplayDriver : SiteDisplayDriver<Age
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.GooglePayMerchantId), S["Enter the store's Google Pay merchant ID, or use Google Pay's test environment."]);
         }
 
+        ValidateDelegatedAuthentication(model, context);
+
         settings.CheckoutLifetimeHours = model.CheckoutLifetimeHours;
         settings.MaxOpenCheckoutsPerPlatform = model.MaxOpenCheckoutsPerPlatform;
         settings.AllowUnregisteredUcpPlatforms = model.AllowUnregisteredUcpPlatforms;
@@ -89,8 +97,63 @@ public sealed class AgenticCommerceSettingsDisplayDriver : SiteDisplayDriver<Age
         settings.GooglePayMerchantId = Clean(model.GooglePayMerchantId);
         settings.GooglePayMerchantName = Clean(model.GooglePayMerchantName);
         settings.GooglePayTestEnvironment = model.GooglePayTestEnvironment;
+        settings.EnableDelegatedAuthentication = model.EnableDelegatedAuthentication;
+        settings.AcquirerBin = Clean(model.AcquirerBin);
+        settings.AcquirerCountry = Clean(model.AcquirerCountry)?.ToUpperInvariant();
+        settings.AcquirerMerchantId = Clean(model.AcquirerMerchantId);
+        settings.AuthenticationMerchantName = Clean(model.AuthenticationMerchantName);
+        settings.ThreeDSecureRequestorId = Clean(model.ThreeDSecureRequestorId);
 
         return Edit(site, settings, context);
+    }
+
+    // The lengths are ACP's limits for authentication metadata; an agent rejects a checkout whose values are longer.
+    private void ValidateDelegatedAuthentication(AgenticCommerceSettingsViewModel model, UpdateEditorContext context)
+    {
+        Check(model.AcquirerBin, 11, nameof(model.AcquirerBin), S["The acquirer BIN is up to 11 characters."]);
+        Check(model.AcquirerMerchantId, 35, nameof(model.AcquirerMerchantId), S["The acquirer merchant ID is up to 35 characters."]);
+        Check(model.AuthenticationMerchantName, 40, nameof(model.AuthenticationMerchantName), S["The merchant name is up to 40 characters."]);
+        Check(model.ThreeDSecureRequestorId, 35, nameof(model.ThreeDSecureRequestorId), S["The 3-D Secure requestor ID is up to 35 characters."]);
+
+        var country = Clean(model.AcquirerCountry);
+
+        if (country is not null && (country.Length != 2 || !country.All(char.IsAsciiLetter)))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.AcquirerCountry), S["Enter the acquirer's two-letter country code, such as US."]);
+        }
+
+        if (!model.EnableDelegatedAuthentication)
+        {
+            return;
+        }
+
+        if (Clean(model.AcquirerBin) is null)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.AcquirerBin), S["Enter the acquirer BIN your payment provider gave you."]);
+        }
+
+        if (country is null)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.AcquirerCountry), S["Enter the acquirer's two-letter country code, such as US."]);
+        }
+
+        if (Clean(model.AcquirerMerchantId) is null)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.AcquirerMerchantId), S["Enter the store's merchant ID at the acquirer."]);
+        }
+
+        if (Clean(model.AuthenticationMerchantName) is null)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.AuthenticationMerchantName), S["Enter the merchant name the buyer's bank shows."]);
+        }
+
+        void Check(string value, int maxLength, string key, LocalizedString error)
+        {
+            if (Clean(value)?.Length > maxLength)
+            {
+                context.Updater.ModelState.AddModelError(Prefix, key, error);
+            }
+        }
     }
 
     private static string Clean(string value)
