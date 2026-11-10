@@ -43,6 +43,11 @@ public sealed class AgentCheckoutView
     public AgentBuyer Buyer { get; set; }
 
     /// <summary>
+    /// Gets or sets the buyer's consent for each purpose the agent gave, such as marketing.
+    /// </summary>
+    public IDictionary<string, bool> Consents { get; set; } = new Dictionary<string, bool>();
+
+    /// <summary>
     /// Gets or sets the billing address.
     /// </summary>
     public Address BillingAddress { get; set; }

@@ -114,11 +114,17 @@ public sealed class UcpCheckoutMapper
             ["line_items"] = WriteLines(view),
             ["totals"] = WriteTotals(view.Totals, currency),
             ["links"] = WriteLinks(view.Links),
+            ["payment"] = WritePayment(request.Json),
         };
 
         if (view.Buyer is not null)
         {
             json["buyer"] = WriteBuyer(view.Buyer);
+
+            if (view.Consents?.Count > 0 && request.Has(UcpConstants.Capabilities.BuyerConsent))
+            {
+                json["buyer"]["consent"] = WriteConsent(view.Consents, request.Version);
+            }
         }
 
         var messages = new JsonArray();
@@ -362,6 +368,21 @@ public sealed class UcpCheckoutMapper
         return json;
     }
 
+    // 2026-04-08 gives consent as booleans per purpose; 2026-08-25 as a map of purposes to { granted }.
+    internal static JsonObject WriteConsent(IDictionary<string, bool> consents, string version)
+    {
+        var json = new JsonObject();
+
+        foreach (var (purpose, granted) in consents)
+        {
+            json[purpose] = version == AgenticCommerceConstants.Versions.Ucp20260408
+                ? JsonValue.Create(granted)
+                : new JsonObject { ["granted"] = granted };
+        }
+
+        return json;
+    }
+
     private static JsonObject WriteDiscount(AgentAppliedDiscount discount, string currency)
     {
         var json = new JsonObject();
@@ -384,7 +405,8 @@ public sealed class UcpCheckoutMapper
                 AgentMessageType.Info => "info",
                 _ => "error",
             },
-            ["code"] = message.Code,
+            // UCP's standard code for a refused payment is payment_failed; it has no payment_declined.
+            ["code"] = message.Code == AgentMessageCodes.PaymentDeclined ? AgentMessageCodes.PaymentFailed : message.Code,
             ["content"] = message.Content,
         };
 
@@ -448,9 +470,11 @@ public sealed class UcpCheckoutMapper
             {
                 var destination = WriteAddress(fulfillment.Address);
 
-                destination["id"] = "dest_1";
+                var destinationId = string.IsNullOrEmpty(fulfillment.DestinationId) ? "dest_1" : fulfillment.DestinationId;
+
+                destination["id"] = destinationId;
                 shipping["destinations"] = new JsonArray(destination);
-                shipping["selected_destination_id"] = "dest_1";
+                shipping["selected_destination_id"] = destinationId;
 
                 var options = new JsonArray();
 
@@ -563,6 +587,33 @@ public sealed class UcpCheckoutMapper
         return json;
     }
 
+    // UCP requires payment in every checkout answer: the instruments the platform sent with this request, without their
+    // credentials (a business must never echo them), or none.
+    internal static JsonObject WritePayment(JsonNode body)
+    {
+        var instruments = new JsonArray();
+
+        if (body?["payment"]?["instruments"] is JsonArray sent)
+        {
+            foreach (var instrument in sent.OfType<JsonObject>())
+            {
+                var copy = new JsonObject();
+
+                foreach (var name in new[] { "id", "handler_id", "type", "selected", "display", "billing_address" })
+                {
+                    if (instrument[name] is { } value)
+                    {
+                        copy[name] = value.DeepClone();
+                    }
+                }
+
+                instruments.Add(copy);
+            }
+        }
+
+        return new JsonObject { ["instruments"] = instruments };
+    }
+
     internal static Address ReadAddress(JsonNode node)
     {
         if (node is not JsonObject json)
@@ -577,8 +628,9 @@ public sealed class UcpCheckoutMapper
             Name = string.IsNullOrWhiteSpace(name) ? null : name,
             AddressLine1 = AgentJson.String(json, "street_address"),
             AddressLine2 = AgentJson.String(json, "extended_address"),
-            City = AgentJson.String(json, "address_locality"),
-            Region = AgentJson.String(json, "address_region"),
+            // locality and region aren't UCP's names, but some clients (the UCP conformance suite among them) send them.
+            City = AgentJson.String(json, "address_locality") ?? AgentJson.String(json, "locality"),
+            Region = AgentJson.String(json, "address_region") ?? AgentJson.String(json, "region"),
             PostalCode = AgentJson.String(json, "postal_code"),
             Country = AgentJson.String(json, "address_country")?.ToUpperInvariant(),
             Phone = AgentJson.String(json, "phone_number"),
@@ -613,7 +665,7 @@ public sealed class UcpCheckoutMapper
         {
             FirstName = AgentJson.String(json, "first_name"),
             LastName = AgentJson.String(json, "last_name"),
-            FullName = AgentJson.String(json, "full_name"),
+            FullName = AgentJson.String(json, "full_name") ?? AgentJson.String(json, "name"),
             Email = AgentJson.String(json, "email"),
             Phone = AgentJson.String(json, "phone_number"),
         };
@@ -650,6 +702,7 @@ public sealed class UcpCheckoutMapper
             {
                 Address = ReadAddress(destination),
                 OptionId = option,
+                DestinationId = AgentJson.String(destination, "id"),
             };
         }
 

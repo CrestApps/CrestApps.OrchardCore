@@ -36,4 +36,9 @@ public sealed class AgentFulfillmentView
     /// Gets or sets the chosen place to collect from.
     /// </summary>
     public string SelectedPickupLocationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the agent's id for the shipping destination, when it gave one.
+    /// </summary>
+    public string DestinationId { get; set; }
 }

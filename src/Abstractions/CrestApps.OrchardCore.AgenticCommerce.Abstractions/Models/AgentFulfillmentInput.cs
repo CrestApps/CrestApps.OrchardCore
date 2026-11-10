@@ -21,4 +21,9 @@ public sealed class AgentFulfillmentInput
     /// Gets or sets the place to collect from, instead of shipping.
     /// </summary>
     public string PickupLocationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the agent's id for the shipping destination, which the checkout answers with.
+    /// </summary>
+    public string DestinationId { get; set; }
 }

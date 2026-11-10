@@ -543,4 +543,26 @@ public sealed class UcpCheckoutMapperTests
             ],
             Totals = new AgentCheckoutTotals { Subtotal = 20m, Discount = 2m, Total = 18m },
         };
+
+    [Fact]
+    public void WritePayment_EchoesTheInstruments_WithoutTheirCredentials()
+    {
+        var body = System.Text.Json.Nodes.JsonNode.Parse("""
+            {"payment":{"instruments":[{"id":"pi_1","handler_id":"stripe_payments","type":"card","display":{"brand":"visa","last_digits":"4242"},"credential":{"type":"stripe.shared_payment_token","token":"spt_secret"}}]}}
+            """);
+
+        var payment = UcpCheckoutMapper.WritePayment(body);
+        var instrument = Assert.Single(payment["instruments"].AsArray());
+
+        Assert.Equal("pi_1", instrument["id"].GetValue<string>());
+        Assert.Equal("4242", instrument["display"]["last_digits"].GetValue<string>());
+        Assert.Null(instrument["credential"]);
+        Assert.DoesNotContain("spt_secret", payment.ToJsonString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WritePayment_WithoutInstruments_IsAnEmptyList()
+    {
+        Assert.Empty(UcpCheckoutMapper.WritePayment(body: null)["instruments"].AsArray());
+    }
 }

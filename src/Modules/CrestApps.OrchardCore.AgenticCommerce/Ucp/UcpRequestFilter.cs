@@ -31,6 +31,7 @@ public sealed class UcpRequestFilter : IEndpointFilter
         }
 
         string profileUrl = null;
+        string requestedVersion = null;
         var agentHeader = request.Headers[UcpConstants.AgentHeader].ToString();
 
         if (!string.IsNullOrWhiteSpace(agentHeader))
@@ -40,7 +41,15 @@ public sealed class UcpRequestFilter : IEndpointFilter
                 return Fail(httpContext, body, StatusCodes.Status400BadRequest, "invalid_profile_url", "The UCP-Agent header doesn't name a profile.");
             }
 
-            profileUrl = profile;
+            // The version is a member of its own, or a parameter of the profile (profile="..."; version="...").
+            requestedVersion = agent.GetString("version")
+                ?? (agent.TryGetValue("profile", out var profileMember) && profileMember.Item?.Parameters is { } parameters && parameters.TryGetValue("version", out var version) ? version as string : null);
+
+            // A profile that isn't a web address (a placeholder such as "...") names nothing to read: the platform signs
+            // in with its key, and the version it asks for is agreed with everything the store offers.
+            profileUrl = Uri.TryCreate(profile, UriKind.Absolute, out var profileUri) && (profileUri.Scheme == Uri.UriSchemeHttps || profileUri.Scheme == Uri.UriSchemeHttp)
+                ? profile
+                : null;
         }
 
         var profiles = services.GetRequiredService<UcpProfileClient>();
@@ -130,7 +139,7 @@ public sealed class UcpRequestFilter : IEndpointFilter
             platformProfile = (await profiles.GetAsync(profileUrl, httpContext.RequestAborted)).Profile;
         }
 
-        var negotiation = await services.GetRequiredService<UcpNegotiator>().NegotiateAsync(platformProfile);
+        var negotiation = await services.GetRequiredService<UcpNegotiator>().NegotiateAsync(platformProfile, requestedVersion);
 
         if (negotiation.Version is null)
         {

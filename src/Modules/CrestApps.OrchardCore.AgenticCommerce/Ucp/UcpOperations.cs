@@ -257,10 +257,18 @@ public sealed class UcpOperations
                 return UcpOperationResult.Fail(StatusCodes.Status429TooManyRequests, UcpOperationResult.RateLimitedCode, result.Error);
         }
 
-        // A business outcome, such as changing a completed checkout, is answered with HTTP 200 and an error status.
+        // Changing, completing or canceling a checkout that can't be any more (completed, canceled, expired) is refused
+        // with 409, as the UCP conformance suite requires; the body is still the checkout, with the reason in messages.
+        var statusCode = result.Failure == AgentCheckoutFailure.InvalidState ? StatusCodes.Status409Conflict : StatusCodes.Status200OK;
+
         if (result.View is not null && result.Checkout is not null)
         {
-            return UcpOperationResult.Answer(await _mapper.WriteAsync(request, result, cancellationToken));
+            return UcpOperationResult.Answer(await _mapper.WriteAsync(request, result, cancellationToken), statusCode);
+        }
+
+        if (statusCode == StatusCodes.Status409Conflict)
+        {
+            return UcpOperationResult.Answer(UcpCheckoutMapper.WriteError(request, result.Error, AgentMessageCodes.InvalidState), statusCode);
         }
 
         return UcpOperationResult.Answer(UcpCheckoutMapper.WriteError(request, result.Error));

@@ -1215,6 +1215,16 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
         }
     }
 
+    private static AgentFulfillmentView WithDestinationId(AgentFulfillmentView fulfillment, string destinationId)
+    {
+        if (fulfillment is not null)
+        {
+            fulfillment.DestinationId = destinationId;
+        }
+
+        return fulfillment;
+    }
+
     private async Task<AgentCheckoutView> BuildViewAsync(
         AgentCheckout checkout,
         CheckoutSession session,
@@ -1224,7 +1234,10 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
         CancellationToken cancellationToken)
     {
         var invoice = session is not null && session.TryGet<CheckoutInvoice>(out var found) ? found : null;
-        var currency = invoice?.Currency ?? pricing?.Currency ?? checkout.Currency ?? session?.Currency;
+        // UCP and ACP require a currency on every checkout, even one with nothing priced yet (an unknown or sold-out
+        // item): it's then the store's checkout currency.
+        var currency = invoice?.Currency ?? pricing?.Currency ?? checkout.Currency ?? session?.Currency
+            ?? (await _siteService.GetSettingsAsync<CheckoutSettings>())?.Currency;
         var order = string.IsNullOrEmpty(checkout.OrderId) ? null : await _orderStore.FindByIdAsync(checkout.OrderId, cancellationToken);
 
         var view = new AgentCheckoutView
@@ -1233,10 +1246,11 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
             Protocol = checkout.Protocol,
             Currency = currency,
             Buyer = checkout.Buyer,
+            Consents = checkout.Consents ?? [],
             BillingAddress = checkout.BillingAddress,
             DiscountCodes = checkout.DiscountCodes ?? [],
             ExpiresUtc = checkout.IsTerminal ? null : checkout.ExpiresUtc,
-            Fulfillment = fulfillment ?? FulfillmentFromSession(checkout, session),
+            Fulfillment = WithDestinationId(fulfillment ?? FulfillmentFromSession(checkout, session), checkout.Fulfillment?.DestinationId),
             Links = await BuildLinksAsync(),
         };
 

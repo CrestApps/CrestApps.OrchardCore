@@ -1,9 +1,11 @@
 using CrestApps.OrchardCore.AgenticCommerce.Core.Models;
 using CrestApps.OrchardCore.AgenticCommerce.Core.Services;
+using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Shipping.Models;
 using CrestApps.OrchardCore.Shipping.Services;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AgenticCommerce.Orders;
 
@@ -16,17 +18,20 @@ public sealed class AgentOrderViewBuilder
     private readonly IEnumerable<IShipmentStore> _shipments;
     private readonly IEnumerable<IOrderLinkService> _orderLinks;
     private readonly AgentSiteUrls _urls;
+    private readonly ISiteService _siteService;
 
     public AgentOrderViewBuilder(
         IAgentItemResolver items,
         IEnumerable<IShipmentStore> shipments,
         IEnumerable<IOrderLinkService> orderLinks,
-        AgentSiteUrls urls)
+        AgentSiteUrls urls,
+        ISiteService siteService = null)
     {
         _items = items;
         _shipments = shipments;
         _orderLinks = orderLinks;
         _urls = urls;
+        _siteService = siteService;
     }
 
     /// <summary>
@@ -59,7 +64,8 @@ public sealed class AgentOrderViewBuilder
             Number = order.OrderNumber,
             CheckoutId = checkout?.ItemId,
             PermalinkUrl = links is null ? await _urls.GetBaseUrlAsync() : await links.CreateUrlAsync(order),
-            Currency = order.Currency,
+            // UCP and ACP require an order's currency; an order from a store without markets has none of its own.
+            Currency = order.Currency ?? (_siteService is null ? null : (await _siteService.GetSettingsAsync<CheckoutSettings>())?.Currency),
             Canceled = canceled,
             CreatedUtc = order.PaidUtc ?? order.CreatedUtc,
             ShippingAddress = order.ShippingAddress,

@@ -36,6 +36,23 @@ public sealed class UcpNegotiatorTests
     }
 
     [Fact]
+    public async Task NegotiateAsync_WithoutAProfile_AgreesTheVersionTheHeaderAsksFor()
+    {
+        var negotiation = await CreateNegotiator().NegotiateAsync(platformProfile: null, AgenticCommerceConstants.Versions.Ucp20260408);
+
+        Assert.Equal(AgenticCommerceConstants.Versions.Ucp20260408, negotiation.Version);
+        Assert.Contains(UcpConstants.Capabilities.Checkout, negotiation.Capabilities.Keys);
+    }
+
+    [Fact]
+    public async Task NegotiateAsync_WithoutAProfile_RefusesAVersionTheStoreDoesNotServe()
+    {
+        var negotiation = await CreateNegotiator().NegotiateAsync(platformProfile: null, "2099-01-01");
+
+        Assert.Null(negotiation.Version);
+    }
+
+    [Fact]
     public async Task NegotiateAsync_WithoutAPlatformProfile_AgreesTheNewestVersionWithEveryCapability()
     {
         // Arrange

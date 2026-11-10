@@ -25,9 +25,21 @@ public sealed class UcpNegotiator
     /// the store offers.
     /// </summary>
     /// <param name="platformProfile">The platform's profile, or <see langword="null"/>.</param>
-    public async Task<UcpNegotiation> NegotiateAsync(JsonObject platformProfile)
+    /// <param name="requestedVersion">The version the <c>UCP-Agent</c> header asked for, when the platform gave no
+    /// profile; or <see langword="null"/>.</param>
+    public async Task<UcpNegotiation> NegotiateAsync(JsonObject platformProfile, string requestedVersion = null)
     {
         var version = UcpConstants.Versions[0];
+
+        if (platformProfile is null && !string.IsNullOrEmpty(requestedVersion))
+        {
+            if (!UcpConstants.Versions.Contains(requestedVersion, StringComparer.Ordinal))
+            {
+                return new UcpNegotiation();
+            }
+
+            version = requestedVersion;
+        }
 
         if (platformProfile?["ucp"]?["version"]?.GetValueKind() == JsonValueKind.String)
         {
