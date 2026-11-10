@@ -190,6 +190,18 @@ dotnet run
 
 * Avoid `DateTime.UtcNow`; always use an injected `IClock`.
 
+#### Showing Dates and Times (never UTC)
+
+Times are stored in UTC, but a user never sees a UTC time unless they asked for one. Every date and time shown anywhere (views, admin lists, reports and their CSV/Excel/PDF exports, emails, SMS, notifications, notices, timeline and audit text, AI prompts that mention the current time) is converted to the local time zone with Orchard Core's `ILocalClock`, which is the user's own zone when the User Time Zone feature is on and the site's otherwise.
+
+* In Razor, use the `DateTime` shape (`@await DisplayAsync(await New.DateTime(Utc: value, Format: "g"))`) or `ILocalClock.ConvertToLocalAsync`. In C#, inject `ILocalClock` and call `ConvertToLocalAsync`. Contact Center reports use `ReportTimeZone`, which reads its zone from `ILocalClock`.
+* Mark the value as UTC first: `DateTime.SpecifyKind(utc, DateTimeKind.Utc)`. A value read back from YesSql or JSON often has an unspecified kind, which `ConvertToLocalAsync` would treat as server-local.
+* Never call `DateTime.ToLocalTime()` (that is the server's zone, UTC in production), never format a stored UTC value directly (`utc.ToString("g")`, `T["... {0:g}", utc]`), and never label a value "(UTC)".
+* Group report rows by the local hour, weekday or day, not the UTC one.
+* An editor shows its date-times in local time and converts the entered value back with `ILocalClock.ToUtcLenientAsync` (`CrestApps.OrchardCore.Calendars`), which accepts a time a daylight-saving change skips or repeats. Never ask the user to type a time in UTC.
+* JSON sent to the browser carries the UTC instant with a `Z` (mark it with `SpecifyKind` when it was read back from storage); the page formats it for display.
+* Exceptions: a pure date with no time (a due date picked as a date, a tax effective date) is not converted; a value deliberately shown in a contact's or lead's own time zone stays in that zone; machine formats (APIs, recipe and JSON schemas, content import/export columns, files scripts read) stay UTC.
+
 #### Documentation
 
 * Keep public docs and comments accurate and aligned with the code.

@@ -333,7 +333,8 @@ public sealed class UnansweredCallOutcomeReportTests
             new Mock<ICatalogManager<OmnichannelCampaignGroup>>().Object,
             Options.Create(new ContactCenterReportingOptions()),
             CreateEventStore(session),
-            Options.Create(new ActivitySourceOptions()));
+            Options.Create(new ActivitySourceOptions()),
+            CrestApps.OrchardCore.Tests.Modules.AI.Chat.Reports.ReportTestClocks.LocalClock(TimeSpan.Zero));
     }
 
     private static InteractionEventStore CreateEventStore(ISession session)

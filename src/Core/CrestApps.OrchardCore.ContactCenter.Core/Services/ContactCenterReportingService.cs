@@ -43,7 +43,7 @@ public sealed partial class ContactCenterReportingService : IContactCenterReport
     /// <param name="reportingOptions">The reporting options that bound the requested range.</param>
     /// <param name="eventStore">The event log whose abandons and voicemails decide each interaction's outcome.</param>
     /// <param name="activitySourceOptions">The activity sources whose stored values a source filter matches.</param>
-    /// <param name="localClock">The local clock, whose time zone the reports' days are in; UTC days without it.</param>
+    /// <param name="localClock">The local clock, whose time zone the reports' days are in.</param>
     public ContactCenterReportingService(
         ISession session,
         IActivityQueueGroupManager queueGroupManager,
@@ -55,7 +55,7 @@ public sealed partial class ContactCenterReportingService : IContactCenterReport
         IOptions<ContactCenterReportingOptions> reportingOptions,
         IInteractionEventStore eventStore,
         IOptions<ActivitySourceOptions> activitySourceOptions,
-        ILocalClock localClock = null)
+        ILocalClock localClock)
     {
         _activitySourceOptions = activitySourceOptions.Value;
         _session = session;
@@ -90,23 +90,7 @@ public sealed partial class ContactCenterReportingService : IContactCenterReport
         await ApplyCurrentQueueGroupCriteriaAsync(criteria, cancellationToken);
         var filtered = FilterInteractions(interactions, criteria);
 
-        // The daily points are the site's days, not UTC ones.
-        Func<DateTime, DateOnly> toLocalDay = null;
-
-        if (_localClock is not null)
-        {
-            var localDays = new Dictionary<DateTime, DateOnly>();
-
-            foreach (var interaction in filtered)
-            {
-                if (!localDays.ContainsKey(interaction.CreatedUtc))
-                {
-                    localDays[interaction.CreatedUtc] = DateOnly.FromDateTime((await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(interaction.CreatedUtc, DateTimeKind.Utc))).DateTime);
-                }
-            }
-
-            toLocalDay = createdUtc => localDays[createdUtc];
-        }
+        var toLocalDay = await CallInsightsBuilder.GetLocalDaysAsync(_localClock, filtered);
 
         return BuildCallInsights(fromUtc, toUtc, filtered, await InteractionOutcomeClassifier.LoadAsync(_eventStore, filtered, cancellationToken), toLocalDay);
     }

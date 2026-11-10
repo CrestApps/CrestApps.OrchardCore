@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Models.Reports;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -10,6 +11,27 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </summary>
 internal static class CallInsightsBuilder
 {
+    /// <summary>
+    /// Reads the site's day of each interaction, so the daily points are the site's days, not UTC ones.
+    /// </summary>
+    /// <param name="localClock">The local clock.</param>
+    /// <param name="interactions">The interactions.</param>
+    /// <returns>A lookup from an interaction's creation time to its local day.</returns>
+    public static async Task<Func<DateTime, DateOnly>> GetLocalDaysAsync(ILocalClock localClock, IReadOnlyList<Interaction> interactions)
+    {
+        var localDays = new Dictionary<DateTime, DateOnly>();
+
+        foreach (var interaction in interactions)
+        {
+            if (!localDays.ContainsKey(interaction.CreatedUtc))
+            {
+                localDays[interaction.CreatedUtc] = DateOnly.FromDateTime((await localClock.ConvertToLocalAsync(DateTime.SpecifyKind(interaction.CreatedUtc, DateTimeKind.Utc))).DateTime);
+            }
+        }
+
+        return createdUtc => localDays[createdUtc];
+    }
+
     /// <summary>
     /// Builds the call insights report.
     /// </summary>
