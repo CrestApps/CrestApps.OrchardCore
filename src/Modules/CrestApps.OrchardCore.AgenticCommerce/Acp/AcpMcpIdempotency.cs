@@ -1,7 +1,6 @@
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.Commerce.Api;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Distributed;
 using OrchardCore.Environment.Shell;
@@ -68,63 +67,41 @@ public sealed class AcpMcpIdempotency
             return (AcpOperationResult.Error(StatusCodes.Status400BadRequest, "invalid_request", "An idempotency key is 1 to 255 characters."), false);
         }
 
-        var cacheKey = GetCacheKey(_shellSettings.Name, platformId, tool, checkoutId, key);
-        var fingerprint = AcpEndpoints.ComputeFingerprint(payload);
+        AcpOperationResult ran = null;
 
-        if (await _cache.GetStringAsync(cacheKey, cancellationToken) is { } stored)
-        {
-            return Replay(stored, fingerprint);
-        }
-
-        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(cacheKey, TimeSpan.FromMilliseconds(500), TimeSpan.FromMinutes(2));
-
-        if (!locked)
-        {
-            return (AcpOperationResult.Error(StatusCodes.Status409Conflict, "idempotency_in_flight", "A request with this idempotency key is still running.", retryAfterSeconds: 1), false);
-        }
-
-        await using (locker)
-        {
-            if (await _cache.GetStringAsync(cacheKey, cancellationToken) is { } storedMeanwhile)
+        var outcome = await IdempotentOperation.RunAsync(
+            _cache,
+            _distributedLock,
+            $"acp-mcp|{_shellSettings.Name}|{platformId}|{tool}|{checkoutId}",
+            key,
+            AcpEndpoints.ComputeFingerprint(payload),
+            AcpEndpoints.Idempotency.Lifetime,
+            async _ =>
             {
-                return Replay(storedMeanwhile, fingerprint);
-            }
+                ran = await run();
 
-            var result = await run();
+                return new IdempotentOperationAnswer(
+                    JsonSerializer.Serialize(new StoredAnswer(ran.StatusCode, ran.Body?.ToJsonString())),
+                    IsFinal(ran));
+            },
+            cancellationToken);
 
-            if (IsFinal(result))
-            {
-                await _cache.SetStringAsync(
-                    cacheKey,
-                    JsonSerializer.Serialize(new StoredAnswer(result.StatusCode, result.Body?.ToJsonString(), fingerprint)),
-                    new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = AcpEndpoints.Idempotency.Lifetime },
-                    cancellationToken);
-            }
-
-            return (result, false);
-        }
-    }
-
-    /// <summary>
-    /// Returns whether an answer is the call's final one, kept for a retry; otherwise a retry is run afresh.
-    /// </summary>
-    /// <param name="result">The answer.</param>
-    internal static bool IsFinal(AcpOperationResult result)
-        => result.StatusCode < StatusCodes.Status500InternalServerError &&
-            result.StatusCode != StatusCodes.Status429TooManyRequests &&
-            result.RetryAfterSeconds is null;
-
-    internal static string GetCacheKey(string tenant, string platformId, string tool, string checkoutId, string key)
-        => "acp-mcp-idempotency:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{tenant}|{platformId}|{tool}|{checkoutId}|{key}")));
-
-    private static (AcpOperationResult Result, bool Replayed) Replay(string stored, string fingerprint)
-    {
-        var answer = JsonSerializer.Deserialize<StoredAnswer>(stored);
-
-        if (!string.Equals(answer.Fingerprint, fingerprint, StringComparison.Ordinal))
+        switch (outcome.Outcome)
         {
-            return (AcpOperationResult.Error(StatusCodes.Status422UnprocessableEntity, "idempotency_conflict", "This idempotency key was used with a different request."), false);
+            case IdempotentOperationOutcome.Conflict:
+                return (AcpOperationResult.Error(StatusCodes.Status422UnprocessableEntity, "idempotency_conflict", "This idempotency key was used with a different request."), false);
+
+            case IdempotentOperationOutcome.InFlight:
+                return (AcpOperationResult.Error(StatusCodes.Status409Conflict, "idempotency_in_flight", "A request with this idempotency key is still running.", retryAfterSeconds: 1), false);
         }
+
+        // The call that ran answers as it is; a replay answers with the status and body that were kept.
+        if (outcome.Outcome == IdempotentOperationOutcome.Ran)
+        {
+            return (ran, false);
+        }
+
+        var answer = JsonSerializer.Deserialize<StoredAnswer>(outcome.Value);
 
         return (new AcpOperationResult
         {
@@ -133,5 +110,10 @@ public sealed class AcpMcpIdempotency
         }, true);
     }
 
-    private sealed record StoredAnswer(int StatusCode, string Body, string Fingerprint);
+    internal static bool IsFinal(AcpOperationResult result)
+        => result.StatusCode < StatusCodes.Status500InternalServerError &&
+            result.StatusCode != StatusCodes.Status429TooManyRequests &&
+            result.RetryAfterSeconds is null;
+
+    private sealed record StoredAnswer(int StatusCode, string Body);
 }

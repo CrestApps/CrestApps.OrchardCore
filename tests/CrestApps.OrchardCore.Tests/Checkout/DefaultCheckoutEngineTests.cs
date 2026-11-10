@@ -660,6 +660,59 @@ public sealed class DefaultCheckoutEngineTests
         Assert.NotEqual(PaymentAttemptState.Canceled, attempt.State);
     }
 
+    /// <summary>
+    /// A begin that ended without the provider's answer (a server error, a timeout) may have charged anyway. Another
+    /// payment method waits until the provider can find such a charge, and never begins while it was paid.
+    /// </summary>
+    [Fact]
+    public async Task BeginPaymentAsync_WithAnotherProvider_WhileTheFirstBeginIsUnanswered_BeginsNothing()
+    {
+        var attemptStore = new InMemoryPaymentAttemptStore();
+        var clock = new TestClock(DateTime.UtcNow);
+        var first = new RecordingProvider(ProviderKey) { BeginResult = () => PaymentBeginResult.Failure("Stripe answered 500.") };
+        var second = new RecordingProvider("second");
+        var (engine, sessionStore) = CreateEngine(attemptStore, first, clock: clock, otherProviders: second);
+        sessionStore.Seed(CreateSession(oneTimeAmount: 30m));
+
+        await engine.BeginPaymentAsync("session-1", new BeginPaymentOptions { ProviderKey = ProviderKey }, TestContext.Current.CancellationToken);
+        var outcome = await engine.BeginPaymentAsync("session-1", new BeginPaymentOptions { ProviderKey = "second" }, TestContext.Current.CancellationToken);
+
+        Assert.False(outcome.Succeeded);
+        Assert.Equal(0, first.CancelCallCount);
+        Assert.Equal(0, second.BeginCallCount);
+
+        // Later, the provider finds that the unanswered begin was paid: still nothing begins.
+        clock.UtcNow = clock.UtcNow.AddMinutes(2);
+        first.Verification = _ => new PaymentVerificationResult { Status = PaymentStatus.Succeeded };
+
+        outcome = await engine.BeginPaymentAsync("session-1", new BeginPaymentOptions { ProviderKey = "second" }, TestContext.Current.CancellationToken);
+
+        Assert.False(outcome.Succeeded);
+        Assert.Equal(0, first.CancelCallCount);
+        Assert.Equal(0, second.BeginCallCount);
+    }
+
+    [Fact]
+    public async Task BeginPaymentAsync_WithAnotherProvider_AfterAnUnansweredBeginThatTookNothing_CancelsItAndBegins()
+    {
+        var attemptStore = new InMemoryPaymentAttemptStore();
+        var clock = new TestClock(DateTime.UtcNow);
+        var first = new RecordingProvider(ProviderKey) { BeginResult = () => PaymentBeginResult.Failure("Stripe answered 500.") };
+        var second = new RecordingProvider("second");
+        var (engine, sessionStore) = CreateEngine(attemptStore, first, clock: clock, otherProviders: second);
+        sessionStore.Seed(CreateSession(oneTimeAmount: 30m));
+
+        await engine.BeginPaymentAsync("session-1", new BeginPaymentOptions { ProviderKey = ProviderKey }, TestContext.Current.CancellationToken);
+
+        clock.UtcNow = clock.UtcNow.AddMinutes(2);
+
+        var outcome = await engine.BeginPaymentAsync("session-1", new BeginPaymentOptions { ProviderKey = "second" }, TestContext.Current.CancellationToken);
+
+        Assert.True(outcome.Succeeded);
+        Assert.Equal(1, first.CancelCallCount);
+        Assert.Equal(1, second.BeginCallCount);
+    }
+
     private static RecordingProvider ConfirmingProvider()
         => new(ProviderKey)
         {
@@ -781,6 +834,7 @@ public sealed class DefaultCheckoutEngineTests
         bool lockGranted = true,
         bool supportsRecurring = true,
         IPaymentIssueRecorder paymentIssues = null,
+        TestClock clock = null,
         params RecordingProvider[] otherProviders)
     {
         var sessionStore = new InMemoryCheckoutSessionStore();
@@ -818,7 +872,7 @@ public sealed class DefaultCheckoutEngineTests
             handler is null ? [] : [handler],
             distributedLock.Object,
             new Mock<ISession>().Object,
-            new TestClock(DateTime.UtcNow),
+            clock ?? new TestClock(DateTime.UtcNow),
             NullLogger<DefaultCheckoutEngine>.Instance,
             paymentIssues: paymentIssues);
 
@@ -846,6 +900,8 @@ public sealed class DefaultCheckoutEngineTests
 
         public Func<Task> OnBegin { get; set; }
 
+        public Func<PaymentBeginResult> BeginResult { get; set; }
+
         public int BeginCallCount { get; private set; }
 
         public int CancelCallCount { get; private set; }
@@ -859,7 +915,7 @@ public sealed class DefaultCheckoutEngineTests
                 await OnBegin();
             }
 
-            return PaymentBeginResult.Success("provider-ref");
+            return BeginResult?.Invoke() ?? PaymentBeginResult.Success("provider-ref");
         }
 
         public Task<PaymentVerificationResult> VerifyAsync(VerifyPaymentContext context, CancellationToken cancellationToken = default)

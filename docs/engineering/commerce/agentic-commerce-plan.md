@@ -423,6 +423,7 @@ Found and fixed while testing against Stripe test mode, each with a unit or inte
 - The agent checkout was saved after its lock was released, and after the checkout engine's own commit, so a request inserted a second row with the same id. A paid checkout could then read as payable again. The changes now go onto the stored row, committed inside the lock.
 - A Stripe failure whose outcome is unknown (a server error, a rate limit, an idempotency conflict) was recorded as a decline, so the next try used a new idempotency key and could charge again. Only Stripe's final answers (a card error, a refused request, a PaymentIntent that ended unpaid) end an attempt now. The same fix applies to saved-card charges.
 - The engine now cancels a payment begun with another provider, at that provider, before beginning one for the same obligation, and begins nothing when the first was paid or can't be canceled.
+- Found in the code review: a begin that ended without Stripe's answer leaves its attempt Created with no PaymentIntent id, although Stripe may have charged it. Switching to another payment method set that attempt aside unchecked, and the reconciliation sweep skips set-aside attempts, so such a charge was never seen. The engine now waits two minutes before setting aside an unanswered attempt, and verifies it first. The Stripe provider finds the PaymentIntent from its `checkout_attempt_id` metadata (Stripe's search) when an attempt has no id, both to verify it, which also lets the sweep settle the checkout from it, and to cancel or refund it.
 
 ### Verified
 

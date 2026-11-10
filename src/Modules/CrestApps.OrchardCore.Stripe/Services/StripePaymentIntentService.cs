@@ -605,6 +605,24 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
         return ToDetails(paymentIntent);
     }
 
+    /// <inheritdoc/>
+    public async Task<string> FindByCheckoutAttemptAsync(string checkoutAttemptId)
+    {
+        // Attempt ids are generated letters and digits; anything else can't be one, and can't be put in a search query.
+        if (string.IsNullOrEmpty(checkoutAttemptId) || !checkoutAttemptId.All(char.IsAsciiLetterOrDigit))
+        {
+            return null;
+        }
+
+        var found = await _paymentIntentService.SearchAsync(new PaymentIntentSearchOptions
+        {
+            Query = $"metadata['checkout_attempt_id']:'{checkoutAttemptId}'",
+            Limit = 1,
+        });
+
+        return found?.Data?.FirstOrDefault()?.Id;
+    }
+
     private static PaymentIntentDetails ToDetails(PaymentIntent paymentIntent)
         => new()
         {

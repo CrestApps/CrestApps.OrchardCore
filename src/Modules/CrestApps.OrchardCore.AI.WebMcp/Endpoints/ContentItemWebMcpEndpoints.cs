@@ -85,12 +85,12 @@ internal static class ContentItemWebMcpEndpoints
             return TypedResults.BadRequest("The antiforgery token is missing or not valid.");
         }
 
-        if (httpContext.Request.ContentLength > WebMcpEndpoints.MaxRequestBodyLength)
+        var (arguments, tooLarge) = await WebMcpToolRequests.ReadArgumentsAsync(httpContext.Request, httpContext.RequestAborted);
+
+        if (tooLarge)
         {
             return TypedResults.BadRequest("The tool input is too large.");
         }
-
-        var arguments = await WebMcpToolRequests.ReadArgumentsAsync(httpContext.Request, httpContext.RequestAborted);
 
         if (arguments is null)
         {

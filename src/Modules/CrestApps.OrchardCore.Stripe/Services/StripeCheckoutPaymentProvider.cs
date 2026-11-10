@@ -308,6 +308,14 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
 
         if (string.IsNullOrEmpty(attempt.ProviderReference))
         {
+            // A begin whose answer never arrived (a Stripe server error, a timeout) may still have made the
+            // PaymentIntent. When Stripe has one for this attempt, it's recorded on the attempt and verified like any
+            // other, so a charge Stripe took is never left unseen.
+            attempt.ProviderReference = await FindPaymentIntentAsync(attempt);
+        }
+
+        if (string.IsNullOrEmpty(attempt.ProviderReference))
+        {
             // The attempt was created but the PaymentIntent was never begun, so there is nothing to
             // confirm yet. Leave the obligation outstanding rather than inventing a settlement.
             return new PaymentVerificationResult
@@ -399,6 +407,13 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
         ArgumentNullException.ThrowIfNull(context.Attempt);
 
         var attempt = context.Attempt;
+
+        if (string.IsNullOrEmpty(attempt.ProviderReference))
+        {
+            // A begin whose answer never arrived may still have made the PaymentIntent: it's voided, or refunded when it
+            // was paid, like any other.
+            attempt.ProviderReference = await FindPaymentIntentAsync(attempt);
+        }
 
         if (string.IsNullOrEmpty(attempt.ProviderReference))
         {
@@ -642,6 +657,22 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes($"{authentication.TransactionId}|{authentication.Cryptogram}|{authentication.ElectronicCommerceIndicator}|{authentication.Version}"));
 
         return $"{attempt.IdempotencyKey}_3ds_{Convert.ToHexStringLower(hash.AsSpan(0, 8))}";
+    }
+
+    // The PaymentIntent Stripe made for an attempt whose begin ended without Stripe's answer, or null. A failed search
+    // leaves things as they were: the attempt is treated as never begun, the way it was before the search.
+    private async Task<string> FindPaymentIntentAsync(PaymentAttempt attempt)
+    {
+        try
+        {
+            return await _paymentIntentService.FindByCheckoutAttemptAsync(attempt.ItemId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not search Stripe for a PaymentIntent of checkout attempt '{AttemptId}'.", attempt.ItemId);
+
+            return null;
+        }
     }
 
     private static bool IsPaymentIntentReference(string providerReference)

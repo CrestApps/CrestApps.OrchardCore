@@ -65,4 +65,14 @@ public interface IStripePaymentIntentService
     /// <param name="model">The cancel request identifying the payment intent.</param>
     /// <returns>The authoritative payment intent details after cancellation.</returns>
     Task<PaymentIntentDetails> CancelAsync(CancelPaymentIntentRequest model);
+
+    /// <summary>
+    /// Finds the PaymentIntent made for a checkout attempt, from its <c>checkout_attempt_id</c> metadata. A charge whose
+    /// answer never arrived (a Stripe server error, a timeout) may still have been made, and this is how the store finds
+    /// it. Stripe's search can lag up to a minute behind a new PaymentIntent.
+    /// </summary>
+    /// <param name="checkoutAttemptId">The checkout attempt's id.</param>
+    /// <returns>The PaymentIntent's id, or <see langword="null"/> when none is found.</returns>
+    Task<string> FindByCheckoutAttemptAsync(string checkoutAttemptId)
+        => Task.FromResult<string>(null);
 }

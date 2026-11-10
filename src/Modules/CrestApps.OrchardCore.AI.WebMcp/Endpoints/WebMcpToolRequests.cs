@@ -1,5 +1,7 @@
 using System.Text.Json;
+using CrestApps.Core.AI.WebMcp.Endpoints;
 using CrestApps.Core.AI.WebMcp.Models;
+using CrestApps.OrchardCore.Core.Http;
 using Microsoft.AspNetCore.Http;
 
 namespace CrestApps.OrchardCore.AI.WebMcp.Endpoints;
@@ -11,27 +13,36 @@ namespace CrestApps.OrchardCore.AI.WebMcp.Endpoints;
 internal static class WebMcpToolRequests
 {
     /// <summary>
-    /// Reads the JSON object in the request body as the tool's arguments.
+    /// Reads the JSON object in the request body as the tool's arguments, reading at most
+    /// <see cref="WebMcpEndpoints.MaxRequestBodyLength"/> bytes whether or not the request declares its length.
     /// </summary>
     /// <param name="request">The request.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The arguments, empty for an empty body, or <see langword="null"/> when the body is not a JSON object.</returns>
-    public static async Task<IDictionary<string, object>> ReadArgumentsAsync(HttpRequest request, CancellationToken cancellationToken)
+    /// <returns>The arguments, empty for an empty body, or <see langword="null"/> when the body is not a JSON object;
+    /// and whether the body was too large to read.</returns>
+    public static async Task<(IDictionary<string, object> Arguments, bool TooLarge)> ReadArgumentsAsync(HttpRequest request, CancellationToken cancellationToken)
     {
+        var body = await RequestBodyReader.ReadAsync(request, WebMcpEndpoints.MaxRequestBodyLength, cancellationToken);
+
+        if (body.IsTooLarge)
+        {
+            return (null, true);
+        }
+
         var arguments = new Dictionary<string, object>(StringComparer.Ordinal);
 
-        if (request.ContentLength == 0)
+        if (string.IsNullOrWhiteSpace(body.Body))
         {
-            return arguments;
+            return (arguments, false);
         }
 
         try
         {
-            using var document = await JsonDocument.ParseAsync(request.Body, cancellationToken: cancellationToken);
+            using var document = JsonDocument.Parse(body.Body);
 
             if (document.RootElement.ValueKind != JsonValueKind.Object)
             {
-                return null;
+                return (null, false);
             }
 
             foreach (var property in document.RootElement.EnumerateObject())
@@ -39,11 +50,11 @@ internal static class WebMcpToolRequests
                 arguments[property.Name] = property.Value.Clone();
             }
 
-            return arguments;
+            return (arguments, false);
         }
         catch (JsonException)
         {
-            return null;
+            return (null, false);
         }
     }
 

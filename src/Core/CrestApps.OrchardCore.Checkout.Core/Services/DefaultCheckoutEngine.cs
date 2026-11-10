@@ -51,6 +51,10 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
     private readonly ILogger _logger;
     private readonly IPaymentIssueRecorder _paymentIssues;
 
+    // How long a begin that ended without the provider's answer holds off another payment method: long enough for the
+    // provider to find a payment it may have made anyway (Stripe's search lags up to a minute behind).
+    private static readonly TimeSpan _unansweredBeginWindow = TimeSpan.FromMinutes(2);
+
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultCheckoutEngine"/> class.
     /// </summary>
@@ -694,6 +698,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         if (attempt is null)
         {
             attempt = CreateAttempt(session, invoice, provider.Key, obligationId);
+            attempt.CreatedUtc = _clock.UtcNow;
 
             // A declined attempt is final, so a new one for the same obligation is a genuinely new charge. It
             // needs its own idempotency key: reusing the declined attempt's key would make the gateway replay the
@@ -900,9 +905,20 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                 return false;
             }
 
+            // An attempt still Created, with no reference, is one whose begin may have ended without the provider's
+            // answer (a server error, a timeout): the provider may have charged it anyway. Until the provider can be
+            // expected to find it, nothing is set aside.
+            if (other.State == PaymentAttemptState.Created &&
+                string.IsNullOrEmpty(other.ProviderReference) &&
+                other.CreatedUtc != default &&
+                _clock.UtcNow - other.CreatedUtc < _unansweredBeginWindow)
+            {
+                return false;
+            }
+
             try
             {
-                if (other.State == PaymentAttemptState.Pending)
+                if (other.State is PaymentAttemptState.Pending or PaymentAttemptState.Created)
                 {
                     var verification = await otherProvider.VerifyAsync(new VerifyPaymentContext { Session = session, Attempt = other }, cancellationToken);
 
