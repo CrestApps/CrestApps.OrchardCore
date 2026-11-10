@@ -40,6 +40,8 @@ Because the read model is reconciled after the fact, it can lag. That leads to o
 
 Lag matters most for an agent who is handed a record: a preview offer opens the activity screen as soon as it reaches the agent, which can be before the activity shows them as its owner. So `ContactCenterActivityOwnershipAuthorizationHandler` grants **Complete activity** to a user with **Complete own activity** from the work state's `ReservedById` and `AssignedToId`, alongside the Omnichannel handler that grants it from the activity.
 
+Routing also lets go of the work when its call ends, and some of those paths clear the owner while the disposition for that call is still owed. So while the work state names nobody and the activity is still open, the same handler grants **Complete activity** to the agent who handled the activity's last call: the call ended after it was answered, it was not a machine or a dialer call still waiting for an agent, and it names that agent. The agent bar and workspace offer **Complete activity** for an ended call only when this check passes.
+
 ## Which one to read
 
 Read `IContactCenterWorkStateService` for anything that decides routing: whether work may be offered, who holds it, whether an offer has expired, and whether the dialer's attempt cap has been reached. Read the activity's projected columns only for CRM presentation and bulk reporting, where a per-row work state lookup would be a query per row.

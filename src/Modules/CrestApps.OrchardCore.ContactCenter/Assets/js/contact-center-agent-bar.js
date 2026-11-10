@@ -679,8 +679,13 @@ import { activityToAutoOpen, autoOpenWorkKey, readPoppedActivities, rememberPopp
                 : label('unknownCaller', 'Unknown caller');
             var number = active.customerAddress ? formatPhone(active.customerAddress) : '';
             var ended = isEnded(active);
+
+            // A call that ended is offered for completion only when the server says the agent may complete its
+            // activity (it sends the completion URL then, as the workspace reads it). Offered regardless, an agent whose
+            // record went to someone else, or was finished elsewhere, clicked through to a bare access-denied page.
+            var canComplete = !!(active.activityItemId && active.completeUrl);
             var heading = ended
-                ? label('callEnded', 'Call ended — complete the activity')
+                ? (canComplete ? label('callEnded', 'Call ended — complete the activity') : label('callEndedNoActivity', 'Call ended'))
                 : (inbound ? label('inboundCall', 'Inbound call') : label('outboundCall', 'Outbound call'));
 
             var rows = detailRow(label('direction', 'Direction'), inbound ? label('inbound', 'Inbound') : label('outbound', 'Outbound')) +
@@ -692,8 +697,8 @@ import { activityToAutoOpen, autoOpenWorkKey, readPoppedActivities, rememberPopp
             // "Complete activity" only appears when the call router assigned a CRM activity (dialer or queue work).
             // The agent never creates an activity or picks a contact from the bar, so a direct inbound call — which
             // has no activity — shows no such button.
-            var activityButton = active.activityItemId
-                ? '<button type="button" class="btn btn-primary btn-sm" data-cc-open-activity="' + escapeHtml(active.activityItemId) + '"><i class="fa-solid fa-up-right-from-square" aria-hidden="true"></i> ' + escapeHtml(ended ? label('completeActivity', 'Complete activity') : label('openActivity', 'Open activity')) + '</button>'
+            var activityButton = active.activityItemId && (!ended || canComplete)
+                ?'<button type="button" class="btn btn-primary btn-sm" data-cc-open-activity="' + escapeHtml(active.activityItemId) + '"><i class="fa-solid fa-up-right-from-square" aria-hidden="true"></i> ' + escapeHtml(ended ? label('completeActivity', 'Complete activity') : label('openActivity', 'Open activity')) + '</button>'
                 : '';
             var contactButton = active.contactUrl
                 ? '<a class="btn btn-outline-secondary btn-sm" href="' + escapeHtml(active.contactUrl) + '" target="_blank" rel="noopener"><i class="fa-solid fa-address-card" aria-hidden="true"></i> ' + escapeHtml(label('openContact', 'Customer record')) + '</a>'

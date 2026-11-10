@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -365,19 +366,13 @@ internal static partial class AgentWorkspaceEndpoints
         TimeSpan? wrapUpWindow,
         CancellationToken cancellationToken)
     {
-        // Wrap-up (disposition) applies only to a call the agent actually handled: it must have ended normally and
-        // have been answered. A failed or never-answered call — an unanswered inbound ring, a busy/failed dial —
-        // was not handled, so it must never linger in the bar or workspace demanding an activity completion. Nor
-        // does a dialer call a machine answered, or one the customer hung up on before the agent was connected:
-        // the dialer dispositions those itself.
+        // Wrap-up (disposition) applies only to a call the agent actually handled (see HandledCallRule), so a call
+        // that was not must never linger in the bar or workspace demanding an activity completion. Completing the
+        // activity is authorized by the same rule.
         // When a wrap-up window is supplied, a call that ended longer ago than that window is no longer live
         // after-call work and is dropped, so a stale record cannot stick around indefinitely.
         var candidates = recentInteractions
-            .Where(interaction => interaction.Status == InteractionStatus.Ended &&
-                interaction.AnsweredUtc.HasValue &&
-                !string.IsNullOrEmpty(interaction.ActivityItemId) &&
-                !DialerCallMetadata.IsAwaitingAgent(interaction) &&
-                !DialerCallMetadata.WasAnsweredByMachine(interaction) &&
+            .Where(interaction => HandledCallRule.IsHandledCall(interaction) &&
                 IsWithinWrapUpWindow(interaction, now, wrapUpWindow))
             .ToArray();
 
