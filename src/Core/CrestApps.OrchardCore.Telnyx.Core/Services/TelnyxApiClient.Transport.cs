@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telnyx.Telemetry;
 using Microsoft.Extensions.Logging;
@@ -73,7 +74,7 @@ public sealed partial class TelnyxApiClient
                         _logger.LogDebug(
                             "Telnyx command {Method} {Path} body: {Body}",
                             method,
-                            path,
+                            path.SanitizeLogValue(),
                             DescribeBodyForLog(body));
                     }
 
@@ -85,7 +86,7 @@ public sealed partial class TelnyxApiClient
                         _logger.LogInformation(
                             "Telnyx command {Method} {Path} returned {StatusCode}.",
                             method,
-                            path,
+                            path.SanitizeLogValue(),
                             (int)response.StatusCode);
                     }
 
@@ -99,10 +100,11 @@ public sealed partial class TelnyxApiClient
                     if (attempt < attempts && TelnyxApiRetryPolicy.IsRetryable(response.StatusCode))
                     {
                         var delay = _retryPolicy.GetDelay(attempt, response.Headers.RetryAfter?.Delta);
+                        var loggedPath = path.SanitizeLogValue();
 
                         retried = true;
                         RetryTelemetry.RecordRetry(TelnyxRetryArea, GetRetryReason(response.StatusCode), attempt + 1);
-                        TelnyxLog.ApiRetrying(_logger, (int)response.StatusCode, method, path, attempt + 1, attempts, delay);
+                        TelnyxLog.ApiRetrying(_logger, (int)response.StatusCode, method, loggedPath, attempt + 1, attempts, delay);
 
                         if (delay > TimeSpan.Zero)
                         {
@@ -125,7 +127,7 @@ public sealed partial class TelnyxApiClient
 
                         if (_logger.IsEnabled(LogLevel.Debug))
                         {
-                            _logger.LogDebug("Telnyx had already ended the call {Path} was asked to hang up.", path);
+                            _logger.LogDebug("Telnyx had already ended the call {Path} was asked to hang up.", path.SanitizeLogValue());
                         }
 
                         return (failure, null);
@@ -139,7 +141,7 @@ public sealed partial class TelnyxApiClient
                         _logger.LogWarning(
                             "Telnyx refused {Method} {Path} with {StatusCode}: {Errors}",
                             method,
-                            path,
+                            path.SanitizeLogValue(),
                             (int)response.StatusCode,
                             DescribeErrors(content));
                     }
@@ -158,14 +160,17 @@ public sealed partial class TelnyxApiClient
                     {
                         retried = true;
                         RetryTelemetry.RecordRetry(TelnyxRetryArea, GetRetryReason(ex), attempt + 1);
-                        TelnyxLog.ApiRetryingAfterException(_logger, method, path, ex.GetType().Name, attempt + 1, attempts);
+                        TelnyxLog.ApiRetryingAfterException(_logger, method, path.SanitizeLogValue(), ex.GetType().Name, attempt + 1, attempts);
 
                         continue;
                     }
 
                     // A provider that cannot be reached is a failed command, not an unhandled exception on a path
                     // that is holding a live call.
-                    _logger.LogError(ex, "The Telnyx request {Method} {Path} could not be completed.", method, path);
+                    if (_logger.IsEnabled(LogLevel.Error))
+                    {
+                        _logger.LogError(ex, "The Telnyx request {Method} {Path} could not be completed.", method, path.SanitizeLogValue());
+                    }
 
                     telemetry.SetStatusCode(null);
                     telemetry.Fail(ex);
