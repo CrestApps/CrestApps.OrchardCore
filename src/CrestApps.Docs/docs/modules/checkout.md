@@ -548,6 +548,30 @@ With Stripe enabled, the storefront account page **Payment methods** (`account/p
 
 A provider that can be charged this way reports `SupportsSavedPaymentMethods`, implements `ICheckoutSavedPaymentMethodProvider`, and honors `CheckoutPaymentDataKeys.OffSession`. When the card's bank asks the cardholder to approve an off-session charge, it returns `PaymentBeginResult.AuthenticationRequired(...)`; the engine then reports `PaymentBeginOutcome.RequiresAuthentication` alongside `Declined`, so the caller can ask the customer to pay it themselves rather than trying the card again.
 
+## Payments an AI agent brings
+
+An AI agent pays with a credential its platform got from the buyer for this one payment, such as a Stripe shared payment token or a Google Pay token, and there is no browser to confirm it in. Server code passes it to `ICheckoutEngine.BeginPaymentAsync` in the provider data:
+
+| Key | Value |
+| --- | --- |
+| `CheckoutPaymentDataKeys.DelegatedCredential` (`delegatedCredential`) | The credential. |
+| `CheckoutPaymentDataKeys.DelegatedCredentialType` (`delegatedCredentialType`) | Its kind, from `DelegatedCredentialTypes`: `stripe_shared_payment_token`, `google_pay_token` or `test`. |
+
+A provider that charges such a credential on the server sets `PaymentProviderCapabilities.AcceptsDelegatedCredentials` and, in `BeginAsync`, charges it when the key is present. Stripe charges shared payment tokens and Google Pay tokens (see [Payments](payments.md#payments-ai-agents-bring)), and the test provider charges the [test credentials](agentic-commerce.md#test-payments) `tok_test_success`, `tok_test_decline` and `tok_test_3ds`. A bank that asks the buyer to approve the payment is reported as `PaymentBeginOutcome.RequiresAuthentication` or `RequiresAction`, and the caller sends the buyer to the checkout.
+
+Only server code sets these keys. The public payment endpoints and the commerce API drop them, with the off-session keys, from anything a browser or an app sends (`PaymentEndpoints.SanitizeProviderData`). [Agentic Commerce](agentic-commerce.md#payment-handlers) is the caller today.
+
+## Filling steps from code
+
+The Contact and Shipping steps can be saved from code, such as an API or an AI agent, with the same rules as their pages. The module that owns each step implements its contract in `CrestApps.OrchardCore.Checkout.Abstractions`; resolve it as an `IEnumerable` and use it only when present.
+
+| Contract | Implemented by | Members |
+| --- | --- | --- |
+| `ICheckoutContactStep` | Customers (`CustomerCheckoutContactStep`) | `StepKey`; `SaveAsync(flow, CheckoutContactDetails)` saves the buyer's details and, when the store asks for one, their billing address, and marks the step done. |
+| `ICheckoutFulfillmentStep` | Shipping (`ShippingCheckoutFulfillmentStep`) | `StepKey`; `QuoteAsync(flow, address)` returns the ways to ship to an address, cheapest first, without saving; `GetPickupOptionsAsync(flow)` returns the places to collect from; `SaveAsync(flow, CheckoutFulfillmentChoice)` saves the choice, puts its cost on the checkout and marks the step done. |
+
+Both return a `CheckoutStepSaveResult` with the errors of each field. A step without a contract, such as a step another module adds, is finished by the buyer on the checkout's own page.
+
 ## Test payments
 
 | | |

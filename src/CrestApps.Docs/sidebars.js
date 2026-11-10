@@ -212,6 +212,7 @@ const sidebars = {
                 'user-manual/commerce/payment-providers',
                 'user-manual/commerce/products-and-currencies',
                 'user-manual/commerce/product-listings',
+                'user-manual/commerce/ai-agents',
                 'user-manual/commerce/markets',
                 'user-manual/commerce/taxes',
                 'user-manual/commerce/coupons',

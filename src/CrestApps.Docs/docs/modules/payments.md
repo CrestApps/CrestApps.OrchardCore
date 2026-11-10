@@ -302,6 +302,15 @@ alone.
 Taking a card that is tapped against the administrator's own phone (Stripe's *Tap to Pay*) needs Stripe Terminal
 inside a native iOS or Android app, and cannot be done from a web page.
 
+### Payments AI agents bring
+
+The provider sets `AcceptsDelegatedCredentials`, so it charges on the server a payment credential an AI agent brought for one purchase (`CheckoutPaymentDataKeys.DelegatedCredential`; see [Checkout](checkout.md#payments-an-ai-agent-brings)). [Agentic Commerce](agentic-commerce.md#payment-handlers) uses it for two kinds:
+
+- **Stripe shared payment tokens** (`stripe_shared_payment_token`, `spt_...`), which the agent's platform issued to the store's Stripe account. The PaymentIntent is created and confirmed with `payment_method_data[shared_payment_granted_token]`. Shared payment tokens are a preview of Stripe's API, so this call is made with the preview API version `2026-09-30.preview` (`StripePaymentIntentService.SharedPaymentTokenApiVersion`).
+- **Google Pay tokens** (`google_pay_token`) whose gateway is Stripe: the Google Pay payment data, or the `tok_...` card token in it. The PaymentIntent is created and confirmed with that card token. A token Stripe didn't issue is refused.
+
+Each charge carries the attempt's idempotency key and the metadata `checkout_attempt_id`, `checkout_session_id` and `delegated`, and is verified against Stripe like any other payment. A credential pays for one purchase only: a charge that asks to keep the card, or that isn't a one-time payment, is refused. When the bank asks the buyer to approve the payment, the begin result requires an action with Stripe's redirect page, which the agent hands to the buyer.
+
 ### Stripe Terminal readers
 
 With the [Point of Sale](point-of-sale) feature on, the Stripe module adds `StripeTerminalPaymentProvider` (key `stripe-terminal`, *Card on a Stripe reader*), which takes a register's card on a Stripe Terminal reader through Stripe's server-driven integration, and the `pos/terminal/readers` endpoints a till app lists and pairs readers with. A simulated reader (registration code `simulated-wpe`) and a test card presented on it work in test mode. See [Point of Sale](point-of-sale#stripe-terminal).
