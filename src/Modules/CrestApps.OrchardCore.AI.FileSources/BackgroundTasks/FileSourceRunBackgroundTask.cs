@@ -1,4 +1,5 @@
 using CrestApps.Core.AI.FileSources;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -34,22 +35,40 @@ public sealed class FileSourceRunBackgroundTask : IBackgroundTask
     /// </summary>
     /// <param name="serviceProvider">The tenant service provider.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(serviceProvider);
 
+        return this.RunAsync(run => DoWorkCoreAsync(run, serviceProvider, cancellationToken));
+    }
+
+    private static async Task DoWorkCoreAsync(MeasuredTaskRun run, IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    {
         // Absent when the feature's services are not in this tenant's container, which is not an error.
         var scheduler = serviceProvider.GetService<IFileSourceScheduler>();
 
         if (scheduler is null)
         {
+            run.Skip();
+
             return;
         }
 
         var result = await scheduler.RunDueAsync(cancellationToken);
 
+        // A pass with nothing due is healthy; it shows as a skipped run rather than as nothing at all.
+        run.AddItems(result.Ran, "ran");
+        run.AddItems(result.Failed, "failed");
+
+        if (result.Failed > 0)
+        {
+            run.ReportError();
+        }
+
         if (result.Ran == 0 && result.Failed == 0)
         {
+            run.Skip();
+
             return;
         }
 

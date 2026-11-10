@@ -1,4 +1,11 @@
 @model ClassifiedOwnViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    // Stored times are UTC; people read them in the site time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 @inject OrchardCore.Modules.IClock Clock
 
 @* A poster's own listings: where each is, renewing it, and upgrading it. *@
@@ -40,7 +47,7 @@ else
                                 <span class="badge text-bg-warning">@T["Waiting for approval"]</span>
                                 break;
                             case ClassifiedStatus.Approved:
-                                <span class="badge text-bg-success">@T["Up until {0:d}", part.ExpiresUtc]</span>
+                                <span class="badge text-bg-success">@T["Up until {0:d}", part.ExpiresUtc is { } expiresUtc ? await LocalAsync(expiresUtc) : null]</span>
                                 break;
                             case ClassifiedStatus.Rejected:
                                 <span class="badge text-bg-danger">@T["Not approved"]</span>
@@ -51,7 +58,7 @@ else
                         }
                         @if (featured)
                         {
-                            <span class="badge text-bg-info">@T["Featured until {0:d}", part.FeaturedUntilUtc]</span>
+                            <span class="badge text-bg-info">@T["Featured until {0:d}", part.FeaturedUntilUtc is { } featuredUntilUtc ? await LocalAsync(featuredUntilUtc) : null]</span>
                         }
                         @if (part.Status == ClassifiedStatus.Rejected && !string.IsNullOrEmpty(part.RejectReason))
                         {

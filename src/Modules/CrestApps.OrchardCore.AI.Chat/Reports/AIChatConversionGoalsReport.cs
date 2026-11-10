@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Localization;
+using OrchardCore.Modules;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Chat.Reports;
@@ -18,6 +19,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Reports;
 public sealed class AIChatConversionGoalsReport : IReport, IReportFilterMetadata
 {
     private readonly IAIChatSessionEventReader _reader;
+    private readonly ILocalClock _localClock;
 
     internal readonly IStringLocalizer S;
 
@@ -25,10 +27,15 @@ public sealed class AIChatConversionGoalsReport : IReport, IReportFilterMetadata
     /// Initializes a new instance of the <see cref="AIChatConversionGoalsReport"/> class.
     /// </summary>
     /// <param name="reader">Reads the session events.</param>
+    /// <param name="localClock">Converts times to the site time zone.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public AIChatConversionGoalsReport(IAIChatSessionEventReader reader, IStringLocalizer<AIChatConversionGoalsReport> stringLocalizer)
+    public AIChatConversionGoalsReport(
+        IAIChatSessionEventReader reader,
+        ILocalClock localClock,
+        IStringLocalizer<AIChatConversionGoalsReport> stringLocalizer)
     {
         _reader = reader;
+        _localClock = localClock;
         S = stringLocalizer;
     }
 
@@ -103,7 +110,7 @@ public sealed class AIChatConversionGoalsReport : IReport, IReportFilterMetadata
             .ToList();
 
         // An export is one flat table, with the invariant columns of the conversion goals page's CSV and a column per
-        // goal, as scripts read it, even when it has no rows.
+        // goal, as scripts read it, even when it has no rows. Its start time stays UTC for those scripts.
         if (context.Mode == ReportRunMode.Export)
         {
             return new ReportDocument().Add(ReportSection.ForTable("ConversionGoals",
@@ -113,12 +120,21 @@ public sealed class AIChatConversionGoalsReport : IReport, IReportFilterMetadata
                 new ReportColumn("TotalPoints", ReportColumnAlign.End),
                 .. goals.Select(goal => new ReportColumn(goal, ReportColumnAlign.End)),
             ],
-            scored.Select(evt => Row(evt, goals))));
+            scored.Select(evt => Row(evt.SessionStartedUtc.ToString("o", CultureInfo.InvariantCulture), evt, goals))));
         }
 
         if (scored.Count == 0)
         {
             return new ReportDocument();
+        }
+
+        var tableRows = new List<ReportRow>(scored.Count);
+
+        foreach (var evt in scored)
+        {
+            var started = await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(evt.SessionStartedUtc, DateTimeKind.Utc));
+
+            tableRows.Add(Row(started.DateTime.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture), evt, goals));
         }
 
         return new ReportDocument()
@@ -129,15 +145,15 @@ public sealed class AIChatConversionGoalsReport : IReport, IReportFilterMetadata
             ]))
             .Add(ReportSection.ForTable(S["Conversion goals"].Value,
             [
-                new ReportColumn(S["Session started (UTC)"].Value),
+                new ReportColumn(S["Session started"].Value),
                 new ReportColumn(S["Session"].Value),
                 new ReportColumn(S["Total points"].Value, ReportColumnAlign.End),
                 .. goals.Select(goal => new ReportColumn(goal, ReportColumnAlign.End)),
             ],
-            scored.Select(evt => Row(evt, goals))));
+            tableRows));
     }
 
-    private static ReportRow Row(AIChatSessionEvent evt, IReadOnlyList<string> goals)
+    private static ReportRow Row(string started, AIChatSessionEvent evt, IReadOnlyList<string> goals)
     {
         var results = evt.ConversionGoalResults
             .Where(result => !string.IsNullOrEmpty(result.Name))
@@ -146,7 +162,7 @@ public sealed class AIChatConversionGoalsReport : IReport, IReportFilterMetadata
 
         return new ReportRow(
         [
-            evt.SessionStartedUtc.ToString("o", CultureInfo.InvariantCulture),
+            started,
             evt.SessionId,
             Points(evt.ConversionScore, evt.ConversionMaxScore),
             .. goals.Select(goal => results.TryGetValue(goal, out var result) ? Points(result.Score, result.MaxScore) : string.Empty),

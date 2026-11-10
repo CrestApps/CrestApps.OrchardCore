@@ -44,4 +44,12 @@ public sealed class ContentImportRowFilterContext
     /// keeps the kind of every skipped row, while <see cref="SkipReason"/> is kept for a limited number of rows only.
     /// </summary>
     public string SkipCategory { get; set; }
+
+    /// <summary>
+    /// Gets or sets a short code for the kind of reason the row was skipped, in snake_case and never localized, such as
+    /// <c>duplicate</c> or <c>dnc_match</c>. The import counts the skipped rows by this code on its telemetry, where
+    /// a row skipped without a code, or with a code that is not lower-case letters, digits and underscores, counts as
+    /// <c>other</c>. Keep the set of codes small and never put a value read from the row in it.
+    /// </summary>
+    public string SkipReasonCode { get; set; }
 }

@@ -883,6 +883,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public System.DateTime CreatedUtc { get; set; }
         public string Description { get; set; }
         public bool IsClosed { get; set; }
+        public bool IsContacted { get; set; }
         public bool IsConverted { get; set; }
         public bool IsDefault { get; set; }
         public System.DateTime? ModifiedUtc { get; set; }
@@ -2016,5 +2017,52 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectDirection direction, System.Threading.CancellationToken cancellationToken = default) { }
         public bool IsConfigured(CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings flowSettings) { }
+    }
+}
+namespace CrestApps.OrchardCore.Omnichannel.Core.Telemetry
+{
+    public readonly struct ActivityBatchLoadCounts : System.IEquatable<CrestApps.OrchardCore.Omnichannel.Core.Telemetry.ActivityBatchLoadCounts>
+    {
+        public ActivityBatchLoadCounts(long Loaded, long Duplicate, long OptedOut, long NoDestination, long NotInService, long LeadOrContact, long OverLimit) { }
+        public long Duplicate { get; init; }
+        public long LeadOrContact { get; init; }
+        public long Loaded { get; init; }
+        public long NoDestination { get; init; }
+        public long NotInService { get; init; }
+        public long OptedOut { get; init; }
+        public long OverLimit { get; init; }
+        public static CrestApps.OrchardCore.Omnichannel.Core.Telemetry.ActivityBatchLoadCounts Of(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch batch) { }
+    }
+    public static class OmnichannelTelemetry
+    {
+        public const string BatchIdSpanTag = "crestapps.omnichannel.batch.id";
+        public const string OutcomeCompleted = "completed";
+        public const string OutcomeStopped = "stopped";
+        public const string OutcomeUnsupported = "unsupported";
+        public const string RecordDuplicate = "duplicate";
+        public const string RecordLeadOrContact = "lead_or_contact";
+        public const string RecordLoaded = "loaded";
+        public const string RecordNoDestination = "no_destination";
+        public const string RecordNotInService = "not_in_service";
+        public const string RecordOptedOut = "opted_out";
+        public const string RecordOverLimit = "over_limit";
+        public const string SourceName = "CrestApps.OrchardCore.Omnichannel";
+        public const string TriggerResume = "resume";
+        public const string TriggerStart = "start";
+        public const string WatchdogGaveUp = "gave_up";
+        public const string WatchdogReset = "reset";
+        public const string WatchdogResumed = "resumed";
+        public static System.Diagnostics.ActivitySource ActivitySource { get; }
+        public static System.Diagnostics.Metrics.Histogram<double> BatchLoadDuration { get; }
+        public static System.Diagnostics.Metrics.Histogram<double> BatchLoadPageDuration { get; }
+        public static System.Diagnostics.Metrics.Histogram<double> BatchLoadPreviewDuration { get; }
+        public static System.Diagnostics.Metrics.Counter<long> BatchLoadRecords { get; }
+        public static System.Diagnostics.Metrics.Gauge<long> BatchLoadsStalled { get; }
+        public static System.Diagnostics.Metrics.Meter Meter { get; }
+        public static void Add(System.Diagnostics.Metrics.Counter<long> counter, long value, System.Diagnostics.TagList tags) { }
+        public static void Add(System.Diagnostics.Metrics.Counter<long> counter, long value, string key, object tagValue) { }
+        public static void Record(System.Diagnostics.Metrics.Gauge<long> gauge, long value) { }
+        public static void Record(System.Diagnostics.Metrics.Histogram<double> histogram, double value, System.Diagnostics.TagList tags = default) { }
+        public static void RecordLoadRecords(CrestApps.OrchardCore.Omnichannel.Core.Telemetry.ActivityBatchLoadCounts previous, CrestApps.OrchardCore.Omnichannel.Core.Telemetry.ActivityBatchLoadCounts current) { }
     }
 }

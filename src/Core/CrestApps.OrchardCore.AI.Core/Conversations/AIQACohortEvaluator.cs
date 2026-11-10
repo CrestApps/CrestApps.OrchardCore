@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Models;
@@ -6,6 +7,8 @@ using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Telemetry;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using YesSql;
@@ -101,11 +104,55 @@ public sealed class AIQACohortEvaluator
     {
         ArgumentNullException.ThrowIfNull(cohort);
 
+        using var telemetry = TelemetryScope.Start(
+            AIModuleTelemetry.ActivitySource,
+            "crestapps.ai.eval.qa_cohort",
+            AIModuleTelemetry.EvaluationDuration,
+            new TagList
+            {
+                { AIModuleTelemetry.KindTag, AIModuleTelemetry.KindQACohort },
+            });
+
+        telemetry.SetSpanTag("crestapps.ai.qa_cohort.id", cohort.ItemId);
+
+        try
+        {
+            var (evaluations, failed) = await EvaluateNextCoreAsync(cohort, cancellationToken);
+
+            telemetry.SetSpanTag("crestapps.ai.eval.count", evaluations.Count);
+
+            if (failed > 0)
+            {
+                // Conversations that could not be scored were logged and skipped.
+                telemetry.SetOutcome(AIModuleTelemetry.OutcomePartial);
+            }
+            else if (evaluations.Count == 0)
+            {
+                telemetry.SetOutcome(CrestAppsOrchardCoreTelemetry.OutcomeSkipped);
+            }
+            else
+            {
+                telemetry.Succeed();
+            }
+
+            return evaluations;
+        }
+        catch (Exception ex)
+        {
+            telemetry.Fail(ex);
+
+            throw;
+        }
+    }
+
+    private async Task<(List<AIConversationEvaluation> Evaluations, int Failed)> EvaluateNextCoreAsync(AIQACohort cohort, CancellationToken cancellationToken)
+    {
         var evaluations = new List<AIConversationEvaluation>();
+        var failed = 0;
 
         if (!cohort.Enabled || cohort.ProfileIds is not { Count: > 0 })
         {
-            return evaluations;
+            return (evaluations, failed);
         }
 
         var profileIds = cohort.ProfileIds.ToArray();
@@ -157,9 +204,11 @@ public sealed class AIQACohortEvaluator
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 _logger.LogWarning(ex, "Conversation '{SessionId}' could not be scored for QA cohort '{CohortId}'.", chatSession.SessionId.SanitizeLogValue(), cohort.ItemId.SanitizeLogValue());
+
+                failed++;
             }
         }
 
-        return evaluations;
+        return (evaluations, failed);
     }
 }

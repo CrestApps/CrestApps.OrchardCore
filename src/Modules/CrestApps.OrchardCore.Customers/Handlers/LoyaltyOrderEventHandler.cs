@@ -1,11 +1,11 @@
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Customers.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
-using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.Customers.Handlers;
 
@@ -45,7 +45,7 @@ internal sealed class LoyaltyOrderEventHandler : OrderEventHandlerBase
 
         // Points are given once the order is saved, in a scope of their own: a balance changes under its own lock and
         // commits, which inside a checkout's completion would commit the checkout halfway.
-        ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<LoyaltyOrderEventHandler>().AwardAsync(orderId));
+        DeferredWork.Add("loyalty_award", scope => scope.ServiceProvider.GetRequiredService<LoyaltyOrderEventHandler>().AwardAsync(orderId));
 
         return Task.CompletedTask;
     }

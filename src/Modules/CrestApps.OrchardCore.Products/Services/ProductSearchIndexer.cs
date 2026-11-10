@@ -1,9 +1,11 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Search;
+using CrestApps.OrchardCore.Products.Core.Telemetry;
 using CrestApps.OrchardCore.Products.Indexes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -175,6 +177,34 @@ public sealed class ProductSearchIndexer
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The number of products indexed.</returns>
     public static async Task<int> RebuildAsync(IShellHost shellHost, ShellSettings shellSettings, CancellationToken cancellationToken)
+    {
+        using var telemetry = ProductsTelemetry.StartSearchRebuild();
+
+        try
+        {
+            var indexed = await RebuildCoreAsync(shellHost, shellSettings, cancellationToken);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                telemetry.SetOutcome(CrestAppsOrchardCoreTelemetry.OutcomeCancelled);
+            }
+            else
+            {
+                telemetry.Succeed();
+                ProductsTelemetry.RecordSearchRebuilt(indexed, TimeProvider.System);
+            }
+
+            return indexed;
+        }
+        catch (Exception exception)
+        {
+            telemetry.Fail(exception);
+
+            throw;
+        }
+    }
+
+    private static async Task<int> RebuildCoreAsync(IShellHost shellHost, ShellSettings shellSettings, CancellationToken cancellationToken)
     {
         var indexed = 0;
         var current = new HashSet<string>(StringComparer.Ordinal);

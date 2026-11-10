@@ -3,7 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
     <OrchardCoreVersion>4.0.0-preview-19219</OrchardCoreVersion>
-    <CrestAppsCoreVersion>2.0.0-preview.363</CrestAppsCoreVersion>
+    <CrestAppsCoreVersion>2.0.0-preview.367</CrestAppsCoreVersion>
     <ModelContextProtocolVersion>2.3.1</ModelContextProtocolVersion>
   </PropertyGroup>
   <ItemGroup>
@@ -87,6 +87,7 @@
     <PackageVersion Include="OrchardCore.Theme.Targets" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Media.Azure" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Mvc.Core" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.OpenTelemetry" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Navigation.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Notifications.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Notifications.Core" Version="$(OrchardCoreVersion)" />

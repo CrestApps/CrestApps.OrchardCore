@@ -1,9 +1,11 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
+using CrestApps.OrchardCore.PhoneNumbers.Verifications.Telemetry;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
@@ -197,12 +199,32 @@ internal sealed class PhoneNumberVerificationQueueProcessor : IPhoneNumberVerifi
         string phoneNumber,
         CancellationToken cancellationToken)
     {
+        // A record whose last lookup failed is being tried again: the retry the revalidation queue makes, counted on
+        // crestapps.retry.attempts.
+        if (contentItem.TryGet<PhoneNumberVerificationPart>(out var part) && part.FailedAttemptCount > 0)
+        {
+            RetryTelemetry.RecordRetry(PhoneNumberVerificationTelemetry.RetryArea, "previous_failure", part.FailedAttemptCount + 1);
+        }
+
+        using var telemetry = PhoneNumberVerificationTelemetry.StartVerification(contentItem.ContentItemId);
+
         try
         {
-            return await _verificationManager.VerifyAsync(phoneNumber, cancellationToken: cancellationToken);
+            var result = await _verificationManager.VerifyAsync(phoneNumber, cancellationToken: cancellationToken);
+
+            PhoneNumberVerificationTelemetry.CompleteVerification(telemetry, result);
+
+            return result;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
+            telemetry.Fail(ex);
+
+            throw;
+        }
+        catch (Exception ex)
+        {
+            telemetry.Fail(ex);
             _logger.LogError(ex, "Failed to verify the phone number for content item '{ContentItemId}'.", contentItem.ContentItemId);
 
             return new PhoneNumberVerificationResult

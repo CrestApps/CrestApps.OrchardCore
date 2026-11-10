@@ -91,7 +91,7 @@ public sealed partial class ContactCenterSupervisorInterventionService
 
         try
         {
-            var providerResult = await _commandExecutor.ExecuteAsync(commandCancellationToken =>
+            var providerResult = await _commandExecutor.ExecuteAsync(interaction.ProviderName, "TakeOver", commandCancellationToken =>
                 provider.TakeOverAsync(new ContactCenterVoiceMonitoringRequest
                 {
                     InteractionId = interaction.ItemId,

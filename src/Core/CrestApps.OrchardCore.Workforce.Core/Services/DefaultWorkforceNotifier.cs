@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Workforce.Core.Telemetry;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Logging;
@@ -49,19 +50,25 @@ internal sealed class DefaultWorkforceNotifier : IWorkforceNotifier
             kindOff = settings.IsQuiet(TimeOnly.FromDateTime(CalendarTime.ToLocal(_clock.UtcNow, zone)));
         }
 
+        var kind = notification.Kind.ToString();
+
         foreach (var channel in _channels)
         {
             if (channel.CanBeTurnedOff && (kindOff || settings.DisabledChannels.Contains(channel.Name)))
             {
+                WorkforceTelemetry.RecordNotification(channel.Name, kind, WorkforceTelemetry.NotificationSkipped);
+
                 continue;
             }
 
             try
             {
                 await channel.SendAsync(worker, notification, cancellationToken);
+                WorkforceTelemetry.RecordNotification(channel.Name, kind, WorkforceTelemetry.NotificationSent);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
+                WorkforceTelemetry.RecordNotification(channel.Name, kind, WorkforceTelemetry.NotificationFailed);
                 _logger.LogWarning(ex, "A workforce notification could not be sent through the {Channel} channel.", channel.Name);
             }
         }

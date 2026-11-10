@@ -84,16 +84,25 @@ public sealed class ReportViewRunner
     /// <returns>The view's result as a data table, with date-times in UTC.</returns>
     public async Task<DataRowSet> ExecuteAsync(ReportQueryPlan plan, DataSourceContext context, int maxRows, CancellationToken cancellationToken = default)
     {
-        return (await ExecuteCoreAsync(plan, context, maxRows, cancellationToken)).Table;
+        return (await ExecuteCoreAsync(plan, context, maxRows, ReportRunSources.ViewRead, null, cancellationToken)).Table;
     }
 
-    private async Task<ReportViewRunResult> ExecuteCoreAsync(ReportQueryPlan plan, DataSourceContext context, int maxRows, CancellationToken cancellationToken)
+    private async Task<ReportViewRunResult> ExecuteCoreAsync(
+        ReportQueryPlan plan,
+        DataSourceContext context,
+        int maxRows,
+        string source,
+        ReportView view,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(context);
 
         var executionContext = await _contextFactory.CreateAsync(context.User, context);
 
+        executionContext.Source = source;
+        executionContext.ReportId = view?.ItemId;
+        executionContext.ReportTitle = view?.DisplayText;
         executionContext.Limits.MaxResultRows = Math.Max(1, maxRows);
 
         var result = await _engine.Value.ExecuteAsync(plan, executionContext, cancellationToken);
@@ -132,7 +141,7 @@ public sealed class ReportViewRunner
         {
             var plan = await PlanValidAsync(view, context, cancellationToken);
 
-            return await ExecuteCoreAsync(plan, context, maxRows, cancellationToken);
+            return await ExecuteCoreAsync(plan, context, maxRows, ReportRunSources.ViewRefresh, view, cancellationToken);
         });
     }
 
@@ -157,6 +166,9 @@ public sealed class ReportViewRunner
         ArgumentNullException.ThrowIfNull(context);
 
         var executionContext = await _contextFactory.CreateAsync(context.User, context);
+
+        executionContext.Source = ReportRunSources.ViewRead;
+
         var columns = ReportQueryEngine.DescribeColumns(plan);
         var fields = columns.Select(column => new DataField(column.Id, column.Label, column.DataType)).ToList();
         var size = batchSize > 0 ? batchSize : DataSourceQuery.DefaultBatchSize;
@@ -224,11 +236,15 @@ public sealed class ReportViewRunner
 
         if (stack.Contains(view.ItemId))
         {
+            ReportTelemetry.RecordViewRejected("loop");
+
             throw new ReportQueryException(S["The view '{0}' reads itself through other views. Remove the loop.", view.DisplayText]);
         }
 
         if (stack.Count >= MaximumDepth)
         {
+            ReportTelemetry.RecordViewRejected("depth");
+
             throw new ReportQueryException(S["Views are nested more than {0} levels deep.", MaximumDepth]);
         }
 

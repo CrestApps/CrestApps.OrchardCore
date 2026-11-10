@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.DncRegistry.Models;
 using CrestApps.OrchardCore.DncRegistry.Services;
 using CrestApps.OrchardCore.DncRegistry.ViewModels;
@@ -25,6 +26,9 @@ namespace CrestApps.OrchardCore.DncRegistry.Controllers;
 [Admin("dnc-registry/local/{action}/{listId?}", "LocalDncRegistry{action}")]
 public sealed class LocalDncRegistryAdminController : Controller
 {
+    private const string ImportJobName = "dnc_local_import";
+    private const string DeleteJobName = "dnc_local_delete";
+
     private readonly ILocalDncListManager _listManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IDisplayManager<LocalDncListOptions> _optionsDisplayManager;
@@ -259,11 +263,17 @@ public sealed class LocalDncRegistryAdminController : Controller
         await HttpBackgroundJob.ExecuteAfterEndOfRequestAsync(
             $"local-dnc-delete-{listId}",
             listId,
-            static async (scope, id) =>
-            {
-                var manager = scope.ServiceProvider.GetRequiredService<ILocalDncListManager>();
-                await manager.DeleteAsync(id);
-            });
+            TraceContextPropagation.Capture(),
+            static (scope, id, traceParent) => RunBackgroundJobAsync(
+                scope,
+                DeleteJobName,
+                id,
+                traceParent,
+                static async (jobScope, jobListId) =>
+                {
+                    var manager = jobScope.ServiceProvider.GetRequiredService<ILocalDncListManager>();
+                    await manager.DeleteAsync(jobListId);
+                }));
 
         await _notifier.InformationAsync(H["Your request to delete the list '{0}' has been received. The list and its entries will be removed in the background.", list.Name]);
 
@@ -350,15 +360,35 @@ public sealed class LocalDncRegistryAdminController : Controller
 
     private static void TriggerImportProcessing(string listId)
     {
+        // Captured in the request, so the import that runs after it links back to the upload that queued it.
+        var traceParent = TraceContextPropagation.Capture();
+
         // Defer the background job until after the request has completed to ensure the user sees the updated status and any status changes are committed before the background task runs.
         ShellScope.AddDeferredTask(async scope =>
         {
             await HttpBackgroundJob.ExecuteAfterEndOfRequestAsync(
                 $"local-dnc-import-{listId}",
                 listId,
-                static (scope, id) => BackgroundTasks.LocalDncImportBackgroundTask.ProcessEntriesAsync(scope.ServiceProvider, id, CancellationToken.None));
+                traceParent,
+                static (scope, id, jobTraceParent) => RunBackgroundJobAsync(
+                    scope,
+                    ImportJobName,
+                    id,
+                    jobTraceParent,
+                    static (jobScope, jobListId) => BackgroundTasks.LocalDncImportBackgroundTask.ProcessEntriesAsync(jobScope.ServiceProvider, jobListId, CancellationToken.None)));
         });
     }
+
+    /// <summary>
+    /// Runs a job queued after a request as measured deferred work, linked to the request that queued it.
+    /// </summary>
+    private static Task RunBackgroundJobAsync(
+        ShellScope scope,
+        string jobName,
+        string listId,
+        string traceParent,
+        Func<ShellScope, string, Task> job)
+        => DeferredWork.RunAsync(jobName, traceParent, scope, jobScope => job(jobScope, listId));
 
     private IActionResult RedirectToReturnUrlOrIndex(string returnUrl)
     {

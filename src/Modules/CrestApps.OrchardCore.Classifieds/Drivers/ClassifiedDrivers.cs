@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Calendars;
 using System.Globalization;
 using CrestApps.OrchardCore.Classifieds.Models;
 using CrestApps.OrchardCore.Classifieds.Services;
@@ -28,16 +29,19 @@ internal sealed class ClassifiedPartDisplayDriver : ContentPartDisplayDriver<Cla
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IClock _clock;
+    private readonly ILocalClock _localClock;
 
     internal readonly IStringLocalizer S;
 
     public ClassifiedPartDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<ClassifiedPartDisplayDriver> stringLocalizer,
-        IClock clock)
+        IClock clock,
+        ILocalClock localClock)
     {
         _httpContextAccessor = httpContextAccessor;
         _clock = clock;
+        _localClock = localClock;
         S = stringLocalizer;
     }
 
@@ -47,10 +51,12 @@ internal sealed class ClassifiedPartDisplayDriver : ContentPartDisplayDriver<Cla
             .Location("Summary", "Meta:5");
 
     public override IDisplayResult Edit(ClassifiedPart part, BuildPartEditorContext context)
-        => Initialize<ClassifiedPartViewModel>(GetEditorShapeType(context), model =>
+        => Initialize<ClassifiedPartViewModel>(GetEditorShapeType(context), async model =>
         {
             Fill(model, part);
             model.IsAdmin = IsAdmin();
+            model.Expires = await ToLocalAsync(part.ExpiresUtc);
+            model.FeaturedUntil = await ToLocalAsync(part.FeaturedUntilUtc);
         });
 
     public override async Task<IDisplayResult> UpdateAsync(ClassifiedPart part, UpdatePartEditorContext context)
@@ -78,8 +84,9 @@ internal sealed class ClassifiedPartDisplayDriver : ContentPartDisplayDriver<Cla
         if (IsAdmin())
         {
             part.Status = Enum.IsDefined(model.Status) ? model.Status : part.Status;
-            part.ExpiresUtc = model.ExpiresUtc is { } expires ? DateTime.SpecifyKind(expires, DateTimeKind.Utc) : null;
-            part.FeaturedUntilUtc = model.FeaturedUntilUtc is { } featured ? DateTime.SpecifyKind(featured, DateTimeKind.Utc) : null;
+            // Staff enter the dates in the site's time zone.
+            part.ExpiresUtc = model.Expires is { } expires ? await _localClock.ToUtcLenientAsync(expires) : null;
+            part.FeaturedUntilUtc = model.FeaturedUntil is { } featured ? await _localClock.ToUtcLenientAsync(featured) : null;
         }
 
         return Edit(part, context);
@@ -91,11 +98,14 @@ internal sealed class ClassifiedPartDisplayDriver : ContentPartDisplayDriver<Cla
         model.Place = part.Place;
         model.Latitude = part.Latitude?.ToString("0.######", CultureInfo.InvariantCulture);
         model.Longitude = part.Longitude?.ToString("0.######", CultureInfo.InvariantCulture);
-        model.ExpiresUtc = part.ExpiresUtc;
-        model.FeaturedUntilUtc = part.FeaturedUntilUtc;
         model.RejectReason = part.RejectReason;
         model.IsFeatured = part.FeaturedUntilUtc > _clock.UtcNow;
     }
+
+    private async Task<DateTime?> ToLocalAsync(DateTime? utc)
+        => utc is { } value
+            ? (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(value, DateTimeKind.Utc))).DateTime
+            : null;
 
     private bool IsAdmin()
         => _httpContextAccessor.HttpContext is { } httpContext && AdminAttribute.IsApplied(httpContext);

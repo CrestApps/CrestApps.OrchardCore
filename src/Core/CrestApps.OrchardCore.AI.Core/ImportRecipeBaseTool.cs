@@ -1,6 +1,9 @@
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Extensions;
+using CrestApps.OrchardCore.AI.Core.Telemetry;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Json.Schema;
 using Microsoft.Extensions.AI;
@@ -62,6 +65,7 @@ public abstract class ImportRecipeBaseTool : AIFunction
         if (!arguments.TryGetFirstString("recipe", out var recipe))
         {
             logger.LogWarning("AI tool '{ToolName}' missing required argument 'recipe'.", Name);
+            RecordImport(AIModuleTelemetry.ModeInline, AIModuleTelemetry.OutcomeInvalid);
 
             return ValueTask.FromResult<object>(MissingArgument());
         }
@@ -86,6 +90,7 @@ public abstract class ImportRecipeBaseTool : AIFunction
         if (data is null)
         {
             logger.LogWarning("AI tool recipe import failed: recipe payload could not be deserialized.");
+            RecordImport(AIModuleTelemetry.ModeInline, AIModuleTelemetry.OutcomeInvalid);
 
             return "Invalid recipe format. The recipe payload could not be deserialized.";
         }
@@ -98,6 +103,7 @@ public abstract class ImportRecipeBaseTool : AIFunction
         if (!result.IsValid)
         {
             logger.LogWarning("AI tool recipe import failed: invalid recipe format.");
+            RecordImport(AIModuleTelemetry.ModeInline, AIModuleTelemetry.OutcomeInvalid);
 
             var schemaStructure = JsonSerializer.Serialize(rootSchema);
 
@@ -112,7 +118,7 @@ public abstract class ImportRecipeBaseTool : AIFunction
 
         if (ShellScope.Current is null)
         {
-            if (await recipeExecutionService.ExecuteRecipeAsync(data))
+            if (await ExecuteAndRecordAsync(recipeExecutionService, data, AIModuleTelemetry.ModeInline))
             {
                 logger.LogInformation("AI tool recipe import completed successfully.");
 
@@ -126,7 +132,8 @@ public abstract class ImportRecipeBaseTool : AIFunction
 
         var serializedRecipe = JsonSerializer.Serialize(data, RecipeSerializerOptions);
 
-        ShellScope.AddDeferredTask(scope => ExecuteDeferredRecipeAsync(scope, serializedRecipe));
+        // Counted when it runs, with how it really ended: the tool has already answered by then.
+        DeferredWork.Add("ai_recipe_import", scope => ExecuteDeferredRecipeAsync(scope, serializedRecipe));
 
         logger.LogInformation("AI tool recipe import scheduled for deferred execution.");
 
@@ -146,6 +153,38 @@ public abstract class ImportRecipeBaseTool : AIFunction
 
         var recipeExecutionService = scope.ServiceProvider.GetRequiredService<RecipeExecutionService>();
 
-        await recipeExecutionService.ExecuteRecipeAsync(recipe);
+        if (!await ExecuteAndRecordAsync(recipeExecutionService, recipe, AIModuleTelemetry.ModeDeferred))
+        {
+            AICoreLog.DeferredRecipeImportFailed(scope.ServiceProvider.GetRequiredService<ILogger<ImportRecipeBaseTool>>());
+        }
+    }
+
+    private static async Task<bool> ExecuteAndRecordAsync(RecipeExecutionService recipeExecutionService, JsonObject recipe, string mode)
+    {
+        bool succeeded;
+
+        try
+        {
+            succeeded = await recipeExecutionService.ExecuteRecipeAsync(recipe);
+        }
+        catch (Exception ex)
+        {
+            RecordImport(mode, CrestAppsOrchardCoreTelemetry.GetOutcome(ex));
+
+            throw;
+        }
+
+        RecordImport(mode, succeeded ? CrestAppsOrchardCoreTelemetry.OutcomeOk : CrestAppsOrchardCoreTelemetry.OutcomeError);
+
+        return succeeded;
+    }
+
+    private static void RecordImport(string mode, string outcome)
+    {
+        AIModuleTelemetry.Add(AIModuleTelemetry.RecipeImports, new TagList
+        {
+            { AIModuleTelemetry.ModeTag, mode },
+            { CrestAppsOrchardCoreTelemetry.OutcomeTag, outcome },
+        });
     }
 }

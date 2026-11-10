@@ -125,7 +125,7 @@ public sealed class TimeTrackerTests
 
         var change = Assert.Single(shorter.Entry.Changes);
 
-        Assert.Equal("Lunch 2026-11-02 17:00-2026-11-02 18:00 UTC", change.Before);
+        Assert.Equal("Lunch 2026-11-02 17:00-2026-11-02 18:00", change.Before);
         Assert.Equal("Lunch was shorter.", change.Reason);
         Assert.Equal("manager", change.By);
         Assert.Equal("Say why the time is removed.", Assert.Single(removed.Errors));

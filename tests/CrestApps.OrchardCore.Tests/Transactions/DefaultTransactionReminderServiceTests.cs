@@ -85,6 +85,7 @@ public sealed class DefaultTransactionReminderServiceTests
             TestCustomerOwnerNotifier.Create(notificationService.Object, userService.Object, contactResolver.Object, EmptyServiceProvider()),
             EmptyServiceProvider(),
             new TestClock(_now),
+            null,
             NullLogger<DefaultTransactionReminderService>.Instance,
             new PassThroughStringLocalizer<DefaultTransactionReminderService>());
 
@@ -122,6 +123,7 @@ public sealed class DefaultTransactionReminderServiceTests
             TestCustomerOwnerNotifier.Create(new Mock<INotificationService>(MockBehavior.Strict).Object, new Mock<IUserService>(MockBehavior.Strict).Object, contactResolver.Object, ServiceProviderWithEmail(emailService.Object)),
             ServiceProviderWithEmail(emailService.Object),
             new TestClock(_now),
+            null,
             NullLogger<DefaultTransactionReminderService>.Instance,
             new PassThroughStringLocalizer<DefaultTransactionReminderService>());
 
@@ -153,6 +155,7 @@ public sealed class DefaultTransactionReminderServiceTests
             TestCustomerOwnerNotifier.Create(new Mock<INotificationService>(MockBehavior.Strict).Object, new Mock<IUserService>(MockBehavior.Strict).Object, contactResolver.Object, EmptyServiceProvider()),
             EmptyServiceProvider(),
             new TestClock(_now),
+            null,
             NullLogger<DefaultTransactionReminderService>.Instance,
             new PassThroughStringLocalizer<DefaultTransactionReminderService>());
 
@@ -195,6 +198,7 @@ public sealed class DefaultTransactionReminderServiceTests
             TestCustomerOwnerNotifier.Create(notificationService.Object, userService.Object, new Mock<ICustomerContactResolver>().Object, EmptyServiceProvider()),
             EmptyServiceProvider(),
             new TestClock(_now),
+            null,
             NullLogger<DefaultTransactionReminderService>.Instance,
             new PassThroughStringLocalizer<DefaultTransactionReminderService>());
     }

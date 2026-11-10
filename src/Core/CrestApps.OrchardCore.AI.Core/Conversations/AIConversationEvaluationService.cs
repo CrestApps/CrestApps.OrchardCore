@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
@@ -6,6 +7,8 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore.AI.Core.Telemetry;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Core.Conversations;
@@ -115,6 +118,55 @@ public sealed class AIConversationEvaluationService
         string judgeDeploymentName,
         string knowledge = null,
         CancellationToken cancellationToken = default)
+    {
+        using var telemetry = TelemetryScope.Start(
+            AIModuleTelemetry.ActivitySource,
+            "crestapps.ai.eval.judge",
+            AIModuleTelemetry.EvaluationDuration,
+            new TagList
+            {
+                { AIModuleTelemetry.KindTag, AIModuleTelemetry.KindJudge },
+            });
+
+        telemetry.SetSpanTag(AITelemetry.ProfileIdAttribute, profile?.ItemId ?? session?.ProfileId);
+        telemetry.SetSpanTag(AITelemetry.SessionIdAttribute, session?.SessionId);
+
+        try
+        {
+            var evaluation = await EvaluateAndSaveAsync(profile, session, turns, criteria, passingScore, label, instructions, judgeDeploymentName, knowledge, cancellationToken);
+
+            if (evaluation is null)
+            {
+                telemetry.SetOutcome(CrestAppsOrchardCoreTelemetry.OutcomeSkipped);
+
+                return null;
+            }
+
+            telemetry.AddMetricTag(CrestAppsOrchardCoreTelemetry.ResultTag, evaluation.Passed ? AIModuleTelemetry.ResultPassed : AIModuleTelemetry.ResultFailed);
+            telemetry.Succeed();
+            telemetry.SetSpanTag("crestapps.ai.eval.score", evaluation.Score);
+
+            return evaluation;
+        }
+        catch (Exception ex)
+        {
+            telemetry.Fail(ex);
+
+            throw;
+        }
+    }
+
+    private async Task<AIConversationEvaluation> EvaluateAndSaveAsync(
+        AIProfile profile,
+        AIChatSession session,
+        IReadOnlyList<AIConversationTurn> turns,
+        IReadOnlyList<string> criteria,
+        int passingScore,
+        string label,
+        string instructions,
+        string judgeDeploymentName,
+        string knowledge,
+        CancellationToken cancellationToken)
     {
         instructions ??= await GetInstructionsAsync(profile, cancellationToken);
 

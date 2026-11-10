@@ -31,6 +31,12 @@ public class LeadStatusViewModel
     public bool IsDefault { get; set; }
 
     /// <summary>
+    /// Gets or sets whether a lead moves to this status once an activity for it is completed while it is still in the
+    /// default status. Only an open status that is not the default can carry it.
+    /// </summary>
+    public bool IsContacted { get; set; }
+
+    /// <summary>
     /// Gets or sets whether the status is open, closed or the converted status.
     /// </summary>
     public LeadStatusKind Kind { get; set; }

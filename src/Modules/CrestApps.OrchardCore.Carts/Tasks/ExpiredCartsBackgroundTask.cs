@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Carts.Core.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
 
@@ -13,5 +14,12 @@ namespace CrestApps.OrchardCore.Carts.Tasks;
 public sealed class ExpiredCartsBackgroundTask : IBackgroundTask
 {
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-        => serviceProvider.GetRequiredService<ExpiredCartCleaner>().DeleteExpiredAsync(cancellationToken: cancellationToken);
+    {
+        return this.RunAsync(async run =>
+        {
+            var deleted = await serviceProvider.GetRequiredService<ExpiredCartCleaner>().DeleteExpiredAsync(cancellationToken: cancellationToken);
+
+            run.AddItems(deleted, "deleted");
+        });
+    }
 }

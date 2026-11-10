@@ -5,8 +5,10 @@ using System.Text.Json;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Telemetry;
 using CrestApps.OrchardCore.Telnyx.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -104,15 +106,24 @@ internal sealed class TelnyxRecordingIngestService : ITelnyxRecordingIngestServi
                 continue;
             }
 
+            using var telemetry = TelephonyTelemetry.StartRecordingIngest(TelnyxConstants.ProviderTechnicalName);
+
+            telemetry.SetSpanTag("crestapps.telephony.recording.id", job.RecordingId);
+
             try
             {
                 if (await TryIngestAsync(job, nowUtc, cancellationToken))
                 {
                     ingested++;
+                    TelephonyTelemetry.RecordRecordingIngestLag(TelnyxConstants.ProviderTechnicalName, job.CreatedUtc, _clock.UtcNow);
                 }
+
+                CompleteIngestTelemetry(telemetry, job.Status);
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
             {
+                telemetry.Fail(ex);
+
                 throw;
             }
             catch (Exception ex)
@@ -122,7 +133,13 @@ internal sealed class TelnyxRecordingIngestService : ITelnyxRecordingIngestServi
                     "An unexpected error occurred while ingesting Telnyx recording {RecordingId}.",
                     job.RecordingId.SanitizeLogValue());
 
+                telemetry.Fail(ex);
+
                 await RecordFailureAsync(job, nowUtc, "An unexpected error occurred during ingestion.", cancellationToken);
+
+                telemetry.AddMetricTag(
+                    CrestAppsOrchardCoreTelemetry.ResultTag,
+                    job.Status == TelnyxRecordingIngestJobStatus.DeadLettered ? TelephonyTelemetry.IngestDeadLettered : CrestAppsOrchardCoreTelemetry.OutcomeError);
             }
             finally
             {
@@ -130,7 +147,36 @@ internal sealed class TelnyxRecordingIngestService : ITelnyxRecordingIngestServi
             }
         }
 
+        // The age of the oldest job found due: read from the jobs this run loaded, never a query of its own.
+        TelephonyTelemetry.RecordRecordingIngestBacklog(
+            TelnyxConstants.ProviderTechnicalName,
+            dueJobs.Count > 0 ? dueJobs.Min(job => job.CreatedUtc) : null,
+            nowUtc);
+
         return ingested;
+    }
+
+    // What became of one attempt, read from the job it left: stored, cancelled, dead-lettered, or due again later.
+    private static void CompleteIngestTelemetry(TelemetryScope telemetry, TelnyxRecordingIngestJobStatus status)
+    {
+        var result = status switch
+        {
+            TelnyxRecordingIngestJobStatus.Completed => TelephonyTelemetry.IngestStored,
+            TelnyxRecordingIngestJobStatus.Cancelled => TelephonyTelemetry.IngestCancelled,
+            TelnyxRecordingIngestJobStatus.DeadLettered => TelephonyTelemetry.IngestDeadLettered,
+            _ => TelephonyTelemetry.IngestRetry,
+        };
+
+        telemetry.AddMetricTag(CrestAppsOrchardCoreTelemetry.ResultTag, result);
+
+        if (result == TelephonyTelemetry.IngestDeadLettered)
+        {
+            telemetry.Fail();
+
+            return;
+        }
+
+        telemetry.Succeed();
     }
 
     private async Task<bool> TryIngestAsync(TelnyxRecordingIngestJob job, DateTime nowUtc, CancellationToken cancellationToken)

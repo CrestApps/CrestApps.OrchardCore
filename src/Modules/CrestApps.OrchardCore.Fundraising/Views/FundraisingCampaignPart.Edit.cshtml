@@ -27,9 +27,9 @@
 </div>
 
 <div class="ocat-limited-wrapper">
-    <label asp-for="EndsUtc" class="ocat-label">@T["Ends (UTC)"]</label>
+    <label asp-for="Ends" class="ocat-label">@T["Ends"]</label>
     <div class="ocat-limited">
-        <input asp-for="EndsUtc" type="datetime-local" step="1" class="form-control" />
+        <input asp-for="Ends" type="datetime-local" step="1" class="form-control" />
         <span class="hint">@T["When it stops taking donations. Leave it empty for no end."]</span>
     </div>
 </div>

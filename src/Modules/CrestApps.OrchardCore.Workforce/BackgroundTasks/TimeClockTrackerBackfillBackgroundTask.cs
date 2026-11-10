@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Workforce.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
@@ -17,8 +18,8 @@ namespace CrestApps.OrchardCore.Workforce.BackgroundTasks;
 public sealed class TimeClockTrackerBackfillBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc />
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        await serviceProvider.GetRequiredService<TimeClockTrackerBackfill>().RunAsync(25, cancellationToken);
+        return this.RunAsync(async run => run.AddItems(await serviceProvider.GetRequiredService<TimeClockTrackerBackfill>().RunAsync(25, cancellationToken), "synced"));
     }
 }

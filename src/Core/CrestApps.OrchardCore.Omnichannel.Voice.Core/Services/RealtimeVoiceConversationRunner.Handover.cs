@@ -6,6 +6,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
+using CrestApps.OrchardCore.Omnichannel.Voice.Telemetry;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -96,6 +97,40 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// </summary>
     /// <returns><see langword="true"/> when the new profile's session carries the call.</returns>
     private async Task<bool> HandOverAsync(
+        IContactCenterVoiceMediaSession media,
+        LiveConversation live,
+        RealtimeVoiceConversationContext context,
+        AIProfile profile,
+        CancellationToken callToken)
+    {
+        using var telemetry = VoiceTelemetry.StartSpan("crestapps.voice.ai.session.handover", context.Activity?.ItemId);
+
+        telemetry.SetSpanTag("crestapps.ai.profile.id", profile?.ItemId);
+
+        try
+        {
+            var handedOver = await HandOverCoreAsync(media, live, context, profile, callToken);
+
+            if (handedOver)
+            {
+                telemetry.Succeed();
+            }
+            else
+            {
+                telemetry.Fail("not_handed_over");
+            }
+
+            return handedOver;
+        }
+        catch (Exception ex)
+        {
+            telemetry.Fail(ex);
+
+            throw;
+        }
+    }
+
+    private async Task<bool> HandOverCoreAsync(
         IContactCenterVoiceMediaSession media,
         LiveConversation live,
         RealtimeVoiceConversationContext context,

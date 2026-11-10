@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
@@ -41,7 +42,12 @@ public sealed class ContactCenterOutboxHealthCheck : IHealthCheck
             var deadLettered = await _outboxStore.CountByStatusAsync(OutboxMessageStatus.DeadLettered, cancellationToken);
             var overdue = await _outboxStore.CountOverdueAsync(_clock.UtcNow, cancellationToken);
 
-            return BacklogHealthEvaluator.Evaluate("Contact Center event outbox", deadLettered, overdue, _options);
+            var result = BacklogHealthEvaluator.Evaluate("Contact Center event outbox", deadLettered, overdue, _options);
+
+            // The gauges report what this check read and decided, so a dashboard and the health endpoint agree.
+            ContactCenterDiagnostics.ObserveBacklog(ContactCenterDiagnostics.SubsystemOutbox, deadLettered, overdue, result.Status);
+
+            return result;
         }
         catch (Exception ex)
         {

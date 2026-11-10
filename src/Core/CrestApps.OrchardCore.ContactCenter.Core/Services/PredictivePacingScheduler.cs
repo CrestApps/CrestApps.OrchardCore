@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -139,7 +140,7 @@ public sealed class PredictivePacingScheduler : IPredictivePacingScheduler
         {
             started = await services.GetRequiredService<IDialerService>().RunCycleAsync(profile, queueId, cancellationToken);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException && recorder is not null)
+        catch (Exception ex) when (ex is not OperationCanceledException && RecordFailedCycle())
         {
             observation?.End();
 
@@ -172,7 +173,23 @@ public sealed class PredictivePacingScheduler : IPredictivePacingScheduler
                 await DescribeOverDialDecisionAsync(services, record, startedUtc, cancellationToken);
             }
 
+            ContactCenterDiagnostics.RecordDialerPacingCycle(record.Outcome, DialerMode.Predictive, _clock.UtcNow - startedUtc, started);
             await recorder.RecordAsync(record);
+        }
+        else
+        {
+            // Counted without a recorder too, so the outcome mix does not depend on whether the scope records cycles.
+            var (outcome, _) = DialerPacingCycleClassifier.Classify(started, observation, null, false);
+
+            ContactCenterDiagnostics.RecordDialerPacingCycle(outcome, DialerMode.Predictive, _clock.UtcNow - startedUtc, started);
+        }
+
+        // Counts the failed cycle whether or not the scope records cycles, and lets the catch run only when it records them.
+        bool RecordFailedCycle()
+        {
+            ContactCenterDiagnostics.RecordDialerPacingCycle(DialerPacingCycleOutcome.Failed, DialerMode.Predictive, elapsed: null);
+
+            return recorder is not null;
         }
 
         // While calls are being placed the queue is paced again soon; once nothing is placed it waits for the next event

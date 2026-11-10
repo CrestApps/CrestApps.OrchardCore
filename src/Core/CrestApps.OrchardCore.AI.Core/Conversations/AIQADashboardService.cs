@@ -5,6 +5,7 @@ using CrestApps.Core.Data.YesSql;
 using CrestApps.OrchardCore.AI.Core.Indexes;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
+using OrchardCore.Modules;
 using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Core.Conversations;
@@ -27,6 +28,7 @@ public sealed partial class AIQADashboardService : IAIQADashboardService
     private readonly ISession _session;
     private readonly YesSqlStoreOptions _storeOptions;
     private readonly IAIChatSessionPromptStore _promptStore;
+    private readonly ILocalClock _localClock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AIQADashboardService"/> class.
@@ -34,11 +36,13 @@ public sealed partial class AIQADashboardService : IAIQADashboardService
     /// <param name="session">The YesSql session.</param>
     /// <param name="storeOptions">The YesSql store options, which name the AI collection.</param>
     /// <param name="promptStore">The chat session prompt store, for the customers' questions.</param>
-    public AIQADashboardService(ISession session, IOptions<YesSqlStoreOptions> storeOptions, IAIChatSessionPromptStore promptStore)
+    /// <param name="localClock">The local clock, whose time zone the dashboard's days are in.</param>
+    public AIQADashboardService(ISession session, IOptions<YesSqlStoreOptions> storeOptions, IAIChatSessionPromptStore promptStore, ILocalClock localClock)
     {
         _session = session;
         _storeOptions = storeOptions.Value;
         _promptStore = promptStore;
+        _localClock = localClock;
     }
 
     /// <inheritdoc/>
@@ -53,7 +57,18 @@ public sealed partial class AIQADashboardService : IAIQADashboardService
             .Take(MaxEvaluations)
             .ListAsync(cancellationToken)).ToList();
 
-        var dashboard = Summarize(evaluations);
+        // The days are the site's days, not UTC ones.
+        var localDays = new Dictionary<DateTime, DateTime>();
+
+        foreach (var evaluation in evaluations)
+        {
+            if (!localDays.ContainsKey(evaluation.EvaluatedUtc))
+            {
+                localDays[evaluation.EvaluatedUtc] = (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(evaluation.EvaluatedUtc, DateTimeKind.Utc))).Date;
+            }
+        }
+
+        var dashboard = Summarize(evaluations, evaluatedUtc => localDays[evaluatedUtc]);
 
         dashboard.TopQuestions = await TopQuestionsAsync(evaluations.Take(QuestionSample).ToList());
 
@@ -64,8 +79,9 @@ public sealed partial class AIQADashboardService : IAIQADashboardService
     /// The figures that come from the evaluations alone.
     /// </summary>
     /// <param name="evaluations">The evaluations, newest first.</param>
+    /// <param name="toLocalDay">Returns the local day of an evaluation time, or <see langword="null"/> for UTC days.</param>
     /// <returns>The dashboard without the top questions.</returns>
-    internal static AIQADashboard Summarize(IReadOnlyList<AIConversationEvaluation> evaluations)
+    internal static AIQADashboard Summarize(IReadOnlyList<AIConversationEvaluation> evaluations, Func<DateTime, DateTime> toLocalDay = null)
     {
         var dashboard = new AIQADashboard
         {
@@ -90,7 +106,7 @@ public sealed partial class AIQADashboardService : IAIQADashboardService
             .OrderByDescending(issue => issue.Count)
             .ToList();
         dashboard.Days = evaluations
-            .GroupBy(evaluation => evaluation.EvaluatedUtc.Date)
+            .GroupBy(evaluation => toLocalDay is null ? evaluation.EvaluatedUtc.Date : toLocalDay(evaluation.EvaluatedUtc))
             .OrderBy(group => group.Key)
             .Select(group => new AIQADay(
                 group.Key,

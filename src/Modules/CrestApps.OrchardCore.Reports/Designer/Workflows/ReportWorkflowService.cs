@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net;
 using System.Text;
+using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Designer.Models;
 using CrestApps.OrchardCore.Reports.Designer.Services;
 using CrestApps.OrchardCore.Reports.Models;
@@ -137,7 +138,7 @@ public sealed class ReportWorkflowService
     /// <returns>The result of the run.</returns>
     public async Task<ReportRunResult> RunAsync(ReportDesign design, IDictionary<string, IList<string>> filterValues, CancellationToken cancellationToken = default)
     {
-        var run = await _runner.RunAsync(design, filterValues, cancellationToken);
+        var run = await _runner.RunAsync(design, filterValues, period: null, new ReportRunOptions { Source = ReportRunSources.Workflow }, cancellationToken);
 
         if (run.Document is not null)
         {

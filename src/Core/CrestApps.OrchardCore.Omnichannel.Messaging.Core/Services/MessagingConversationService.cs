@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Notifications;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
@@ -156,6 +157,7 @@ public sealed class MessagingConversationService : IMessagingConversationService
         conversation.AssignedUtc = null;
         conversation.ReassignmentAttempts = 0;
         conversation.ModifiedUtc = _clock.UtcNow;
+        MessagingTelemetry.RecordFirstResponse(conversation, message.CreatedUtc);
         _slaService.MarkResponded(conversation);
 
         var previousAgentId = conversation.GetHolderAgentId();
@@ -163,6 +165,7 @@ public sealed class MessagingConversationService : IMessagingConversationService
         if (claims)
         {
             ApplyAssignment(conversation, request.ActingAgentId);
+            MessagingTelemetry.RecordAssignment(conversation.Channel, MessagingTelemetry.AssignmentTriggers.Reply, conversation.AssignmentStatus);
         }
 
         await _conversationStore.UpdateAsync(conversation, cancellationToken);
@@ -273,6 +276,13 @@ public sealed class MessagingConversationService : IMessagingConversationService
         conversation.LastMessagePreview = MessagingConversationRollup.BuildPreview(body);
         conversation.IsRead = true;
         conversation.ModifiedUtc = _clock.UtcNow;
+
+        // A thread the agent opens is answered by its own first message; only a thread the contact started waits.
+        if (!isNew)
+        {
+            MessagingTelemetry.RecordFirstResponse(conversation, message.CreatedUtc);
+        }
+
         _slaService.MarkResponded(conversation);
 
         // Reopen a closed/snoozed thread when the agent messages the contact again.
@@ -307,6 +317,8 @@ public sealed class MessagingConversationService : IMessagingConversationService
 
         if (channel is null)
         {
+            MessagingTelemetry.RecordDelivery(null, receipt.Status, MessagingTelemetry.DeliveryResults.Unmatched);
+
             return false;
         }
 
@@ -315,6 +327,8 @@ public sealed class MessagingConversationService : IMessagingConversationService
 
         if (string.IsNullOrEmpty(serviceAddress) || string.IsNullOrEmpty(contactAddress))
         {
+            MessagingTelemetry.RecordDelivery(channel.Name, receipt.Status, MessagingTelemetry.DeliveryResults.Unmatched);
+
             return false;
         }
 
@@ -322,6 +336,13 @@ public sealed class MessagingConversationService : IMessagingConversationService
 
         if (conversation is null)
         {
+            MessagingTelemetry.RecordDelivery(channel.Name, receipt.Status, MessagingTelemetry.DeliveryResults.Unmatched);
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.DeliveryReceiptUnmatched(channel.Name, receipt.ProviderMessageId.SanitizeLogValue(), receipt.Status.ToString(), "conversation");
+            }
+
             return false;
         }
 
@@ -350,8 +371,27 @@ public sealed class MessagingConversationService : IMessagingConversationService
 
         if (message is null)
         {
+            MessagingTelemetry.RecordDelivery(channel.Name, receipt.Status, MessagingTelemetry.DeliveryResults.Unmatched);
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.DeliveryReceiptUnmatched(channel.Name, receipt.ProviderMessageId.SanitizeLogValue(), receipt.Status.ToString(), "sent message");
+            }
+
             return false;
         }
+
+        // The latency is measured once, on the receipt that settles the message; a provider that repeats a receipt
+        // does not count the delivery again.
+        var settles = (receipt.Status is MessageDeliveryStatus.Delivered or MessageDeliveryStatus.Failed or MessageDeliveryStatus.Undelivered) &&
+            !string.Equals(message.DeliveryStatus, receipt.Status.ToString(), StringComparison.Ordinal) &&
+            message.CreatedUtc != default;
+
+        MessagingTelemetry.RecordDelivery(
+            channel.Name,
+            receipt.Status,
+            MessagingTelemetry.DeliveryResults.Applied,
+            settles ? _clock.UtcNow - message.CreatedUtc : null);
 
         message.DeliveryStatus = receipt.Status.ToString();
         message.ErrorCode = receipt.ErrorCode;
@@ -520,6 +560,12 @@ public sealed class MessagingConversationService : IMessagingConversationService
         ApplyAssignment(conversation, agentId);
 
         await _conversationStore.UpdateAsync(conversation, cancellationToken);
+
+        // Claiming credits the agent who claims; an assignment by a supervisor or an integration credits nobody.
+        MessagingTelemetry.RecordAssignment(
+            conversation.Channel,
+            string.IsNullOrEmpty(assignedByAgentId) ? MessagingTelemetry.AssignmentTriggers.Assign : MessagingTelemetry.AssignmentTriggers.Claim,
+            conversation.AssignmentStatus);
 
         await NotifyAssignedAsync(conversation, previousAgentId, assignedByAgentId, cancellationToken);
 

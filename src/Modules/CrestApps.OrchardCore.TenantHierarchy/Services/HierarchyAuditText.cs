@@ -2,6 +2,7 @@ using System.Globalization;
 using CrestApps.OrchardCore.TenantHierarchy.Core.Services;
 using CrestApps.OrchardCore.TenantHierarchy.Models;
 using Microsoft.AspNetCore.Mvc.Localization;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.TenantHierarchy.Services;
 
@@ -14,9 +15,10 @@ public static class HierarchyAuditText
     /// Returns the details of an event in words. A session event stores why the session ended as a reason code.
     /// </summary>
     /// <param name="T">The localizer of the view.</param>
+    /// <param name="localClock">The clock that shows a stored UTC time in the site's time zone, or <see langword="null"/> to show it in UTC.</param>
     /// <param name="data">The event data.</param>
     /// <param name="labels">The words the parent uses for its child tenants.</param>
-    public static string DescribeDetails(IHtmlLocalizer T, HierarchyAuditEvent data, HierarchyLabels labels)
+    public static async Task<string> DescribeDetailsAsync(IHtmlLocalizer T, ILocalClock localClock, HierarchyAuditEvent data, HierarchyLabels labels)
     {
         ArgumentNullException.ThrowIfNull(T);
         ArgumentNullException.ThrowIfNull(data);
@@ -32,6 +34,11 @@ public static class HierarchyAuditText
         if (data.Name == HierarchyAuditEventNames.RemovalScheduled &&
             DateTime.TryParse(data.Details, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var until))
         {
+            if (localClock is not null)
+            {
+                until = (await localClock.ConvertToLocalAsync(DateTime.SpecifyKind(until, DateTimeKind.Utc))).DateTime;
+            }
+
             return T.GetString("Can be restored until {0}", until.ToString("d", CultureInfo.CurrentCulture)).Value;
         }
 

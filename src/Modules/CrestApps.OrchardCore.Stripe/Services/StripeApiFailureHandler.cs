@@ -1,9 +1,9 @@
 using System.Net;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Stripe.Workflows;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Shell;
-using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.Stripe.Services;
 
@@ -68,7 +68,7 @@ public sealed class StripeApiFailureHandler : DelegatingHandler
         _memoryCache.Set(_throttleCacheKey, true, _throttleWindow);
 
         // The workflow event is raised after the request's scope completes, in a scope of its own.
-        ShellScope.AddDeferredTask(async deferredScope =>
+        DeferredWork.Add("stripe_request_failed", async deferredScope =>
         {
             var notifier = deferredScope.ServiceProvider.GetService<StripeWorkflowNotifier>();
 

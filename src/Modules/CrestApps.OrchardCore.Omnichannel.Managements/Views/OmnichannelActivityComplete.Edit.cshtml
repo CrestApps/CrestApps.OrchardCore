@@ -70,6 +70,16 @@
     </div>
 </div>
 
+@if (Model.CreatedLocal.HasValue)
+{
+    <div class="ocat-wrapper">
+        <label asp-for="CreatedLocal" class="ocat-label">@T["Created at"]</label>
+        <div class="ocat-end">
+            <input id="@Html.IdFor(x => x.CreatedLocal)" class="form-control-plaintext" value="@Model.CreatedLocal.Value.ToString("g")" readonly />
+        </div>
+    </div>
+}
+
 @if (Model.CompletedLocal.HasValue)
 {
     @* Who dispositioned it and how: a person, the AI agent of a profile, the dialer, or the platform. *@

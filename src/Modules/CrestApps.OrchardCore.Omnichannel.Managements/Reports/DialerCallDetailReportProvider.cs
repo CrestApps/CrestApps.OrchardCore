@@ -11,6 +11,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement.Records;
 using OrchardCore.Localization;
+using OrchardCore.Modules;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
@@ -57,6 +58,7 @@ public sealed class DialerCallDetailReportProvider : OmnichannelReportBase, IRep
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
     private readonly INamedCatalogManager<OmnichannelDisposition> _dispositionManager;
     private readonly ActivitySourceOptions _activitySourceOptions;
+    private readonly ILocalClock _localClock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DialerCallDetailReportProvider"/> class.
@@ -65,12 +67,14 @@ public sealed class DialerCallDetailReportProvider : OmnichannelReportBase, IRep
     /// <param name="campaignManager">The campaign manager used to resolve campaign names.</param>
     /// <param name="dispositionManager">The disposition manager used to resolve disposition names.</param>
     /// <param name="activitySourceOptions">The activity sources registered by the enabled features.</param>
+    /// <param name="localClock">Converts times to the site time zone.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public DialerCallDetailReportProvider(
         ISession session,
         ICatalogManager<OmnichannelCampaign> campaignManager,
         INamedCatalogManager<OmnichannelDisposition> dispositionManager,
         IOptions<ActivitySourceOptions> activitySourceOptions,
+        ILocalClock localClock,
         IStringLocalizer<DialerCallDetailReportProvider> stringLocalizer)
         : base(stringLocalizer)
     {
@@ -78,6 +82,7 @@ public sealed class DialerCallDetailReportProvider : OmnichannelReportBase, IRep
         _campaignManager = campaignManager;
         _dispositionManager = dispositionManager;
         _activitySourceOptions = activitySourceOptions.Value;
+        _localClock = localClock;
     }
 
     /// <inheritdoc/>
@@ -190,24 +195,31 @@ public sealed class DialerCallDetailReportProvider : OmnichannelReportBase, IRep
             new ReportColumn(S["Campaign"].Value),
             new ReportColumn(S["Last disposition"].Value),
             new ReportColumn(S["Attempts"].Value, ReportColumnAlign.End),
-            new ReportColumn(S["Completed (UTC)"].Value),
+            new ReportColumn(S["Completed"].Value),
             new ReportColumn(S["Agent"].Value),
             new ReportColumn(S["Status"].Value),
         };
 
-        var rows = activities.Select(activity => new ReportRow(
-        [
-            Display(activity.PreferredDestination),
-            ResolveContact(activity.ContactContentItemId, contactNames),
-            CatalogReportDisplayNames.Resolve(activity.CampaignId, campaignNames, noCampaign, unknownCampaign),
-            CatalogReportDisplayNames.Resolve(activity.DispositionId, dispositionNames, noDisposition, unknownDisposition),
-            ReportFormat.Number(Math.Max(0, activity.Attempts)),
-            activity.CompletedUtc.HasValue
-                ? activity.CompletedUtc.Value.ToString("u", CultureInfo.InvariantCulture)
-                : string.Empty,
-            ResolveUser(activity.AssignedToId, userNames),
-            GetStatusName(activity.Status),
-        ]));
+        var rows = new List<ReportRow>(activities.Count);
+
+        foreach (var activity in activities)
+        {
+            var completed = activity.CompletedUtc.HasValue
+                ? (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(activity.CompletedUtc.Value, DateTimeKind.Utc))).DateTime.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)
+                : string.Empty;
+
+            rows.Add(new ReportRow(
+            [
+                Display(activity.PreferredDestination),
+                ResolveContact(activity.ContactContentItemId, contactNames),
+                CatalogReportDisplayNames.Resolve(activity.CampaignId, campaignNames, noCampaign, unknownCampaign),
+                CatalogReportDisplayNames.Resolve(activity.DispositionId, dispositionNames, noDisposition, unknownDisposition),
+                ReportFormat.Number(Math.Max(0, activity.Attempts)),
+                completed,
+                ResolveUser(activity.AssignedToId, userNames),
+                GetStatusName(activity.Status),
+            ]));
+        }
 
         var section = ReportSection.ForTable(S["Dialed numbers"].Value, columns, rows);
         section.Description = description;

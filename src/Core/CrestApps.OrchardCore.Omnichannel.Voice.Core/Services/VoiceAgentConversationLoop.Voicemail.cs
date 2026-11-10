@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
+using CrestApps.OrchardCore.Omnichannel.Voice.Telemetry;
 using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -81,6 +82,8 @@ public sealed partial class VoiceAgentConversationLoop
             activity.Put(voicemail);
             await _activityStore.UpdateAsync(activity, cancellationToken);
 
+            VoiceTelemetry.RecordMachineDetected("transcript", phoneMenu: false);
+
             if (_logger.IsEnabled(LogLevel.Information))
             {
                 _logger.LogInformation(
@@ -132,6 +135,8 @@ public sealed partial class VoiceAgentConversationLoop
         // The assistant has already pressed keys on it, so the machine is a phone menu it is getting through.
         if (_answeringMachineSignals.Watch(voiceEvent.ProviderName, voiceEvent.ProviderCallId).PhoneMenuReached.IsCancellationRequested)
         {
+            VoiceTelemetry.RecordMachineDetected("provider", phoneMenu: true);
+
             return;
         }
 
@@ -144,6 +149,9 @@ public sealed partial class VoiceAgentConversationLoop
 
         activity.Put(new VoicemailReached { DetectedByProvider = true });
         await _activityStore.UpdateAsync(activity, cancellationToken);
+
+        // Counted once the call is marked: a redelivered detection finds the mark above and is not counted again.
+        VoiceTelemetry.RecordMachineDetected("provider", phoneMenu: false);
 
         if (_logger.IsEnabled(LogLevel.Information))
         {

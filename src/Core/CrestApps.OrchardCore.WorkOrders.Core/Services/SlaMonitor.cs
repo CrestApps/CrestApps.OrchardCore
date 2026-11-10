@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
+using CrestApps.OrchardCore.WorkOrders.Core.Telemetry;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.WorkOrders.Services;
 using OrchardCore.Modules;
@@ -76,6 +77,7 @@ public sealed class SlaMonitor
             foreach (var (name, target) in events)
             {
                 raised++;
+                WorkOrdersTelemetry.RecordSlaEvent(name == WorkOrdersConstants.Events.SlaBreached, target);
 
                 foreach (var observer in _observers)
                 {

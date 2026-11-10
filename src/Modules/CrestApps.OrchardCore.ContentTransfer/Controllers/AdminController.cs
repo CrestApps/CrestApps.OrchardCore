@@ -1,10 +1,14 @@
+using CrestApps.OrchardCore.Calendars;
 using System.Data;
+using System.Diagnostics;
 using System.Security.Claims;
 using CrestApps.OrchardCore.ContentTransfer.Filters;
 using CrestApps.OrchardCore.ContentTransfer.Indexes;
 using CrestApps.OrchardCore.ContentTransfer.Models;
 using CrestApps.OrchardCore.ContentTransfer.Services;
+using CrestApps.OrchardCore.ContentTransfer.Telemetry;
 using CrestApps.OrchardCore.ContentTransfer.ViewModels;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -12,6 +16,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Admin;
@@ -63,6 +68,7 @@ public sealed class AdminController : Controller, IUpdateModel
     private readonly ContentImportOptions _contentImportOptions;
     private readonly ITempDirectoryProvider _tempDirectoryProvider;
     private readonly IDistributedLock _distributedLock;
+    private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
     internal readonly IHtmlLocalizer H;
@@ -92,6 +98,7 @@ public sealed class AdminController : Controller, IUpdateModel
         IOptions<ContentImportOptions> contentImportOptions,
         ITempDirectoryProvider tempDirectoryProvider,
         IDistributedLock distributedLock,
+        ILogger<AdminController> logger,
         IClock clock)
     {
         _authorizationService = authorizationService;
@@ -118,6 +125,7 @@ public sealed class AdminController : Controller, IUpdateModel
         _contentImportOptions = contentImportOptions.Value;
         _tempDirectoryProvider = tempDirectoryProvider;
         _distributedLock = distributedLock;
+        _logger = logger;
         _shapeFactory = shapeFactory;
         _pagerOptions = pagerOptions.Value;
         _clock = clock;
@@ -250,11 +258,15 @@ public sealed class AdminController : Controller, IUpdateModel
     {
         if (string.IsNullOrEmpty(contentTypeId))
         {
+            RecordUploadRejected("not_found");
+
             return NotFound();
         }
 
         if (!await _authorizationService.AuthorizeAsync(User, ContentTransferPermissions.ImportContentFromFile, (object)contentTypeId))
         {
+            RecordUploadRejected("unauthorized");
+
             return Unauthorized();
         }
 
@@ -262,6 +274,8 @@ public sealed class AdminController : Controller, IUpdateModel
 
         if (contentTypeDefinition == null)
         {
+            RecordUploadRejected("not_found");
+
             return NotFound();
         }
 
@@ -269,6 +283,8 @@ public sealed class AdminController : Controller, IUpdateModel
 
         if (!settings.AllowBulkImport)
         {
+            RecordUploadRejected("disabled");
+
             return NotFound();
         }
 
@@ -281,11 +297,15 @@ public sealed class AdminController : Controller, IUpdateModel
 
                 if (file == null || file.Length == 0)
                 {
+                    RecordUploadRejected("missing_file");
+
                     return BadRequest(new { error = S["File is required."].Value });
                 }
 
                 if (_contentImportOptions.MaxUploadFileSize > 0 && file.Length > _contentImportOptions.MaxUploadFileSize)
                 {
+                    RecordUploadRejected("too_large");
+
                     return BuildUploadErrorResult(ContentTransferUploadError.MaxFileSizeExceeded);
                 }
 
@@ -294,6 +314,8 @@ public sealed class AdminController : Controller, IUpdateModel
 
                 if (formatProvider == null)
                 {
+                    RecordUploadRejected("bad_format");
+
                     return BadRequest(new { error = GetUnsupportedFormatsMessage().Value });
                 }
 
@@ -307,6 +329,8 @@ public sealed class AdminController : Controller, IUpdateModel
 
                 if (!ModelState.IsValid)
                 {
+                    RecordUploadRejected("invalid_model");
+
                     return BadRequest(new { error = GetModelErrorMessage() });
                 }
 
@@ -328,13 +352,46 @@ public sealed class AdminController : Controller, IUpdateModel
 
                 importContent.CopyPropertiesTo(entry);
 
+                // The background import links its spans to this request.
+                ContentTransferDiagnostics.SetTraceParent(entry);
+
                 await _session.SaveAsync(entry, false, collection: null, cancellationToken: CancellationToken.None);
                 await _session.SaveChangesAsync();
                 TriggerImportProcessing(entry.EntryId);
 
+                ContentTransferDiagnostics.Add(ContentTransferDiagnostics.ImportUploads, 1, CrestAppsOrchardCoreTelemetry.OutcomeTag, ContentTransferDiagnostics.OutcomeAccepted);
+                ContentTransferDiagnostics.Record(ContentTransferDiagnostics.UploadSize, file.Length, new TagList
+                {
+                    { CrestAppsOrchardCoreTelemetry.FormatTag, ContentTransferDiagnostics.GetFormat(formatProvider.FileExtension) },
+                });
+
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    ContentTransferLog.ImportQueued(_logger, entry.EntryId, entry.ContentType, file.Length);
+                }
+
                 return Ok(new { success = true });
             },
-            (error) => Task.FromResult(BuildUploadErrorResult(error)));
+            (error) =>
+            {
+                RecordUploadRejected(error switch
+                {
+                    ContentTransferUploadError.MaxFileSizeExceeded => "too_large",
+                    ContentTransferUploadError.MaxChunkSizeExceeded => "chunk_too_large",
+                    _ => "invalid_request",
+                });
+
+                return Task.FromResult(BuildUploadErrorResult(error));
+            });
+    }
+
+    private static void RecordUploadRejected(string reason)
+    {
+        ContentTransferDiagnostics.Add(ContentTransferDiagnostics.ImportUploads, 1, new TagList
+        {
+            { CrestAppsOrchardCoreTelemetry.OutcomeTag, ContentTransferDiagnostics.OutcomeRejected },
+            { CrestAppsOrchardCoreTelemetry.ReasonTag, reason },
+        });
     }
 
     [Admin("import/contents/{contentTypeId}/download-template", "ImportContentDownloadTemplateTemplate")]
@@ -453,8 +510,18 @@ public sealed class AdminController : Controller, IUpdateModel
         string owners = null,
         bool publishedOnly = true,
         bool latestOnly = false,
-        bool allVersions = false)
+        bool allVersions = false,
+        [FromServices] ILocalClock localClock = null)
     {
+        // The dates are days in the site's time zone; the index keeps UTC.
+        if (localClock is not null)
+        {
+            createdFrom = await ToUtcAsync(createdFrom, localClock);
+            createdTo = await ToUtcAsync(createdTo, localClock);
+            modifiedFrom = await ToUtcAsync(modifiedFrom, localClock);
+            modifiedTo = await ToUtcAsync(modifiedTo, localClock);
+        }
+
         var contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentTypeId);
 
         if (contentTypeDefinition == null)
@@ -547,7 +614,25 @@ public sealed class AdminController : Controller, IUpdateModel
             return View(nameof(Export), invalidModel);
         }
 
-        if (totalCount > threshold || exportRequest.RequiresQueue)
+        var queued = totalCount > threshold || exportRequest.RequiresQueue;
+        var mode = queued
+            ? ContentTransferDiagnostics.ModeQueued
+            : ContentTransferDiagnostics.ModeInline;
+
+        var format = ContentTransferDiagnostics.GetFormat(formatProvider.FileExtension);
+
+        ContentTransferDiagnostics.Add(ContentTransferDiagnostics.ExportRequests, 1, new TagList
+        {
+            { ContentTransferDiagnostics.ModeTag, mode },
+            { CrestAppsOrchardCoreTelemetry.FormatTag, format },
+        });
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            ContentTransferLog.ExportQueueDecision(_logger, contentTypeId, totalCount, threshold, exportRequest.RequiresQueue, mode);
+        }
+
+        if (queued)
         {
             // Store the filters so the background task can apply them.
             if (partialExport)
@@ -565,6 +650,9 @@ public sealed class AdminController : Controller, IUpdateModel
                 });
             }
 
+            // The background export links its spans to this request.
+            ContentTransferDiagnostics.SetTraceParent(entry);
+
             await _session.SaveAsync(entry, false, collection: null, cancellationToken: CancellationToken.None);
             await _session.SaveChangesAsync();
             TriggerExportProcessing(entry.EntryId);
@@ -579,6 +667,18 @@ public sealed class AdminController : Controller, IUpdateModel
         var columnNames = exportColumns.Select(c => c.Name).ToList();
 
         var tempFilePath = _tempDirectoryProvider.GetTempFileName();
+
+        // The export runs in this request, so its duration is the latency the user waits for.
+        using var telemetry = TelemetryScope.Start(
+            ContentTransferDiagnostics.ActivitySource,
+            "crestapps.contenttransfer.export.inline",
+            ContentTransferDiagnostics.ExportInlineDuration,
+            new TagList
+            {
+                { CrestAppsOrchardCoreTelemetry.FormatTag, format },
+                { ContentTransferDiagnostics.ContentTypeTag, contentTypeId },
+            });
+
         try
         {
             using (var fileStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
@@ -591,6 +691,15 @@ public sealed class AdminController : Controller, IUpdateModel
 
                 while (true)
                 {
+                    using var pageTelemetry = TelemetryScope.Start(
+                        ContentTransferDiagnostics.ActivitySource,
+                        "crestapps.contenttransfer.export.page",
+                        ContentTransferDiagnostics.ExportPageDuration,
+                        new TagList
+                        {
+                            { ContentTransferDiagnostics.ModeTag, ContentTransferDiagnostics.ModeInline },
+                        });
+
                     var pageQuery = BuildExportQuery(contentTypeId, partialExport, latestOnly, allVersions, createdFrom, createdTo, modifiedFrom, modifiedTo, owners);
 
                     var contentItems = await pageQuery
@@ -602,8 +711,15 @@ public sealed class AdminController : Controller, IUpdateModel
 
                     if (items.Count == 0)
                     {
+                        pageTelemetry.Succeed();
+
                         break;
                     }
+
+                    pageTelemetry.SetSpanTag(ContentTransferDiagnostics.RowsSpanTag, items.Count);
+
+                    var written = 0;
+                    var excluded = 0;
 
                     // Let handlers pre-load per-page data in a single pass before mapping rows.
                     await _contentImportManager.PrepareExportBatchAsync(new ContentExportBatchContext
@@ -636,6 +752,8 @@ public sealed class AdminController : Controller, IUpdateModel
                         // A handler may exclude a content item from the output (for example, a contributed filter).
                         if (mapContext.Exclude)
                         {
+                            excluded++;
+
                             continue;
                         }
 
@@ -646,7 +764,11 @@ public sealed class AdminController : Controller, IUpdateModel
                         }
 
                         writer.WriteRow(rowValues);
+                        written++;
                     }
+
+                    BackgroundTasks.ExportFilesBackgroundTask.RecordPage(ContentTransferDiagnostics.ModeInline, written, excluded);
+                    pageTelemetry.Succeed();
 
                     page++;
                 }
@@ -657,13 +779,28 @@ public sealed class AdminController : Controller, IUpdateModel
             // Read back from temp file for download (file-based, not memory-based).
             var downloadStream = new FileStream(tempFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 4096, options: FileOptions.DeleteOnClose);
 
+            ContentTransferDiagnostics.Record(ContentTransferDiagnostics.ExportFileSize, downloadStream.Length, new TagList
+            {
+                { CrestAppsOrchardCoreTelemetry.FormatTag, format },
+                { ContentTransferDiagnostics.ModeTag, ContentTransferDiagnostics.ModeInline },
+            });
+
+            telemetry.Succeed();
+
             return new FileStreamResult(downloadStream, formatProvider.ContentType)
             {
                 FileDownloadName = $"{contentTypeDefinition.Name}_Export{formatProvider.FileExtension}",
             };
         }
-        catch
+        catch (Exception ex)
         {
+            telemetry.Fail(ex);
+            ContentTransferDiagnostics.Add(ContentTransferDiagnostics.ExportFailures, 1, new TagList
+            {
+                { CrestAppsOrchardCoreTelemetry.ReasonTag, "exception" },
+                { ContentTransferDiagnostics.ModeTag, ContentTransferDiagnostics.ModeInline },
+            });
+
             if (System.IO.File.Exists(tempFilePath))
             {
                 System.IO.File.Delete(tempFilePath);
@@ -1065,6 +1202,9 @@ public sealed class AdminController : Controller, IUpdateModel
         };
     }
 
+    private static async Task<DateTime?> ToUtcAsync(DateTime? localDay, ILocalClock localClock)
+        => localDay is { } value ? await localClock.ToUtcLenientAsync(value.Date) : null;
+
     private async Task<ContentExporterViewModel> BuildContentExporterViewModelAsync(
         IList<SelectListItem> exportableTypes,
         string selectedContentTypeId = null,
@@ -1193,40 +1333,77 @@ public sealed class AdminController : Controller, IUpdateModel
 
     private static void TriggerImportProcessing(string entryId)
     {
+        var traceParent = TraceContextPropagation.Capture();
+
+        ContentTransferDiagnostics.Add(ContentTransferDiagnostics.JobsTriggered, 1, ContentTransferDiagnostics.JobTag, "import");
+
         ShellScope.AddDeferredTask(async scope =>
         {
             await HttpBackgroundJob.ExecuteAfterEndOfRequestAsync(
                 $"content-transfer-import-{entryId}",
                 entryId,
-                static (backgroundScope, id) => BackgroundTasks.ImportFilesBackgroundTask.ProcessEntriesAsync(backgroundScope.ServiceProvider, id, CancellationToken.None));
+                traceParent,
+                static (backgroundScope, id, parent) => RunJobAsync(
+                    backgroundScope,
+                    "contenttransfer_import",
+                    parent,
+                    jobScope => BackgroundTasks.ImportFilesBackgroundTask.ProcessEntriesAsync(jobScope.ServiceProvider, id, CancellationToken.None)));
         });
     }
 
     private static void TriggerExportProcessing(string entryId)
     {
+        var traceParent = TraceContextPropagation.Capture();
+
+        ContentTransferDiagnostics.Add(ContentTransferDiagnostics.JobsTriggered, 1, ContentTransferDiagnostics.JobTag, "export");
+
         ShellScope.AddDeferredTask(async scope =>
         {
             await HttpBackgroundJob.ExecuteAfterEndOfRequestAsync(
                 $"content-transfer-export-{entryId}",
                 entryId,
-                static (backgroundScope, id) => BackgroundTasks.ExportFilesBackgroundTask.ProcessEntriesAsync(backgroundScope.ServiceProvider, id, CancellationToken.None));
+                traceParent,
+                static (backgroundScope, id, parent) => RunJobAsync(
+                    backgroundScope,
+                    "contenttransfer_export",
+                    parent,
+                    jobScope => BackgroundTasks.ExportFilesBackgroundTask.ProcessEntriesAsync(jobScope.ServiceProvider, id, CancellationToken.None)));
         });
     }
 
     private static void TriggerEntryDeletion(string entryId)
     {
+        var traceParent = TraceContextPropagation.Capture();
+
+        ContentTransferDiagnostics.Add(ContentTransferDiagnostics.JobsTriggered, 1, ContentTransferDiagnostics.JobTag, "delete");
+
         ShellScope.AddDeferredTask(async scope =>
         {
             await HttpBackgroundJob.ExecuteAfterEndOfRequestAsync(
                 $"content-transfer-delete-{entryId}",
                 entryId,
-                static async (backgroundScope, id) =>
-                {
-                    var manager = backgroundScope.ServiceProvider.GetRequiredService<IContentTransferEntryManager>();
-                    await manager.DeleteAsync(id);
-                });
+                traceParent,
+                static (backgroundScope, id, parent) => RunJobAsync(
+                    backgroundScope,
+                    "contenttransfer_delete",
+                    parent,
+                    async jobScope =>
+                    {
+                        var manager = jobScope.ServiceProvider.GetRequiredService<IContentTransferEntryManager>();
+                        await manager.DeleteAsync(id);
+                    }));
         });
     }
+
+    /// <summary>
+    /// Runs a job queued after the request, measured as deferred work linked to the request that queued it.
+    /// </summary>
+    private static Task RunJobAsync(
+        ShellScope scope,
+        string name,
+        string traceParent,
+        Func<ShellScope, Task> work)
+        => DeferredWork.RunAsync(name, traceParent, scope, work);
 
     private IContentTransferFileFormatProvider ResolveFileFormatProvider(string format)
     {

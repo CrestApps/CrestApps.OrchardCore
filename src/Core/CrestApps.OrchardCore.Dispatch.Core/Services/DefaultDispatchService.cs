@@ -2,6 +2,7 @@ using System.Globalization;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Services;
 using CrestApps.OrchardCore.Dispatch.Core.Indexes;
+using CrestApps.OrchardCore.Dispatch.Core.Telemetry;
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
 using CrestApps.OrchardCore.Locking;
@@ -670,6 +671,8 @@ public sealed class DefaultDispatchService : IDispatchService
 
     private async Task NotifyAsync(ServiceVisit visit, string eventName, IReadOnlyDictionary<string, object> detail, CancellationToken cancellationToken)
     {
+        DispatchTelemetry.RecordVisitEvent(eventName, visit.Status);
+
         foreach (var observer in _observers)
         {
             try
@@ -678,6 +681,7 @@ public sealed class DefaultDispatchService : IDispatchService
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
+                DispatchTelemetry.RecordObserverFailure(observer.GetType(), eventName);
                 _logger.LogError(exception, "A visit observer failed on {EventName} for visit {VisitNumber}.", eventName, visit.Number);
             }
         }

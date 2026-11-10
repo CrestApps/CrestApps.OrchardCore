@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Voice.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -113,6 +114,8 @@ public sealed partial class RealtimeVoiceConversationRunner
                 context.SessionLost = true;
             }
 
+            VoiceTelemetry.RecordMediaStreamLost(context.ProviderName);
+
             _logger.LogError(
                 ex,
                 "The call audio on activity '{ActivityId}' was lost with the caller still on the line; the call is handed on.",
@@ -152,6 +155,9 @@ public sealed partial class RealtimeVoiceConversationRunner
 
         if (conversation is null || live.Faulted)
         {
+            // Nowhere to send the caller's audio while a lost session is replaced: what they say meanwhile is not heard.
+            VoiceTelemetry.RecordFramesDropped("no_session", released.Count);
+
             return;
         }
 
@@ -168,6 +174,11 @@ public sealed partial class RealtimeVoiceConversationRunner
             // so a provider that reports the caller late (see LogProviderRunningBehind) can be told apart from audio
             // that left here late.
             var elapsed = System.Diagnostics.Stopwatch.GetElapsedTime(started);
+
+            if (elapsed >= CallerAudioSendStall)
+            {
+                VoiceTelemetry.RecordSendStall("to_model");
+            }
 
             if (elapsed >= CallerAudioSendStall && _logger.IsEnabled(LogLevel.Information))
             {
@@ -321,15 +332,20 @@ public sealed partial class RealtimeVoiceConversationRunner
                                             and not RealtimeConversationEventType.AssistantTranscriptDelta &&
                     _logger.IsEnabled(LogLevel.Debug))
                 {
-                    // Sanitized into a local first: as an argument it would be evaluated on the way into a call
-                    // that may discard it, and this runs for every event of a live call.
-                    var text = conversationEvent.Text.SanitizeLogValue();
+                    // What was said never reaches the log: a turn is described by its length. Only a session error
+                    // keeps its text, which is the provider's message rather than anybody's words.
+                    var eventType = conversationEvent.Type.ToString();
 
-                    _logger.LogDebug(
-                        "Realtime turn on activity '{ActivityId}': {EventType} '{Text}'.",
-                        activityId,
-                        conversationEvent.Type,
-                        text);
+                    if (conversationEvent.Type == RealtimeConversationEventType.Error)
+                    {
+                        var error = conversationEvent.Text.SanitizeLogValue();
+
+                        VoiceLog.RealtimeSessionError(_logger, activityId, eventType, error);
+                    }
+                    else
+                    {
+                        VoiceLog.RealtimeTurn(_logger, activityId, eventType, conversationEvent.Text?.Length ?? 0);
+                    }
                 }
 
                 switch (conversationEvent.Type)

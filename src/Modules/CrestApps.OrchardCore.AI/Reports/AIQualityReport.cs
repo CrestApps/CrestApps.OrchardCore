@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Localization;
+using OrchardCore.Modules;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Reports;
@@ -43,6 +44,7 @@ public sealed class AIQualityReport : IReport
     private readonly IAIProfileStore _profileStore;
     private readonly LinkGenerator _linkGenerator;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ILocalClock _localClock;
 
     internal readonly IStringLocalizer S;
 
@@ -54,6 +56,7 @@ public sealed class AIQualityReport : IReport
     /// <param name="profileStore">The AI profile store, which names the profile of each conversation.</param>
     /// <param name="linkGenerator">Makes the link that opens each conversation.</param>
     /// <param name="httpContextAccessor">The current request, whose tenant the links are on.</param>
+    /// <param name="localClock">Converts times to the site time zone.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AIQualityReport(
         IAIQADashboardService dashboardService,
@@ -61,6 +64,7 @@ public sealed class AIQualityReport : IReport
         IAIProfileStore profileStore,
         LinkGenerator linkGenerator,
         IHttpContextAccessor httpContextAccessor,
+        ILocalClock localClock,
         IStringLocalizer<AIQualityReport> stringLocalizer)
     {
         _dashboardService = dashboardService;
@@ -68,6 +72,7 @@ public sealed class AIQualityReport : IReport
         _profileStore = profileStore;
         _linkGenerator = linkGenerator;
         _httpContextAccessor = httpContextAccessor;
+        _localClock = localClock;
         S = stringLocalizer;
     }
 
@@ -156,7 +161,23 @@ public sealed class AIQualityReport : IReport
             return context.Mode == ReportRunMode.Export ? new ReportDocument() : NothingScored();
         }
 
-        return Build(dashboard, await GetProfileNamesAsync(dashboard.Worst, cancellationToken), context.Mode == ReportRunMode.Display);
+        return Build(
+            dashboard,
+            await GetProfileNamesAsync(dashboard.Worst, cancellationToken),
+            await GetLocalEvaluatedTimesAsync(dashboard.Worst),
+            context.Mode == ReportRunMode.Display);
+    }
+
+    private async Task<Dictionary<AIConversationEvaluation, DateTime>> GetLocalEvaluatedTimesAsync(IEnumerable<AIConversationEvaluation> evaluations)
+    {
+        var times = new Dictionary<AIConversationEvaluation, DateTime>(ReferenceEqualityComparer.Instance);
+
+        foreach (var evaluation in evaluations)
+        {
+            times[evaluation] = (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(evaluation.EvaluatedUtc, DateTimeKind.Utc))).DateTime;
+        }
+
+        return times;
     }
 
     private ReportDocument NothingScored()
@@ -204,7 +225,11 @@ public sealed class AIQualityReport : IReport
         return ReportValue.Link(evaluation.SessionId, url);
     }
 
-    private ReportDocument Build(AIQADashboard dashboard, IReadOnlyDictionary<string, string> profileNames, bool withLinks)
+    private ReportDocument Build(
+        AIQADashboard dashboard,
+        IReadOnlyDictionary<string, string> profileNames,
+        IReadOnlyDictionary<AIConversationEvaluation, DateTime> evaluatedTimes,
+        bool withLinks)
     {
         var document = new ReportDocument()
             .Add(ReportSection.ForMetrics(S["Summary"].Value,
@@ -266,18 +291,22 @@ public sealed class AIQualityReport : IReport
                 ReportFormat.Number(question.Count),
                 ReportFormat.Percent(question.ResolutionRate),
             ]))))
-            .Add(LowestScores(dashboard, profileNames, withLinks));
+            .Add(LowestScores(dashboard, profileNames, evaluatedTimes, withLinks));
 
         return document;
     }
 
-    private ReportSection LowestScores(AIQADashboard dashboard, IReadOnlyDictionary<string, string> profileNames, bool withLinks)
+    private ReportSection LowestScores(
+        AIQADashboard dashboard,
+        IReadOnlyDictionary<string, string> profileNames,
+        IReadOnlyDictionary<AIConversationEvaluation, DateTime> evaluatedTimes,
+        bool withLinks)
     {
         var section = ReportSection.ForTable(S["Lowest scores"].Value,
             [
                 new ReportColumn(S["Score"].Value, ReportColumnAlign.End),
                 new ReportColumn(S["Passed"].Value),
-                new ReportColumn(S["Evaluated (UTC)"].Value),
+                new ReportColumn(S["Evaluated"].Value),
                 new ReportColumn(S["Session"].Value),
                 new ReportColumn(S["AI profile"].Value),
                 new ReportColumn(S["Summary"].Value),
@@ -286,7 +315,7 @@ public sealed class AIQualityReport : IReport
             [
                 evaluation.Score.ToString(CultureInfo.InvariantCulture),
                 evaluation.Passed ? S["Yes"].Value : S["No"].Value,
-                evaluation.EvaluatedUtc.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture),
+                evaluatedTimes[evaluation].ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture),
                 Session(evaluation, withLinks),
                 string.IsNullOrEmpty(evaluation.ProfileId) ? null : profileNames.GetValueOrDefault(evaluation.ProfileId, evaluation.ProfileId),
                 evaluation.Summary,

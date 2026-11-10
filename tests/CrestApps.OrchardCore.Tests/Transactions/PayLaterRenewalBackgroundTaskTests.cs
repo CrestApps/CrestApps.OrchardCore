@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -165,6 +166,9 @@ public sealed class PayLaterRenewalBackgroundTaskTests
         services.AddSingleton(SiteServiceFactory.Create(new PayLaterSettings { NetTermDays = 30 }));
         services.AddSingleton<IDistributedLock, LocalLock>();
         services.AddSingleton<IClock>(new TestClock(_now));
+        var localClock = new Mock<ILocalClock>();
+        localClock.Setup(clock => clock.ConvertToLocalAsync(It.IsAny<DateTimeOffset>())).Returns<DateTimeOffset>(Task.FromResult);
+        services.AddSingleton(localClock.Object);
         services.AddSingleton(typeof(IStringLocalizer<>), typeof(PassThroughStringLocalizer<>));
 
         var task = new PayLaterRenewalBackgroundTask(NullLogger<PayLaterRenewalBackgroundTask>.Instance);

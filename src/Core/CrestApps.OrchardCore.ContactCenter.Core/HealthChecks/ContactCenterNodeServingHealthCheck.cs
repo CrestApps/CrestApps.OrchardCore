@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 
@@ -74,7 +75,11 @@ public sealed class ContactCenterNodeServingHealthCheck : IHealthCheck
             succeeded = false;
         }
 
-        return _tracker.Record(succeeded)
+        var serving = _tracker.Record(succeeded);
+
+        ContactCenterDiagnostics.ObserveNodeServing(serving);
+
+        return serving
             ? HealthCheckResult.Healthy("This node can reach the Contact Center store.")
             : new HealthCheckResult(
                 context.Registration.FailureStatus,

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -19,22 +20,26 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.BackgroundTasks;
 public sealed class MessagingRoutedReassignmentBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        var reassignmentService = serviceProvider.GetRequiredService<IMessagingRoutedReassignmentService>();
-        var logger = serviceProvider.GetRequiredService<ILogger<MessagingRoutedReassignmentBackgroundTask>>();
+        return this.RunAsync(async run =>
+        {
+            var reassignmentService = serviceProvider.GetRequiredService<IMessagingRoutedReassignmentService>();
+            var logger = serviceProvider.GetRequiredService<ILogger<MessagingRoutedReassignmentBackgroundTask>>();
 
-        try
-        {
-            await reassignmentService.ReassignStaleAsync(cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "An error occurred while reassigning stale routed conversations.");
-        }
+            try
+            {
+                run.AddItems(await reassignmentService.ReassignStaleAsync(cancellationToken), "reassigned");
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "An error occurred while reassigning stale routed conversations.");
+                run.ReportError(ex);
+            }
+        });
     }
 }

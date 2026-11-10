@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.PayLater.Models;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
@@ -46,19 +47,25 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
         => _logger = logger;
 
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => RenewDueAsync(serviceProvider, run, cancellationToken));
+
+    private async Task RenewDueAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var transactionManager = serviceProvider.GetRequiredService<ITransactionManager>();
         var siteService = serviceProvider.GetRequiredService<ISiteService>();
         var distributedLock = serviceProvider.GetRequiredService<IDistributedLock>();
         var localizer = serviceProvider.GetRequiredService<IStringLocalizer<PayLaterRenewalBackgroundTask>>();
         var clock = serviceProvider.GetRequiredService<IClock>();
+        var localClock = serviceProvider.GetRequiredService<ILocalClock>();
 
         var now = clock.UtcNow;
         var due = await transactionManager.GetDueForRenewalAsync(now - _grace, cancellationToken);
 
         if (due.Count == 0)
         {
+            run.Skip();
+
             return;
         }
 
@@ -79,21 +86,26 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
 
             try
             {
-                await RenewAsync(transactionManager, distributedLock, localizer, settings, transaction, now, cancellationToken);
+                run.AddItems(1, await RenewAsync(transactionManager, distributedLock, localizer, localClock, settings, transaction, now, cancellationToken)
+                    ? "renewed"
+                    : "skipped");
             }
             catch (Exception exception)
             {
                 // One bad agreement must not stop the rest of the sweep. The cycle stays unspawned, so the
                 // next run tries it again.
+                run.AddItems(1, CrestAppsOrchardCoreTelemetry.OutcomeError);
                 _logger.LogError(exception, "Failed to create the next Pay Later billing cycle for transaction '{TransactionId}'.", transaction.ItemId);
             }
         }
     }
 
-    private static async Task RenewAsync(
+    // Returns whether the next cycle was created.
+    private static async Task<bool> RenewAsync(
         ITransactionManager transactionManager,
         IDistributedLock distributedLock,
         IStringLocalizer localizer,
+        ILocalClock localClock,
         PayLaterSettings settings,
         Transaction transaction,
         DateTime now,
@@ -103,7 +115,7 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
 
         if (recurrence?.GetNextCycleUtc() is null)
         {
-            return;
+            return false;
         }
 
         // Two nodes running the sweep at the same moment would otherwise both see an unspawned cycle and
@@ -115,7 +127,7 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
 
         if (!locked)
         {
-            return;
+            return false;
         }
 
         await using var _ = locker;
@@ -125,10 +137,10 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
 
         if (current?.Recurrence?.GetNextCycleUtc() is null)
         {
-            return;
+            return false;
         }
 
-        var next = await BuildNextCycleAsync(transactionManager, localizer, settings, current, now);
+        var next = await BuildNextCycleAsync(transactionManager, localizer, localClock, settings, current, now);
 
         // The source is marked before the new cycle is created so a crash between the two leaves the
         // schedule stopped rather than invoicing the same period on every later sweep.
@@ -143,11 +155,14 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
 
         await transactionManager.UpdateAsync(current, cancellationToken: cancellationToken);
         await transactionManager.CreateAsync(next, cancellationToken: cancellationToken);
+
+        return true;
     }
 
     private static async Task<Transaction> BuildNextCycleAsync(
         ITransactionManager transactionManager,
         IStringLocalizer localizer,
+        ILocalClock localClock,
         PayLaterSettings settings,
         Transaction source,
         DateTime now)
@@ -199,11 +214,14 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
             CycleTaxAmount = recurrence.CycleTaxAmount,
         };
 
+        // The period's first day as the site reads it, in its own time zone.
+        var localPeriodStart = (await localClock.ConvertToLocalAsync(DateTime.SpecifyKind(periodStart, DateTimeKind.Utc))).DateTime;
+
         next.Events.Add(new TransactionEvent
         {
             CreatedUtc = now,
             Type = TransactionEventType.Created,
-            Message = localizer["An outstanding Pay Later balance was recorded for the billing period starting {0:d}.", periodStart].Value,
+            Message = localizer["An outstanding Pay Later balance was recorded for the billing period starting {0:d}.", localPeriodStart].Value,
         });
 
         return next;

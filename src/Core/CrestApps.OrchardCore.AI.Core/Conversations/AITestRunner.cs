@@ -1,9 +1,12 @@
+using System.Diagnostics;
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore.AI.Core.Telemetry;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 
@@ -119,6 +122,52 @@ public sealed class AITestRunner
     {
         ArgumentNullException.ThrowIfNull(run);
 
+        using var telemetry = TelemetryScope.Start(
+            AIModuleTelemetry.ActivitySource,
+            "crestapps.ai.eval.test_run",
+            AIModuleTelemetry.EvaluationDuration,
+            new TagList
+            {
+                { AIModuleTelemetry.KindTag, AIModuleTelemetry.KindTestRun },
+            });
+
+        telemetry.SetSpanTag("crestapps.ai.test_run.id", run.ItemId);
+        telemetry.SetSpanTag("crestapps.ai.test_case.id", run.TestCaseId);
+
+        try
+        {
+            var finished = await RunCoreAsync(run, cancellationToken);
+
+            var result = finished.Status switch
+            {
+                AITestRunStatus.Passed => AIModuleTelemetry.ResultPassed,
+                AITestRunStatus.Failed => AIModuleTelemetry.ResultFailed,
+                _ => CrestAppsOrchardCoreTelemetry.OutcomeError,
+            };
+
+            // A run that could not finish is recorded on the run itself rather than thrown.
+            if (result == CrestAppsOrchardCoreTelemetry.OutcomeError)
+            {
+                telemetry.Fail("run_error");
+            }
+            else
+            {
+                telemetry.AddMetricTag(CrestAppsOrchardCoreTelemetry.ResultTag, result);
+                telemetry.Succeed();
+            }
+
+            return finished;
+        }
+        catch (Exception ex)
+        {
+            telemetry.Fail(ex);
+
+            throw;
+        }
+    }
+
+    private async Task<AITestRun> RunCoreAsync(AITestRun run, CancellationToken cancellationToken)
+    {
         var testCase = await _testCaseStore.FindByIdAsync(run.TestCaseId, cancellationToken);
 
         try

@@ -1,8 +1,9 @@
 @model HierarchyAuditEventViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
 
 @{
     var data = Model.Data;
-    var details = HierarchyAuditText.DescribeDetails(T, data, Model.Labels);
+    var details = await HierarchyAuditText.DescribeDetailsAsync(T, LocalClock, data, Model.Labels);
     var signIn = HierarchyAuditText.DescribeSignIn(T, data.AuthenticationMethods);
 }
 

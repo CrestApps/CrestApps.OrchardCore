@@ -96,7 +96,7 @@ public sealed class AgentAvailabilityReportProviderTests
         Assert.Equal("No: offline, disconnected or no recent heartbeat", agent.Cells[9]);
         Assert.Equal("0:30:00", agent.Cells[10]);
         Assert.Equal("No: not signed in to a queue or campaign you oversee", agent.Cells[11]);
-        Assert.Contains("Available with no live session (last heartbeat 2026-07-10 11:30:00.000 UTC).", agent.Cells[12], StringComparison.Ordinal);
+        Assert.Contains("Available with no live session (last heartbeat 2026-07-10 11:30:00.000).", agent.Cells[12], StringComparison.Ordinal);
 
         var other = QueueRow(document, "absent2", "Other");
         Assert.Equal("Yes", other.Cells[4]);
@@ -168,7 +168,7 @@ public sealed class AgentAvailabilityReportProviderTests
 
         // Assert
         var mismatch = AgentRow(document, "mismatch");
-        Assert.Contains("The profile says Offline, but the last recorded change is to Available at 2026-07-10 10:00:00.000 UTC.", mismatch.Cells[13], StringComparison.Ordinal);
+        Assert.Contains("The profile says Offline, but the last recorded change is to Available at 2026-07-10 10:00:00.000.", mismatch.Cells[13], StringComparison.Ordinal);
         Assert.Contains("No sign-out is recorded after the change to Available", mismatch.Cells[13], StringComparison.Ordinal);
 
         var unrecorded = AgentRow(document, "unrecorded");
@@ -255,7 +255,27 @@ public sealed class AgentAvailabilityReportProviderTests
         Assert.Equal(new DateTime(2026, 7, 9, 7, 0, 0, DateTimeKind.Utc), startOfDay);
     }
 
-    private static async Task<ReportDocument> RunIncidentAsync(string agentId = null, bool withStaleWorkDetection = true)
+    [Fact]
+    public async Task RunAsync_WhenTenantIsBehindUtc_ShowsEveryTimeInTheTenantsZone()
+    {
+        // Act
+        var document = await RunIncidentAsync(timeZoneId: "America/Los_Angeles");
+
+        // Assert
+        Assert.StartsWith(
+            "Live as of 2026-07-10 05:00:00.000. Today started at 2026-07-10 00:00:00.000. Times are in America/Los_Angeles.",
+            document.Sections[0].Description,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("UTC", document.Sections[0].Description, StringComparison.Ordinal);
+        Assert.Equal("Available since (America/Los_Angeles)", document.Sections[1].Columns[2].Label);
+        Assert.Equal("2026-07-09 08:00:00.000", AgentRow(document, "absent1").Cells[2]);
+        Assert.Contains(
+            "Available with no live session (last heartbeat 2026-07-10 04:30:00.000).",
+            AgentRow(document, "absent2").Cells[12],
+            StringComparison.Ordinal);
+    }
+
+    private static async Task<ReportDocument> RunIncidentAsync(string agentId = null, bool withStaleWorkDetection = true, string timeZoneId = null)
     {
         var agents = new List<AgentProfile>
         {
@@ -537,13 +557,27 @@ public sealed class AgentAvailabilityReportProviderTests
             httpContextAccessor,
             availabilityOptions,
             clock.Object,
-            Mock.Of<ILocalClock>(),
+            LocalClock(timeZoneId),
             new FormattingLocalizer<AgentAvailabilityReportProvider>());
 
         var filter = new ReportFilter();
         ContactCenterReportFilter.SetString(filter, ContactCenterReportFilter.AgentId, agentId);
 
         return await provider.RunAsync(new ReportContext(filter), TestContext.Current.CancellationToken);
+    }
+
+    private static ILocalClock LocalClock(string timeZoneId)
+    {
+        var localClock = new Mock<ILocalClock>();
+
+        if (timeZoneId is not null)
+        {
+            localClock
+                .Setup(value => value.GetLocalTimeZoneAsync())
+                .ReturnsAsync(Mock.Of<ITimeZone>(zone => zone.TimeZoneId == timeZoneId));
+        }
+
+        return localClock.Object;
     }
 
     private static AgentProfile CampaignAgent(

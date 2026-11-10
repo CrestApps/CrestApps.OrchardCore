@@ -1,5 +1,6 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -155,12 +156,15 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
         bool releaseAssignedWork,
         CancellationToken cancellationToken)
     {
-        var healed = 0;
-        healed += await HealPendingReservationAsync(agent, forceCancelReservation, cancellationToken);
+        var healedReservations = await HealPendingReservationAsync(agent, forceCancelReservation, cancellationToken);
         agent = await _agentManager.FindByIdAsync(agent.ItemId, cancellationToken) ?? agent;
-        healed += await HealActiveInteractionAsync(agent, releaseAssignedWork, cancellationToken);
+        var healedInteractions = await HealActiveInteractionAsync(agent, releaseAssignedWork, cancellationToken);
 
-        return healed;
+        // Every repair here is an agent left holding work the routing transitions should have released: a leak.
+        ContactCenterDiagnostics.RecordRecoveryHealed("pending_reservation", healedReservations);
+        ContactCenterDiagnostics.RecordRecoveryHealed("active_interaction", healedInteractions);
+
+        return healedReservations + healedInteractions;
     }
 
     private async Task<int> HealPendingReservationAsync(AgentProfile agent, bool forceCancel, CancellationToken cancellationToken)

@@ -319,6 +319,7 @@ public sealed class DataSetRefreshServiceTests
             services.AddScoped<ConnectedDataSource>();
             services.AddSingleton<global::OrchardCore.Locking.Distributed.IDistributedLock>(harness.Lock);
             services.AddSingleton<global::OrchardCore.Modules.IClock>(harness.Clock);
+            services.AddSingleton(CrestApps.OrchardCore.Tests.Modules.AI.Chat.Reports.ReportTestClocks.LocalClock(TimeSpan.Zero));
             services.AddScoped<DataSetRefreshService>();
 
             harness._services = services.BuildServiceProvider();

@@ -18,6 +18,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
+using CrestApps.OrchardCore.Omnichannel.Voice.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
 using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.Extensions.AI;
@@ -51,6 +52,8 @@ public sealed partial class VoiceAgentConversationLoop
 
             if (refused is not null)
             {
+                VoiceTelemetry.RecordGuardrailRefusal(VoiceTelemetry.EngineTurnBased, "customer");
+
                 return (refused.Reply, false, null, false);
             }
         }
@@ -145,6 +148,7 @@ public sealed partial class VoiceAgentConversationLoop
 
             if (refused is not null)
             {
+                VoiceTelemetry.RecordGuardrailRefusal(VoiceTelemetry.EngineTurnBased, "reply");
                 reply = refused.Reply;
             }
         }

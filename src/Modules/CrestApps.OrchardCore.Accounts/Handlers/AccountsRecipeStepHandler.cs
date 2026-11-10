@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Accounts.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Recipes.Models;
@@ -22,7 +23,7 @@ internal sealed class AccountsRecipeStepHandler : IRecipeStepHandler
     {
         if (context?.Name is "ContentDefinition" or "ReplaceContentDefinition" && ShellScope.Current is not null)
         {
-            ShellScope.AddDeferredTask(scope => scope.ServiceProvider
+            DeferredWork.Add("account_list_sync", scope => scope.ServiceProvider
                 .GetRequiredService<AccountListSynchronizer>()
                 .SynchronizeAsync());
         }

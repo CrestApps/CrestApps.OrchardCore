@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.TenantHierarchy.Core.Services;
 using CrestApps.OrchardCore.TenantHierarchy.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,28 +21,36 @@ namespace CrestApps.OrchardCore.TenantHierarchy.BackgroundTasks;
 public sealed class ChildTenantMaintenanceBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        if (!serviceProvider.GetRequiredService<ShellSettings>().IsParentTenant())
+        return this.RunAsync(async run =>
         {
-            return;
-        }
-
-        var logger = serviceProvider.GetRequiredService<ILogger<ChildTenantMaintenanceBackgroundTask>>();
-
-        try
-        {
-            // Expired delegated sign-in codes are removed by the platform retention task (DelegatedAccessCodeRetentionPolicy).
-            var removed = await serviceProvider.GetRequiredService<ChildTenantManager>().RemoveDueAsync();
-
-            if (removed > 0 && logger.IsEnabled(LogLevel.Information))
+            if (!serviceProvider.GetRequiredService<ShellSettings>().IsParentTenant())
             {
-                logger.LogInformation("Removed {Count} child tenants whose removal grace period ended.", removed);
+                run.Skip();
+
+                return;
             }
-        }
-        catch (Exception ex) when (!ex.IsFatal())
-        {
-            logger.LogError(ex, "The tenant hierarchy maintenance failed.");
-        }
+
+            var logger = serviceProvider.GetRequiredService<ILogger<ChildTenantMaintenanceBackgroundTask>>();
+
+            try
+            {
+                // Expired delegated sign-in codes are removed by the platform retention task (DelegatedAccessCodeRetentionPolicy).
+                var removed = await serviceProvider.GetRequiredService<ChildTenantManager>().RemoveDueAsync();
+
+                run.AddItems(removed, "removed");
+
+                if (removed > 0 && logger.IsEnabled(LogLevel.Information))
+                {
+                    logger.LogInformation("Removed {Count} child tenants whose removal grace period ended.", removed);
+                }
+            }
+            catch (Exception ex) when (!ex.IsFatal())
+            {
+                run.ReportError(ex);
+                logger.LogError(ex, "The tenant hierarchy maintenance failed.");
+            }
+        });
     }
 }

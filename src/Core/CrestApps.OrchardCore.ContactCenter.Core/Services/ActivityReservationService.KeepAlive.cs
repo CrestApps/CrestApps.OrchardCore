@@ -1,4 +1,5 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Logging;
 
@@ -74,7 +75,8 @@ public sealed partial class ActivityReservationService
                 }
             }, cancellationToken);
 
-            await CommitTransitionAsync(activityItemId, reservation.AgentId, cancellationToken);
+            await CommitTransitionAsync(activityItemId, reservation.AgentId, "reservation.keep_alive", cancellationToken);
+            ContactCenterDiagnostics.RecordOfferKeepAlive(reservation.QueueId);
 
             if (_logger.IsEnabled(LogLevel.Information))
             {

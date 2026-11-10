@@ -95,36 +95,117 @@ On a scorecard dashboard shaped like a real one (2,000 calls, four queries that 
 
 ## Telemetry
 
-Report runs emit OpenTelemetry spans and metrics through the .NET `ActivitySource` and `Meter` named `CrestApps.OrchardCore.Reports` (`ReportTelemetry.SourceName` and `ReportTelemetry.MeterName`). While nothing listens to them, no span is started and no measurement is taken. To export them, add the names to the host's OpenTelemetry setup, for example in the `Program.cs` of the web host, or in the `ConfigureOpenTelemetry` method of an Aspire service defaults project:
+Reports emit OpenTelemetry spans and metrics through the .NET `ActivitySource` and `Meter` named `CrestApps.OrchardCore.Reports` (`ReportTelemetry.SourceName` and `ReportTelemetry.MeterName`): designed report runs, coded reports, exports, views, subscriptions, the designer and the widgets. The PDF export adds one instrument to a meter of the same name. While nothing listens, no span is started and no measurement is taken. The web host collects them with the `CrestApps.OrchardCore.*` wildcard; see [Observability](../../observability.md) for turning it on.
 
-```csharp
-builder.Services.AddOpenTelemetry()
-    .WithTracing(tracing => tracing.AddSource("CrestApps.OrchardCore.Reports"))
-    .WithMetrics(metrics => metrics.AddMeter("CrestApps.OrchardCore.Reports"));
-```
+### Tags
 
-Spans:
+Metrics carry bounded tags only, so a site with thousands of reports still stores a handful of series:
+
+- `crestapps.report.source`: what the run is for (`ReportRunSources`): `Admin`, `Shared` or `Link` for the report pages, `Preview` for the builder, `Widget`, `Workflow`, `Subscription`, `ViewRefresh` for the refresh of a scheduled view, `ViewRead` for a live view another report reads, and `Other` for anything else. A value that is not in this list is tagged `Other`.
+- `crestapps.report.data_source`: the registered data source, such as `Contents` or `ReportViews`.
+- `outcome`: `ok`, `error`, `cancelled` or `timeout`, plus the values an instrument lists below.
+- `crestapps.report.name`: the technical name of a coded report in the report registry.
+- `format`: the name of a registered export format; a format typed in an address that is not registered is `other`.
+
+The report and query identifiers (`crestapps.report.id`, `crestapps.report.query.id`), the data set (`crestapps.report.data_set`), the view and subscription identifiers and the report title are **span tags only**: they no longer tag metrics. The old `crestapps.report.outcome` tag (`success`, `failure`, `canceled`) is gone; use `outcome`.
+
+### Spans
 
 | Span | One per | Tags besides the common ones |
 | --- | --- | --- |
-| `report.run` | Run of a report, including the preview and a click that refreshes some visuals | `crestapps.report.click_filtered`, `crestapps.report.refreshed_visuals` (the visuals a click refreshes), `crestapps.report.rows.returned`, `crestapps.report.warnings`, `crestapps.report.outcome` |
+| `report.run` | Run of a designed report, including the preview and a click that refreshes some visuals | `crestapps.report.click_filtered`, `crestapps.report.refreshed_visuals` (the visuals a click refreshes), `crestapps.report.rows.returned`, `crestapps.report.warnings`, `crestapps.report.queries`, `crestapps.report.queries.failed`, `outcome` |
 | `report.plan` | Run of a query (a query filtered by a click is a run of its own) | `crestapps.report.calculated_fields`, `crestapps.report.row_calculations` (the ones it computes), `crestapps.report.errors` |
-| `report.query` | Run of a query | `crestapps.report.gate_wait_ms` (time waiting for `MaxConcurrentRuns`), `crestapps.report.rows.source`, `crestapps.report.rows.filtered`, `crestapps.report.rows.returned`, `crestapps.report.calculate_ms`, `crestapps.report.grouped`, `crestapps.report.grouped_by_source`, `crestapps.report.sorted`, `crestapps.report.spills` |
-| `report.read` | Read of a data set | `crestapps.report.data_source`, `crestapps.report.data_set`, `crestapps.report.fields`, `crestapps.report.rows.read`, `crestapps.report.read_shared` (read from the rows another query kept), `crestapps.report.truncated`, `crestapps.report.join_key_batches` |
+| `report.schema` | Data set schema a plan reads, whoever plans: report runs, views, the builder | `crestapps.report.data_source`, `crestapps.report.data_set`, `outcome` (`ok`, `not_found`, `error`) |
+| `report.query` | Run of a query | `crestapps.report.gate_wait_ms` (time waiting for `MaxConcurrentRuns`), `crestapps.report.rows.source`, `crestapps.report.rows.filtered`, `crestapps.report.rows.returned`, `crestapps.report.calculate_ms`, `crestapps.report.calc_errors`, `crestapps.report.grouped`, `crestapps.report.grouped_by_source`, `crestapps.report.pushdown_fallback`, `crestapps.report.sorted`, `crestapps.report.spills` |
+| `report.stream` | Query whose rows stream to another report, such as a live view | `crestapps.report.rows.source`, `crestapps.report.rows.returned`, `outcome` |
+| `report.read` | Read of a data set | `crestapps.report.data_source`, `crestapps.report.data_set`, `crestapps.report.fields`, `crestapps.report.rows.read`, `crestapps.report.read_shared` (read from the rows another query kept), `crestapps.report.truncated`, `crestapps.report.join_key_batches`, `crestapps.report.view.mode` (a view) |
 | `report.join` | Join | `crestapps.report.data_source`, `crestapps.report.data_set`, `crestapps.report.join_type`, `crestapps.report.join_keys`, `crestapps.report.rows.joined` |
 | `report.result` | Run of a query, while it builds its result and the groupings its totals, charts and pivots need | |
 | `report.render` | Run of a query that shows visuals, while it builds their sections | `crestapps.report.visuals` |
+| `report.present` | Report page, shared page or share link, around its run | `crestapps.report.id`, `crestapps.report.source` |
+| `report.events` | Fan-out of a run or an export to the report event handlers, such as the workflow events | `crestapps.report.id`, `crestapps.report.event` (`ran`, `exported`) |
+| `report.coded.run` | Run of a coded report | `crestapps.report.name`, `crestapps.report.mode`, `outcome` |
+| `report.export` | File an export format writes | `format`, `crestapps.report.source`, `crestapps.report.export.size`, `crestapps.report.export.rows`, `outcome` |
+| `report.view.refresh` | Refresh of a scheduled view that runs the view | `crestapps.report.view.id`, `trigger`, `crestapps.report.view.snapshot.rows`, `outcome` (`refreshed`, `failed`) |
+| `report.view.sweep` | Run of the **Report view refresh** background task | `crestapps.report.views.due`, `.refreshed`, `.failed`, `.skipped` |
+| `report.subscription.send` | Run of a subscription | `crestapps.report.subscription.id`, `trigger`, `reason`, `outcome` |
+| `report.subscription.sweep` | Run of the **Report subscriptions** background task | `crestapps.report.subscriptions.due`, `.sent`, `.not_sent` |
 
-Every span carries `crestapps.report.id`, `crestapps.report.title`, `crestapps.report.source` (`Admin`, `Shared` or `Link` for the report pages, `Preview` for the builder, `Other` for widgets, workflows and views) and `crestapps.report.query.id` (empty for the main query). Rows stream through a query, so the read, join and calculation of one query overlap: `report.read` lasts while its rows are consumed, and `crestapps.report.calculate_ms` adds up the time spent on calculated fields.
+The designed run spans carry `crestapps.report.id`, `crestapps.report.title`, `crestapps.report.source` and `crestapps.report.query.id` (empty for the main query). Rows stream through a query, so the read, join and calculation of one query overlap: `report.read` lasts while its rows are consumed, and `crestapps.report.calculate_ms` adds up the time spent on calculated fields.
 
-Metrics:
+### Metrics
 
-| Instrument | Kind | Unit | Tags |
-| --- | --- | --- | --- |
-| `crestapps.report.run.duration` | Histogram | s | `crestapps.report.id`, `crestapps.report.source`, `crestapps.report.outcome` |
-| `crestapps.report.query.duration` | Histogram | s | `crestapps.report.id`, `crestapps.report.source`, `crestapps.report.query.id` |
-| `crestapps.report.rows.read` | Counter | rows | the query tags, `crestapps.report.data_source`, `crestapps.report.data_set` |
-| `crestapps.report.reads.shared` | Counter | reads | the query tags, `crestapps.report.data_source`, `crestapps.report.data_set` |
-| `crestapps.report.rows.returned` | Counter | rows | the query tags |
-| `crestapps.report.run.failures` | Counter | runs | the run or query tags; a run that was canceled isn't a failure |
-| `crestapps.report.spills` | Counter | files | the query tags: the temporary files a query wrote because its rows didn't fit in `MemoryLimitMegabytes` |
+Designed report runs:
+
+| Instrument | Kind | Unit | Tags | What it measures |
+| --- | --- | --- | --- | --- |
+| `crestapps.report.run.duration` | Histogram | s | source, `outcome` | Designed report runs |
+| `crestapps.report.run.failures` | Counter | `{run}` | source, `crestapps.report.level` (`run`, `query`) | Each failed run once at `run`, each failed query once at `query` (an invalid plan, or an exception in the engine). A cancellation isn't a failure. A run whose secondary query fails is `ok` and counts that query at `query`. |
+| `crestapps.report.run.queries` | Histogram | `{query}` | source | Queries one run executed |
+| `crestapps.report.run.queries.skipped` | Counter | `{query}` | source, `reason` (`invalid`, `failed`) | Queries of a run that did not run |
+| `crestapps.report.run.rejected` | Counter | `{run}` | source, `reason` (`owner_missing`) | Runs refused before they started |
+| `crestapps.report.query.duration` | Histogram | s | source, `outcome` | Queries |
+| `crestapps.report.stream.duration` | Histogram | s | source, `outcome` | Queries streamed to another report |
+| `crestapps.report.plan.duration` | Histogram | s | `outcome` (`ok`, `invalid`, `error`) | Query plans, whoever plans |
+| `crestapps.report.schema.duration` | Histogram | s | data source, `outcome` (`ok`, `not_found`, `error`) | Data set schema reads of plans |
+| `crestapps.report.rows.read` | Counter | `{row}` | source, data source | Rows read from data sources |
+| `crestapps.report.rows.returned` | Counter | `{row}` | source | Rows queries return |
+| `crestapps.report.reads.shared` | Counter | `{read}` | source, data source | Reads served from the rows another query kept |
+| `crestapps.report.reads.shared.miss` | Counter | `{read}` | data source, `reason` (`disabled`, `join_key`, `conditions`, `too_many_rows`) | Reads of a data set several queries read that the rows kept could not serve |
+| `crestapps.report.limit.hits` | Counter | `{hit}` | `crestapps.report.limit` (`rows_per_dataset`, `joined_rows`, `result_rows`, `join_keys`, `shared_read_rows`), source | Runs that reached a limit of [Configuration](index.md#configuration) |
+| `crestapps.report.aggregate.pushdown` | Counter | `{query}` | `outcome` (`used`, `fallback`), `reason` (`multiple_data_sets`, `joins`, `row_calculations`, `not_supported`, `filter`, `dimension`, `measure`, `too_many_buckets`, `declined`), data source | Grouped queries the data source grouped, or why they read every row |
+| `crestapps.report.aggregate.index` | Counter | `{statement}` | `result` (`built`, `unbuildable`, `too_many_groups`), `crestapps.report.index` | `ReportIndexAggregator` statements over a YesSql index |
+| `crestapps.report.calc.errors` | Counter | `{error}` | source | Calculated field values that failed and were left empty, added once per query |
+| `crestapps.report.spills` | Counter | `{file}` | source | Temporary files a query wrote because its rows didn't fit in `MemoryLimitMegabytes` |
+| `crestapps.report.gate.wait` | Histogram | s | source | Time runs waited for `MaxConcurrentRuns` |
+| `crestapps.report.gate.active` | UpDownCounter | `{run}` | source | Runs that hold the gate |
+| `crestapps.report.gate.waiting` | UpDownCounter | `{run}` | source | Runs that wait for the gate |
+
+Coded reports, exports, views and subscriptions:
+
+| Instrument | Kind | Unit | Tags | What it measures |
+| --- | --- | --- | --- | --- |
+| `crestapps.report.coded.duration` | Histogram | s | `crestapps.report.name`, `crestapps.report.mode` (`display`, `export`), `outcome` | Coded report runs |
+| `crestapps.report.coded.index_rows` | Histogram | `{row}` | `crestapps.report.name` | Index rows a coded report read at once; from 50,000 rows (`ReportTelemetry.CodedIndexRowsWarningThreshold`) a warning is logged |
+| `crestapps.report.export.duration` | Histogram | s | `format`, `outcome` | Time export formats took to write their file |
+| `crestapps.report.export.size` | Histogram | By | `format` | Size of the exported files |
+| `crestapps.report.export.rows` | Histogram | `{row}` | `format` | Table rows of the exported files |
+| `crestapps.report.exports` | Counter | `{export}` | source, `format`, `outcome` (`ok`, `error`, `not_found`, `forbidden`) | Export requests, including those refused for an unknown format or a missing permission |
+| `crestapps.report.pdf.font_fallbacks` | Counter | `{export}` | | PDF exports written with the built-in Helvetica font, which shows Latin-1 text only; a warning is logged once |
+| `crestapps.report.view.refresh.duration` | Histogram | s | `trigger` (`schedule`, `manual`), `outcome` (`refreshed`, `failed`) | Refreshes that ran a view |
+| `crestapps.report.view.refreshes` | Counter | `{refresh}` | `trigger`, `outcome` (`refreshed`, `failed`, `busy`, `not_due`, `not_scheduled`, `not_found`) | Refresh attempts |
+| `crestapps.report.view.snapshot.rows` | Histogram | `{row}` | | Rows a refresh stored |
+| `crestapps.report.view.snapshot.age` | Gauge | s | | Age of the oldest stored rows of a scheduled view, at each run of the background task. Alert when it grows well past the longest refresh interval. |
+| `crestapps.report.view.reads` | Counter | `{read}` | `crestapps.report.view.mode` (`snapshot`, `live`, `stale_snapshot`, `first_run`) | Reads of views by other reports |
+| `crestapps.report.view.rejected` | Counter | `{read}` | `reason` (`loop`, `depth`) | View reads refused |
+| `crestapps.report.subscription.sends` | Counter | `{email}` | `trigger`, `outcome` (`ok`, `skipped`, `error`), `reason` (`no_email`, `no_recipients`, `report_unavailable`, `export_denied`, `send_failed`, `exception`) | Subscription runs |
+| `crestapps.report.subscription.duration` | Histogram | s | `trigger`, `outcome` | Subscription runs, from running the report to sending the email |
+
+The builder and the widgets:
+
+| Instrument | Kind | Unit | Tags | What it measures |
+| --- | --- | --- | --- | --- |
+| `crestapps.report.design.publishes` | Counter | `{publish}` | `outcome` (`saved`, `invalid`, `conflict`, `busy`, `not_found`) | Publishes |
+| `crestapps.report.design.conflicts` | Counter | `{request}` | `reason` (`conflict`, `busy`) | Saves refused with a 409 |
+| `crestapps.report.design.validation_errors` | Counter | `{error}` | | Problems the builder found in the queries it checked |
+| `crestapps.report.shared_link.requests` | Counter | `{request}` | `result` (`opened`, `exported`, `not_found`, `export_denied`) | Requests of share links, which anonymous visitors can reach |
+| `crestapps.report.workflow.tasks` | Counter | `{task}` | `crestapps.report.workflow_task` (`run`, `export`, `email`, `share_link`), `outcome` | Report workflow tasks |
+| `crestapps.report.widget.requests` | Counter | `{request}` | `crestapps.report.kind` (`design`, `coded`), `crestapps.report.cache` (`hit`, `miss`, `off`), `outcome` | Dashboard widget renders |
+| `crestapps.report.hub.denied` | Counter | `{call}` | `operation` | Presence hub calls refused |
+
+Both background tasks also report `crestapps.background_task.items` (`refreshed`, `failed`, `skipped` for views; `sent`, `not_sent` for subscriptions), and the builder notifications run as the deferred task `report_design_notify`.
+
+### Logs
+
+The report engine, the Reports module and the PDF export log with event ids from 14000 to 14999:
+
+| Event id | Level | When |
+| --- | --- | --- |
+| 14001 | Warning | A coded report read at least 50,000 index rows at once |
+| 14002 | Debug | The temporary files of a query could not be deleted |
+| 14101 | Warning | A designed report run ended with errors |
+| 14102 | Warning | A designed report run took longer than 10 seconds |
+| 14107 | Debug | The presence hub refused a call |
+| 14110 | Debug | The builder found problems in a query |
+| 14111, 14112 | Information | Summary of the report designs recipe step and deployment step |
+| 14400 | Warning | The PDF export has no TrueType font (logged once) |

@@ -202,16 +202,23 @@ public sealed class ReportDesignsController : Controller
 
         if (design is null)
         {
+            ReportTelemetry.RecordExport(ReportRunSources.Admin, null, ReportTelemetry.OutcomeNotFound);
+
             return NotFound();
         }
 
         if (!await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ViewAllReportDesigns, design))
         {
+            ReportTelemetry.RecordExport(ReportRunSources.Admin, null, ReportTelemetry.OutcomeForbidden);
+
             return Forbid();
         }
 
         if (!design.AllowExport && !await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ManageAllReportDesigns, design))
         {
+            // The format comes from the address, so it is tagged "other" rather than as typed.
+            ReportTelemetry.RecordExport(ReportRunSources.Admin, null, ReportTelemetry.OutcomeForbidden);
+
             return Forbid();
         }
 

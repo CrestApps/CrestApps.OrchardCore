@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Retention;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -20,33 +21,41 @@ namespace CrestApps.OrchardCore.YesSql.Core.Retention;
 public sealed class RetentionBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        var logger = serviceProvider.GetRequiredService<ILogger<RetentionBackgroundTask>>();
-        var options = serviceProvider.GetRequiredService<IOptions<RetentionOptions>>().Value;
-
-        try
+        return this.RunAsync(async run =>
         {
-            var report = await RetentionRunner.RunAsync(
-                serviceProvider.GetServices<IRetentionPolicy>(),
-                serviceProvider.GetRequiredService<ISession>(),
-                serviceProvider.GetRequiredService<IClock>().UtcNow,
-                options.PurgeBatchSize > 0 ? options.PurgeBatchSize : RetentionOptions.DefaultPurgeBatchSize,
-                options.MaxPurgeBatchesPerCycle > 0 ? options.MaxPurgeBatchesPerCycle : RetentionOptions.DefaultMaxPurgeBatchesPerCycle,
-                logger,
-                cancellationToken);
+            var logger = serviceProvider.GetRequiredService<ILogger<RetentionBackgroundTask>>();
+            var options = serviceProvider.GetRequiredService<IOptions<RetentionOptions>>().Value;
 
-            if (report.WorkRemains)
+            try
             {
-                logger.LogWarning(
-                    "Retention removed {PurgedCount} records but did not reach steady state for: {Policies}. Raise 'CrestApps:Retention:MaxPurgeBatchesPerCycle' or shorten the retention windows.",
-                    report.TotalPurged,
-                    string.Join(", ", report.Policies.Where(policy => policy.WorkRemains).Select(policy => policy.Name)));
+                var report = await RetentionRunner.RunAsync(
+                    serviceProvider.GetServices<IRetentionPolicy>(),
+                    serviceProvider.GetRequiredService<ISession>(),
+                    serviceProvider.GetRequiredService<IClock>().UtcNow,
+                    options.PurgeBatchSize > 0 ? options.PurgeBatchSize : RetentionOptions.DefaultPurgeBatchSize,
+                    options.MaxPurgeBatchesPerCycle > 0 ? options.MaxPurgeBatchesPerCycle : RetentionOptions.DefaultMaxPurgeBatchesPerCycle,
+                    logger,
+                    cancellationToken);
+
+                run.AddItems(report.TotalPurged, "purged");
+
+                if (report.WorkRemains)
+                {
+                    run.BudgetExceeded();
+
+                    logger.LogWarning(
+                        "Retention removed {PurgedCount} records but did not reach steady state for: {Policies}. Raise 'CrestApps:Retention:MaxPurgeBatchesPerCycle' or shorten the retention windows.",
+                        report.TotalPurged,
+                        string.Join(", ", report.Policies.Where(policy => policy.WorkRemains).Select(policy => policy.Name)));
+                }
             }
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "An error occurred while removing expired records.");
-        }
+            catch (Exception ex)
+            {
+                run.ReportError(ex);
+                logger.LogError(ex, "An error occurred while removing expired records.");
+            }
+        });
     }
 }

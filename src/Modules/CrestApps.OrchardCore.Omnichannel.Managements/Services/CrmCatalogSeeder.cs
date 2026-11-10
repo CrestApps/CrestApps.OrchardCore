@@ -38,7 +38,7 @@ internal sealed class CrmCatalogSeeder
         if (!(await _leadStatusManager.GetAllAsync()).Any())
         {
             await CreateLeadStatusAsync("Open - Not Contacted", "A new lead nobody has reached yet.", 10, isDefault: true);
-            await CreateLeadStatusAsync("Working - Contacted", "Someone has reached, or tried to reach, the lead.", 20);
+            await CreateLeadStatusAsync("Working - Contacted", "Someone has reached, or tried to reach, the lead.", 20, isContacted: true);
             await CreateLeadStatusAsync("Nurturing", "The lead is not ready yet and is followed up over time.", 30);
             await CreateLeadStatusAsync("Closed - Not Converted", "The lead will not become a customer, for example a wrong number or no interest.", 40, isClosed: true);
             await CreateLeadStatusAsync("Converted", "The lead became a contact. A lead takes this status when it is converted.", 50, isClosed: true, isConverted: true);
@@ -59,7 +59,7 @@ internal sealed class CrmCatalogSeeder
         }
     }
 
-    private async Task CreateLeadStatusAsync(string name, string description, int order, bool isDefault = false, bool isClosed = false, bool isConverted = false)
+    private async Task CreateLeadStatusAsync(string name, string description, int order, bool isDefault = false, bool isClosed = false, bool isConverted = false, bool isContacted = false)
     {
         var status = await _leadStatusManager.NewAsync();
 
@@ -67,10 +67,46 @@ internal sealed class CrmCatalogSeeder
         status.Description = description;
         status.Order = order;
         status.IsDefault = isDefault;
+        status.IsContacted = isContacted;
         status.IsClosed = isClosed;
         status.IsConverted = isConverted;
 
         await _leadStatusManager.CreateAsync(status);
+    }
+
+    /// <summary>
+    /// Picks the status a contacted lead moves to on a CRM seeded before the flag existed: the seeded
+    /// <c>Working - Contacted</c> status, when it is still an open status that is not the default and no status carries
+    /// the flag yet. An administrator who renamed or replaced it picks their own on the status.
+    /// </summary>
+    public async Task SeedContactedStatusAsync()
+    {
+        var statuses = (await _leadStatusManager.GetAllAsync()).ToArray();
+
+        if (statuses.Any(status => status.IsContacted))
+        {
+            return;
+        }
+
+        var contacted = statuses.FirstOrDefault(status =>
+            string.Equals(status.Name, "Working - Contacted", StringComparison.OrdinalIgnoreCase) &&
+            !status.IsClosed &&
+            !status.IsConverted &&
+            !status.IsDefault);
+
+        if (contacted is null)
+        {
+            return;
+        }
+
+        contacted.IsContacted = true;
+
+        await _leadStatusManager.UpdateAsync(contacted);
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Made the lead status '{StatusName}' the status a contacted lead moves to.", contacted.Name);
+        }
     }
 
     private async Task CreateOpportunityStageAsync(string name, int order, int probability, bool isClosed = false, bool isWon = false)

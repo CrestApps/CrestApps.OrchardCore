@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Liquid;
@@ -38,6 +39,7 @@ internal static class ApiAICompletionEndpoint
     public static IEndpointRouteBuilder AddApiAICompletionEndpoint<T>(this IEndpointRouteBuilder builder)
     {
         _ = builder.MapPost("api/ai/completion/chat", HandleAsync<T>)
+            .AddEndpointFilter(ScopeLogsAsync<T>)
             .DisableAntiforgery()
             .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = AIApiKeys.ApiSchemes })
             .WithTags(AIConversationsApiEndpoints.ChatTag)
@@ -45,6 +47,28 @@ internal static class ApiAICompletionEndpoint
             .WithSummary("Sends a prompt to a chat AI profile and returns its reply, in a new or an existing session.");
 
         return builder;
+    }
+
+    /// <summary>
+    /// Puts the profile and the session in the scope of every log line the request writes. The hubs get that scope from
+    /// CrestApps.Core; this endpoint runs the orchestrator directly, so it adds it itself.
+    /// </summary>
+    /// <typeparam name="T">The type used for logger category resolution.</typeparam>
+    /// <param name="context">The endpoint invocation.</param>
+    /// <param name="next">The endpoint.</param>
+    /// <returns>The endpoint's result.</returns>
+    private static async ValueTask<object> ScopeLogsAsync<T>(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+    {
+        var request = context.Arguments.OfType<AICompletionRequest>().FirstOrDefault();
+        var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<T>>();
+
+        using var logScope = logger.BeginScope(new Dictionary<string, object>
+        {
+            ["ProfileId"] = request?.ProfileId?.SanitizeLogValue(),
+            ["SessionId"] = request?.SessionId?.SanitizeLogValue(),
+        });
+
+        return await next(context);
     }
 
     private static async Task<IResult> HandleAsync<T>(

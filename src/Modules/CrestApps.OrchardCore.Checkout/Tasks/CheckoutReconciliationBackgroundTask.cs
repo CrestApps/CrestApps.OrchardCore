@@ -1,5 +1,7 @@
+using CrestApps.OrchardCore.Checkout.Core.Telemetry;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -16,6 +18,11 @@ namespace CrestApps.OrchardCore.Checkout.Tasks;
 /// attempt is still swept up here and settled or failed based on what really happened at the gateway, so
 /// a real charge is never left unrecorded.
 /// </summary>
+/// <remarks>
+/// Its lock expires after 60 seconds while each session can wait on a provider's API, so the
+/// <c>crestapps.background_task.lock.utilization</c> of this task is the signal to watch: near 1, a second node can
+/// start the same sweep.
+/// </remarks>
 [BackgroundTask(
     Title = "Checkout Payment Reconciliation",
     Schedule = "*/5 * * * *",
@@ -45,7 +52,10 @@ public sealed class CheckoutReconciliationBackgroundTask : IBackgroundTask
     /// <param name="serviceProvider">The service provider used to resolve scoped checkout services.</param>
     /// <param name="cancellationToken">The token used to stop the reconciliation sweep.</param>
     /// <returns>A task that represents the asynchronous background operation.</returns>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => SweepAsync(serviceProvider, run, cancellationToken));
+
+    private async Task SweepAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var attemptStore = serviceProvider.GetRequiredService<IPaymentAttemptStore>();
         var engine = serviceProvider.GetRequiredService<ICheckoutEngine>();
@@ -54,8 +64,9 @@ public sealed class CheckoutReconciliationBackgroundTask : IBackgroundTask
         var sessionStore = serviceProvider.GetRequiredService<ICheckoutSessionStore>();
         var siteService = serviceProvider.GetRequiredService<ISiteService>();
 
-        var olderThanUtc = _clock.UtcNow - _minimumAge;
-        var pending = await attemptStore.GetPendingAsync(olderThanUtc, cancellationToken);
+        var now = _clock.UtcNow;
+        var olderThanUtc = now - _minimumAge;
+        var pending = (await attemptStore.GetPendingAsync(olderThanUtc, cancellationToken)).ToList();
 
         // A checkout whose payment was confirmed but whose fulfillment failed has no pending attempt to be
         // found by, so it is found by its own status instead. Without this, a customer who paid moments
@@ -66,7 +77,20 @@ public sealed class CheckoutReconciliationBackgroundTask : IBackgroundTask
             .Select(attempt => attempt.SessionId)
             .Concat(stuck.Select(session => session.SessionId))
             .Where(id => !string.IsNullOrEmpty(id))
-            .Distinct(StringComparer.Ordinal);
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        // What is waiting is measured from what the sweep already read, never with a query of its own.
+        var oldestUtc = pending
+            .Select(attempt => attempt.CreatedUtc)
+            .Concat(stuck.Select(session => session.CreatedUtc))
+            .DefaultIfEmpty(now)
+            .Min();
+
+        CheckoutTelemetry.RecordPending(sessionIds.Count, now - oldestUtc);
+
+        var completed = 0;
+        var failed = 0;
 
         foreach (var sessionId in sessionIds)
         {
@@ -74,6 +98,8 @@ public sealed class CheckoutReconciliationBackgroundTask : IBackgroundTask
             {
                 break;
             }
+
+            using var logScope = logger.BeginScope(new Dictionary<string, object> { ["CheckoutSessionId"] = sessionId });
 
             try
             {
@@ -84,34 +110,50 @@ public sealed class CheckoutReconciliationBackgroundTask : IBackgroundTask
                 // reported as already completed and nothing runs twice.
                 var result = await engine.TryCompleteAsync(sessionId, cancellationToken);
 
-                if (result.Status == CheckoutCompletionStatus.Completed && logger.IsEnabled(LogLevel.Information))
+                run.AddItems(1, CheckoutTelemetry.GetResult(result.Status));
+
+                if (result.Status == CheckoutCompletionStatus.Completed)
                 {
-                    logger.LogInformation("Checkout session '{SessionId}' was completed by the reconciliation sweep after the customer left the payment flow.", sessionId);
+                    completed++;
+
+                    if (logger.IsEnabled(LogLevel.Information))
+                    {
+                        logger.LogInformation("Checkout session '{SessionId}' was completed by the reconciliation sweep after the customer left the payment flow.", sessionId);
+                    }
                 }
             }
             catch (Exception exception)
             {
+                failed++;
+                run.AddItems(1, CrestAppsOrchardCoreTelemetry.OutcomeError);
                 logger.LogError(exception, "Failed to reconcile checkout session '{SessionId}' during the background sweep.", sessionId);
             }
         }
 
-        await ExpireAbandonedAsync(sessionStore, siteService, engine, logger, cancellationToken);
+        var expired = await ExpireAbandonedAsync(sessionStore, siteService, engine, logger, run, cancellationToken);
+
+        if (sessionIds.Count > 0 || expired > 0)
+        {
+            CheckoutLog.ReconciliationSwept(logger, sessionIds.Count, completed, failed, expired, (now - oldestUtc).TotalSeconds);
+        }
     }
 
     // A checkout nobody finished still holds whatever the provider set aside for it: an authorization, a
     // pending intent, a subscription waiting on confirmation. Releasing those after the configured lifetime
     // is what keeps the provider's side from filling with the site's forgotten checkouts. The engine refuses
     // to expire anything that actually collected money, so this can never close a paid purchase.
-    private async Task ExpireAbandonedAsync(
+    private async Task<int> ExpireAbandonedAsync(
         ICheckoutSessionStore sessionStore,
         ISiteService siteService,
         ICheckoutEngine engine,
         ILogger logger,
+        MeasuredTaskRun run,
         CancellationToken cancellationToken)
     {
         var settings = await siteService.GetSettingsAsync<CheckoutSettings>();
         var lifetime = TimeSpan.FromHours(Math.Max(1, settings.SessionLifetimeHours));
         var before = _clock.UtcNow - lifetime;
+        var expired = 0;
 
         foreach (var status in new[] { CheckoutSessionStatus.Pending, CheckoutSessionStatus.AwaitingProvider })
         {
@@ -121,18 +163,29 @@ public sealed class CheckoutReconciliationBackgroundTask : IBackgroundTask
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    return;
+                    return expired;
                 }
 
                 try
                 {
-                    await engine.ExpireAsync(session.SessionId, cancellationToken);
+                    var result = await engine.ExpireAsync(session.SessionId, cancellationToken);
+
+                    // A checkout that had already ended comes back canceled with a message; only one this call
+                    // expired counts.
+                    if (result.Status == CheckoutCompletionStatus.Canceled && string.IsNullOrEmpty(result.ErrorMessage))
+                    {
+                        expired++;
+                        run.AddItems(1, "expired");
+                    }
                 }
                 catch (Exception exception)
                 {
+                    run.AddItems(1, CrestAppsOrchardCoreTelemetry.OutcomeError);
                     logger.LogError(exception, "Failed to expire abandoned checkout session '{SessionId}'.", session.SessionId);
                 }
             }
         }
+
+        return expired;
     }
 }

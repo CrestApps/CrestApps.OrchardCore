@@ -285,6 +285,7 @@ const sidebars = {
         { type: 'doc', id: 'getting-started', className: icon('rocket') },
         { type: 'doc', id: 'building-assets', className: icon('wrench') },
         { type: 'doc', id: 'configuration', className: icon('file-cog') },
+        { type: 'doc', id: 'observability', className: icon('activity') },
         { type: 'doc', id: 'feature-reference', className: icon('tags') },
         {
             type: 'category',

@@ -23,6 +23,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 /// </summary>
 public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
 {
+    // The codes the import counts skipped rows by. They name the kind of reason only, never a value from the row.
+    private const string SkipCodeDuplicate = "duplicate";
+    private const string SkipCodeRepeatedInFile = "repeated_in_file";
+    private const string SkipCodeDncCheckFailed = "dnc_check_failed";
+    private const string SkipCodeUnreadableNumber = "unreadable_number";
+    private const string SkipCodeDncMatch = "dnc_match";
+
     private readonly IEnumerable<INationalDoNotCallRegistry> _registries;
     private readonly IOmnichannelContactDuplicateLookupService _duplicateLookupService;
     private readonly IPhoneNumberService _phoneNumberService;
@@ -185,6 +192,7 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
                 {
                     context.SkipReason = $"{entry.Label} '{entry.RawValue}' already exists in the database.";
                     context.SkipCategory = "Already in the database";
+                    context.SkipReasonCode = SkipCodeDuplicate;
 
                     if (_logger.IsEnabled(LogLevel.Debug))
                     {
@@ -201,6 +209,7 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
                 {
                     context.SkipReason = $"{entry.Label} '{entry.RawValue}' already appeared earlier in the import file.";
                     context.SkipCategory = "Repeated in the import file";
+                    context.SkipReasonCode = SkipCodeRepeatedInFile;
 
                     if (_logger.IsEnabled(LogLevel.Debug))
                     {
@@ -229,6 +238,7 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
             {
                 context.SkipReason = ex.Message;
                 context.SkipCategory = "Do-not-call check failed";
+                context.SkipReasonCode = SkipCodeDncCheckFailed;
 
                 _logger.LogError(
                     ex,
@@ -248,6 +258,7 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
                 {
                     context.SkipReason = $"{entry.Label} '{entry.RawValue}' could not be read as a phone number, so it could not be checked against a national do-not-call registry.";
                     context.SkipCategory = "Not a readable phone number";
+                    context.SkipReasonCode = SkipCodeUnreadableNumber;
 
                     if (_logger.IsEnabled(LogLevel.Debug))
                     {
@@ -282,6 +293,7 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
                 {
                     context.SkipReason = $"{entry.Label} '{entry.RawValue}' is registered on a national do-not-call registry.";
                     context.SkipCategory = "On a national do-not-call registry";
+                    context.SkipReasonCode = SkipCodeDncMatch;
 
                     if (_logger.IsEnabled(LogLevel.Debug))
                     {

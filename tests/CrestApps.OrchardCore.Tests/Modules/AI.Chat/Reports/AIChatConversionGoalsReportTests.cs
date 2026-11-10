@@ -49,8 +49,9 @@ public sealed class AIChatConversionGoalsReportTests
         var document = await RunAsync(Filter("profile-1"));
 
         var table = document.Sections.Single(section => section.Rows.Count > 0);
-        Assert.Equal(["Session started (UTC)", "Session", "Total points", "Booked", "Email"], table.Columns.Select(column => column.Label));
+        Assert.Equal(["Session started", "Session", "Total points", "Booked", "Email"], table.Columns.Select(column => column.Label));
         var row = Assert.Single(table.Rows);
+        Assert.Equal("2026-11-02 04:00", row.Cells[0]);
         Assert.Equal(["s1", "7 / 10", "5 / 5", "2 / 5"], row.Cells.Skip(1));
         Assert.Equal("profile-1", _reader.LastQuery.ProfileId);
     }
@@ -92,7 +93,7 @@ public sealed class AIChatConversionGoalsReportTests
     }
 
     private Task<ReportDocument> RunAsync(ReportFilter filter, ReportRunMode mode = ReportRunMode.Display)
-        => new AIChatConversionGoalsReport(_reader, new PassThroughStringLocalizer<AIChatConversionGoalsReport>())
+        => new AIChatConversionGoalsReport(_reader, ReportTestClocks.LocalClock(TimeSpan.FromHours(-5)), new PassThroughStringLocalizer<AIChatConversionGoalsReport>())
             .RunAsync(new ReportContext(filter, mode), TestContext.Current.CancellationToken);
 
     private static ReportFilter Filter(string profileId)

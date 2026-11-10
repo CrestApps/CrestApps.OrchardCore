@@ -15,6 +15,7 @@ using CrestApps.OrchardCore.Tests.Utilities;
 using CrestApps.Core.Services;
 using Microsoft.Extensions.Options;
 using Moq;
+using OrchardCore.Modules;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
@@ -305,6 +306,7 @@ public sealed class UnansweredCallOutcomeReportTests
             agentManager.Object,
             kind,
             guard.Object,
+            Mock.Of<ILocalClock>(),
             new PassThroughStringLocalizer<EnterpriseInteractionReportProvider>(),
             Options.Create(new ContactCenterReportingOptions { MaximumReportRange = TimeSpan.FromDays(400) }));
 
@@ -331,7 +333,8 @@ public sealed class UnansweredCallOutcomeReportTests
             new Mock<ICatalogManager<OmnichannelCampaignGroup>>().Object,
             Options.Create(new ContactCenterReportingOptions()),
             CreateEventStore(session),
-            Options.Create(new ActivitySourceOptions()));
+            Options.Create(new ActivitySourceOptions()),
+            CrestApps.OrchardCore.Tests.Modules.AI.Chat.Reports.ReportTestClocks.LocalClock(TimeSpan.Zero));
     }
 
     private static InteractionEventStore CreateEventStore(ISession session)

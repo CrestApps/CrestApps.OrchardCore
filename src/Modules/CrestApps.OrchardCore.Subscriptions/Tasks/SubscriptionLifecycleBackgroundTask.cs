@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Subscriptions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -40,7 +41,10 @@ public sealed class SubscriptionLifecycleBackgroundTask : IBackgroundTask
         => _logger = logger;
 
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => SweepAsync(serviceProvider, run, cancellationToken));
+
+    private async Task SweepAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var subscriptionManager = serviceProvider.GetRequiredService<ISubscriptionManager>();
         var lifecycleService = serviceProvider.GetRequiredService<ISubscriptionLifecycleService>();
@@ -49,14 +53,15 @@ public sealed class SubscriptionLifecycleBackgroundTask : IBackgroundTask
 
         var now = clock.UtcNow;
 
-        await ExpireLapsedAsync(subscriptionManager, lifecycleService, now, cancellationToken);
-        await RenewDueAsync(subscriptionManager, lifecycleService, providerResolver, now, cancellationToken);
+        await ExpireLapsedAsync(subscriptionManager, lifecycleService, run, now, cancellationToken);
+        await RenewDueAsync(subscriptionManager, lifecycleService, providerResolver, run, now, cancellationToken);
     }
 
     // A past-due agreement whose grace window ran out is over. Leaving it past due would give away the plan.
     private async Task ExpireLapsedAsync(
         ISubscriptionManager subscriptionManager,
         ISubscriptionLifecycleService lifecycleService,
+        MeasuredTaskRun run,
         DateTime now,
         CancellationToken cancellationToken)
     {
@@ -75,10 +80,13 @@ public sealed class SubscriptionLifecycleBackgroundTask : IBackgroundTask
                     subscription.ItemId,
                     "The grace period for the unpaid renewal elapsed.",
                     cancellationToken);
+
+                run.AddItems(1, "expired");
             }
             catch (Exception exception)
             {
                 // One bad agreement must not stop the sweep; it stays lapsed and is retried next run.
+                run.AddItems(1, CrestAppsOrchardCoreTelemetry.OutcomeError);
                 _logger.LogError(exception, "Failed to expire lapsed subscription '{SubscriptionId}'.", subscription.ItemId);
             }
         }
@@ -89,6 +97,7 @@ public sealed class SubscriptionLifecycleBackgroundTask : IBackgroundTask
         ISubscriptionManager subscriptionManager,
         ISubscriptionLifecycleService lifecycleService,
         ICheckoutPaymentProviderResolver providerResolver,
+        MeasuredTaskRun run,
         DateTime now,
         CancellationToken cancellationToken)
     {
@@ -117,6 +126,8 @@ public sealed class SubscriptionLifecycleBackgroundTask : IBackgroundTask
                             : "The subscription was set to end at the close of the paid period.",
                         cancellationToken);
 
+                    run.AddItems(1, "expired");
+
                     continue;
                 }
 
@@ -126,6 +137,8 @@ public sealed class SubscriptionLifecycleBackgroundTask : IBackgroundTask
                 {
                     // A gateway owns this schedule and reports each cycle through its webhook. Advancing it
                     // here would claim a payment the gateway has not confirmed.
+                    run.AddItems(1, "skipped");
+
                     continue;
                 }
 
@@ -137,9 +150,12 @@ public sealed class SubscriptionLifecycleBackgroundTask : IBackgroundTask
                     subscription.NextBillingUtc ?? subscription.CurrentPeriodEndUtc,
                     new SubscriptionRenewalContext { AmountPaid = null },
                     cancellationToken);
+
+                run.AddItems(1, "renewed");
             }
             catch (Exception exception)
             {
+                run.AddItems(1, CrestAppsOrchardCoreTelemetry.OutcomeError);
                 _logger.LogError(exception, "Failed to advance due subscription '{SubscriptionId}'.", subscription.ItemId);
             }
         }

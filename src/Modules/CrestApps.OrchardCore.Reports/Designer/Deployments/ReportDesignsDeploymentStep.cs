@@ -9,6 +9,8 @@ using CrestApps.OrchardCore.Reports.Designer.Services;
 using CrestApps.OrchardCore.Reports.Designer.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -67,17 +69,20 @@ internal sealed class ReportDesignsDeploymentSource : DeploymentSourceBase<Repor
     private readonly ICatalog<ReportView> _views;
     private readonly ICatalog<ReportGroup> _groups;
     private readonly UserManager<IUser> _userManager;
+    private readonly ILogger _logger;
 
     public ReportDesignsDeploymentSource(
         ICatalog<ReportDesign> designs,
         ICatalog<ReportView> views,
         ICatalog<ReportGroup> groups,
-        UserManager<IUser> userManager)
+        UserManager<IUser> userManager,
+        ILogger<ReportDesignsDeploymentSource> logger = null)
     {
         _designs = designs;
         _views = views;
         _groups = groups;
         _userManager = userManager;
+        _logger = logger ?? NullLogger<ReportDesignsDeploymentSource>.Instance;
     }
 
     protected override async Task ProcessAsync(ReportDesignsDeploymentStep step, DeploymentPlanResult result)
@@ -117,6 +122,8 @@ internal sealed class ReportDesignsDeploymentSource : DeploymentSourceBase<Repor
             ["Views"] = viewNodes,
             ["Reports"] = reportNodes,
         });
+
+        ReportsModuleLog.DeploymentStepExported(_logger, reportNodes.Count, viewNodes.Count, groupNodes.Count);
     }
 
     private static List<T> Pick<T>(IEnumerable<T> items, string[] ids)

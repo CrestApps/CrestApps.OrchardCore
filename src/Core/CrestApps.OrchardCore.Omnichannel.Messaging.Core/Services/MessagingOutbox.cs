@@ -1,9 +1,11 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Notifications;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
@@ -163,6 +165,8 @@ public sealed class MessagingOutbox : IMessagingOutbox
                 message.ProviderMessageId = dispatch.ProviderMessageId;
                 message.ErrorCode = null;
                 accepted++;
+
+                MessagingTelemetry.RecordOutboxRetry(channel.Name, MessagingTelemetry.OutboxResults.Sent);
             }
             else
             {
@@ -172,11 +176,21 @@ public sealed class MessagingOutbox : IMessagingOutbox
                 if (OutboundDeliveryState.CanRetry(state.Attempts, dispatch.ErrorCode))
                 {
                     state.NextAttemptUtc = now.Add(OutboundDeliveryState.GetDelay(state.Attempts));
+
+                    MessagingTelemetry.RecordOutboxRetry(channel.Name, MessagingTelemetry.OutboxResults.Rescheduled);
+
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.OutboxMessageRescheduled(channel.Name, message.Id.SanitizeLogValue(), state.Attempts);
+                    }
                 }
                 else
                 {
                     state.NextAttemptUtc = null;
                     message.DeliveryStatus = MessageDeliveryStatus.Failed.ToString();
+
+                    MessagingTelemetry.RecordOutboxRetry(channel.Name, MessagingTelemetry.OutboxResults.Failed);
+                    _logger.OutboxMessageFailed(channel.Name, message.Id.SanitizeLogValue(), state.Attempts, MessagingTelemetry.GetOutboxFailureReason(state.Attempts));
                 }
 
                 message.ErrorCode = state.LastError;

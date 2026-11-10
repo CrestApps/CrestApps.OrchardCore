@@ -47,6 +47,9 @@ public sealed class CreateReportShareLinkTask : ReportTaskActivity<CreateReportS
     /// <inheritdoc/>
     public override LocalizedString DisplayText => S["Create Report Share Link"];
 
+    /// <inheritdoc/>
+    protected override string TelemetryName => "share_link";
+
     /// <summary>
     /// Gets or sets the user names or emails of the users of the site the link is for, separated by commas, with Liquid.
     /// </summary>
@@ -117,7 +120,7 @@ public sealed class CreateReportShareLinkTask : ReportTaskActivity<CreateReportS
         {
             _logger.LogWarning("The Create Report Share Link task of workflow '{WorkflowId}' found no report.", workflowContext.WorkflowId);
 
-            return Outcome("Failed");
+            return Finish("Failed");
         }
 
         var recipients = (await _reports.EvaluateAsync(Recipients, workflowContext) ?? string.Empty)
@@ -155,7 +158,7 @@ public sealed class CreateReportShareLinkTask : ReportTaskActivity<CreateReportS
             // is off.
             _logger.LogWarning(exception, "The Create Report Share Link task of workflow '{WorkflowId}' could not share report '{ReportId}'.", workflowContext.WorkflowId, design.ItemId);
 
-            return Outcome("Failed");
+            return Finish("Failed");
         }
 
         var output = new Dictionary<string, object>(StringComparer.Ordinal)
@@ -172,6 +175,6 @@ public sealed class CreateReportShareLinkTask : ReportTaskActivity<CreateReportS
         workflowContext.Output[string.IsNullOrWhiteSpace(OutputName) ? DefaultOutputName : OutputName.Trim()] = output;
         workflowContext.LastResult = result.Url;
 
-        return Outcome("Done");
+        return Finish("Done");
     }
 }

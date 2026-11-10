@@ -130,7 +130,7 @@ public class ReportDesignerPayload
         payload.HasDraft = workingCopy.HasDraft;
         payload.IsUnpublished = workingCopy.IsUnpublished;
         payload.DraftModifiedBy = workingCopy.ModifiedByName;
-        payload.DraftModifiedUtc = workingCopy.ModifiedUtc;
+        payload.DraftModifiedUtc = workingCopy.ModifiedUtc is { } modifiedUtc ? DateTime.SpecifyKind(modifiedUtc, DateTimeKind.Utc) : null;
 
         return payload;
     }

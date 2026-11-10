@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Core.Telemetry;
 using Dapper;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -17,6 +18,7 @@ using OrchardCore.Users.Models;
 using YesSql;
 using YesSql.Services;
 using YesSql.Sql;
+using Stopwatch = System.Diagnostics.Stopwatch;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 
@@ -123,6 +125,10 @@ public sealed class DefaultContactActivityBatchLoader : IActivityBatchLoader
         {
             batch.ResetLoadCounts();
         }
+
+        // The records are counted on the load's telemetry as each page commits, from what the batch held at the last
+        // commit, so a resumed load counts only what it adds and a preview, which commits nothing, counts nothing.
+        var recordedCounts = ActivityBatchLoadCounts.Of(batch);
 
         if (!TryGetActivityBatchSource(batch.Source, _sourceOptions, out var sourceEntry))
         {
@@ -473,6 +479,8 @@ public sealed class DefaultContactActivityBatchLoader : IActivityBatchLoader
         while (!limitReached)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
+            var pageStartTimestamp = Stopwatch.GetTimestamp();
 
             // A page is read from the index first. Whole documents are read only for the records that can still become
             // activities: a converted lead, a lead that is already a contact and a contact with an open activity are all
@@ -877,6 +885,9 @@ public sealed class DefaultContactActivityBatchLoader : IActivityBatchLoader
             // A committed session no longer tracks what it loaded before, so the batch is read again as it was left.
             await _session.SaveChangesAsync(cancellationToken);
 
+            recordedCounts = RecordCommittedCounts(batch, recordedCounts);
+            OmnichannelTelemetry.Record(OmnichannelTelemetry.BatchLoadPageDuration, Stopwatch.GetElapsedTime(pageStartTimestamp).TotalSeconds);
+
             batch = await _catalog.FindByIdAsync(batch.ItemId, cancellationToken) ?? batch;
         }
 
@@ -892,6 +903,8 @@ public sealed class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
         await _catalog.UpdateAsync(batch, cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
+
+        RecordCommittedCounts(batch, recordedCounts);
 
         // One line per load that accounts for every matching record, so a load that found fewer people than
         // expected can be explained from the log alone. Counts only: names and numbers stay out of it.
@@ -912,6 +925,21 @@ public sealed class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 batch.TotalSkippedAsNotInService,
                 batch.TotalSkippedByLimit);
         }
+    }
+
+    /// <summary>
+    /// Records what the load did since the counts were last recorded, now that it is committed, and returns the
+    /// counts to record the next commit from.
+    /// </summary>
+    /// <param name="batch">The batch as it was just committed.</param>
+    /// <param name="recorded">The counts when they were last recorded.</param>
+    private static ActivityBatchLoadCounts RecordCommittedCounts(OmnichannelActivityBatch batch, ActivityBatchLoadCounts recorded)
+    {
+        var committed = ActivityBatchLoadCounts.Of(batch);
+
+        OmnichannelTelemetry.RecordLoadRecords(recorded, committed);
+
+        return committed;
     }
 
     /// <summary>

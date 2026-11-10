@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Geo.Core.Telemetry;
 using CrestApps.OrchardCore.Geo.Models;
 using CrestApps.OrchardCore.Geo.Services;
 using Microsoft.Extensions.Caching.Distributed;
@@ -113,9 +114,16 @@ public sealed class DefaultGeoService : IGeoService
 
         var key = CacheKey(provider.Name, origins, destinations, departureUtc, options);
 
-        if (keep > TimeSpan.Zero && await _cache.GetStringAsync(key, cancellationToken) is { } cached)
+        if (keep > TimeSpan.Zero)
         {
-            return JsonSerializer.Deserialize<CachedMatrix>(cached, _jsonOptions).ToMatrix(provider.Name);
+            var cached = await _cache.GetStringAsync(key, cancellationToken);
+
+            GeoTelemetry.RecordMatrixCacheLookup(provider.Name, cached is not null);
+
+            if (cached is not null)
+            {
+                return JsonSerializer.Deserialize<CachedMatrix>(cached, _jsonOptions).ToMatrix(provider.Name);
+            }
         }
 
         try
@@ -134,6 +142,7 @@ public sealed class DefaultGeoService : IGeoService
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            GeoTelemetry.RecordFallback(provider.Name, GeoTelemetry.OperationMatrix);
             _logger.LogWarning(ex, "The travel-time provider {Provider} failed; using the built-in estimate.", provider.Name.SanitizeLogValue());
 
             return await _haversine.GetMatrixAsync(origins, destinations, departureUtc, options, cancellationToken);
@@ -158,6 +167,7 @@ public sealed class DefaultGeoService : IGeoService
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            GeoTelemetry.RecordFallback(provider.Name, GeoTelemetry.OperationRoute);
             _logger.LogWarning(ex, "The route provider {Provider} failed; drawing straight lines.", provider.Name.SanitizeLogValue());
 
             return await _haversine.GetRouteAsync(points, cancellationToken);

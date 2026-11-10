@@ -1,4 +1,11 @@
 @model ShapeViewModel<ChildTenantListItem>
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    // Stored times are UTC; people read them in the site time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 
 @{
     var item = Model.Value;
@@ -17,7 +24,7 @@
         <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["State"]"><span class="spinner-border spinner-border-sm text-warning me-1" aria-hidden="true"></span>@T["Removing"]</span>
         break;
     case ChildTenantStatus.PendingRemoval:
-        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["State"]"><i class="fa-solid fa-clock text-warning" aria-hidden="true"></i> @T["Removal on {0}", entry.RetainUntilUtc?.ToLocalTime().ToString("d")]</span>
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["State"]"><i class="fa-solid fa-clock text-warning" aria-hidden="true"></i> @T["Removal on {0}", entry.RetainUntilUtc is { } retainUntilUtc ? (await LocalAsync(retainUntilUtc)).ToString("d") : null]</span>
         break;
     default:
         switch (item.Info.State)

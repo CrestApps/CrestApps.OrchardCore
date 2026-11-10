@@ -12,6 +12,7 @@ using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.Options;
 using Moq;
+using OrchardCore.Modules;
 using YesSql;
 using YesSql.Provider.Sqlite;
 
@@ -99,12 +100,55 @@ public sealed class EnterpriseInteractionReportNamingTests
         }
     }
 
+    // The interaction starts at 14:06:15 UTC on the 24th, which is 04:06:15 on the 25th in a zone 14 hours ahead.
+    [Theory]
+    [InlineData(nameof(EnterpriseInteractionReportKind.InteractionDetail), "Started (Pacific/Kiritimati)", "2026-09-25 04:06:15")]
+    [InlineData(nameof(EnterpriseInteractionReportKind.HourOfDayPerformance), "Hour (Pacific/Kiritimati)", "04")]
+    [InlineData(nameof(EnterpriseInteractionReportKind.DailyUsageBilling), "Date (Pacific/Kiritimati)", "2026-09-25")]
+    [InlineData(nameof(EnterpriseInteractionReportKind.VolumeTrend), "Date (Pacific/Kiritimati)", "2026-09-25")]
+    public async Task TimeReports_ShowTimesAndDaysInTheSiteTimeZone(string kind, string label, string value)
+    {
+        // Arrange
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var (store, databasePath) = await CreateStoreAsync(cancellationToken, ("queued", "queue-1", "agent-1"));
+
+        try
+        {
+            await using var session = store.CreateSession();
+            var provider = CreateProvider(session, kind: Enum.Parse<EnterpriseInteractionReportKind>(kind), timeZoneId: "Pacific/Kiritimati");
+
+            // Act
+            var document = await provider.RunAsync(CreateContext(), cancellationToken);
+
+            // Assert
+            var table = document.Sections.First(section => section.Columns.Count > 0);
+
+            Assert.Equal(label, table.Columns[0].Label);
+            Assert.Equal(value, table.Rows[0].Cells[0]);
+            Assert.DoesNotContain(table.Columns, column => column.Label.Contains("UTC", StringComparison.Ordinal));
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
     private static EnterpriseInteractionReportProvider CreateProvider(
         ISession session,
         ActivityQueue queue = null,
         AgentProfile agent = null,
-        EnterpriseInteractionReportKind kind = EnterpriseInteractionReportKind.InteractionDetail)
+        EnterpriseInteractionReportKind kind = EnterpriseInteractionReportKind.InteractionDetail,
+        string timeZoneId = null)
     {
+        var localClock = new Mock<ILocalClock>();
+
+        if (timeZoneId is not null)
+        {
+            localClock
+                .Setup(clock => clock.GetLocalTimeZoneAsync())
+                .ReturnsAsync(Mock.Of<ITimeZone>(zone => zone.TimeZoneId == timeZoneId));
+        }
+
         var queueManager = new Mock<IActivityQueueManager>();
         queueManager
             .Setup(manager => manager.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -134,6 +178,7 @@ public sealed class EnterpriseInteractionReportNamingTests
             agentManager.Object,
             kind,
             guard.Object,
+            localClock.Object,
             new PassThroughStringLocalizer<EnterpriseInteractionReportProvider>(),
             Options.Create(new ContactCenterReportingOptions { MaximumReportRange = TimeSpan.FromDays(400) }));
     }

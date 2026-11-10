@@ -1,5 +1,6 @@
 using System.Globalization;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.HealthChecks;
@@ -14,7 +15,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.HealthChecks;
 /// gauge on purpose. An observable-gauge callback is synchronous and runs with no ambient tenant scope, so it
 /// cannot safely issue the per-tenant store query this count requires, and a process-global count would be wrong
 /// across tenants and nodes. A health check already runs inside the tenant scope with an async body, so it is the
-/// correct seam for a store-backed gauge. The check reports the count and stays healthy whenever it can read it;
+/// correct seam for a store-backed gauge: it also hands the count it read to the
+/// <c>crestapps.contactcenter.queue.depth</c> gauge, which reports it without a query of its own. The check reports the count and stays healthy whenever it can read it;
 /// it deliberately does not degrade on a high count because the acceptable ceiling is deployment specific.
 /// </remarks>
 public sealed class ContactCenterQueueBacklogHealthCheck : IHealthCheck
@@ -38,6 +40,9 @@ public sealed class ContactCenterQueueBacklogHealthCheck : IHealthCheck
         try
         {
             var queuedInteractions = await _queueItemStore.CountAllWaitingAsync(cancellationToken);
+
+            // The queue depth gauge reports this count; its callback cannot query the tenant's store itself.
+            ContactCenterDiagnostics.ObserveQueueDepth(queuedInteractions);
 
             var data = new Dictionary<string, object>
             {

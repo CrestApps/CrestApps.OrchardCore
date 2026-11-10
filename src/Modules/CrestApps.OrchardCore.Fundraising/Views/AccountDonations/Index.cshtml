@@ -1,6 +1,13 @@
 @using System.Globalization
 @using Microsoft.AspNetCore.Html
 @model AccountDonationsViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    // Stored times are UTC; people read them in the site time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 
 <zone Name="Title">
     <breadcrumb name="AccountDonations" title="@T["Donations"]">
@@ -30,7 +37,7 @@
                         @foreach (var donation in Model.Donations)
                         {
                             <tr>
-                                <td>@donation.CreatedUtc.ToString("d", CultureInfo.CurrentCulture)</td>
+                                <td>@((await LocalAsync(donation.CreatedUtc)).ToString("d", CultureInfo.CurrentCulture))</td>
                                 <td>
                                     @donation.CampaignTitle
                                     @if (!string.IsNullOrEmpty(donation.Tribute))

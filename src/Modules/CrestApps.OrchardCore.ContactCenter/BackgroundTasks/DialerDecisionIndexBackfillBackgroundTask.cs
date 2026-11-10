@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -30,10 +31,15 @@ public sealed class DialerDecisionIndexBackfillBackgroundTask : IBackgroundTask
     private bool _completed;
 
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => DoWorkAsync(serviceProvider, run, cancellationToken));
+
+    private async Task DoWorkAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         if (_completed)
         {
+            run.Skip();
+
             return;
         }
 
@@ -76,6 +82,7 @@ public sealed class DialerDecisionIndexBackfillBackgroundTask : IBackgroundTask
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            run.ReportError(ex);
             // A decision missing from a report is not a reason to disturb the tenant; the next run picks up from the
             // last page that was saved.
             logger.LogWarning(ex, "Could not index the dialer decisions recorded before the dialer decision log existed.");
@@ -88,6 +95,8 @@ public sealed class DialerDecisionIndexBackfillBackgroundTask : IBackgroundTask
                 "Indexed {DecisionCount} dialer decisions recorded before the dialer decision log existed.",
                 indexed);
         }
+
+        run.AddItems(indexed, "indexed");
 
         await stateManager.UpdateAsync(state);
 

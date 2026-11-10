@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -18,22 +19,26 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.BackgroundTasks;
 public sealed class MessagingBroadcastBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        var broadcastService = serviceProvider.GetRequiredService<IMessagingBroadcastService>();
-        var logger = serviceProvider.GetRequiredService<ILogger<MessagingBroadcastBackgroundTask>>();
+        return this.RunAsync(async run =>
+        {
+            var broadcastService = serviceProvider.GetRequiredService<IMessagingBroadcastService>();
+            var logger = serviceProvider.GetRequiredService<ILogger<MessagingBroadcastBackgroundTask>>();
 
-        try
-        {
-            await broadcastService.ProcessPendingAsync(cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "An error occurred while processing broadcasts.");
-        }
+            try
+            {
+                await broadcastService.ProcessPendingAsync(cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "An error occurred while processing broadcasts.");
+                run.ReportError(ex);
+            }
+        });
     }
 }

@@ -1,6 +1,8 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
+using CrestApps.OrchardCore.Subscriptions.Core.Telemetry;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.Services;
 using Microsoft.Extensions.Logging;
@@ -60,7 +62,7 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
 
     /// <inheritdoc/>
     public Task<Subscription> RecordRenewalAsync(string subscriptionId, DateTime periodStartUtc, SubscriptionRenewalContext context = null, CancellationToken cancellationToken = default)
-        => MutateAsync(subscriptionId, subscription =>
+        => MutateAsync(SubscriptionsTelemetry.OperationRenew, subscriptionId, subscription =>
         {
             // A webhook and the renewal sweep both report the same cycle. Advancing on the second report
             // would move the customer a whole period ahead and skip a payment.
@@ -106,7 +108,7 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
 
     /// <inheritdoc/>
     public Task<Subscription> MarkPastDueAsync(string subscriptionId, string reason, CancellationToken cancellationToken = default)
-        => MutateAsync(subscriptionId, async subscription =>
+        => MutateAsync(SubscriptionsTelemetry.OperationPastDue, subscriptionId, async subscription =>
         {
             if (subscription.Status is SubscriptionStatus.Expired or SubscriptionStatus.Canceled)
             {
@@ -139,7 +141,7 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
 
     /// <inheritdoc/>
     public Task<Subscription> CancelAsync(string subscriptionId, bool atPeriodEnd, string reason, string source = null, CancellationToken cancellationToken = default)
-        => MutateAsync(subscriptionId, subscription =>
+        => MutateAsync(SubscriptionsTelemetry.OperationCancel, subscriptionId, subscription =>
         {
             if (subscription.Status is SubscriptionStatus.Expired)
             {
@@ -182,7 +184,7 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
 
     /// <inheritdoc/>
     public Task<Subscription> ResumeAsync(string subscriptionId, CancellationToken cancellationToken = default)
-        => MutateAsync(subscriptionId, subscription =>
+        => MutateAsync(SubscriptionsTelemetry.OperationResume, subscriptionId, subscription =>
         {
             if (subscription.Status is not (SubscriptionStatus.PastDue or SubscriptionStatus.Paused))
             {
@@ -208,7 +210,7 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
 
     /// <inheritdoc/>
     public Task<Subscription> PauseAsync(string subscriptionId, string reason, CancellationToken cancellationToken = default)
-        => MutateAsync(subscriptionId, subscription =>
+        => MutateAsync(SubscriptionsTelemetry.OperationPause, subscriptionId, subscription =>
         {
             if (subscription.Status is SubscriptionStatus.Canceled or SubscriptionStatus.Expired or SubscriptionStatus.Paused)
             {
@@ -232,7 +234,7 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
 
     /// <inheritdoc/>
     public Task<Subscription> ExpireAsync(string subscriptionId, string reason, CancellationToken cancellationToken = default)
-        => MutateAsync(subscriptionId, subscription =>
+        => MutateAsync(SubscriptionsTelemetry.OperationExpire, subscriptionId, subscription =>
         {
             if (subscription.Status == SubscriptionStatus.Expired)
             {
@@ -265,7 +267,7 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        return MutateAsync(subscriptionId, subscription =>
+        return MutateAsync(SubscriptionsTelemetry.OperationSync, subscriptionId, subscription =>
         {
             var changed = false;
 
@@ -330,17 +332,22 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
         }, cancellationToken, context.Source);
     }
 
-    private Task<Subscription> MutateAsync(string subscriptionId, Func<Subscription, SubscriptionTransition> mutate, CancellationToken cancellationToken, string source = null)
-        => MutateAsync(subscriptionId, subscription => Task.FromResult(mutate(subscription)), cancellationToken, source);
+    private Task<Subscription> MutateAsync(string operation, string subscriptionId, Func<Subscription, SubscriptionTransition> mutate, CancellationToken cancellationToken, string source = null)
+        => MutateAsync(operation, subscriptionId, subscription => Task.FromResult(mutate(subscription)), cancellationToken, source);
 
-    private async Task<Subscription> MutateAsync(string subscriptionId, Func<Subscription, Task<SubscriptionTransition>> mutate, CancellationToken cancellationToken, string source = null)
+    private async Task<Subscription> MutateAsync(string operation, string subscriptionId, Func<Subscription, Task<SubscriptionTransition>> mutate, CancellationToken cancellationToken, string source = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(subscriptionId);
+
+        using var activity = SubscriptionsTelemetry.StartTransition(operation, subscriptionId);
 
         var (locker, locked) = await _distributedLock.TryAcquireLockAsync(LockPrefix + subscriptionId, _lockTimeout, _lockExpiration);
 
         if (!locked)
         {
+            SubscriptionsTelemetry.RecordTransition(operation, SubscriptionsTelemetry.ResultBusy);
+            activity?.SetTag(CrestAppsOrchardCoreTelemetry.ResultTag, SubscriptionsTelemetry.ResultBusy);
+
             // Another node is applying a transition to this very subscription. Returning what is stored is
             // safer than applying a second transition on top of a half-finished one.
             _logger.LogWarning("Could not acquire the lock for subscription '{SubscriptionId}'; the transition was skipped.", subscriptionId.SanitizeLogValue());
@@ -355,6 +362,9 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
 
         if (subscription is null)
         {
+            SubscriptionsTelemetry.RecordTransition(operation, SubscriptionsTelemetry.ResultNotFound);
+            activity?.SetTag(CrestAppsOrchardCoreTelemetry.ResultTag, SubscriptionsTelemetry.ResultNotFound);
+
             return null;
         }
 
@@ -362,10 +372,18 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
 
         if (await mutate(subscription) == SubscriptionTransition.NoChange)
         {
+            SubscriptionsTelemetry.RecordTransition(operation, SubscriptionsTelemetry.ResultNoChange);
+            activity?.SetTag(CrestAppsOrchardCoreTelemetry.ResultTag, SubscriptionsTelemetry.ResultNoChange);
+
             return subscription;
         }
 
         await _subscriptionManager.UpdateAsync(subscription, cancellationToken: cancellationToken);
+
+        // Counted once the change is handed to the session, before the scope commits: a transition whose commit later
+        // fails or is rolled back is still counted.
+        SubscriptionsTelemetry.RecordTransition(operation, SubscriptionsTelemetry.ResultChanged, before, subscription.Status);
+        activity?.SetTag(CrestAppsOrchardCoreTelemetry.ResultTag, SubscriptionsTelemetry.ResultChanged);
 
         await _handlers.InvokeAsync(
             (handler, context) => handler.ChangedAsync(context),

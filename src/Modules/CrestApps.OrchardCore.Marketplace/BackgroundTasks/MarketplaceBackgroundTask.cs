@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Marketplace.Models;
 using CrestApps.OrchardCore.Marketplace.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,15 +18,19 @@ namespace CrestApps.OrchardCore.Marketplace.BackgroundTasks;
     LockExpiration = 600_000)]
 public sealed class MarketplaceBackgroundTask : IBackgroundTask
 {
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        var marketplace = serviceProvider.GetRequiredService<MarketplaceService>();
-
-        await marketplace.ReleaseDueAsync(500, cancellationToken);
-
-        if ((await serviceProvider.GetRequiredService<ISiteService>().GetSettingsAsync<MarketplaceSettings>()).AutomaticPayouts && marketplace.CanPayOut)
+        return this.RunAsync(async run =>
         {
-            await marketplace.PayOutAllAsync(cancellationToken);
-        }
+            var marketplace = serviceProvider.GetRequiredService<MarketplaceService>();
+
+            run.AddItems(await marketplace.ReleaseDueAsync(500, cancellationToken), "released");
+
+            // Each transfer is counted on crestapps.marketplace.payouts, by provider and outcome.
+            if ((await serviceProvider.GetRequiredService<ISiteService>().GetSettingsAsync<MarketplaceSettings>()).AutomaticPayouts && marketplace.CanPayOut)
+            {
+                await marketplace.PayOutAllAsync(cancellationToken);
+            }
+        });
     }
 }

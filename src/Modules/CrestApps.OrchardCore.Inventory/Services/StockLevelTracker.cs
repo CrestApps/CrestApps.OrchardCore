@@ -1,7 +1,7 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Inventory.Core.Models;
 using CrestApps.OrchardCore.Inventory.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
-using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.Inventory.Services;
 
@@ -24,7 +24,7 @@ internal sealed class StockLevelTracker : IStockLevelObserver
         {
             var previous = _previous = new Dictionary<string, int>(StringComparer.Ordinal);
 
-            ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<StockLevelDispatcher>().DispatchAsync(previous));
+            DeferredWork.Add("inventory_stock_level_dispatch", scope => scope.ServiceProvider.GetRequiredService<StockLevelDispatcher>().DispatchAsync(previous));
         }
 
         // The level before the first change is the one that counts: several changes in one unit of work are one.

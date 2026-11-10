@@ -521,6 +521,62 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public static bool ReachedVoicemail(CrestApps.OrchardCore.Omnichannel.Voice.Models.VoicemailReached voicemail, System.Collections.Generic.IEnumerable<CrestApps.Core.AI.Models.AIChatSessionPrompt> prompts) { }
     }
 }
+namespace CrestApps.OrchardCore.Omnichannel.Voice.Telemetry
+{
+    public static class VoiceTelemetry
+    {
+        public const string ActionTag = "action";
+        public const string ActivityIdSpanTag = "crestapps.omnichannel.activity.id";
+        public const string DeploymentTag = "deployment";
+        public const string DirectionTag = "direction";
+        public const string EngineRealtime = "realtime";
+        public const string EngineTag = "engine";
+        public const string EngineTurnBased = "turn_based";
+        public const string IdleActionAsk = "ask";
+        public const string IdleActionGoodbye = "goodbye";
+        public const string KindTag = "kind";
+        public const string OutcomeLost = "lost";
+        public const string OutcomeNotHeld = "not_held";
+        public const string SourceName = "CrestApps.OrchardCore.Voice";
+        public static System.Diagnostics.ActivitySource ActivitySource { get; }
+        public static System.Diagnostics.Metrics.Counter<long> BargeIns { get; }
+        public static System.Diagnostics.Metrics.Histogram<double> DetectorWait { get; }
+        public static System.Diagnostics.Metrics.Histogram<double> FirstAudioLatency { get; }
+        public static System.Diagnostics.Metrics.Counter<long> FramesDropped { get; }
+        public static System.Diagnostics.Metrics.Counter<long> GuardrailRefusals { get; }
+        public static System.Diagnostics.Metrics.Counter<long> IdlePrompts { get; }
+        public static System.Diagnostics.Metrics.Counter<long> MachineDetections { get; }
+        public static System.Diagnostics.Metrics.UpDownCounter<long> MediaStreams { get; }
+        public static System.Diagnostics.Metrics.Counter<long> MediaStreamsLost { get; }
+        public static System.Diagnostics.Metrics.Meter Meter { get; }
+        public static System.Diagnostics.Metrics.Histogram<double> ModelLatency { get; }
+        public static System.Diagnostics.Metrics.Histogram<double> ResponseLatency { get; }
+        public static System.Diagnostics.Metrics.Counter<long> SendStalls { get; }
+        public static System.Diagnostics.Metrics.Histogram<double> SessionDuration { get; }
+        public static System.Diagnostics.Metrics.Counter<long> SessionErrors { get; }
+        public static System.Diagnostics.Metrics.Counter<long> SessionReconnects { get; }
+        public static System.Diagnostics.Metrics.Counter<long> Sessions { get; }
+        public static System.Diagnostics.Metrics.Counter<long> SummariesLost { get; }
+        public static System.Diagnostics.Metrics.Histogram<double> TurnDuration { get; }
+        public static System.Diagnostics.Metrics.Counter<long> UnheardPrompts { get; }
+        public static string GetEngine(CrestApps.OrchardCore.AI.Core.Models.AIVoiceSessionEngine engine) { }
+        public static string GetOutcome(CrestApps.OrchardCore.AI.Core.Models.AIVoiceSessionOutcome outcome) { }
+        public static void RecordFramesDropped(string reason, long count = 1) { }
+        public static void RecordGuardrailRefusal(string engine, string direction) { }
+        public static void RecordIdlePrompt(string engine, string action) { }
+        public static void RecordMachineDetected(string source, bool phoneMenu) { }
+        public static void RecordMediaStream(string providerName, int delta) { }
+        public static void RecordMediaStreamLost(string providerName) { }
+        public static void RecordSendStall(string direction) { }
+        public static void RecordSession(CrestApps.OrchardCore.AI.Core.Models.AIVoiceSessionEngine engine, CrestApps.OrchardCore.AI.Core.Models.AIVoiceSessionOutcome outcome, string deploymentName, string providerName, CrestApps.OrchardCore.Omnichannel.Voice.Models.AIVoiceSessionMeasurements measured, bool countSession) { }
+        public static void RecordSessionError(string kind, bool continued) { }
+        public static void RecordSessionReconnect(string outcome) { }
+        public static void RecordSummaryLost(string reason) { }
+        public static void RecordUnheardPrompt() { }
+        public static CrestApps.OrchardCore.Diagnostics.TelemetryScope StartSpan(string spanName, string activityId) { }
+        public static System.IDisposable TrackMediaStream(string providerName) { }
+    }
+}
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Tools
 {
     public sealed class CollectSecureDigitsTool : Microsoft.Extensions.AI.AIFunction

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Calendars;
 using System.Globalization;
 using System.Text;
 using CrestApps.OrchardCore.Checkout.Core;
@@ -234,9 +235,10 @@ public sealed class CouponsAdminController : Controller
     /// Creates a coupon.
     /// </summary>
     /// <param name="model">The submitted form.</param>
+    /// <param name="localClock">The clock converting the entered dates from the site's time zone.</param>
     [HttpPost]
     [ActionName(nameof(Create))]
-    public async Task<IActionResult> CreatePost(CouponEditViewModel model)
+    public async Task<IActionResult> CreatePost(CouponEditViewModel model, [FromServices] ILocalClock localClock)
     {
         if (!await _authorizationService.AuthorizeAsync(User, CheckoutPermissions.ManageCoupons))
         {
@@ -249,6 +251,7 @@ public sealed class CouponsAdminController : Controller
         // fields of this form are applied after, once everything is valid.
         var editor = await _couponDisplayManager.UpdateEditorAsync(coupon, _updateModelAccessor.ModelUpdater, isNew: true);
 
+        await SetUtcDatesAsync(model, localClock);
         await _editor.ValidateAsync(model, existingItemId: null, ModelState);
 
         if (!ModelState.IsValid)
@@ -273,7 +276,8 @@ public sealed class CouponsAdminController : Controller
     /// Displays the form for an existing coupon.
     /// </summary>
     /// <param name="itemId">The coupon identifier.</param>
-    public async Task<IActionResult> Edit(string itemId)
+    /// <param name="localClock">The clock showing the dates in the site's time zone.</param>
+    public async Task<IActionResult> Edit(string itemId, [FromServices] ILocalClock localClock)
     {
         if (!await _authorizationService.AuthorizeAsync(User, CheckoutPermissions.ManageCoupons))
         {
@@ -300,8 +304,8 @@ public sealed class CouponsAdminController : Controller
             Currency = coupon.Currency,
             Target = coupon.Target,
             IsEnabled = coupon.IsEnabled,
-            StartsUtc = coupon.StartsUtc,
-            EndsUtc = coupon.EndsUtc,
+            Starts = await ToLocalAsync(coupon.StartsUtc, localClock),
+            Ends = await ToLocalAsync(coupon.EndsUtc, localClock),
             MaxRedemptions = coupon.MaxRedemptions,
             MinimumAmount = coupon.MinimumAmount,
             MaximumAmount = coupon.MaximumAmount,
@@ -333,9 +337,10 @@ public sealed class CouponsAdminController : Controller
     /// </summary>
     /// <param name="itemId">The coupon identifier.</param>
     /// <param name="model">The submitted form.</param>
+    /// <param name="localClock">The clock converting the entered dates from the site's time zone.</param>
     [HttpPost]
     [ActionName(nameof(Edit))]
-    public async Task<IActionResult> EditPost(string itemId, CouponEditViewModel model)
+    public async Task<IActionResult> EditPost(string itemId, CouponEditViewModel model, [FromServices] ILocalClock localClock)
     {
         if (!await _authorizationService.AuthorizeAsync(User, CheckoutPermissions.ManageCoupons))
         {
@@ -351,6 +356,7 @@ public sealed class CouponsAdminController : Controller
 
         var editor = await _couponDisplayManager.UpdateEditorAsync(coupon, _updateModelAccessor.ModelUpdater, isNew: false);
 
+        await SetUtcDatesAsync(model, localClock);
         await _editor.ValidateAsync(model, coupon.ItemId, ModelState);
 
         if (!ModelState.IsValid)
@@ -456,7 +462,8 @@ public sealed class CouponsAdminController : Controller
     /// Downloads the coupon's generated codes as a CSV file, with how often each was used.
     /// </summary>
     /// <param name="itemId">The coupon identifier.</param>
-    public async Task<IActionResult> ExportCodes(string itemId)
+    /// <param name="localClock">The clock showing the created times in the site's time zone.</param>
+    public async Task<IActionResult> ExportCodes(string itemId, [FromServices] ILocalClock localClock)
     {
         if (!await _authorizationService.AuthorizeAsync(User, CheckoutPermissions.ManageCoupons))
         {
@@ -472,19 +479,33 @@ public sealed class CouponsAdminController : Controller
 
         var csv = new StringBuilder();
 
-        CsvWriter.AppendRow(csv, "Code", "Uses", "Limit", "Created (UTC)");
+        CsvWriter.AppendRow(csv, "Code", "Uses", "Limit", "Created");
 
         foreach (var code in await _couponStore.ListGeneratedCodesAsync(coupon.ItemId, HttpContext.RequestAborted))
         {
+            var created = await localClock.ConvertToLocalAsync(DateTime.SpecifyKind(code.CreatedUtc, DateTimeKind.Utc));
+
             CsvWriter.AppendRow(csv,
                 code.Code,
                 code.RedemptionCount.ToString(CultureInfo.InvariantCulture),
                 code.MaxRedemptions?.ToString(CultureInfo.InvariantCulture),
-                code.CreatedUtc.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
+                created.DateTime.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
         }
 
         return File(Encoding.UTF8.GetBytes(csv.ToString()), "text/csv", $"{coupon.Code}-codes.csv");
     }
+
+    // The form shows and takes the dates in the site's time zone; the coupon keeps them in UTC.
+    private static async Task SetUtcDatesAsync(CouponEditViewModel model, ILocalClock localClock)
+    {
+        model.StartsUtc = model.Starts.HasValue ? await localClock.ToUtcLenientAsync(model.Starts.Value) : null;
+        model.EndsUtc = model.Ends.HasValue ? await localClock.ToUtcLenientAsync(model.Ends.Value) : null;
+    }
+
+    private static async Task<DateTime?> ToLocalAsync(DateTime? utc, ILocalClock localClock)
+        => utc.HasValue
+            ? (await localClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc.Value, DateTimeKind.Utc))).DateTime
+            : null;
 
     private async Task PopulateUsesAsync(CouponEditViewModel model, Coupon coupon)
     {

@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Dispatch.Core.Services;
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
 using CrestApps.OrchardCore.Geo.Models;
+using CrestApps.OrchardCore.OrTools.Telemetry;
 using Google.OrTools.ConstraintSolver;
 using Google.Protobuf.WellKnownTypes;
 
@@ -29,25 +30,63 @@ public sealed class OrToolsDispatchOptimizer : IDispatchOptimizer
     {
         ArgumentNullException.ThrowIfNull(problem);
 
-        var watch = Stopwatch.StartNew();
-        var start = await _builtIn.SolveAsync(problem, cancellationToken);
-        var workers = problem.Workers.Where(worker => worker.Open.Count > 0).ToList();
+        using var telemetry = SolverTelemetry.Start(SolverTelemetry.DispatchSolver, problem.Visits.Count);
 
-        if (workers.Count == 0 || problem.Visits.Count == 0)
+        try
         {
-            return Stamp(start, watch);
+            var watch = Stopwatch.StartNew();
+            var start = await _builtIn.SolveAsync(problem, cancellationToken);
+            var workers = problem.Workers.Where(worker => worker.Open.Count > 0).ToList();
+
+            if (workers.Count == 0 || problem.Visits.Count == 0)
+            {
+                telemetry.Complete(SolverTelemetry.StatusSkipped, usedSolverAnswer: false);
+
+                return Stamp(start, watch);
+            }
+
+            var left = problem.TimeLimit - watch.Elapsed;
+            var (plan, status) = await Task.Run(() => new Routing(problem, workers).Solve(start, left < TimeSpan.FromSeconds(1) ? TimeSpan.FromSeconds(1) : left, cancellationToken), CancellationToken.None);
+
+            // The built-in plan stays when the solver finds nothing, or nothing cheaper.
+            if (plan is null || Cost(problem, plan) > Cost(problem, start))
+            {
+                telemetry.Complete(GetStatus(status, plan is not null, cancellationToken), usedSolverAnswer: false);
+
+                return Stamp(start, watch);
+            }
+
+            telemetry.Complete(GetStatus(status, found: true, cancellationToken), usedSolverAnswer: true);
+
+            return Stamp(plan, watch);
+        }
+        catch (Exception ex)
+        {
+            telemetry.Fail(ex);
+
+            throw;
+        }
+    }
+
+    // A guided local search never proves its answer optimal and runs to its time limit, so an answer it found is
+    // feasible unless the solver says it is optimal.
+    private static string GetStatus(RoutingSearchStatus.Types.Value status, bool found, CancellationToken cancellationToken)
+    {
+        if (found)
+        {
+            return status == RoutingSearchStatus.Types.Value.RoutingOptimal
+                ? SolverTelemetry.StatusOptimal
+                : SolverTelemetry.StatusFeasible;
         }
 
-        var left = problem.TimeLimit - watch.Elapsed;
-        var plan = await Task.Run(() => new Routing(problem, workers).Solve(start, left < TimeSpan.FromSeconds(1) ? TimeSpan.FromSeconds(1) : left, cancellationToken), CancellationToken.None);
-
-        // The built-in plan stays when the solver finds nothing, or nothing cheaper.
-        if (plan is null || Cost(problem, plan) > Cost(problem, start))
+        if (cancellationToken.IsCancellationRequested)
         {
-            return Stamp(start, watch);
+            return SolverTelemetry.StatusCancelled;
         }
 
-        return Stamp(plan, watch);
+        return status is RoutingSearchStatus.Types.Value.RoutingInfeasible or RoutingSearchStatus.Types.Value.RoutingInvalid
+            ? SolverTelemetry.StatusInfeasible
+            : SolverTelemetry.StatusTimedOut;
     }
 
     private DispatchPlan Stamp(DispatchPlan plan, Stopwatch watch)
@@ -96,7 +135,7 @@ public sealed class OrToolsDispatchOptimizer : IDispatchOptimizer
 
         private int FirstVisitNode => 1 + _workers.Count;
 
-        public DispatchPlan Solve(DispatchPlan hint, TimeSpan limit, CancellationToken cancellationToken)
+        public (DispatchPlan Plan, RoutingSearchStatus.Types.Value Status) Solve(DispatchPlan hint, TimeSpan limit, CancellationToken cancellationToken)
         {
             var nodes = FirstVisitNode + _visits.Count;
             var starts = Enumerable.Range(1, _workers.Count).ToArray();
@@ -220,7 +259,7 @@ public sealed class OrToolsDispatchOptimizer : IDispatchOptimizer
             var initial = Read(hint, routing, manager);
             var solution = (initial is null ? null : routing.SolveFromAssignmentWithParameters(initial, parameters)) ?? routing.SolveWithParameters(parameters);
 
-            return solution is null ? null : ToPlan(solution, routing, manager, dimension);
+            return (solution is null ? null : ToPlan(solution, routing, manager, dimension), routing.GetStatus());
         }
 
         // The minutes from the origin each visit can start at on a technician's day: five-minute steps that fit one of

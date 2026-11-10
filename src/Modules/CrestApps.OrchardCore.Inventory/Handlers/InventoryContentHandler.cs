@@ -1,10 +1,10 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Inventory.Core.Models;
 using CrestApps.OrchardCore.Inventory.Services;
 using CrestApps.OrchardCore.Products.Core.Models;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Handlers;
-using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.Inventory.Handlers;
 
@@ -44,7 +44,7 @@ public sealed class InventoryContentHandler : ContentHandlerBase
         {
             var products = _products = new HashSet<string>(StringComparer.Ordinal);
 
-            ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<InventorySyncService>().SyncAsync(products));
+            DeferredWork.Add("inventory_product_sync", scope => scope.ServiceProvider.GetRequiredService<InventorySyncService>().SyncAsync(products));
         }
 
         _products.Add(contentItem.ContentItemId);

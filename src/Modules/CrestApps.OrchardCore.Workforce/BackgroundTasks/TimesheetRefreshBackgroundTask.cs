@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Workforce.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
@@ -19,6 +20,6 @@ public sealed class TimesheetRefreshBackgroundTask : IBackgroundTask
     /// <inheritdoc />
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        return serviceProvider.GetRequiredService<TimesheetRefresher>().RefreshAsync(cancellationToken);
+        return this.RunAsync(async run => run.AddItems(await serviceProvider.GetRequiredService<TimesheetRefresher>().RefreshAsync(cancellationToken), "refreshed"));
     }
 }

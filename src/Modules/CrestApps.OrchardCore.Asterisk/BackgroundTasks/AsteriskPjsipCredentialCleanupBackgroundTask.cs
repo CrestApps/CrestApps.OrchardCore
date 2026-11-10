@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Asterisk.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -19,7 +20,10 @@ namespace CrestApps.OrchardCore.Asterisk.BackgroundTasks;
 public sealed class AsteriskPjsipCredentialCleanupBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => CleanupAsync(serviceProvider, run, cancellationToken));
+
+    private static async Task CleanupAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var credentialIssuer = serviceProvider.GetRequiredService<IAsteriskPjsipCredentialIssuer>();
         var logger = serviceProvider.GetRequiredService<ILogger<AsteriskPjsipCredentialCleanupBackgroundTask>>();
@@ -30,6 +34,7 @@ public sealed class AsteriskPjsipCredentialCleanupBackgroundTask : IBackgroundTa
         }
         catch (Exception ex)
         {
+            run.ReportError(ex);
             logger.LogError(ex, "An error occurred while cleaning up expired Asterisk browser SIP credentials.");
         }
     }

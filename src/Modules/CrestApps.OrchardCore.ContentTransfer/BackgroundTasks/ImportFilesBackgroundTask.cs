@@ -1,10 +1,13 @@
 using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics;
 using CrestApps.OrchardCore.BackgroundWork;
 using CrestApps.OrchardCore.ContentTransfer.Indexes;
 using CrestApps.OrchardCore.ContentTransfer.Models;
 using CrestApps.OrchardCore.ContentTransfer.Services;
+using CrestApps.OrchardCore.ContentTransfer.Telemetry;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Localization;
@@ -75,9 +78,25 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
     private static readonly TimeSpan _stalledProgressThreshold = TimeSpan.FromMinutes(10);
 
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-        => ProcessEntriesAsync(serviceProvider, cancellationToken: cancellationToken);
+    {
+        // Each import runs under a lock of its own that outlives the task's lock by far, so the run is not measured
+        // against the task's lock expiration.
+        return BackgroundTaskTelemetry.RunAsync(
+            nameof(ImportFilesBackgroundTask),
+            run => ProcessEntriesAsync(serviceProvider, entryId: null, run, cancellationToken),
+            lockExpiration: null);
+    }
 
-    internal static async Task ProcessEntriesAsync(IServiceProvider serviceProvider, string entryId = null, CancellationToken cancellationToken = default)
+    internal static Task ProcessEntriesAsync(IServiceProvider serviceProvider, string entryId = null, CancellationToken cancellationToken = default)
+    {
+        return ProcessEntriesAsync(serviceProvider, entryId, taskRun: null, cancellationToken);
+    }
+
+    private static async Task ProcessEntriesAsync(
+        IServiceProvider serviceProvider,
+        string entryId,
+        MeasuredTaskRun taskRun,
+        CancellationToken cancellationToken)
     {
         // A run started from the admin pages gets no token of its own, so nothing told it the host was stopping. The
         // errors a stopping host throws at it, such as a database connection that is closed under it, then marked the
@@ -101,6 +120,13 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             .OrderBy(x => x.CreatedUtc)
             .ListAsync(cancellationToken);
 
+        if (!entries.Any())
+        {
+            taskRun?.Skip();
+
+            return;
+        }
+
         foreach (var entry in entries)
         {
             if (cancellationToken.IsCancellationRequested)
@@ -123,6 +149,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
                 if (!locked)
                 {
+                    taskRun?.AddItems(1, "lock_contended");
                     LogLockTaken(logger, clock, entry);
 
                     break;
@@ -130,12 +157,9 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
                 await using var acquiredLock = locker;
 
-                var run = await ImportRunSupervisor.RunAsync(
-                    (monitor, token) => ProcessEntryInScopeAsync(serviceProvider, entry.EntryId, monitor, token),
-                    RunLimits,
-                    logger,
-                    entry.EntryId,
-                    cancellationToken);
+                var run = await SuperviseRunAsync(serviceProvider, entry, logger, cancellationToken);
+
+                taskRun?.AddItems(1, GetRunOutcome(run));
 
                 if (run.Abandoned)
                 {
@@ -164,6 +188,14 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                         break;
                     }
 
+                    ContentTransferDiagnostics.Add(ContentTransferDiagnostics.ImportRetries, 1, CrestAppsOrchardCoreTelemetry.ReasonTag, "failed_run");
+                    RetryTelemetry.RecordRetry("contenttransfer", "failed_run", failedRuns + 1);
+
+                    if (logger.IsEnabled(LogLevel.Warning))
+                    {
+                        ContentTransferLog.ImportRetrying(logger, entry.EntryId, failedRuns, MaxRetriesInRun, RetryBackoff.GetDelay(failedRuns));
+                    }
+
                     await RetryBackoff.DelayAsync(failedRuns, cancellationToken);
 
                     continueImport = true;
@@ -174,6 +206,95 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Runs one import run under the watchdog, measured as the <c>crestapps.contenttransfer.import.run</c> span linked
+    /// to the request that queued the import, with the entry in the scope of every log line the run writes.
+    /// </summary>
+    private static async Task<SupervisedImportRun<ImportEntryRunOutcome>> SuperviseRunAsync(
+        IServiceProvider serviceProvider,
+        ContentTransferEntry entry,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        var tags = new TagList
+        {
+            { ContentTransferDiagnostics.ContentTypeTag, entry.ContentType },
+            { CrestAppsOrchardCoreTelemetry.FormatTag, ContentTransferDiagnostics.GetFormat(entry.StoredFileName) },
+        };
+
+        using var telemetry = TelemetryScope.StartLinked(
+            ContentTransferDiagnostics.ActivitySource,
+            "crestapps.contenttransfer.import.run",
+            ContentTransferDiagnostics.ImportDuration,
+            ContentTransferDiagnostics.GetTraceParent(entry),
+            tags);
+
+        telemetry.SetSpanTag(ContentTransferDiagnostics.EntryIdSpanTag, entry.EntryId);
+
+        using var logScope = logger.BeginScope(new Dictionary<string, object>
+        {
+            ["EntryId"] = entry.EntryId,
+            ["ContentType"] = entry.ContentType,
+            ["Direction"] = entry.Direction.ToString(),
+        });
+
+        ContentTransferDiagnostics.Add(ContentTransferDiagnostics.ImportActive, 1);
+
+        try
+        {
+            var run = await ImportRunSupervisor.RunAsync(
+                (monitor, token) => ProcessEntryInScopeAsync(serviceProvider, entry.EntryId, monitor, token),
+                RunLimits,
+                logger,
+                entry.EntryId,
+                cancellationToken);
+
+            var outcome = GetRunOutcome(run);
+
+            telemetry.SetOutcome(outcome);
+
+            if (outcome is ContentTransferDiagnostics.OutcomeFailed or ContentTransferDiagnostics.OutcomeRetry or ContentTransferDiagnostics.OutcomeAbandoned)
+            {
+                telemetry.Activity?.SetStatus(ActivityStatusCode.Error, run.AbandonReason ?? outcome);
+            }
+
+            return run;
+        }
+        catch (Exception ex)
+        {
+            telemetry.Fail(ex);
+
+            var outcome = ex is OperationCanceledException
+                ? ContentTransferDiagnostics.OutcomeStopped
+                : ContentTransferDiagnostics.OutcomeFailed;
+
+            telemetry.SetOutcome(outcome);
+
+            throw;
+        }
+        finally
+        {
+            ContentTransferDiagnostics.Add(ContentTransferDiagnostics.ImportActive, -1);
+        }
+    }
+
+    internal static string GetRunOutcome(SupervisedImportRun<ImportEntryRunOutcome> run)
+    {
+        if (run.Abandoned)
+        {
+            return ContentTransferDiagnostics.OutcomeAbandoned;
+        }
+
+        return run.Result switch
+        {
+            ImportEntryRunOutcome.Completed => ContentTransferDiagnostics.OutcomeCompleted,
+            ImportEntryRunOutcome.Continue => ContentTransferDiagnostics.OutcomeContinued,
+            ImportEntryRunOutcome.RetryAfterFailure => ContentTransferDiagnostics.OutcomeRetry,
+            ImportEntryRunOutcome.Failed => ContentTransferDiagnostics.OutcomeFailed,
+            _ => ContentTransferDiagnostics.OutcomeStopped,
+        };
     }
 
     private static async Task<ImportEntryRunOutcome> ProcessEntryInScopeAsync(IServiceProvider serviceProvider, string entryId, ImportRunMonitor monitor, CancellationToken cancellationToken)
@@ -238,6 +359,8 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             await session.SaveAsync(entry, true, collection: null, cancellationToken);
             await session.SaveChangesAsync(cancellationToken);
 
+            ContentTransferDiagnostics.Add(ContentTransferDiagnostics.ImportStalledRows, 1, CrestAppsOrchardCoreTelemetry.ResultTag, "recorded");
+
             if (logger.IsEnabled(LogLevel.Warning))
             {
                 logger.LogWarning(
@@ -250,6 +373,8 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            ContentTransferDiagnostics.Add(ContentTransferDiagnostics.ImportStalledRows, 1, CrestAppsOrchardCoreTelemetry.ResultTag, "unrecorded");
+
             if (logger.IsEnabled(LogLevel.Warning))
             {
                 logger.LogWarning(ex, "Could not record that the import of entry '{EntryId}' stopped on row {RowIndex}.", entryId, rowIndex);
@@ -309,7 +434,9 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             }
 
             await SaveEntryWithErrorAsync(session, clock, entry, localizer["The content definition was removed."], cancellationToken);
-            return ImportEntryRunOutcome.Stop;
+            ContentTransferDiagnostics.Add(ContentTransferDiagnostics.ImportEntriesFailed, 1, CrestAppsOrchardCoreTelemetry.ReasonTag, "content_type_removed");
+
+            return ImportEntryRunOutcome.Failed;
         }
 
         var fileInfo = await fileStore.GetFileInfoAsync(entry.StoredFileName);
@@ -322,7 +449,9 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             }
 
             await SaveEntryWithErrorAsync(session, clock, entry, localizer["The import file no longer exists."], cancellationToken);
-            return ImportEntryRunOutcome.Stop;
+            ContentTransferDiagnostics.Add(ContentTransferDiagnostics.ImportEntriesFailed, 1, CrestAppsOrchardCoreTelemetry.ReasonTag, "file_missing");
+
+            return ImportEntryRunOutcome.Failed;
         }
 
         var batchSize = contentImportOptions.ImportBatchSize < 1
@@ -369,6 +498,17 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 startRow);
         }
 
+        var format = ContentTransferDiagnostics.GetFormat(entry.StoredFileName);
+
+        if (!isResuming)
+        {
+            ContentTransferDiagnostics.Record(ContentTransferDiagnostics.ImportFileSize, fileInfo.Length, new TagList
+            {
+                { CrestAppsOrchardCoreTelemetry.FormatTag, format },
+            });
+        }
+
+        var runTelemetry = new ImportRunTelemetry(logger, entry.EntryId, startRow);
         ImportRunResult result;
 
         try
@@ -414,6 +554,8 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 monitor,
                 logger,
                 localizer,
+                runTelemetry,
+                format,
                 cancellationToken);
         }
         catch (Exception) when (cancellationToken.IsCancellationRequested)
@@ -426,9 +568,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         {
             // The session that ran the import is unusable after a failed save, and saving the failure through it
             // fails too, which left the entry in Processing with no error and the same rows retried every run.
-            return await RecordImportFailureAsync(serviceProvider, entry.EntryId, ex, localizer, cancellationToken)
-                ? ImportEntryRunOutcome.RetryAfterFailure
-                : ImportEntryRunOutcome.Stop;
+            return await RecordImportFailureAsync(serviceProvider, entry.EntryId, ex, localizer, cancellationToken);
         }
 
         if (cancellationToken.IsCancellationRequested)
@@ -480,6 +620,9 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         await session.SaveAsync(entry, false, collection: null, cancellationToken);
         await session.SaveChangesAsync(cancellationToken);
 
+        // The rows read after the last batch, such as skipped or empty ones, are saved with the completed import.
+        runTelemetry.Commit();
+
         if (logger.IsEnabled(LogLevel.Information))
         {
             logger.LogInformation(
@@ -492,7 +635,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 progressPart.Errors.Count);
         }
 
-        return ImportEntryRunOutcome.Stop;
+        return ImportEntryRunOutcome.Completed;
     }
 
     private static async Task<ImportRunResult> ProcessFileInBatchesAsync(
@@ -512,6 +655,8 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         ImportRunMonitor monitor,
         ILogger logger,
         IStringLocalizer localizer,
+        ImportRunTelemetry runTelemetry,
+        string format,
         CancellationToken cancellationToken)
     {
         // Another system's layout, such as a store's product export, is read as the content type's columns.
@@ -546,6 +691,14 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
         progressPart.TotalRecords = reader.GetRowCount();
 
+        if (progressPart.CurrentRow == 0)
+        {
+            ContentTransferDiagnostics.Record(ContentTransferDiagnostics.ImportRowsTotal, progressPart.TotalRecords, new TagList
+            {
+                { CrestAppsOrchardCoreTelemetry.FormatTag, format },
+            });
+        }
+
         var indexOfKeyColumn = dataTable.Columns.IndexOf(nameof(ContentItem.ContentItemId));
         var newRecords = new Dictionary<int, DataRow>();
         var existingRows = new Dictionary<string, KeyValuePair<int, DataRow>>(StringComparer.OrdinalIgnoreCase);
@@ -578,7 +731,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             // new, and start over the same way for ever; each run now reads at least one row before it stops.
             if (clock.UtcNow >= runDeadlineUtc && progressPart.CurrentRow > firstRowOfRun)
             {
-                await FilterPendingRowsAsync(pendingRows, activeRowFilters, contentTypeDefinition, entry, progressPart, indexOfKeyColumn, newRecords, existingRows, monitor, cancellationToken);
+                await FilterPendingRowsAsync(pendingRows, activeRowFilters, contentTypeDefinition, entry, progressPart, indexOfKeyColumn, newRecords, existingRows, monitor, cancellationToken, runTelemetry);
 
                 var progressSaved = await BackgroundWorkPacer.RunBatchAsync(
                     token => ProcessBatchAsync(
@@ -595,6 +748,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                         clock,
                         monitor,
                         localizer,
+                        runTelemetry,
                         token),
                     pacingOptions,
                     cancellationToken);
@@ -615,6 +769,8 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                     rowIndex,
                     localizer["Importing this row stopped responding {0} times, so it was skipped.", progressPart.StalledRowAttempts],
                     localizer["Stopped responding"]);
+
+                runTelemetry.AddRow(ContentTransferDiagnostics.ResultSkippedStalled);
 
                 if (logger.IsEnabled(LogLevel.Warning))
                 {
@@ -667,12 +823,16 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                     AddRowToBatch(rowContext, indexOfKeyColumn, newRecords, existingRows);
                 }
             }
+            else
+            {
+                runTelemetry.AddRow(ContentTransferDiagnostics.ResultEmpty);
+            }
 
             var filtered = false;
 
             if (pendingRows.Count >= batchSize)
             {
-                await FilterPendingRowsAsync(pendingRows, activeRowFilters, contentTypeDefinition, entry, progressPart, indexOfKeyColumn, newRecords, existingRows, monitor, cancellationToken);
+                await FilterPendingRowsAsync(pendingRows, activeRowFilters, contentTypeDefinition, entry, progressPart, indexOfKeyColumn, newRecords, existingRows, monitor, cancellationToken, runTelemetry);
                 filtered = true;
             }
 
@@ -697,6 +857,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                         clock,
                         monitor,
                         localizer,
+                        runTelemetry,
                         token),
                     pacingOptions,
                     cancellationToken);
@@ -710,6 +871,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 newRecords.Clear();
                 existingRows.Clear();
                 dataTable.Rows.Clear();
+                runTelemetry.LogProgress(progressPart.CurrentRow, progressPart.TotalRecords);
             }
 
             rowIndex++;
@@ -720,7 +882,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             return ImportRunResult.Stopped;
         }
 
-        await FilterPendingRowsAsync(pendingRows, activeRowFilters, contentTypeDefinition, entry, progressPart, indexOfKeyColumn, newRecords, existingRows, monitor, cancellationToken);
+        await FilterPendingRowsAsync(pendingRows, activeRowFilters, contentTypeDefinition, entry, progressPart, indexOfKeyColumn, newRecords, existingRows, monitor, cancellationToken, runTelemetry);
 
         if (newRecords.Count + existingRows.Count > 0)
         {
@@ -738,6 +900,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 clock,
                 monitor,
                 localizer,
+                runTelemetry,
                 cancellationToken);
 
             if (!lastBatchProcessed)
@@ -769,6 +932,104 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         IClock clock,
         ImportRunMonitor monitor,
         IStringLocalizer localizer,
+        ImportRunTelemetry runTelemetry,
+        CancellationToken cancellationToken)
+    {
+        var rowCount = newRecords.Count + existingRows.Count;
+
+        using var telemetry = TelemetryScope.Start(
+            ContentTransferDiagnostics.ActivitySource,
+            "crestapps.contenttransfer.import.batch",
+            ContentTransferDiagnostics.ImportBatchDuration);
+
+        if (telemetry.Activity is not null)
+        {
+            telemetry.SetSpanTag(ContentTransferDiagnostics.EntryIdSpanTag, entry.EntryId);
+            telemetry.SetSpanTag(ContentTransferDiagnostics.RowsSpanTag, rowCount);
+            telemetry.SetSpanTag(ContentTransferDiagnostics.FirstRowSpanTag, GetFirstRow(newRecords, existingRows));
+        }
+
+        try
+        {
+            var saved = await ImportBatchAsync(
+                serviceProvider,
+                entry,
+                dataTable,
+                newRecords,
+                existingRows,
+                contentTypeDefinition,
+                contentManager,
+                contentImportManager,
+                progressPart,
+                session,
+                clock,
+                monitor,
+                localizer,
+                runTelemetry,
+                cancellationToken);
+
+            if (!saved)
+            {
+                telemetry.SetOutcome(ContentTransferDiagnostics.OutcomeStopped);
+
+                return false;
+            }
+
+            ContentTransferDiagnostics.Record(ContentTransferDiagnostics.ImportBatchSize, rowCount);
+
+            // The rows are counted once their progress is saved. A run the watchdog gave up on may still save a
+            // batch it had started; the run that replaced it counts those rows.
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                runTelemetry.Commit();
+            }
+
+            telemetry.Succeed();
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            telemetry.Fail(ex);
+
+            throw;
+        }
+    }
+
+    private static int GetFirstRow(Dictionary<int, DataRow> newRecords, Dictionary<string, KeyValuePair<int, DataRow>> existingRows)
+    {
+        var firstRow = int.MaxValue;
+
+        foreach (var rowIndex in newRecords.Keys)
+        {
+            firstRow = Math.Min(firstRow, rowIndex);
+        }
+
+        foreach (var existingRow in existingRows.Values)
+        {
+            firstRow = Math.Min(firstRow, existingRow.Key);
+        }
+
+        return firstRow == int.MaxValue
+            ? 0
+            : firstRow;
+    }
+
+    private static async Task<bool> ImportBatchAsync(
+        IServiceProvider serviceProvider,
+        ContentTransferEntry entry,
+        DataTable dataTable,
+        Dictionary<int, DataRow> newRecords,
+        Dictionary<string, KeyValuePair<int, DataRow>> existingRows,
+        ContentTypeDefinition contentTypeDefinition,
+        IContentManager contentManager,
+        IContentImportManager contentImportManager,
+        ImportFileProcessStatsPart progressPart,
+        ISession session,
+        IClock clock,
+        ImportRunMonitor monitor,
+        IStringLocalizer localizer,
+        ImportRunTelemetry runTelemetry,
         CancellationToken cancellationToken)
     {
         if (await ShouldStopImportAsync(serviceProvider, entry.EntryId, cancellationToken))
@@ -806,6 +1067,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                         contentImportManager,
                         progressPart,
                         localizer,
+                        runTelemetry,
                         isNew);
                 }
                 finally
@@ -832,6 +1094,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                     contentImportManager,
                     progressPart,
                     localizer,
+                    runTelemetry,
                     true);
             }
             finally
@@ -867,12 +1130,20 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         Dictionary<int, DataRow> newRecords,
         Dictionary<string, KeyValuePair<int, DataRow>> existingRows,
         ImportRunMonitor monitor,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ImportRunTelemetry runTelemetry = null)
     {
         if (pendingRows.Count == 0)
         {
             return;
         }
+
+        // The do-not-call lookups and the database reads of the filters happen here, so the work is a span of its own.
+        using var telemetry = TelemetryScope.Start(ContentTransferDiagnostics.ActivitySource, "crestapps.contenttransfer.import.filter", duration: null);
+
+        telemetry.SetSpanTag(ContentTransferDiagnostics.RowsSpanTag, pendingRows.Count);
+
+        var phaseTimestamp = Stopwatch.GetTimestamp();
 
         // A filter may call out of the application, such as a do-not-call registry or the database, so the watchdog
         // watches this work as it watches the import of a row.
@@ -897,6 +1168,9 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         {
             monitor?.EndRow();
         }
+
+        RecordFilterPhase(ContentTransferDiagnostics.PhasePrepare, phaseTimestamp);
+        phaseTimestamp = Stopwatch.GetTimestamp();
 
         foreach (var rowContext in pendingRows)
         {
@@ -924,13 +1198,29 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             {
                 AddRowToBatch(rowContext, indexOfKeyColumn, newRecords, existingRows);
             }
-            else if (!string.IsNullOrWhiteSpace(rowContext.SkipReason))
+            else
             {
-                AddRowError(progressPart, rowContext.RowIndex, rowContext.SkipReason, rowContext.SkipCategory);
+                runTelemetry?.AddSkipped(rowContext.SkipReasonCode);
+
+                if (!string.IsNullOrWhiteSpace(rowContext.SkipReason))
+                {
+                    AddRowError(progressPart, rowContext.RowIndex, rowContext.SkipReason, rowContext.SkipCategory);
+                }
             }
         }
 
+        RecordFilterPhase(ContentTransferDiagnostics.PhaseEvaluate, phaseTimestamp);
+        telemetry.Succeed();
+
         pendingRows.Clear();
+    }
+
+    private static void RecordFilterPhase(string phase, long startTimestamp)
+    {
+        ContentTransferDiagnostics.Record(ContentTransferDiagnostics.ImportFilterDuration, Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds, new TagList
+        {
+            { ContentTransferDiagnostics.PhaseTag, phase },
+        });
     }
 
     private static void AddRowToBatch(
@@ -977,6 +1267,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         IContentImportManager contentImportManager,
         ImportFileProcessStatsPart progressPart,
         IStringLocalizer localizer,
+        ImportRunTelemetry runTelemetry,
         bool isNew)
     {
         try
@@ -998,6 +1289,8 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             if (!validationResult.Succeeded)
             {
                 AddRowError(progressPart, rowIndex, FormatValidationErrors(validationResult), localizer["Did not pass validation"]);
+                runTelemetry.AddError(ContentTransferDiagnostics.ReasonValidation);
+
                 return;
             }
 
@@ -1028,12 +1321,14 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             }
 
             progressPart.ImportedCount++;
+            runTelemetry.AddRow(ContentTransferDiagnostics.ResultImported);
 
             RemoveRowError(progressPart, rowIndex);
         }
         catch (Exception ex)
         {
             AddRowError(progressPart, rowIndex, ex.Message, localizer["Could not be imported"]);
+            runTelemetry.AddRowException(rowIndex, ex);
         }
     }
 
@@ -1147,7 +1442,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
     /// failure marks it as failed with the reason, and the user can resume it once the cause is fixed. The entry
     /// is loaded again rather than reused, so the rows of the failed batch are not recorded as done.
     /// </summary>
-    private static async Task<bool> RecordImportFailureAsync(
+    private static async Task<ImportEntryRunOutcome> RecordImportFailureAsync(
         IServiceProvider serviceProvider,
         string entryId,
         Exception exception,
@@ -1178,7 +1473,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
             if (entry == null || entry.Status.ShouldStopImport())
             {
-                return false;
+                return ImportEntryRunOutcome.Stop;
             }
 
             if (isTransient)
@@ -1189,7 +1484,9 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 await session.SaveAsync(entry, false, collection: null, cancellationToken);
                 await session.SaveChangesAsync(cancellationToken);
 
-                return true;
+                RecordImportFailure("transient");
+
+                return ImportEntryRunOutcome.RetryAfterFailure;
             }
 
             var progressPart = entry.GetOrCreate<ImportFileProcessStatsPart>();
@@ -1216,12 +1513,17 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                         MaxFailedRunAttempts);
                 }
 
-                return true;
+                RecordImportFailure("resumable");
+
+                return ImportEntryRunOutcome.RetryAfterFailure;
             }
 
             await SaveEntryWithErrorAsync(session, clock, entry, localizer["Error processing file: {0}", exception.Message], cancellationToken);
 
-            return false;
+            RecordImportFailure("final");
+            ContentTransferDiagnostics.Add(ContentTransferDiagnostics.ImportEntriesFailed, 1, CrestAppsOrchardCoreTelemetry.ReasonTag, "repeated_failures");
+
+            return ImportEntryRunOutcome.Failed;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -1231,8 +1533,15 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 logger.LogWarning(ex, "Could not record why the import of entry '{EntryId}' stopped.", entryId);
             }
 
-            return true;
+            RecordImportFailure("unrecorded");
+
+            return ImportEntryRunOutcome.RetryAfterFailure;
         }
+    }
+
+    private static void RecordImportFailure(string reason)
+    {
+        ContentTransferDiagnostics.Add(ContentTransferDiagnostics.ImportFailures, 1, CrestAppsOrchardCoreTelemetry.ReasonTag, reason);
     }
 
     /// <summary>
@@ -1272,7 +1581,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
     /// </summary>
     internal enum ImportEntryRunOutcome
     {
-        /// <summary>The import is finished, stopped, or failed; nothing more to do now.</summary>
+        /// <summary>The import stopped, because it was paused or deleted or the host is stopping; nothing more to do now.</summary>
         Stop,
 
         /// <summary>The run reached its time limit with rows left; run again under a fresh lock.</summary>
@@ -1280,6 +1589,12 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
         /// <summary>The run failed but the import is still in Processing; run again after a pause.</summary>
         RetryAfterFailure,
+
+        /// <summary>The import finished every row of its file; nothing more to do.</summary>
+        Completed,
+
+        /// <summary>The import failed and was marked as failed; nothing more to do until someone resumes it.</summary>
+        Failed,
     }
 
     /// <summary>

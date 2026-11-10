@@ -1,4 +1,9 @@
+using System.Diagnostics;
 using System.Globalization;
+using CrestApps.Core.AI.Tooling;
+using CrestApps.Core.Support;
+using CrestApps.OrchardCore.AI.Core.Telemetry;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -45,6 +50,12 @@ public sealed class TimeLimitedAIFunction : DelegatingAIFunction
     public TimeSpan Limit => _timeout;
 
     /// <summary>
+    /// Gets where the tool comes from, as the bounded <c>tool.source</c> value of <see cref="AIModuleTelemetry.ToolTimeouts"/>,
+    /// such as <c>local</c> or <c>mcp</c>. Never the tool's name, which a tool instance or an MCP server decides.
+    /// </summary>
+    public string ToolSource { get; init; }
+
+    /// <summary>
     /// The line the model receives when a tool did not answer in time.
     /// </summary>
     /// <param name="toolName">The tool's name.</param>
@@ -74,9 +85,14 @@ public sealed class TimeLimitedAIFunction : DelegatingAIFunction
             }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
-                arguments?.Services?.GetService<ILoggerFactory>()?
-                    .CreateLogger<TimeLimitedAIFunction>()
-                    .LogWarning("The AI tool '{ToolName}' did not answer within {TimeoutSeconds} seconds and was stopped.", Name, _timeout.TotalSeconds);
+                var logger = arguments?.Services?.GetService<ILoggerFactory>()?.CreateLogger<TimeLimitedAIFunction>();
+
+                if (logger is not null)
+                {
+                    AICoreLog.ToolTimedOut(logger, Name.SanitizeLogValue(), _timeout.TotalSeconds);
+                }
+
+                RecordTimeout();
 
                 return TimedOutResult(Name, _timeout);
             }
@@ -85,6 +101,18 @@ public sealed class TimeLimitedAIFunction : DelegatingAIFunction
         {
             _finished?.Invoke(Name);
         }
+    }
+
+    // The tool hands the model a result rather than throwing, so CrestApps.Core is told the call failed, and the
+    // timeout is counted on its own.
+    private void RecordTimeout()
+    {
+        AIToolInvocation.ReportFailure();
+
+        AIModuleTelemetry.Add(AIModuleTelemetry.ToolTimeouts, new TagList
+        {
+            { AIModuleTelemetry.ToolSourceTag, ToolSource ?? CrestAppsOrchardCoreTelemetry.Unknown },
+        });
     }
 
     private static TimeSpan GetTimeout(AIFunction function, TimeSpan fallback)

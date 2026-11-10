@@ -254,7 +254,7 @@ public sealed class AgentAvailabilityReportProvider : ContactCenterReportBase, I
                 liveAfter))
             .ToArray();
 
-        return Build(diagnoses, now, startOfDay, timeZone.Name, scope);
+        return Build(diagnoses, now, startOfDay, timeZone, scope);
     }
 
     /// <summary>
@@ -263,17 +263,18 @@ public sealed class AgentAvailabilityReportProvider : ContactCenterReportBase, I
     /// <param name="diagnoses">The agents' diagnoses.</param>
     /// <param name="nowUtc">The time the report was read.</param>
     /// <param name="startOfDayUtc">The start of the tenant's day.</param>
-    /// <param name="timeZoneName">The name of the tenant's time zone.</param>
+    /// <param name="timeZone">The tenant's time zone, which every time is shown in.</param>
     /// <param name="scope">Which agents the report lists.</param>
     /// <returns>The report document.</returns>
     internal ReportDocument Build(
         IReadOnlyList<AgentAvailabilityDiagnosis> diagnoses,
         DateTime nowUtc,
         DateTime startOfDayUtc,
-        string timeZoneName,
+        ReportTimeZone timeZone,
         AgentAvailabilityReportScope scope)
     {
         ArgumentNullException.ThrowIfNull(diagnoses);
+        ArgumentNullException.ThrowIfNull(timeZone);
 
         var ordered = diagnoses
             .OrderBy(diagnosis => diagnosis.AvailableSinceUtc.HasValue ? 0 : 1)
@@ -293,7 +294,7 @@ public sealed class AgentAvailabilityReportProvider : ContactCenterReportBase, I
         ]);
 
         summary.Description = string.Join(" ",
-            S["Live as of {0} UTC. Today started at {1} UTC ({2}). The date range is not used.", AuditReportFormat.Timestamp(nowUtc), AuditReportFormat.Timestamp(startOfDayUtc), timeZoneName].Value,
+            S["Live as of {0}. Today started at {1}. Times are in {2}. The date range is not used.", AuditReportFormat.Timestamp(nowUtc, timeZone), AuditReportFormat.Timestamp(startOfDayUtc, timeZone), timeZone.Name].Value,
             scope switch
             {
                 AgentAvailabilityReportScope.ChosenAgent => S["Shows the agent you chose."].Value,
@@ -303,20 +304,20 @@ public sealed class AgentAvailabilityReportProvider : ContactCenterReportBase, I
 
         return new ReportDocument()
             .Add(summary)
-            .Add(BuildAgents(ordered, nowUtc))
+            .Add(BuildAgents(ordered, nowUtc, timeZone))
             .Add(BuildQueues(ordered));
     }
 
-    private ReportSection BuildAgents(IReadOnlyList<AgentAvailabilityDiagnosis> diagnoses, DateTime nowUtc)
+    private ReportSection BuildAgents(IReadOnlyList<AgentAvailabilityDiagnosis> diagnoses, DateTime nowUtc, ReportTimeZone timeZone)
     {
         var columns = new[]
         {
             new ReportColumn(S["Agent"].Value),
             new ReportColumn(S["Presence"].Value),
-            new ReportColumn(S["Available since (UTC)"].Value),
+            new ReportColumn(S["Available since ({0})", timeZone.Name].Value),
             new ReportColumn(S["Idle time"].Value, ReportColumnAlign.End),
-            new ReportColumn(S["Last call assigned (UTC)"].Value),
-            new ReportColumn(S["Last call ended (UTC)"].Value),
+            new ReportColumn(S["Last call assigned ({0})", timeZone.Name].Value),
+            new ReportColumn(S["Last call ended ({0})", timeZone.Name].Value),
             new ReportColumn(S["Calls today"].Value, ReportColumnAlign.End),
             new ReportColumn(S["Longest wait between calls"].Value, ReportColumnAlign.End),
             new ReportColumn(S["Signed in to"].Value),
@@ -331,18 +332,18 @@ public sealed class AgentAvailabilityReportProvider : ContactCenterReportBase, I
             .Select(diagnosis =>
             {
                 var agent = diagnosis.Agent;
-                var flags = diagnosis.Flags.Select(DescribeFlag).ToArray();
-                var history = DescribeHistory(diagnosis);
+                var flags = diagnosis.Flags.Select(flag => DescribeFlag(flag, timeZone)).ToArray();
+                var history = DescribeHistory(diagnosis, timeZone);
                 var row = new ReportRow(
                 [
                     AgentName(agent),
                     string.IsNullOrWhiteSpace(agent.PresenceReason)
                         ? agent.PresenceStatus.ToString()
                         : S["{0} ({1})", agent.PresenceStatus.ToString(), agent.PresenceReason].Value,
-                    Timestamp(diagnosis.AvailableSinceUtc),
+                    Timestamp(diagnosis.AvailableSinceUtc, timeZone),
                     diagnosis.AvailableSinceUtc.HasValue ? Age(nowUtc, diagnosis.AvailableSinceUtc.Value) : "—",
-                    Timestamp(diagnosis.LastCallAssignedUtc),
-                    Timestamp(diagnosis.LastCallEndedUtc),
+                    Timestamp(diagnosis.LastCallAssignedUtc, timeZone),
+                    Timestamp(diagnosis.LastCallEndedUtc, timeZone),
                     ReportFormat.Number(diagnosis.CallsToday),
                     AuditReportFormat.Clock(diagnosis.LongestWaitSeconds),
                     DescribeSignedIn(diagnosis),
@@ -525,12 +526,12 @@ public sealed class AgentAvailabilityReportProvider : ContactCenterReportBase, I
         return reasons;
     }
 
-    private string DescribeFlag(AgentAvailabilityFlag flag)
+    private string DescribeFlag(AgentAvailabilityFlag flag, ReportTimeZone timeZone)
     {
         if (flag.Kind == AgentAvailabilityFlagKind.AvailableWithoutLiveSession)
         {
             return flag.SinceUtc.HasValue
-                ? S["Available with no live session (last heartbeat {0} UTC).", AuditReportFormat.Timestamp(flag.SinceUtc.Value)].Value
+                ? S["Available with no live session (last heartbeat {0}).", AuditReportFormat.Timestamp(flag.SinceUtc.Value, timeZone)].Value
                 : S["Available with no live session (no session at all)."].Value;
         }
 
@@ -554,7 +555,7 @@ public sealed class AgentAvailabilityReportProvider : ContactCenterReportBase, I
 
         if (flag.SinceUtc.HasValue)
         {
-            parts.Add(S["Since {0} UTC.", AuditReportFormat.Timestamp(flag.SinceUtc.Value)].Value);
+            parts.Add(S["Since {0}.", AuditReportFormat.Timestamp(flag.SinceUtc.Value, timeZone)].Value);
         }
 
         if (!string.IsNullOrWhiteSpace(flag.Detail))
@@ -565,7 +566,7 @@ public sealed class AgentAvailabilityReportProvider : ContactCenterReportBase, I
         return string.Join(" ", parts);
     }
 
-    private List<string> DescribeHistory(AgentAvailabilityDiagnosis diagnosis)
+    private List<string> DescribeHistory(AgentAvailabilityDiagnosis diagnosis, ReportTimeZone timeZone)
     {
         var notes = new List<string>();
         var profileState = diagnosis.Agent.PresenceStatus.ToString();
@@ -581,16 +582,16 @@ public sealed class AgentAvailabilityReportProvider : ContactCenterReportBase, I
         }
 
         var recordedState = diagnosis.RecordedState.Value.ToString();
-        var recordedSince = AuditReportFormat.Timestamp(diagnosis.RecordedSinceUtc.Value);
+        var recordedSince = AuditReportFormat.Timestamp(diagnosis.RecordedSinceUtc.Value, timeZone);
 
         if ((diagnosis.HistoryDisagreement & AgentHistoryDisagreement.CountedSignedInWithoutLiveSession) != 0)
         {
-            notes.Add(S["No sign-out is recorded after the change to {0} at {1} UTC, so the time summary counts this agent as {0} up to now, but the agent has no live session.", recordedState, recordedSince].Value);
+            notes.Add(S["No sign-out is recorded after the change to {0} at {1}, so the time summary counts this agent as {0} up to now, but the agent has no live session.", recordedState, recordedSince].Value);
         }
 
         if ((diagnosis.HistoryDisagreement & AgentHistoryDisagreement.StateDiffers) != 0)
         {
-            notes.Add(S["The profile says {0}, but the last recorded change is to {1} at {2} UTC.", profileState, recordedState, recordedSince].Value);
+            notes.Add(S["The profile says {0}, but the last recorded change is to {1} at {2}.", profileState, recordedState, recordedSince].Value);
         }
 
         return notes;
@@ -610,8 +611,8 @@ public sealed class AgentAvailabilityReportProvider : ContactCenterReportBase, I
     private string AgentName(AgentProfile agent)
         => ReportValue.UserDisplayName(agent.UserName, S["(Unknown agent)"].Value);
 
-    private static string Timestamp(DateTime? value)
-        => value.HasValue ? AuditReportFormat.Timestamp(value.Value) : "—";
+    private static string Timestamp(DateTime? value, ReportTimeZone timeZone)
+        => value.HasValue ? AuditReportFormat.Timestamp(value.Value, timeZone) : "—";
 
     private static string Age(DateTime nowUtc, DateTime sinceUtc)
         => AuditReportFormat.Clock(Math.Max(0d, (nowUtc - sinceUtc).TotalSeconds));

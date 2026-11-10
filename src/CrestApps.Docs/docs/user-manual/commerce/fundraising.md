@@ -40,7 +40,7 @@ Under **Settings > Commerce > Fundraising**:
 1. Add the **Fundraising campaign** part to a product's content type. The sample's **Fundraising Campaign** type has it.
 2. On the campaign, enter its **Goal**, or leave it empty for none.
 3. Enter the **Suggested amounts** offered as buttons, such as 25, 50, 100, and the **Least donation**.
-4. Enter when it **Ends (UTC)**, or leave it empty for no end.
+4. Enter when it **Ends**, in the site's time zone, or leave it empty for no end.
 5. Tick **Donations get a tax receipt** when gifts are tax-deductible.
 
 Set the product's price display to hide its price, since donors choose the amount.

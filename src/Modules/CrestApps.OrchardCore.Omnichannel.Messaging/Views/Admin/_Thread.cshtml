@@ -1,6 +1,7 @@
 @using CrestApps.OrchardCore.Omnichannel.Messaging.Services
 @using CrestApps.OrchardCore.Omnichannel.Messaging.Models
 @model ThreadViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
 
 @{
     var conversation = Model.Conversation;
@@ -194,12 +195,14 @@
                 foreach (var item in ThreadTimeline.Merge(Model.Messages, Model.Events))
                 {
                     // A day separator whenever the calendar date changes.
-                    var localDay = item.OccurredUtc.ToLocalTime().Date;
+                    // Stored times are UTC; the day and its label are read in the site time zone.
+                    var localTime = (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(item.OccurredUtc, DateTimeKind.Utc))).DateTime;
+                    var localDay = localTime.Date;
                     if (lastDay != localDay)
                     {
                         lastDay = localDay;
                         <div class="text-center my-3">
-                            <span class="badge rounded-pill text-bg-light border">@item.OccurredUtc.ToLocalTime().ToString("D")</span>
+                            <span class="badge rounded-pill text-bg-light border">@localTime.ToString("D")</span>
                         </div>
                     }
 
@@ -320,7 +323,7 @@
                     </span>
                     @if (conversation.SummaryGeneratedUtc.HasValue)
                     {
-                        <span class="text-muted small text-nowrap" title="@T["When this summary was generated"]">@conversation.SummaryGeneratedUtc.Value.ToLocalTime().ToString("g")</span>
+                        <span class="text-muted small text-nowrap" title="@T["When this summary was generated"]">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(conversation.SummaryGeneratedUtc.Value, DateTimeKind.Utc), Format: "g"))</span>
                     }
                 </div>
                 <div class="card-body">

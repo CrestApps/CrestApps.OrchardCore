@@ -4,8 +4,10 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 using YesSql;
@@ -21,6 +23,7 @@ public sealed class OpportunityPipelineReportProvider : OmnichannelReportBase, I
 {
     private readonly ISession _session;
     private readonly INamedCatalog<OpportunityStage> _stages;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OpportunityPipelineReportProvider"/> class.
@@ -28,14 +31,17 @@ public sealed class OpportunityPipelineReportProvider : OmnichannelReportBase, I
     /// <param name="session">The YesSql session.</param>
     /// <param name="stages">The opportunity stage catalog.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="logger">The logger, which warns when the report reads more index rows than it should hold in memory.</param>
     public OpportunityPipelineReportProvider(
         ISession session,
         INamedCatalog<OpportunityStage> stages,
-        IStringLocalizer<OpportunityPipelineReportProvider> stringLocalizer)
+        IStringLocalizer<OpportunityPipelineReportProvider> stringLocalizer,
+        ILogger<OpportunityPipelineReportProvider> logger = null)
         : base(stringLocalizer)
     {
         _session = session;
         _stages = stages;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -78,6 +84,8 @@ public sealed class OpportunityPipelineReportProvider : OmnichannelReportBase, I
                 index.CloseDate <= to)
             .ListAsync(cancellationToken))
             .ToList();
+
+        ReportTelemetry.RecordCodedIndexRows(Name, open.Count + closed.Count, _logger);
 
         var pipelineColumns = new[]
         {

@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Bookings.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -20,7 +21,10 @@ public sealed class BookingsBackgroundTask : IBackgroundTask
 {
     private const int BatchSize = 50;
 
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => ReleaseAndChargeAsync(serviceProvider, run, cancellationToken));
+
+    private static async Task ReleaseAndChargeAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var bookings = serviceProvider.GetRequiredService<BookingService>();
         var balances = serviceProvider.GetRequiredService<IBookingBalanceStore>();
@@ -28,16 +32,19 @@ public sealed class BookingsBackgroundTask : IBackgroundTask
         var clock = serviceProvider.GetRequiredService<IClock>();
         var logger = serviceProvider.GetRequiredService<ILogger<BookingsBackgroundTask>>();
 
-        await bookings.ReleaseExpiredAsync(BatchSize, cancellationToken);
+        run.AddItems(await bookings.ReleaseExpiredAsync(BatchSize, cancellationToken), "released");
 
         foreach (var balance in await balances.ListDueAsync(clock.UtcNow, BatchSize, cancellationToken))
         {
             try
             {
-                await charger.ChargeAsync(balance, cancellationToken);
+                var failure = await charger.ChargeAsync(balance, cancellationToken);
+
+                run.AddItems(1, failure is null ? "charged" : "charge_failed");
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
+                run.AddItems(1, CrestAppsOrchardCoreTelemetry.OutcomeError);
                 logger.LogError(ex, "The balance of order '{OrderNumber}' couldn't be charged.", balance.OrderNumber);
             }
         }

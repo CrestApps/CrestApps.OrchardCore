@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -43,13 +44,18 @@ public sealed class OrphanedActivityRecoveryBackgroundTask : IBackgroundTask
     private const int LockExpirationMilliseconds = 120_000;
 
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => DoWorkAsync(serviceProvider, run, cancellationToken));
+
+    private static async Task DoWorkAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var workManager = serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>();
         using var workLease = workManager.TryEnter(ContactCenterConstants.Feature.Queues);
 
         if (workLease is null)
         {
+            run.SkipForLease();
+
             return;
         }
 
@@ -60,6 +66,14 @@ public sealed class OrphanedActivityRecoveryBackgroundTask : IBackgroundTask
             TimeSpan.FromMinutes(GracePeriodMinutes),
             MaxRecoveriesPerRun,
             cancellationToken);
+
+        // Any steady rate of orphans is a state-machine leak worth an alert.
+        run.AddItems(recovered, "recovered");
+
+        if (recovered >= MaxRecoveriesPerRun)
+        {
+            run.BudgetExceeded();
+        }
 
         if (recovered > 0 && logger.IsEnabled(LogLevel.Information))
         {

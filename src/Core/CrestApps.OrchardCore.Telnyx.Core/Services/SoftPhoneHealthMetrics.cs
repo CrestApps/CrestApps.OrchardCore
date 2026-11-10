@@ -1,4 +1,6 @@
 using System.Threading;
+using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Telephony.Telemetry;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Telnyx.Services;
@@ -105,12 +107,23 @@ public sealed class SoftPhoneHealthMetrics : ISoftPhoneHealthMetrics
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Also recorded on <see cref="TelephonyTelemetry.SoftPhoneCredentials"/>, so an OpenTelemetry collector sees what
+    /// the health canary reads. Webhook processing is not bridged: <c>crestapps.telnyx.webhooks</c> already counts
+    /// every delivery by result.
+    /// </remarks>
     public void RecordCredentialIssued()
-        => Interlocked.Increment(ref _credentialsIssued);
+    {
+        Interlocked.Increment(ref _credentialsIssued);
+        TelephonyTelemetry.RecordSoftPhoneCredential(TelnyxConstants.ProviderTechnicalName, TelephonyTelemetry.CredentialIssue, CrestAppsOrchardCoreTelemetry.OutcomeOk);
+    }
 
     /// <inheritdoc/>
     public void RecordCredentialFailure()
-        => Interlocked.Increment(ref _credentialFailures);
+    {
+        Interlocked.Increment(ref _credentialFailures);
+        TelephonyTelemetry.RecordSoftPhoneCredential(TelnyxConstants.ProviderTechnicalName, TelephonyTelemetry.CredentialIssue, CrestAppsOrchardCoreTelemetry.OutcomeError);
+    }
 
     /// <inheritdoc/>
     public void RecordWebhookProcessed(bool succeeded)

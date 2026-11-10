@@ -351,9 +351,10 @@ public sealed class CallRecordingsController : Controller
             return NotFound();
         }
 
-        var (token, expires) = links.Create(recording.ItemId);
+        var (token, expiresUtc) = links.Create(recording.ItemId);
         await AuditAccessAsync(recording, access, "call-recordings-share");
-        await _notifier.SuccessAsync(H["Anyone with this link can play the recording until {0} UTC: {1}", expires.ToString("g", CultureInfo.CurrentCulture), CallRecordingLinkEndpoints.BuildUrl(Request, token)]);
+        var expires = await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(expiresUtc, DateTimeKind.Utc));
+        await _notifier.SuccessAsync(H["Anyone with this link can play the recording until {0}: {1}", expires.DateTime.ToString("g", CultureInfo.CurrentCulture), CallRecordingLinkEndpoints.BuildUrl(Request, token)]);
 
         return RedirectToRoute(DisplayRouteName, new { id });
     }

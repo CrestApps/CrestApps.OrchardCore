@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Workforce.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
@@ -17,10 +18,13 @@ namespace CrestApps.OrchardCore.Workforce.BackgroundTasks;
 public sealed class TimeOffTimeTrackerBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc />
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        var now = await serviceProvider.GetRequiredService<ILocalClock>().GetLocalNowAsync();
+        return this.RunAsync(async run =>
+        {
+            var now = await serviceProvider.GetRequiredService<ILocalClock>().GetLocalNowAsync();
 
-        await serviceProvider.GetRequiredService<TimeOffTimeTrackerRefresher>().RunAsync(DateOnly.FromDateTime(now.DateTime), cancellationToken);
+            run.AddItems(await serviceProvider.GetRequiredService<TimeOffTimeTrackerRefresher>().RunAsync(DateOnly.FromDateTime(now.DateTime), cancellationToken), "refreshed");
+        });
     }
 }

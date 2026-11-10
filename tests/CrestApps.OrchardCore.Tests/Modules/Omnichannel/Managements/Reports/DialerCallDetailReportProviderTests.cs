@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Reports.Services;
+using CrestApps.OrchardCore.Tests.Modules.AI.Chat.Reports;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.Options;
@@ -98,7 +99,7 @@ public sealed class DialerCallDetailReportProviderTests
             // Assert
             var section = Assert.Single(document.Sections);
             Assert.Equal(
-                ["Phone number", "Contact", "Campaign", "Last disposition", "Attempts", "Completed (UTC)", "Agent", "Status"],
+                ["Phone number", "Contact", "Campaign", "Last disposition", "Attempts", "Completed", "Agent", "Status"],
                 section.Columns.Select(column => column.Label));
             Assert.Equal(2, section.Rows.Count);
 
@@ -113,7 +114,7 @@ public sealed class DialerCallDetailReportProviderTests
                     "Spring renewal",
                     "No answer",
                     "2",
-                    "2026-09-24 21:05:00Z",
+                    "2026-09-24 17:05:00",
                     ReportValue.UserDisplayName("agent.smith", "(Unknown user)"),
                     "Completed",
                 ],
@@ -392,7 +393,7 @@ public sealed class DialerCallDetailReportProviderTests
 
             // Assert
             var lines = csv.Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
-            Assert.Equal("Phone number,Contact,Campaign,Last disposition,Attempts,Completed (UTC),Agent,Status", lines[0]);
+            Assert.Equal("Phone number,Contact,Campaign,Last disposition,Attempts,Completed,Agent,Status", lines[0]);
             Assert.Equal(4, lines.Length);
             Assert.StartsWith(NumberedPhone(3) + ",", lines[1], StringComparison.Ordinal);
         }
@@ -495,6 +496,7 @@ public sealed class DialerCallDetailReportProviderTests
             campaignManager.Object,
             dispositionManager.Object,
             Options.Create(sourceOptions),
+            ReportTestClocks.LocalClock(TimeSpan.FromHours(-4)),
             new PassThroughStringLocalizer<DialerCallDetailReportProvider>());
     }
 

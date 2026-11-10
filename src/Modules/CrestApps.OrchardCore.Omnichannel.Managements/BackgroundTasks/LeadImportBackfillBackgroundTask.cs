@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
@@ -36,10 +37,17 @@ public sealed class LeadImportBackfillBackgroundTask : IBackgroundTask
     private bool _completed;
 
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    {
+        return this.RunAsync(run => BackfillAsync(serviceProvider, run, cancellationToken));
+    }
+
+    private async Task BackfillAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         if (_completed)
         {
+            run.Skip();
+
             return;
         }
 
@@ -49,6 +57,7 @@ public sealed class LeadImportBackfillBackgroundTask : IBackgroundTask
         if (state.Completed.Contains(BackfillName))
         {
             _completed = true;
+            run.Skip();
 
             return;
         }
@@ -69,11 +78,17 @@ public sealed class LeadImportBackfillBackgroundTask : IBackgroundTask
 
         state.Cursors[BackfillName] = step.Cursor;
 
+        run.AddItems(step.Recorded, "recorded");
         if (step.Completed)
         {
             state.Completed.Add(BackfillName);
             state.Cursors.Remove(BackfillName);
             _completed = true;
+        }
+        else
+        {
+            // The run read its pages and stopped; the leads after its cursor wait for the next run.
+            run.BudgetExceeded();
         }
 
         await stateManager.UpdateAsync(state);

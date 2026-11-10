@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Accounts.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
@@ -28,7 +29,7 @@ internal sealed class AccountPartHandler : ContentPartHandler<AccountPart>
 
         var accountId = context.ContentItem.ContentItemId;
 
-        ShellScope.AddDeferredTask(scope => DetachChildrenAsync(scope, accountId));
+        DeferredWork.Add("account_detach_children", scope => DetachChildrenAsync(scope, accountId));
 
         return Task.CompletedTask;
     }

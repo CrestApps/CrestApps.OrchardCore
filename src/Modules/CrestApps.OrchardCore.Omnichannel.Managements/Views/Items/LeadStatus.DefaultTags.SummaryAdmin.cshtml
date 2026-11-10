@@ -9,6 +9,12 @@
         <i class="fa-solid fa-star text-secondary me-1" aria-hidden="true"></i>@T["Default"]
     </span>
 }
+@if (Model.Value.IsContacted)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["A lead in the default status moves to this status once an activity for it is completed."]">
+        <i class="fa-solid fa-phone text-secondary me-1" aria-hidden="true"></i>@T["Contacted"]
+    </span>
+}
 @if (Model.Value.IsClosed)
 {
     <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["A lead with this status is closed."]">

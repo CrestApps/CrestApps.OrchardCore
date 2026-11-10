@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Indexes;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
@@ -34,7 +35,10 @@ public sealed class PhoneNumberRevalidationBackgroundTask : IBackgroundTask
     private const int MaxProcessingDurationMilliseconds = 1_500_000;
 
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => RevalidateAsync(serviceProvider, run, cancellationToken));
+
+    private static async Task RevalidateAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         string[] dueContentItemIds;
 
@@ -47,6 +51,8 @@ public sealed class PhoneNumberRevalidationBackgroundTask : IBackgroundTask
 
             if ((await verificationManager.GetEnabledProvidersAsync(cancellationToken)).Count == 0)
             {
+                run.Skip();
+
                 return;
             }
 
@@ -73,10 +79,18 @@ public sealed class PhoneNumberRevalidationBackgroundTask : IBackgroundTask
                 .Where(contentItemId => !string.IsNullOrEmpty(contentItemId))
                 .Distinct(StringComparer.Ordinal)
                 .ToArray();
+
+            // A full page means more numbers are due than one run takes on; the rest wait for the next run.
+            if (dueIndexes.Count >= maxItemsPerRun)
+            {
+                run.BudgetExceeded();
+            }
         }
 
         if (dueContentItemIds.Length == 0)
         {
+            run.Skip();
+
             return;
         }
 
@@ -110,6 +124,8 @@ public sealed class PhoneNumberRevalidationBackgroundTask : IBackgroundTask
             {
                 delayBeforeNextRequest = true;
             }
+
+            run.AddItems(processed);
 
             foreach (var contentItem in contentItems)
             {

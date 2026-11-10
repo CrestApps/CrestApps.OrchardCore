@@ -39,12 +39,12 @@
                 </select>
             </div>
             <div class="col-6 col-md-4">
-                <label asp-for="ExpiresUtc" class="form-label">@T["Ends (UTC)"]</label>
-                <input asp-for="ExpiresUtc" type="datetime-local" step="1" class="form-control" />
+                <label asp-for="Expires" class="form-label">@T["Ends"]</label>
+                <input asp-for="Expires" type="datetime-local" step="1" class="form-control" />
             </div>
             <div class="col-6 col-md-4">
-                <label asp-for="FeaturedUntilUtc" class="form-label">@T["Featured until (UTC)"]</label>
-                <input asp-for="FeaturedUntilUtc" type="datetime-local" step="1" class="form-control" />
+                <label asp-for="FeaturedUntil" class="form-label">@T["Featured until"]</label>
+                <input asp-for="FeaturedUntil" type="datetime-local" step="1" class="form-control" />
             </div>
         </div>
         <span class="hint">@T["A listing that's up is taken down when it ends. Approve or reject what's waiting from Content, Posted listings."]</span>

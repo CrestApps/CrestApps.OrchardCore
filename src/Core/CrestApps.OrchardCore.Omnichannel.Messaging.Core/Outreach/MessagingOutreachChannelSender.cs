@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Outreach;
 using CrestApps.OrchardCore.Outreach.Models;
@@ -60,7 +61,14 @@ public sealed class MessagingOutreachChannelSender : IOutreachChannelSender
 
         // A message held back by the address's sending limits, or waiting for a retry, is queued and the outbox sends it
         // later, so it is not a failure.
-        return result.Succeeded || string.Equals(result.Message?.DeliveryStatus, MessageDeliveryStatus.Queued.ToString(), StringComparison.Ordinal)
+        var accepted = result.Succeeded || string.Equals(result.Message?.DeliveryStatus, MessageDeliveryStatus.Queued.ToString(), StringComparison.Ordinal);
+
+        if (string.Equals(run.OwnerType, MessagingOutreachConstants.BroadcastOwnerType, StringComparison.Ordinal))
+        {
+            MessagingTelemetry.RecordBroadcastRecipient(_channelResolver.Get(run.Channel)?.Name, accepted);
+        }
+
+        return accepted
             ? OutreachSendResult.Success()
             : OutreachSendResult.Failure(result.Error);
     }

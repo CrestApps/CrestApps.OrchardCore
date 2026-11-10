@@ -94,7 +94,7 @@ public sealed partial class ContactCenterMonitoringService
 
         try
         {
-            var providerResult = await _commandExecutor.ExecuteAsync(commandCancellationToken =>
+            var providerResult = await _commandExecutor.ExecuteAsync(interaction.ProviderName, "MonitorSwitchMode", commandCancellationToken =>
                 interventionProvider.SwitchModeAsync(new ContactCenterVoiceMonitoringRequest
                 {
                     InteractionId = interaction.ItemId,

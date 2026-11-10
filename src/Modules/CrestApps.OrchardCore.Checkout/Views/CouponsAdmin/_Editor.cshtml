@@ -185,17 +185,19 @@
 </div>
 
 <div class="ocat-limited-wrapper" asp-validation-class-for="StartsUtc">
-    <label asp-for="StartsUtc" class="ocat-label">@T["Valid from (UTC)"]</label>
+    <label asp-for="Starts" class="ocat-label">@T["Valid from"]</label>
     <div class="ocat-limited">
-        <input asp-for="StartsUtc" type="datetime-local" class="form-control" />
+        <input asp-for="Starts" type="datetime-local" class="form-control" />
+        <span asp-validation-for="Starts"></span>
         <span asp-validation-for="StartsUtc"></span>
     </div>
 </div>
 
 <div class="ocat-limited-wrapper" asp-validation-class-for="EndsUtc">
-    <label asp-for="EndsUtc" class="ocat-label">@T["Valid until (UTC)"]</label>
+    <label asp-for="Ends" class="ocat-label">@T["Valid until"]</label>
     <div class="ocat-limited">
-        <input asp-for="EndsUtc" type="datetime-local" class="form-control" />
+        <input asp-for="Ends" type="datetime-local" class="form-control" />
+        <span asp-validation-for="Ends"></span>
         <span asp-validation-for="EndsUtc"></span>
     </div>
 </div>

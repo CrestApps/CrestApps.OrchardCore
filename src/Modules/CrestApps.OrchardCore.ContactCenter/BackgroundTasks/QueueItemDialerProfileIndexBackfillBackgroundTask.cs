@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -42,10 +43,15 @@ public sealed class QueueItemDialerProfileIndexBackfillBackgroundTask : IBackgro
     private bool _completed;
 
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => DoWorkAsync(serviceProvider, run, cancellationToken));
+
+    private async Task DoWorkAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         if (_completed)
         {
+            run.Skip();
+
             return;
         }
 
@@ -54,6 +60,8 @@ public sealed class QueueItemDialerProfileIndexBackfillBackgroundTask : IBackgro
 
         if (workLease is null)
         {
+            run.SkipForLease();
+
             return;
         }
 
@@ -125,6 +133,8 @@ public sealed class QueueItemDialerProfileIndexBackfillBackgroundTask : IBackgro
             reindexed += saved;
             _cursor = rows.Max(row => row.DocumentId);
         }
+
+        run.AddItems(reindexed, "indexed");
 
         if (reindexed > 0 && logger.IsEnabled(LogLevel.Information))
         {

@@ -196,7 +196,7 @@ public sealed partial class ContactCenterMonitoringService : IContactCenterMonit
 
         try
         {
-            var providerResult = await _commandExecutor.ExecuteAsync(commandCancellationToken =>
+            var providerResult = await _commandExecutor.ExecuteAsync(interaction.ProviderName, "MonitorEngage", commandCancellationToken =>
                 monitoringProvider.EngageAsync(new ContactCenterVoiceMonitoringRequest
                 {
                     InteractionId = interaction.ItemId,
@@ -324,7 +324,7 @@ public sealed partial class ContactCenterMonitoringService : IContactCenterMonit
 
         try
         {
-            var providerResult = await _commandExecutor.ExecuteAsync(commandCancellationToken =>
+            var providerResult = await _commandExecutor.ExecuteAsync(interaction.ProviderName, "MonitorStop", commandCancellationToken =>
                 monitoringProvider.StopAsync(new ContactCenterVoiceMonitoringRequest
                 {
                     InteractionId = interaction.ItemId,
@@ -437,7 +437,7 @@ public sealed partial class ContactCenterMonitoringService : IContactCenterMonit
 
             try
             {
-                providerResult = await _commandExecutor.ExecuteAsync(commandCancellationToken =>
+                providerResult = await _commandExecutor.ExecuteAsync(interaction.ProviderName, "MonitorStop", commandCancellationToken =>
                     monitoringProvider.StopAsync(new ContactCenterVoiceMonitoringRequest
                     {
                         InteractionId = interaction.ItemId,

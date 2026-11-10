@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.DncRegistry.Indexes;
 using CrestApps.OrchardCore.DncRegistry.Models;
 using CrestApps.OrchardCore.DncRegistry.Services;
@@ -23,12 +24,26 @@ public sealed class LocalDncImportBackgroundTask : IBackgroundTask
 
     /// <inheritdoc/>
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-        => ProcessEntriesAsync(serviceProvider, cancellationToken: cancellationToken);
+    {
+        // Each list is imported under a lock of its own held for up to 30 minutes, far past the 30 second lock of the
+        // task itself, so the run is measured without the task's lock expiration; its lock utilization would
+        // otherwise always read far above 1.
+        return BackgroundTaskTelemetry.RunAsync(
+            nameof(LocalDncImportBackgroundTask),
+            run => ProcessEntriesCoreAsync(serviceProvider, listId: null, run, cancellationToken));
+    }
 
-    internal static async Task ProcessEntriesAsync(
+    internal static Task ProcessEntriesAsync(
         IServiceProvider serviceProvider,
         string listId = null,
         CancellationToken cancellationToken = default)
+        => ProcessEntriesCoreAsync(serviceProvider, listId, run: null, cancellationToken);
+
+    private static async Task ProcessEntriesCoreAsync(
+        IServiceProvider serviceProvider,
+        string listId,
+        MeasuredTaskRun run,
+        CancellationToken cancellationToken)
     {
         var session = serviceProvider.GetRequiredService<ISession>();
         var distributedLock = serviceProvider.GetRequiredService<IDistributedLock>();
@@ -72,6 +87,18 @@ public sealed class LocalDncImportBackgroundTask : IBackgroundTask
                 .ToList();
         }
 
+        if (work.Count == 0)
+        {
+            run?.Skip();
+
+            return;
+        }
+
+        var imports = 0;
+        var deletions = 0;
+        var failed = 0;
+        var contended = 0;
+
         foreach (var (list, action) in work)
         {
             if (cancellationToken.IsCancellationRequested)
@@ -84,14 +111,25 @@ public sealed class LocalDncImportBackgroundTask : IBackgroundTask
                 if (action == LocalDncListRecoveryAction.Delete)
                 {
                     await ResumeDeletionAsync(serviceProvider, list, logger, cancellationToken);
+                    deletions++;
 
                     continue;
                 }
 
-                await ImportAsync(serviceProvider, distributedLock, list, logger, cancellationToken);
+                if (await ImportAsync(serviceProvider, distributedLock, list, logger, cancellationToken))
+                {
+                    imports++;
+                }
+                else
+                {
+                    contended++;
+                }
             }
             catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
             {
+                failed++;
+                run?.ReportError(ex);
+
                 // One list must not keep the others waiting; it is picked up again on the next run.
                 logger.LogError(
                     ex,
@@ -101,6 +139,11 @@ public sealed class LocalDncImportBackgroundTask : IBackgroundTask
                     list.Status);
             }
         }
+
+        run?.AddItems(imports, "imported");
+        run?.AddItems(deletions, "deleted");
+        run?.AddItems(failed, "failed");
+        run?.AddItems(contended, "skipped_lock");
     }
 
     internal static string GetImportLockKey(string listId)
@@ -128,7 +171,11 @@ public sealed class LocalDncImportBackgroundTask : IBackgroundTask
         await manager.DeleteAsync(list.ListId, cancellationToken);
     }
 
-    private static async Task ImportAsync(
+    /// <summary>
+    /// Imports a list under its lock.
+    /// </summary>
+    /// <returns><see langword="false"/> when another worker holds the lock of the list.</returns>
+    private static async Task<bool> ImportAsync(
         IServiceProvider serviceProvider,
         IDistributedLock distributedLock,
         LocalDncList list,
@@ -150,7 +197,7 @@ public sealed class LocalDncImportBackgroundTask : IBackgroundTask
                     list.Status);
             }
 
-            return;
+            return false;
         }
 
         await using var acquiredLock = locker;
@@ -178,8 +225,16 @@ public sealed class LocalDncImportBackgroundTask : IBackgroundTask
                 list.Error);
         }
 
+        if (list.Status == LocalDncListStatus.Failed)
+        {
+            // The attempt about to be made: the first automatic retry of a list that failed once is attempt 2.
+            RetryTelemetry.RecordRetry("dnc", "failed_import", list.FailedAttempts + 1);
+        }
+
         await using var scope = serviceProvider.CreateAsyncScope();
         var manager = scope.ServiceProvider.GetRequiredService<ILocalDncListManager>();
         await manager.ProcessImportAsync(list.ListId, cancellationToken);
+
+        return true;
     }
 }

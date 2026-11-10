@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -38,7 +40,10 @@ public sealed class TenantProvisioningBackgroundTask : IBackgroundTask
         => _logger = logger;
 
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => ProvisionDueAsync(serviceProvider, run, cancellationToken));
+
+    private async Task ProvisionDueAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var jobStore = serviceProvider.GetRequiredService<ITenantProvisioningJobStore>();
         var provisioningService = serviceProvider.GetRequiredService<ITenantProvisioningService>();
@@ -48,7 +53,15 @@ public sealed class TenantProvisioningBackgroundTask : IBackgroundTask
 
         if (due.Count == 0)
         {
+            run.Skip();
+
             return;
+        }
+
+        if (due.Count > MaxJobsPerRun)
+        {
+            // The rest wait for the next run, a minute away.
+            run.BudgetExceeded();
         }
 
         foreach (var job in due.Take(MaxJobsPerRun))
@@ -60,11 +73,20 @@ public sealed class TenantProvisioningBackgroundTask : IBackgroundTask
 
             try
             {
-                await provisioningService.ProvisionAsync(job.ItemId, cancellationToken);
+                var status = await provisioningService.ProvisionAsync(job.ItemId, cancellationToken);
+
+                run.AddItems(1, status switch
+                {
+                    TenantProvisioningStatus.Succeeded => "succeeded",
+                    TenantProvisioningStatus.Abandoned => "abandoned",
+                    TenantProvisioningStatus.Failed => "failed",
+                    _ => "busy",
+                });
             }
             catch (Exception exception)
             {
                 // One bad job must not stop the sweep; its own back-off brings it round again.
+                run.AddItems(1, CrestAppsOrchardCoreTelemetry.OutcomeError);
                 _logger.LogError(exception, "The provisioning sweep failed on job '{JobId}'.", job.ItemId);
             }
         }

@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using CrestApps.OrchardCore.ContentTransfer.Telemetry;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.ContentTransfer.BackgroundTasks;
@@ -23,7 +25,9 @@ internal sealed record ImportRunLimits(
 /// <param name="Abandoned"><see langword="true"/> when the watchdog gave up on the run, or the host is stopping.</param>
 /// <param name="Result">What the run returned; the default when it was abandoned.</param>
 /// <param name="StalledRowIndex">The row the run was stuck on when it was abandoned; 0 when it was between rows.</param>
-internal readonly record struct SupervisedImportRun<TResult>(bool Abandoned, TResult Result, int StalledRowIndex);
+/// <param name="AbandonReason">Why the run was abandoned: <c>row_timeout</c>, <c>run_timeout</c> or <c>host_stopping</c>;
+/// <see langword="null"/> when it was not.</param>
+internal readonly record struct SupervisedImportRun<TResult>(bool Abandoned, TResult Result, int StalledRowIndex, string AbandonReason = null);
 
 /// <summary>
 /// Runs an import under a watchdog, so a row that never finishes cannot keep the import lock forever.
@@ -53,6 +57,12 @@ internal static class ImportRunSupervisor
         var monitor = new ImportRunMonitor();
         var started = Stopwatch.GetTimestamp();
 
+        // The row in flight is reported until the work itself ends, so a run stuck after the watchdog gave up on it
+        // still shows on the gauge.
+        var rowInFlight = ContentTransferDiagnostics.TrackRowInFlight(() => monitor.TryGetRowInFlight(out _, out var elapsed)
+            ? elapsed
+            : null);
+
         // Started on the thread pool, so a row stuck in synchronous work cannot hold the watchdog either.
         var work = Task.Run(() => run(monitor, runCts.Token), CancellationToken.None);
         var warnedRowIndex = 0;
@@ -64,6 +74,7 @@ internal static class ImportRunSupervisor
             if (work.IsCompleted)
             {
                 runCts.Dispose();
+                rowInFlight.Dispose();
 
                 return new SupervisedImportRun<TResult>(false, await work, 0);
             }
@@ -71,7 +82,9 @@ internal static class ImportRunSupervisor
             if (cancellationToken.IsCancellationRequested)
             {
                 // The host is stopping and the run did not stop with it. It resumes from its saved row next time.
-                return Abandon(work, runCts, logger, entryId, started, stalledRowIndex: 0);
+                monitor.TryGetRowInFlight(out _, out var stoppingRowElapsed);
+
+                return Abandon(work, runCts, rowInFlight, logger, entryId, started, stalledRowIndex: 0, ContentTransferDiagnostics.ReasonHostStopping, stoppingRowElapsed);
             }
 
             var hasRowInFlight = monitor.TryGetRowInFlight(out var rowIndex, out var rowElapsed);
@@ -87,7 +100,7 @@ internal static class ImportRunSupervisor
                         rowElapsed);
                 }
 
-                return Abandon(work, runCts, logger, entryId, started, rowIndex);
+                return Abandon(work, runCts, rowInFlight, logger, entryId, started, rowIndex, ContentTransferDiagnostics.ReasonRowTimeout, rowElapsed);
             }
 
             var runElapsed = Stopwatch.GetElapsedTime(started);
@@ -104,12 +117,22 @@ internal static class ImportRunSupervisor
                         hasRowInFlight ? rowIndex : null);
                 }
 
-                return Abandon(work, runCts, logger, entryId, started, hasRowInFlight ? rowIndex : 0);
+                return Abandon(
+                    work,
+                    runCts,
+                    rowInFlight,
+                    logger,
+                    entryId,
+                    started,
+                    hasRowInFlight ? rowIndex : 0,
+                    ContentTransferDiagnostics.ReasonRunTimeout,
+                    rowElapsed);
             }
 
             if (hasRowInFlight && rowElapsed >= limits.SlowRowThreshold && rowIndex != warnedRowIndex)
             {
                 warnedRowIndex = rowIndex;
+                ContentTransferDiagnostics.Add(ContentTransferDiagnostics.ImportSlowRows, 1);
 
                 if (logger.IsEnabled(LogLevel.Warning))
                 {
@@ -127,20 +150,39 @@ internal static class ImportRunSupervisor
     private static SupervisedImportRun<TResult> Abandon<TResult>(
         Task<TResult> work,
         CancellationTokenSource runCts,
+        IDisposable rowInFlight,
         ILogger logger,
         string entryId,
         long started,
-        int stalledRowIndex)
+        int stalledRowIndex,
+        string reason,
+        TimeSpan rowElapsed)
     {
         // Cancelled before anything else: the run checks the token before it saves a batch, so if it ever wakes up it
         // cannot record progress over the run that replaces it.
         runCts.Cancel();
+
+        ContentTransferDiagnostics.Add(ContentTransferDiagnostics.ImportAbandoned, 1, CrestAppsOrchardCoreTelemetry.ReasonTag, reason);
+
+        if (rowElapsed > TimeSpan.Zero)
+        {
+            ContentTransferDiagnostics.Record(ContentTransferDiagnostics.ImportStalledRowElapsed, rowElapsed.TotalSeconds, new TagList
+            {
+                { CrestAppsOrchardCoreTelemetry.ReasonTag, reason },
+            });
+        }
+
+        if (logger.IsEnabled(LogLevel.Warning))
+        {
+            ContentTransferLog.ImportRunAbandoned(logger, entryId, reason, Stopwatch.GetElapsedTime(started), rowElapsed);
+        }
 
         // The source is disposed only once the run has ended, since the run still holds its token.
         _ = work.ContinueWith(
             completed =>
             {
                 runCts.Dispose();
+                rowInFlight.Dispose();
 
                 if (logger.IsEnabled(LogLevel.Warning))
                 {
@@ -156,6 +198,6 @@ internal static class ImportRunSupervisor
             TaskContinuationOptions.ExecuteSynchronously,
             TaskScheduler.Default);
 
-        return new SupervisedImportRun<TResult>(true, default, stalledRowIndex);
+        return new SupervisedImportRun<TResult>(true, default, stalledRowIndex, reason);
     }
 }

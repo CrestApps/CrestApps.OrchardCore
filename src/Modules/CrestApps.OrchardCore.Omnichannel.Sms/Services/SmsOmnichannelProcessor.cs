@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
 using Fluid;
 using Fluid.Values;
 using Microsoft.Extensions.AI;
@@ -92,6 +93,25 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
     /// <param name="activity">The activity.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     public async Task StartAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
+    {
+        var result = MessagingTelemetry.ResultError;
+
+        try
+        {
+            result = await StartCoreAsync(activity, cancellationToken);
+        }
+        finally
+        {
+            MessagingTelemetry.RecordActivityStart(OmnichannelConstants.Channels.Sms, MessagingTelemetry.ActivityStartResults.TriggerAutomated, result);
+        }
+
+        if (result == MessagingTelemetry.ActivityStartResults.SendFailed)
+        {
+            throw new InvalidOperationException("Failed to send SMS for an automated activity.");
+        }
+    }
+
+    private async Task<string> StartCoreAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
     {
         AIChatSession chatSession = null;
 
@@ -200,12 +220,12 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
             Contact = contact,
         }, cancellationToken)).HasOptedOut)
         {
-            return;
+            return MessagingTelemetry.ActivityStartResults.OptedOut;
         }
 
         // Sent through the provider that owns the activity's number, not the tenant default, so a number on a second
         // carrier opens the conversation from the number the customer will reply to.
-        var smsResult = await _smsProviderRouter.SendAsync(message, cancellationToken);
+        var smsResult = await SmsAutomatedSend.SendAsync(_smsProviderRouter, message, cancellationToken);
 
         if (smsResult.Succeeded)
         {
@@ -235,11 +255,12 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
                     flowSettings,
                     _clock.UtcNow);
             }
+
+            return MessagingTelemetry.ActivityStartResults.Started;
         }
-        else
-        {
-            throw new InvalidOperationException("Failed to send SMS for an automated activity.");
-        }
+
+        // The caller throws, after the failed start is counted.
+        return MessagingTelemetry.ActivityStartResults.SendFailed;
     }
 
     private async Task<SubjectFlowSettings> FindFlowSettingsAsync(

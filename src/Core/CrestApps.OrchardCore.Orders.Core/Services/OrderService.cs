@@ -3,6 +3,7 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Carts.Core.Models;
 using CrestApps.OrchardCore.Numbering;
 using CrestApps.OrchardCore.Orders.Core.Models;
+using CrestApps.OrchardCore.Orders.Core.Telemetry;
 using CrestApps.OrchardCore.Products.Core.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
@@ -139,6 +140,8 @@ public sealed class OrderService : IOrderService
             await handler.CreatedAsync(created, cancellationToken);
         }
 
+        OrdersTelemetry.RecordCreated(order.Channel, unavailable: created.Problems.Count > 0);
+
         if (created.Problems.Count > 0)
         {
             await CancelAsync(order, OrderCancelReason.Unavailable, cancellationToken);
@@ -211,6 +214,8 @@ public sealed class OrderService : IOrderService
         order.ModifiedUtc = now;
 
         await _store.UpdateAsync(order, cancellationToken);
+
+        OrdersTelemetry.RecordCancelled(reason);
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
