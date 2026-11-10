@@ -445,6 +445,24 @@
     }
   }
 
+  // The checkout the page opens must be a page of this store: an http(s) address on the page's own origin. Anything
+  // else (another site, a javascript: or data: address) is refused, so the page never navigates the frame to it.
+  function sameOriginUrl(value, origin) {
+    if (typeof value !== 'string' || value.length === 0) {
+      return null;
+    }
+
+    var url;
+
+    try {
+      url = new URL(value, origin);
+    } catch (e) {
+      return null;
+    }
+
+    return (url.protocol === 'https:' || url.protocol === 'http:') && url.origin === origin ? url.href : null;
+  }
+
   function applyColorScheme(doc, scheme) {
     if (scheme !== 'light' && scheme !== 'dark') {
       return;
@@ -479,7 +497,9 @@
     var config = readConfig(doc);
     var frame = /** @type {HTMLIFrameElement} */ (doc.getElementById(FRAME_ID));
 
-    if (!config || !frame) {
+    var checkoutUrl = config ? sameOriginUrl(config.checkoutUrl, win.location.origin) : null;
+
+    if (!config || !frame || !checkoutUrl) {
       return null;
     }
 
@@ -489,7 +509,7 @@
 
     // Opened on its own, not framed by a platform: there is no host to talk to, so show the checkout.
     if (!consumer && win.parent === win) {
-      win.location.replace(config.checkoutUrl);
+      win.location.replace(checkoutUrl);
 
       return null;
     }
@@ -500,7 +520,7 @@
       config: config,
       channel: channel,
       loadCheckout: function () {
-        frame.setAttribute('src', config.checkoutUrl);
+        frame.setAttribute('src', checkoutUrl);
       },
       fetchCheckout: function () {
         return win.fetch(config.stateUrl, { credentials: 'same-origin', cache: 'no-store' })
@@ -546,6 +566,7 @@
   globalThis.CrestAppsEmbeddedCheckout = {
     changedMethods: changedMethods,
     isCheckoutUrl: isCheckoutUrl,
+    sameOriginUrl: sameOriginUrl,
     createSession: createSession,
     createWindowChannel: createWindowChannel,
     createNativeChannel: createNativeChannel,

@@ -414,3 +414,20 @@ describe('createSession', () => {
         expect(s.state).toBe('handshaking');
     });
 });
+
+describe('sameOriginUrl', () => {
+    const origin = 'https://store.example';
+
+    it('keeps a page of the store', () => {
+        expect(ecp.sameOriginUrl('/Checkout/abc', origin)).toBe('https://store.example/Checkout/abc');
+        expect(ecp.sameOriginUrl('https://store.example/Checkout/abc?x=1', origin)).toBe('https://store.example/Checkout/abc?x=1');
+    });
+
+    it('refuses another site and scripted addresses', () => {
+        expect(ecp.sameOriginUrl('https://evil.example/Checkout/abc', origin)).toBeNull();
+        expect(ecp.sameOriginUrl('javascript:alert(1)', origin)).toBeNull();
+        expect(ecp.sameOriginUrl('data:text/html,<script>alert(1)</script>', origin)).toBeNull();
+        expect(ecp.sameOriginUrl('//evil.example/x', origin)).toBeNull();
+        expect(ecp.sameOriginUrl(null, origin)).toBeNull();
+    });
+});

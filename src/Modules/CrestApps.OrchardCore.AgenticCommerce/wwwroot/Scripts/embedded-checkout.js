@@ -309,6 +309,16 @@
 				return null;
 			}
 		}
+		function sameOriginUrl(value, origin) {
+			if (typeof value !== "string" || value.length === 0) return null;
+			var url;
+			try {
+				url = new URL(value, origin);
+			} catch (e) {
+				return null;
+			}
+			return (url.protocol === "https:" || url.protocol === "http:") && url.origin === origin ? url.href : null;
+		}
 		function applyColorScheme(doc, scheme) {
 			if (scheme !== "light" && scheme !== "dark") return;
 			doc.documentElement.setAttribute("data-bs-theme", scheme);
@@ -328,18 +338,19 @@
 		function start(win, doc) {
 			var config = readConfig(doc);
 			var frame = doc.getElementById(FRAME_ID);
-			if (!config || !frame) return null;
+			var checkoutUrl = config ? sameOriginUrl(config.checkoutUrl, win.location.origin) : null;
+			if (!config || !frame || !checkoutUrl) return null;
 			applyColorScheme(doc, config.colorScheme);
 			var consumer = nativeConsumer(win);
 			if (!consumer && win.parent === win) {
-				win.location.replace(config.checkoutUrl);
+				win.location.replace(checkoutUrl);
 				return null;
 			}
 			var session = createSession({
 				config,
 				channel: consumer ? createNativeChannel(win, consumer) : createWindowChannel(win, config.hostOrigins),
 				loadCheckout: function() {
-					frame.setAttribute("src", config.checkoutUrl);
+					frame.setAttribute("src", checkoutUrl);
 				},
 				fetchCheckout: function() {
 					return win.fetch(config.stateUrl, {
@@ -382,6 +393,7 @@
 		globalThis.CrestAppsEmbeddedCheckout = {
 			changedMethods,
 			isCheckoutUrl,
+			sameOriginUrl,
 			createSession,
 			createWindowChannel,
 			createNativeChannel,
