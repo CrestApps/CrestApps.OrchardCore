@@ -1675,8 +1675,23 @@
 	function isUnacceptedOfferCall(unaccepted, callId, now) {
 		return !!unaccepted && !!callId && typeof unaccepted[callId] === "number" && now - unaccepted[callId] <= 36e5;
 	}
-	function planOfferCallReport(report, offer, accepted, unaccepted, now) {
-		if (!report || !report.callId || !isLiveStateName(report.stateName)) return "apply";
+	function rememberAnsweredElsewhereCall(answeredElsewhere, callId, now) {
+		if (!answeredElsewhere || !callId) return;
+		Object.keys(answeredElsewhere).forEach(function(id) {
+			if (now - answeredElsewhere[id] > 12e4) delete answeredElsewhere[id];
+		});
+		answeredElsewhere[callId] = now;
+	}
+	function forgetAnsweredElsewhereCall(answeredElsewhere, callId) {
+		if (answeredElsewhere && callId) delete answeredElsewhere[callId];
+	}
+	function isAnsweredElsewhereCall(answeredElsewhere, callId, now) {
+		return !!answeredElsewhere && !!callId && typeof answeredElsewhere[callId] === "number" && now - answeredElsewhere[callId] <= 12e4;
+	}
+	function planOfferCallReport(report, offer, accepted, unaccepted, now, answeredElsewhere) {
+		if (!report || !report.callId) return "apply";
+		if (report.stateName === "Ringing" && isAnsweredElsewhereCall(answeredElsewhere, report.callId, now)) return "ignore";
+		if (!isLiveStateName(report.stateName)) return "apply";
 		if (offer && offer.callId === report.callId) return offer.accepting || isAccepted(accepted, offer.reservationId, now) ? "apply" : "keep-ringing";
 		return isUnacceptedOfferCall(unaccepted, report.callId, now) ? "ignore" : "apply";
 	}
@@ -6317,6 +6332,7 @@
 			var offerCallIds = {};
 			var unacceptedOfferCalls = {};
 			var heldBackOfferReports = {};
+			var answeredElsewhereCalls = {};
 			var agentHolds = {};
 			var agentMutes = {};
 			var extensionDirectory = createExtensionDirectory();
@@ -8334,7 +8350,7 @@
 				var plan = planOfferCallReport({
 					callId: call.callId,
 					stateName: normalizeState(call.state)
-				}, ringingOfferForReports(), acceptedOfferIds, unacceptedOfferCalls, Date.now());
+				}, ringingOfferForReports(), acceptedOfferIds, unacceptedOfferCalls, Date.now(), answeredElsewhereCalls);
 				if (plan === "keep-ringing") {
 					if (!heldBackOfferReports[call.callId]) reportDiagnostic("warning", "offer-call-live-before-accept", "The server reported the call of a ringing offer as " + normalizeState(call.state) + " before anyone accepted it; the offer keeps ringing.", call.callId);
 					heldBackOfferReports[call.callId] = call;
@@ -8355,7 +8371,9 @@
 			}
 			function handleOfferAnswered(callId, reservationId) {
 				var answeredHeldLeg = settleOfferLeg(reservationId, true);
-				if (!!!(currentCall && isRingingInbound() && (!callId || currentCall.callId === callId)) || incomingAcceptPending || incomingHandled) return;
+				var ringing = !!(currentCall && isRingingInbound() && (!callId || currentCall.callId === callId));
+				if (!(ringing && (incomingAcceptPending || incomingHandled)) && callId) rememberAnsweredElsewhereCall(answeredElsewhereCalls, callId, Date.now());
+				if (!ringing || incomingAcceptPending || incomingHandled) return;
 				if (!answeredHeldLeg) armInboundAutoAnswer(reservationId);
 				clearIncomingOffer();
 			}
@@ -10168,6 +10186,7 @@
 				if (offeredReservationId) {
 					offerCallIds[offeredReservationId] = call.callId;
 					forgetUnacceptedOfferCall(unacceptedOfferCalls, call.callId);
+					forgetAnsweredElsewhereCall(answeredElsewhereCalls, call.callId);
 					disarmOtherOffers(inboundAutoAnswer, offerKey(offeredReservationId));
 				}
 				if (!sameOffer) {
@@ -10604,6 +10623,7 @@
 						if (call && call.callId && typeof rememberSettledOffer === "function") rememberSettledOffer(settledOffers, { callId: call.callId }, Date.now());
 						if (call && call.callId) {
 							forgetUnacceptedOfferCall(unacceptedOfferCalls, call.callId);
+							forgetAnsweredElsewhereCall(answeredElsewhereCalls, call.callId);
 							delete heldBackOfferReports[call.callId];
 							forgetRemoteParty(remoteParties, call.callId);
 						}

@@ -4,10 +4,14 @@ import {
     rememberAcceptedOffer,
 } from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-leg.js';
 import {
+    ANSWERED_ELSEWHERE_CALL_TTL_MS,
     UNACCEPTED_OFFER_CALL_TTL_MS,
+    forgetAnsweredElsewhereCall,
     forgetUnacceptedOfferCall,
+    isAnsweredElsewhereCall,
     isUnacceptedOfferCall,
     planOfferCallReport,
+    rememberAnsweredElsewhereCall,
     rememberUnacceptedOfferCall,
 } from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-report.js';
 
@@ -99,5 +103,45 @@ describe('the calls of withdrawn offers', () => {
 
         expect(unaccepted).toEqual({});
         expect(isUnacceptedOfferCall(unaccepted, '', now)).toBe(false);
+    });
+});
+
+// Regression: the agent answered an offer in one browser. The desktop app's page, told it was answered, ended its prompt
+// -- then the platform reported the call ringing while it connected the browser that answered, the page showed it
+// ringing again, and the desktop app opened a popup for it that outlived the call.
+describe('a call answered on another phone', () => {
+    it('does not ring here again when its call is reported ringing', () => {
+        const answeredElsewhere = {};
+
+        rememberAnsweredElsewhereCall(answeredElsewhere, 'call-9', now);
+
+        expect(planOfferCallReport({ callId: 'call-9', stateName: 'Ringing' }, null, {}, {}, now + 400, answeredElsewhere)).toBe('ignore');
+    });
+
+    it('still applies the report that the call connected', () => {
+        const answeredElsewhere = {};
+
+        rememberAnsweredElsewhereCall(answeredElsewhere, 'call-9', now);
+
+        expect(planOfferCallReport({ callId: 'call-9', stateName: 'Connected' }, null, {}, {}, now + 900, answeredElsewhere)).toBe('apply');
+    });
+
+    it('rings again once the call is offered here again or the memory lapses', () => {
+        const answeredElsewhere = {};
+
+        rememberAnsweredElsewhereCall(answeredElsewhere, 'call-9', now);
+        expect(isAnsweredElsewhereCall(answeredElsewhere, 'call-9', now + ANSWERED_ELSEWHERE_CALL_TTL_MS + 1)).toBe(false);
+
+        forgetAnsweredElsewhereCall(answeredElsewhere, 'call-9');
+        expect(planOfferCallReport({ callId: 'call-9', stateName: 'Ringing' }, null, {}, {}, now, answeredElsewhere)).toBe('apply');
+    });
+
+    it('leaves other calls and callers that pass no memory alone', () => {
+        const answeredElsewhere = {};
+
+        rememberAnsweredElsewhereCall(answeredElsewhere, 'call-9', now);
+
+        expect(planOfferCallReport({ callId: 'call-10', stateName: 'Ringing' }, null, {}, {}, now, answeredElsewhere)).toBe('apply');
+        expect(planOfferCallReport({ callId: 'call-9', stateName: 'Ringing' }, null, {}, {}, now)).toBe('apply');
     });
 });

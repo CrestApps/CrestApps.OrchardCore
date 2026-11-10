@@ -86,8 +86,10 @@ import {
     rememberAcceptedOffer,
 } from './soft-phone/offer-leg.js';
 import {
+    forgetAnsweredElsewhereCall,
     forgetUnacceptedOfferCall,
     planOfferCallReport,
+    rememberAnsweredElsewhereCall,
     rememberUnacceptedOfferCall,
 } from './soft-phone/offer-report.js';
 import {
@@ -3221,6 +3223,9 @@ import {
         var offerCallIds = {};
         var unacceptedOfferCalls = {};
         var heldBackOfferReports = {};
+        // The calls of offers answered on another of the agent's phones, not here: a report that one rings is about the
+        // phone that answered it (see soft-phone/offer-report.js).
+        var answeredElsewhereCalls = {};
         // Calls the agent put on hold and has not resumed, by call id. With browser audio the hold happens here and
         // the server keeps reporting the call connected, so this, not the server, says whether the call is held.
         var agentHolds = {};
@@ -7112,7 +7117,8 @@ import {
                 ringingOfferForReports(),
                 acceptedOfferIds,
                 unacceptedOfferCalls,
-                Date.now());
+                Date.now(),
+                answeredElsewhereCalls);
 
             if (plan === 'keep-ringing') {
                 if (!heldBackOfferReports[call.callId]) {
@@ -7154,6 +7160,14 @@ import {
         function handleOfferAnswered(callId, reservationId) {
             var answeredHeldLeg = settleOfferLeg(reservationId, true);
             var ringing = !!(currentCall && isRingingInbound() && (!callId || currentCall.callId === callId));
+
+            var answeringHere = ringing && (incomingAcceptPending || incomingHandled);
+
+            // Answered on another of the agent's phones: the platform goes on to report the call ringing while it
+            // connects that phone, which must not ring here again.
+            if (!answeringHere && callId) {
+                rememberAnsweredElsewhereCall(answeredElsewhereCalls, callId, Date.now());
+            }
 
             // The page that made the accept finishes it itself, and a page another page already told has stopped.
             if (!ringing || incomingAcceptPending || incomingHandled) {
@@ -10296,6 +10310,7 @@ import {
                 // for any other offer is for one that is over.
                 offerCallIds[offeredReservationId] = call.callId;
                 forgetUnacceptedOfferCall(unacceptedOfferCalls, call.callId);
+                forgetAnsweredElsewhereCall(answeredElsewhereCalls, call.callId);
                 disarmOtherOffers(inboundAutoAnswer, autoAnswerOfferKey(offeredReservationId));
             }
 
@@ -11080,6 +11095,7 @@ import {
 
                     if (call && call.callId) {
                         forgetUnacceptedOfferCall(unacceptedOfferCalls, call.callId);
+                        forgetAnsweredElsewhereCall(answeredElsewhereCalls, call.callId);
                         delete heldBackOfferReports[call.callId];
                         forgetRemoteParty(remoteParties, call.callId);
                     }

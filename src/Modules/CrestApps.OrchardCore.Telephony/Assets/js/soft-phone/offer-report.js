@@ -62,16 +62,61 @@ export function isUnacceptedOfferCall(unaccepted, callId, now) {
         now - unaccepted[callId] <= UNACCEPTED_OFFER_CALL_TTL_MS;
 }
 
+// How long a call whose offer was answered on another of the agent's phones is kept from ringing here. The platform
+// reports the call ringing while it connects the phone that answered, a second or two after the accept.
+export var ANSWERED_ELSEWHERE_CALL_TTL_MS = 2 * 60 * 1000;
+
+// Remembers the call of an offer that was answered on another of the agent's phones (another page, another device),
+// not by this one. A report that the call is ringing is then about the phone that answered it, not a call for this one.
+export function rememberAnsweredElsewhereCall(answeredElsewhere, callId, now) {
+    if (!answeredElsewhere || !callId) {
+        return;
+    }
+
+    Object.keys(answeredElsewhere).forEach(function (id) {
+        if (now - answeredElsewhere[id] > ANSWERED_ELSEWHERE_CALL_TTL_MS) {
+            delete answeredElsewhere[id];
+        }
+    });
+
+    answeredElsewhere[callId] = now;
+}
+
+// The call was offered to this phone again, or it ended.
+export function forgetAnsweredElsewhereCall(answeredElsewhere, callId) {
+    if (answeredElsewhere && callId) {
+        delete answeredElsewhere[callId];
+    }
+}
+
+export function isAnsweredElsewhereCall(answeredElsewhere, callId, now) {
+    return !!answeredElsewhere && !!callId && typeof answeredElsewhere[callId] === 'number' &&
+        now - answeredElsewhere[callId] <= ANSWERED_ELSEWHERE_CALL_TTL_MS;
+}
+
 // What to do with a server report of a call's state.
 //   report     - { callId, stateName } (stateName normalized: 'Ringing', 'Connected', 'OnHold', ...).
 //   offer      - the offer ringing on screen, { callId, reservationId, accepting }, or null. accepting is true
 //                while this page's own accept is in flight or has completed.
 //   accepted   - the offers known to have been accepted (rememberAcceptedOffer), from anywhere.
 //   unaccepted - the calls of offers withdrawn without an accept here (rememberUnacceptedOfferCall).
+//   answeredElsewhere - optional: the calls of offers answered on another of the agent's phones
+//                (rememberAnsweredElsewhereCall).
 // Returns 'apply' (the usual handling), 'keep-ringing' (the offer stays on screen as it is) or 'ignore' (the call
 // is not on this phone).
-export function planOfferCallReport(report, offer, accepted, unaccepted, now) {
-    if (!report || !report.callId || !isLiveStateName(report.stateName)) {
+export function planOfferCallReport(report, offer, accepted, unaccepted, now, answeredElsewhere) {
+    if (!report || !report.callId) {
+        return 'apply';
+    }
+
+    // Regression: the agent answered an offer in one browser and the desktop app's page, told it was answered, ended
+    // its prompt -- then the platform reported the call ringing while it connected the browser that answered, and the
+    // page showed it ringing again. The desktop app opened a new popup for it, which outlived the call.
+    if (report.stateName === 'Ringing' && isAnsweredElsewhereCall(answeredElsewhere, report.callId, now)) {
+        return 'ignore';
+    }
+
+    if (!isLiveStateName(report.stateName)) {
         return 'apply';
     }
 
