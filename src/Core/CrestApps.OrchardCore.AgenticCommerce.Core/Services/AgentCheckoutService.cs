@@ -1211,7 +1211,7 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
 
     // The parts add up to the total, as every protocol requires: what isn't subtotal, discount, shipping or tax added on
     // top is a fee, and tax already in the prices isn't added again.
-    private static AgentCheckoutTotals BuildTotals(CheckoutInvoice invoice)
+    internal static AgentCheckoutTotals BuildTotals(CheckoutInvoice invoice)
     {
         var lines = invoice.LineItems ?? [];
         var subtotal = lines.Where(line => line.TaxableKind != TaxableItemKind.Shipping).Sum(line => line.UnitPrice * line.Quantity);
@@ -1377,7 +1377,7 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
         return field.StartsWith("Billing", StringComparison.OrdinalIgnoreCase) ? AgentCheckoutFields.BillingAddress : null;
     }
 
-    private static List<AgentCheckoutLineInput> Normalize(IEnumerable<AgentCheckoutLineInput> lines)
+    internal static List<AgentCheckoutLineInput> Normalize(IEnumerable<AgentCheckoutLineInput> lines)
         => (lines ?? [])
             .Where(line => line is not null && !string.IsNullOrWhiteSpace(line.ItemId) && line.Quantity > 0)
             .Select(line => new AgentCheckoutLineInput
@@ -1387,7 +1387,7 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
             })
             .ToList();
 
-    private static List<string> NormalizeCodes(IEnumerable<string> codes)
+    internal static List<string> NormalizeCodes(IEnumerable<string> codes)
         => (codes ?? [])
             .Where(code => !string.IsNullOrWhiteSpace(code))
             .Select(code => code.Trim())
