@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.AgenticCommerce.Services;
 using CrestApps.OrchardCore.AgenticCommerce.Ucp;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Services;
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,6 +22,7 @@ public sealed class AgentHandoffController : Controller
     private readonly IAgentCheckoutStore _checkouts;
     private readonly ICheckoutSessionStore _sessions;
     private readonly GuestSessionTokenManager _guestTokens;
+    private readonly ICheckoutEngine _engine;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AgentHandoffController"/> class.
@@ -29,16 +31,19 @@ public sealed class AgentHandoffController : Controller
     /// <param name="checkouts">The agent checkout store.</param>
     /// <param name="sessions">The store checkout store.</param>
     /// <param name="guestTokens">The guest session tokens.</param>
+    /// <param name="engine">The checkout engine.</param>
     public AgentHandoffController(
         AgentSiteUrls urls,
         IAgentCheckoutStore checkouts,
         ICheckoutSessionStore sessions,
-        GuestSessionTokenManager guestTokens)
+        GuestSessionTokenManager guestTokens,
+        ICheckoutEngine engine)
     {
         _urls = urls;
         _checkouts = checkouts;
         _sessions = sessions;
         _guestTokens = guestTokens;
+        _engine = engine;
     }
 
     /// <summary>
@@ -81,8 +86,16 @@ public sealed class AgentHandoffController : Controller
             return View("EmbeddedCheckout", model);
         }
 
-        // A buyer back from their bank's approval may find the checkout already paid: they see the confirmation, which
-        // is theirs now too.
+        // A buyer back from their bank's approval may find the payment settled while the provider's confirmation is still
+        // on its way: the checkout is completed now, from the provider's answer, so they see their confirmation rather
+        // than the checkout's first step. Completing is idempotent, so a webhook arriving at the same time pays nothing twice.
+        if (session.Status is CheckoutSessionStatus.AwaitingProvider or CheckoutSessionStatus.PaymentPending &&
+            (await _engine.TryCompleteAsync(session.SessionId, HttpContext.RequestAborted)).IsCompleted)
+        {
+            return RedirectToRoute(CheckoutConstants.RouteNames.Confirmation, new { sessionId = session.SessionId });
+        }
+
+        // A checkout already paid shows its confirmation, which is the buyer's now too.
         return session.Status == CheckoutSessionStatus.Completed
             ? RedirectToRoute(CheckoutConstants.RouteNames.Confirmation, new { sessionId = session.SessionId })
             : RedirectToRoute(CheckoutConstants.RouteNames.Step, new { sessionId = session.SessionId });
