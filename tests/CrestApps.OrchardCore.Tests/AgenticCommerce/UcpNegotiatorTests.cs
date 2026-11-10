@@ -53,7 +53,7 @@ public sealed class UcpNegotiatorTests
     }
 
     [Fact]
-    public async Task NegotiateAsync_WithoutAPlatformProfile_AgreesTheNewestVersionWithEveryCapability()
+    public async Task NegotiateAsync_WithoutAPlatformProfile_AgreesTheNewestVersionWithEveryCapabilityButAp2()
     {
         // Arrange
         var negotiator = CreateNegotiator();
@@ -71,7 +71,6 @@ public sealed class UcpNegotiatorTests
                 UcpConstants.Capabilities.Discount,
                 UcpConstants.Capabilities.BuyerConsent,
                 UcpConstants.Capabilities.Order,
-                UcpConstants.Capabilities.Ap2Mandate,
             }.Order(StringComparer.Ordinal),
             negotiation.Capabilities.Keys.Order(StringComparer.Ordinal));
         Assert.All(negotiation.Capabilities.Values, version => Assert.Equal(AgenticCommerceConstants.Versions.Ucp20260825, version));

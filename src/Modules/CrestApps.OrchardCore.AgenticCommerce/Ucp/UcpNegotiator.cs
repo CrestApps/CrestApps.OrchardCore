@@ -62,6 +62,13 @@ public sealed class UcpNegotiator
                 continue;
             }
 
+            // AP2 locks a checkout to signed mandates, so it's only agreed with a platform whose profile says it signs
+            // them; a platform that gave no profile could never complete.
+            if (platformCapabilities is null && capability.Name is UcpConstants.Capabilities.Ap2Mandate or UcpConstants.Capabilities.Ap2MandateLegacy)
+            {
+                continue;
+            }
+
             negotiation.Capabilities[capability.Name] = capability.Version;
             negotiation.Extends[capability.Name] = capability.Extends;
         }

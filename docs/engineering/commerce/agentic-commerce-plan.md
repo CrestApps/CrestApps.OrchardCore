@@ -1,6 +1,6 @@
 # Agentic commerce plan: UCP, ACP and AP2
 
-Status: built, 2026-11-09, in one branch and PR. [As built](#as-built) at the end says what changed from the plan and what is left. This plan follows the [commerce parity plan](commerce-parity-plan.md), whose phase 6 headless API, phase 10 product feeds and checkout engine it builds on.
+Status: built, 2026-11-09, finished 2026-11-10, in one branch and PR. [As built](#as-built) at the end says what changed from the plan and what is left. This plan follows the [commerce parity plan](commerce-parity-plan.md), whose phase 6 headless API, phase 10 product feeds and checkout engine it builds on.
 
 The goal is to let AI agents discover a store, find its products, check out and pay on a buyer's behalf, and follow the order afterwards, through the open standards those agents speak:
 
@@ -388,7 +388,7 @@ Until they are answered, the work goes ahead on the default in the last column.
 
 ## As built
 
-Built on 2026-11-09 in one branch and one PR, with a commit per group of slices, not a PR per phase: the phases share the agent checkout, so they are reviewed together.
+Built on 2026-11-09 and finished on 2026-11-10 in one branch and one PR, with a commit per group of slices, not a PR per phase: the phases share the agent checkout, so they are reviewed together.
 
 ### Where the code is
 
@@ -406,24 +406,42 @@ Built on 2026-11-09 in one branch and one PR, with a commit per group of slices,
 ### Changes from the plan
 
 - **Checkout lines.** When an agent changes the lines, the service reprices a transient cart and starts a new order and checkout session. The engine cancels the earlier unpaid order for the same cart, so only one order is open per agent checkout.
-- **Hand-off.** `continue_url` is a signed, short-lived link to `agentic-commerce/continue/{token}`. It gives the store checkout session to the buyer's browser with the guest token, and the session's owner becomes the buyer (or a guest), never the agent platform.
+- **Hand-off.** `continue_url` is a signed, short-lived link to `agentic-commerce/continue/{token}`. It gives the store checkout session to the browser that opens it: to the signed-in user, or to a guest with the guest token, never to the agent platform. A buyer back from their bank's approval is sent to the confirmation, because the hand-off completes a payment that is still being confirmed.
 - **Agent catalog without the feed rules.** The agent catalog and UCP catalog read products without Merchant Center's validation (`IProductFeedService.BuildAsync(validate: false)`), so a store without a base URL or GTINs can still sell through agents. The feeds keep the validation.
 - **Fulfillment.** When the agent gives an address and no option, the cheapest option is selected, so totals are complete on the first answer.
 - **Limits.** The checkout lifetime (default 6 hours, 1 to 72) and the cap on open checkouts per platform (default 1,000) are site settings. There is no per-platform request rate limit beyond the cap.
-- **RFC 8414.** `/.well-known/oauth-authorization-server` redirects to the OpenID server's discovery document instead of serving its own metadata.
-- **AI tools.** Three tools: search products, get a product, and start a checkout (returns the hand-off link, never pays). Add to cart and view cart were left out, because the start checkout tool takes the lines directly.
+- **RFC 8414.** OpenIddict answers `/.well-known/oauth-authorization-server` itself, so UCP Account Linking adds the UCP scopes to that document and makes the OpenID server accept S256 PKCE only. The module's own route answers 404 when there is no OpenID server.
+- **AI tools.** Five tools: search products, get a product, add to cart, view cart, and start a checkout (returns the hand-off link, never pays). WebMCP serves the tools a module marks with `MarkAIToolAnonymousSafe` to anonymous visitors when **Offer storefront tools to visitors** is on.
+- **ACP request signatures.** Optional per platform: ES256 (no Ed25519 in .NET 10) over the RFC 8785 canonical body, with the `Timestamp` checked against a clock skew. The specs leave the signed string open.
+- **Delegated 3-D Secure.** ACP only. UCP's authentication extension carries no result in 2026-08-25; it needs a challenge page that speaks the embedded protocol, which isn't built.
+- **UCP over A2A.** UCP defines A2A for checkout only, so catalog and cart aren't offered there. Order get and the error mapping are this module's choices.
+
+### Double charges
+
+Found and fixed while testing against Stripe test mode, each with a unit or integration test:
+
+- The agent checkout was saved after its lock was released, and after the checkout engine's own commit, so a request inserted a second row with the same id. A paid checkout could then read as payable again. The changes now go onto the stored row, committed inside the lock.
+- A Stripe failure whose outcome is unknown (a server error, a rate limit, an idempotency conflict) was recorded as a decline, so the next try used a new idempotency key and could charge again. Only Stripe's final answers (a card error, a refused request, a PaymentIntent that ended unpaid) end an attempt now. The same fix applies to saved-card charges.
+- The engine now cancels a payment begun with another provider, at that provider, before beginning one for the same obligation, and begins nothing when the first was paid or can't be canceled.
 
 ### Verified
 
-- On a live test host with the test payment provider and a local listener that served fake platform profiles and received webhooks:
-  - UCP 2026-08-25 and 2026-04-08: discovery, negotiation, the full purchase, the order read, catalog search and lookup, carts, checkout from a cart, 3-D Secure escalation and the hand-off in a browser, the MCP binding, the AP2 merchant authorization and mandate refusals, and the RFC 9421 order webhook signature checked by an independent verifier.
-  - ACP 2026-04-17: discovery, version and idempotency errors, replay and conflict, address and shipping option changes, a decline then a success, cancel rules, and the `Merchant-Signature` order webhook.
-  - Admin pages: the platform list (also at phone width), the platform editor, the settings page and the store profile's policy links.
-- Unit tests for the mappers, negotiation, idempotency policy, authenticator, order mappers, signing keys, delegated credentials and the crypto helpers against the RFC vectors.
+- **Stripe test mode**, with the account's test keys, shared payment tokens from Stripe's test helper and webhooks forwarded by the Stripe CLI. Each run was checked against Stripe's own list of PaymentIntents:
+  - ACP and UCP purchases with a shared payment token; a second complete is refused.
+  - 8 parallel completes with different keys and tokens: one charge. 8 parallel completes with the same key: one charge, the rest told it's in flight or replayed.
+  - A decline then a good card: one charge. A token whose limit is below the total: refused, nothing charged.
+  - Google Pay (a Stripe card token in Google Pay's gateway format): a charge, a decline then a charge, and 3-D Secure escalation approved in a browser, landing on the store's confirmation with one charge.
+  - Delegated 3-D Secure over ACP: `authentication_required` with the acquirer details, then the result imported onto the same PaymentIntent (one charge); a `denied` result cancels the PaymentIntent.
+  - ACP over MCP paid with a shared payment token, replay with the same key, refusal with a new key.
+  - Stripe webhooks arriving after the agent's completion don't record the payment twice.
+- **The UCP conformance suite** (`Universal-Commerce-Protocol/conformance`), run locally against the test host with two local changes to the suite: an `Authorization` header with a test platform's key, and a default buyer (email and name) on its checkouts, because the store needs a contact email and a recipient name to place an order. Results are in the PR.
+- **The commerce integration suite** has agentic tests: a purchase, parallel completes with different keys and with the same key, a decline then a success, and one platform refused another's checkout. Each checks there is exactly one succeeded payment attempt and that it equals the order total.
+- UCP over A2A, the embedded checkout (in a frame from another origin), WebMCP storefront tools and RFC 8414 metadata were each run on a live host.
+- Unit tests for every piece, the RFC vectors, and the UCP and ACP mappers.
 
 ### Not done
 
-- **WebMCP anonymous storefront tools** (phase 7). Not built.
-- **External suites.** The UCP conformance suite, the scripted ACP checklist and the AP2 SDK's sample shopping agent were not run. The commerce integration suite has no agentic tests yet.
-- **Live Stripe.** Shared payment tokens and Google Pay charges were not run against Stripe test mode, because the test host has no Stripe keys. The shared payment token call uses the preview API version `2026-09-30.preview`.
-- **ACP request signatures** are not verified; ACP platforms sign in with an API key or OAuth token. The ACP MCP binding, UCP's A2A binding, embedded checkout and delegated 3-D Secure are not built.
+- **The AP2 sample shopping agent** runs on Google's ADK with Gemini and needs a Google API key, so it wasn't run.
+- **Live Stripe** was run in test mode only. The shared payment token call uses the preview API version `2026-09-30.preview`.
+- **UCP conformance differences** the store keeps on purpose: it refuses the suite's `mock_payment_handler` and raw card numbers (a business must refuse handlers it didn't advertise), retries failed webhooks on a backoff of seconds to minutes rather than within the suite's 5 seconds, and has no `/testing/simulate-shipping` endpoint.
+- **Embedded checkout** accepts no delegations. **ACP over MCP** describes `payload` as a plain object in `tools/list`.
