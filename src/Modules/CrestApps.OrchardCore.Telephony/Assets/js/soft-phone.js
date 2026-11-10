@@ -286,6 +286,7 @@ import {
     describeMicrophoneFacts,
 } from './soft-phone/microphone-errors.js';
 import { offerRingStopDelayMs } from './soft-phone/offer-deadline.js';
+import { INBOUND_RING_ACTIONS, inboundRingAction, offerDeclinesRing } from './soft-phone/ring-policy.js';
 import {
     deleteVoicemailsInTurn,
     describeVoicemailDeleteFailures,
@@ -7176,9 +7177,17 @@ import {
                 return;
             }
 
-            // The agent is already on a (non-ringing) call: decline the new leg rather than interrupting, matching
-            // how a server offer is suppressed while a blocking call is active.
-            if (hasBlockingActiveCall()) {
+            // One ringing call at a time (see soft-phone/ring-policy.js). The agent on a call, or another incoming call
+            // already ringing here -- an offer or an earlier leg -- keeps the prompt, and the new leg is declined rather
+            // than stacked on top of it as a second ringing call.
+            if (inboundRingAction({
+                onCall: hasBlockingActiveCall(),
+                ringing: isRingingInbound(),
+                answering: incomingAcceptPending || incomingHandled
+            }) === INBOUND_RING_ACTIONS.decline) {
+                reportDiagnostic('info', 'inbound-leg-declined-busy',
+                    'Declined an incoming leg because another call is ringing or on the line.', controller.platformCallId || '');
+
                 try {
                     controller.decline();
                 } catch (e) { /* best effort */ }
@@ -7186,9 +7195,9 @@ import {
                 return;
             }
 
-            // Replace any earlier unanswered ring with this one.
-            if (browserInboundRing && browserInboundRing.callId !== null) {
-                removeActiveCall(browserInboundRing.callId);
+            // An earlier leg still on record but no longer shown: decline it, so no leg is left ringing unseen.
+            if (browserInboundRing) {
+                clearBrowserInboundRing({ decline: true });
             }
 
             // A call a colleague is handing over is the platform's own call, under the id of the leg it rings: the
@@ -10262,6 +10271,14 @@ import {
                 { callId: call.callId, reservationId: getIncomingReservationId(context) }, Date.now())) ||
                 (isFinite(expiresUtc) && expiresUtc <= Date.now())) {
                 return;
+            }
+
+            // The offer is the work routing chose for this agent: a leg still ringing here gives way to it, declined
+            // rather than hidden, so one call rings at a time (see soft-phone/ring-policy.js).
+            if (offerDeclinesRing(browserInboundRing ? browserInboundRing.callId : '', call.callId)) {
+                reportDiagnostic('info', 'inbound-leg-declined-for-offer',
+                    'Declined a ringing incoming leg because a Contact Center offer arrived.', call.callId || '');
+                clearBrowserInboundRing({ decline: true });
             }
 
             // The same offer delivered again (pushed, then restored) while the agent's answer is under way keeps that

@@ -4581,6 +4581,20 @@
 		return computeOfferRingStopDelayMs(properties.expiresUtc, properties[OFFSET_KEY], nowMs);
 	}
 	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/ring-policy.js
+	var INBOUND_RING_ACTIONS = {
+		ring: "ring",
+		decline: "decline"
+	};
+	function inboundRingAction(state) {
+		state = state || {};
+		if (state.onCall) return INBOUND_RING_ACTIONS.decline;
+		return state.ringing && !state.answering ? INBOUND_RING_ACTIONS.decline : INBOUND_RING_ACTIONS.ring;
+	}
+	function offerDeclinesRing(ringCallId, offerCallId) {
+		return !!ringCallId && ringCallId !== offerCallId;
+	}
+	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/voicemail-delete.js
 	var DEFAULT_TEXT = {
 		refused: "The server refused the request. Reload the page and try again.",
@@ -8347,13 +8361,18 @@
 			}
 			function handleBrowserInboundRing(controller) {
 				if (!controller) return;
-				if (hasBlockingActiveCall()) {
+				if (inboundRingAction({
+					onCall: hasBlockingActiveCall(),
+					ringing: isRingingInbound(),
+					answering: incomingAcceptPending || incomingHandled
+				}) === INBOUND_RING_ACTIONS.decline) {
+					reportDiagnostic("info", "inbound-leg-declined-busy", "Declined an incoming leg because another call is ringing or on the line.", controller.platformCallId || "");
 					try {
 						controller.decline();
 					} catch (e) {}
 					return;
 				}
-				if (browserInboundRing && browserInboundRing.callId !== null) removeActiveCall(browserInboundRing.callId);
+				if (browserInboundRing) clearBrowserInboundRing({ decline: true });
 				var platform = !!controller.platformCallId;
 				var callId = platform ? controller.platformCallId : "browser-in-" + Date.now();
 				browserInboundRing = {
@@ -10137,6 +10156,10 @@
 					callId: call.callId,
 					reservationId: getIncomingReservationId(context)
 				}, Date.now()) || isFinite(expiresUtc) && expiresUtc <= Date.now()) return;
+				if (offerDeclinesRing(browserInboundRing ? browserInboundRing.callId : "", call.callId)) {
+					reportDiagnostic("info", "inbound-leg-declined-for-offer", "Declined a ringing incoming leg because a Contact Center offer arrived.", call.callId || "");
+					clearBrowserInboundRing({ decline: true });
+				}
 				var sameOffer = isSameIncomingOffer(call, context);
 				upsertActiveCall(call, true);
 				incomingContext = context || null;
