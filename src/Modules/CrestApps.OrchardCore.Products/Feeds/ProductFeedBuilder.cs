@@ -75,13 +75,13 @@ public sealed class ProductFeedBuilder
     /// Builds the feed, priced in <paramref name="currency"/>, or the store's when none.
     /// </summary>
     public Task<ProductFeed> BuildAsync(string currency = null, CancellationToken cancellationToken = default)
-        => BuildAsync(currency, contentItemIds: null, cancellationToken);
+        => BuildAsync(currency, contentItemIds: null, cancellationToken: cancellationToken);
 
     /// <summary>
     /// Builds the feed of some products, or of all when <paramref name="contentItemIds"/> is <see langword="null"/>,
     /// priced in <paramref name="currency"/>, or the store's when none.
     /// </summary>
-    public async Task<ProductFeed> BuildAsync(string currency, IReadOnlyCollection<string> contentItemIds, CancellationToken cancellationToken = default, bool validate = true)
+    public async Task<ProductFeed> BuildAsync(string currency, IReadOnlyCollection<string> contentItemIds, bool validate = true, CancellationToken cancellationToken = default)
     {
         var now = _clock.UtcNow;
         var site = await _siteService.GetSiteSettingsAsync();

@@ -1,6 +1,6 @@
 # Agentic commerce plan: UCP, ACP and AP2
 
-Status: planned, 2026-11-02. Nothing is built yet. This plan follows the [commerce parity plan](commerce-parity-plan.md), whose phase 6 headless API, phase 10 product feeds and checkout engine it builds on.
+Status: built, 2026-11-09, in one branch and PR. [As built](#as-built) at the end says what changed from the plan and what is left. This plan follows the [commerce parity plan](commerce-parity-plan.md), whose phase 6 headless API, phase 10 product feeds and checkout engine it builds on.
 
 The goal is to let AI agents discover a store, find its products, check out and pay on a buyer's behalf, and follow the order afterwards, through the open standards those agents speak:
 
@@ -385,3 +385,45 @@ Until they are answered, the work goes ahead on the default in the last column.
 | P-AC6 | OpenAI prefers Parquet feeds. Add a Parquet dependency? | JSON lines and CSV only / add Parquet.Net | JSON lines and CSV, which OpenAI accepts; Parquet if OpenAI asks |
 | P-AC7 | Is AP2 in scope now, while it's v0.2 and moving to FIDO? | Preview in phase 6 / wait for 1.0 | Preview in phase 6 |
 | P-AC8 | Should the store's own agents (phase 7) be part of this plan or separate? | In / separate | In, last |
+
+## As built
+
+Built on 2026-11-09 in one branch and one PR, with a commit per group of slices, not a PR per phase: the phases share the agent checkout, so they are reviewed together.
+
+### Where the code is
+
+| Piece | Project |
+| --- | --- |
+| Protocol-neutral models, `IAgentPaymentHandler` | `CrestApps.OrchardCore.AgenticCommerce.Abstractions` |
+| Agent checkout service, platforms, checkout store, signing keys, RFC 9421/9530/8941/8785 helpers, AP2 SD-JWT and JWS | `CrestApps.OrchardCore.AgenticCommerce.Core` |
+| Features, endpoints, admin, payment handlers, order publishers, feeds, AI tools, recipes | `CrestApps.OrchardCore.AgenticCommerce` (features `Ucp`, `Ucp.IdentityLinking`, `Ucp.Catalog`, `Ucp.Mcp`, `Acp`, `Feeds`, `Ap2`) |
+| Headless checkout steps | `ICheckoutContactStep` and `ICheckoutFulfillmentStep` in Checkout.Abstractions; Customers and Shipping implement them |
+| Delegated credentials | `CheckoutPaymentDataKeys.DelegatedCredential`, `PaymentProviderCapabilities.AcceptsDelegatedCredentials`; Stripe charges shared payment tokens and Google Pay tokens, the test provider takes `tok_test_*` |
+| Direct webhook deliveries | `IWebhookOutbox` and `IWebhookDeliveryFormatter` in Webhooks.Core: one signed delivery to a URL that isn't a subscription, with the outbox's retries |
+| Protocol idempotency rules | `IdempotencyPolicy` in Commerce.Api.Core, set per endpoint group |
+| Store website and policy links | `StoreProfileSettings.Website` and `Policies` |
+
+### Changes from the plan
+
+- **Checkout lines.** When an agent changes the lines, the service reprices a transient cart and starts a new order and checkout session. The engine cancels the earlier unpaid order for the same cart, so only one order is open per agent checkout.
+- **Hand-off.** `continue_url` is a signed, short-lived link to `agentic-commerce/continue/{token}`. It gives the store checkout session to the buyer's browser with the guest token, and the session's owner becomes the buyer (or a guest), never the agent platform.
+- **Agent catalog without the feed rules.** The agent catalog and UCP catalog read products without Merchant Center's validation (`IProductFeedService.BuildAsync(validate: false)`), so a store without a base URL or GTINs can still sell through agents. The feeds keep the validation.
+- **Fulfillment.** When the agent gives an address and no option, the cheapest option is selected, so totals are complete on the first answer.
+- **Limits.** The checkout lifetime (default 6 hours, 1 to 72) and the cap on open checkouts per platform (default 1,000) are site settings. There is no per-platform request rate limit beyond the cap.
+- **RFC 8414.** `/.well-known/oauth-authorization-server` redirects to the OpenID server's discovery document instead of serving its own metadata.
+- **AI tools.** Three tools: search products, get a product, and start a checkout (returns the hand-off link, never pays). Add to cart and view cart were left out, because the start checkout tool takes the lines directly.
+
+### Verified
+
+- On a live test host with the test payment provider and a local listener that served fake platform profiles and received webhooks:
+  - UCP 2026-08-25 and 2026-04-08: discovery, negotiation, the full purchase, the order read, catalog search and lookup, carts, checkout from a cart, 3-D Secure escalation and the hand-off in a browser, the MCP binding, the AP2 merchant authorization and mandate refusals, and the RFC 9421 order webhook signature checked by an independent verifier.
+  - ACP 2026-04-17: discovery, version and idempotency errors, replay and conflict, address and shipping option changes, a decline then a success, cancel rules, and the `Merchant-Signature` order webhook.
+  - Admin pages: the platform list (also at phone width), the platform editor, the settings page and the store profile's policy links.
+- Unit tests for the mappers, negotiation, idempotency policy, authenticator, order mappers, signing keys, delegated credentials and the crypto helpers against the RFC vectors.
+
+### Not done
+
+- **WebMCP anonymous storefront tools** (phase 7). Not built.
+- **External suites.** The UCP conformance suite, the scripted ACP checklist and the AP2 SDK's sample shopping agent were not run. The commerce integration suite has no agentic tests yet.
+- **Live Stripe.** Shared payment tokens and Google Pay charges were not run against Stripe test mode, because the test host has no Stripe keys. The shared payment token call uses the preview API version `2026-09-30.preview`.
+- **ACP request signatures** are not verified; ACP platforms sign in with an API key or OAuth token. The ACP MCP binding, UCP's A2A binding, embedded checkout and delegated 3-D Secure are not built.

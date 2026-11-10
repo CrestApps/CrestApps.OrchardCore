@@ -48,7 +48,7 @@ public sealed class ProductFeedService : IProductFeedService
 
         // The token is taken before the build, so a stock change during it still drops the copy.
         var token = _signal.GetToken(ProductFeedCache.SignalKey);
-        var feed = await _builder.BuildAsync(currency, contentItemIds: null, cancellationToken);
+        var feed = await _builder.BuildAsync(currency, contentItemIds: null, cancellationToken: cancellationToken);
 
         _cache.Set(key, feed, new MemoryCacheEntryOptions()
             .SetAbsoluteExpiration(_lifetime)
@@ -62,14 +62,14 @@ public sealed class ProductFeedService : IProductFeedService
     {
         ArgumentNullException.ThrowIfNull(contentItemIds);
 
-        return _builder.BuildAsync(currency, contentItemIds.ToArray(), cancellationToken, validate);
+        return _builder.BuildAsync(currency, contentItemIds.ToArray(), validate, cancellationToken);
     }
 
     public Task<ProductFeed> BuildAsync(IEnumerable<string> contentItemIds, string currency, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(contentItemIds);
 
-        return _builder.BuildAsync(currency, contentItemIds.ToArray(), cancellationToken);
+        return _builder.BuildAsync(currency, contentItemIds.ToArray(), cancellationToken: cancellationToken);
     }
 
     /// <inheritdoc/>

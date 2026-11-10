@@ -134,7 +134,7 @@ public sealed class UcpProfileClient
     /// </summary>
     /// <param name="profileUrl">The profile's address.</param>
     public static string GetUnregisteredPlatformId(string profileUrl)
-        => "ucp-" + Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(profileUrl ?? string.Empty))).Substring(0, 22);
+        => $"ucp-{Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(profileUrl ?? string.Empty)).AsSpan(0, 11))}";
 
     /// <summary>
     /// The storage key of where a UCP platform's order updates go, on an agent checkout.
