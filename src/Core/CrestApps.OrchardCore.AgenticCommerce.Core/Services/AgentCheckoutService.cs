@@ -305,6 +305,33 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
         }, cancellationToken);
 
     /// <inheritdoc />
+    public async Task<AgentCheckoutView> PreviewAsync(AgentCheckoutContext context, IList<AgentCheckoutLineInput> lines, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var now = _clock.UtcNow;
+        var preview = new AgentCheckout
+        {
+            ItemId = IdGenerator.GenerateId(),
+            PlatformId = context.PlatformId,
+            Protocol = context.Protocol,
+            UserId = context.UserId,
+            Lines = Normalize(lines),
+            CreatedUtc = now,
+            ExpiresUtc = now,
+        };
+
+        var messages = new List<AgentCheckoutMessage>();
+        var pricing = await PriceAsync(preview, messages, cancellationToken);
+        var view = await BuildViewAsync(preview, session: null, messages, fulfillment: null, pricing, cancellationToken);
+
+        view.ContinueUrl = null;
+        view.ExpiresUtc = null;
+
+        return view;
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<AgentPaymentHandlerDescriptor>> GetPaymentHandlersAsync(AgentCheckoutContext context, AgentCheckoutView view, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);

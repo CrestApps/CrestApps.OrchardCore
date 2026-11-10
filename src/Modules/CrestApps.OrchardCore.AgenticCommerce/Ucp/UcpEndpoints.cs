@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Net.Http.Headers;
 
 namespace CrestApps.OrchardCore.AgenticCommerce.Ucp;
@@ -94,7 +95,17 @@ public static class UcpEndpoints
             return UcpResults.Error(StatusCodes.Status400BadRequest, "invalid_request", "Send the checkout as a JSON object.");
         }
 
-        var result = await checkouts.CreateAsync(request.Context, UcpCheckoutMapper.ReadInput(body), httpContext.RequestAborted);
+        var input = UcpCheckoutMapper.ReadInput(body);
+
+        // A checkout may start from a cart the agent built: its items, unless the request gives others.
+        if (input.Lines.Count == 0 &&
+            AgentJson.String(body, "cart_id") is { } cartId &&
+            await UcpCatalogEndpoints.FindCartAsync(httpContext.RequestServices.GetRequiredService<IAgentCheckoutStore>(), request, cartId, httpContext.RequestAborted) is { } cart)
+        {
+            input.Lines = [.. cart.Lines];
+        }
+
+        var result = await checkouts.CreateAsync(request.Context, input, httpContext.RequestAborted);
 
         if (!result.Succeeded)
         {

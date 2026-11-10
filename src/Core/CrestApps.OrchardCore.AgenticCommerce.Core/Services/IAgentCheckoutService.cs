@@ -54,6 +54,14 @@ public interface IAgentCheckoutService
     Task<AgentCheckoutResult> CancelAsync(AgentCheckoutContext context, string id, JsonObject intentTrace, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Prices items as the store would check them out, without making a checkout or holding stock, as a cart's estimate.
+    /// </summary>
+    /// <param name="context">Who asks, through which protocol.</param>
+    /// <param name="lines">The items.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    Task<AgentCheckoutView> PreviewAsync(AgentCheckoutContext context, IList<AgentCheckoutLineInput> lines, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns the payment handlers an agent may pay a checkout through.
     /// </summary>
     /// <param name="context">Who asks, through which protocol.</param>

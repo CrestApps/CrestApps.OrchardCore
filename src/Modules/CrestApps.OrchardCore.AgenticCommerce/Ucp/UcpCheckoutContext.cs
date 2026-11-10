@@ -29,4 +29,9 @@ public sealed class UcpCheckoutContext
     /// Gets or sets the checkout as UCP JSON: the answer being written, or the body of a complete request.
     /// </summary>
     public JsonObject Json { get; set; }
+
+    /// <summary>
+    /// Gets what an extension keeps between checking a complete request and its completion.
+    /// </summary>
+    public IDictionary<string, object> Items { get; } = new Dictionary<string, object>(StringComparer.Ordinal);
 }
