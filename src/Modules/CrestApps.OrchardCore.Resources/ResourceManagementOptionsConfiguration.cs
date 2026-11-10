@@ -59,60 +59,61 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 )
             .SetVersion("2.21.0");
 
-        // FullCalendar 7 ships one global build (no .min.js in the package); jsDelivr minifies it on request. The CSS is no
-        // longer part of the script, so the skeleton, the classic theme and its palette are separate styles.
+        // FullCalendar 7 publishes only readable global builds, so the asset build minifies its own copies (Assets.json
+        // "minify") and jsDelivr minifies the CDN copies on request. The CSS is no longer part of the script, so the
+        // skeleton, the classic theme and its palette are separate styles.
         _manifest
             .DefineScript("fullcalendar")
             .SetUrl(
-                "~/CrestApps.OrchardCore.Resources/vendors/fullcalendar/global.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/fullcalendar/global.min.js",
                 "~/CrestApps.OrchardCore.Resources/vendors/fullcalendar/global.js")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/all/global.min.js",
-                "https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/all/global.js")
-            .SetVersion("7.1.3");
+                "https://cdn.jsdelivr.net/npm/fullcalendar@7.1.4/all/global.min.js",
+                "https://cdn.jsdelivr.net/npm/fullcalendar@7.1.4/all/global.js")
+            .SetVersion("7.1.4");
 
         _manifest
             .DefineScript("fullcalendar-locales")
             .SetUrl(
-                "~/CrestApps.OrchardCore.Resources/vendors/fullcalendar/locales-all.global.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/fullcalendar/locales-all.global.min.js",
                 "~/CrestApps.OrchardCore.Resources/vendors/fullcalendar/locales-all.global.js")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/locales-all/global.min.js",
-                "https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/locales-all/global.js")
+                "https://cdn.jsdelivr.net/npm/fullcalendar@7.1.4/locales-all/global.min.js",
+                "https://cdn.jsdelivr.net/npm/fullcalendar@7.1.4/locales-all/global.js")
             .SetDependencies("fullcalendar")
-            .SetVersion("7.1.3");
+            .SetVersion("7.1.4");
 
         // FullCalendar 7 draws nothing without a theme plugin; this registers the classic theme (pair it with the theme and palette styles).
         _manifest
             .DefineScript("fullcalendar-theme")
             .SetUrl(
-                "~/CrestApps.OrchardCore.Resources/vendors/fullcalendar/classic-theme.global.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/fullcalendar/classic-theme.global.min.js",
                 "~/CrestApps.OrchardCore.Resources/vendors/fullcalendar/classic-theme.global.js")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/themes/classic/global.min.js",
-                "https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/themes/classic/global.js")
+                "https://cdn.jsdelivr.net/npm/fullcalendar@7.1.4/themes/classic/global.min.js",
+                "https://cdn.jsdelivr.net/npm/fullcalendar@7.1.4/themes/classic/global.js")
             .SetDependencies("fullcalendar")
-            .SetVersion("7.1.3");
+            .SetVersion("7.1.4");
 
         _manifest
             .DefineStyle("fullcalendar")
             .SetUrl("~/CrestApps.OrchardCore.Resources/vendors/fullcalendar/skeleton.css")
-            .SetCdn("https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/skeleton.css")
-            .SetVersion("7.1.3");
+            .SetCdn("https://cdn.jsdelivr.net/npm/fullcalendar@7.1.4/skeleton.css")
+            .SetVersion("7.1.4");
 
         _manifest
             .DefineStyle("fullcalendar-theme")
             .SetUrl("~/CrestApps.OrchardCore.Resources/vendors/fullcalendar/classic-theme.css")
-            .SetCdn("https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/themes/classic/theme.css")
+            .SetCdn("https://cdn.jsdelivr.net/npm/fullcalendar@7.1.4/themes/classic/theme.css")
             .SetDependencies("fullcalendar")
-            .SetVersion("7.1.3");
+            .SetVersion("7.1.4");
 
         _manifest
             .DefineStyle("fullcalendar-palette")
             .SetUrl("~/CrestApps.OrchardCore.Resources/vendors/fullcalendar/classic-palette.css")
-            .SetCdn("https://cdn.jsdelivr.net/npm/fullcalendar@7.1.3/themes/classic/palette.css")
+            .SetCdn("https://cdn.jsdelivr.net/npm/fullcalendar@7.1.4/themes/classic/palette.css")
             .SetDependencies("fullcalendar-theme")
-            .SetVersion("7.1.3");
+            .SetVersion("7.1.4");
 
         // Leaflet maps, with marker clusters and Geoman drawing, all MIT. The crestapps-map wrapper reads the site's
         // tile settings from the map element.

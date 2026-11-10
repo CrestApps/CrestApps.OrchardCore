@@ -265,6 +265,7 @@
     "name": "fullcalendar",
     "source": "node_modules/fullcalendar/all/global.js",
     "dest": "wwwroot/vendors/fullcalendar/global.js",
+    "minify": true,
     "tags": ["vendor"]
   },
   {
@@ -279,6 +280,7 @@
     "name": "fullcalendar-locales",
     "source": "node_modules/fullcalendar/locales-all/global.js",
     "dest": "wwwroot/vendors/fullcalendar/locales-all.global.js",
+    "minify": true,
     "tags": ["vendor"]
   },
   {
@@ -286,6 +288,7 @@
     "name": "fullcalendar-classic-theme-script",
     "source": "node_modules/fullcalendar/themes/classic/global.js",
     "dest": "wwwroot/vendors/fullcalendar/classic-theme.global.js",
+    "minify": true,
     "tags": ["vendor"]
   },
   {

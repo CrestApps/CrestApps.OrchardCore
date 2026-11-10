@@ -47,6 +47,7 @@ should not float, such as a vendored SDK the soft phone was tested against, is p
 | `dest` | `vite`: the readable output file; the build also writes its `.min` sibling. `copy`: a folder ending in `/` (each file keeps its name), or one file path for a single source (which renames it). |
 | `tags` | Optional; used by `-t`. |
 | `global` | `vite` script groups with one source only: bundle that package and expose its exports as `window[global]`. |
+| `minify` | `copy` groups of `.js` files only: also write each file's `.min.js` sibling, for a package that publishes a readable browser build and no minified one (FullCalendar 7). Oxc minifies it as a classic script, so its top-level names stay page globals, and keeps its license comment. |
 
 ```json
 [
@@ -116,7 +117,8 @@ pipeline takes its shape (one `Assets.json` array of `action`/`name`/`source`/`d
 filters, a pinned `.node-version`, committed output checked in CI) and deliberately narrows it:
 
 - **One bundler.** Vite covers bundling, Sass, minification and vendor IIFE builds, and it is already the engine
-  under Vitest, so building and testing share one toolchain. `copy` is the only other action.
+  under Vitest, so building and testing share one toolchain. `copy` is the only other action; its `minify` option
+  uses Vite's Oxc minifier for a package script that ships with no minified copy.
 - **npm, not Yarn.** npm workspaces give one lockfile and one install without adding corepack and a second package
   manager.
 - **No Concurrently.** Groups build in-process through Vite's API, a few at a time.

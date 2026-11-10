@@ -72,6 +72,10 @@ function resolveGroup(definition, manifestPath, relativeManifestPath) {
         throw new Error(`${where}: every asset group needs a 'dest'.`);
     }
 
+    if (definition.minify !== undefined && (definition.action !== "copy" || typeof definition.minify !== "boolean")) {
+        throw new Error(`${where}: 'minify' is true or false, and only 'copy' groups take it ('vite' groups always write a minified file).`);
+    }
+
     const sources = Array.isArray(definition.source) ? definition.source : [definition.source];
 
     if (sources.length === 0 || sources.some(source => typeof source !== "string" || source.length === 0)) {
@@ -147,4 +151,18 @@ export function toPosix(value) {
 
 export function relativeToRepo(value) {
     return toPosix(path.relative(repoRoot, value));
+}
+
+// The minified sibling of an output, for example scripts/app.js → scripts/app.min.js.
+export function toMinifiedPath(destPath) {
+    const extension = path.extname(destPath);
+
+    return `${destPath.substring(0, destPath.length - extension.length)}.min${extension}`;
+}
+
+// Every built file is written with LF line endings and one trailing newline.
+export function toLf(text) {
+    const normalized = text.replace(/\r\n/g, "\n");
+
+    return normalized.endsWith("\n") ? normalized : `${normalized}\n`;
 }

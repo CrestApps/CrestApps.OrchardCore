@@ -4,45 +4,45 @@
   --fc-popover-z: 4;
 }
 
-.fc-pj {
+.fc-5T {
   z-index: var(--fc-popover-z) !important;
 }
 
-.fc-L2 {
+.fc-CJ {
   isolation: isolate;
 }
 
 /*
 This will prevent all ancestors from customizing their box size unless they use .contentBox
 */
-.fc-oK,
-.fc-oK *,
-.fc-oK *:before,
-.fc-oK *:after {
+.fc-Qg,
+.fc-Qg *,
+.fc-Qg *:before,
+.fc-Qg *:after {
   box-sizing: border-box !important;
 }
 
 /* classes attached to <body> */
-.fc-Nr,
-.fc-Nr * {
+.fc-5r,
+.fc-5r * {
   cursor: not-allowed !important;
 }
 
-.fc-h3 {
+.fc-Ee {
   -ms-overflow-style: none !important; /* IE and Edge */
   scrollbar-width: none !important; /* Firefox */
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */
-.fc-h3::-webkit-scrollbar {
+.fc-Ee::-webkit-scrollbar {
   display: none !important;
 }
 
-.fc-s2 {
+.fc-FR {
   flex-shrink: 0 !important;
 }
 
-.fc-Qd .fc-j1 {
+.fc-kt .fc-lI {
   display: flex !important;
   flex-direction: row !important;
   flex-wrap: wrap !important;
@@ -50,75 +50,75 @@ This will prevent all ancestors from customizing their box size unless they use 
 
 /* HACK for Safari. Can't do break-inside:avoid with flexbox items, likely b/c it's not standard:
    https://stackoverflow.com/a/60256345 */
-.fc-Fn .fc-j1 > * {
+.fc-DW .fc-lI > * {
   float: left !important;
 }
 
-[dir=rtl] .fc-Fn .fc-j1 > *,
-.fc-Fn[dir=rtl] .fc-j1 > * {
+[dir=rtl] .fc-DW .fc-lI > *,
+.fc-DW[dir=rtl] .fc-lI > * {
   float: right !important;
 }
 
-.fc-Fn .fc-j1::after {
+.fc-DW .fc-lI::after {
   content: "" !important;
   display: block !important;
   clear: both !important;
 }
 
-.fc-3A {
+.fc-2a {
   cursor: pointer !important;
 }
 
-.fc-3Z {
+.fc-lW {
   cursor: n-resize !important;
 }
 
-.fc-Bn {
+.fc-x7 {
   cursor: s-resize !important;
 }
 
-.fc-Bs {
+.fc-up {
   cursor: w-resize !important;
 }
 
-[dir=rtl] .fc-Bs {
+[dir=rtl] .fc-up {
   cursor: e-resize !important;
 }
 
-.fc-mJ {
+.fc-8l {
   cursor: e-resize !important;
 }
 
-[dir=rtl] .fc-mJ {
+[dir=rtl] .fc-8l {
   cursor: w-resize !important;
 }
 
-.fc-xg {
+.fc-Xb {
   cursor: col-resize !important;
 }
 
-.fc-B6,
-.fc-If,
-.fc-uS {
+.fc-wI,
+.fc-7K,
+.fc-hT {
   position: absolute !important;
   box-sizing: content-box !important;
   width: 100% !important;
   height: 100% !important;
 }
 
-.fc-B6 {
+.fc-wI {
   padding: 10px !important;
   margin: -10px !important;
 }
 
-.fc-If {
+.fc-7K {
   padding-left: 10px !important;
   padding-right: 10px !important;
   margin-left: -10px !important;
   margin-right: -10px !important;
 }
 
-.fc-uS {
+.fc-hT {
   padding-top: 10px !important;
   padding-bottom: 10px !important;
   margin-top: -10px !important;
@@ -126,7 +126,7 @@ This will prevent all ancestors from customizing their box size unless they use 
 }
 
 /* QUESTION: why not use -left -right instead of negative margins/padding for ALL? */
-.fc-gw {
+.fc-kd {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -134,81 +134,81 @@ This will prevent all ancestors from customizing their box size unless they use 
   right: -5px;
 }
 
-.fc-Qx {
+.fc-rm {
   -webkit-user-select: none;
      -moz-user-select: none;
           user-select: none;
 }
 
-.fc-DP {
+.fc-gv {
   visibility: hidden;
 }
 
 /* Border Utils */
 /* ------------------------------------------------------------------------------------------------- */
 
-.fc-m0 {
+.fc-NQ {
   border: 0 !important;
 }
 
-.fc-lH {
+.fc-VY {
   border-left: 0 !important;
   border-right: 0 !important;
 }
 
-.fc-T4 {
+.fc-6M {
   border-top: 0 !important;
   border-bottom: 0 !important;
 }
 
-.fc-7v {
+.fc-jS {
   border-top: 0 !important;
 }
 
-.fc-C1 {
+.fc-Z5 {
   border-bottom: 0 !important;
 }
 
-.fc-QG {
+.fc-xm {
   border-inline-start: 0 !important;
 }
 
-.fc-N5 {
+.fc-HA {
   border-inline-end: 0 !important;
 }
 
 /* Flexbox Utils */
 /* ------------------------------------------------------------------------------------------------- */
 
-.fc-4L {
+.fc-uT {
   display: flex !important;
   flex-direction: row !important;
 }
 
-.fc-Ir {
+.fc-5N {
   display: flex !important;
   flex-direction: column !important;
 }
 
-.fc-o7 {
+.fc-pI {
   flex-grow: 1 !important;
 }
 
-.fc-bx {
+.fc-I4 {
   flex-grow: 1 !important;
   flex-basis: 0 !important;
   min-width: 0 !important;
   min-height: 0 !important;
 }
 
-.fc-PC {
+.fc-fy {
   min-height: 0 !important;
 }
 
 /*
 TODO: use liquidX/Y elsewhere because frees up min other dimension; less collisions
 */
-.fc-rJ {
+.fc-h7 {
   flex-grow: 1 !important;
   flex-basis: 0 !important;
   min-width: 0 !important;
@@ -217,7 +217,7 @@ TODO: use liquidX/Y elsewhere because frees up min other dimension; less collisi
 /* Semantic Print Table */
 /* ------------------------------------------------------------------------------------------------- */
 
-.fc-2n {
+.fc-5w {
   width: 100% !important;
   table-layout: fixed !important;
   border: 0 !important;
@@ -225,21 +225,21 @@ TODO: use liquidX/Y elsewhere because frees up min other dimension; less collisi
   border-spacing: 0 !important;
 }
 
-.fc-2n > thead {
+.fc-5w > thead {
   /* Both properties are needed for cross-browser repeated headers across printed pages. */
   -moz-column-break-inside: avoid !important;
        break-inside: avoid !important;
   page-break-inside: avoid !important;
 }
 
-.fc-2n > tbody {
+.fc-5w > tbody {
   /* Timeline print-layout hack (resource and non-resource): lets shared absolute backgrounds show through. */
   background: transparent !important;
 }
 
-.fc-2n > thead > tr > th,
-.fc-2n > tbody > tr > th,
-.fc-2n > tbody > tr > td {
+.fc-5w > thead > tr > th,
+.fc-5w > tbody > tr > th,
+.fc-5w > tbody > tr > td {
   vertical-align: top !important;
   font-weight: inherit;
   text-align: inherit;
@@ -248,49 +248,49 @@ TODO: use liquidX/Y elsewhere because frees up min other dimension; less collisi
 /* Table Utils */
 /* ------------------------------------------------------------------------------------------------- */
 
-.fc-Ib {
+.fc-Gm {
   padding: 0 !important;
 }
 
-.fc-ho {
+.fc-qW {
   padding-top: 0 !important;
   padding-bottom: 0 !important;
 }
 
-.fc-Yg {
+.fc-K4 {
   margin: 0 !important;
 }
 
-.fc-4U {
+.fc-ZN {
   margin-top: 0 !important;
   margin-bottom: 0 !important;
 }
 
-.fc-mC {
+.fc-Qo {
   margin-left: 0 !important;
   margin-right: 0 !important;
 }
 
-.fc-XZ {
+.fc-mO {
   white-space: nowrap !important;
 }
 
-.fc-5Z {
+.fc-ZC {
   white-space: pre !important;
 }
 
 /* Misc Utils */
 /* ------------------------------------------------------------------------------------------------- */
 
-.fc-0T {
+.fc-vq {
   overflow-anchor: none;
 }
 
-.fc-8Y {
+.fc-OS {
   pointer-events: none !important;
 }
 
-.fc-Zz {
+.fc-Tq {
   overflow: hidden !important;
 }
 
@@ -299,28 +299,28 @@ TODO: eventually use this on daygrid/timegrid events' inner, time, and title, FO
 Needed to prevent wrapping to multiple lines, increasing height, throwing off print-positioning,
 which can't rely on dynamic height detection after print-flag activated.
 */
-.fc-Sr {
+.fc-zy {
   white-space: nowrap !important;
   overflow: hidden !important;
 }
 
-.fc-7Q {
+.fc-Yq {
   position: relative !important;
 }
 
-.fc-Rs {
+.fc-Jy {
   position: absolute !important;
 }
 
-.fc-Hv {
+.fc-Sd {
   inset-inline-start: 0 !important;
 }
 
-.fc-97 {
+.fc-B2 {
   inset-inline-end: 0 !important;
 }
 
-.fc-ou {
+.fc-Kg {
   position: absolute !important;
   top: 0 !important;
   left: 0 !important;
@@ -328,47 +328,47 @@ which can't rely on dynamic height detection after print-flag activated.
   bottom: 0 !important;
 }
 
-.fc-b1,
-.fc-7k {
+.fc-Dv,
+.fc-he {
   position: absolute !important;
   left: 0 !important;
   right: 0 !important;
 }
 
-.fc-5V,
-.fc-Z6 {
+.fc-kA,
+.fc-eP {
   position: absolute !important;
   top: 0 !important;
   bottom: 0 !important;
 }
 
-.fc-b1 {
+.fc-Dv {
   top: 0 !important;
 }
 
-.fc-Z6 {
+.fc-eP {
   left: 0 !important;
   right: 0 !important;
   width: 0 !important;
 }
 
 @media not print {
-  .fc-TI {
+  .fc-G5 {
     position: sticky !important;
   }
 
-  .fc-G7 {
+  .fc-WE {
     position: sticky !important;
     top: 0 !important;
   }
 
   /* Sticks to either left or right (the flex "start") depending on ltr/rtl */
-  .fc-lC {
+  .fc-z6 {
     position: sticky !important;
     inset-inline-start: 0 !important;
   }
 
-  .fc-hw {
+  .fc-ca {
     position: sticky !important;
     top: 0 !important;
     z-index: var(--fc-sticky-header-footer-z) !important;
@@ -376,20 +376,20 @@ which can't rely on dynamic height detection after print-flag activated.
 }
 
 /* Only needed when padding/border must be separate from width/height */
-.fc-Ap {
+.fc-ck {
   box-sizing: content-box !important;
 }
 
 /* Out of view but keeps its real size, for measurement probes. For screen-reader text, use .srOnly.
 Hidden also means not focusable, clickable, or read by screen readers */
-.fc-hI {
+.fc-Sc {
   position: absolute !important;
   left: -10000px !important;
   visibility: hidden !important;
 }
 
 /* Visually hidden but read by screen readers. Unlike .offscreen, never causes scroll overflow */
-.fc-GR {
+.fc-ad {
   position: absolute !important;
   width: 1px !important;
   height: 1px !important;
@@ -401,113 +401,113 @@ Hidden also means not focusable, clickable, or read by screen readers */
   white-space: nowrap !important;
 }
 
-.fc-Hi {
+.fc-pr {
   align-items: center !important;
 }
 
-.fc-Yj {
+.fc-2c {
   align-items: flex-start !important;
 }
 
-.fc-io {
+.fc-uD {
   align-items: flex-end !important;
 }
 
 /* Footer Scrollbar */
 /* ------------------------------------------------------------------------------------------------- */
 
-.fc-4I {
+.fc-Cq {
   position: sticky !important;
   bottom: 0 !important;
   z-index: var(--fc-sticky-header-footer-z) !important;
 }
 
-.fc-Nd > * {
+.fc-mv > * {
   margin-top: -1px !important;
 }
 
-.fc-Nd > * > * {
+.fc-mv > * > * {
   height: 1px !important;
 }
 
 /* Print Utils */
 /* ------------------------------------------------------------------------------------------------- */
 
-.fc-Gu {
+.fc-Ia {
   -moz-column-break-inside: avoid !important;
        break-inside: avoid !important;
   page-break-inside: avoid !important;
 }
 
-.fc-2s {
+.fc-5U {
   min-height: 4em !important;
 }
 
-.fc-es {
+.fc-mg {
   display: flow-root !important;
 }
 
 /* Z-index */
 /* ------------------------------------------------------------------------------------------------- */
 
-.fc-QB {
+.fc-s1 {
   z-index: 0;
 }
 
-.fc-eY {
+.fc-2P {
   z-index: 1;
 }
 
-.fc-qd {
+.fc-BT {
   z-index: 2;
 }
 
-.fc-9p {
+.fc-LA {
   z-index: 3;
 }
 
-.fc-65 {
+.fc-BL {
   z-index: 4;
 }
 
-.fc-Hy {
+.fc-46 {
   z-index: 5;
 }
 
-.fc-T7 {
+.fc-4i {
   z-index: 1000;
 }
 
-.fc-mO {
+.fc-Dd {
   z-index: 9999;
 }
 
-.fc-zL:focus-visible {
+.fc-6W:focus-visible {
   z-index: 2;
 }
 
 /* INTERNAL MARKER -- used to mark an element for internal significance */
 /* ------------------------------------------------------------------------------------------------- */
 
-.fc-7y {}
+.fc-HP {}
 
-.fc-Rq {}
-.fc-wf {}
-.fc-QY {}
-.fc-1d {}
-.fc-3d {}
-.fc-bM {}
-.fc-ik {}
-.fc-lw {}
+.fc-Nv {}
+.fc-8X {}
+.fc-uj {}
+.fc-RS {}
+.fc-JU {}
+.fc-aj {}
+.fc-lA {}
+.fc-Dy {}
 
-.fc-Sz {}
+.fc-qp {}
 
-.fc-4D {}
+.fc-EH {}
 
-.fc-Wa {}
+.fc-UW {}
 
-.fc-JJ {}
+.fc-d0 {}
 
-.fc-Ix {}
+.fc-ds {}
 
-.fc-0s {}
+.fc-oa {}
