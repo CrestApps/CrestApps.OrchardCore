@@ -14,7 +14,7 @@ description: >
   hand-off link, and the traps (the agent principal must not own the store checkout, money only through the checkout
   engine, SanitizeProviderData drops delegated keys, profile fetches through the egress guard, minor units, totals
   that add up). Use this skill when asked to add an agent payment method, a UCP capability or extension, another
-  agentic protocol or binding (ACP MCP, A2A), an order webhook format, or to change how agents check out.
+  agentic protocol or binding (A2A), ACP request signatures or ACP over MCP, an order webhook format, or to change how agents check out.
 license: Apache-2.0
 metadata:
   author: CrestApps Team
@@ -32,10 +32,11 @@ the code was built from are in `docs/engineering/commerce/agentic-commerce-proto
 ## The shape of the module
 
 ```
-UCP REST (UcpEndpoints)   UCP MCP (UcpMcpEndpoints)   ACP REST (AcpEndpoints)   AI tools (AI/*.cs)
-        |  UcpRequestFilter  |                               | AcpRequestFilter        |
-        |  UcpCheckoutMapper |                               | AcpCheckoutMapper       |
-        +--------------------+---------------+---------------+-------------------------+
+UCP REST (UcpEndpoints)   UCP MCP (UcpMcpEndpoints)   ACP REST (AcpEndpoints)  ACP MCP (AcpMcpEndpoints)   AI tools
+        |  UcpRequestFilter  |                               | AcpRequestFilter (sign-in, Signature) |   (AI/*.cs)
+        |  UcpCheckoutMapper |                               +-- AcpCheckoutOperations --------------+       |
+        |                    |                                   AcpCheckoutMapper                           |
+        +--------------------+---------------+-------------------------------------------------------------+
                                              |
                           IAgentCheckoutService (AgentCheckoutService, Core)
                                              |
@@ -55,8 +56,18 @@ UCP REST (UcpEndpoints)   UCP MCP (UcpMcpEndpoints)   ACP REST (AcpEndpoints)   
   Statuses map in `ToStatus` (UCP `ready_for_complete`, ACP `ready_for_payment`, and so on).
 - **`AgentCheckoutService`** owns everything else: the `AgentCheckout` record, pricing, the order and store checkout,
   the steps, discount codes, totals, messages, escalation, payment, expiry and the per-checkout lock.
+- **ACP's two bindings share one code path.** `AcpCheckoutOperations` takes the REST body as a payload and returns an
+  `AcpOperationResult` (status + body); REST turns it into an `IResult`, `AcpMcpEndpoints.ToResponse` into a tool
+  result or a `-32000` JSON-RPC error with the ACP error in `data`. Sign-in is `AcpRequestFilter.SignInAsync` for both.
+  MCP idempotency (`AcpMcpIdempotency`, key in `meta.idempotency_key`) keeps the REST policy's rules. Add an ACP
+  operation to `AcpCheckoutOperations`, never to one binding only. Discovery additions go through
+  `IAcpDiscoveryContributor`.
+- **ACP request signatures** (`AcpRequestSignature` in Core, `AcpSignatureCheck` in the module): ES256 over the RFC
+  8785 canonical JSON of the body (MCP: of `payload`), `Timestamp` checked against the platform's skew. The timestamp
+  isn't signed (no ACP source defines that). .NET 10 has no Ed25519, so don't add it without a vetted library. The
+  public key is configuration: it is exported, and validated in `AgentPlatformHandler.ValidatingAsync`.
 
-A new binding (ACP over MCP, UCP over A2A) is a new endpoint plus a mapper over `IAgentCheckoutService`. Never call
+A new binding (such as UCP over A2A) is a new endpoint plus a mapper over `IAgentCheckoutService`. Never call
 carts, orders or providers from an endpoint.
 
 ## Add a payment handler (required pieces)
